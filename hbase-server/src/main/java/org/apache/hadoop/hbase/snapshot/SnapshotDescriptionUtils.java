@@ -120,8 +120,6 @@ public final class SnapshotDescriptionUtils {
    */
   public static final String SNAPSHOT_WORKING_DIR = "hbase.snapshot.working.dir";
 
-  /** This tag will be created in in-progess snapshots */
-  public static final String SNAPSHOT_IN_PROGRESS = ".inprogress";
   // snapshot operation values
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
@@ -352,16 +350,6 @@ public final class SnapshotDescriptionUtils {
         throw new IOException(msg);
       }
     }
-  }
-
-  /**
-   * Create in-progress tag under .tmp of in-progress snapshot
-   * */
-  public static void createInProgressTag(Path workingDir, FileSystem fs) throws IOException {
-    FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
-      HConstants.DATA_FILE_UMASK_KEY);
-    Path snapshot_in_progress = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOT_IN_PROGRESS);
-    FSUtils.create(fs, snapshot_in_progress, perms, true);
   }
 
   /**

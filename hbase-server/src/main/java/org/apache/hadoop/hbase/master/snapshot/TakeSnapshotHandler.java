@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -174,7 +173,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     String msg = "Running " + snapshot.getType() + " table snapshot " + snapshot.getName() + " "
         + eventType + " on table " + snapshotTable;
     LOG.info(msg);
-    ReentrantLock lock = snapshotManager.getLocks().acquireLock(snapshot.getName());
     MasterLock tableLockToRelease = this.tableLock;
     status.setStatus(msg);
     try {
@@ -251,7 +249,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       } catch (IOException e) {
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
       }
-      lock.unlock();
       tableLockToRelease.release();
     }
   }
