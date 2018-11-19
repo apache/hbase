@@ -595,12 +595,17 @@ public class HRegionServer extends HasThread implements
       // init superusers and add the server principal (if using security)
       // or process owner as default super user.
       Superusers.initialize(conf);
-
       regionServerAccounting = new RegionServerAccounting(conf);
+
       boolean isMasterNotCarryTable =
           this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf);
-      cacheConfig = new CacheConfig(conf, !isMasterNotCarryTable);
-      mobCacheConfig = new MobCacheConfig(conf, !isMasterNotCarryTable);
+      // no need to instantiate global block cache when master not carry table
+      if (!isMasterNotCarryTable) {
+        CacheConfig.instantiateBlockCache(conf);
+      }
+      cacheConfig = new CacheConfig(conf);
+      mobCacheConfig = new MobCacheConfig(conf);
+
       uncaughtExceptionHandler = new UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread t, Throwable e) {

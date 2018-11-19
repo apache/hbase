@@ -139,6 +139,7 @@ public class TestCompoundBloomFilter {
 
     fs = FileSystem.get(conf);
 
+    CacheConfig.instantiateBlockCache(conf);
     cacheConf = new CacheConfig(conf);
     blockCache = cacheConf.getBlockCache();
     assertNotNull(blockCache);

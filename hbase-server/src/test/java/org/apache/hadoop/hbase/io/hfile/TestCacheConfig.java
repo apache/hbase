@@ -209,6 +209,7 @@ public class TestCacheConfig {
   @Test
   public void testDisableCacheDataBlock() throws IOException {
     Configuration conf = HBaseConfiguration.create();
+    CacheConfig.instantiateBlockCache(conf);
     CacheConfig cacheConfig = new CacheConfig(conf);
     assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
@@ -274,6 +275,7 @@ public class TestCacheConfig {
 
   @Test
   public void testCacheConfigDefaultLRUBlockCache() {
+    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
@@ -307,6 +309,7 @@ public class TestCacheConfig {
   private void doBucketCacheConfigTest() {
     final int bcSize = 100;
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
+    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
@@ -338,6 +341,7 @@ public class TestCacheConfig {
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
+    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
