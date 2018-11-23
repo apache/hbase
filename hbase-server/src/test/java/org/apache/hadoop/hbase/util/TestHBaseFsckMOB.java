@@ -80,7 +80,6 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     admin.setBalancerRunning(false, true);
 
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
   }
 
   @AfterClass

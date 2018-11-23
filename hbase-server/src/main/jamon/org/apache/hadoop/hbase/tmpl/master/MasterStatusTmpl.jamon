@@ -447,8 +447,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             description = "The hbase:acl table holds information about acl.";
         } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
             description = "The hbase:labels table holds information about visibility labels.";
-        } else if (tableName.equals(TableName.NAMESPACE_TABLE_NAME)){
-            description = "The hbase:namespace table holds information about namespaces.";
         } else if (tableName.equals(QuotaUtil.QUOTA_TABLE_NAME)){
             description = "The hbase:quota table holds quota information about number" +
             " or size of requests in a given time frame.";

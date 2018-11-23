@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -508,6 +507,13 @@ public final class HConstants {
   public static final byte[] REPLICATION_BARRIER_FAMILY =
       Bytes.toBytes(REPLICATION_BARRIER_FAMILY_STR);
 
+  /** The namespace family as a string */
+  public static final String NAMESPACE_FAMILY_STR = "ns";
+
+  /** The namespace family */
+  public static final byte[] NAMESPACE_FAMILY = Bytes.toBytes(NAMESPACE_FAMILY_STR);
+
+  public static final byte[] NAMESPACE_COL_DESC_QUALIFIER = Bytes.toBytes("d");
   /**
    * The meta table version column qualifier.
    * We keep current version of the meta table in this column in <code>-ROOT-</code>

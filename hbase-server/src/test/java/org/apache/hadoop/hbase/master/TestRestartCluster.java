@@ -81,7 +81,7 @@ public class TestRestartCluster {
     }
 
     List<RegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
-    assertEquals(4, allRegions.size());
+    assertEquals(3, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
     UTIL.shutdownMiniHBaseCluster();
@@ -96,7 +96,7 @@ public class TestRestartCluster {
     // Otherwise we're reusing an Connection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
     allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
-    assertEquals(4, allRegions.size());
+    assertEquals(3, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
     for(TableName TABLE: TABLES) {
       try {
@@ -201,9 +201,6 @@ public class TestRestartCluster {
       snapshot.getRegionToRegionServerMap();
     assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
     for (Map.Entry<RegionInfo, ServerName> entry : newRegionToRegionServerMap.entrySet()) {
-      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) {
-        continue;
-      }
       ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
       ServerName currentServer = entry.getValue();
       LOG.info(

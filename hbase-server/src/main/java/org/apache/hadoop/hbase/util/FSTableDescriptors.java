@@ -178,6 +178,17 @@ public class FSTableDescriptors implements TableDescriptors {
         // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
         .setBloomFilterType(BloomType.NONE)
         .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.NAMESPACE_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+                HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+                HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build())
       .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
         MultiRowMutationEndpoint.class.getName())
         .setPriority(Coprocessor.PRIORITY_SYSTEM).build());

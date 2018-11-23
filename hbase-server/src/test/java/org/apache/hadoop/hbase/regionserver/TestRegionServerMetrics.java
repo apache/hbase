@@ -239,7 +239,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 3, serverSource);
+    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER ? 1 : 2, serverSource);
   }
 
   @Test

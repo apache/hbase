@@ -902,7 +902,7 @@ public class TestMasterProcedureScheduler {
 
     @Override
     public TableName getTableName() {
-      return TableName.NAMESPACE_TABLE_NAME;
+      return TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME;
     }
 
     @Override
@@ -1009,7 +1009,7 @@ public class TestMasterProcedureScheduler {
 
     LockedResource tableResource = locks.get(1);
     assertLockResource(tableResource, LockedResourceType.TABLE,
-      TableName.NAMESPACE_TABLE_NAME.getNameAsString());
+      TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME.getNameAsString());
     assertSharedLock(tableResource, 1);
     assertTrue(tableResource.getWaitingProcedures().isEmpty());
   }

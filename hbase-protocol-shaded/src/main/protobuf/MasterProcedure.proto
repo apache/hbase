@@ -117,7 +117,7 @@ enum CreateNamespaceState {
   CREATE_NAMESPACE_PREPARE = 1;
   CREATE_NAMESPACE_CREATE_DIRECTORY = 2;
   CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;
-  CREATE_NAMESPACE_UPDATE_ZK = 4;
+  CREATE_NAMESPACE_UPDATE_ZK = 4[deprecated=true];
   CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;
 }
 
@@ -128,7 +128,7 @@ message CreateNamespaceStateData {
 enum ModifyNamespaceState {
   MODIFY_NAMESPACE_PREPARE = 1;
   MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;
-  MODIFY_NAMESPACE_UPDATE_ZK = 3;
+  MODIFY_NAMESPACE_UPDATE_ZK = 3[deprecated=true];
 }
 
 message ModifyNamespaceStateData {
@@ -139,7 +139,7 @@ message ModifyNamespaceStateData {
 enum DeleteNamespaceState {
   DELETE_NAMESPACE_PREPARE = 1;
   DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;
-  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;
+  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3[deprecated=true];
   DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;
   DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;
 }
@@ -475,7 +475,8 @@ message ReopenTableRegionsStateData {
 }
 
 enum InitMetaState {
-   INIT_META_ASSIGN_META = 1;
+  INIT_META_ASSIGN_META = 1;
+  INIT_META_CREATE_NAMESPACES = 2;
 }
 
 message InitMetaStateData {

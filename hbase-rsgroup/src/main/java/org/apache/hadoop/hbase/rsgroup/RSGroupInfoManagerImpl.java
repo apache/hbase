@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.protobuf.ServiceException;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +33,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -85,6 +83,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
@@ -757,12 +756,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         assignedRegions.clear();
         found.set(true);
         try {
-          conn.getTable(TableName.NAMESPACE_TABLE_NAME);
-          conn.getTable(RSGROUP_TABLE_NAME);
           boolean rootMetaFound =
               masterServices.getMetaTableLocator().verifyMetaRegionLocation(
                   conn, masterServices.getZooKeeper(), 1);
-          final AtomicBoolean nsFound = new AtomicBoolean(false);
           if (rootMetaFound) {
             MetaTableAccessor.Visitor visitor = new DefaultVisitorBase() {
               @Override
@@ -791,36 +787,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
                     }
                     foundRegions.add(info);
                   }
-                  if (TableName.NAMESPACE_TABLE_NAME.equals(info.getTable())) {
-                    Cell cell = row.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-                        HConstants.SERVER_QUALIFIER);
-                    ServerName sn = null;
-                    if(cell != null) {
-                      sn = ServerName.parseVersionedServerName(CellUtil.cloneValue(cell));
-                    }
-                    if (sn == null) {
-                      nsFound.set(false);
-                    } else if (tsm.isTableState(TableName.NAMESPACE_TABLE_NAME,
-                        TableState.State.ENABLED)) {
-                      try {
-                        ClientProtos.ClientService.BlockingInterface rs = conn.getClient(sn);
-                        ClientProtos.GetRequest request =
-                            RequestConverter.buildGetRequest(info.getRegionName(),
-                                new Get(ROW_KEY));
-                        rs.get(null, request);
-                        nsFound.set(true);
-                      } catch(Exception ex) {
-                        LOG.debug("Caught exception while verifying group region", ex);
-                      }
-                    }
-                  }
                 }
                 return true;
               }
             };
             MetaTableAccessor.fullScanRegions(conn, visitor);
             // if no regions in meta then we have to create the table
-            if (foundRegions.size() < 1 && rootMetaFound && !createSent && nsFound.get()) {
+            if (foundRegions.size() < 1 && rootMetaFound && !createSent) {
               createRSGroupTable();
               createSent = true;
             }

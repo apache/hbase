@@ -53,8 +53,8 @@ class TableQueue extends Queue<TableName> {
       case ENABLE:
         return true;
       case EDIT:
-        // we allow concurrent edit on the NS table
-        return !proc.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
+        // we allow concurrent edit on the ns family in meta table
+        return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
         return false;
       // region operations are using the shared-lock on the table

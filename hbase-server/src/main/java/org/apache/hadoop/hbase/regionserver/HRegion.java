@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -8298,8 +8297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public byte[] checkSplit() {
     // Can't split META
-    if (this.getRegionInfo().isMetaRegion() ||
-        TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTable())) {
+    if (this.getRegionInfo().isMetaRegion()) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split meta region in HBase 0.20 and above");
       }

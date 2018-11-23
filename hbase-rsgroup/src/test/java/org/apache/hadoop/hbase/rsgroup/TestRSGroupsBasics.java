@@ -93,8 +93,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(4, defaultInfo.getServers().size());
     // Assignment of root and meta regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    //3 meta,namespace, group
-    assertEquals(3, count);
+    // 2 meta, group
+    assertEquals(2, count);
   }
 
   @Test

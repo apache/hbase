@@ -779,13 +779,10 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Create a 'smarter' Connection, one that is capable of by-passing RPC if the request is to
-   * the local server; i.e. a short-circuit Connection. Safe to use going to local or remote
-   * server. Create this instance in a method can be intercepted and mocked in tests.
-   * @throws IOException
+   * Create a 'smarter' Connection, one that is capable of by-passing RPC if the request is to the
+   * local server; i.e. a short-circuit Connection. Safe to use going to local or remote server.
    */
-  @VisibleForTesting
-  protected ClusterConnection createClusterConnection() throws IOException {
+  private ClusterConnection createClusterConnection() throws IOException {
     Configuration conf = this.conf;
     if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
       // Use server ZK cluster for server-issued connections, so we clone
@@ -796,8 +793,15 @@ public class HRegionServer extends HasThread implements
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
-    return ConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
-      serverName, rpcServices, rpcServices);
+    ClusterConnection conn = ConnectionUtils.createShortCircuitConnection(conf, null,
+      userProvider.getCurrent(), serverName, rpcServices, rpcServices);
+    // This is used to initialize the batch thread pool inside the connection implementation.
+    // When deploy a fresh cluster, we may first use the cluster connection in InitMetaProcedure,
+    // which will be executed inside the PEWorker, and then the batch thread pool will inherit the
+    // thread group of PEWorker, which will be destroy when shutting down the ProcedureExecutor. It
+    // will cause lots of procedure related UTs to fail, so here let's initialize it first, no harm.
+    conn.getTable(TableName.META_TABLE_NAME).close();
+    return conn;
   }
 
   /**
@@ -823,7 +827,6 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Setup our cluster connection if not already initialized.
-   * @throws IOException
    */
   protected synchronized void setupClusterConnection() throws IOException {
     if (clusterConnection == null) {

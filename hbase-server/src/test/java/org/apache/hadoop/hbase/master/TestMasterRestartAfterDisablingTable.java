@@ -91,9 +91,8 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.getAdmin().disableTable(tableName);
 
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    assertEquals(
-        "The number of regions for the table tableRestart should be 0 and only"
-            + "the catalog and namespace tables should be present.", 2, regions.size());
+    assertEquals("The number of regions for the table tableRestart should be 0 and only" +
+      "the catalog table should be present.", 1, regions.size());
 
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
@@ -120,12 +119,10 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    assertEquals("The assigned regions were not onlined after master"
-        + " switch except for the catalog and namespace tables.",
-          6, regions.size());
-    assertTrue("The table should be in enabled state",
-        cluster.getMaster().getTableStateManager()
-        .isTableState(TableName.valueOf(name.getMethodName()), TableState.State.ENABLED));
+    assertEquals("The assigned regions were not onlined after master" +
+      " switch except for the catalog table.", 5, regions.size());
+    assertTrue("The table should be in enabled state", cluster.getMaster().getTableStateManager()
+      .isTableState(TableName.valueOf(name.getMethodName()), TableState.State.ENABLED));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

@@ -1112,10 +1112,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(catalogJanitorChore);
     this.serverManager.startChore();
 
-    // NAMESPACE READ!!!!
-    // Here we expect hbase:namespace to be online. See inside initClusterSchemaService.
-    // TODO: Fix this. Namespace is a pain being a sort-of system table. Fold it in to hbase:meta.
-    // isNamespace does like isMeta and waits until namespace is onlined before allowing progress.
+    // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
     if (!waitForNamespaceOnline()) {
       return;
     }
@@ -1243,20 +1240,28 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   /**
    * Check hbase:namespace table is assigned. If not, startup will hang looking for the ns table
-   * (TODO: Fix this! NS should not hold-up startup).
+   * <p/>
+   * This is for rolling upgrading, later we will migrate the data in ns table to the ns family of
+   * meta table. And if this is a new clsuter, this method will return immediately as there will be
+   * no namespace table/region.
    * @return True if namespace table is up/online.
    */
-  @VisibleForTesting
-  public boolean waitForNamespaceOnline() throws InterruptedException {
-    List<RegionInfo> ris = this.assignmentManager.getRegionStates().
-        getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
+  private boolean waitForNamespaceOnline() throws InterruptedException, IOException {
+    TableState nsTableState =
+      MetaTableAccessor.getTableState(getClusterConnection(), TableName.NAMESPACE_TABLE_NAME);
+    if (nsTableState == null || nsTableState.isDisabled()) {
+      // this means we have already migrated the data and disabled or deleted the namespace table,
+      // or this is a new depliy which does not have a namespace table from the beginning.
+      return true;
+    }
+    List<RegionInfo> ris =
+      this.assignmentManager.getRegionStates().getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
     if (ris.isEmpty()) {
-      // If empty, means we've not assigned the namespace table yet... Just return true so startup
-      // continues and the namespace table gets created.
+      // maybe this will not happen any more, but anyway, no harm to add a check here...
       return true;
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
-    for (RegionInfo ri: ris) {
+    for (RegionInfo ri : ris) {
       isRegionOnline(ri);
     }
     return true;

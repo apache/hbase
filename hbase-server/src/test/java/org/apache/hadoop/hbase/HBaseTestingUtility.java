@@ -3436,7 +3436,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public void waitUntilAllSystemRegionsAssigned() throws IOException {
     waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
-    waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
   }
 
   /**

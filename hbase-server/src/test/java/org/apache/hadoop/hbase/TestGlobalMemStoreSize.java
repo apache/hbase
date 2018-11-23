@@ -58,8 +58,8 @@ public class TestGlobalMemStoreSize {
   private static final Logger LOG = LoggerFactory.getLogger(TestGlobalMemStoreSize.class);
   private static int regionServerNum = 4;
   private static int regionNum = 16;
-  // total region num = region num + root and meta regions
-  private static int totalRegionNum = regionNum+2;
+  // total region num = region num + meta regions
+  private static int totalRegionNum = regionNum + 1;
 
   private HBaseTestingUtility TEST_UTIL;
   private MiniHBaseCluster cluster;

@@ -136,8 +136,6 @@ public class TestProcedurePriority {
       .stream().filter(t -> !t.getRegionServer().getRegions(TableName.META_TABLE_NAME).isEmpty())
       .findAny().get();
     HRegionServer rsNoMeta = UTIL.getOtherRegionServer(rsWithMetaThread.getRegionServer());
-    // wait for NS table initialization to avoid our error inject affecting master initialization
-    UTIL.waitTableAvailable(TableName.NAMESPACE_TABLE_NAME);
     FAIL = true;
     UTIL.getMiniHBaseCluster().killRegionServer(rsNoMeta.getServerName());
     // wait until all the worker thread are stuck, which means that the stuck checker will start to

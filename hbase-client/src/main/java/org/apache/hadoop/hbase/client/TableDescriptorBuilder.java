@@ -220,11 +220,28 @@ public class TableDescriptorBuilder {
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
 
+  /**
+   * @deprecated namespace table has been folded into the ns family in meta table, do not use this
+   *             any more.
+   */
   @InterfaceAudience.Private
+  @Deprecated
   public final static String NAMESPACE_FAMILY_INFO = "info";
+
+  /**
+   * @deprecated namespace table has been folded into the ns family in meta table, do not use this
+   *             any more.
+   */
   @InterfaceAudience.Private
+  @Deprecated
   public final static byte[] NAMESPACE_FAMILY_INFO_BYTES = Bytes.toBytes(NAMESPACE_FAMILY_INFO);
+
+  /**
+   * @deprecated namespace table has been folded into the ns family in meta table, do not use this
+   *             any more.
+   */
   @InterfaceAudience.Private
+  @Deprecated
   public final static byte[] NAMESPACE_COL_DESC_BYTES = Bytes.toBytes("d");
 
   /**
@@ -245,22 +262,21 @@ public class TableDescriptorBuilder {
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
   private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
     Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+
   /**
    * Table descriptor for namespace table
+   * @deprecated We have folded the data in namespace table into meta table, so do not use it any
+   *             more.
    */
-  // TODO We used to set CacheDataInL1 for NS table. When we have BucketCache in file mode, now the
-  // NS data goes to File mode BC only. Test how that affect the system. If too much, we have to
-  // rethink about adding back the setCacheDataInL1 for NS table.
-  public static final TableDescriptor NAMESPACE_TABLEDESC
-    = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
+  @Deprecated
+  public static final TableDescriptor NAMESPACE_TABLEDESC =
+    TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
-        // Ten is arbitrary number.  Keep versions to help debugging.
-        .setMaxVersions(10)
-        .setInMemory(true)
-        .setBlocksize(8 * 1024)
-        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        .build())
+        // Ten is arbitrary number. Keep versions to help debugging.
+        .setMaxVersions(10).setInMemory(true).setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).build())
       .build();
+
   private final ModifyableTableDescriptor desc;
 
   /**

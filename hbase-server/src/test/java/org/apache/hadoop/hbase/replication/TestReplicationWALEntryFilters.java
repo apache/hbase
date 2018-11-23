@@ -73,14 +73,7 @@ public class TestReplicationWALEntryFilters {
 
     assertNull(filter.filter(metaEntry));
 
-    // ns table
-    WALKeyImpl key2 =
-        new WALKeyImpl(new byte[0], TableName.NAMESPACE_TABLE_NAME, System.currentTimeMillis());
-    Entry nsEntry = new Entry(key2, null);
-    assertNull(filter.filter(nsEntry));
-
     // user table
-
     WALKeyImpl key3 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
         System.currentTimeMillis());
     Entry userEntry = new Entry(key3, null);

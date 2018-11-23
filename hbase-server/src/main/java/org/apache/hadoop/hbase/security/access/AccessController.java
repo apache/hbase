@@ -875,7 +875,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // wait till the acl table is created.
     if (AccessControlLists.isAclTable(desc)) {
       this.aclTabAvailable = true;
-    } else if (!(TableName.NAMESPACE_TABLE_NAME.equals(desc.getTableName()))) {
+    } else {
       if (!aclTabAvailable) {
         LOG.warn("Not adding owner permission for table " + desc.getTableName() + ". "
             + AccessControlLists.ACL_TABLE_NAME + " is not yet created. "

@@ -15,23 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.TableNamespaceManager;
-import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The procedure to create a new namespace.
@@ -42,10 +38,8 @@ public class CreateNamespaceProcedure
   private static final Logger LOG = LoggerFactory.getLogger(CreateNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
-  private Boolean traceEnabled;
 
   public CreateNamespaceProcedure() {
-    this.traceEnabled = null;
   }
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
@@ -57,43 +51,40 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor, ProcedurePrepareLatch latch) {
     super(env, latch);
     this.nsDescriptor = nsDescriptor;
-    this.traceEnabled = null;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CreateNamespaceState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
-      case CREATE_NAMESPACE_PREPARE:
-        boolean success = prepareCreate(env);
-        releaseSyncLatch();
-        if (!success) {
-          assert isFailed() : "createNamespace should have an exception here";
+        case CREATE_NAMESPACE_PREPARE:
+          boolean success = prepareCreate(env);
+          releaseSyncLatch();
+          if (!success) {
+            assert isFailed() : "createNamespace should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          setNextState(CreateNamespaceState.CREATE_NAMESPACE_CREATE_DIRECTORY);
+          break;
+        case CREATE_NAMESPACE_CREATE_DIRECTORY:
+          createDirectory(env, nsDescriptor);
+          setNextState(CreateNamespaceState.CREATE_NAMESPACE_INSERT_INTO_NS_TABLE);
+          break;
+        case CREATE_NAMESPACE_INSERT_INTO_NS_TABLE:
+          addOrUpdateNamespace(env, nsDescriptor);
+          setNextState(CreateNamespaceState.CREATE_NAMESPACE_SET_NAMESPACE_QUOTA);
+          break;
+        case CREATE_NAMESPACE_UPDATE_ZK:
+          // not used any more
+          setNextState(CreateNamespaceState.CREATE_NAMESPACE_SET_NAMESPACE_QUOTA);
+          break;
+        case CREATE_NAMESPACE_SET_NAMESPACE_QUOTA:
+          setNamespaceQuota(env, nsDescriptor);
           return Flow.NO_MORE_STATE;
-        }
-        setNextState(CreateNamespaceState.CREATE_NAMESPACE_CREATE_DIRECTORY);
-        break;
-      case CREATE_NAMESPACE_CREATE_DIRECTORY:
-        createDirectory(env, nsDescriptor);
-        setNextState(CreateNamespaceState.CREATE_NAMESPACE_INSERT_INTO_NS_TABLE);
-        break;
-      case CREATE_NAMESPACE_INSERT_INTO_NS_TABLE:
-        insertIntoNSTable(env, nsDescriptor);
-        setNextState(CreateNamespaceState.CREATE_NAMESPACE_UPDATE_ZK);
-        break;
-      case CREATE_NAMESPACE_UPDATE_ZK:
-        updateZKNamespaceManager(env, nsDescriptor);
-        setNextState(CreateNamespaceState.CREATE_NAMESPACE_SET_NAMESPACE_QUOTA);
-        break;
-      case CREATE_NAMESPACE_SET_NAMESPACE_QUOTA:
-        setNamespaceQuota(env, nsDescriptor);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
@@ -145,39 +136,26 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData.Builder createNamespaceMsg =
-        MasterProcedureProtos.CreateNamespaceStateData.newBuilder().setNamespaceDescriptor(
-          ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
+      MasterProcedureProtos.CreateNamespaceStateData.newBuilder()
+        .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.nsDescriptor));
     serializer.serialize(createNamespaceMsg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.CreateNamespaceStateData createNamespaceMsg =
-        serializer.deserialize(MasterProcedureProtos.CreateNamespaceStateData.class);
+      serializer.deserialize(MasterProcedureProtos.CreateNamespaceStateData.class);
     nsDescriptor = ProtobufUtil.toNamespaceDescriptor(createNamespaceMsg.getNamespaceDescriptor());
-  }
-
-  private boolean isBootstrapNamespace() {
-    return nsDescriptor.equals(NamespaceDescriptor.DEFAULT_NAMESPACE) ||
-        nsDescriptor.equals(NamespaceDescriptor.SYSTEM_NAMESPACE);
   }
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
-    // Namespace manager might not be ready if master is not fully initialized,
-    // return false to reject user namespace creation; return true for default
-    // and system namespace creation (this is part of master initialization).
-    if (isBootstrapNamespace()) {
-      return false;
-    }
     return env.waitInitialized(this);
   }
 
@@ -202,12 +180,11 @@ public class CreateNamespaceProcedure
   /**
    * Action before any real action of creating namespace.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(nsDescriptor.getName())) {
       setFailure("master-create-namespace",
-          new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists"));
+        new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists"));
       return false;
     }
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
@@ -215,77 +192,14 @@ public class CreateNamespaceProcedure
   }
 
   /**
-   * Create the namespace directory
-   * @param env MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor
-   * @throws IOException
-   */
-  protected static void createDirectory(
-      final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) throws IOException {
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    mfs.getFileSystem().mkdirs(
-      FSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
-  }
-
-  /**
-   * Insert the row into ns table
-   * @param env MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor
-   * @throws IOException
-   */
-  protected static void insertIntoNSTable(
-      final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) throws IOException {
-    getTableNamespaceManager(env).insertIntoNSTable(nsDescriptor);
-  }
-
-  /**
-   * Update ZooKeeper.
-   * @param env MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor
-   * @throws IOException
-   */
-  protected static void updateZKNamespaceManager(
-      final MasterProcedureEnv env,
-      final NamespaceDescriptor nsDescriptor) throws IOException {
-    getTableNamespaceManager(env).updateZKNamespaceManager(nsDescriptor);
-  }
-
-  /**
    * Set quota for the namespace
    * @param env MasterProcedureEnv
    * @param nsDescriptor NamespaceDescriptor
-   * @throws IOException
    **/
-  protected static void setNamespaceQuota(
-      final MasterProcedureEnv env,
+  private static void setNamespaceQuota(final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) throws IOException {
     if (env.getMasterServices().isInitialized()) {
       env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
     }
-  }
-
-  private static TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
-    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
-  }
-
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
-  }
-
-  @Override
-  protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
-    // hbase and default namespaces are created on bootstrap internally by the system
-    // the client does not know about this procedures.
-    return !isBootstrapNamespace();
   }
 }

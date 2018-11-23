@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -63,7 +62,6 @@ public class TestNamespace {
   private static HBaseTestingUtility TEST_UTIL;
   protected static Admin admin;
   protected static HBaseCluster cluster;
-  private static ZKNamespaceManager zkNamespaceManager;
   private String prefix = "TestNamespace";
 
   @Rule
@@ -76,9 +74,6 @@ public class TestNamespace {
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
-    zkNamespaceManager =
-        new ZKNamespaceManager(master.getZooKeeper());
-    zkNamespaceManager.start();
     LOG.info("Done initializing cluster");
   }
 
@@ -107,19 +102,16 @@ public class TestNamespace {
         admin.getNamespaceDescriptor(NamespaceDescriptor.DEFAULT_NAMESPACE.getName());
     assertNotNull(ns);
     assertEquals(ns.getName(), NamespaceDescriptor.DEFAULT_NAMESPACE.getName());
-    assertNotNull(zkNamespaceManager.get(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR));
 
     ns = admin.getNamespaceDescriptor(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     assertNotNull(ns);
     assertEquals(ns.getName(), NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
-    assertNotNull(zkNamespaceManager.get(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR));
 
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
     //verify existence of system tables
     Set<TableName> systemTables = Sets.newHashSet(
-        TableName.META_TABLE_NAME,
-        TableName.NAMESPACE_TABLE_NAME);
+        TableName.META_TABLE_NAME);
     HTableDescriptor[] descs =
         admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     assertEquals(systemTables.size(), descs.length);
@@ -181,18 +173,9 @@ public class TestNamespace {
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     assertEquals(3, admin.listNamespaceDescriptors().length);
-    TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return zkNamespaceManager.list().size() == 3;
-      }
-    });
-    assertNotNull(zkNamespaceManager.get(nsName));
     //remove namespace and verify
     admin.deleteNamespace(nsName);
     assertEquals(2, admin.listNamespaceDescriptors().length);
-    assertEquals(2, zkNamespaceManager.list().size());
-    assertNull(zkNamespaceManager.get(nsName));
   }
 
   @Test

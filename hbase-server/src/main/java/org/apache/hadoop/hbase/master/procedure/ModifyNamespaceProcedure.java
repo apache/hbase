@@ -15,19 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.master.TableNamespaceManager;
-import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyNamespaceState;
@@ -42,11 +40,9 @@ public class ModifyNamespaceProcedure
 
   private NamespaceDescriptor oldNsDescriptor;
   private NamespaceDescriptor newNsDescriptor;
-  private Boolean traceEnabled;
 
   public ModifyNamespaceProcedure() {
     this.oldNsDescriptor = null;
-    this.traceEnabled = null;
   }
 
   public ModifyNamespaceProcedure(final MasterProcedureEnv env,
@@ -59,36 +55,31 @@ public class ModifyNamespaceProcedure
     super(env, latch);
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
-    this.traceEnabled = null;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final ModifyNamespaceState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
-
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
-      case MODIFY_NAMESPACE_PREPARE:
-        boolean success = prepareModify(env);
-        releaseSyncLatch();
-        if (!success) {
-          assert isFailed() : "Modify namespace should have an exception here";
+        case MODIFY_NAMESPACE_PREPARE:
+          boolean success = prepareModify(env);
+          releaseSyncLatch();
+          if (!success) {
+            assert isFailed() : "Modify namespace should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+          setNextState(ModifyNamespaceState.MODIFY_NAMESPACE_UPDATE_NS_TABLE);
+          break;
+        case MODIFY_NAMESPACE_UPDATE_NS_TABLE:
+          addOrUpdateNamespace(env, newNsDescriptor);
           return Flow.NO_MORE_STATE;
-        }
-        setNextState(ModifyNamespaceState.MODIFY_NAMESPACE_UPDATE_NS_TABLE);
-        break;
-      case MODIFY_NAMESPACE_UPDATE_NS_TABLE:
-        insertIntoNSTable(env);
-        setNextState(ModifyNamespaceState.MODIFY_NAMESPACE_UPDATE_ZK);
-        break;
-      case MODIFY_NAMESPACE_UPDATE_ZK:
-        updateZKNamespaceManager(env);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        case MODIFY_NAMESPACE_UPDATE_ZK:
+          // not used any more
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
@@ -116,7 +107,7 @@ public class ModifyNamespaceProcedure
   }
 
   @Override
-  protected boolean isRollbackSupported(final ModifyNamespaceState state) {
+  protected boolean isRollbackSupported(ModifyNamespaceState state) {
     switch (state) {
       case MODIFY_NAMESPACE_PREPARE:
         return true;
@@ -126,12 +117,12 @@ public class ModifyNamespaceProcedure
   }
 
   @Override
-  protected ModifyNamespaceState getState(final int stateId) {
-    return ModifyNamespaceState.valueOf(stateId);
+  protected ModifyNamespaceState getState(int stateId) {
+    return ModifyNamespaceState.forNumber(stateId);
   }
 
   @Override
-  protected int getStateId(final ModifyNamespaceState state) {
+  protected int getStateId(ModifyNamespaceState state) {
     return state.getNumber();
   }
 
@@ -141,13 +132,12 @@ public class ModifyNamespaceProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData.Builder modifyNamespaceMsg =
-        MasterProcedureProtos.ModifyNamespaceStateData.newBuilder().setNamespaceDescriptor(
-          ProtobufUtil.toProtoNamespaceDescriptor(this.newNsDescriptor));
+      MasterProcedureProtos.ModifyNamespaceStateData.newBuilder()
+        .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(this.newNsDescriptor));
     if (this.oldNsDescriptor != null) {
       modifyNamespaceMsg.setUnmodifiedNamespaceDescriptor(
         ProtobufUtil.toProtoNamespaceDescriptor(this.oldNsDescriptor));
@@ -156,17 +146,16 @@ public class ModifyNamespaceProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ModifyNamespaceStateData modifyNamespaceMsg =
-        serializer.deserialize(MasterProcedureProtos.ModifyNamespaceStateData.class);
+      serializer.deserialize(MasterProcedureProtos.ModifyNamespaceStateData.class);
     newNsDescriptor =
-        ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getNamespaceDescriptor());
+      ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getNamespaceDescriptor());
     if (modifyNamespaceMsg.hasUnmodifiedNamespaceDescriptor()) {
       oldNsDescriptor =
-          ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getUnmodifiedNamespaceDescriptor());
+        ProtobufUtil.toNamespaceDescriptor(modifyNamespaceMsg.getUnmodifiedNamespaceDescriptor());
     }
   }
 
@@ -187,8 +176,8 @@ public class ModifyNamespaceProcedure
    */
   private boolean prepareModify(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName()) == false) {
-      setFailure("master-modify-namespace", new NamespaceNotFoundException(
-            newNsDescriptor.getName()));
+      setFailure("master-modify-namespace",
+        new NamespaceNotFoundException(newNsDescriptor.getName()));
       return false;
     }
     try {
@@ -201,39 +190,5 @@ public class ModifyNamespaceProcedure
     // This is used for rollback
     oldNsDescriptor = getTableNamespaceManager(env).get(newNsDescriptor.getName());
     return true;
-  }
-
-  /**
-   * Insert/update the row into namespace table
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  private void insertIntoNSTable(final MasterProcedureEnv env) throws IOException {
-    getTableNamespaceManager(env).insertIntoNSTable(newNsDescriptor);
-  }
-
-  /**
-   * Update ZooKeeper.
-   * @param env MasterProcedureEnv
-   * @throws IOException
-   */
-  private void updateZKNamespaceManager(final MasterProcedureEnv env) throws IOException {
-    getTableNamespaceManager(env).updateZKNamespaceManager(newNsDescriptor);
-  }
-
-  private TableNamespaceManager getTableNamespaceManager(final MasterProcedureEnv env) {
-    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
-  }
-
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
   }
 }

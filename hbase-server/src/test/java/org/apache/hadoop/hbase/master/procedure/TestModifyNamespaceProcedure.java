@@ -240,11 +240,9 @@ public class TestModifyNamespaceProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Modify
-    nsd.setConfiguration(nsKey, nsValue);
-
     // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId = procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(),
+      NamespaceDescriptor.create(nsd).addConfiguration(nsKey, nsValue).build()));
 
     int lastStep = 2; // failing before MODIFY_NAMESPACE_UPDATE_NS_TABLE
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);

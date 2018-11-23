@@ -200,7 +200,7 @@ public class TestMasterOperationsForRegionReplicas {
       StartMiniClusterOption option = StartMiniClusterOption.builder()
           .numRegionServers(numSlaves).rsPorts(rsports).build();
       TEST_UTIL.startMiniHBaseCluster(option);
-      TEST_UTIL.waitTableEnabled(tableName);
+      TEST_UTIL.waitTableAvailable(tableName);
       validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
@@ -208,7 +208,7 @@ public class TestMasterOperationsForRegionReplicas {
       // one server running
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster();
-      TEST_UTIL.waitTableEnabled(tableName);
+      TEST_UTIL.waitTableAvailable(tableName);
       validateSingleRegionServerAssignment(ADMIN.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { //restore the cluster
         TEST_UTIL.getMiniHBaseCluster().startRegionServer();
@@ -334,7 +334,7 @@ public class TestMasterOperationsForRegionReplicas {
       connection);
     snapshot.initialize();
     Map<RegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
-    assert(regionToServerMap.size() == numRegions * numReplica + 1); //'1' for the namespace
+    assert(regionToServerMap.size() == numRegions * numReplica);
     Map<ServerName, List<RegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
     for (Map.Entry<ServerName, List<RegionInfo>> entry : serverToRegionMap.entrySet()) {
       if (entry.getKey().equals(util.getHBaseCluster().getMaster().getServerName())) {
@@ -361,14 +361,14 @@ public class TestMasterOperationsForRegionReplicas {
       connection);
     snapshot.initialize();
     Map<RegionInfo, ServerName>  regionToServerMap = snapshot.getRegionToRegionServerMap();
-    assertEquals(regionToServerMap.size(), numRegions * numReplica + 1);
+    assertEquals(regionToServerMap.size(), numRegions * numReplica);
     Map<ServerName, List<RegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
     assertEquals("One Region Only", 1, serverToRegionMap.keySet().size());
     for (Map.Entry<ServerName, List<RegionInfo>> entry : serverToRegionMap.entrySet()) {
       if (entry.getKey().equals(TEST_UTIL.getHBaseCluster().getMaster().getServerName())) {
         continue;
       }
-      assertEquals(entry.getValue().size(), numRegions * numReplica + 1);
+      assertEquals(entry.getValue().size(), numRegions * numReplica);
     }
   }
 }
