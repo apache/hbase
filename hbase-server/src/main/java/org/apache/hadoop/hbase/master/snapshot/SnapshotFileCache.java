@@ -189,7 +189,7 @@ public class SnapshotFileCache implements Stoppable {
     }
     if (lock == null || lock.tryLock()) {
       try {
-        if (snapshotManager == null || snapshotManager.isTakingAnySnapshot()) {
+        if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
           LOG.warn("Not checking unreferenced files since snapshot is running, it will "
               + "skip to clean the HFiles this time");
           return unReferencedFiles;
