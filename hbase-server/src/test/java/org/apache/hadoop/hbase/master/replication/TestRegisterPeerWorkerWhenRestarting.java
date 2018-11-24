@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.replication;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyState.DISPATCH_WALS_VALUE;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverStandbyState.UNREGISTER_PEER_FROM_WORKER_STORAGE_VALUE;
-import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -119,9 +118,9 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     mt.join();
     FAIL = false;
     t.join();
-    // make sure the new master can finish the transiting
-    assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
-      UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID));
+    // make sure the new master can finish the transition
+    UTIL2.waitFor(60000, () -> UTIL2.getAdmin()
+      .getReplicationPeerSyncReplicationState(PEER_ID) == SyncReplicationState.DOWNGRADE_ACTIVE);
     verify(UTIL2, 0, 100);
   }
 }
