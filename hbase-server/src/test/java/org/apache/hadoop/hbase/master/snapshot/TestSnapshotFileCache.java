@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,13 +26,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
@@ -50,11 +45,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Test that we correctly reload the cache, filter directories, etc.
@@ -98,10 +88,8 @@ public class TestSnapshotFileCache {
         "test-snapshot-file-cache-refresh", new SnapshotFiles());
 
     createAndTestSnapshotV1(cache, "snapshot1a", false, true);
-    createAndTestSnapshotV1(cache, "snapshot1b", true, true);
 
     createAndTestSnapshotV2(cache, "snapshot2a", false, true);
-    createAndTestSnapshotV2(cache, "snapshot2b", true, true);
   }
 
   @Test
@@ -130,78 +118,6 @@ public class TestSnapshotFileCache {
     // Add a new non-tmp snapshot
     createAndTestSnapshotV1(cache, "snapshot0v1", false, false);
     createAndTestSnapshotV1(cache, "snapshot0v2", false, false);
-
-    // Add a new tmp snapshot
-    createAndTestSnapshotV2(cache, "snapshot1", true, false);
-
-    // Add another tmp snapshot
-    createAndTestSnapshotV2(cache, "snapshot2", true, false);
-  }
-
-  @Test
-  public void testWeNeverCacheTmpDirAndLoadIt() throws Exception {
-
-    final AtomicInteger count = new AtomicInteger(0);
-    // don't refresh the cache unless we tell it to
-    long period = Long.MAX_VALUE;
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles()) {
-      @Override
-      List<String> getSnapshotsInProgress()
-              throws IOException {
-        List<String> result = super.getSnapshotsInProgress();
-        count.incrementAndGet();
-        return result;
-      }
-
-      @Override public void triggerCacheRefreshForTesting() {
-        super.triggerCacheRefreshForTesting();
-      }
-    };
-
-    SnapshotMock.SnapshotBuilder complete =
-        createAndTestSnapshotV1(cache, "snapshot", false, false);
-
-    int countBeforeCheck = count.get();
-
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
-
-    List<FileStatus> allStoreFiles = getStoreFilesForSnapshot(complete);
-    Iterable<FileStatus> deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
-    assertTrue(Iterables.isEmpty(deletableFiles));
-    // no need for tmp dir check as all files are accounted for.
-    assertEquals(0, count.get() - countBeforeCheck);
-
-
-    // add a random file to make sure we refresh
-    FileStatus randomFile = mockStoreFile(UTIL.getRandomUUID().toString());
-    allStoreFiles.add(randomFile);
-    deletableFiles = cache.getUnreferencedFiles(allStoreFiles, null);
-    assertEquals(randomFile, Iterables.getOnlyElement(deletableFiles));
-    assertEquals(1, count.get() - countBeforeCheck); // we check the tmp directory
-  }
-
-  private List<FileStatus> getStoreFilesForSnapshot(SnapshotMock.SnapshotBuilder builder)
-      throws IOException {
-    final List<FileStatus> allStoreFiles = Lists.newArrayList();
-    SnapshotReferenceUtil
-        .visitReferencedFiles(UTIL.getConfiguration(), fs, builder.getSnapshotsDir(),
-            new SnapshotReferenceUtil.SnapshotVisitor() {
-              @Override public void storeFile(RegionInfo regionInfo, String familyName,
-                  SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-                FileStatus status = mockStoreFile(storeFile.getName());
-                allStoreFiles.add(status);
-              }
-            });
-    return allStoreFiles;
-  }
-
-  private FileStatus mockStoreFile(String storeFileName) {
-    FileStatus status = mock(FileStatus.class);
-    Path path = mock(Path.class);
-    when(path.getName()).thenReturn(storeFileName);
-    when(status.getPath()).thenReturn(path);
-    return status;
   }
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
@@ -234,20 +150,12 @@ public class TestSnapshotFileCache {
     List<Path> files = new ArrayList<>();
     for (int i = 0; i < 3; ++i) {
       for (Path filePath: builder.addRegion()) {
-        if (tmp) {
-          // We should be able to find all the files while the snapshot creation is in-progress
-          FSUtils.logFileSystemState(fs, rootDir, LOG);
-          assertFalse("Cache didn't find " + filePath,
-            contains(getNonSnapshotFiles(cache, filePath), filePath));
-        }
         files.add(filePath);
       }
     }
 
     // Finalize the snapshot
-    if (!tmp) {
-      builder.commit();
-    }
+    builder.commit();
 
     // Make sure that all files are still present
     for (Path path: files) {
