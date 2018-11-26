@@ -29,7 +29,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +39,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -182,7 +180,6 @@ public class SnapshotFileCache implements Stoppable {
       final SnapshotManager snapshotManager)
       throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
-    List<String> snapshotsInProgress = null;
     boolean refreshed = false;
     Lock lock = null;
     if (snapshotManager != null) {
@@ -202,12 +199,6 @@ public class SnapshotFileCache implements Stoppable {
             refreshed = true;
           }
           if (cache.contains(fileName)) {
-            continue;
-          }
-          if (snapshotsInProgress == null) {
-            snapshotsInProgress = getSnapshotsInProgress();
-          }
-          if (snapshotsInProgress.contains(fileName)) {
             continue;
           }
           unReferencedFiles.add(file);
@@ -284,31 +275,6 @@ public class SnapshotFileCache implements Stoppable {
     // 4. set the snapshots we are tracking
     this.snapshots.clear();
     this.snapshots.putAll(known);
-  }
-
-  @VisibleForTesting
-  List<String> getSnapshotsInProgress() throws IOException {
-    List<String> snapshotInProgress = Lists.newArrayList();
-    // only add those files to the cache, but not to the known snapshots
-    Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
-    FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
-    if (running != null) {
-      for (FileStatus run : running) {
-        try {
-          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
-        } catch (CorruptedSnapshotException e) {
-          // See HBASE-16464
-          if (e.getCause() instanceof FileNotFoundException) {
-            // If the snapshot is corrupt, we will delete it
-            fs.delete(run.getPath(), true);
-            LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
-          } else {
-            throw e;
-          }
-        }
-      }
-    }
-    return snapshotInProgress;
   }
 
   /**
