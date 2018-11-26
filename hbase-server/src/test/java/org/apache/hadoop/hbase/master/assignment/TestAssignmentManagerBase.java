@@ -186,7 +186,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected byte[] waitOnFuture(final Future<byte[]> future) throws Exception {
     try {
-      return future.get(5, TimeUnit.SECONDS);
+      return future.get(60, TimeUnit.SECONDS);
     } catch (ExecutionException e) {
       LOG.info("ExecutionException", e);
       Exception ee = (Exception) e.getCause();

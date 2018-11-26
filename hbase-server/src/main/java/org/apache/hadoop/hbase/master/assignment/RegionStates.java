@@ -357,22 +357,6 @@ public class RegionStates {
         ((hri.isOffline() || hri.isSplit()) && offline);
   }
 
-  /**
-   * Returns the set of regions hosted by the specified server
-   * @param serverName the server we are interested in
-   * @return set of RegionInfo hosted by the specified server
-   */
-  public List<RegionInfo> getServerRegionInfoSet(final ServerName serverName) {
-    ServerStateNode serverInfo = getServerNode(serverName);
-    if (serverInfo == null) {
-      return Collections.emptyList();
-    }
-
-    synchronized (serverInfo) {
-      return serverInfo.getRegionInfoList();
-    }
-  }
-
   // ============================================================================================
   // Split helpers
   // These methods will only be called in ServerCrashProcedure, and at the end of SCP we will remove

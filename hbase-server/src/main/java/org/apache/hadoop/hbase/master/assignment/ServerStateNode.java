@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,23 +34,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class ServerStateNode implements Comparable<ServerStateNode> {
 
-  private static final class ServerReportEvent extends ProcedureEvent<ServerName> {
-    public ServerReportEvent(final ServerName serverName) {
-      super(serverName);
-    }
-  }
-
-  private final ServerReportEvent reportEvent;
-
   private final Set<RegionStateNode> regions;
   private final ServerName serverName;
 
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
   private volatile ServerState state = ServerState.ONLINE;
 
-  public ServerStateNode(final ServerName serverName) {
+  public ServerStateNode(ServerName serverName) {
     this.serverName = serverName;
     this.regions = ConcurrentHashMap.newKeySet();
-    this.reportEvent = new ServerReportEvent(serverName);
   }
 
   public ServerName getServerName() {
@@ -56,10 +52,6 @@ class ServerStateNode implements Comparable<ServerStateNode> {
 
   public ServerState getState() {
     return state;
-  }
-
-  public ProcedureEvent<?> getReportEvent() {
-    return reportEvent;
   }
 
   public boolean isInState(final ServerState... expected) {
@@ -76,20 +68,17 @@ class ServerStateNode implements Comparable<ServerStateNode> {
     this.state = state;
   }
 
-  public Set<RegionStateNode> getRegions() {
-    return regions;
-  }
-
   public int getRegionCount() {
     return regions.size();
   }
 
-  public ArrayList<RegionInfo> getRegionInfoList() {
-    ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(regions.size());
-    for (RegionStateNode region : regions) {
-      hris.add(region.getRegionInfo());
-    }
-    return hris;
+  public List<RegionInfo> getRegionInfoList() {
+    return regions.stream().map(RegionStateNode::getRegionInfo).collect(Collectors.toList());
+  }
+
+  public List<RegionInfo> getSystemRegionInfoList() {
+    return regions.stream().filter(RegionStateNode::isSystemTable)
+      .map(RegionStateNode::getRegionInfo).collect(Collectors.toList());
   }
 
   public void addRegion(final RegionStateNode regionNode) {
@@ -98,6 +87,14 @@ class ServerStateNode implements Comparable<ServerStateNode> {
 
   public void removeRegion(final RegionStateNode regionNode) {
     this.regions.remove(regionNode);
+  }
+
+  public Lock readLock() {
+    return lock.readLock();
+  }
+
+  public Lock writeLock() {
+    return lock.writeLock();
   }
 
   @Override
