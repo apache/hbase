@@ -500,11 +500,9 @@ public class TransitRegionStateProcedure
       case REGION_STATE_TRANSITION_CONFIRM_CLOSED:
       case REGION_STATE_TRANSITION_CONFIRM_OPENED:
         // for these 3 states, the region may still be online on the crashed server
-        if (serverName.equals(regionNode.getRegionLocation())) {
-          env.getAssignmentManager().regionClosed(regionNode, false);
-          if (currentState != RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE) {
-            regionNode.getProcedureEvent().wake(env.getProcedureScheduler());
-          }
+        env.getAssignmentManager().regionClosed(regionNode, false);
+        if (currentState != RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE) {
+          regionNode.getProcedureEvent().wake(env.getProcedureScheduler());
         }
         break;
       default:

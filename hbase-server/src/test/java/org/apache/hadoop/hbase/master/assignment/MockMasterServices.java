@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -28,7 +27,6 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -51,7 +49,6 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -93,19 +90,15 @@ public class MockMasterServices extends MockNoopMasterServices {
   private final ClusterConnection connection;
   private final LoadBalancer balancer;
   private final ServerManager serverManager;
-  // Set of regions on a 'server'. Populated externally. Used in below faking 'cluster'.
-  private final NavigableMap<ServerName, SortedSet<byte []>> regionsToRegionServers;
 
-  private final ProcedureEvent initialized = new ProcedureEvent("master initialized");
+  private final ProcedureEvent<?> initialized = new ProcedureEvent<>("master initialized");
   public static final String DEFAULT_COLUMN_FAMILY_NAME = "cf";
   public static final ServerName MOCK_MASTER_SERVERNAME =
       ServerName.valueOf("mockmaster.example.org", 1234, -1L);
 
   public MockMasterServices(Configuration conf,
-      NavigableMap<ServerName, SortedSet<byte []>> regionsToRegionServers)
-  throws IOException {
+      NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers) throws IOException {
     super(conf);
-    this.regionsToRegionServers = regionsToRegionServers;
     Superusers.initialize(conf);
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
@@ -119,15 +112,6 @@ public class MockMasterServices extends MockNoopMasterServices {
       @Override
       public boolean isTableDisabled(final TableName tableName) {
         return false;
-      }
-
-      @Override
-      protected boolean waitServerReportEvent(ServerName serverName, Procedure proc) {
-        // Make a report with current state of the server 'serverName' before we call wait..
-        SortedSet<byte[]> regions = regionsToRegionServers.get(serverName);
-        getAssignmentManager().reportOnlineRegions(serverName,
-          regions == null ? new HashSet<byte[]>() : regions);
-        return super.waitServerReportEvent(serverName, proc);
       }
     };
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
@@ -176,7 +160,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.assignmentManager.start();
     for (int i = 0; i < numServes; ++i) {
       ServerName sn = ServerName.valueOf("localhost", 100 + i, 1);
-      serverManager.regionServerReport(sn, new ServerLoad(ServerMetricsBuilder.of(sn)));
+      serverManager.regionServerReport(sn, ServerMetricsBuilder.of(sn));
     }
     this.procedureExecutor.getEnvironment().setEventReady(initialized, true);
   }
@@ -202,7 +186,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       return;
     }
     ServerName sn = ServerName.valueOf(serverName.getAddress().toString(), startCode);
-    serverManager.regionServerReport(sn, new ServerLoad(ServerMetricsBuilder.of(sn)));
+    serverManager.regionServerReport(sn, ServerMetricsBuilder.of(sn));
   }
 
   @Override
@@ -260,7 +244,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   @Override
-  public ProcedureEvent getInitializedEvent() {
+  public ProcedureEvent<?> getInitializedEvent() {
     return this.initialized;
   }
 

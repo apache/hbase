@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -99,7 +98,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * Unassigns are triggered by DisableTable, Split, Merge
  */
 @InterfaceAudience.Private
-public class AssignmentManager implements ServerListener {
+public class AssignmentManager {
   private static final Logger LOG = LoggerFactory.getLogger(AssignmentManager.class);
 
   // TODO: AMv2
@@ -193,9 +192,6 @@ public class AssignmentManager implements ServerListener {
 
     LOG.trace("Starting assignment manager");
 
-    // Register Server Listener
-    master.getServerManager().registerListener(this);
-
     // Start the Assignment Thread
     startAssignmentThread();
 
@@ -275,9 +271,6 @@ public class AssignmentManager implements ServerListener {
     // Stop the RegionStateStore
     regionStates.clear();
 
-    // Unregister Server Listener
-    master.getServerManager().unregisterListener(this);
-
     // Update meta events (for testing)
     if (hasProcExecutor) {
       metaLoadEvent.suspend();
@@ -319,14 +312,31 @@ public class AssignmentManager implements ServerListener {
     return regionStates;
   }
 
+  /**
+   * Returns the regions hosted by the specified server.
+   * <p/>
+   * Notice that, for SCP, after we submit the SCP, no one can change the region list for the
+   * ServerStateNode so we do not need any locks here. And for other usage, this can only give you a
+   * snapshot of the current region list for this server, which means, right after you get the
+   * region list, new regions may be moved to this server or some regions may be moved out from this
+   * server, so you should not use it critically if you need strong consistency.
+   */
+  public List<RegionInfo> getRegionsOnServer(ServerName serverName) {
+    ServerStateNode serverInfo = regionStates.getServerNode(serverName);
+    if (serverInfo == null) {
+      return Collections.emptyList();
+    }
+    return serverInfo.getRegionInfoList();
+  }
+
   public RegionStateStore getRegionStateStore() {
     return regionStateStore;
   }
 
   public List<ServerName> getFavoredNodes(final RegionInfo regionInfo) {
-    return this.shouldAssignRegionsWithFavoredNodes?
-        ((FavoredStochasticBalancer)getBalancer()).getFavoredNodes(regionInfo):
-          ServerName.EMPTY_SERVER_LIST;
+    return this.shouldAssignRegionsWithFavoredNodes
+      ? ((FavoredStochasticBalancer) getBalancer()).getFavoredNodes(regionInfo)
+      : ServerName.EMPTY_SERVER_LIST;
   }
 
   // ============================================================================================
@@ -522,12 +532,11 @@ public class AssignmentManager implements ServerListener {
   }
 
   private List<RegionInfo> getSystemTables(ServerName serverName) {
-    Set<RegionStateNode> regions = this.getRegionStates().getServerNode(serverName).getRegions();
-    if (regions == null) {
+    ServerStateNode serverNode = regionStates.getServerNode(serverName);
+    if (serverNode == null) {
       return Collections.emptyList();
     }
-    return regions.stream().map(RegionStateNode::getRegionInfo)
-      .filter(r -> r.getTable().isSystemTable()).collect(Collectors.toList());
+    return serverNode.getSystemRegionInfoList();
   }
 
   private void preTransitCheck(RegionStateNode regionNode, RegionState.State[] expectedStates)
@@ -817,54 +826,79 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   //  RS Region Transition Report helpers
   // ============================================================================================
-  // TODO: Move this code in MasterRpcServices and call on specific event?
+  private void reportRegionStateTransition(ReportRegionStateTransitionResponse.Builder builder,
+      ServerName serverName, List<RegionStateTransition> transitionList) throws IOException {
+    for (RegionStateTransition transition : transitionList) {
+      switch (transition.getTransitionCode()) {
+        case OPENED:
+        case FAILED_OPEN:
+        case CLOSED:
+          assert transition.getRegionInfoCount() == 1 : transition;
+          final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+          updateRegionTransition(serverName, transition.getTransitionCode(), hri,
+            transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM);
+          break;
+        case READY_TO_SPLIT:
+        case SPLIT:
+        case SPLIT_REVERTED:
+          assert transition.getRegionInfoCount() == 3 : transition;
+          final RegionInfo parent = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+          final RegionInfo splitA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
+          final RegionInfo splitB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
+          updateRegionSplitTransition(serverName, transition.getTransitionCode(), parent, splitA,
+            splitB);
+          break;
+        case READY_TO_MERGE:
+        case MERGED:
+        case MERGE_REVERTED:
+          assert transition.getRegionInfoCount() == 3 : transition;
+          final RegionInfo merged = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+          final RegionInfo mergeA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
+          final RegionInfo mergeB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
+          updateRegionMergeTransition(serverName, transition.getTransitionCode(), merged, mergeA,
+            mergeB);
+          break;
+      }
+    }
+  }
+
   public ReportRegionStateTransitionResponse reportRegionStateTransition(
       final ReportRegionStateTransitionRequest req) throws PleaseHoldException {
-    final ReportRegionStateTransitionResponse.Builder builder =
+    ReportRegionStateTransitionResponse.Builder builder =
         ReportRegionStateTransitionResponse.newBuilder();
-    final ServerName serverName = ProtobufUtil.toServerName(req.getServer());
+    ServerName serverName = ProtobufUtil.toServerName(req.getServer());
+    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
+    // here we have to acquire a read lock instead of a simple exclusive lock. This is because that
+    // we should not block other reportRegionStateTransition call from the same region server. This
+    // is not only about performance, but also to prevent dead lock. Think of the meta region is
+    // also on the same region server and you hold the lock which blocks the
+    // reportRegionStateTransition for meta, and since meta is not online, you will block inside the
+    // lock protection to wait for meta online...
+    serverNode.readLock().lock();
     try {
-      for (RegionStateTransition transition: req.getTransitionList()) {
-        switch (transition.getTransitionCode()) {
-          case OPENED:
-          case FAILED_OPEN:
-          case CLOSED:
-            assert transition.getRegionInfoCount() == 1 : transition;
-            final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
-            updateRegionTransition(serverName, transition.getTransitionCode(), hri,
-                transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM);
-            break;
-          case READY_TO_SPLIT:
-          case SPLIT:
-          case SPLIT_REVERTED:
-            assert transition.getRegionInfoCount() == 3 : transition;
-            final RegionInfo parent = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
-            final RegionInfo splitA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
-            final RegionInfo splitB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
-            updateRegionSplitTransition(serverName, transition.getTransitionCode(),
-              parent, splitA, splitB);
-            break;
-          case READY_TO_MERGE:
-          case MERGED:
-          case MERGE_REVERTED:
-            assert transition.getRegionInfoCount() == 3 : transition;
-            final RegionInfo merged = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
-            final RegionInfo mergeA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
-            final RegionInfo mergeB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
-            updateRegionMergeTransition(serverName, transition.getTransitionCode(),
-              merged, mergeA, mergeB);
-            break;
+      // we only accept reportRegionStateTransition if the region server is online, see the comment
+      // above in submitServerCrash method and HBASE-21508 for more details.
+      if (serverNode.isInState(ServerState.ONLINE)) {
+        try {
+          reportRegionStateTransition(builder, serverName, req.getTransitionList());
+        } catch (PleaseHoldException e) {
+          LOG.trace("Failed transition ", e);
+          throw e;
+        } catch (UnsupportedOperationException | IOException e) {
+          // TODO: at the moment we have a single error message and the RS will abort
+          // if the master says that one of the region transitions failed.
+          LOG.warn("Failed transition", e);
+          builder.setErrorMessage("Failed transition " + e.getMessage());
         }
+      } else {
+        LOG.warn("The region server {} is already dead, skip reportRegionStateTransition call",
+          serverName);
+        builder.setErrorMessage("You are dead");
       }
-    } catch (PleaseHoldException e) {
-      LOG.trace("Failed transition ", e);
-      throw e;
-    } catch (UnsupportedOperationException|IOException e) {
-      // TODO: at the moment we have a single error message and the RS will abort
-      // if the master says that one of the region transitions failed.
-      LOG.warn("Failed transition", e);
-      builder.setErrorMessage("Failed transition " + e.getMessage());
+    } finally {
+      serverNode.readLock().unlock();
     }
+
     return builder.build();
   }
 
@@ -1017,9 +1051,6 @@ public class AssignmentManager implements ServerListener {
     }
     // The Heartbeat tells us of what regions are on the region serve, check the state.
     checkOnlineRegionsReport(serverNode, regionNames);
-
-    // wake report event
-    wakeServerReportEvent(serverNode);
   }
 
   // just check and output possible inconsistency, without actually doing anything
@@ -1059,18 +1090,6 @@ public class AssignmentManager implements ServerListener {
         regionNode.unlock();
       }
     }
-  }
-
-  protected boolean waitServerReportEvent(ServerName serverName, Procedure<?> proc) {
-    final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
-    if (serverNode == null) {
-      LOG.warn("serverName=null; {}", proc);
-    }
-    return serverNode.getReportEvent().suspendIfNotReady(proc);
-  }
-
-  protected void wakeServerReportEvent(final ServerStateNode serverNode) {
-    serverNode.getReportEvent().wake(getProcedureScheduler());
   }
 
   // ============================================================================================
@@ -1321,13 +1340,27 @@ public class AssignmentManager implements ServerListener {
     return 0;
   }
 
-  public long submitServerCrash(final ServerName serverName, final boolean shouldSplitWal) {
-    boolean carryingMeta = isCarryingMeta(serverName);
-    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    long pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-        serverName, shouldSplitWal, carryingMeta));
-    LOG.debug("Added=" + serverName
-        + " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+  public long submitServerCrash(ServerName serverName, boolean shouldSplitWal) {
+    boolean carryingMeta;
+    long pid;
+    ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
+    // we hold the write lock here for fencing on reportRegionStateTransition. Once we set the
+    // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
+    // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
+    // sure that, the region list fetched by SCP will not be changed any more.
+    serverNode.writeLock().lock();
+    try {
+      serverNode.setState(ServerState.CRASHED);
+      carryingMeta = isCarryingMeta(serverName);
+      ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
+      pid = procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(), serverName,
+        shouldSplitWal, carryingMeta));
+    } finally {
+      serverNode.writeLock().unlock();
+    }
+    LOG.info(
+      "Added {} to dead servers which carryingMeta={}, submitted ServerCrashProcedure pid={}",
+      serverName, carryingMeta, pid);
     return pid;
   }
 
@@ -1845,22 +1878,6 @@ public class AssignmentManager implements ServerListener {
         .filter((p)->!p.getSecond().equals(highestVersion))
         .map(Pair::getFirst)
         .collect(Collectors.toList());
-  }
-
-  // ============================================================================================
-  //  Server Helpers
-  // ============================================================================================
-  @Override
-  public void serverAdded(final ServerName serverName) {
-  }
-
-  @Override
-  public void serverRemoved(final ServerName serverName) {
-    final ServerStateNode serverNode = regionStates.getServerNode(serverName);
-    if (serverNode == null) return;
-
-    // just in case, wake procedures waiting for this server report
-    wakeServerReportEvent(serverNode);
   }
 
   @VisibleForTesting

@@ -713,12 +713,12 @@ public class TestAdmin2 {
     assertEquals(3, clusterRegionServers.size());
 
     HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
-    // Get a server that has regions. We will decommission two of the servers,
+    // Get a server that has meta online. We will decommission two of the servers,
     // leaving one online.
     int i;
     for (i = 0; i < clusterRegionServers.size(); i++) {
       List<RegionInfo> regionsOnServer = admin.getRegions(clusterRegionServers.get(i));
-      if (regionsOnServer.size() > 0) {
+      if (admin.getRegions(clusterRegionServers.get(i)).stream().anyMatch(p -> p.isMetaRegion())) {
         serversToDecommssion.put(clusterRegionServers.get(i), regionsOnServer);
         break;
       }

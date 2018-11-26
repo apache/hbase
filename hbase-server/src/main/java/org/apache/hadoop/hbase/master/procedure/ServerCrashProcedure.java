@@ -146,7 +146,7 @@ public class ServerCrashProcedure
           break;
         case SERVER_CRASH_GET_REGIONS:
           this.regionsOnCrashedServer =
-            services.getAssignmentManager().getRegionStates().getServerRegionInfoSet(serverName);
+            services.getAssignmentManager().getRegionsOnServer(serverName);
           // Where to go next? Depends on whether we should split logs at all or
           // if we should do distributed log splitting.
           if (!this.shouldSplitWal) {

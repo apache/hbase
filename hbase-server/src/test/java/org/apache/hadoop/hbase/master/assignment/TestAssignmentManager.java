@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -48,14 +47,6 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     HBaseClassTestRule.forClass(TestAssignmentManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManager.class);
-
-  @Test(expected = NullPointerException.class)
-  public void testWaitServerReportEventWithNullServer() throws UnexpectedStateException {
-    // Test what happens if we pass in null server. I'd expect it throws NPE.
-    if (this.am.waitServerReportEvent(null, null)) {
-      throw new UnexpectedStateException();
-    }
-  }
 
   @Test
   public void testAssignWithGoodExec() throws Exception {
