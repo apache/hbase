@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -126,16 +125,7 @@ public class TestSnapshotHFileCleaner {
     builder.addRegionV2();
     builder.corruptOneRegionManifest();
 
-    long period = Long.MAX_VALUE;
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
-    try {
-      cache.getSnapshotsInProgress();
-    } catch (CorruptedSnapshotException cse) {
-      LOG.info("Expected exception " + cse);
-    } finally {
-      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
-    }
+    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
   }
 
   /**
@@ -153,34 +143,6 @@ public class TestSnapshotHFileCleaner {
     builder.consolidate();
     builder.corruptDataManifest();
 
-    long period = Long.MAX_VALUE;
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
-    try {
-      cache.getSnapshotsInProgress();
-    } catch (CorruptedSnapshotException cse) {
-      LOG.info("Expected exception " + cse);
-    } finally {
-      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
-    }
-  }
-
-  /**
-  * HBASE-16464
-  */
-  @Test
-  public void testMissedTmpSnapshot() throws IOException {
-    SnapshotTestingUtils.SnapshotMock
-        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
-        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
-    builder.addRegionV2();
-    builder.missOneRegionSnapshotFile();
-
-      long period = Long.MAX_VALUE;
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFiles());
-    cache.getSnapshotsInProgress();
-    assertFalse(fs.exists(builder.getSnapshotsDir()));
+    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir), true);
   }
 }
