@@ -58,4 +58,15 @@ public class TestCustomWALCellCodec {
     assertEquals("Custom codec didn't get initialized with the right compression context!", null,
       codec.context);
   }
+
+  /**
+   * Test that a custom {@link WALCellCodec} will fail if provided an invalid
+   * code class.
+   */
+  @Test(expected = RuntimeException.class)
+  public void testCreatePreparesCodecInvalidClass() throws Exception {
+    Configuration conf = new Configuration(false);
+    conf.setStrings(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, "org.apache.hbase.wal.NoSuchClass");
+    WALCellCodec.create(conf, null, null);
+  }
 }

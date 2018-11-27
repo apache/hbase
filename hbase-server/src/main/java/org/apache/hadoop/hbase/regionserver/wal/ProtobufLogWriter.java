@@ -69,7 +69,7 @@ public class ProtobufLogWriter extends WriterBase {
       builder.setWriterClsName(ProtobufLogWriter.class.getSimpleName());
     }
     if (!builder.hasCellCodecClsName()) {
-      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf));
+      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf).getName());
     }
     return builder.build();
   }
