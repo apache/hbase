@@ -295,7 +295,7 @@ public class WALPlayer extends Configured implements Tool {
       // No reducers.
       job.setNumReduceTasks(0);
     }
-    String codecCls = WALCellCodec.getWALCellCodecClass(conf);
+    String codecCls = WALCellCodec.getWALCellCodecClass(conf).getName();
     try {
       TableMapReduceUtil.addDependencyJars(conf, Class.forName(codecCls));
     } catch (Exception e) {
