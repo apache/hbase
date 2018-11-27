@@ -24,22 +24,32 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -52,7 +62,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestRestoreSnapshotHelper {
 
   @ClassRule
@@ -70,6 +80,16 @@ public class TestRestoreSnapshotHelper {
   protected Path rootDir;
 
   protected void setupConf(Configuration conf) {
+  }
+
+  @BeforeClass
+  public static void setupCluster() throws Exception {
+    TEST_UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void tearDownCluster() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Before
@@ -99,6 +119,51 @@ public class TestRestoreSnapshotHelper {
   @Test
   public void testRestoreWithNamespace() throws IOException {
     restoreAndVerify("snapshot", "namespace1:testRestoreWithNamespace");
+  }
+
+  @Test
+  public void testNoHFileLinkInRootDir() throws IOException {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    FSUtils.setRootDir(conf, rootDir);
+    fs = rootDir.getFileSystem(conf);
+
+    TableName tableName = TableName.valueOf("testNoHFileLinkInRootDir");
+    String snapshotName = tableName.getNameAsString() + "-snapshot";
+    createTableAndSnapshot(tableName, snapshotName);
+
+    Path restoreDir = new Path("/hbase/.tmp-restore");
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    checkNoHFileLinkInTableDir(tableName);
+  }
+
+  protected void createTableAndSnapshot(TableName tableName, String snapshotName)
+      throws IOException {
+    byte[] column = Bytes.toBytes("A");
+    Table table = TEST_UTIL.createTable(tableName, column, 2);
+    TEST_UTIL.loadTable(table, column);
+    TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
+  }
+
+  private void checkNoHFileLinkInTableDir(TableName tableName) throws IOException {
+    Path[] tableDirs = new Path[] { CommonFSUtils.getTableDir(rootDir, tableName),
+        CommonFSUtils.getTableDir(new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY), tableName),
+        CommonFSUtils.getTableDir(MobUtils.getMobHome(rootDir), tableName) };
+    for (Path tableDir : tableDirs) {
+      Assert.assertFalse(hasHFileLink(tableDir));
+    }
+  }
+
+  private boolean hasHFileLink(Path tableDir) throws IOException {
+    if (fs.exists(tableDir)) {
+      RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(tableDir, true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus fileStatus = iterator.next();
+        if (fileStatus.isFile() && HFileLink.isHFileLink(fileStatus.getPath())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private void restoreAndVerify(final String snapshotName, final String tableName) throws IOException {
