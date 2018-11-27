@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -94,6 +96,35 @@ public class TestMaster {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * Return the region and current deployment for the region containing the given row. If the region
+   * cannot be found, returns null. If it is found, but not currently deployed, the second element
+   * of the pair may be null.
+   */
+  private Pair<RegionInfo, ServerName> getTableRegionForRow(HMaster master, TableName tableName,
+      byte[] rowKey) throws IOException {
+    final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
+
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      @Override
+      public boolean visit(Result data) throws IOException {
+        if (data == null || data.size() <= 0) {
+          return true;
+        }
+        Pair<RegionInfo, ServerName> pair = new Pair<>(MetaTableAccessor.getRegionInfo(data),
+          MetaTableAccessor.getServerName(data, 0));
+        if (!pair.getFirst().getTable().equals(tableName)) {
+          return false;
+        }
+        result.set(pair);
+        return true;
+      }
+    };
+
+    MetaTableAccessor.scanMeta(master.getConnection(), visitor, tableName, rowKey, 1);
+    return result.get();
+  }
+
   @Test
   @SuppressWarnings("deprecation")
   public void testMasterOpsWhileSplitting() throws Exception {
@@ -128,8 +159,7 @@ public class TestMaster {
     // We have three regions because one is split-in-progress
     assertEquals(3, tableRegions.size());
     LOG.info("Making sure we can call getTableRegionClosest while opening");
-    Pair<RegionInfo, ServerName> pair =
-        m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
+    Pair<RegionInfo, ServerName> pair = getTableRegionForRow(m, TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<RegionInfo, ServerName> tableRegionFromName =
         MetaTableAccessor.getRegion(m.getConnection(),
