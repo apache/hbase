@@ -24,7 +24,6 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -87,8 +86,8 @@ public class WALCellCodec implements Codec {
     this.compression = compression;
   }
 
-  public static String getWALCellCodecClass(Configuration conf) {
-    return conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
+  public static Class<?> getWALCellCodecClass(Configuration conf) {
+    return conf.getClass(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class);
   }
 
   /**
@@ -107,7 +106,7 @@ public class WALCellCodec implements Codec {
   public static WALCellCodec create(Configuration conf, String cellCodecClsName,
       CompressionContext compression) throws UnsupportedOperationException {
     if (cellCodecClsName == null) {
-      cellCodecClsName = getWALCellCodecClass(conf);
+      cellCodecClsName = getWALCellCodecClass(conf).getName();
     }
     return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
         { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
@@ -126,7 +125,7 @@ public class WALCellCodec implements Codec {
    */
   public static WALCellCodec create(Configuration conf,
       CompressionContext compression) throws UnsupportedOperationException {
-    String cellCodecClsName = getWALCellCodecClass(conf);
+    String cellCodecClsName = getWALCellCodecClass(conf).getName();
     return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
         { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
   }

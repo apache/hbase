@@ -80,7 +80,8 @@ public abstract class AbstractProtobufLogWriter {
       builder.setWriterClsName(getWriterClassName());
     }
     if (!builder.hasCellCodecClsName()) {
-      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf));
+      builder.setCellCodecClsName(
+          WALCellCodec.getWALCellCodecClass(conf).getName());
     }
     return builder.build();
   }
