@@ -620,7 +620,7 @@ public class RestoreSnapshotHelper {
   private void cloneHdfsMobRegion(final Map<String, SnapshotRegionManifest> regionManifests,
       final RegionInfo region) throws IOException {
     // clone region info (change embedded tableName with the new one)
-    Path clonedRegionPath = MobUtils.getMobRegionPath(conf, tableDesc.getTableName());
+    Path clonedRegionPath = MobUtils.getMobRegionPath(rootDir, tableDesc.getTableName());
     cloneRegion(clonedRegionPath, region, regionManifests.get(region.getEncodedName()));
   }
 
