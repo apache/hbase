@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.9
+Release Notes - HBase - Version 1.2.9 2018/11/27
 
 ** Sub-task
     * [HBASE-21347] - Backport HBASE-21200 "Memstore flush doesn't finish because of seekToPreviousRow() in memstore scanner." to branch-1
