@@ -47,7 +47,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -84,7 +83,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2516,42 +2514,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         return "DisableTableProcedure";
       }
     });
-  }
-
-  /**
-   * Return the region and current deployment for the region containing
-   * the given row. If the region cannot be found, returns null. If it
-   * is found, but not currently deployed, the second element of the pair
-   * may be null.
-   */
-  @VisibleForTesting // Used by TestMaster.
-  Pair<RegionInfo, ServerName> getTableRegionForRow(
-      final TableName tableName, final byte [] rowKey)
-  throws IOException {
-    final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
-
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
-        @Override
-        public boolean visit(Result data) throws IOException {
-          if (data == null || data.size() <= 0) {
-            return true;
-          }
-          Pair<RegionInfo, ServerName> pair =
-              new Pair(MetaTableAccessor.getRegionInfo(data),
-                  MetaTableAccessor.getServerName(data,0));
-          if (pair == null) {
-            return false;
-          }
-          if (!pair.getFirst().getTable().equals(tableName)) {
-            return false;
-          }
-          result.set(pair);
-          return true;
-        }
-    };
-
-    MetaTableAccessor.scanMeta(clusterConnection, visitor, tableName, rowKey, 1);
-    return result.get();
   }
 
   private long modifyTable(final TableName tableName,
