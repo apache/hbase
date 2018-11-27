@@ -21,10 +21,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.regionserver.CellSink;
 
 /**
  * Base class for cell sink that separates the provided cells into multiple files.
@@ -117,12 +119,9 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   @Override
   public void beforeShipped() throws IOException {
-    Collection<StoreFileWriter> writers = writers();
-    if (writers != null) {
-      for (StoreFileWriter writer : writers) {
-        if (writer != null) {
-          writer.beforeShipped();
-        }
+    if (this.writers() != null) {
+      for (StoreFileWriter writer : writers()) {
+        writer.beforeShipped();
       }
     }
   }
