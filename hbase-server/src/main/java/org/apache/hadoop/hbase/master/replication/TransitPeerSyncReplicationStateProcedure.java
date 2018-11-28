@@ -50,13 +50,15 @@ public class TransitPeerSyncReplicationStateProcedure
     extends AbstractPeerProcedure<PeerSyncReplicationStateTransitionState> {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TransitPeerSyncReplicationStateProcedure.class);
+    LoggerFactory.getLogger(TransitPeerSyncReplicationStateProcedure.class);
 
   protected SyncReplicationState fromState;
 
   private SyncReplicationState toState;
 
   private boolean enabled;
+
+  private boolean serial;
 
   public TransitPeerSyncReplicationStateProcedure() {
   }
@@ -75,8 +77,8 @@ public class TransitPeerSyncReplicationStateProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     TransitPeerSyncReplicationStateStateData.Builder builder =
-        TransitPeerSyncReplicationStateStateData.newBuilder()
-          .setToState(ReplicationPeerConfigUtil.toSyncReplicationState(toState));
+      TransitPeerSyncReplicationStateStateData.newBuilder()
+        .setToState(ReplicationPeerConfigUtil.toSyncReplicationState(toState));
     if (fromState != null) {
       builder.setFromState(ReplicationPeerConfigUtil.toSyncReplicationState(fromState));
     }
@@ -87,7 +89,7 @@ public class TransitPeerSyncReplicationStateProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     TransitPeerSyncReplicationStateStateData data =
-        serializer.deserialize(TransitPeerSyncReplicationStateStateData.class);
+      serializer.deserialize(TransitPeerSyncReplicationStateStateData.class);
     toState = ReplicationPeerConfigUtil.toSyncReplicationState(data.getToState());
     if (data.hasFromState()) {
       fromState = ReplicationPeerConfigUtil.toSyncReplicationState(data.getFromState());
@@ -129,6 +131,7 @@ public class TransitPeerSyncReplicationStateProcedure
     }
     fromState = desc.getSyncReplicationState();
     enabled = desc.isEnabled();
+    serial = desc.getPeerConfig().isSerial();
   }
 
   private void postTransit(MasterProcedureEnv env) throws IOException {
@@ -174,7 +177,11 @@ public class TransitPeerSyncReplicationStateProcedure
         : PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER);
     } else {
       assert toState.equals(SyncReplicationState.DOWNGRADE_ACTIVE);
-      setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
+      // for serial peer, we need to reopen all the regions and then update the last pushed sequence
+      // id, before replaying any remote wals, so that the serial replication will not be stuck, and
+      // also guarantee the order when replicating the remote wal back.
+      setNextState(serial ? PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER
+        : PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
     }
   }
 
@@ -183,6 +190,11 @@ public class TransitPeerSyncReplicationStateProcedure
       setNextState(
         enabled ? PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_SET_PEER_ENABLED
           : PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
+    } else if (fromState == SyncReplicationState.STANDBY) {
+      assert toState.equals(SyncReplicationState.DOWNGRADE_ACTIVE);
+      setNextState(serial && enabled
+        ? PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_SET_PEER_ENABLED
+        : PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
     } else {
       setNextState(
         PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
@@ -196,14 +208,20 @@ public class TransitPeerSyncReplicationStateProcedure
   @VisibleForTesting
   protected void setPeerNewSyncReplicationState(MasterProcedureEnv env)
       throws ReplicationException {
-    env.getReplicationPeerManager().setPeerNewSyncReplicationState(peerId, toState);
-    if (toState.equals(SyncReplicationState.STANDBY) && enabled) {
-      // disable the peer if we are going to transit to STANDBY state, as we need to remove
+    if (toState.equals(SyncReplicationState.STANDBY) ||
+      (fromState.equals(SyncReplicationState.STANDBY) && serial) && enabled) {
+      // Disable the peer if we are going to transit to STANDBY state, as we need to remove
       // all the pending replication files. If we do not disable the peer and delete the wal
       // queues on zk directly, RS will get NoNode exception when updating the wal position
       // and crash.
+      // Disable the peer if we are going to transit from STANDBY to DOWNGRADE_ACTIVE, and the
+      // replication is serial, as we need to update the lastPushedSequence id after we reopen all
+      // the regions, and for performance reason here we will update in batch, without using CAS, if
+      // we are still replicating at RS side, we may accidentally update the last pushed sequence id
+      // to a less value and cause the replication to be stuck.
       env.getReplicationPeerManager().disablePeer(peerId);
     }
+    env.getReplicationPeerManager().setPeerNewSyncReplicationState(peerId, toState);
   }
 
   @VisibleForTesting
@@ -240,7 +258,7 @@ public class TransitPeerSyncReplicationStateProcedure
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn(
             "Failed to update peer storage for peer {} when starting transiting sync " +
-                "replication peer state from {} to {}, sleep {} secs and retry",
+              "replication peer state from {} to {}, sleep {} secs and retry",
             peerId, fromState, toState, backoff / 1000, e);
           throw suspend(backoff);
         }
@@ -254,6 +272,30 @@ public class TransitPeerSyncReplicationStateProcedure
           .toArray(RefreshPeerProcedure[]::new));
         setNextStateAfterRefreshBegin();
         return Flow.HAS_MORE_STATE;
+      case REOPEN_ALL_REGIONS_IN_PEER:
+        reopenRegions(env);
+        if (fromState.equals(SyncReplicationState.STANDBY)) {
+          assert serial;
+          setNextState(
+            PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_UPDATE_LAST_PUSHED_SEQ_ID_FOR_SERIAL_PEER);
+        } else {
+          setNextState(
+            PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
+        }
+        return Flow.HAS_MORE_STATE;
+      case SYNC_REPLICATION_UPDATE_LAST_PUSHED_SEQ_ID_FOR_SERIAL_PEER:
+        try {
+          setLastPushedSequenceId(env, env.getReplicationPeerManager().getPeerConfig(peerId).get());
+        } catch (Exception e) {
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn(
+            "Failed to update last pushed sequence id for peer {} when transiting sync " +
+              "replication peer state from {} to {}, sleep {} secs and retry",
+            peerId, fromState, toState, backoff / 1000, e);
+          throw suspend(backoff);
+        }
+        setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
+        return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
         replayRemoteWAL(env.getReplicationPeerManager().getPeerConfig(peerId).get().isSerial());
         setNextState(
@@ -266,7 +308,7 @@ public class TransitPeerSyncReplicationStateProcedure
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn(
             "Failed to remove all replication queues peer {} when starting transiting" +
-                " sync replication peer state from {} to {}, sleep {} secs and retry",
+              " sync replication peer state from {} to {}, sleep {} secs and retry",
             peerId, fromState, toState, backoff / 1000, e);
           throw suspend(backoff);
         }
@@ -275,11 +317,6 @@ public class TransitPeerSyncReplicationStateProcedure
           ? PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER
           : PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
         return Flow.HAS_MORE_STATE;
-      case REOPEN_ALL_REGIONS_IN_PEER:
-        reopenRegions(env);
-        setNextState(
-          PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
-        return Flow.HAS_MORE_STATE;
       case TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE:
         try {
           transitPeerSyncReplicationState(env);
@@ -287,7 +324,7 @@ public class TransitPeerSyncReplicationStateProcedure
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn(
             "Failed to update peer storage for peer {} when ending transiting sync " +
-                "replication peer state from {} to {}, sleep {} secs and retry",
+              "replication peer state from {} to {}, sleep {} secs and retry",
             peerId, fromState, toState, backoff / 1000, e);
           throw suspend(backoff);
         }
@@ -308,7 +345,7 @@ public class TransitPeerSyncReplicationStateProcedure
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn(
             "Failed to set peer enabled for peer {} when transiting sync replication peer " +
-                "state from {} to {}, sleep {} secs and retry",
+              "state from {} to {}, sleep {} secs and retry",
             peerId, fromState, toState, backoff / 1000, e);
           throw suspend(backoff);
         }
@@ -327,7 +364,7 @@ public class TransitPeerSyncReplicationStateProcedure
           long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
           LOG.warn(
             "Failed to create remote wal dir for peer {} when transiting sync replication " +
-                "peer state from {} to {}, sleep {} secs and retry",
+              "peer state from {} to {}, sleep {} secs and retry",
             peerId, fromState, toState, backoff / 1000, e);
           throw suspend(backoff);
         }
