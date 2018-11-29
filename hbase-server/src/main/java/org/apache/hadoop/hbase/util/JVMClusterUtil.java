@@ -249,14 +249,24 @@ public class JVMClusterUtil {
       // Do backups first.
       JVMClusterUtil.MasterThread activeMaster = null;
       for (JVMClusterUtil.MasterThread t : masters) {
-        if (!t.master.isActiveMaster()) {
-          try {
-            t.master.stopMaster();
-          } catch (IOException e) {
-            LOG.error("Exception occurred while stopping master", e);
+        // Master was killed but could be still considered as active. Check first if it is stopped.
+        if (!t.master.isStopped()) {
+          if (!t.master.isActiveMaster()) {
+            try {
+              t.master.stopMaster();
+            } catch (IOException e) {
+              LOG.error("Exception occurred while stopping master", e);
+            }
+            LOG.info("Stopped backup Master {} is stopped: {}",
+                t.master.hashCode(), t.master.isStopped());
+          } else {
+            if (activeMaster != null) {
+              LOG.warn("Found more than 1 active master, hash {}", activeMaster.master.hashCode());
+            }
+            activeMaster = t;
+            LOG.debug("Found active master hash={}, stopped={}",
+                t.master.hashCode(), t.master.isStopped());
           }
-        } else {
-          activeMaster = t;
         }
       }
       // Do active after.
