@@ -611,7 +611,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     checkClosed();
     try {
       if (!isTableEnabled(tableName)) {
-        LOG.debug("Table " + tableName + " not enabled");
+        LOG.debug("Table {} not enabled", tableName);
         return false;
       }
       List<Pair<RegionInfo, ServerName>> locations =
@@ -622,10 +622,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       for (Pair<RegionInfo, ServerName> pair : locations) {
         RegionInfo info = pair.getFirst();
         if (pair.getSecond() == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Table " + tableName + " has not deployed region " + pair.getFirst()
-                .getEncodedName());
-          }
+          LOG.debug("Table {} has not deployed region {}", tableName,
+              pair.getFirst().getEncodedName());
           notDeployed++;
         } else if (splitKeys != null
             && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
@@ -643,23 +641,21 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       if (notDeployed > 0) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
+          LOG.debug("Table {} has {} regions not deployed", tableName, notDeployed);
         }
         return false;
       } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " expected to have " + (splitKeys.length + 1)
-              + " regions, but only " + regionCount + " available");
+          LOG.debug("Table {} expected to have {} regions, but only {} available", tableName,
+              splitKeys.length + 1, regionCount);
         }
         return false;
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " should be available");
-        }
+        LOG.trace("Table {} should be available", tableName);
         return true;
       }
     } catch (TableNotFoundException tnfe) {
-      LOG.warn("Table " + tableName + " not enabled, it is not exists");
+      LOG.warn("Table {} does not exist", tableName);
       return false;
     }
   }
