@@ -1112,9 +1112,41 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Shutdown HBase mini cluster.  Does not shutdown zk or dfs if running.
+   * Shutdown HBase mini cluster.Does not shutdown zk or dfs if running.
+   * @throws java.io.IOException in case command is unsuccessful
    */
   public void shutdownMiniHBaseCluster() throws IOException {
+    cleanup();
+    if (this.hbaseCluster != null) {
+      this.hbaseCluster.shutdown();
+      // Wait till hbase is down before going on to shutdown zk.
+      this.hbaseCluster.waitUntilShutDown();
+      this.hbaseCluster = null;
+    }
+    if (zooKeeperWatcher != null) {
+      zooKeeperWatcher.close();
+      zooKeeperWatcher = null;
+    }
+  }
+
+  /**
+   * Abruptly Shutdown HBase mini cluster. Does not shutdown zk or dfs if running.
+   * @throws java.io.IOException throws in case command is unsuccessful
+   */
+  public void killMiniHBaseCluster() throws IOException {
+    cleanup();
+    if (this.hbaseCluster != null) {
+      getMiniHBaseCluster().killAll();
+      this.hbaseCluster = null;
+    }
+    if (zooKeeperWatcher != null) {
+      zooKeeperWatcher.close();
+      zooKeeperWatcher = null;
+    }
+  }
+
+  // close hbase admin, close current connection and reset MIN MAX configs for RS.
+  private void cleanup() throws IOException {
     if (hbaseAdmin != null) {
       hbaseAdmin.close();
       hbaseAdmin = null;
@@ -1126,16 +1158,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
-    if (this.hbaseCluster != null) {
-      this.hbaseCluster.shutdown();
-      // Wait till hbase is down before going on to shutdown zk.
-      this.hbaseCluster.waitUntilShutDown();
-      this.hbaseCluster = null;
-    }
-    if (zooKeeperWatcher != null) {
-      zooKeeperWatcher.close();
-      zooKeeperWatcher = null;
-    }
   }
 
   /**
