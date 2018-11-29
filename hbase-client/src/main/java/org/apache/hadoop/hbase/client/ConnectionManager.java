@@ -1236,10 +1236,9 @@ class ConnectionManager {
       // HBASE-10785: We cache the location of the META itself, so that we are not overloading
       // zookeeper with one request for every region lookup. We cache the META with empty row
       // key in MetaCache.
-      byte[] metaCacheKey = HConstants.EMPTY_START_ROW; // use byte[0] as the row for meta
       RegionLocations locations = null;
       if (useCache) {
-        locations = getCachedLocation(tableName, metaCacheKey);
+        locations = getCachedLocation(tableName, HRegionInfo.FIRST_META_REGIONINFO.getStartKey());
         if (locations != null && locations.getRegionLocation(replicaId) != null) {
           return locations;
         }
@@ -1250,10 +1249,15 @@ class ConnectionManager {
         // Check the cache again for a hit in case some other thread made the
         // same query while we were waiting on the lock.
         if (useCache) {
-          locations = getCachedLocation(tableName, metaCacheKey);
+          locations = getCachedLocation(tableName, HRegionInfo.FIRST_META_REGIONINFO.getStartKey());
           if (locations != null && locations.getRegionLocation(replicaId) != null) {
             return locations;
           }
+        } else {
+          // Don't keep stale entries in cache when relocating meta. Cache state should
+          // reflect whatever is up in zookeeper (which could be the case where no region
+          // is deployed yet).
+          clearRegionCache(tableName);
         }
 
         // Look up from zookeeper
