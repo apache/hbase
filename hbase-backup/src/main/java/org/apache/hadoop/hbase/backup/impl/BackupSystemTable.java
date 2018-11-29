@@ -229,8 +229,14 @@ public final class BackupSystemTable implements Closeable {
   }
 
   private void waitForSystemTable(Admin admin, TableName tableName) throws IOException {
+    // Return fast if the table is available and avoid a log message
+    if (admin.tableExists(tableName) && admin.isTableAvailable(tableName)) {
+      return;
+    }
     long TIMEOUT = 60000;
     long startTime = EnvironmentEdgeManager.currentTime();
+    LOG.debug("Backup table {} is not present and available, waiting for it to become so",
+        tableName);
     while (!admin.tableExists(tableName) || !admin.isTableAvailable(tableName)) {
       try {
         Thread.sleep(100);
@@ -241,7 +247,7 @@ public final class BackupSystemTable implements Closeable {
           "Failed to create backup system table " + tableName + " after " + TIMEOUT + "ms");
       }
     }
-    LOG.debug("Backup table " + tableName + " exists and available");
+    LOG.debug("Backup table {} exists and available", tableName);
   }
 
   @Override
