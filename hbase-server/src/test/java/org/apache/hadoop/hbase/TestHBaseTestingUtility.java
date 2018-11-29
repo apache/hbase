@@ -26,11 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,6 +58,9 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
+  private static final int NUMTABLES = 1;
+  private static final int NUMROWS = 100;
+  private static final int NUMREGIONS = 10;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -469,6 +468,34 @@ public class TestHBaseTestingUtility {
           customCluster.getConfiguration().getInt(HConstants.REGIONSERVER_INFO_PORT, 0));
     } finally {
       htu.shutdownMiniCluster();
+    }
+  }
+
+  // This test demonstrates how long killHBTU takes vs. shutdownHBTU takes
+  // for realistic results, adjust NUMROWS, NUMTABLES to much larger number.
+  @Test
+  public void testKillMiniHBaseCluster() throws Exception {
+
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    htu.startMiniZKCluster();
+
+    try {
+      htu.startMiniHBaseCluster(1, 1);
+
+      TableName tableName;
+      byte[] FAM_NAME;
+
+      for(int i = 0; i < NUMTABLES; i++) {
+        tableName = TableName.valueOf(name.getMethodName() + i);
+        FAM_NAME = Bytes.toBytes("fam" + i);
+
+        try (Table table = htu.createMultiRegionTable(tableName, FAM_NAME, NUMREGIONS)) {
+          htu.loadRandomRows(table, FAM_NAME, 100, NUMROWS);
+        }
+      }
+    } finally {
+      htu.killMiniHBaseCluster();
+      htu.shutdownMiniZKCluster();
     }
   }
 }
