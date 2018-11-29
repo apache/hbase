@@ -132,11 +132,13 @@ import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
@@ -323,6 +325,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder compactionsQueued = new LongAdder();
   final LongAdder flushesQueued = new LongAdder();
 
+  private BlockCache blockCache;
+  private MobFileCache mobFileCache;
   private final WAL wal;
   private final HRegionFileSystem fs;
   protected final Configuration conf;
@@ -772,7 +776,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
     }
+
     this.rsServices = rsServices;
+    if (rsServices != null) {
+      this.blockCache = rsServices.getBlockCache().orElse(null);
+      this.mobFileCache = rsServices.getMobFileCache().orElse(null);
+    }
+
     setHTableSpecificConf();
     this.scannerReadPoints = new ConcurrentHashMap<>();
 
@@ -1836,6 +1846,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** @return WAL in use for this region */
   public WAL getWAL() {
     return this.wal;
+  }
+
+  public BlockCache getBlockCache() {
+    return this.blockCache;
+  }
+
+  /**
+   * Only used for unit test which doesn't start region server.
+   */
+  @VisibleForTesting
+  public void setBlockCache(BlockCache blockCache) {
+    this.blockCache = blockCache;
+  }
+
+  public MobFileCache getMobFileCache() {
+    return this.mobFileCache;
+  }
+
+  /**
+   * Only used for unit test which doesn't start region server.
+   */
+  @VisibleForTesting
+  public void setMobFileCache(MobFileCache mobFileCache) {
+    this.mobFileCache = mobFileCache;
   }
 
   /**
@@ -7008,7 +7042,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, null);
-    if (initialize) region.initialize(null);
+    if (initialize) {
+      region.initialize(null);
+    }
     return region;
   }
 
@@ -8087,7 +8123,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      53 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
+      55 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       3 * Bytes.SIZEOF_BOOLEAN);
 

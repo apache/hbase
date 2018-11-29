@@ -214,7 +214,7 @@ public class TestSecureBulkLoadManager {
     ColumnFamilyDescriptor family = desc.getColumnFamily(FAMILY);
     Compression.Algorithm compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
 
-    CacheConfig writerCacheConf = new CacheConfig(conf, family);
+    CacheConfig writerCacheConf = new CacheConfig(conf, family, null);
     writerCacheConf.setCacheDataOnWrite(false);
     HFileContext hFileContext = new HFileContextBuilder()
         .withIncludesMvcc(false)

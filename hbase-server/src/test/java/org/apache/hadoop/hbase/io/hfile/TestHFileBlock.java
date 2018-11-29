@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -246,7 +247,7 @@ public class TestHFileBlock {
   @Test
   public void testNoCompression() throws IOException {
     CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
-    Mockito.when(cacheConf.isBlockCacheEnabled()).thenReturn(false);
+    Mockito.when(cacheConf.getBlockCache()).thenReturn(Optional.empty());
 
     HFileBlock block =
       createTestV2Block(NONE, includesMemstoreTS, false).getBlockForCaching(cacheConf);

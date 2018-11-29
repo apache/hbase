@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -3590,7 +3591,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         stats.addException(region.getRegionInfo().getRegionName(), e);
       }
     }
-    stats.withMaxCacheSize(regionServer.getCacheConfig().getBlockCache().getMaxSize());
+    stats.withMaxCacheSize(regionServer.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
     return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
   }
 

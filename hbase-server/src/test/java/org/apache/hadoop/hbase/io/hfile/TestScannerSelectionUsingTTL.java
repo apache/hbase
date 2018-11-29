@@ -28,12 +28,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -104,17 +106,15 @@ public class TestScannerSelectionUsingTTL {
   @Test
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    CacheConfig.instantiateBlockCache(conf);
     conf.setBoolean("hbase.store.delete.expired.storefile", false);
-    HColumnDescriptor hcd =
-      new HColumnDescriptor(FAMILY_BYTES)
-          .setMaxVersions(Integer.MAX_VALUE)
-          .setTimeToLive(TTL_SECONDS);
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info,
-      TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, htd);
+    LruBlockCache cache = (LruBlockCache) BlockCacheFactory.createBlockCache(conf);
+
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setMaxVersions(Integer.MAX_VALUE)
+            .setTimeToLive(TTL_SECONDS).build()).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
+    HRegion region = HBaseTestingUtility
+        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cache);
 
     long ts = EnvironmentEdgeManager.currentTime();
     long version = 0; //make sure each new set of Put's have a new ts
@@ -136,10 +136,7 @@ public class TestScannerSelectionUsingTTL {
       version++;
     }
 
-    Scan scan = new Scan();
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    CacheConfig cacheConf = new CacheConfig(conf);
-    LruBlockCache cache = (LruBlockCache) cacheConf.getBlockCache();
+    Scan scan = new Scan().readVersions(Integer.MAX_VALUE);
     cache.clearCache();
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> results = new ArrayList<>();

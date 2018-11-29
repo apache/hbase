@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter;
@@ -122,13 +122,14 @@ public class TestCompoundBloomFilter {
   private static Configuration conf;
   private static CacheConfig cacheConf;
   private FileSystem fs;
-  private BlockCache blockCache;
 
   /** A message of the form "in test#&lt;number>:" to include in logging. */
   private String testIdMsg;
 
   private static final int GENERATION_SEED = 2319;
   private static final int EVALUATION_SEED = 135;
+
+  private BlockCache blockCache;
 
   @Before
   public void setUp() throws IOException {
@@ -138,11 +139,8 @@ public class TestCompoundBloomFilter {
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
 
     fs = FileSystem.get(conf);
-
-    CacheConfig.instantiateBlockCache(conf);
-    cacheConf = new CacheConfig(conf);
-    blockCache = cacheConf.getBlockCache();
-    assertNotNull(blockCache);
+    blockCache = BlockCacheFactory.createBlockCache(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
   }
 
   private List<KeyValue> createSortedKeyValues(Random rand, int n) {
@@ -305,7 +303,7 @@ public class TestCompoundBloomFilter {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZES[t]);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
-    cacheConf = new CacheConfig(conf);
+    cacheConf = new CacheConfig(conf, blockCache);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCK_SIZES[t]).build();
     StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConf, fs)
             .withOutputDir(TEST_UTIL.getDataTestDir())
@@ -373,7 +371,5 @@ public class TestCompoundBloomFilter {
       rowColKV.getRowLength()));
     assertEquals(0, rowKV.getQualifierLength());
   }
-
-
 }
 

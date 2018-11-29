@@ -30,13 +30,14 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -105,20 +106,11 @@ public class HeapMemoryManager {
 
   private List<HeapMemoryTuneObserver> tuneObservers = new ArrayList<>();
 
-  public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
-      Server server, RegionServerAccounting regionServerAccounting) {
-    ResizableBlockCache lruCache = CacheConfig.getOnHeapCache(conf);
-    if (lruCache != null) {
-      return new HeapMemoryManager(lruCache, memStoreFlusher, server, regionServerAccounting);
-    }
-    return null;
-  }
-
   @VisibleForTesting
-  HeapMemoryManager(ResizableBlockCache blockCache, FlushRequester memStoreFlusher,
+  HeapMemoryManager(BlockCache blockCache, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
     Configuration conf = server.getConfiguration();
-    this.blockCache = blockCache;
+    this.blockCache = toResizableBlockCache(blockCache);
     this.memStoreFlusher = memStoreFlusher;
     this.server = server;
     this.regionServerAccounting = regionServerAccounting;
@@ -128,6 +120,14 @@ public class HeapMemoryManager {
     this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
       HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
     metricsHeapMemoryManager = new MetricsHeapMemoryManager();
+  }
+
+  private ResizableBlockCache toResizableBlockCache(BlockCache blockCache) {
+    if (blockCache instanceof CombinedBlockCache) {
+      return (ResizableBlockCache) ((CombinedBlockCache) blockCache).getOnHeapCache();
+    } else {
+      return (ResizableBlockCache) blockCache;
+    }
   }
 
   private boolean doInit(Configuration conf) {

@@ -23,6 +23,7 @@ CacheConfig cacheConfig;
 Configuration conf;
 String bcn;
 String bcv;
+BlockCache blockCache;
 </%args>
 <%import>
 java.util.*;
@@ -39,7 +40,7 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
 org.apache.hadoop.util.StringUtils;
 </%import>
 <%java>
-  BlockCache bc = cacheConfig == null ? null : cacheConfig.getBlockCache();
+  BlockCache bc = blockCache;
   BlockCache [] bcs = bc == null ? null : bc.getBlockCaches();
   if (bcn.equals("L1")) {
     bc = bcs == null || bcs.length == 0? bc: bcs[0];

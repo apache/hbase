@@ -29,11 +29,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -451,7 +451,7 @@ public final class BucketAllocator {
     BucketSizeInfo bsi = roundUpToBucketSizeInfo(blockSize);
     if (bsi == null) {
       throw new BucketAllocatorException("Allocation too big size=" + blockSize +
-        "; adjust BucketCache sizes " + CacheConfig.BUCKET_CACHE_BUCKETS_KEY +
+        "; adjust BucketCache sizes " + BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY +
         " to accomodate if size seems reasonable and you want it cached.");
     }
     long offset = bsi.allocateBlock();

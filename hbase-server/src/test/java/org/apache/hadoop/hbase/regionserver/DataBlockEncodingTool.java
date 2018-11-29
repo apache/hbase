@@ -740,12 +740,7 @@ public class DataBlockEncodingTool {
         "Excluding the first " + benchmarkNOmit + " times from statistics.");
 
     final Configuration conf = HBaseConfiguration.create();
-    try {
-      testCodecs(conf, kvLimit, pathName, compressionName, doBenchmark,
-          doVerify);
-    } finally {
-      (new CacheConfig(conf)).getBlockCache().shutdown();
-    }
+    testCodecs(conf, kvLimit, pathName, compressionName, doBenchmark, doVerify);
   }
 
 }

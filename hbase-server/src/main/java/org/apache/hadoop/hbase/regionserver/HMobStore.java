@@ -48,9 +48,9 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
-import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -80,7 +80,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class HMobStore extends HStore {
   private static final Logger LOG = LoggerFactory.getLogger(HMobStore.class);
-  private MobCacheConfig mobCacheConfig;
+  private MobFileCache mobFileCache;
   private Path homePath;
   private Path mobFamilyPath;
   private AtomicLong cellsCountCompactedToMob = new AtomicLong();
@@ -107,7 +107,7 @@ public class HMobStore extends HStore {
       final Configuration confParam) throws IOException {
     super(region, family, confParam);
     this.family = family;
-    this.mobCacheConfig = (MobCacheConfig) cacheConf;
+    this.mobFileCache = region.getMobFileCache();
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
         family.getNameAsString());
@@ -123,14 +123,6 @@ public class HMobStore extends HStore {
         getTableName().getName());
     tags.add(tableNameTag);
     this.refCellTags = TagUtil.fromList(tags);
-  }
-
-  /**
-   * Creates the mob cache config.
-   */
-  @Override
-  protected void createCacheConf(ColumnFamilyDescriptor family) {
-    cacheConf = new MobCacheConfig(conf, family);
   }
 
   /**
@@ -256,7 +248,7 @@ public class HMobStore extends HStore {
       long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction) throws IOException {
     return MobUtils.createWriter(conf, region.getFilesystem(), family,
-      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, mobCacheConfig,
+      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConf,
       cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
   }
 
@@ -291,7 +283,7 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
-      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.mobCacheConfig,
+      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.cacheConf,
           BloomType.NONE, isPrimaryReplicaStore());
       storeFile.initReader();
     } catch (IOException e) {
@@ -398,11 +390,11 @@ public class HMobStore extends HStore {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
-        file = mobCacheConfig.getMobFileCache().openFile(fs, path, mobCacheConfig);
+        file = mobFileCache.openFile(fs, path, cacheConf);
         return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt) : file.readCell(search,
           cacheMobBlocks);
       } catch (IOException e) {
-        mobCacheConfig.getMobFileCache().evictFile(fileName);
+        mobFileCache.evictFile(fileName);
         throwable = e;
         if ((e instanceof FileNotFoundException) ||
             (e.getCause() instanceof FileNotFoundException)) {
@@ -414,16 +406,16 @@ public class HMobStore extends HStore {
           throw e;
         }
       } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        mobCacheConfig.getMobFileCache().evictFile(fileName);
+        mobFileCache.evictFile(fileName);
         LOG.debug("Fail to read the cell", e);
         throwable = e;
       } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        mobCacheConfig.getMobFileCache().evictFile(fileName);
+        mobFileCache.evictFile(fileName);
         LOG.debug("Fail to read the cell", e);
         throwable = e;
       } finally {
         if (file != null) {
-          mobCacheConfig.getMobFileCache().closeFile(file);
+          mobFileCache.closeFile(file);
         }
       }
     }

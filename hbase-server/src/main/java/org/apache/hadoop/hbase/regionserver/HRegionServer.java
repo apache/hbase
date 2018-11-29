@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -98,7 +99,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -114,7 +115,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.mob.MobCacheConfig;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.FileSystemUtilizationChore;
@@ -407,10 +408,10 @@ public class HRegionServer extends HasThread implements
 
   private final RegionServerAccounting regionServerAccounting;
 
-  // Cache configuration and block cache reference
-  protected CacheConfig cacheConfig;
-  // Cache configuration for mob
-  final MobCacheConfig mobCacheConfig;
+  // Block cache
+  private BlockCache blockCache;
+  // The cache for mob files
+  private MobFileCache mobFileCache;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -588,12 +589,12 @@ public class HRegionServer extends HasThread implements
 
       boolean isMasterNotCarryTable =
           this instanceof HMaster && !LoadBalancer.isTablesOnMaster(conf);
-      // no need to instantiate global block cache when master not carry table
+
+      // no need to instantiate block cache and mob file cache when master not carry table
       if (!isMasterNotCarryTable) {
-        CacheConfig.instantiateBlockCache(conf);
+        blockCache = BlockCacheFactory.createBlockCache(conf);
+        mobFileCache = new MobFileCache(conf);
       }
-      cacheConfig = new CacheConfig(conf);
-      mobCacheConfig = new MobCacheConfig(conf);
 
       uncaughtExceptionHandler = new UncaughtExceptionHandler() {
         @Override
@@ -1056,10 +1057,12 @@ public class HRegionServer extends HasThread implements
       }
     }
     // Send cache a shutdown.
-    if (cacheConfig != null && cacheConfig.isBlockCacheEnabled()) {
-      cacheConfig.getBlockCache().shutdown();
+    if (blockCache != null) {
+      blockCache.shutdown();
     }
-    mobCacheConfig.getMobFileCache().shutdown();
+    if (mobFileCache != null) {
+      mobFileCache.shutdown();
+    }
 
     if (movedRegionsCleaner != null) {
       movedRegionsCleaner.stop("Region Server stopping");
@@ -1585,9 +1588,9 @@ public class HRegionServer extends HasThread implements
   }
 
   private void startHeapMemoryManager() {
-    this.hMemManager = HeapMemoryManager.create(this.conf, this.cacheFlusher, this,
-        this.regionServerAccounting);
-    if (this.hMemManager != null) {
+    if (this.blockCache != null) {
+      this.hMemManager =
+          new HeapMemoryManager(this.blockCache, this.cacheFlusher, this, regionServerAccounting);
       this.hMemManager.start(getChoreService());
     }
   }
@@ -3586,10 +3589,23 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * @return The cache config instance used by the regionserver.
+   * May be null if this is a master which not carry table.
+   *
+   * @return The block cache instance used by the regionserver.
    */
-  public CacheConfig getCacheConfig() {
-    return this.cacheConfig;
+  @Override
+  public Optional<BlockCache> getBlockCache() {
+    return Optional.ofNullable(this.blockCache);
+  }
+
+  /**
+   * May be null if this is a master which not carry table.
+   *
+   * @return The cache for mob files used by the regionserver.
+   */
+  @Override
+  public Optional<MobFileCache> getMobFileCache() {
+    return Optional.ofNullable(this.mobFileCache);
   }
 
   /**
@@ -3618,7 +3634,6 @@ public class HRegionServer extends HasThread implements
   }
 
   public CacheEvictionStats clearRegionBlockCache(Region region) {
-    BlockCache blockCache = this.getCacheConfig().getBlockCache();
     long evictedBlocks = 0;
 
     for(Store store : region.getStores()) {

@@ -152,6 +152,14 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       this.bucketCacheStats = fcStats;
     }
 
+    public CacheStats getLruCacheStats() {
+      return this.lruCacheStats;
+    }
+
+    public CacheStats getBucketCacheStats() {
+      return this.bucketCacheStats;
+    }
+
     @Override
     public long getDataMissCount() {
       return lruCacheStats.getDataMissCount() + bucketCacheStats.getDataMissCount();
@@ -380,5 +388,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   public int getRefCount(BlockCacheKey cacheKey) {
     return (this.l2Cache instanceof BucketCache)
         ? ((BucketCache) this.l2Cache).getRefCount(cacheKey) : 0;
+  }
+
+  public LruBlockCache getOnHeapCache() {
+    return onHeapCache;
   }
 }

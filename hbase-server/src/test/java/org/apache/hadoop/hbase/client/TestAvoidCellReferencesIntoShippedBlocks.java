@@ -142,7 +142,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      final BlockCache cache = cacheConf.getBlockCache();
+      final BlockCache cache = cacheConf.getBlockCache().get();
       // insert data. 5 Rows are added
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -306,7 +306,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      final BlockCache cache = cacheConf.getBlockCache();
+      final BlockCache cache = cacheConf.getBlockCache().get();
       // insert data. 5 Rows are added
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);

@@ -638,16 +638,17 @@ public class SplitTableRegionProcedure
 
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // Split each store file.
-    for (Map.Entry<String, Collection<StoreFileInfo>>e: files.entrySet()) {
-      byte [] familyName = Bytes.toBytes(e.getKey());
+    for (Map.Entry<String, Collection<StoreFileInfo>> e : files.entrySet()) {
+      byte[] familyName = Bytes.toBytes(e.getKey());
       final ColumnFamilyDescriptor hcd = htd.getColumnFamily(familyName);
       final Collection<StoreFileInfo> storeFiles = e.getValue();
       if (storeFiles != null && storeFiles.size() > 0) {
-        final CacheConfig cacheConf = new CacheConfig(conf, hcd);
-        for (StoreFileInfo storeFileInfo: storeFiles) {
-          StoreFileSplitter sfs =
-              new StoreFileSplitter(regionFs, familyName, new HStoreFile(mfs.getFileSystem(),
-                  storeFileInfo, conf, cacheConf, hcd.getBloomFilterType(), true));
+        for (StoreFileInfo storeFileInfo : storeFiles) {
+          // As this procedure is running on master, use CacheConfig.DISABLED means
+          // don't cache any block.
+          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, familyName,
+              new HStoreFile(mfs.getFileSystem(), storeFileInfo, conf, CacheConfig.DISABLED,
+                  hcd.getBloomFilterType(), true));
           futures.add(threadPool.submit(sfs));
         }
       }

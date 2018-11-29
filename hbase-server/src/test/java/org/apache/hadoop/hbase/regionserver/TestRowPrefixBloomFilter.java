@@ -68,7 +68,7 @@ public class TestRowPrefixBloomFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowPrefixBloomFilter.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
+  private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
   private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
   private boolean localfs = false;

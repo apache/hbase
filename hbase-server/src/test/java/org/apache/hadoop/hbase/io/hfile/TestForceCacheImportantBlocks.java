@@ -25,14 +25,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -103,24 +103,20 @@ public class TestForceCacheImportantBlocks {
 
   @Before
   public void setup() {
-    // Make sure we make a new one each time.
-    CacheConfig.clearGlobalInstances();
     HFile.DATABLOCK_READ_COUNT.reset();
-    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
   }
 
   @Test
   public void testCacheBlocks() throws IOException {
     // Set index block size to be the same as normal block size.
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, BLOCK_SIZE);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS).
-      setCompressionType(COMPRESSION_ALGORITHM).
-      setBloomFilterType(BLOOM_TYPE);
-    hcd.setBlocksize(BLOCK_SIZE);
-    hcd.setBlockCacheEnabled(cfCacheEnabled);
-    HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);
-    BlockCache cache = region.getStore(hcd.getName()).getCacheConfig().getBlockCache();
-    CacheStats stats = cache.getStats();
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS)
+            .setCompressionType(COMPRESSION_ALGORITHM).setBloomFilterType(BLOOM_TYPE)
+            .setBlocksize(BLOCK_SIZE).setBlockCacheEnabled(cfCacheEnabled).build();
+    HRegion region = TEST_UTIL.createTestRegion(TABLE, cfd, blockCache);
+    CacheStats stats = blockCache.getStats();
     writeTestData(region);
     assertEquals(0, stats.getHitCount());
     assertEquals(0, HFile.DATABLOCK_READ_COUNT.sum());

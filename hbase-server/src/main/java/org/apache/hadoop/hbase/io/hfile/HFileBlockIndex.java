@@ -1103,9 +1103,11 @@ public class HFileBlockIndex {
           blockStream.write(midKeyMetadata);
         blockWriter.writeHeaderAndData(out);
         if (cacheConf != null) {
-          HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
-          cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
-            rootLevelIndexPos, true, blockForCaching.getBlockType()), blockForCaching);
+          cacheConf.getBlockCache().ifPresent(cache -> {
+            HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
+            cache.cacheBlock(new BlockCacheKey(nameForCaching, rootLevelIndexPos, true,
+                blockForCaching.getBlockType()), blockForCaching);
+          });
         }
       }
 
@@ -1207,9 +1209,12 @@ public class HFileBlockIndex {
       blockWriter.writeHeaderAndData(out);
 
       if (getCacheOnWrite()) {
-        HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
-        cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
-          beginOffset, true, blockForCaching.getBlockType()), blockForCaching);
+        cacheConf.getBlockCache().ifPresent(cache -> {
+          HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
+          cache.cacheBlock(
+              new BlockCacheKey(nameForCaching, beginOffset, true, blockForCaching.getBlockType()),
+              blockForCaching);
+        });
       }
 
       // Add intermediate index block size

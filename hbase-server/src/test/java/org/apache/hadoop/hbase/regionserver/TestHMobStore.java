@@ -32,6 +32,7 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
 import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,20 +43,24 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -90,7 +95,6 @@ public class TestHMobStore {
 
   private HMobStore store;
   private HRegion region;
-  private HColumnDescriptor hcd;
   private FileSystem fs;
   private byte [] table = Bytes.toBytes("table");
   private byte [] family = Bytes.toBytes("family");
@@ -131,49 +135,44 @@ public class TestHMobStore {
       byte [] next = iter.next();
       expected.add(new KeyValue(row, family, next, 1, value));
       get.addColumn(family, next);
-      get.setMaxVersions(); // all versions.
+      get.readAllVersions();
     }
   }
 
-  private void init(String methodName, Configuration conf, boolean testStore)
-  throws IOException {
-    hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
-    hcd.setMaxVersions(4);
-    init(methodName, conf, hcd, testStore);
+  private void init(String methodName, Configuration conf, boolean testStore) throws IOException {
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(3L)
+            .setMaxVersions(4).build();
+    init(methodName, conf, cfd, testStore);
   }
 
-  private void init(String methodName, Configuration conf,
-      HColumnDescriptor hcd, boolean testStore) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    init(methodName, conf, htd, hcd, testStore);
-  }
+  private void init(String methodName, Configuration conf, ColumnFamilyDescriptor cfd,
+      boolean testStore) throws IOException {
+    TableDescriptor td =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(cfd).build();
 
-  private void init(String methodName, Configuration conf, HTableDescriptor htd,
-      HColumnDescriptor hcd, boolean testStore) throws IOException {
     //Setting up tje Region and Store
-    Path basedir = new Path(DIR+methodName);
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
+    Path basedir = new Path(DIR + methodName);
+    Path tableDir = FSUtils.getTableDir(basedir, td.getTableName());
     String logName = "logs";
     Path logdir = new Path(basedir, logName);
     FileSystem fs = FileSystem.get(conf);
     fs.delete(logdir, true);
 
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(td.getTableName()).build();
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, methodName);
-    region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, htd, null);
-    store = new HMobStore(region, hcd, conf);
-    if(testStore) {
-      init(conf, hcd);
+    region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, td, null);
+    region.setMobFileCache(new MobFileCache(conf));
+    store = new HMobStore(region, cfd, conf);
+    if (testStore) {
+      init(conf, cfd);
     }
   }
 
-  private void init(Configuration conf, HColumnDescriptor hcd)
+  private void init(Configuration conf, ColumnFamilyDescriptor cfd)
       throws IOException {
     Path basedir = FSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
@@ -187,7 +186,7 @@ public class TestHMobStore {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     StoreFileWriter mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
-        hcd.getCompactionCompressionType(), region.getRegionInfo().getStartKey(), false);
+        cfd.getCompactionCompressionType(), region.getRegionInfo().getStartKey(), false);
     mobFilePath = mobWriter.getPath();
 
     mobWriter.append(key1);
@@ -382,15 +381,11 @@ public class TestHMobStore {
    */
   @Test
   public void testMobCellSizeThreshold() throws IOException {
-
     final Configuration conf = HBaseConfiguration.create();
-
-    HColumnDescriptor hcd;
-    hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(100);
-    hcd.setMaxVersions(4);
-    init(name.getMethodName(), conf, hcd, false);
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(100)
+            .setMaxVersions(4).build();
+    init(name.getMethodName(), conf, cfd, false);
 
     //Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -503,15 +498,12 @@ public class TestHMobStore {
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key cfKey = new SecretKeySpec(keyBytes, algorithm);
 
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(100);
-    hcd.setMaxVersions(4);
-    hcd.setEncryptionType(algorithm);
-    hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
-      conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),cfKey));
-
-    init(name.getMethodName(), conf, hcd, false);
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(100)
+            .setMaxVersions(4).setEncryptionType(algorithm).setEncryptionKey(EncryptionUtil
+            .wrapKey(conf, conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+                User.getCurrent().getShortName()), cfKey)).build();
+    init(name.getMethodName(), conf, cfd, false);
 
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);

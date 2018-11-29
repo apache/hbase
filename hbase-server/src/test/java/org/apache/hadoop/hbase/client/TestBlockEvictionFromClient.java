@@ -196,7 +196,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -286,7 +286,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       insertData(table);
       // flush the data
@@ -345,7 +345,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -583,7 +583,7 @@ public class TestBlockEvictionFromClient {
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -647,7 +647,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -803,7 +803,7 @@ public class TestBlockEvictionFromClient {
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
       // Use the last one
-      cache = cacheConf.getBlockCache();
+      cache = cacheConf.getBlockCache().get();
     }
     return cache;
   }
@@ -830,7 +830,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       insertData(table);
@@ -896,7 +896,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -1014,7 +1014,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -1144,7 +1144,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data

@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -91,7 +92,7 @@ public class TestHStoreFile extends HBaseTestCase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
+  private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
   private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
@@ -934,8 +935,7 @@ public class TestHStoreFile extends HBaseTestCase {
     Path baseDir = new Path(new Path(testDir, "7e0102"),"twoCOWEOC");
 
     // Grab the block cache and get the initial hit/miss counts
-    CacheConfig.instantiateBlockCache(conf);
-    BlockCache bc = new CacheConfig(conf).getBlockCache();
+    BlockCache bc = BlockCacheFactory.createBlockCache(conf);
     assertNotNull(bc);
     CacheStats cs = bc.getStats();
     long startHit = cs.getHitCount();
@@ -944,7 +944,7 @@ public class TestHStoreFile extends HBaseTestCase {
 
     // Let's write a StoreFile with three blocks, with cache on write off
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
-    CacheConfig cacheConf = new CacheConfig(conf);
+    CacheConfig cacheConf = new CacheConfig(conf, bc);
     Path pathCowOff = new Path(baseDir, "123456789");
     StoreFileWriter writer = writeStoreFile(conf, cacheConf, pathCowOff, 3);
     HStoreFile hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
@@ -967,7 +967,7 @@ public class TestHStoreFile extends HBaseTestCase {
 
     // Now write a StoreFile with three blocks, with cache on write on
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
-    cacheConf = new CacheConfig(conf);
+    cacheConf = new CacheConfig(conf, bc);
     Path pathCowOn = new Path(baseDir, "123456788");
     writer = writeStoreFile(conf, cacheConf, pathCowOn, 3);
     hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
@@ -1025,7 +1025,7 @@ public class TestHStoreFile extends HBaseTestCase {
 
     // Let's close the first file with evict on close turned on
     conf.setBoolean("hbase.rs.evictblocksonclose", true);
-    cacheConf = new CacheConfig(conf);
+    cacheConf = new CacheConfig(conf, bc);
     hsf = new HStoreFile(this.fs, pathCowOff, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     reader = hsf.getReader();
@@ -1039,7 +1039,7 @@ public class TestHStoreFile extends HBaseTestCase {
 
     // Let's close the second file with evict on close turned off
     conf.setBoolean("hbase.rs.evictblocksonclose", false);
-    cacheConf = new CacheConfig(conf);
+    cacheConf = new CacheConfig(conf, bc);
     hsf = new HStoreFile(this.fs, pathCowOn, conf, cacheConf, BloomType.NONE, true);
     hsf.initReader();
     reader = hsf.getReader();

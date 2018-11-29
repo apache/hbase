@@ -530,9 +530,8 @@ public class TestHFileBlockIndex {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     // should open hfile.block.index.cacheonwrite
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
-    CacheConfig.instantiateBlockCache(conf);
-    CacheConfig cacheConf = new CacheConfig(conf);
-    BlockCache blockCache = cacheConf.getBlockCache();
+    CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
+    BlockCache blockCache = cacheConf.getBlockCache().get();
     // Evict all blocks that were cached-on-write by the previous invocation.
     blockCache.evictBlocksByHfileName(hfilePath.getName());
     // Write the HFile
@@ -589,9 +588,8 @@ public class TestHFileBlockIndex {
   public void testHFileWriterAndReader() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
         "hfile_for_block_index");
-    CacheConfig.instantiateBlockCache(conf);
-    CacheConfig cacheConf = new CacheConfig(conf);
-    BlockCache blockCache = cacheConf.getBlockCache();
+    CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
+    BlockCache blockCache = cacheConf.getBlockCache().get();
 
     for (int testI = 0; testI < INDEX_CHUNK_SIZES.length; ++testI) {
       int indexBlockSize = INDEX_CHUNK_SIZES[testI];

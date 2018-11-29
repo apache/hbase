@@ -36,15 +36,16 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -139,12 +140,10 @@ public abstract class TestMultiColumnScanner {
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
     TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
     HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
-        new HColumnDescriptor(FAMILY)
-            .setCompressionType(comprAlgo)
-            .setBloomFilterType(bloomType)
-            .setMaxVersions(MAX_VERSIONS)
-            .setDataBlockEncoding(dataBlockEncoding)
-    );
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setCompressionType(comprAlgo)
+            .setBloomFilterType(bloomType).setMaxVersions(MAX_VERSIONS)
+            .setDataBlockEncoding(dataBlockEncoding).build(),
+        BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration()));
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<>();
@@ -202,7 +201,7 @@ public abstract class TestMultiColumnScanner {
     for (int maxVersions = 1; maxVersions <= TIMESTAMPS.length; ++maxVersions) {
       for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
         Scan scan = new Scan();
-        scan.setMaxVersions(maxVersions);
+        scan.readVersions(maxVersions);
         Set<String> qualSet = new TreeSet<>();
         {
           int columnMaskTmp = columnBitMask;
