@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -104,6 +105,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -2512,6 +2514,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
   }
 
+
   /**
    * Create a region with it's own WAL. Be sure to call
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
@@ -2519,6 +2522,31 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
       final Configuration conf, final TableDescriptor htd) throws IOException {
     return createRegionAndWAL(info, rootDir, conf, htd, true);
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
+      final Configuration conf, final TableDescriptor htd, BlockCache blockCache)
+      throws IOException {
+    HRegion region = createRegionAndWAL(info, rootDir, conf, htd, false);
+    region.setBlockCache(blockCache);
+    region.initialize();
+    return region;
+  }
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
+      final Configuration conf, final TableDescriptor htd, MobFileCache mobFileCache)
+      throws IOException {
+    HRegion region = createRegionAndWAL(info, rootDir, conf, htd, false);
+    region.setMobFileCache(mobFileCache);
+    region.initialize();
+    return region;
   }
 
   /**
@@ -4037,15 +4065,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       + " on server " + server);
   }
 
-  public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd)
-      throws IOException {
-    TableDescriptor td
-        = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-            .setColumnFamily(cd)
-            .build();
-    HRegionInfo info =
-        new HRegionInfo(TableName.valueOf(tableName), null, null, false);
+  public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd) throws IOException {
+    TableDescriptor td =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), td);
+  }
+
+  public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd,
+      BlockCache blockCache) throws IOException {
+    TableDescriptor td =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
+    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), td, blockCache);
   }
 
   public void setFileSystemURI(String fsURI) {

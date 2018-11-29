@@ -25,29 +25,28 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.ChunkCreator;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -88,7 +87,6 @@ public class TestScannerFromBucketCache {
       conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
     }
     tableName = TableName.valueOf(name.getMethodName());
-    CacheConfig.instantiateBlockCache(conf);
   }
 
   @After
@@ -96,7 +94,6 @@ public class TestScannerFromBucketCache {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + test_util.getDataTestDir());
     test_util.cleanupTestDir();
-    CacheConfig.clearGlobalInstances();
   }
 
   String getName() {
@@ -210,9 +207,7 @@ public class TestScannerFromBucketCache {
       Thread.sleep(500);
       // do the scan again and verify. This time it should be from the bucket cache in offheap mode
       // but one of the cell will be copied due to the asSubByteBuff call
-      Scan scan = new Scan(row1);
-      scan.addFamily(fam1);
-      scan.setMaxVersions(10);
+      Scan scan = new Scan().withStartRow(row1).addFamily(fam1).readVersions(10);
       actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
@@ -290,9 +285,7 @@ public class TestScannerFromBucketCache {
   }
 
   private List<Cell> performScan(byte[] row1, byte[] fam1) throws IOException {
-    Scan scan = new Scan(row1);
-    scan.addFamily(fam1);
-    scan.setMaxVersions(MAX_VERSIONS);
+    Scan scan = new Scan().withStartRow(row1).addFamily(fam1).readVersions(MAX_VERSIONS);
     List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
@@ -307,32 +300,19 @@ public class TestScannerFromBucketCache {
   }
 
   private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtility test_util, boolean isReadOnly,
+      String callingMethod, Configuration conf, HBaseTestingUtility testUtil, boolean isReadOnly,
       byte[]... families) throws IOException {
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    Path logDir = test_util.getDataTestDirOnTestFS(callingMethod + ".log");
-    HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
-    final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
-    return initHRegion(tableName, startKey, stopKey, callingMethod, conf, test_util, isReadOnly,
-      Durability.SYNC_WAL, wal, families);
-  }
-
-  /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param callingMethod
-   * @param conf
-   * @param isReadOnly
-   * @param families
-   * @throws IOException
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
-   */
-  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtility test_util, boolean isReadOnly,
-      Durability durability, WAL wal, byte[]... families) throws IOException {
-    return test_util.createLocalHRegion(tableName, startKey, stopKey, isReadOnly, durability, wal,
-      families);
+    RegionInfo regionInfo =
+        RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    builder.setReadOnly(isReadOnly).setDurability(Durability.SYNC_WAL);
+    for (byte[] family : families) {
+      builder.setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE)
+              .build());
+    }
+    return HBaseTestingUtility
+        .createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod), conf,
+            builder.build(), BlockCacheFactory.createBlockCache(conf));
   }
 }

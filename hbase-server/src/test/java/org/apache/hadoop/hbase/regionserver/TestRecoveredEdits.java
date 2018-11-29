@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,16 +32,19 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -49,6 +53,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,7 +74,15 @@ public class TestRecoveredEdits {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
+
+  private static BlockCache blockCache;
+
   @Rule public TestName testName = new TestName();
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
+  }
 
   /**
    * HBASE-12782 ITBLL fails for me if generator does anything but 5M per maptask.
@@ -81,7 +94,6 @@ public class TestRecoveredEdits {
   @Test
   public void testReplayWorksThoughLotsOfFlushing() throws
       IOException {
-    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
     for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
       testReplayWorksWithMemoryCompactionPolicy(policy);
     }
@@ -96,18 +108,22 @@ public class TestRecoveredEdits {
     // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
     // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
     final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(testName.getMethodName()));
     final String columnFamily = "meta";
     byte [][] columnFamilyAsByteArray = new byte [][] {Bytes.toBytes(columnFamily)};
-    htd.addFamily(new HColumnDescriptor(columnFamily));
-    HRegionInfo hri = new HRegionInfo(htd.getTableName()) {
+    TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(testName.getMethodName()))
+            .setColumnFamily(
+                ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(columnFamily)).build())
+            .build();
+    RegionInfo hri = new HRegionInfo(tableDescriptor.getTableName()) {
       @Override
       public synchronized String getEncodedName() {
         return encodedRegionName;
       }
 
       // Cache the name because lots of lookups.
-      private byte [] encodedRegionNameAsBytes = null;
+      private byte[] encodedRegionNameAsBytes = null;
+
       @Override
       public synchronized byte[] getEncodedNameAsBytes() {
         if (encodedRegionNameAsBytes == null) {
@@ -117,16 +133,16 @@ public class TestRecoveredEdits {
       }
     };
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, htd.getTableName());
+    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableDescriptor.getTableName());
     HRegionFileSystem hrfs =
         new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
     if (fs.exists(hrfs.getRegionDir())) {
       LOG.info("Region directory already exists. Deleting.");
       fs.delete(hrfs.getRegionDir(), true);
     }
-    HRegion region = HRegion.createHRegion(hri, hbaseRootDir, conf, htd, null);
+    HRegion region = HBaseTestingUtility
+        .createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, blockCache);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
     List<String> storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
     // There should be no store files.

@@ -86,13 +86,14 @@ public class TestHFile  {
     TEST_UTIL.getDataTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
-  private static CacheConfig cacheConf = null;
+  private static CacheConfig cacheConf;
   private static Configuration conf ;
   private static FileSystem fs;
 
   @BeforeClass
   public static void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
+    cacheConf = new CacheConfig(conf);
     fs = TEST_UTIL.getTestFileSystem();
   }
 
@@ -162,7 +163,6 @@ public class TestHFile  {
    */
   @Test
   public void testEmptyHFile() throws IOException {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, testName.getMethodName());
     HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
     Writer w =
@@ -179,7 +179,6 @@ public class TestHFile  {
    */
   @Test
   public void testCorrupt0LengthHFile() throws IOException {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, testName.getMethodName());
     FSDataOutputStream fsos = fs.create(f);
     fsos.close();
@@ -213,7 +212,6 @@ public class TestHFile  {
    */
   @Test
   public void testCorruptTruncatedHFile() throws IOException {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, testName.getMethodName());
     HFileContext  context = new HFileContextBuilder().build();
     Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f)
@@ -315,7 +313,6 @@ public class TestHFile  {
     if (useTags) {
       conf.setInt("hfile.format.version", 3);
     }
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path  ncHFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
     FSDataOutputStream fout = createFSOutput(ncHFile);
     HFileContext meta = new HFileContextBuilder()
@@ -411,7 +408,6 @@ public class TestHFile  {
   }
 
   private void metablocks(final String compress) throws Exception {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     HFileContext meta = new HFileContextBuilder()
@@ -445,7 +441,6 @@ public class TestHFile  {
 
   @Test
   public void testNullMetaBlocks() throws Exception {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
     for (Compression.Algorithm compressAlgo :
         HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");

@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,10 +40,11 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -51,7 +53,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -160,8 +161,7 @@ public class TestCacheOnWrite {
     Configuration conf = TEST_UTIL.getConfiguration();
     List<BlockCache> blockcaches = new ArrayList<>();
     // default
-    CacheConfig.instantiateBlockCache(conf);
-    blockcaches.add(new CacheConfig(conf).getBlockCache());
+    blockcaches.add(BlockCacheFactory.createBlockCache(conf));
 
     //set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
     TEST_UTIL.getConfiguration().setFloat(LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME, 2.0f);
@@ -224,16 +224,16 @@ public class TestCacheOnWrite {
     conf = TEST_UTIL.getConfiguration();
     this.conf.set("dfs.datanode.data.dir.perm", "700");
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
-    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
-        BLOOM_BLOCK_SIZE);
+    conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZE);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, cacheCompressedData);
     cowType.modifyConf(conf);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, cowType.shouldBeCached(BlockType.DATA));
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.LEAF_INDEX));
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
+    cacheConf = new CacheConfig(conf, blockCache);
     fs = HFileSystem.get(conf);
-    cacheConf =
-        new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
-        cowType.shouldBeCached(BlockType.LEAF_INDEX),
-        cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData,
-            false, false);
   }
 
   @After
@@ -414,13 +414,11 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    HRegion region = TEST_UTIL.createTestRegion(table,
-        new HColumnDescriptor(cf)
-            .setCompressionType(compress)
-            .setBloomFilterType(BLOOM_TYPE)
-            .setMaxVersions(maxVersions)
-            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
-    );
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(cfBytes).setCompressionType(compress)
+            .setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
+            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
+    HRegion region = TEST_UTIL.createTestRegion(table, cfd, blockCache);
     int rowIdx = 0;
     long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {

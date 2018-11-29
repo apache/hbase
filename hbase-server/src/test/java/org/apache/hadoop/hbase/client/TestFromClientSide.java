@@ -5234,13 +5234,12 @@ public class TestFromClientSide {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache();
+      BlockCache cache = cacheConf.getBlockCache().get();
 
       // establish baseline stats
       long startBlockCount = cache.getBlockCount();
       long startBlockHits = cache.getStats().getHitCount();
       long startBlockMiss = cache.getStats().getMissCount();
-
 
       // wait till baseline is stable, (minimal 500 ms)
       for (int i = 0; i < 5; i++) {

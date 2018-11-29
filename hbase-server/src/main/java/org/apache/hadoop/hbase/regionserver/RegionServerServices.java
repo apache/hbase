@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Server;
@@ -31,7 +32,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionSizeStore;
@@ -266,4 +269,14 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return Return table descriptors implementation.
    */
   TableDescriptors getTableDescriptors();
+
+  /**
+   * @return The block cache instance.
+   */
+  Optional<BlockCache> getBlockCache();
+
+  /**
+   * @return The cache for mob files.
+   */
+  Optional<MobFileCache> getMobFileCache();
 }

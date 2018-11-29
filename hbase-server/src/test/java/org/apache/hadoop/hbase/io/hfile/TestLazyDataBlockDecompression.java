@@ -82,13 +82,11 @@ public class TestLazyDataBlockDecompression {
 
   @Before
   public void setUp() throws IOException {
-    CacheConfig.clearGlobalInstances();
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
   }
 
   @After
   public void tearDown() {
-    CacheConfig.clearGlobalInstances();
     fs = null;
   }
 
@@ -159,12 +157,11 @@ public class TestLazyDataBlockDecompression {
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE =
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled);
-    CacheConfig cc = new CacheConfig(lazyCompressDisabled);
+    CacheConfig cc = new CacheConfig(lazyCompressDisabled,
+        new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled));
     assertFalse(cc.shouldCacheDataCompressed());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache();
+    assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
+    LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("disabledBlockCache=" + disabledBlockCache);
     assertEquals("test inconsistency detected.", maxSize, disabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",
@@ -194,12 +191,11 @@ public class TestLazyDataBlockDecompression {
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
-    CacheConfig.GLOBAL_BLOCK_CACHE_INSTANCE =
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled);
-    cc = new CacheConfig(lazyCompressEnabled);
+    cc = new CacheConfig(lazyCompressEnabled,
+        new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled));
     assertTrue("test improperly configured.", cc.shouldCacheDataCompressed());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache();
+    assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
+    LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("enabledBlockCache=" + enabledBlockCache);
     assertEquals("test inconsistency detected", maxSize, enabledBlockCache.getMaxSize());
     assertTrue("eviction thread spawned unintentionally.",

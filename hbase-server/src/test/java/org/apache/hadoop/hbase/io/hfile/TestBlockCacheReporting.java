@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -31,7 +33,6 @@ import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.DataCacheEntry;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.IndexCacheEntry;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -51,14 +52,7 @@ public class TestBlockCacheReporting {
 
   @Before
   public void setUp() throws Exception {
-    CacheConfig.clearGlobalInstances();
     this.conf = HBaseConfiguration.create();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    // Let go of current block cache.
-    CacheConfig.clearGlobalInstances();
   }
 
   private void addDataAndHits(final BlockCache bc, final int count) {
@@ -85,39 +79,36 @@ public class TestBlockCacheReporting {
   public void testBucketCache() throws IOException {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
-    CacheConfig.instantiateBlockCache(this.conf);
-    CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
-    logPerBlock(cc.getBlockCache());
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    assertTrue(blockCache instanceof CombinedBlockCache);
+    logPerBlock(blockCache);
     final int count = 3;
-    addDataAndHits(cc.getBlockCache(), count);
+    addDataAndHits(blockCache, count);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
-    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
+    LOG.info(Objects.toString(blockCache.getStats()));
+    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
     LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
-    bucketCacheReport(cc.getBlockCache());
+    bucketCacheReport(blockCache);
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
   }
 
   @Test
   public void testLruBlockCache() throws IOException {
-    CacheConfig.instantiateBlockCache(this.conf);
     CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
-    logPerBlock(cc.getBlockCache());
-    addDataAndHits(cc.getBlockCache(), 3);
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    assertTrue(blockCache instanceof LruBlockCache);
+    logPerBlock(blockCache);
+    addDataAndHits(blockCache, 3);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    BlockCache bc = cc.getBlockCache();
-    LOG.info("count=" + bc.getBlockCount() + ", currentSize=" + bc.getCurrentSize() +
-        ", freeSize=" + bc.getFreeSize() );
-    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
-    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
+    LOG.info("count=" + blockCache.getBlockCount() + ", currentSize=" + blockCache.getCurrentSize()
+        + ", freeSize=" + blockCache.getFreeSize());
+    LOG.info(Objects.toString(blockCache.getStats()));
+    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
     LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
-    bucketCacheReport(cc.getBlockCache());
+    bucketCacheReport(blockCache);
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
   }
 

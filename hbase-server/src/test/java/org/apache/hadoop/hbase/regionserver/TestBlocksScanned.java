@@ -17,25 +17,33 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HBaseTestCase.addContent;
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -43,7 +51,7 @@ import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestBlocksScanned extends HBaseTestCase {
+public class TestBlocksScanned {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -56,13 +64,14 @@ public class TestBlocksScanned extends HBaseTestCase {
   private static int BLOCK_SIZE = 70;
 
   private static HBaseTestingUtility TEST_UTIL = null;
+  private Configuration conf;
+  private Path testDir;
 
-  @Override
   @Before
   public void setUp() throws Exception {
-    super.setUp();
     TEST_UTIL = new HBaseTestingUtility();
-    CacheConfig.instantiateBlockCache(TEST_UTIL.getConfiguration());
+    conf = TEST_UTIL.getConfiguration();
+    testDir = TEST_UTIL.getDataTestDir("TestBlocksScanned");
   }
 
   @Test
@@ -96,12 +105,16 @@ public class TestBlocksScanned extends HBaseTestCase {
     _testBlocksScanned(table);
   }
 
-  private void _testBlocksScanned(HTableDescriptor table) throws Exception {
-    HRegion r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
+  private void _testBlocksScanned(TableDescriptor td) throws Exception {
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
+    RegionInfo regionInfo =
+        RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY).setEndKey(END_KEY)
+            .build();
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
     addContent(r, FAMILY, COL);
     r.flush(true);
 
-    CacheStats stats = new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache().getStats();
+    CacheStats stats = blockCache.getStats();
     long before = stats.getHitCount() + stats.getMissCount();
     // Do simple test of getting one row only first.
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
@@ -119,11 +132,12 @@ public class TestBlocksScanned extends HBaseTestCase {
 
     int kvPerBlock = (int) Math.ceil(BLOCK_SIZE /
         (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
-    Assert.assertEquals(2, kvPerBlock);
+    assertEquals(2, kvPerBlock);
 
     long expectDataBlockRead = (long) Math.ceil(expectResultSize / (double) kvPerBlock);
     long expectIndexBlockRead = expectDataBlockRead;
 
-    assertEquals(expectIndexBlockRead+expectDataBlockRead, stats.getHitCount() + stats.getMissCount() - before);
+    assertEquals(expectIndexBlockRead + expectDataBlockRead,
+        stats.getHitCount() + stats.getMissCount() - before);
   }
 }

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,7 +30,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -102,11 +103,9 @@ public class TestRSStatusServlet {
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(rs).getZooKeeper();
 
-    // Fake CacheConfig
+    // Fake BlockCache
     LOG.warn("The " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " is set to 0");
-    CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
-    Mockito.doReturn(null).when(cacheConf).getBlockCache();
-    Mockito.doReturn(cacheConf).when(rs).getCacheConfig();
+    Mockito.doReturn(Optional.empty()).when(rs).getBlockCache();
 
     // Fake MasterAddressTracker
     MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);

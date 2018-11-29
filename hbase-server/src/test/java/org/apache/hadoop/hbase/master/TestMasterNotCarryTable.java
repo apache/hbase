@@ -79,7 +79,13 @@ public class TestMasterNotCarryTable {
   @Test
   public void testMasterBlockCache() {
     // no need to instantiate block cache.
-    assertNull(master.getCacheConfig().getBlockCache());
+    assertFalse(master.getBlockCache().isPresent());
+  }
+
+  @Test
+  public void testMasterMOBFileCache() {
+    // no need to instantiate mob file cache.
+    assertFalse(master.getMobFileCache().isPresent());
   }
 
   @Test
