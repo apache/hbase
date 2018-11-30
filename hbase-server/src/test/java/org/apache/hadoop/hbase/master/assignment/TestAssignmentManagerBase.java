@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.NavigableMap;
@@ -38,8 +39,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -63,6 +66,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -110,9 +115,11 @@ public abstract class TestAssignmentManagerBase {
   protected long unassignSubmittedCount = 0;
   protected long unassignFailedCount = 0;
 
+  protected int newRsAdded;
+
   protected int getAssignMaxAttempts() {
     // Have many so we succeed eventually.
-    return 100;
+    return 1000;
   }
 
   protected void setupConfiguration(Configuration conf) throws Exception {
@@ -127,11 +134,13 @@ public abstract class TestAssignmentManagerBase {
   @Before
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
-    this.executor = Executors.newSingleThreadScheduledExecutor();
+    this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
+    newRsAdded = 0;
     am = master.getAssignmentManager();
     assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
@@ -186,7 +195,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected byte[] waitOnFuture(final Future<byte[]> future) throws Exception {
     try {
-      return future.get(60, TimeUnit.SECONDS);
+      return future.get(3, TimeUnit.MINUTES);
     } catch (ExecutionException e) {
       LOG.info("ExecutionException", e);
       Exception ee = (Exception) e.getCause();
@@ -271,7 +280,17 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected void doCrash(final ServerName serverName) {
+    this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
     this.am.submitServerCrash(serverName, false/* No WALs here */);
+    // add a new server to avoid killing all the region servers which may hang the UTs
+    ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
+    newRsAdded++;
+    try {
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+    } catch (YouAreDeadException e) {
+      // should not happen
+      throw new UncheckedIOException(e);
+    }
   }
 
   protected void doRestart(final ServerName serverName) {
