@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.NavigableMap;
@@ -38,8 +39,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -271,7 +274,18 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected void doCrash(final ServerName serverName) {
+    this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
     this.am.submitServerCrash(serverName, false/* No WALs here */);
+    // add a new server to avoid killing all the region servers which may hang the UTs
+    int maxPort = this.master.getServerManager().getOnlineServersList().stream()
+      .mapToInt(ServerName::getPort).max().getAsInt();
+    ServerName newSn = ServerName.valueOf("localhost", 100 + maxPort + 1, 1);
+    try {
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+    } catch (YouAreDeadException e) {
+      // should not happen
+      throw new UncheckedIOException(e);
+    }
   }
 
   protected void doRestart(final ServerName serverName) {
