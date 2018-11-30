@@ -136,7 +136,7 @@ public final class ReadOnlyZKClient implements Closeable {
     this.retryIntervalMs =
         conf.getInt(RECOVERY_RETRY_INTERVAL_MILLIS, DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS);
     this.keepAliveTimeMs = conf.getInt(KEEPALIVE_MILLIS, DEFAULT_KEEPALIVE_MILLIS);
-    LOG.info(
+    LOG.debug(
       "Connect {} to {} with session timeout={}ms, retries {}, " +
         "retry interval {}ms, keepAlive={}ms",
       getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs);
@@ -347,7 +347,7 @@ public final class ReadOnlyZKClient implements Closeable {
   @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
-      LOG.info("Close zookeeper connection {} to {}", getId(), connectString);
+      LOG.debug("Close zookeeper connection {} to {}", getId(), connectString);
       tasks.add(CLOSE);
     }
   }
