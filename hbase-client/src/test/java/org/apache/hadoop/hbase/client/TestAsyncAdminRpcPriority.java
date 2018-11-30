@@ -142,7 +142,7 @@ public class TestAsyncAdminRpcPriority {
     }).when(adminStub).stopServer(any(HBaseRpcController.class), any(StopServerRequest.class),
       any());
 
-    conn = new AsyncConnectionImpl(CONF, new DoNothingAsyncRegistry(CONF), "test",
+    conn = new AsyncConnectionImpl(CONF, new DoNothingAsyncRegistry(CONF), "test", null,
       UserProvider.instantiate(CONF).getCurrent()) {
 
       @Override
