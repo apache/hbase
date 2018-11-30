@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -860,6 +861,11 @@ public class TestHeapMemoryManager {
 
     @Override
     public Connection createConnection(Configuration conf) throws IOException {
+      return null;
+    }
+
+    @Override
+    public AsyncClusterConnection getAsyncClusterConnection() {
       return null;
     }
   }

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -471,6 +472,11 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public SyncReplicationReplayWALManager getSyncReplicationReplayWALManager() {
+    return null;
+  }
+
+  @Override
+  public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
   }
 }
