@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -720,5 +721,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public Optional<MobFileCache> getMobFileCache() {
     return Optional.empty();
+  }
+
+  public AsyncClusterConnection getAsyncClusterConnection() {
+    return null;
   }
 }
