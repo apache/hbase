@@ -1231,38 +1231,46 @@ class ConnectionManager {
       }
     }
 
+    private volatile RegionLocations metaLocations = null;
+    private volatile long lastMetaLookupTime = EnvironmentEdgeManager.currentTime();
+    // cache meta location at most 10 seconds
+    private final static long META_LOOKUP_CACHE_INTERVAL = 10000;
+
     private RegionLocations locateMeta(final TableName tableName,
         boolean useCache, int replicaId) throws IOException {
-      // HBASE-10785: We cache the location of the META itself, so that we are not overloading
-      // zookeeper with one request for every region lookup. We cache the META with empty row
-      // key in MetaCache.
-      byte[] metaCacheKey = HConstants.EMPTY_START_ROW; // use byte[0] as the row for meta
-      RegionLocations locations = null;
+      // We cache the location of the META itself, so that we are not overloading
+      // zookeeper with one request for every region lookup. If relocating, bypass
+      // the cache immediately.
       if (useCache) {
-        locations = getCachedLocation(tableName, metaCacheKey);
-        if (locations != null && locations.getRegionLocation(replicaId) != null) {
-          return locations;
+        long now = EnvironmentEdgeManager.currentTime();
+        if (now - lastMetaLookupTime < META_LOOKUP_CACHE_INTERVAL) {
+          if (metaLocations != null &&
+              metaLocations.getRegionLocation(replicaId) != null) {
+            return metaLocations;
+          }
+        } else {
+          useCache = false;
         }
       }
-
       // only one thread should do the lookup.
       synchronized (metaRegionLock) {
         // Check the cache again for a hit in case some other thread made the
         // same query while we were waiting on the lock.
         if (useCache) {
-          locations = getCachedLocation(tableName, metaCacheKey);
-          if (locations != null && locations.getRegionLocation(replicaId) != null) {
-            return locations;
+          if (metaLocations != null &&
+              metaLocations.getRegionLocation(replicaId) != null) {
+            return metaLocations;
           }
         }
-
         // Look up from zookeeper
-        locations = this.registry.getMetaRegionLocation();
-        if (locations != null) {
-          cacheLocation(tableName, locations);
+        metaLocations = this.registry.getMetaRegionLocation();
+        lastMetaLookupTime = EnvironmentEdgeManager.currentTime();
+        if (metaLocations != null &&
+            metaLocations.getRegionLocation(replicaId) != null) {
+          return metaLocations;
         }
+        return null;
       }
-      return locations;
     }
 
     /*
