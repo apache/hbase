@@ -175,7 +175,8 @@ public class MetaTableAccessor {
    * @return An {@link Table} for <code>hbase:meta</code>
    * @throws IOException
    */
-  static Table getMetaHTable(final Connection connection) throws IOException {
+  static Table getMetaHTable(final Connection connection)
+  throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     if (connection == null) {
       throw new NullPointerException("No connection");
@@ -247,13 +248,11 @@ public class MetaTableAccessor {
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    try (Table metaTable = getMetaHTable(connection)) {
-      Result r = get(metaTable, get);
-      RegionLocations locations = getRegionLocations(r);
-      return locations == null
-          ? null
-          : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
-    }
+    Result r = get(getMetaHTable(connection), get);
+    RegionLocations locations = getRegionLocations(r);
+    return locations == null
+      ? null
+      : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
   }
 
   /**
@@ -268,10 +267,8 @@ public class MetaTableAccessor {
     byte[] row = getMetaKeyForRegion(regionInfo);
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    try (Table metaTable = getMetaHTable(connection)) {
-      Result r = get(metaTable, get);
-      return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
-    }
+    Result r = get(getMetaHTable(connection), get);
+    return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
   }
 
   /** Returns the row key to use for this regionInfo */
@@ -303,9 +300,7 @@ public class MetaTableAccessor {
       byte[] regionName) throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    try (Table metaTable = getMetaHTable(connection)) {
-      return get(metaTable, get);
-    }
+    return get(getMetaHTable(connection), get);
   }
 
   /**
@@ -636,19 +631,19 @@ public class MetaTableAccessor {
       scan.setCaching(caching);
     }
     scan.addFamily(HConstants.CATALOG_FAMILY);
-    try (Table metaTable = getMetaHTable(connection)) {
-      try (ResultScanner scanner = metaTable.getScanner(scan)) {
-        Result data;
-        while ((data = scanner.next()) != null) {
-          if (data.isEmpty()) {
-            continue;
-          }
-          // Break if visit returns false.
-          if (!visitor.visit(data)) {
-            break;
-          }
-        }
+    Table metaTable = getMetaHTable(connection);
+    ResultScanner scanner = null;
+    try {
+      scanner = metaTable.getScanner(scan);
+      Result data;
+      while((data = scanner.next()) != null) {
+        if (data.isEmpty()) continue;
+        // Break if visit returns false.
+        if (!visitor.visit(data)) break;
       }
+    } finally {
+      if (scanner != null) scanner.close();
+      metaTable.close();
     }
   }
 
@@ -1025,9 +1020,7 @@ public class MetaTableAccessor {
    */
   static void putToMetaTable(final Connection connection, final Put p)
     throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
-      put(metaTable, p);
-    }
+    put(getMetaHTable(connection), p);
   }
 
   /**
@@ -1051,8 +1044,11 @@ public class MetaTableAccessor {
    */
   public static void putsToMetaTable(final Connection connection, final List<Put> ps)
     throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
-      metaTable.put(ps);
+    Table t = getMetaHTable(connection);
+    try {
+      t.put(ps);
+    } finally {
+      t.close();
     }
   }
 
@@ -1077,8 +1073,11 @@ public class MetaTableAccessor {
    */
   public static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
     throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
-      metaTable.delete(deletes);
+    Table t = getMetaHTable(connection);
+    try {
+      t.delete(deletes);
+    } finally {
+      t.close();
     }
   }
 
@@ -1117,12 +1116,15 @@ public class MetaTableAccessor {
   public static void mutateMetaTable(final Connection connection,
                                      final List<Mutation> mutations)
     throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
-      metaTable.batch(mutations);
+    Table t = getMetaHTable(connection);
+    try {
+      t.batch(mutations);
     } catch (InterruptedException e) {
       InterruptedIOException ie = new InterruptedIOException(e.getMessage());
       ie.initCause(e);
       throw ie;
+    } finally {
+      t.close();
     }
   }
 
@@ -1186,8 +1188,11 @@ public class MetaTableAccessor {
    */
   public static void addRegionToMeta(Connection connection, HRegionInfo regionInfo,
                                      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
-      addRegionToMeta(metaTable, regionInfo, splitA, splitB);
+    Table meta = getMetaHTable(connection);
+    try {
+      addRegionToMeta(meta, regionInfo, splitA, splitB);
+    } finally {
+      meta.close();
     }
   }
 
@@ -1264,7 +1269,8 @@ public class MetaTableAccessor {
       HRegionInfo regionA, HRegionInfo regionB, ServerName sn, int regionReplication,
       long masterSystemTime)
           throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
+    Table meta = getMetaHTable(connection);
+    try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
       // use the maximum of what master passed us vs local time.
@@ -1292,7 +1298,9 @@ public class MetaTableAccessor {
 
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
         + HConstants.DELIMITER);
-      multiMutate(metaTable, tableRow, putOfMerged, deleteA, deleteB);
+      multiMutate(meta, tableRow, putOfMerged, deleteA, deleteB);
+    } finally {
+      meta.close();
     }
   }
 
@@ -1310,7 +1318,8 @@ public class MetaTableAccessor {
   public static void splitRegion(final Connection connection,
                                  HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
                                  ServerName sn, int regionReplication) throws IOException {
-    try (Table metaTable = getMetaHTable(connection)) {
+    Table meta = getMetaHTable(connection);
+    try {
       HRegionInfo copyOfParent = new HRegionInfo(parent);
       copyOfParent.setOffline(true);
       copyOfParent.setSplit(true);
@@ -1334,7 +1343,9 @@ public class MetaTableAccessor {
       }
 
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-      multiMutate(metaTable, tableRow, putParent, putA, putB);
+      multiMutate(meta, tableRow, putParent, putA, putB);
+    } finally {
+      meta.close();
     }
   }
 
