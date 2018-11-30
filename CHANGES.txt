@@ -1,5 +1,37 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.9 12/7/2018
+
+** Sub-task
+    * [HBASE-21347] - Backport HBASE-21200 "Memstore flush doesn't finish because of seekToPreviousRow() in memstore scanner." to branch-1
+    * [HBASE-21473] - RowIndexSeekerV1 may return cell with extra two \x00\x00 bytes which has no tags
+
+** Bug
+    * [HBASE-20604] - ProtobufLogReader#readNext can incorrectly loop to the same position in the stream until the the WAL is rolled
+    * [HBASE-21266] - Not running balancer because processing dead regionservers, but empty dead rs list
+    * [HBASE-21275] - Thrift Server (branch 1 fix) -> Disable TRACE HTTP method for thrift http server (branch 1 only)
+    * [HBASE-21355] - HStore's storeSize is calculated repeatedly which causing the confusing region split 
+    * [HBASE-21357] - RS should abort if OOM in Reader thread
+    * [HBASE-21359] - Fix build problem against Hadoop 2.8.5
+    * [HBASE-21387] - Race condition surrounding in progress snapshot handling in snapshot cache leads to loss of snapshot files
+    * [HBASE-21417] - Pre commit build is broken due to surefire plugin crashes
+    * [HBASE-21424] - Change flakies and nightlies so scheduled less often
+    * [HBASE-21439] - StochasticLoadBalancer RegionLoads aren’t being used in RegionLoad cost functions
+    * [HBASE-21445] - CopyTable by bulkload will write hfile into yarn's HDFS 
+    * [HBASE-21464] - Splitting blocked with meta NSRE during split transaction
+    * [HBASE-21504] - If enable FIFOCompactionPolicy, a compaction may write a "empty" hfile whose maxTimeStamp is long max. This kind of hfile will never be archived.
+
+** Improvement
+    * [HBASE-21103] - nightly test cache of yetus install needs to be more thorough in verification
+    * [HBASE-21185] - WALPrettyPrinter: Additional useful info to be printed by wal printer tool, for debugability purposes
+    * [HBASE-21263] - Mention compression algorithm along with other storefile details
+    * [HBASE-21373] - Backport to branch-1, "HBASE-21338 [balancer] If balancer is an ill-fit for cluster size, it gives little indication"
+    * [HBASE-21511] - Remove in progress snapshot check in SnapshotFileCache#getUnreferencedFiles
+
+** Task
+    * [HBASE-21265] - Split up TestRSGroups
+
+
 Release Notes - HBase - Version 1.4.8 10/8/2018
 
 ** Sub-task
