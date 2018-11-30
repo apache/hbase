@@ -298,7 +298,7 @@ public class ConnectionFactory {
       try {
         future.complete(
           user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
-            .newInstance(clazz, conf, registry, clusterId, user)));
+            .newInstance(clazz, conf, registry, clusterId, null, user)));
       } catch (Exception e) {
         registry.close();
         future.completeExceptionally(e);
