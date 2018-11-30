@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -367,5 +368,9 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public Optional<MobFileCache> getMobFileCache() {
     return Optional.empty();
+  }
+
+  public AsyncClusterConnection getAsyncClusterConnection() {
+    return null;
   }
 }
