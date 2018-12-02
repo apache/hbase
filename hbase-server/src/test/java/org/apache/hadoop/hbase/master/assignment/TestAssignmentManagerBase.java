@@ -67,6 +67,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -113,9 +115,11 @@ public abstract class TestAssignmentManagerBase {
   protected long unassignSubmittedCount = 0;
   protected long unassignFailedCount = 0;
 
+  protected int newRsAdded;
+
   protected int getAssignMaxAttempts() {
     // Have many so we succeed eventually.
-    return 100;
+    return 1000;
   }
 
   protected void setupConfiguration(Configuration conf) throws Exception {
@@ -130,11 +134,13 @@ public abstract class TestAssignmentManagerBase {
   @Before
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
-    this.executor = Executors.newSingleThreadScheduledExecutor();
+    this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
+    newRsAdded = 0;
     am = master.getAssignmentManager();
     assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
@@ -189,7 +195,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected byte[] waitOnFuture(final Future<byte[]> future) throws Exception {
     try {
-      return future.get(60, TimeUnit.SECONDS);
+      return future.get(3, TimeUnit.MINUTES);
     } catch (ExecutionException e) {
       LOG.info("ExecutionException", e);
       Exception ee = (Exception) e.getCause();
@@ -277,9 +283,8 @@ public abstract class TestAssignmentManagerBase {
     this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
     this.am.submitServerCrash(serverName, false/* No WALs here */);
     // add a new server to avoid killing all the region servers which may hang the UTs
-    int maxPort = this.master.getServerManager().getOnlineServersList().stream()
-      .mapToInt(ServerName::getPort).max().getAsInt();
-    ServerName newSn = ServerName.valueOf("localhost", 100 + maxPort + 1, 1);
+    ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
+    newRsAdded++;
     try {
       this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
     } catch (YouAreDeadException e) {
