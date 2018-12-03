@@ -808,12 +808,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException {
-
-    Thread zombieDetector = new Thread(new InitializationMonitor(this),
-        "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
-    zombieDetector.setDaemon(true);
-    zombieDetector.start();
-
     /*
      * We are active master now... go initialize components we need to run.
      */
@@ -882,6 +876,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     initializeZKBasedSystemTrackers();
     // Set ourselves as active Master now our claim has succeeded up in zk.
     this.activeMaster = true;
+
+    // Start the Zombie master detector after setting master as active, see HBASE-21535
+    Thread zombieDetector = new Thread(new InitializationMonitor(this),
+        "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
+    zombieDetector.setDaemon(true);
+    zombieDetector.start();
 
     // This is for backwards compatibility
     // See HBASE-11393
