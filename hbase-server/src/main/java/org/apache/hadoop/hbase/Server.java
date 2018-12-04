@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,15 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.io.IOException;
 
 /**
  * Defines a curated set of shared functions implemented by HBase servers (Masters
@@ -62,14 +59,6 @@ public interface Server extends Abortable, Stoppable {
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
   ClusterConnection getClusterConnection();
-
-  /**
-   * Returns instance of {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
-   * running inside this server. This MetaServerLocator is started and stopped by server, clients
-   * shouldn't manage it's lifecycle.
-   * @return instance of {@link MetaTableLocator} associated with this server.
-   */
-  MetaTableLocator getMetaTableLocator();
 
   /**
    * @return The unique server name for this server.

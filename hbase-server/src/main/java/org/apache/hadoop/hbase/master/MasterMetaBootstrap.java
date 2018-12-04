@@ -65,8 +65,7 @@ class MasterMetaBootstrap {
       throw new IllegalStateException("hbase:meta must be initialized first before we can " +
           "assign out its replicas");
     }
-    ServerName metaServername =
-        this.master.getMetaTableLocator().getMetaRegionLocation(this.master.getZooKeeper());
+    ServerName metaServername = MetaTableLocator.getMetaRegionLocation(this.master.getZooKeeper());
     for (int i = 1; i < numReplicas; i++) {
       // Get current meta state for replica from zk.
       RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper(), i);

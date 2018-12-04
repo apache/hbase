@@ -757,8 +757,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         found.set(true);
         try {
           boolean rootMetaFound =
-              masterServices.getMetaTableLocator().verifyMetaRegionLocation(
-                  conn, masterServices.getZooKeeper(), 1);
+            Utility.verifyMetaRegionLocation(conn, masterServices.getZooKeeper(), 1);
           if (rootMetaFound) {
             MetaTableAccessor.Visitor visitor = new DefaultVisitorBase() {
               @Override

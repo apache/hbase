@@ -77,8 +77,6 @@
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-
-  MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
   Table table;
@@ -202,7 +200,7 @@ if ( fqtn != null ) {
   for (int j = 0; j < numMetaReplicas; j++) {
     RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                             RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-    ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+    ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
     for (int i = 0; i < 1; i++) {
       String hostAndPort = "";
       String readReq = "N/A";

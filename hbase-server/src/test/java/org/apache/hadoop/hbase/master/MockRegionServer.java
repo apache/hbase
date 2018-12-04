@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -301,11 +300,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public ClusterConnection getConnection() {
-    return null;
-  }
-
-  @Override
-  public MetaTableLocator getMetaTableLocator() {
     return null;
   }
 
