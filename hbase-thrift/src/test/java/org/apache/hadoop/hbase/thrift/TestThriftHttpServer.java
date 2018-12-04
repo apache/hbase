@@ -185,11 +185,7 @@ public class TestThriftHttpServer {
 
   private void waitThriftServerStartup() throws Exception{
     // wait up to 10s for the server to start
-    for (int i = 0; i < 100
-        && ( thriftServer.serverRunner == null ||  thriftServer.serverRunner.httpServer ==
-        null); i++) {
-      Thread.sleep(100);
-    }
+    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
   }
 
   private void runThriftServer(int customHeaderSize) throws Exception {
@@ -252,7 +248,7 @@ public class TestThriftHttpServer {
   }
 
   private void stopHttpServerThread() throws Exception {
-    LOG.debug("Stopping " + " Thrift HTTP server");
+    LOG.debug("Stopping Thrift HTTP server");
     thriftServer.stop();
     httpServerThread.join();
     if (httpServerException != null) {
