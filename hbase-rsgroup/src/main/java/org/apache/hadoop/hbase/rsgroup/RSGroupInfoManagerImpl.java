@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.protobuf.ServiceException;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +33,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -81,9 +79,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
@@ -756,11 +756,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         assignedRegions.clear();
         found.set(true);
         try {
-          conn.getTable(TableName.NAMESPACE_TABLE_NAME);
-          conn.getTable(RSGROUP_TABLE_NAME);
           boolean rootMetaFound =
-              masterServices.getMetaTableLocator().verifyMetaRegionLocation(
-                  conn, masterServices.getZooKeeper(), 1);
+            Utility.verifyMetaRegionLocation(conn, masterServices.getZooKeeper(), 1);
           final AtomicBoolean nsFound = new AtomicBoolean(false);
           if (rootMetaFound) {
             MetaTableAccessor.Visitor visitor = new DefaultVisitorBase() {

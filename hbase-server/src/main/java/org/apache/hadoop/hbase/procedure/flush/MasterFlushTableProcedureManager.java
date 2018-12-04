@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -43,14 +42,15 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -131,7 +131,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     List<Pair<RegionInfo, ServerName>> regionsAndLocations;
 
     if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+      regionsAndLocations = MetaTableLocator.getMetaRegionsAndLocations(
         master.getZooKeeper());
     } else {
       regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(

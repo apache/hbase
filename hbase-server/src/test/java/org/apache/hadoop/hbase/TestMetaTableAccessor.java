@@ -247,13 +247,11 @@ public class TestMetaTableAccessor {
     abstract void metaTask() throws Throwable;
   }
 
-  @Test public void testGetRegionsFromMetaTable()
-  throws IOException, InterruptedException {
-    List<RegionInfo> regions =
-      new MetaTableLocator().getMetaRegions(UTIL.getZooKeeperWatcher());
+  @Test
+  public void testGetRegionsFromMetaTable() throws IOException, InterruptedException {
+    List<RegionInfo> regions = MetaTableLocator.getMetaRegions(UTIL.getZooKeeperWatcher());
     assertTrue(regions.size() >= 1);
-    assertTrue(new MetaTableLocator().getMetaRegionsAndLocations(
-      UTIL.getZooKeeperWatcher()).size() >= 1);
+    assertTrue(MetaTableLocator.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
   }
 
   @Test public void testTableExists() throws IOException {
