@@ -711,6 +711,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       new Path(root, "mapreduce-am-staging-root-dir").toString());
   }
 
+  /**
+   *  Check whether the tests should assume NEW_VERSION_BEHAVIOR when creating
+   *  new column families. Default to false.
+   */
+  public boolean isNewVersionBehaviorEnabled(){
+    final String propName = "hbase.tests.new.version.behavior";
+    String v = System.getProperty(propName);
+    if (v != null){
+      return Boolean.parseBoolean(v);
+    }
+    return false;
+  }
 
   /**
    *  Get the HBase setting for dfs.client.read.shortcircuit from the conf or a system property.
@@ -1444,9 +1456,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       BloomType type, int blockSize, Configuration c) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
     for (byte[] family : families) {
-      builder.setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(type)
-              .setBlocksize(blockSize).build());
+      ColumnFamilyDescriptorBuilder cfdb = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setBloomFilterType(type)
+        .setBlocksize(blockSize);
+      if (isNewVersionBehaviorEnabled()) {
+          cfdb.setNewVersionBehavior(true);
+      }
+      builder.setColumnFamily(cfdb.build());
     }
     TableDescriptor td = builder.build();
     getAdmin().createTable(td, splitKeys);
@@ -1465,7 +1481,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createTable(TableDescriptor htd, byte[][] splitRows)
       throws IOException {
-    getAdmin().createTable(htd, splitRows);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
+    if (isNewVersionBehaviorEnabled()) {
+      for (ColumnFamilyDescriptor family : htd.getColumnFamilies()) {
+         builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+           .setNewVersionBehavior(true).build());
+      }
+    }
+    getAdmin().createTable(builder.build(), splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta
     // we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
@@ -1529,6 +1552,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
+      if (isNewVersionBehaviorEnabled()) {
+        hcd.setNewVersionBehavior(true);
+      }
       desc.addFamily(hcd);
     }
     getAdmin().createTable(desc, splitKeys);
@@ -1567,6 +1593,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       HColumnDescriptor hcd = new HColumnDescriptor(family)
           .setMaxVersions(numVersions)
           .setBlocksize(blockSize);
+      if (isNewVersionBehaviorEnabled()) {
+        hcd.setNewVersionBehavior(true);
+      }
       desc.addFamily(hcd);
     }
     getAdmin().createTable(desc);
@@ -1583,6 +1612,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         HColumnDescriptor hcd = new HColumnDescriptor(family)
             .setMaxVersions(numVersions)
             .setBlocksize(blockSize);
+        if (isNewVersionBehaviorEnabled()) {
+          hcd.setNewVersionBehavior(true);
+        }
         desc.addFamily(hcd);
       }
       if(cpName != null) {
@@ -1611,6 +1643,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family)
           .setMaxVersions(numVersions[i]);
+      if (isNewVersionBehaviorEnabled()) {
+        hcd.setNewVersionBehavior(true);
+      }
       desc.addFamily(hcd);
       i++;
     }
@@ -1633,6 +1668,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
+    if (isNewVersionBehaviorEnabled()) {
+      hcd.setNewVersionBehavior(true);
+    }
     desc.addFamily(hcd);
     getAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
@@ -1754,13 +1792,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
-      htd.addFamily(new HColumnDescriptor(cfName)
+      HColumnDescriptor hcd = new HColumnDescriptor(cfName)
           .setMinVersions(minVersions)
           .setMaxVersions(versions)
           .setKeepDeletedCells(keepDeleted)
           .setBlockCacheEnabled(false)
-          .setTimeToLive(ttl)
-      );
+          .setTimeToLive(ttl);
+      if (isNewVersionBehaviorEnabled()) {
+          hcd.setNewVersionBehavior(true);
+      }
+      htd.addFamily(hcd);
     }
     return htd;
   }
@@ -1786,6 +1827,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family)
           .setMaxVersions(maxVersions);
+      if (isNewVersionBehaviorEnabled()) {
+          hcd.setNewVersionBehavior(true);
+      }
       desc.addFamily(hcd);
     }
     return desc;
