@@ -20,6 +20,7 @@ Release Notes - HBase - Version 1.4.9 12/7/2018
     * [HBASE-21445] - CopyTable by bulkload will write hfile into yarn's HDFS 
     * [HBASE-21464] - Splitting blocked with meta NSRE during split transaction
     * [HBASE-21504] - If enable FIFOCompactionPolicy, a compaction may write a "empty" hfile whose maxTimeStamp is long max. This kind of hfile will never be archived.
+    * [HBASE-21546] - ConnectException in TestThriftHttpServer
 
 ** Improvement
     * [HBASE-21103] - nightly test cache of yetus install needs to be more thorough in verification
