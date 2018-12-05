@@ -94,6 +94,7 @@ public class TestMasterObserver {
 
   public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {
 
+    private boolean preCreateTableRegionInfosCalled;
     private boolean preCreateTableCalled;
     private boolean postCreateTableCalled;
     private boolean preDeleteTableCalled;
@@ -186,6 +187,7 @@ public class TestMasterObserver {
     private boolean postLockHeartbeatCalled;
 
     public void resetStates() {
+      preCreateTableRegionInfosCalled = false;
       preCreateTableCalled = false;
       postCreateTableCalled = false;
       preDeleteTableCalled = false;
@@ -298,6 +300,14 @@ public class TestMasterObserver {
     }
 
     @Override
+    public TableDescriptor preCreateTableRegionsInfos(
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc)
+        throws IOException {
+      preCreateTableRegionInfosCalled = true;
+      return desc;
+    }
+
+    @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         TableDescriptor desc, RegionInfo[] regions) throws IOException {
       preCreateTableCalled = true;
@@ -310,11 +320,11 @@ public class TestMasterObserver {
     }
 
     public boolean wasCreateTableCalled() {
-      return preCreateTableCalled && postCreateTableCalled;
+      return preCreateTableRegionInfosCalled && preCreateTableCalled && postCreateTableCalled;
     }
 
     public boolean preCreateTableCalledOnly() {
-      return preCreateTableCalled && !postCreateTableCalled;
+      return preCreateTableRegionInfosCalled && preCreateTableCalled && !postCreateTableCalled;
     }
 
     @Override
