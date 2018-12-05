@@ -1898,7 +1898,28 @@ This treatment can possibly lead to data inconsistency between source and destin
 
 .Serial replication configuration
 
-. Set the serial flag to true for a repliation peer. You can either set it to true when creating a replication peer, or change it to true later.
+Set the serial flag to true for a repliation peer. And the default serial flag is false.
+
+* Add a new replication peer which serial flag is true
+
+[source,ruby]
+----
+hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase", SERIAL => true
+----
+
+* Set a replication peer's serial flag to false
+
+[source,ruby]
+----
+hbase> set_peer_serial '1', false
+----
+
+* Set a replication peer's serial flag to true
+
+[source,ruby]
+----
+hbase> set_peer_serial '1', true
+----
 
 The serial replication feature had been done firstly in link:https://issues.apache.org/jira/browse/HBASE-9465[HBASE-9465] and then reverted and redone in link:https://issues.apache.org/jira/browse/HBASE-20046[HBASE-20046]. You can find more details in these issues.
 

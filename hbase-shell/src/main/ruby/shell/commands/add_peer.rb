@@ -34,6 +34,8 @@ An optional parameter for namespaces identifies which namespace's tables will be
 to the peer cluster.
 An optional parameter for table column families identifies which tables and/or column families
 will be replicated to the peer cluster.
+An optional parameter for serial flag identifies whether or not the replication peer is a serial
+replication peer. The default serial flag is false.
 
 Note: Set a namespace in the peer config means that all tables in this namespace
 will be replicated to the peer cluster. So if you already have set a namespace in peer config,
@@ -50,6 +52,8 @@ Examples:
     NAMESPACES => ["ns1", "ns2", "ns3"]
   hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
     NAMESPACES => ["ns1", "ns2"], TABLE_CFS => { "ns3:table1" => [], "ns3:table2" => ["cf1"] }
+  hbase> add_peer '3', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
+    NAMESPACES => ["ns1", "ns2", "ns3"], SERIAL => true
 
 For a custom replication endpoint, the ENDPOINT_CLASSNAME can be provided. Two optional arguments
 are DATA and CONFIG which can be specified to set different either the peer_data or configuration

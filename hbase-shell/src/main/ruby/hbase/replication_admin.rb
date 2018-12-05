@@ -66,6 +66,7 @@ module Hbase
         namespaces = args.fetch(NAMESPACES, nil)
         peer_state = args.fetch(STATE, nil)
         remote_wal_dir = args.fetch(REMOTE_WAL_DIR, nil)
+        serial = args.fetch(SERIAL, nil)
 
         # Create and populate a ReplicationPeerConfig
         builder = ReplicationPeerConfig.newBuilder()
@@ -77,6 +78,10 @@ module Hbase
 
         unless remote_wal_dir.nil?
           builder.setRemoteWALDir(remote_wal_dir)
+        end
+
+        unless serial.nil?
+          builder.setSerial(serial)
         end
 
         unless config.nil?
