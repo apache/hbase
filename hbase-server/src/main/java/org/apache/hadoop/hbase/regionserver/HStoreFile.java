@@ -126,7 +126,8 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   private final AtomicInteger refCount = new AtomicInteger(0);
 
   // Set implementation must be of concurrent type
-  private final Set<StoreFileReader> streamReaders;
+  @VisibleForTesting
+  final Set<StoreFileReader> streamReaders;
 
   private final boolean noReadahead;
 
