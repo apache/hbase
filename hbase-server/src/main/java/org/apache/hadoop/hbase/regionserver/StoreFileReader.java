@@ -181,6 +181,9 @@ public class StoreFileReader {
     if (!shared) {
       try {
         reader.close(false);
+        if (this.listener != null) {
+          this.listener.storeFileReaderClosed(this);
+        }
       } catch (IOException e) {
         LOG.warn("failed to close stream reader", e);
       }
