@@ -316,6 +316,20 @@ public class MasterCoprocessorHost
 
   /* Implementation of hooks for invoking MasterObservers */
 
+  public TableDescriptor preCreateTableRegionsInfos(TableDescriptor desc) throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return desc;
+    }
+    return execOperationWithResult(
+      new ObserverOperationWithResult<MasterObserver, TableDescriptor>(masterObserverGetter, desc) {
+
+        @Override
+        protected TableDescriptor call(MasterObserver observer) throws IOException {
+          return observer.preCreateTableRegionsInfos(this, getResult());
+        }
+      });
+  }
+
   public void preCreateTable(final TableDescriptor htd, final RegionInfo[] regions)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
