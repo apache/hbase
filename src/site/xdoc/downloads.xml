@@ -32,6 +32,7 @@ under the License.
   <a href="https://www.apache.org/dyn/closer.cgi#verify">Verify The Integrity Of The Files</a> for
   how to verify your mirrored downloads.
   </p>
+  <p style="color:red;"><strong>NOTE: 2.1.1 and 2.0.3 have a serious memory leak. See HBASE-21551. We are working on replacement releases.</strong></p>
   <section name="Releases">
   <table>
     <tr>
