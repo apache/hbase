@@ -482,6 +482,8 @@ public class MetricsRegionServerSourceImpl
                     rsWrap.getNumStoreFiles())
             .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
             .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
+            .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
+                    rsWrap.getStoreFileSizeGrowthRate())
             .addGauge(Interns.info(MAX_STORE_FILE_AGE, MAX_STORE_FILE_AGE_DESC),
                     rsWrap.getMaxStoreFileAge())
             .addGauge(Interns.info(MIN_STORE_FILE_AGE, MIN_STORE_FILE_AGE_DESC),

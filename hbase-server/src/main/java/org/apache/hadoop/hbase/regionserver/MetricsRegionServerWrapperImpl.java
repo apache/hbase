@@ -68,6 +68,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
   private volatile long storeFileSize = 0;
+  private volatile double storeFileSizeGrowthRate = 0;
   private volatile long maxStoreFileAge = 0;
   private volatile long minStoreFileAge = 0;
   private volatile long avgStoreFileAge = 0;
@@ -512,6 +513,11 @@ class MetricsRegionServerWrapperImpl
     return storeFileSize;
   }
 
+  @Override
+  public double getStoreFileSizeGrowthRate() {
+    return storeFileSizeGrowthRate;
+  }
+
   @Override public double getRequestsPerSecond() {
     return requestsPerSecond;
   }
@@ -730,6 +736,7 @@ class MetricsRegionServerWrapperImpl
     private long lastRequestCount = 0;
     private long lastReadRequestsCount = 0;
     private long lastWriteRequestsCount = 0;
+    private long lastStoreFileSize = 0;
 
     @Override
     synchronized public void run() {
@@ -870,18 +877,20 @@ class MetricsRegionServerWrapperImpl
           long intervalReadRequestsCount = tempReadRequestsCount - lastReadRequestsCount;
           long intervalWriteRequestsCount = tempWriteRequestsCount - lastWriteRequestsCount;
 
-          double readRequestsRatePerMilliSecond = ((double)intervalReadRequestsCount/
-              (double)period);
-          double writeRequestsRatePerMilliSecond = ((double)intervalWriteRequestsCount/
-              (double)period);
+          double readRequestsRatePerMilliSecond = (double)intervalReadRequestsCount / period;
+          double writeRequestsRatePerMilliSecond = (double)intervalWriteRequestsCount / period;
 
           readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
           writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
 
+          long intervalStoreFileSize = tempStoreFileSize - lastStoreFileSize;
+          storeFileSizeGrowthRate = (double)intervalStoreFileSize * 1000.0 / period;
+
           lastReadRequestsCount = tempReadRequestsCount;
           lastWriteRequestsCount = tempWriteRequestsCount;
-
+          lastStoreFileSize = tempStoreFileSize;
         }
+
         lastRan = currentTime;
 
         WALProvider provider = regionServer.walFactory.getWALProvider();

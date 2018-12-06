@@ -234,6 +234,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
+  String STOREFILE_SIZE_GROWTH_RATE = "storeFileSizeGrowthRate";
   String MAX_STORE_FILE_AGE = "maxStoreFileAge";
   String MIN_STORE_FILE_AGE = "minStoreFileAge";
   String AVG_STORE_FILE_AGE = "avgStoreFileAge";
@@ -243,6 +244,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String AVG_STORE_FILE_AGE_DESC = "Average age of store files hosted on this RegionServer";
   String NUM_REFERENCE_FILES_DESC = "Number of reference file on this RegionServer";
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
+  String STOREFILE_SIZE_GROWTH_RATE_DESC =
+        "Bytes per second by which the size of storefiles being served grows.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
       "Total number of requests this RegionServer has answered; increments the count once for " +

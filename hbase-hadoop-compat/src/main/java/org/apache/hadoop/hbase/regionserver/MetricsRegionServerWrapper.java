@@ -101,6 +101,11 @@ public interface MetricsRegionServerWrapper {
   long getStoreFileSize();
 
   /**
+   * Get the growth rate of the store files this region server is serving from.
+   */
+  double getStoreFileSizeGrowthRate();
+
+  /**
    * @return Max age of store files hosted on this region server
    */
   long getMaxStoreFileAge();
