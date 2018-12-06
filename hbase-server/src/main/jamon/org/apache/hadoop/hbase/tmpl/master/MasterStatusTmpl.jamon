@@ -621,6 +621,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <tr>
         <th>Peer Id</th>
         <th>Cluster Key</th>
+        <th>Endpoint</th>
         <th>State</th>
         <th>IsSerial</th>
         <th>Remote WAL</th>
@@ -641,6 +642,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <tr>
         <td><% peerId %></td>
         <td><% peerConfig.getClusterKey() %></td>
+        <td><% peerConfig.getReplicationEndpointImpl() %></td>
         <td><% peer.isEnabled() ? "ENABLED" : "DISABLED" %></td>
         <td><% peerConfig.isSerial() %></td>
         <td><% peerConfig.getRemoteWALDir() == null ? "" : peerConfig.getRemoteWALDir() %>
