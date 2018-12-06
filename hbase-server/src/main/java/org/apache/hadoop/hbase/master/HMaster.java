@@ -201,6 +201,7 @@ import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -233,6 +234,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -1959,6 +1961,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     });
   }
 
+  private void warmUpRegion(ServerName server, RegionInfo region) {
+    FutureUtils.addListener(asyncClusterConnection.getRegionServerAdmin(server)
+      .warmupRegion(RequestConverter.buildWarmupRegionRequest(region)), (r, e) -> {
+        if (e != null) {
+          LOG.warn("Failed to warm up region {} on server {}", region, server, e);
+        }
+      });
+  }
+
   // Public so can be accessed by tests. Blocks until move is done.
   // Replace with an async implementation from which you can get
   // a success/failure result.
@@ -2029,11 +2040,12 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       TransitRegionStateProcedure proc =
-          this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
-      // Warmup the region on the destination before initiating the move. this call
-      // is synchronous and takes some time. doing it before the source region gets
-      // closed
-      serverManager.sendRegionWarmup(rp.getDestination(), hri);
+        this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
+      // Warmup the region on the destination before initiating the move.
+      // A region server could reject the close request because it either does not
+      // have the specified region or the region is being split.
+      warmUpRegion(rp.getDestination(), hri);
+
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
