@@ -318,4 +318,9 @@ class AsyncConnectionImpl implements AsyncClusterConnection {
   public void clearRegionLocationCache() {
     locator.clearCache();
   }
+
+  @Override
+  public AsyncRegionServerAdmin getRegionServerAdmin(ServerName serverName) {
+    return new AsyncRegionServerAdmin(serverName, this);
+  }
 }
