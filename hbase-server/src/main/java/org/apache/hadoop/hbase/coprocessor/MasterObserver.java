@@ -240,11 +240,13 @@ public interface MasterObserver {
    * @param currentDescriptor current TableDescriptor of the table
    * @param newDescriptor after modify operation, table will have this descriptor
    */
-  default void preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+  default TableDescriptor preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
-    throws IOException {
+      throws IOException {
     preModifyTable(ctx, tableName, newDescriptor);
+    return newDescriptor;
   }
+
   /**
    * Called after the modifyTable operation has been requested.  Called as part
    * of modify table RPC call.

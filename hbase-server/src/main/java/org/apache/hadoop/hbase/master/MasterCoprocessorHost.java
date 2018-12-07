@@ -446,14 +446,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyTable(final TableName tableName, final TableDescriptor currentDescriptor,
-    final TableDescriptor newDescriptor) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preModifyTable(this, tableName, currentDescriptor, newDescriptor);
-      }
-    });
+  public TableDescriptor preModifyTable(final TableName tableName,
+      final TableDescriptor currentDescriptor, final TableDescriptor newDescriptor)
+      throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return newDescriptor;
+    }
+    return execOperationWithResult(
+        new ObserverOperationWithResult<MasterObserver, TableDescriptor>(masterObserverGetter,
+            newDescriptor) {
+          @Override
+          protected TableDescriptor call(MasterObserver observer) throws IOException {
+            return observer.preModifyTable(this, tableName, currentDescriptor, getResult());
+          }
+        });
   }
 
   public void postModifyTable(final TableName tableName, final TableDescriptor oldDescriptor,
