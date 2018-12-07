@@ -1,4 +1,4 @@
-# HBASE  2.0.3 Release Notes
+# HBASE  2.0.4 Release Notes
 
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -42,6 +42,57 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 
 -->
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-21551](https://issues.apache.org/jira/browse/HBASE-21551) | *Blocker* | **Memory leak when use scan with STREAM at server side**
+
+<!-- markdown -->
+### Summary
+HBase clusters will experience Region Server failures due to out of memory errors due to a leak given any of the following:
+
+* User initiates Scan operations set to use the STREAM reading type
+* User initiates Scan operations set to use the default reading type that read more than 4 * the block size of column families involved in the scan (e.g. by default 4*64KiB)
+* Compactions run
+
+### Root cause
+
+When there are long running scans the Region Server process attempts to optimize access by using a different API geared towards sequential access. Due to an error in HBASE-20704 for HBase 2.0+ the Region Server fails to release related resources when those scans finish. That same optimization path is always used for the HBase internal file compaction process.
+
+### Workaround
+
+Impact for this error can be minimized by setting the config value “hbase.storescanner.pread.max.bytes” to MAX_INT to avoid the optimization for default user scans. Clients should also be checked to ensure they do not pass the STREAM read type to the Scan API. This will have a severe impact on performance for long scans.
+
+Compactions always use this sequential optimized reading mechanism so downstream users will need to periodically restart Region Server roles after compactions have happened.
+
+
+---
+
+* [HBASE-21146](https://issues.apache.org/jira/browse/HBASE-21146) | *Minor* | **(2.0) Add ability for HBase Canary to ignore a configurable number of ZooKeeper down nodes**
+
+Adds -permittedZookeeperFailures \<N\>
+
+Makes it so Canary will keep running reporting on downed zk ensemble members rather than exit.
+
+
+---
+
+* [HBASE-21557](https://issues.apache.org/jira/browse/HBASE-21557) | *Major* | **Set version to 2.0.4 on branch-2.0 so can cut an RC**
+
+Set project version to 2.0.4 from 2.0.4-SNAPSHOT
+
+
+---
+
+* [HBASE-21544](https://issues.apache.org/jira/browse/HBASE-21544) | *Major* | **Backport HBASE-20734 Colocate recovered edits directory with hbase.wal.dir**
+
+This change moves the recovered.edits files which are created by the WALSplitter from the default filesystem into the WAL filesystem. This better enables the separate filesystem for WAL and HFile deployment model, by avoiding a check which requires that the HFile filesystem provides the hflush capability.
+
+
+
+# HBASE  2.0.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
