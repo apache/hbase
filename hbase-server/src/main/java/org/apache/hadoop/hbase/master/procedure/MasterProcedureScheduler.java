@@ -741,31 +741,38 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * @return true if we were able to acquire the lock on the table, otherwise false.
    */
   public boolean tryAcquireTableExclusiveLock(final Procedure procedure, final TableName table) {
-    schedLock.lock();
-    TableQueue queue = getTableQueue(table);
-    if (!queue.getNamespaceQueue().trySharedLock()) {
-      return false;
-    }
-
-    if (!queue.tryExclusiveLock(procedure.getProcId())) {
-      queue.getNamespaceQueue().releaseSharedLock();
-      schedLock.unlock();
-      return false;
-    }
-
-    removeFromRunQueue(tableRunQueue, queue);
-    schedLock.unlock();
-
-    // Zk lock is expensive...
-    boolean hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
-    if (!hasXLock) {
+    try {
       schedLock.lock();
-      queue.releaseExclusiveLock();
-      queue.getNamespaceQueue().releaseSharedLock();
-      addToRunQueue(tableRunQueue, queue);
+      TableQueue queue = getTableQueue(table);
+      if (!queue.getNamespaceQueue().trySharedLock()) {
+        schedLock.unlock();
+        return false;
+      }
+
+      if (!queue.tryExclusiveLock(procedure.getProcId())) {
+        queue.getNamespaceQueue().releaseSharedLock();
+        schedLock.unlock();
+        return false;
+      }
+
+      removeFromRunQueue(tableRunQueue, queue);
       schedLock.unlock();
+
+      // Zk lock is expensive...
+      boolean hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
+      if (!hasXLock) {
+        schedLock.lock();
+        queue.releaseExclusiveLock();
+        queue.getNamespaceQueue().releaseSharedLock();
+        addToRunQueue(tableRunQueue, queue);
+        schedLock.unlock();
+      }
+      return hasXLock;
+    } finally {
+      if(schedLock.isHeldByCurrentThread()){
+        schedLock.unlock();
+      }
     }
-    return hasXLock;
   }
 
   /**
@@ -774,18 +781,24 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * @param table the name of the table that has the exclusive lock
    */
   public void releaseTableExclusiveLock(final Procedure procedure, final TableName table) {
-    schedLock.lock();
-    TableQueue queue = getTableQueue(table);
-    schedLock.unlock();
+    try {
+      schedLock.lock();
+      TableQueue queue = getTableQueue(table);
+      schedLock.unlock();
 
-    // Zk lock is expensive...
-    queue.releaseZkExclusiveLock(lockManager);
+      // Zk lock is expensive...
+      queue.releaseZkExclusiveLock(lockManager);
 
-    schedLock.lock();
-    queue.releaseExclusiveLock();
-    queue.getNamespaceQueue().releaseSharedLock();
-    addToRunQueue(tableRunQueue, queue);
-    schedLock.unlock();
+      schedLock.lock();
+      queue.releaseExclusiveLock();
+      queue.getNamespaceQueue().releaseSharedLock();
+      addToRunQueue(tableRunQueue, queue);
+      schedLock.unlock();
+    } finally {
+      if(schedLock.isHeldByCurrentThread()) {
+        schedLock.unlock();
+      }
+    }
   }
 
   /**
@@ -801,29 +814,35 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   private TableQueue tryAcquireTableQueueSharedLock(final Procedure procedure,
       final TableName table) {
-    schedLock.lock();
-    TableQueue queue = getTableQueue(table);
-    if (!queue.getNamespaceQueue().trySharedLock()) {
-      return null;
-    }
-
-    if (!queue.trySharedLock()) {
-      queue.getNamespaceQueue().releaseSharedLock();
-      schedLock.unlock();
-      return null;
-    }
-
-    schedLock.unlock();
-
-    // Zk lock is expensive...
-    if (!queue.tryZkSharedLock(lockManager, procedure.toString())) {
+    try {
       schedLock.lock();
-      queue.releaseSharedLock();
-      queue.getNamespaceQueue().releaseSharedLock();
+      TableQueue queue = getTableQueue(table);
+      if (!queue.getNamespaceQueue().trySharedLock()) {
+        return null;
+      }
+
+      if (!queue.trySharedLock()) {
+        queue.getNamespaceQueue().releaseSharedLock();
+        schedLock.unlock();
+        return null;
+      }
+
       schedLock.unlock();
-      return null;
+
+      // Zk lock is expensive...
+      if (!queue.tryZkSharedLock(lockManager, procedure.toString())) {
+        schedLock.lock();
+        queue.releaseSharedLock();
+        queue.getNamespaceQueue().releaseSharedLock();
+        schedLock.unlock();
+        return null;
+      }
+      return queue;
+    } finally {
+      if(schedLock.isHeldByCurrentThread()) {
+        schedLock.unlock();
+      }
     }
-    return queue;
   }
 
   /**
@@ -836,11 +855,16 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     // Zk lock is expensive...
     queue.releaseZkSharedLock(lockManager);
-
-    schedLock.lock();
-    queue.releaseSharedLock();
-    queue.getNamespaceQueue().releaseSharedLock();
-    schedLock.unlock();
+    try {
+      schedLock.lock();
+      queue.releaseSharedLock();
+      queue.getNamespaceQueue().releaseSharedLock();
+      schedLock.unlock();
+    } finally {
+      if(schedLock.isHeldByCurrentThread()) {
+        schedLock.unlock();
+      }
+    }
   }
 
   /**
