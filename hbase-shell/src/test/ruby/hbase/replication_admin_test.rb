@@ -233,6 +233,27 @@ module Hbase
       end
     end
 
+    define_test "add_peer: serial" do
+      cluster_key = "server1.cie.com:2181:/hbase"
+      remote_wal_dir = "hdfs://srv1:9999/hbase"
+      table_cfs = { "ns3:table1" => [], "ns3:table2" => [],
+        "ns3:table3" => [] }
+      # add a new replication peer which serial flag is true
+      args = { CLUSTER_KEY => cluster_key, SERIAL => true,
+        TABLE_CFS => table_cfs}
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      peer = command(:list_peers).get(0)
+      assert_equal(@peer_id, peer.getPeerId)
+      assert_equal(cluster_key, peer.getPeerConfig.getClusterKey)
+      assert_equal(true, peer.getPeerConfig.isSerial)
+      assert_tablecfs_equal(table_cfs, peer.getPeerConfig.getTableCFsMap())
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
     define_test "set_peer_tableCFs: works with table-cfs map" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       args = { CLUSTER_KEY => cluster_key}
@@ -467,6 +488,7 @@ module Hbase
 
       assert_equal(1, command(:list_peers).length)
       peer_config = command(:list_peers).get(0).getPeerConfig
+      # the default serial flag is false
       assert_equal(false, peer_config.isSerial)
 
       command(:set_peer_serial, @peer_id, true)
