@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -408,4 +409,43 @@ public class MasterWalManager {
       }
     }
   }
+
+  /**
+   * For meta region open and closed normally on a server, it may leave some meta
+   * WAL in the server's wal dir. Since meta region is no long on this server,
+   * The SCP won't split those meta wals, just leaving them there. So deleting
+   * the wal dir will fail since the dir is not empty. Actually We can safely achive those
+   * meta log and Archiving the meta log and delete the dir.
+   * @param serverName the server to archive meta log
+   */
+  public void archiveMetaLog(final ServerName serverName) {
+    try {
+      Path logDir = new Path(this.rootDir,
+          AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+      Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
+      if (fs.exists(splitDir)) {
+        FileStatus[] logfiles = FSUtils.listStatus(fs, splitDir, META_FILTER);
+        if (logfiles != null) {
+          for (FileStatus status : logfiles) {
+            if (!status.isDir()) {
+              Path newPath = AbstractFSWAL.getWALArchivePath(this.oldLogDir,
+                  status.getPath());
+              if (!FSUtils.renameAndSetModifyTime(fs, status.getPath(), newPath)) {
+                LOG.warn("Unable to move  " + status.getPath() + " to " + newPath);
+              } else {
+                LOG.debug("Archived meta log " + status.getPath() + " to " + newPath);
+              }
+            }
+          }
+        }
+        if (!fs.delete(splitDir, false)) {
+          LOG.warn("Unable to delete log dir. Ignoring. " + splitDir);
+        }
+      }
+    } catch (IOException ie) {
+      LOG.warn("Failed archiving meta log for server " + serverName, ie);
+    }
+  }
+
+
 }
