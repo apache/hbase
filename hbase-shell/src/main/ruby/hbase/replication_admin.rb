@@ -64,6 +64,7 @@ module Hbase
         table_cfs = args.fetch(TABLE_CFS, nil)
         namespaces = args.fetch(NAMESPACES, nil)
         peer_state = args.fetch(STATE, nil)
+        serial = args.fetch(SERIAL, nil)
 
         # Create and populate a ReplicationPeerConfig
         builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
@@ -72,6 +73,10 @@ module Hbase
 
         unless endpoint_classname.nil?
           builder.set_replication_endpoint_impl(endpoint_classname)
+        end
+
+        unless serial.nil?
+          builder.setSerial(serial)
         end
 
         unless config.nil?

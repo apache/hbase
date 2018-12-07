@@ -41,8 +41,8 @@ module Shell
   EOF
       end
 
-      def command(id, peer_serial)
-        replication_admin.set_peer_serial(id, peer_serial)
+      def command(id, serial)
+        replication_admin.set_peer_serial(id, serial)
       end
     end
   end
