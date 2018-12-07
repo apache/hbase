@@ -388,8 +388,6 @@ public class HFileOutputFormat2
         DataBlockEncoding encoding = overriddenEncoding;
         encoding = encoding == null ? datablockEncodingMap.get(tableAndFamily) : encoding;
         encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
-        Configuration tempConf = new Configuration(conf);
-        tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
         HFileContextBuilder contextBuilder = new HFileContextBuilder()
                                     .withCompression(compression)
                                     .withChecksumType(HStore.getChecksumType(conf))
@@ -404,12 +402,12 @@ public class HFileOutputFormat2
         HFileContext hFileContext = contextBuilder.build();
         if (null == favoredNodes) {
           wl.writer =
-              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
+              new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, fs)
                   .withOutputDir(familydir).withBloomType(bloomType)
                   .withComparator(CellComparator.getInstance()).withFileContext(hFileContext).build();
         } else {
           wl.writer =
-              new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
+              new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, new HFileSystem(fs))
                   .withOutputDir(familydir).withBloomType(bloomType)
                   .withComparator(CellComparator.getInstance()).withFileContext(hFileContext)
                   .withFavoredNodes(favoredNodes).build();
