@@ -251,6 +251,9 @@ public class ServerCrashProcedure
     // PROBLEM!!! WE BLOCK HERE.
     am.getRegionStates().logSplitting(this.serverName);
     mwm.splitLog(this.serverName);
+    if (!carryingMeta) {
+      mwm.archiveMetaLog(this.serverName);
+    }
     am.getRegionStates().logSplit(this.serverName);
     LOG.debug("Done splitting WALs {}", this);
   }
