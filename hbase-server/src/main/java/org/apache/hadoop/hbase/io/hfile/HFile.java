@@ -356,9 +356,7 @@ public class HFile {
    */
   public static final WriterFactory getWriterFactoryNoCache(Configuration
        conf) {
-    Configuration tempConf = new Configuration(conf);
-    tempConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-    return HFile.getWriterFactory(conf, new CacheConfig(tempConf));
+    return HFile.getWriterFactory(conf, CacheConfig.DISABLED);
   }
 
   /**

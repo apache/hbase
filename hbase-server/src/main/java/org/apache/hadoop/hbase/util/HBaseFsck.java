@@ -922,7 +922,7 @@ public class HBaseFsck extends Configured implements Closeable {
             // For all the stores in this column family.
             for (FileStatus storeFile : storeFiles) {
               HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(),
-                new CacheConfig(getConf()), true, getConf());
+                CacheConfig.DISABLED, true, getConf());
               if ((reader.getFirstKey() != null)
                   && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
                       ((KeyValue.KeyOnlyKeyValue) reader.getFirstKey().get()).getKey()) > 0))) {
@@ -1025,8 +1025,7 @@ public class HBaseFsck extends Configured implements Closeable {
         byte[] start, end;
         HFile.Reader hf = null;
         try {
-          CacheConfig cacheConf = new CacheConfig(getConf());
-          hf = HFile.createReader(fs, hfile.getPath(), cacheConf, true, getConf());
+          hf = HFile.createReader(fs, hfile.getPath(), CacheConfig.DISABLED, true, getConf());
           hf.loadFileInfo();
           Optional<Cell> startKv = hf.getFirstKey();
           start = CellUtil.cloneRow(startKv.get());

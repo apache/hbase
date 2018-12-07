@@ -710,7 +710,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Path hfilePath = item.getFilePath();
     Optional<byte[]> first, last;
     try (HFile.Reader hfr = HFile.createReader(hfilePath.getFileSystem(getConf()), hfilePath,
-      new CacheConfig(getConf()), true, getConf())) {
+      CacheConfig.DISABLED, true, getConf())) {
       hfr.loadFileInfo();
       first = hfr.getFirstRowKey();
       last = hfr.getLastRowKey();
@@ -847,7 +847,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           throws IOException {
         Path hfile = hfileStatus.getPath();
         try (HFile.Reader reader =
-            HFile.createReader(fs, hfile, new CacheConfig(getConf()), true, getConf())) {
+            HFile.createReader(fs, hfile, CacheConfig.DISABLED, true, getConf())) {
           if (builder.getCompressionType() != reader.getFileContext().getCompression()) {
             builder.setCompressionType(reader.getFileContext().getCompression());
             LOG.info("Setting compression " + reader.getFileContext().getCompression().name() +
@@ -1083,7 +1083,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static void copyHFileHalf(Configuration conf, Path inFile, Path outFile,
       Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
-    CacheConfig cacheConf = new CacheConfig(conf);
+    CacheConfig cacheConf = CacheConfig.DISABLED;
     HalfStoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
