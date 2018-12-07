@@ -1,4 +1,4 @@
-# HBASE  2.1.1 Release Notes
+# HBASE  2.1.2 Release Notes
 
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -17,6 +17,71 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-21551](https://issues.apache.org/jira/browse/HBASE-21551) | *Blocker* | **Memory leak when use scan with STREAM at server side**
+
+<!-- markdown -->
+### Summary
+HBase clusters will experience Region Server failures due to out of memory errors due to a leak given any of the following:
+
+* User initiates Scan operations set to use the STREAM reading type
+* User initiates Scan operations set to use the default reading type that read more than 4 * the block size of column families involved in the scan (e.g. by default 4*64KiB)
+* Compactions run
+
+### Root cause
+
+When there are long running scans the Region Server process attempts to optimize access by using a different API geared towards sequential access. Due to an error in HBASE-20704 for HBase 2.0+ the Region Server fails to release related resources when those scans finish. That same optimization path is always used for the HBase internal file compaction process.
+
+### Workaround
+
+Impact for this error can be minimized by setting the config value “hbase.storescanner.pread.max.bytes” to MAX_INT to avoid the optimization for default user scans. Clients should also be checked to ensure they do not pass the STREAM read type to the Scan API. This will have a severe impact on performance for long scans.
+
+Compactions always use this sequential optimized reading mechanism so downstream users will need to periodically restart Region Server roles after compactions have happened.
+
+
+---
+
+* [HBASE-21387](https://issues.apache.org/jira/browse/HBASE-21387) | *Major* | **Race condition surrounding in progress snapshot handling in snapshot cache leads to loss of snapshot files**
+
+To prevent race condition between in progress snapshot (performed by TakeSnapshotHandler) and HFileCleaner which results in data loss, this JIRA introduced mutual exclusion between taking snapshot and running HFileCleaner. That is, at any given moment, either some snapshot can be taken or, HFileCleaner checks hfiles which are not referenced, but not both can be running.
+
+
+---
+
+* [HBASE-21423](https://issues.apache.org/jira/browse/HBASE-21423) | *Major* | **Procedures for meta table/region should be able to execute in separate workers**
+
+The procedure for meta table will be executed in a separate worker thread named 'Urgent Worker' to avoid stuck. A new config named 'hbase.master.urgent.procedure.threads' is added, the default value for it is 1. To disable the separate worker, set it to 0.
+
+
+---
+
+* [HBASE-21417](https://issues.apache.org/jira/browse/HBASE-21417) | *Critical* | **Pre commit build is broken due to surefire plugin crashes**
+
+Add -Djdk.net.URLClassPath.disableClassPathURLCheck=true when executing surefire plugin.
+
+
+---
+
+* [HBASE-21237](https://issues.apache.org/jira/browse/HBASE-21237) | *Blocker* | **Use CompatRemoteProcedureResolver to dispatch open/close region requests to RS**
+
+Use CompatRemoteProcedureResolver  instead of ExecuteProceduresRemoteCall to dispatch region open/close requests to RS. Since ExecuteProceduresRemoteCall  will group all the open/close operations in one call and execute them sequentially on the target RS. If one operation fails, all the operation will be marked as failure.
+
+
+---
+
+* [HBASE-21322](https://issues.apache.org/jira/browse/HBASE-21322) | *Major* | **Add a scheduleServerCrashProcedure() API to HbckService**
+
+Adds scheduleServerCrashProcedure to the HbckService.
+
+
+
+
+# HBASE  2.1.1 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
