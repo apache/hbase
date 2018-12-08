@@ -54,9 +54,11 @@ public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, Ma
   }
 
   @Override
-  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, TableDescriptor htd) throws IOException {
-    verifyCoprocessors(ctx, htd);
+  public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, TableDescriptor currentDesc, TableDescriptor newDesc)
+      throws IOException {
+    verifyCoprocessors(ctx, newDesc);
+    return newDesc;
   }
 
   @Override

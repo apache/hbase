@@ -2610,13 +2610,12 @@ public class HMaster extends HRegionServer implements MasterServices {
         .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
           @Override
           protected void run() throws IOException {
-            TableDescriptor newDescriptor = newDescriptorGetter.get();
-            sanityCheckTableDescriptor(newDescriptor);
             TableDescriptor oldDescriptor = getMaster().getTableDescriptors().get(tableName);
-            getMaster().getMasterCoprocessorHost().preModifyTable(tableName, oldDescriptor,
-              newDescriptor);
-
-            LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
+            TableDescriptor newDescriptor = getMaster().getMasterCoprocessorHost()
+                .preModifyTable(tableName, oldDescriptor, newDescriptorGetter.get());
+            sanityCheckTableDescriptor(newDescriptor);
+            LOG.info("{} modify table {} from {} to {}", getClientIdAuditPrefix(), tableName,
+              oldDescriptor, newDescriptor);
 
             // Execute the operation synchronously - wait for the operation completes before
             // continuing.

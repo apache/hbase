@@ -969,11 +969,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      TableDescriptor htd) throws IOException {
+  public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName, TableDescriptor currentDesc, TableDescriptor newDesc)
+      throws IOException {
     // TODO: potentially check if this is a add/modify/delete column operation
-    requirePermission(c, "modifyTable",
-        tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission(c, "modifyTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    return newDesc;
   }
 
   @Override

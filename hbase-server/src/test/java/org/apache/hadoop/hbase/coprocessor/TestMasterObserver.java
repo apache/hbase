@@ -373,9 +373,11 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, TableDescriptor htd) throws IOException {
+    public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
+        TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
+        throws IOException {
       preModifyTableCalled = true;
+      return newDescriptor;
     }
 
     @Override
