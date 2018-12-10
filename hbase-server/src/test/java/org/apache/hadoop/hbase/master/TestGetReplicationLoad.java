@@ -86,22 +86,52 @@ public class TestGetReplicationLoad {
 
   @Test
   public void testGetReplicationMetrics() throws Exception {
-    String peer1 = "test1", peer2 = "test2";
-    long ageOfLastShippedOp = 2, replicationLag = 3, timeStampOfLastShippedOp = 4;
-    int sizeOfLogQueue = 5;
+    String peer1 = "test1", peer2 = "test2", queueId="1";
+    long ageOfLastShippedOp = 2,
+        replicationLag = 3,
+        timeStampOfLastShippedOp = 4,
+        timeStampOfNextToReplicate=5,
+        editsRead=6,
+        oPsShipped=7;
+    int sizeOfLogQueue = 8;
+    boolean recovered=false,
+        running=false,
+        editsSinceRestart=false;
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
         RegionServerStatusProtos.RegionServerReportRequest.newBuilder();
     ServerName serverName = cluster.getMaster(0).getServerName();
     request.setServer(ProtobufUtil.toServerName(serverName));
     ClusterStatusProtos.ReplicationLoadSource rload1 = ClusterStatusProtos.ReplicationLoadSource
-        .newBuilder().setPeerID(peer1).setAgeOfLastShippedOp(ageOfLastShippedOp)
-        .setReplicationLag(replicationLag).setTimeStampOfLastShippedOp(timeStampOfLastShippedOp)
-        .setSizeOfLogQueue(sizeOfLogQueue).build();
+        .newBuilder().setPeerID(peer1)
+        .setAgeOfLastShippedOp(ageOfLastShippedOp)
+        .setReplicationLag(replicationLag)
+        .setTimeStampOfLastShippedOp(timeStampOfLastShippedOp)
+        .setSizeOfLogQueue(sizeOfLogQueue)
+        .setTimeStampOfNextToReplicate(timeStampOfNextToReplicate)
+        .setQueueId(queueId)
+        .setEditsRead(editsRead)
+        .setOPsShipped(oPsShipped)
+        .setRunning(running)
+        .setRecovered(recovered)
+        .setEditsSinceRestart(editsSinceRestart)
+        .build();
     ClusterStatusProtos.ReplicationLoadSource rload2 =
-        ClusterStatusProtos.ReplicationLoadSource.newBuilder().setPeerID(peer2)
-            .setAgeOfLastShippedOp(ageOfLastShippedOp + 1).setReplicationLag(replicationLag + 1)
+        ClusterStatusProtos.ReplicationLoadSource
+            .newBuilder()
+            .setPeerID(peer2)
+            .setAgeOfLastShippedOp(ageOfLastShippedOp + 1)
+            .setReplicationLag(replicationLag + 1)
             .setTimeStampOfLastShippedOp(timeStampOfLastShippedOp + 1)
-            .setSizeOfLogQueue(sizeOfLogQueue + 1).build();
+            .setSizeOfLogQueue(sizeOfLogQueue + 1)
+            .setTimeStampOfNextToReplicate(timeStampOfNextToReplicate+1)
+            .setQueueId(queueId)
+            .setEditsRead(editsRead+1)
+            .setOPsShipped(oPsShipped+1)
+            .setRunning(running)
+            .setRecovered(recovered)
+            .setEditsSinceRestart(editsSinceRestart)
+            .build();
+
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
         .addReplLoadSource(rload1).addReplLoadSource(rload2).build();
     request.setLoad(sl);
