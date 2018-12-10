@@ -173,8 +173,7 @@ public class TestReplicationBase {
     htable1.put(puts);
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  protected static void configureClusters(){
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
     // sufficient number of events. But we don't want to go too low because
@@ -196,6 +195,17 @@ public class TestReplicationBase {
     conf1.setLong("hbase.serial.replication.waiting.ms", 100);
 
     utility1 = new HBaseTestingUtility(conf1);
+
+    // Base conf2 on conf1 so it gets the right zk cluster.
+    conf2 = HBaseConfiguration.create(conf1);
+    conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
+    conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
+    conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
+
+    utility2 = new HBaseTestingUtility(conf2);
+  }
+
+  protected static void startClusters() throws Exception{
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     // Have to reget conf1 in case zk cluster location different
@@ -205,13 +215,6 @@ public class TestReplicationBase {
     admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
-    // Base conf2 on conf1 so it gets the right zk cluster.
-    conf2 = HBaseConfiguration.create(conf1);
-    conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
-    conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-
-    utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
     zkw2 = new ZKWatcher(conf2, "cluster2", null, true);
     LOG.info("Setup second Zk");
@@ -244,6 +247,12 @@ public class TestReplicationBase {
     utility2.waitUntilAllRegionsAssigned(tableName);
     htable1 = connection1.getTable(tableName);
     htable2 = connection2.getTable(tableName);
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    configureClusters();
+    startClusters();
   }
 
   private boolean peerExist(String peerId) throws IOException {

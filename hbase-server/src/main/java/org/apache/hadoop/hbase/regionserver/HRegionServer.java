@@ -1395,9 +1395,11 @@ public class HRegionServer extends HasThread implements
       ReplicationLoad rLoad = rsources.refreshAndGetReplicationLoad();
       if (rLoad != null) {
         serverLoad.setReplLoadSink(rLoad.getReplicationLoadSink());
-        for (ClusterStatusProtos.ReplicationLoadSource rLS : rLoad.getReplicationLoadSourceList()) {
+        for (ClusterStatusProtos.ReplicationLoadSource rLS :
+            rLoad.getReplicationLoadSourceEntries()) {
           serverLoad.addReplLoadSource(rLS);
         }
+
       }
     }
 

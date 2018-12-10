@@ -48,7 +48,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
   private final MutableFastCounter logReadInEditsCounter;
-  private final MutableFastCounter logEditsFilteredCounter;
+  private final MutableFastCounter walEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
   private final MutableFastCounter shippedKBsCounter;
@@ -102,7 +102,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     logReadInEditsCounter = rms.getMetricsRegistry().getCounter(logReadInEditsKey, 0L);
 
     logEditsFilteredKey = this.keyPrefix + "logEditsFiltered";
-    logEditsFilteredCounter = rms.getMetricsRegistry().getCounter(logEditsFilteredKey, 0L);
+    walEditsFilteredCounter = rms.getMetricsRegistry().getCounter(logEditsFilteredKey, 0L);
 
     shippedHFilesKey = this.keyPrefix + "shippedHFiles";
     shippedHFilesCounter = rms.getMetricsRegistry().getCounter(shippedHFilesKey, 0L);
@@ -149,7 +149,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   }
 
   @Override public void incrLogEditsFiltered(long size) {
-    logEditsFilteredCounter.incr(size);
+    walEditsFilteredCounter.incr(size);
   }
 
   @Override public void incrBatchesShipped(int batches) {
@@ -313,5 +313,17 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   @Override
   public String getMetricsName() {
     return rms.getMetricsName();
+  }
+
+  @Override public long getWALEditsRead() {
+    return this.logReadInEditsCounter.value();
+  }
+
+  @Override public long getShippedOps() {
+    return this.shippedOpsCounter.value();
+  }
+
+  @Override public long getEditsFiltered() {
+    return this.walEditsFilteredCounter.value();
   }
 }

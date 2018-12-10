@@ -78,4 +78,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void incrCompletedWAL();
   void incrCompletedRecoveryQueue();
   void incrFailedRecoveryQueue();
+  long getWALEditsRead();
+  long getShippedOps();
+  long getEditsFiltered();
 }

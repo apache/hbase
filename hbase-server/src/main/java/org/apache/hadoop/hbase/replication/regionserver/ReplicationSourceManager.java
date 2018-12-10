@@ -381,6 +381,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           abortAndThrowIOExceptionWhenFail(
             () -> this.queueStorage.addWAL(server.getServerName(), peerId, walPath.getName()));
           src.enqueueLog(walPath);
+          LOG.trace("Enqueued {} to source {} during source creation.", walPath, src.getQueueId());
         }
       }
     }
@@ -789,6 +790,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
+      LOG.trace("Enqueued {} to source {} while performing postLogRoll operation.",
+          newLog, source.getQueueId());
     }
   }
 
@@ -960,7 +963,9 @@ public class ReplicationSourceManager implements ReplicationListener {
               wals.add(wal);
             }
             oldsources.add(src);
+            LOG.trace("Added source for recovered queue: " + src.getQueueId());
             for (String wal : walsSet) {
+              LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
               src.enqueueLog(new Path(oldLogDir, wal));
             }
             src.startup();
