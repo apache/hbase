@@ -65,7 +65,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @VisibleForTesting
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-      Threads.newDaemonThreadFactory("Async-Client-Retry-Timer"), 10, TimeUnit.MILLISECONDS);
+    Threads.newDaemonThreadFactory("Async-Client-Retry-Timer"), 10, TimeUnit.MILLISECONDS);
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
@@ -177,7 +177,7 @@ class AsyncConnectionImpl implements AsyncConnection {
         String msg = "ZooKeeper available but no active master location found";
         LOG.info(msg);
         this.masterStubMakeFuture.getAndSet(null)
-            .completeExceptionally(new MasterNotRunningException(msg));
+          .completeExceptionally(new MasterNotRunningException(msg));
         return;
       }
       try {
@@ -200,7 +200,7 @@ class AsyncConnectionImpl implements AsyncConnection {
           });
       } catch (IOException e) {
         this.masterStubMakeFuture.getAndSet(null)
-            .completeExceptionally(new IOException("Failed to create async master stub", e));
+          .completeExceptionally(new IOException("Failed to create async master stub", e));
       }
     });
   }
@@ -301,12 +301,13 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName) {
-    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName));
+    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName), RETRY_TIMER);
   }
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
       ExecutorService pool) {
-    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool));
+    return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool),
+      RETRY_TIMER);
   }
 }
