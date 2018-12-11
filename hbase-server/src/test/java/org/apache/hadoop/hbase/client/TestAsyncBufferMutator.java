@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -45,12 +48,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncBufferMutator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncBufferMutator.class);
+    HBaseClassTestRule.forClass(TestAsyncBufferMutator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -96,10 +102,10 @@ public class TestAsyncBufferMutator {
   private void test(TableName tableName) throws InterruptedException {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     try (AsyncBufferedMutator mutator =
-        CONN.getBufferedMutatorBuilder(tableName).setWriteBufferSize(16 * 1024).build()) {
+      CONN.getBufferedMutatorBuilder(tableName).setWriteBufferSize(16 * 1024).build()) {
       List<CompletableFuture<Void>> fs = mutator.mutate(IntStream.range(0, COUNT / 2)
-          .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
-          .collect(Collectors.toList()));
+        .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
+        .collect(Collectors.toList()));
       // exceeded the write buffer size, a flush will be called directly
       fs.forEach(f -> f.join());
       IntStream.range(COUNT / 2, COUNT).forEach(i -> {
@@ -115,9 +121,9 @@ public class TestAsyncBufferMutator {
     futures.forEach(f -> f.join());
     AsyncTable<?> table = CONN.getTable(tableName);
     IntStream.range(0, COUNT).mapToObj(i -> new Get(Bytes.toBytes(i))).map(g -> table.get(g).join())
-        .forEach(r -> {
-          assertArrayEquals(VALUE, r.getValue(CF, CQ));
-        });
+      .forEach(r -> {
+        assertArrayEquals(VALUE, r.getValue(CF, CQ));
+      });
   }
 
   @Test
@@ -140,6 +146,147 @@ public class TestAsyncBufferMutator {
         assertThat(e.getCause(), instanceOf(IOException.class));
         assertTrue(e.getCause().getMessage().startsWith("Already closed"));
       }
+    }
+  }
+
+  @Test
+  public void testNoPeriodicFlush() throws InterruptedException, ExecutionException {
+    try (AsyncBufferedMutator mutator =
+      CONN.getBufferedMutatorBuilder(TABLE_NAME).disableWriteBufferPeriodicFlush().build()) {
+      Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
+      CompletableFuture<?> future = mutator.mutate(put);
+      Thread.sleep(2000);
+      // assert that we have not flushed it out
+      assertFalse(future.isDone());
+      mutator.flush();
+      future.get();
+    }
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+  }
+
+  @Test
+  public void testPeriodicFlush() throws InterruptedException, ExecutionException {
+    AsyncBufferedMutator mutator = CONN.getBufferedMutatorBuilder(TABLE_NAME)
+      .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build();
+    Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
+    CompletableFuture<?> future = mutator.mutate(put);
+    future.get();
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+  }
+
+  // a bit deep into the implementation
+  @Test
+  public void testCancelPeriodicFlush() throws InterruptedException, ExecutionException {
+    Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
+    try (AsyncBufferedMutatorImpl mutator = (AsyncBufferedMutatorImpl) CONN
+      .getBufferedMutatorBuilder(TABLE_NAME).setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS)
+      .setWriteBufferSize(10 * put.heapSize()).build()) {
+      List<CompletableFuture<?>> futures = new ArrayList<>();
+      futures.add(mutator.mutate(put));
+      Timeout task = mutator.periodicFlushTask;
+      // we should have scheduled a periodic flush task
+      assertNotNull(task);
+      for (int i = 1;; i++) {
+        futures.add(mutator.mutate(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE)));
+        if (mutator.periodicFlushTask == null) {
+          break;
+        }
+      }
+      assertTrue(task.isCancelled());
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+      AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+      for (int i = 0; i < futures.size(); i++) {
+        assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(i))).get().getValue(CF, CQ));
+      }
+    }
+  }
+
+  @Test
+  public void testCancelPeriodicFlushByManuallyFlush()
+      throws InterruptedException, ExecutionException {
+    try (AsyncBufferedMutatorImpl mutator =
+      (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
+        .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
+      CompletableFuture<?> future =
+        mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
+      Timeout task = mutator.periodicFlushTask;
+      // we should have scheduled a periodic flush task
+      assertNotNull(task);
+      mutator.flush();
+      assertTrue(task.isCancelled());
+      future.get();
+      AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+      assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+    }
+  }
+
+  @Test
+  public void testCancelPeriodicFlushByClose() throws InterruptedException, ExecutionException {
+    CompletableFuture<?> future;
+    Timeout task;
+    try (AsyncBufferedMutatorImpl mutator =
+      (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
+        .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
+      future = mutator.mutate(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE));
+      task = mutator.periodicFlushTask;
+      // we should have scheduled a periodic flush task
+      assertNotNull(task);
+    }
+    assertTrue(task.isCancelled());
+    future.get();
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+    assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+  }
+
+  private static final class AsyncBufferMutatorForTest extends AsyncBufferedMutatorImpl {
+
+    private int flushCount;
+
+    AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
+        long writeBufferSize, long periodicFlushTimeoutNs) {
+      super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs);
+    }
+
+    @Override
+    protected void internalFlush() {
+      flushCount++;
+      super.internalFlush();
+    }
+  }
+
+  @Test
+  public void testRaceBetweenNormalFlushAndPeriodicFlush()
+      throws InterruptedException, ExecutionException {
+    Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
+    try (AsyncBufferMutatorForTest mutator =
+      new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),
+        10 * put.heapSize(), TimeUnit.MILLISECONDS.toNanos(200))) {
+      CompletableFuture<?> future = mutator.mutate(put);
+      Timeout task = mutator.periodicFlushTask;
+      // we should have scheduled a periodic flush task
+      assertNotNull(task);
+      synchronized (mutator) {
+        // synchronized on mutator to prevent periodic flush to be executed
+        Thread.sleep(500);
+        // the timeout should be issued
+        assertTrue(task.isExpired());
+        // but no flush is issued as we hold the lock
+        assertEquals(0, mutator.flushCount);
+        assertFalse(future.isDone());
+        // manually flush, then release the lock
+        mutator.flush();
+      }
+      // this is a bit deep into the implementation in netty but anyway let's add a check here to
+      // confirm that an issued timeout can not be canceled by netty framework.
+      assertFalse(task.isCancelled());
+      // and the mutation is done
+      future.get();
+      AsyncTable<?> table = CONN.getTable(TABLE_NAME);
+      assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
+      // only the manual flush, the periodic flush should have been canceled by us
+      assertEquals(1, mutator.flushCount);
     }
   }
 }
