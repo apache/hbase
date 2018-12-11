@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -117,6 +122,7 @@ public class TestSnapshotFromMaster {
     conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, "");
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    conf.setLong(SnapshotManager.HBASE_SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT_MILLIS, 3 * 1000L);
     conf.setLong(SnapshotHFileCleaner.HFILE_CACHE_REFRESH_PERIOD_CONF_KEY, cacheRefreshPeriod);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
@@ -386,5 +392,28 @@ public class TestSnapshotFromMaster {
    */
   private static void ensureHFileCleanersRun() {
     UTIL.getHBaseCluster().getMaster().getHFileCleaner().chore();
+  }
+
+  @Test
+  public void testAsyncSnapshotWillNotBlockSnapshotHFileCleaner() throws Exception {
+    // Write some data
+    Table table = UTIL.getConnection().getTable(TABLE_NAME);
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(Bytes.toBytes(i)).addColumn(TEST_FAM, Bytes.toBytes("q"), Bytes.toBytes(i));
+      table.put(put);
+    }
+    final String snapshotName = "testAsyncSnapshotWillNotBlockSnapshotHFileCleaner01";
+    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName)
+        .setTable(TABLE_NAME.getNameAsString()).setType(SnapshotDescription.Type.FLUSH).build();
+    UTIL.getHBaseAdmin().takeSnapshotAsync(snapshot);
+    UTIL.waitFor(10 * 1000L, 200L, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return UTIL.getHBaseAdmin().listSnapshots(Pattern.compile(snapshotName)).size() == 1;
+      }
+    });
+    assertTrue(master.getSnapshotManager().isTakingAnySnapshot());
+    Thread.sleep(11 * 1000L);
+    assertFalse(master.getSnapshotManager().isTakingAnySnapshot());
   }
 }
