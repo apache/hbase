@@ -703,6 +703,7 @@ class MemStoreFlusher implements FlushRequester {
     if (flushType != FlushType.NORMAL) {
       TraceUtil.addTimelineAnnotation("Force Flush. We're above high water mark.");
       long start = EnvironmentEdgeManager.currentTime();
+      long nextLogTimeMs = start;
       synchronized (this.blockSignal) {
         boolean blocked = false;
         long startTime = 0;
@@ -744,8 +745,11 @@ class MemStoreFlusher implements FlushRequester {
               LOG.warn("Interrupted while waiting");
               interrupted = true;
             }
-            long took = EnvironmentEdgeManager.currentTime() - start;
-            LOG.warn("Memstore is above high water mark and block " + took + "ms");
+            long nowMs = EnvironmentEdgeManager.currentTime();
+            if (nowMs >= nextLogTimeMs) {
+              LOG.warn("Memstore is above high water mark and block {} ms", nowMs - start);
+              nextLogTimeMs = nowMs + 1000;
+            }
             flushType = isAboveHighWaterMark();
           }
         } finally {
