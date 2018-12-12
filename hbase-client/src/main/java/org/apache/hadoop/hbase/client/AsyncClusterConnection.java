@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 
 /**
  * The asynchronous connection for internal usage.
@@ -41,4 +44,9 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Get the rpc client we used to communicate with other servers.
    */
   RpcClient getRpcClient();
+
+  /**
+   * Flush a region and get the response.
+   */
+  CompletableFuture<FlushRegionResponse> flush(byte[] regionName, boolean writeFlushWALMarker);
 }
