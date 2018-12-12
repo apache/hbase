@@ -20,26 +20,23 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.FlushRegionCallable;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 
 /**
  * HBASE-11580: With the async wal approach (HBASE-11568), the edits are not persisted to wal in
@@ -56,20 +53,13 @@ public class RegionReplicaFlushHandler extends EventHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaFlushHandler.class);
 
-  private final ClusterConnection connection;
-  private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
-  private final RpcControllerFactory rpcControllerFactory;
-  private final int operationTimeout;
+  private final AsyncClusterConnection connection;
+
   private final HRegion region;
 
-  public RegionReplicaFlushHandler(Server server, ClusterConnection connection,
-      RpcRetryingCallerFactory rpcRetryingCallerFactory, RpcControllerFactory rpcControllerFactory,
-      int operationTimeout, HRegion region) {
+  public RegionReplicaFlushHandler(Server server, HRegion region) {
     super(server, EventType.RS_REGION_REPLICA_FLUSH);
-    this.connection = connection;
-    this.rpcRetryingCallerFactory = rpcRetryingCallerFactory;
-    this.rpcControllerFactory = rpcControllerFactory;
-    this.operationTimeout = operationTimeout;
+    this.connection = server.getAsyncClusterConnection();
     this.region = region;
   }
 
@@ -103,7 +93,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
     return numRetries;
   }
 
-  void triggerFlushInPrimaryRegion(final HRegion region) throws IOException, RuntimeException {
+  void triggerFlushInPrimaryRegion(final HRegion region) throws IOException {
     long pause = connection.getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
 
@@ -117,45 +107,59 @@ public class RegionReplicaFlushHandler extends EventHandler {
     }
     while (!region.isClosing() && !region.isClosed()
         && !server.isAborted() && !server.isStopped()) {
-      FlushRegionCallable flushCallable = new FlushRegionCallable(
-        connection, rpcControllerFactory,
-        RegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo()), true);
-
       // TODO: flushRegion() is a blocking call waiting for the flush to complete. Ideally we
       // do not have to wait for the whole flush here, just initiate it.
-      FlushRegionResponse response = null;
+      FlushRegionResponse response;
       try {
-         response = rpcRetryingCallerFactory.<FlushRegionResponse>newCaller()
-          .callWithRetries(flushCallable, this.operationTimeout);
-      } catch (IOException ex) {
-        if (ex instanceof TableNotFoundException
-            || connection.isTableDisabled(region.getRegionInfo().getTable())) {
+        response = FutureUtils.get(connection.flush(ServerRegionReplicaUtil
+          .getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionName(), true));
+      } catch (IOException e) {
+        if (e instanceof TableNotFoundException || FutureUtils
+          .get(connection.getAdmin().isTableDisabled(region.getRegionInfo().getTable()))) {
           return;
         }
-        throw ex;
+        if (!counter.shouldRetry()) {
+          throw e;
+        }
+        // The reason that why we need to retry here is that, the retry for asynchronous admin
+        // request is much simpler than the normal operation, if we failed to locate the region once
+        // then we will throw the exception out and will not try to relocate again. So here we need
+        // to add some retries by ourselves to prevent shutting down the region server too
+        // frequent...
+        LOG.debug("Failed to trigger a flush of primary region replica {} of region {}, retry={}",
+          ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+            .getRegionNameAsString(),
+          region.getRegionInfo().getRegionNameAsString(), counter.getAttemptTimes(), e);
+        try {
+          counter.sleepUntilNextRetry();
+        } catch (InterruptedException e1) {
+          throw new InterruptedIOException(e1.getMessage());
+        }
+        continue;
       }
 
       if (response.getFlushed()) {
         // then we have to wait for seeing the flush entry. All reads will be rejected until we see
         // a complete flush cycle or replay a region open event
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Successfully triggered a flush of primary region replica "
-              + ServerRegionReplicaUtil
-                .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName()
-                + " of region " + region.getRegionInfo().getEncodedName()
-                + " Now waiting and blocking reads until observing a full flush cycle");
+          LOG.debug("Successfully triggered a flush of primary region replica " +
+            ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+              .getRegionNameAsString() +
+            " of region " + region.getRegionInfo().getRegionNameAsString() +
+            " Now waiting and blocking reads until observing a full flush cycle");
         }
         region.setReadsEnabled(true);
         break;
       } else {
         if (response.hasWroteFlushWalMarker()) {
-          if(response.getWroteFlushWalMarker()) {
+          if (response.getWroteFlushWalMarker()) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Successfully triggered an empty flush marker(memstore empty) of primary "
-                  + "region replica " + ServerRegionReplicaUtil
-                    .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName()
-                  + " of region " + region.getRegionInfo().getEncodedName() + " Now waiting and "
-                  + "blocking reads until observing a flush marker");
+              LOG.debug("Successfully triggered an empty flush marker(memstore empty) of primary " +
+                "region replica " +
+                ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+                  .getRegionNameAsString() +
+                " of region " + region.getRegionInfo().getRegionNameAsString() +
+                " Now waiting and " + "blocking reads until observing a flush marker");
             }
             region.setReadsEnabled(true);
             break;
@@ -164,15 +168,23 @@ public class RegionReplicaFlushHandler extends EventHandler {
             // closing or already flushing. Retry flush again after some sleep.
             if (!counter.shouldRetry()) {
               throw new IOException("Cannot cause primary to flush or drop a wal marker after " +
-                  "retries. Failing opening of this region replica "
-                  + region.getRegionInfo().getEncodedName());
+                counter.getAttemptTimes() + " retries. Failing opening of this region replica " +
+                region.getRegionInfo().getRegionNameAsString());
+            } else {
+              LOG.warn(
+                "Cannot cause primary replica {} to flush or drop a wal marker " +
+                  "for region replica {}, retry={}",
+                ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+                  .getRegionNameAsString(),
+                region.getRegionInfo().getRegionNameAsString(), counter.getAttemptTimes());
             }
           }
         } else {
           // nothing to do. Are we dealing with an old server?
-          LOG.warn("Was not able to trigger a flush from primary region due to old server version? "
-              + "Continuing to open the secondary region replica: "
-              + region.getRegionInfo().getEncodedName());
+          LOG.warn(
+            "Was not able to trigger a flush from primary region due to old server version? " +
+              "Continuing to open the secondary region replica: " +
+              region.getRegionInfo().getRegionNameAsString());
           region.setReadsEnabled(true);
           break;
         }
