@@ -18,14 +18,11 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.SocketAddress;
-import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * The factory for creating {@link AsyncClusterConnection}.
@@ -48,16 +45,7 @@ public final class ClusterConnectionFactory {
   public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
       SocketAddress localAddress, User user) throws IOException {
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
-    String clusterId;
-    try {
-      clusterId = registry.getClusterId().get();
-    } catch (InterruptedException e) {
-      throw (IOException) new InterruptedIOException().initCause(e);
-    } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      Throwables.propagateIfPossible(cause, IOException.class);
-      throw new IOException(cause);
-    }
+    String clusterId = FutureUtils.get(registry.getClusterId());
     return new AsyncConnectionImpl(conf, registry, clusterId, localAddress, user);
   }
 }
