@@ -1710,6 +1710,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.info("Closed " + this);
       return result;
     } finally {
+      this.closing.set(false);
       lock.writeLock().unlock();
     }
   }
