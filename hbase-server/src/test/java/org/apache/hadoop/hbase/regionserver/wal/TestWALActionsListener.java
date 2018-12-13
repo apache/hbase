@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.Before;
@@ -142,12 +143,12 @@ public class TestWALActionsListener {
     public int closedCount = 0;
 
     @Override
-    public void preLogRoll(Path oldFile, Path newFile) {
+    public void preLogRoll(WALIdentity oldWalId, WALIdentity newWalId) {
       preLogRollCounter++;
     }
 
     @Override
-    public void postLogRoll(Path oldFile, Path newFile) {
+    public void postLogRoll(WALIdentity oldWalId, WALIdentity newWalId) {
       postLogRollCounter++;
     }
 

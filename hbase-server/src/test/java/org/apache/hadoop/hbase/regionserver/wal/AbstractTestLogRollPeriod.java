@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -130,12 +130,12 @@ public abstract class AbstractTestLogRollPeriod {
 
   private void checkMinLogRolls(final WAL log, final int minRolls)
       throws Exception {
-    final List<Path> paths = new ArrayList<>();
+    final List<WALIdentity> walIds = new ArrayList<WALIdentity>();
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
-      public void postLogRoll(Path oldFile, Path newFile) {
-        LOG.debug("postLogRoll: oldFile="+oldFile+" newFile="+newFile);
-        paths.add(newFile);
+      public void postLogRoll(WALIdentity oldWalId, WALIdentity newWalId) {
+        LOG.debug("postLogRoll: oldWalId="+oldWalId+" newWalId="+newWalId);
+        walIds.add(newWalId);
       }
     });
 
@@ -144,13 +144,13 @@ public abstract class AbstractTestLogRollPeriod {
     Thread.sleep((minRolls + 1) * LOG_ROLL_PERIOD);
     // Do some extra sleep in case the machine is slow,
     // and the log-roll is not triggered exactly on LOG_ROLL_PERIOD.
-    final int NUM_RETRIES = 1 + 8 * (minRolls - paths.size());
-    for (int retry = 0; paths.size() < minRolls && retry < NUM_RETRIES; ++retry) {
+    final int NUM_RETRIES = 1 + 8 * (minRolls - walIds.size());
+    for (int retry = 0; walIds.size() < minRolls && retry < NUM_RETRIES; ++retry) {
       Thread.sleep(LOG_ROLL_PERIOD / 4);
     }
     wtime = System.currentTimeMillis() - wtime;
     LOG.info(String.format("got %d rolls after %dms (%dms each) - expected at least %d rolls",
-                           paths.size(), wtime, wtime / paths.size(), minRolls));
-    assertFalse(paths.size() < minRolls);
+                           walIds.size(), wtime, wtime / walIds.size(), minRolls));
+    assertFalse(walIds.size() < minRolls);
   }
 }

@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -44,7 +44,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
+      PriorityBlockingQueue<WALIdentity> logQueue, long startPosition, WALEntryFilter filter,
       ReplicationSource source) {
     super(fs, conf, logQueue, startPosition, filter, source);
     checker = new SerialReplicationChecker(conf, source);
@@ -53,22 +53,22 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   @Override
   protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
-    Path currentPath = entryStream.getCurrentPath();
+    WALIdentity currentWalId = entryStream.getCurrentWalIdentity();
     if (!entryStream.hasNext()) {
       // check whether we have switched a file
-      if (currentPath != null && switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
+      if (currentWalId != null && switched(entryStream, currentWalId)) {
+        return WALEntryBatch.endOfFile(currentWalId);
       } else {
         return null;
       }
     }
-    if (currentPath != null) {
-      if (switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
+    if (currentWalId != null) {
+      if (switched(entryStream, currentWalId)) {
+        return WALEntryBatch.endOfFile(currentWalId);
       }
     } else {
       // when reading from the entry stream first time we will enter here
-      currentPath = entryStream.getCurrentPath();
+      currentWalId = entryStream.getCurrentWalIdentity();
     }
     long positionBefore = entryStream.getPosition();
     WALEntryBatch batch = createBatch(entryStream);
@@ -115,7 +115,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
       }
       boolean hasNext = entryStream.hasNext();
       // always return if we have switched to a new file.
-      if (switched(entryStream, currentPath)) {
+      if (switched(entryStream, currentWalId)) {
         batch.setEndOfFile(true);
         break;
       }

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.WALObserver;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -170,28 +170,28 @@ public class WALCoprocessorHost
 
   /**
    * Called before rolling the current WAL
-   * @param oldPath the path of the current wal that we are replacing
-   * @param newPath the path of the wal we are going to create
+   * @param oldWalId the identity of the current wal that we are replacing
+   * @param newWalId the identity of the wal we are going to create
    */
-  public void preWALRoll(Path oldPath, Path newPath) throws IOException {
+  public void preWALRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
       @Override
       protected void call(WALObserver observer) throws IOException {
-        observer.preWALRoll(this, oldPath, newPath);
+        observer.preWALRoll(this, oldWalId, newWalId);
       }
     });
   }
 
   /**
    * Called after rolling the current WAL
-   * @param oldPath the path of the wal that we replaced
-   * @param newPath the path of the wal we have created and now is the current
+   * @param oldWalId the identity of the wal that we replaced
+   * @param newWalId the identity of the wal we have created and now is the current
    */
-  public void postWALRoll(Path oldPath, Path newPath) throws IOException {
+  public void postWALRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
       @Override
       protected void call(WALObserver observer) throws IOException {
-        observer.postWALRoll(this, oldPath, newPath);
+        observer.postWALRoll(this, oldWalId, newWalId);
       }
     });
   }

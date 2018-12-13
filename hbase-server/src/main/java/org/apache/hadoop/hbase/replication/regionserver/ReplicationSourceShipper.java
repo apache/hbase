@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,14 +56,14 @@ public class ReplicationSourceShipper extends Thread {
 
   private final Configuration conf;
   protected final String walGroupId;
-  protected final PriorityBlockingQueue<Path> queue;
+  protected final PriorityBlockingQueue<WALIdentity> queue;
   private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
   // It will be accessed by the stats thread so make it volatile
   private volatile long currentPosition = -1;
   // Path of the current log
-  private Path currentPath;
+  private WALIdentity currentWalId;
   // Current state of the worker thread
   private volatile WorkerState state;
   protected ReplicationSourceWALReader entryReader;
@@ -76,7 +76,7 @@ public class ReplicationSourceShipper extends Thread {
   private final int getEntriesTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      PriorityBlockingQueue<Path> queue, ReplicationSource source) {
+      PriorityBlockingQueue<WALIdentity> queue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
     this.queue = queue;
@@ -269,7 +269,7 @@ public class ReplicationSourceShipper extends Thread {
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
     // position and the file will be removed soon in cleanOldLogs.
-    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
+    if (batch.isEndOfFile() || !batch.getLastWalId().equals(currentWalId) ||
       batch.getLastWalPosition() != currentPosition) {
       source.getSourceManager().logPositionAndCleanOldLogs(source, batch);
       updated = true;
@@ -278,10 +278,10 @@ public class ReplicationSourceShipper extends Thread {
     // the only exception is for recovered queue, if we reach the end of the queue, then there will
     // no more files so here the currentPath may be null.
     if (batch.isEndOfFile()) {
-      currentPath = entryReader.getCurrentPath();
+      currentWalId = entryReader.getCurrentWalId();
       currentPosition = 0L;
     } else {
-      currentPath = batch.getLastWalPath();
+      currentWalId = batch.getLastWalId();
       currentPosition = batch.getLastWalPosition();
     }
     return updated;
@@ -293,8 +293,8 @@ public class ReplicationSourceShipper extends Thread {
       name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
   }
 
-  Path getCurrentPath() {
-    return entryReader.getCurrentPath();
+  WALIdentity getCurrentWALIdentity() {
+    return entryReader.getCurrentWalId();
   }
 
   long getCurrentPosition() {

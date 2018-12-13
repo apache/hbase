@@ -63,7 +63,29 @@ class DisabledWALProvider implements WALProvider {
     if (null == providerId) {
       providerId = "defaultDisabled";
     }
-    disabled = new DisabledWAL(new Path(FSUtils.getWALRootDir(conf), providerId), conf, null);
+    final Path path = new Path(FSUtils.getWALRootDir(conf), providerId);
+    disabled = new DisabledWAL(new WALIdentity() {
+
+      @Override
+      public int compareTo(WALIdentity o) {
+        return 0;
+      }
+
+      @Override
+      public String getName() {
+        return path.getName();
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        return true;
+      }
+
+      @Override
+      public int hashCode() {
+        return 0;
+      }
+    }, conf, null);
   }
 
   @Override
@@ -90,14 +112,14 @@ class DisabledWALProvider implements WALProvider {
 
   private static class DisabledWAL implements WAL {
     protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
-    protected final Path path;
+    protected final WALIdentity walId;
     protected final WALCoprocessorHost coprocessorHost;
     protected final AtomicBoolean closed = new AtomicBoolean(false);
 
-    public DisabledWAL(final Path path, final Configuration conf,
+    public DisabledWAL(final WALIdentity walId, final Configuration conf,
         final List<WALActionsListener> listeners) {
       this.coprocessorHost = new WALCoprocessorHost(this, conf);
-      this.path = path;
+      this.walId = walId;
       if (null != listeners) {
         for(WALActionsListener listener : listeners) {
           registerWALActionsListener(listener);
@@ -123,14 +145,14 @@ class DisabledWALProvider implements WALProvider {
         }
         for (WALActionsListener listener : listeners) {
           try {
-            listener.preLogRoll(path, path);
+            listener.preLogRoll(walId, walId);
           } catch (IOException exception) {
             LOG.debug("Ignoring exception from listener.", exception);
           }
         }
         for (WALActionsListener listener : listeners) {
           try {
-            listener.postLogRoll(path, path);
+            listener.postLogRoll(walId, walId);
           } catch (IOException exception) {
             LOG.debug("Ignoring exception from listener.", exception);
           }
@@ -243,7 +265,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+    public OptionalLong getLogFileSizeIfBeingWritten(WALIdentity path) {
       return OptionalLong.empty();
     }
   }

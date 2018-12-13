@@ -15,20 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication.regionserver;
+package org.apache.hadoop.hbase.wal;
 
-import java.util.OptionalLong;
-
-import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used by replication to prevent replicating unacked log entries. See
- * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
+ * This interface defines the identification of WAL for both stream based and distributed FileSystem
+ * based environments.
+ * See {@link #getName()} method.
  */
 @InterfaceAudience.Private
-@FunctionalInterface
-public interface WALFileLengthProvider {
+public interface WALIdentity extends Comparable<WALIdentity> {
 
-  OptionalLong getLogFileSizeIfBeingWritten(WALIdentity walId);
+  /**
+   * WALIdentity is uniquely identifying a WAL stored in this WALProvider.
+   * This name can be thought of as a human-readable, serialized form of the WALIdentity.
+   *
+   * The same value should be returned across calls to this method.
+   *
+   * @return name of the wal
+   */
+  String getName();
 }

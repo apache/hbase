@@ -24,13 +24,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,13 +148,13 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
 
   @Override
   public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException {
+      WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
     preWALRollCalled = true;
   }
 
   @Override
   public void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException {
+      WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
     postWALRollCalled = true;
   }
 

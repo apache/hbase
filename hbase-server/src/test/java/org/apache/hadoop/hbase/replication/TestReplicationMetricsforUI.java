@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.Map;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -74,9 +74,9 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
       }
       rs = utility1.getRSForFirstRegionInTable(tableName);
       metrics = rs.getWalGroupsReplicationStatus();
-      Path lastPath = null;
+      WALIdentity lastPath = null;
       for (Map.Entry<String, ReplicationStatus> metric : metrics.entrySet()) {
-        lastPath = metric.getValue().getCurrentPath();
+        lastPath = metric.getValue().getCurrentWalId();
         Assert.assertEquals("peerId", PEER_ID2, metric.getValue().getPeerId());
         Assert.assertTrue("age of Last Shipped Op should be > 0 ",
           metric.getValue().getAgeOfLastShippedOp() > 0);
@@ -100,7 +100,7 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
         Assert.assertEquals("replication delay", 0, metric.getValue().getReplicationDelay());
         Assert.assertTrue("current position should < last position",
           metric.getValue().getCurrentPosition() < lastPosition);
-        Assert.assertNotEquals("current path", lastPath, metric.getValue().getCurrentPath());
+        Assert.assertNotEquals("current path", lastPath, metric.getValue().getCurrentWalId());
       }
     }
   }

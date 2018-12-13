@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,7 +36,7 @@ class WALEntryBatch {
 
   private List<Entry> walEntries;
   // last WAL that was read
-  private Path lastWalPath;
+  private WALIdentity lastWalId;
   // position in WAL of last entry in this batch
   private long lastWalPosition = 0;
   // number of distinct row keys in this batch
@@ -51,16 +51,16 @@ class WALEntryBatch {
   private boolean endOfFile;
 
   /**
-   * @param lastWalPath Path of the WAL the last entry in this batch was read from
+   * @param lastWalId of the WAL the last entry in this batch was read from
    */
-  WALEntryBatch(int maxNbEntries, Path lastWalPath) {
+  WALEntryBatch(int maxNbEntries, WALIdentity lastWalId) {
     this.walEntries = new ArrayList<>(maxNbEntries);
-    this.lastWalPath = lastWalPath;
+    this.lastWalId = lastWalId;
   }
 
 
-  static WALEntryBatch endOfFile(Path lastWalPath) {
-    WALEntryBatch batch = new WALEntryBatch(0, lastWalPath);
+  static WALEntryBatch endOfFile(WALIdentity lastWalId) {
+    WALEntryBatch batch = new WALEntryBatch(0, lastWalId);
     batch.setLastWalPosition(-1L);
     batch.setEndOfFile(true);
     return batch;
@@ -78,10 +78,10 @@ class WALEntryBatch {
   }
 
   /**
-   * @return the path of the last WAL that was read.
+   * @return the Id of the last WAL that was read.
    */
-  public Path getLastWalPath() {
-    return lastWalPath;
+  public WALIdentity getLastWalId() {
+    return lastWalId;
   }
 
   /**
@@ -160,7 +160,7 @@ class WALEntryBatch {
 
   @Override
   public String toString() {
-    return "WALEntryBatch [walEntries=" + walEntries + ", lastWalPath=" + lastWalPath +
+    return "WALEntryBatch [walEntries=" + walEntries + ", lastWalId=" + lastWalId +
       ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles=" +
       nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile=" +
       endOfFile + "]";

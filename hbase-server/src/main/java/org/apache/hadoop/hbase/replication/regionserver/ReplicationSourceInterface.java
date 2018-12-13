@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -60,7 +61,7 @@ public interface ReplicationSourceInterface {
    * Add a log to the list of logs to replicate
    * @param log path to the log to replicate
    */
-  void enqueueLog(Path log);
+  void enqueueLog(WALIdentity log);
 
   /**
    * Add hfile names to the queue to be replicated.
@@ -95,7 +96,7 @@ public interface ReplicationSourceInterface {
    * Get the current log that's replicated
    * @return the current log
    */
-  Path getCurrentPath();
+  WALIdentity getCurrentWALIdentity();
 
   /**
    * Get the queue id that the source is replicating to

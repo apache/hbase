@@ -32,7 +32,10 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterfa
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -64,12 +67,13 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
               utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
           WAL wal = hrs.getWAL(regionInfo);
           Path currentFile = ((AbstractFSWAL<?>) wal).getCurrentFileName();
+          WALIdentity walId = new FSWALIdentity(currentFile);
           Replication replicationService = (Replication) utility1.getHBaseCluster()
               .getRegionServer(i).getReplicationSourceService();
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
               .getSources()) {
             ReplicationSource source = (ReplicationSource) rsi;
-            if (!currentFile.equals(source.getCurrentPath())) {
+            if (!walId.equals(source.getCurrentWALIdentity())) {
               return false;
             }
           }
@@ -97,6 +101,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       emptyWalPaths.add(emptyWalPath);
     }
 
+    WALFactory factory = new WALFactory(conf1, "empty-wal-recovery");
     // inject our empty wal into the replication queue, and then roll the original wal, which
     // enqueues a new wal behind our empty wal. We must roll the wal here as now we use the WAL to
     // determine if the file being replicated currently is still opened for write, so just inject a
@@ -104,8 +109,10 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     for (int i = 0; i < numRs; i++) {
       HRegionServer hrs = utility1.getHBaseCluster().getRegionServer(i);
       Replication replicationService = (Replication) hrs.getReplicationSourceService();
-      replicationService.getReplicationManager().preLogRoll(emptyWalPaths.get(i));
-      replicationService.getReplicationManager().postLogRoll(emptyWalPaths.get(i));
+      WALIdentity id = new FSWALIdentity(
+          emptyWalPaths.get(i));
+      replicationService.getReplicationManager().preLogRoll(id);
+      replicationService.getReplicationManager().postLogRoll(id);
       RegionInfo regionInfo =
         utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = hrs.getWAL(regionInfo);

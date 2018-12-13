@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class ReplicationStatus {
   private final String peerId;
   private final String walGroup;
-  private final Path currentPath;
+  private final WALIdentity currentWalId;
   private final int queueSize;
   private final long ageOfLastShippedOp;
   private final long replicationDelay;
@@ -34,7 +34,7 @@ public final class ReplicationStatus {
   private ReplicationStatus(ReplicationStatusBuilder builder) {
     this.peerId = builder.peerId;
     this.walGroup = builder.walGroup;
-    this.currentPath = builder.currentPath;
+    this.currentWalId = builder.currentWalId;
     this.queueSize = builder.queueSize;
     this.ageOfLastShippedOp = builder.ageOfLastShippedOp;
     this.replicationDelay = builder.replicationDelay;
@@ -70,8 +70,8 @@ public final class ReplicationStatus {
     return replicationDelay;
   }
 
-  public Path getCurrentPath() {
-    return currentPath;
+  public WALIdentity getCurrentWalId() {
+    return currentWalId;
   }
 
   public static ReplicationStatusBuilder newBuilder() {
@@ -81,7 +81,7 @@ public final class ReplicationStatus {
   public static class ReplicationStatusBuilder {
     private String peerId = "UNKNOWN";
     private String walGroup = "UNKNOWN";
-    private Path currentPath = new Path("UNKNOWN");
+    private WALIdentity currentWalId = null;
     private int queueSize = -1;
     private long ageOfLastShippedOp = -1;
     private long replicationDelay = -1;
@@ -103,8 +103,8 @@ public final class ReplicationStatus {
       return this;
     }
 
-    public ReplicationStatusBuilder withCurrentPath(Path currentPath) {
-      this.currentPath = currentPath;
+    public ReplicationStatusBuilder withCurrentWalId(WALIdentity currentWalId) {
+      this.currentWalId = currentWalId;
       return this;
     }
 

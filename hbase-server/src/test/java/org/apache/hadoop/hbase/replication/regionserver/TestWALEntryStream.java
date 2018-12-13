@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -56,10 +55,12 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -98,7 +99,7 @@ public class TestWALEntryStream {
   }
 
   private WAL log;
-  PriorityBlockingQueue<Path> walQueue;
+  PriorityBlockingQueue<WALIdentity> walQueue;
   private PathWatcher pathWatcher;
 
   @Rule
@@ -369,7 +370,7 @@ public class TestWALEntryStream {
     }
 
     // start up a reader
-    Path walPath = walQueue.peek();
+    WALIdentity walId = walQueue.peek();
     ReplicationSourceWALReader reader = createReader(false, CONF);
     WALEntryBatch entryBatch = reader.take();
 
@@ -377,7 +378,7 @@ public class TestWALEntryStream {
     assertNotNull(entryBatch);
     assertEquals(3, entryBatch.getWalEntries().size());
     assertEquals(position, entryBatch.getLastWalPosition());
-    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(walId, entryBatch.getLastWalId());
     assertEquals(3, entryBatch.getNbRowKeys());
 
     appendToLog("foo");
@@ -389,7 +390,7 @@ public class TestWALEntryStream {
   @Test
   public void testReplicationSourceWALReaderRecovered() throws Exception {
     appendEntriesToLogAndSync(10);
-    Path walPath = walQueue.peek();
+    WALIdentity walId = walQueue.peek();
     log.rollWriter();
     appendEntriesToLogAndSync(5);
     log.shutdown();
@@ -400,18 +401,18 @@ public class TestWALEntryStream {
     ReplicationSourceWALReader reader = createReader(true, conf);
 
     WALEntryBatch batch = reader.take();
-    assertEquals(walPath, batch.getLastWalPath());
+    assertEquals(walId, batch.getLastWalId());
     assertEquals(10, batch.getNbEntries());
     assertFalse(batch.isEndOfFile());
 
     batch = reader.take();
-    assertEquals(walPath, batch.getLastWalPath());
+    assertEquals(walId, batch.getLastWalId());
     assertEquals(0, batch.getNbEntries());
     assertTrue(batch.isEndOfFile());
 
-    walPath = walQueue.peek();
+    walId = walQueue.peek();
     batch = reader.take();
-    assertEquals(walPath, batch.getLastWalPath());
+    assertEquals(walId, batch.getLastWalId());
     assertEquals(5, batch.getNbEntries());
     assertTrue(batch.isEndOfFile());
 
@@ -422,49 +423,49 @@ public class TestWALEntryStream {
   @Test
   public void testReplicationSourceWALReaderWrongPosition() throws Exception {
     appendEntriesToLogAndSync(1);
-    Path walPath = walQueue.peek();
+    FSWALIdentity walId = (FSWALIdentity)walQueue.peek();
     log.rollWriter();
     appendEntriesToLogAndSync(20);
     TEST_UTIL.waitFor(5000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
-        return fs.getFileStatus(walPath).getLen() > 0;
+        return fs.getFileStatus(walId.getPath()).getLen() > 0;
       }
 
       @Override
       public String explainFailure() throws Exception {
-        return walPath + " has not been closed yet";
+        return walId + " has not been closed yet";
       }
 
     });
-    long walLength = fs.getFileStatus(walPath).getLen();
+    long walLength = fs.getFileStatus(walId.getPath()).getLen();
 
     ReplicationSourceWALReader reader = createReader(false, CONF);
 
     WALEntryBatch entryBatch = reader.take();
-    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(walId, entryBatch.getLastWalId());
     assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is " +
       walLength, entryBatch.getLastWalPosition() <= walLength);
     assertEquals(1, entryBatch.getNbEntries());
     assertTrue(entryBatch.isEndOfFile());
 
-    Path walPath2 = walQueue.peek();
+    WALIdentity walId2 = walQueue.peek();
     entryBatch = reader.take();
-    assertEquals(walPath2, entryBatch.getLastWalPath());
+    assertEquals(walId2, entryBatch.getLastWalId());
     assertEquals(20, entryBatch.getNbEntries());
     assertFalse(entryBatch.isEndOfFile());
 
     log.rollWriter();
     appendEntriesToLogAndSync(10);
     entryBatch = reader.take();
-    assertEquals(walPath2, entryBatch.getLastWalPath());
+    assertEquals(walId2, entryBatch.getLastWalId());
     assertEquals(0, entryBatch.getNbEntries());
     assertTrue(entryBatch.isEndOfFile());
 
-    Path walPath3 = walQueue.peek();
+    WALIdentity walId3 = walQueue.peek();
     entryBatch = reader.take();
-    assertEquals(walPath3, entryBatch.getLastWalPath());
+    assertEquals(walId3, entryBatch.getLastWalId());
     assertEquals(10, entryBatch.getNbEntries());
     assertFalse(entryBatch.isEndOfFile());
   }
@@ -484,7 +485,7 @@ public class TestWALEntryStream {
     }
 
     // start up a reader
-    Path walPath = walQueue.peek();
+    WALIdentity walId = walQueue.peek();
     ReplicationSource source = mockReplicationSource(false, CONF);
     AtomicInteger invokeCount = new AtomicInteger(0);
     AtomicBoolean enabled = new AtomicBoolean(false);
@@ -511,7 +512,7 @@ public class TestWALEntryStream {
     assertNotNull(entryBatch);
     assertEquals(3, entryBatch.getWalEntries().size());
     assertEquals(position, entryBatch.getLastWalPosition());
-    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(walId, entryBatch.getLastWalId());
     assertEquals(3, entryBatch.getNbRowKeys());
   }
 
@@ -577,12 +578,12 @@ public class TestWALEntryStream {
 
   class PathWatcher implements WALActionsListener {
 
-    Path currentPath;
+    WALIdentity currentWalId;
 
     @Override
-    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-      walQueue.add(newPath);
-      currentPath = newPath;
+    public void preLogRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
+      walQueue.add(newWalId);
+      currentWalId = newWalId;
     }
   }
 

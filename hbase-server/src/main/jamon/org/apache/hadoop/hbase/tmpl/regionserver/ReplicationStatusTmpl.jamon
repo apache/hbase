@@ -71,7 +71,7 @@
                  <tr>
                      <td><% entry.getValue().getPeerId() %></td>
                      <td><% entry.getValue().getWalGroup() %></td>
-                     <td><% entry.getValue().getCurrentPath() %> </td>
+                     <td><% entry.getValue().getCurrentWalId() %> </td>
                      <td><% StringUtils.humanSize(entry.getValue().getFileSize()) %></td>
                      <td><% entry.getValue().getQueueSize() %></td>
                      <td><% StringUtils.humanSize(entry.getValue().getCurrentPosition()) %></td>
@@ -96,7 +96,7 @@
                  <tr>
                      <td><% entry.getValue().getPeerId() %></td>
                      <td><% entry.getValue().getWalGroup() %></td>
-                     <td><% entry.getValue().getCurrentPath() %> </td>
+                     <td><% entry.getValue().getCurrentWalId() %> </td>
                      <td><% StringUtils.humanTimeDiff(entry.getValue().getAgeOfLastShippedOp()) %></td>
                      <td><% entry.getValue().getReplicationDelay() == Long.MAX_VALUE ? "UNKNOWN" : StringUtils.humanTimeDiff(entry.getValue().getReplicationDelay()) %></td>
                  </tr>

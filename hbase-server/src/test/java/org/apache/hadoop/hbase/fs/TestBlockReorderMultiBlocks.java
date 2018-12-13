@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -155,7 +156,8 @@ public class TestBlockReorderMultiBlocks {
       // listen for successful log rolls
       final WALActionsListener listener = new WALActionsListener() {
             @Override
-            public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+            public void postLogRoll(final WALIdentity oldWalId, final WALIdentity newWalId)
+                throws IOException {
               latch.countDown();
             }
           };

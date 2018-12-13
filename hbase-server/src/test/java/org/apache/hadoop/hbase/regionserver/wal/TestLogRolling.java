@@ -52,8 +52,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.BeforeClass;
@@ -251,21 +253,21 @@ public class TestLogRolling extends AbstractTestLogRolling {
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
       final WAL log = server.getWAL(region);
-      final List<Path> paths = new ArrayList<>(1);
+      final List<WALIdentity> walIds = new ArrayList<>(1);
       final List<Integer> preLogRolledCalled = new ArrayList<>();
 
-      paths.add(AbstractFSWALProvider.getCurrentFileName(log));
+      walIds.add(new FSWALIdentity(AbstractFSWALProvider.getCurrentFileName(log)));
       log.registerWALActionsListener(new WALActionsListener() {
 
         @Override
-        public void preLogRoll(Path oldFile, Path newFile) {
+        public void preLogRoll(WALIdentity oldFile, WALIdentity newFile) {
           LOG.debug("preLogRoll: oldFile=" + oldFile + " newFile=" + newFile);
           preLogRolledCalled.add(new Integer(1));
         }
 
         @Override
-        public void postLogRoll(Path oldFile, Path newFile) {
-          paths.add(newFile);
+        public void postLogRoll(WALIdentity oldFile, WALIdentity newFile) {
+          walIds.add(newFile);
         }
       });
 
@@ -315,7 +317,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
       // read back the data written
       Set<String> loggedRows = new HashSet<>();
       FSUtils fsUtils = FSUtils.getInstance(fs, TEST_UTIL.getConfiguration());
-      for (Path p : paths) {
+      for (WALIdentity walId : walIds) {
+        Path p = ((FSWALIdentity) walId).getPath();
         LOG.debug("recovering lease for " + p);
         fsUtils.recoverFileLease(((HFileSystem) fs).getBackingFs(), p, TEST_UTIL.getConfiguration(),
           null);

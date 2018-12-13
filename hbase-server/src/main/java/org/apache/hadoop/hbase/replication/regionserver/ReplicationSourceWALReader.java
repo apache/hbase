@@ -28,15 +28,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -55,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 class ReplicationSourceWALReader extends Thread {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceWALReader.class);
 
-  private final PriorityBlockingQueue<Path> logQueue;
+  private final PriorityBlockingQueue<WALIdentity> logQueue;
   private final FileSystem fs;
   private final Configuration conf;
   private final WALEntryFilter filter;
@@ -89,7 +90,7 @@ class ReplicationSourceWALReader extends Thread {
    * @param source replication source
    */
   public ReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
+      PriorityBlockingQueue<WALIdentity> logQueue, long startPosition, WALEntryFilter filter,
       ReplicationSource source) {
     this.logQueue = logQueue;
     this.currentPosition = startPosition;
@@ -181,29 +182,29 @@ class ReplicationSourceWALReader extends Thread {
       batch.getNbEntries() >= replicationBatchCountCapacity;
   }
 
-  protected static final boolean switched(WALEntryStream entryStream, Path path) {
-    Path newPath = entryStream.getCurrentPath();
-    return newPath == null || !path.getName().equals(newPath.getName());
+  protected static final boolean switched(WALEntryStream entryStream, WALIdentity walId) {
+    WALIdentity newWalId = entryStream.getCurrentWalIdentity();
+    return newWalId == null || !walId.equals(newWalId);
   }
 
   protected WALEntryBatch readWALEntries(WALEntryStream entryStream)
       throws IOException, InterruptedException {
-    Path currentPath = entryStream.getCurrentPath();
+    WALIdentity walId = entryStream.getCurrentWalIdentity();
     if (!entryStream.hasNext()) {
       // check whether we have switched a file
-      if (currentPath != null && switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
+      if (walId != null && switched(entryStream, walId)) {
+        return WALEntryBatch.endOfFile(walId);
       } else {
         return null;
       }
     }
-    if (currentPath != null) {
-      if (switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
+    if (walId != null) {
+      if (switched(entryStream, walId)) {
+        return WALEntryBatch.endOfFile(walId);
       }
     } else {
       // when reading from the entry stream first time we will enter here
-      currentPath = entryStream.getCurrentPath();
+      walId = entryStream.getCurrentWalIdentity();
     }
     WALEntryBatch batch = createBatch(entryStream);
     for (;;) {
@@ -217,7 +218,7 @@ class ReplicationSourceWALReader extends Thread {
       }
       boolean hasNext = entryStream.hasNext();
       // always return if we have switched to a new file
-      if (switched(entryStream, currentPath)) {
+      if (switched(entryStream, walId)) {
         batch.setEndOfFile(true);
         break;
       }
@@ -248,7 +249,7 @@ class ReplicationSourceWALReader extends Thread {
     if ((e instanceof EOFException || e.getCause() instanceof EOFException) &&
       logQueue.size() > 1 && this.eofAutoRecovery) {
       try {
-        if (fs.getFileStatus(logQueue.peek()).getLen() == 0) {
+        if (fs.getFileStatus(((FSWALIdentity)logQueue.peek()).getPath()).getLen() == 0) {
           LOG.warn("Forcing removal of 0 length log in queue: " + logQueue.peek());
           logQueue.remove();
           currentPosition = 0;
@@ -259,11 +260,11 @@ class ReplicationSourceWALReader extends Thread {
     }
   }
 
-  public Path getCurrentPath() {
-    // if we've read some WAL entries, get the Path we read from
+  public WALIdentity getCurrentWalId() {
+    // if we've read some WAL entries, get the walId we read from
     WALEntryBatch batchQueueHead = entryBatchQueue.peek();
     if (batchQueueHead != null) {
-      return batchQueueHead.getLastWalPath();
+      return batchQueueHead.getLastWalId();
     }
     // otherwise, we must be currently reading from the head of the log queue
     return logQueue.peek();
@@ -280,7 +281,7 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   protected final WALEntryBatch createBatch(WALEntryStream entryStream) {
-    return new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
+    return new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentWalIdentity());
   }
 
   protected final Entry filterEntry(Entry entry) {

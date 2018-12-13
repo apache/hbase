@@ -84,9 +84,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -336,7 +338,7 @@ public abstract class TestReplicationSourceManager {
     when(source.isRecovered()).thenReturn(false);
     when(source.isSyncReplication()).thenReturn(false);
     manager.logPositionAndCleanOldLogs(source,
-      new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
+      new WALEntryBatch(0, manager.getSources().get(0).getCurrentWALIdentity()));
 
     wal.append(hri,
       new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
@@ -551,7 +553,7 @@ public abstract class TestReplicationSourceManager {
         .map(HRegionServer::getReplicationSourceService)
         .map(r -> (Replication)r)
         .map(Replication::getReplicationManager)
-        .mapToLong(ReplicationSourceManager::getSizeOfLatestPath)
+        .mapToLong(ReplicationSourceManager::getSizeOfLatestWalId)
         .sum();
   }
 
@@ -571,7 +573,7 @@ public abstract class TestReplicationSourceManager {
       assertNotNull(source);
       final int sizeOfSingleLogQueue = source.getSourceMetrics().getSizeOfLogQueue();
       // Enqueue log and check if metrics updated
-      source.enqueueLog(new Path("abc"));
+      source.enqueueLog(new FSWALIdentity((new Path("abc")).toString()));
       assertEquals(1 + sizeOfSingleLogQueue, source.getSourceMetrics().getSizeOfLogQueue());
       assertEquals(source.getSourceMetrics().getSizeOfLogQueue() + globalLogQueueSizeInitial,
         globalSource.getSizeOfLogQueue());
@@ -618,8 +620,9 @@ public abstract class TestReplicationSourceManager {
       String walNameNotExists =
         "remoteWAL-12345-" + slaveId + ".12345" + ReplicationUtils.SYNC_WAL_SUFFIX;
       Path wal = new Path(logDir, walNameNotExists);
-      manager.preLogRoll(wal);
-      manager.postLogRoll(wal);
+      WALIdentity walId = new FSWALIdentity(wal);
+      manager.preLogRoll(walId);
+      manager.postLogRoll(walId);
 
       Path remoteLogDirForPeer = new Path(remoteLogDir, slaveId);
       fs.mkdirs(remoteLogDirForPeer);
@@ -629,8 +632,9 @@ public abstract class TestReplicationSourceManager {
         new Path(remoteLogDirForPeer, walName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
       fs.create(remoteWAL).close();
       wal = new Path(logDir, walName);
-      manager.preLogRoll(wal);
-      manager.postLogRoll(wal);
+      walId = new FSWALIdentity(wal);
+      manager.preLogRoll(walId);
+      manager.postLogRoll(walId);
 
       ReplicationSourceInterface source = mockReplicationSource(peerId2);
       manager.cleanOldLogs(walName, true, source);
@@ -648,13 +652,13 @@ public abstract class TestReplicationSourceManager {
   @Test
   public void testSameWALPrefix() throws IOException {
     Set<String> latestWalsBefore =
-      manager.getLastestPath().stream().map(Path::getName).collect(Collectors.toSet());
+      manager.getLastestWalIds().stream().map(WALIdentity::getName).collect(Collectors.toSet());
     String walName1 = "localhost,8080,12345-45678-Peer.34567";
     String walName2 = "localhost,8080,12345.56789";
-    manager.preLogRoll(new Path(walName1));
-    manager.preLogRoll(new Path(walName2));
+    manager.preLogRoll(new FSWALIdentity((new Path(walName1)).toString()));
+    manager.preLogRoll(new FSWALIdentity((new Path(walName2)).toString()));
 
-    Set<String> latestWals = manager.getLastestPath().stream().map(Path::getName)
+    Set<String> latestWals = manager.getLastestWalIds().stream().map(WALIdentity::getName)
       .filter(n -> !latestWalsBefore.contains(n)).collect(Collectors.toSet());
     assertEquals(2, latestWals.size());
     assertTrue(latestWals.contains(walName1));

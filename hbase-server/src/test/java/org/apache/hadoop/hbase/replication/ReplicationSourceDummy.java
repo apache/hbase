@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 
 /**
  * Source that does nothing at all, helpful to test ReplicationSourceManager
@@ -42,7 +44,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   private ReplicationSourceManager manager;
   private ReplicationPeer replicationPeer;
   private String peerClusterId;
-  private Path currentPath;
+  private WALIdentity currentWalId;
   private MetricsSource metrics;
   private WALFileLengthProvider walFileLengthProvider;
   private AtomicBoolean startup = new AtomicBoolean(false);
@@ -60,14 +62,14 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void enqueueLog(Path log) {
-    this.currentPath = log;
+  public void enqueueLog(WALIdentity log) {
+    this.currentWalId = log;
     metrics.incrSizeOfLogQueue();
   }
 
   @Override
-  public Path getCurrentPath() {
-    return this.currentPath;
+  public WALIdentity getCurrentWALIdentity() {
+    return this.currentWalId;
   }
 
   @Override

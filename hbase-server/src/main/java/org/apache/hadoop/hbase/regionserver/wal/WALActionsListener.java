@@ -19,9 +19,9 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,32 +35,32 @@ public interface WALActionsListener {
   /**
    * The WAL is going to be rolled. The oldPath can be null if this is
    * the first log file from the regionserver.
-   * @param oldPath the path to the old wal
-   * @param newPath the path to the new wal
+   * @param oldWalId the identity to the old wal
+   * @param newWalId the identity to the new wal
    */
-  default void preLogRoll(Path oldPath, Path newPath) throws IOException {}
+  default void preLogRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {}
 
   /**
    * The WAL has been rolled. The oldPath can be null if this is
    * the first log file from the regionserver.
-   * @param oldPath the path to the old wal
-   * @param newPath the path to the new wal
+   * @param oldWalId the identity to the old wal
+   * @param newWalId the identity to the new wal
    */
-  default void postLogRoll(Path oldPath, Path newPath) throws IOException {}
+  default void postLogRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {}
 
   /**
    * The WAL is going to be archived.
-   * @param oldPath the path to the old wal
-   * @param newPath the path to the new wal
+   * @param oldWalId the identity to the old wal
+   * @param newWalId the identity to the new wal
    */
-  default void preLogArchive(Path oldPath, Path newPath) throws IOException {}
+  default void preLogArchive(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {}
 
   /**
    * The WAL has been archived.
-   * @param oldPath the path to the old wal
-   * @param newPath the path to the new wal
+   * @param oldWalId the identity to the old wal
+   * @param newWalId the identity to the new wal
    */
-  default void postLogArchive(Path oldPath, Path newPath) throws IOException {}
+  default void postLogArchive(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {}
 
   /**
    * A request was made that the WAL be rolled.

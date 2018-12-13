@@ -63,7 +63,9 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -114,7 +116,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * {@link ReplicationSourceManager.NodeFailoverWorker#run()} and {@link #removePeer(String)}, there
  * is already synchronized on {@link #oldsources}. So no need synchronized on
  * {@link #walsByIdRecoveredQueues}.</li>
- * <li>Need synchronized on {@link #latestPaths} to avoid the new open source miss new log.</li>
+ * <li>Need synchronized on {@link #latestWalIds} to avoid the new open source miss new log.</li>
  * <li>Need synchronized on {@link #oldsources} to avoid adding recovered source for the
  * to-be-removed peer.</li>
  * </ul>
@@ -148,7 +150,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Configuration conf;
   private final FileSystem fs;
   // The paths to the latest log of each wal group, for new coming peers
-  private final Map<String, Path> latestPaths;
+  private final Map<String, WALIdentity> latestWalIds;
   // Path to the wals directories
   private final Path logDir;
   // Path to the wal archive
@@ -216,7 +218,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     tfb.setNameFormat("ReplicationExecutor-%d");
     tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
-    this.latestPaths = new HashMap<>();
+    this.latestWalIds = new HashMap<>();
     this.replicationForBulkLoadDataEnabled = conf.getBoolean(
       HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
@@ -365,22 +367,22 @@ public class ReplicationSourceManager implements ReplicationListener {
   ReplicationSourceInterface addSource(String peerId) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
-    // synchronized on latestPaths to avoid missing the new log
-    synchronized (this.latestPaths) {
+    // synchronized on latestWalIds to avoid missing the new log
+    synchronized (this.latestWalIds) {
       this.sources.put(peerId, src);
       Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
       this.walsById.put(peerId, walsByGroup);
       // Add the latest wal to that source's queue
-      if (!latestPaths.isEmpty()) {
-        for (Map.Entry<String, Path> walPrefixAndPath : latestPaths.entrySet()) {
-          Path walPath = walPrefixAndPath.getValue();
+      if (!latestWalIds.isEmpty()) {
+        for (Map.Entry<String, WALIdentity> walPrefixAndId : latestWalIds.entrySet()) {
+          WALIdentity walId = walPrefixAndId.getValue();
           NavigableSet<String> wals = new TreeSet<>();
-          wals.add(walPath.getName());
-          walsByGroup.put(walPrefixAndPath.getKey(), wals);
+          wals.add(walId.getName());
+          walsByGroup.put(walPrefixAndId.getKey(), wals);
           // Abort RS and throw exception to make add peer failed
           abortAndThrowIOExceptionWhenFail(
-            () -> this.queueStorage.addWAL(server.getServerName(), peerId, walPath.getName()));
-          src.enqueueLog(walPath);
+            () -> this.queueStorage.addWAL(server.getServerName(), peerId, walId.getName()));
+          src.enqueueLog(walId);
         }
       }
     }
@@ -417,7 +419,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     // walsById.
     ReplicationSourceInterface toRemove;
     Map<String, NavigableSet<String>> wals = new HashMap<>();
-    synchronized (latestPaths) {
+    synchronized (latestWalIds) {
       toRemove = sources.put(peerId, src);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
@@ -476,15 +478,15 @@ public class ReplicationSourceManager implements ReplicationListener {
       " state or config changed. Will close the previous replication source and open a new one";
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
-    // synchronized on latestPaths to avoid missing the new log
-    synchronized (this.latestPaths) {
+    // synchronized on latestWalIds to avoid missing the new log
+    synchronized (this.latestWalIds) {
       ReplicationSourceInterface toRemove = this.sources.put(peerId, src);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
         toRemove.terminate(terminateMessage);
       }
       for (NavigableSet<String> walsByGroup : walsById.get(peerId).values()) {
-        walsByGroup.forEach(wal -> src.enqueueLog(new Path(this.logDir, wal)));
+        walsByGroup.forEach(wal -> src.enqueueLog(new FSWALIdentity(new Path(this.logDir, wal))));
       }
     }
     LOG.info("Startup replication source for " + src.getPeerId());
@@ -505,7 +507,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         ReplicationSourceInterface replicationSource = createSource(queueId, peer);
         this.oldsources.add(replicationSource);
         for (SortedSet<String> walsByGroup : walsByIdRecoveredQueues.get(queueId).values()) {
-          walsByGroup.forEach(wal -> src.enqueueLog(new Path(wal)));
+          walsByGroup.forEach(wal -> src.enqueueLog(new FSWALIdentity(wal)));
         }
         toStartup.add(replicationSource);
       }
@@ -617,7 +619,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public void logPositionAndCleanOldLogs(ReplicationSourceInterface source,
       WALEntryBatch entryBatch) {
-    String fileName = entryBatch.getLastWalPath().getName();
+    String fileName = entryBatch.getLastWalId().getName();
     interruptOrAbortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(),
       source.getQueueId(), fileName, entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
     cleanOldLogs(fileName, entryBatch.isEndOfFile(), source);
@@ -735,11 +737,11 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   // public because of we call it in TestReplicationEmptyWALRecovery
   @VisibleForTesting
-  public void preLogRoll(Path newLog) throws IOException {
+  public void preLogRoll(WALIdentity newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
-    // synchronized on latestPaths to avoid the new open source miss the new log
-    synchronized (this.latestPaths) {
+    // synchronized on latestWalIds to avoid the new open source miss the new log
+    synchronized (this.latestWalIds) {
       // Add log to queue storage
       for (ReplicationSourceInterface source : this.sources.values()) {
         // If record log to queue storage failed, abort RS and throw exception to make log roll
@@ -778,14 +780,14 @@ public class ReplicationSourceManager implements ReplicationListener {
         }
       }
 
-      // Add to latestPaths
-      latestPaths.put(logPrefix, newLog);
+      // Add to latestWalIds
+      latestWalIds.put(logPrefix, newLog);
     }
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery
   @VisibleForTesting
-  public void postLogRoll(Path newLog) throws IOException {
+  public void postLogRoll(WALIdentity newLog) throws IOException {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
@@ -961,7 +963,7 @@ public class ReplicationSourceManager implements ReplicationListener {
             }
             oldsources.add(src);
             for (String wal : walsSet) {
-              src.enqueueLog(new Path(oldLogDir, wal));
+              src.enqueueLog(new FSWALIdentity(new Path(oldLogDir, wal)));
             }
             src.startup();
           }
@@ -1038,16 +1040,16 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   @VisibleForTesting
-  int getSizeOfLatestPath() {
-    synchronized (latestPaths) {
-      return latestPaths.size();
+  int getSizeOfLatestWalId() {
+    synchronized (latestWalIds) {
+      return latestWalIds.size();
     }
   }
 
   @VisibleForTesting
-  Set<Path> getLastestPath() {
-    synchronized (latestPaths) {
-      return Sets.newHashSet(latestPaths.values());
+  Set<WALIdentity> getLastestWalIds() {
+    synchronized (latestWalIds) {
+      return Sets.newHashSet(latestWalIds.values());
     }
   }
 

@@ -33,9 +33,11 @@ import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -43,9 +45,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Streaming access to WAL entries. This class is given a queue of WAL {@link Path}, and continually
- * iterates through all the WAL {@link Entry} in the queue. When it's done reading from a Path, it
- * dequeues it and starts reading from the next.
+ * Streaming access to WAL entries. This class is given a queue of WAL {@link WALIdentity}, and
+ * continually iterates through all the WAL {@link Entry} in the queue. When it's done reading from
+ * a Wal, it dequeues it and starts reading from the next.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -53,7 +55,7 @@ class WALEntryStream implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(WALEntryStream.class);
 
   private Reader reader;
-  private Path currentPath;
+  private WALIdentity currentWAlIdentity;
   // cache of next entry for hasNext()
   private Entry currentEntry;
   // position for the current entry. As now we support peek, which means that the upper layer may
@@ -62,7 +64,7 @@ class WALEntryStream implements Closeable {
   private long currentPositionOfEntry = 0;
   // position after reading current entry
   private long currentPositionOfReader = 0;
-  private final PriorityBlockingQueue<Path> logQueue;
+  private final PriorityBlockingQueue<WALIdentity> logQueue;
   private final FileSystem fs;
   private final Configuration conf;
   private final WALFileLengthProvider walFileLengthProvider;
@@ -72,7 +74,7 @@ class WALEntryStream implements Closeable {
 
   /**
    * Create an entry stream over the given queue at the given start position
-   * @param logQueue the queue of WAL paths
+   * @param logQueue the queue of WAL walIds
    * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
    * @param conf {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
@@ -80,9 +82,9 @@ class WALEntryStream implements Closeable {
    * @param metrics replication metrics
    * @throws IOException
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
-      long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
-      MetricsSource metrics) throws IOException {
+  public WALEntryStream(PriorityBlockingQueue<WALIdentity> logQueue, FileSystem fs,
+      Configuration conf, long startPosition, WALFileLengthProvider walFileLengthProvider,
+      ServerName serverName, MetricsSource metrics) throws IOException {
     this.logQueue = logQueue;
     this.fs = fs;
     this.conf = conf;
@@ -135,16 +137,16 @@ class WALEntryStream implements Closeable {
   }
 
   /**
-   * @return the {@link Path} of the current WAL
+   * @return the {@link WALIdentity} of the current WAL
    */
-  public Path getCurrentPath() {
-    return currentPath;
+  public WALIdentity getCurrentWalIdentity() {
+    return currentWAlIdentity;
   }
 
-  private String getCurrentPathStat() {
+  private String getCurrentWalIdStat() {
     StringBuilder sb = new StringBuilder();
-    if (currentPath != null) {
-      sb.append("currently replicating from: ").append(currentPath).append(" at position: ")
+    if (currentWAlIdentity != null) {
+      sb.append("currently replicating from: ").append(currentWAlIdentity).append(" at position: ")
           .append(currentPositionOfEntry).append("\n");
     } else {
       sb.append("no replication ongoing, waiting for new log");
@@ -157,7 +159,7 @@ class WALEntryStream implements Closeable {
    * false)
    */
   public void reset() throws IOException {
-    if (reader != null && currentPath != null) {
+    if (reader != null && currentWAlIdentity != null) {
       resetReader();
     }
   }
@@ -166,8 +168,8 @@ class WALEntryStream implements Closeable {
     currentPositionOfEntry = position;
   }
 
-  private void setCurrentPath(Path path) {
-    this.currentPath = path;
+  private void setCurrentWalId(WALIdentity walId) {
+    this.currentWAlIdentity = walId;
   }
 
   private void tryAdvanceEntry() throws IOException {
@@ -203,10 +205,10 @@ class WALEntryStream implements Closeable {
     final long trailerSize = currentTrailerSize();
     FileStatus stat = null;
     try {
-      stat = fs.getFileStatus(this.currentPath);
+      stat = fs.getFileStatus(((FSWALIdentity)this.currentWAlIdentity).getPath());
     } catch (IOException exception) {
       LOG.warn("Couldn't get file length information about log {}, it {} closed cleanly {}",
-        currentPath, trailerSize < 0 ? "was not" : "was", getCurrentPathStat());
+        currentWAlIdentity, trailerSize < 0 ? "was not" : "was", getCurrentWalIdStat());
       metrics.incrUnknownFileLengthForClosedWAL();
     }
     // Here we use currentPositionOfReader instead of currentPositionOfEntry.
@@ -222,7 +224,7 @@ class WALEntryStream implements Closeable {
           LOG.debug(
             "Reached the end of WAL file '{}'. It was not closed cleanly," +
               " so we did not parse {} bytes of data. This is normally ok.",
-            currentPath, skippedBytes);
+            currentWAlIdentity, skippedBytes);
           metrics.incrUncleanlyClosedWALs();
           metrics.incrBytesSkippedInUncleanlyClosedWALs(skippedBytes);
         }
@@ -230,7 +232,7 @@ class WALEntryStream implements Closeable {
         LOG.warn(
           "Processing end of WAL file '{}'. At position {}, which is too far away from" +
             " reported file length {}. Restarting WAL reading (see HBASE-15983 for details). {}",
-          currentPath, currentPositionOfReader, stat.getLen(), getCurrentPathStat());
+          currentWAlIdentity, currentPositionOfReader, stat.getLen(), getCurrentWalIdStat());
         setPosition(0);
         resetReader();
         metrics.incrRestartedWALReading();
@@ -239,15 +241,15 @@ class WALEntryStream implements Closeable {
       }
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Reached the end of log " + this.currentPath + ", and the length of the file is " +
-        (stat == null ? "N/A" : stat.getLen()));
+      LOG.trace("Reached the end of log " + this.currentWAlIdentity
+          + ", and the length of the file is " + (stat == null ? "N/A" : stat.getLen()));
     }
     metrics.incrCompletedWAL();
     return true;
   }
 
   private void dequeueCurrentLog() throws IOException {
-    LOG.debug("Reached the end of log {}", currentPath);
+    LOG.debug("Reached the end of log {}", currentWAlIdentity);
     closeReader();
     logQueue.remove();
     setPosition(0);
@@ -260,12 +262,13 @@ class WALEntryStream implements Closeable {
   private boolean readNextEntryAndRecordReaderPosition() throws IOException {
     Entry readEntry = reader.next();
     long readerPos = reader.getPosition();
-    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    OptionalLong fileLength =
+        walFileLengthProvider.getLogFileSizeIfBeingWritten(currentWAlIdentity);
     if (fileLength.isPresent() && readerPos > fileLength.getAsLong()) {
       // see HBASE-14004, for AsyncFSWAL which uses fan-out, it is possible that we read uncommitted
       // data, so we need to make sure that we do not read beyond the committed file length.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("The provider tells us the valid length for " + currentPath + " is " +
+        LOG.debug("The provider tells us the valid length for " + currentWAlIdentity + " is " +
             fileLength.getAsLong() + ", but we have advanced to " + readerPos);
       }
       resetReader();
@@ -297,16 +300,16 @@ class WALEntryStream implements Closeable {
 
   // open a reader on the next log in queue
   private boolean openNextLog() throws IOException {
-    Path nextPath = logQueue.peek();
-    if (nextPath != null) {
-      openReader(nextPath);
+    WALIdentity nextWalId = logQueue.peek();
+    if (nextWalId != null) {
+      openReader((FSWALIdentity)nextWalId);
       if (reader != null) {
         return true;
       }
     } else {
       // no more files in queue, this could happen for recovered queue, or for a wal group of a sync
       // replication peer which has already been transited to DA or S.
-      setCurrentPath(null);
+      setCurrentWalId(null);
     }
     return false;
   }
@@ -336,38 +339,39 @@ class WALEntryStream implements Closeable {
     return path;
   }
 
-  private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
+  private void handleFileNotFound(FSWALIdentity walId, FileNotFoundException fnfe)
+      throws IOException {
     // If the log was archived, continue reading from there
-    Path archivedLog = getArchivedLog(path);
-    if (!path.equals(archivedLog)) {
+    FSWALIdentity archivedLog = new FSWALIdentity(getArchivedLog(walId.getPath()));
+    if (!walId.equals(archivedLog)) {
       openReader(archivedLog);
     } else {
       throw fnfe;
     }
   }
 
-  private void openReader(Path path) throws IOException {
+  private void openReader(FSWALIdentity walId) throws IOException {
     try {
       // Detect if this is a new file, if so get a new reader else
       // reset the current reader so that we see the new data
-      if (reader == null || !getCurrentPath().equals(path)) {
+      if (reader == null || !getCurrentWalIdentity().equals(walId)) {
         closeReader();
-        reader = WALFactory.createReader(fs, path, conf);
+        reader = WALFactory.createReader(fs, walId.getPath(), conf);
         seek();
-        setCurrentPath(path);
+        setCurrentWalId(walId);
       } else {
         resetReader();
       }
     } catch (FileNotFoundException fnfe) {
-      handleFileNotFound(path, fnfe);
+      handleFileNotFound(walId, fnfe);
     }  catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException(FileNotFoundException.class);
       if (!(ioe instanceof FileNotFoundException)) throw ioe;
-      handleFileNotFound(path, (FileNotFoundException)ioe);
+      handleFileNotFound(walId, (FileNotFoundException)ioe);
     } catch (LeaseNotRecoveredException lnre) {
       // HBASE-15019 the WAL was not closed due to some hiccup.
-      LOG.warn("Try to recover the WAL lease " + currentPath, lnre);
-      recoverLease(conf, currentPath);
+      LOG.warn("Try to recover the WAL lease " + currentWAlIdentity, lnre);
+      recoverLease(conf, ((FSWALIdentity)currentWAlIdentity).getPath());
       reader = null;
     } catch (NullPointerException npe) {
       // Workaround for race condition in HDFS-4380
@@ -402,8 +406,9 @@ class WALEntryStream implements Closeable {
       seek();
     } catch (FileNotFoundException fnfe) {
       // If the log was archived, continue reading from there
-      Path archivedLog = getArchivedLog(currentPath);
-      if (!currentPath.equals(archivedLog)) {
+      FSWALIdentity archivedLog =
+          new FSWALIdentity(getArchivedLog(((FSWALIdentity) currentWAlIdentity).getPath()));
+      if (!currentWAlIdentity.equals(archivedLog)) {
         openReader(archivedLog);
       } else {
         throw fnfe;

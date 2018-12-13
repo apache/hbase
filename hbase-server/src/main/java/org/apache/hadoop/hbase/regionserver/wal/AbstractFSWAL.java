@@ -65,9 +65,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
@@ -544,11 +546,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   private void tellListenersAboutPreLogRoll(final Path oldPath, final Path newPath)
       throws IOException {
-    coprocessorHost.preWALRoll(oldPath, newPath);
+    coprocessorHost.preWALRoll(new FSWALIdentity(oldPath), new FSWALIdentity(newPath));
 
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
-        i.preLogRoll(oldPath, newPath);
+        i.preLogRoll(new FSWALIdentity(oldPath), new FSWALIdentity(newPath));
       }
     }
   }
@@ -560,11 +562,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       throws IOException {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
-        i.postLogRoll(oldPath, newPath);
+        i.postLogRoll(new FSWALIdentity(oldPath), new FSWALIdentity(newPath));
       }
     }
 
-    coprocessorHost.postWALRoll(oldPath, newPath);
+    coprocessorHost.postWALRoll(new FSWALIdentity(oldPath), new FSWALIdentity(newPath));
   }
 
   // public only until class moves to o.a.h.h.wal
@@ -650,7 +652,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // Tell our listeners that a log is going to be archived.
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
-        i.preLogArchive(p, newPath);
+        i.preLogArchive(new FSWALIdentity(p), new FSWALIdentity(newPath));
       }
     }
     LOG.info("Archiving " + p + " to " + newPath);
@@ -660,7 +662,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // Tell our listeners that a log has been archived.
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
-        i.postLogArchive(p, newPath);
+        i.postLogArchive(new FSWALIdentity(p), new FSWALIdentity(newPath));
       }
     }
   }
@@ -836,7 +838,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         // Tell our listeners that a log is going to be archived.
         if (!this.listeners.isEmpty()) {
           for (WALActionsListener i : this.listeners) {
-            i.preLogArchive(file.getPath(), p);
+            i.preLogArchive(new FSWALIdentity(file.getPath()), new FSWALIdentity(p));
           }
         }
 
@@ -846,7 +848,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         // Tell our listeners that a log was archived.
         if (!this.listeners.isEmpty()) {
           for (WALActionsListener i : this.listeners) {
-            i.postLogArchive(file.getPath(), p);
+            i.postLogArchive(new FSWALIdentity(file.getPath()), new FSWALIdentity(p));
           }
         }
       }
@@ -994,11 +996,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
    */
   @Override
-  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
+  public OptionalLong getLogFileSizeIfBeingWritten(WALIdentity walId) {
     rollWriterLock.lock();
     try {
-      Path currentPath = getOldPath();
-      if (path.equals(currentPath)) {
+      FSWALIdentity currentPath = new FSWALIdentity(getOldPath());
+      if (walId.equals(currentPath)) {
         W writer = this.writer;
         return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
       } else {

@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,13 +46,13 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
-  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.preLogRoll(newPath);
+  public void preLogRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
+    manager.preLogRoll(newWalId);
   }
 
   @Override
-  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.postLogRoll(newPath);
+  public void postLogRoll(WALIdentity oldWalId, WALIdentity newWalId) throws IOException {
+    manager.postLogRoll(newWalId);
   }
 
   @Override
