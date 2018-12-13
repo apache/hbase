@@ -34,9 +34,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,22 +46,28 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Tests optimized scanning of multiple columns.
+ * Tests optimized scanning of multiple columns. <br>
+ * We separated the big test into several sub-class UT, because When in ROWCOL bloom type, we will
+ * test the row-col bloom filter frequently for saving HDFS seek once we switch from one column to
+ * another in our UT. It's cpu time consuming (~45s for each case), so moved the ROWCOL case into a
+ * separated LargeTests to avoid timeout failure. <br>
+ * <br>
+ * To be clear: In TestMultiColumnScanner, we will flush 10 (NUM_FLUSHES=10) HFiles here, and the
+ * table will put ~1000 cells (rows=20, ts=6, qualifiers=8, total=20*6*8 ~ 1000) . Each full table
+ * scan will check the ROWCOL bloom filter 20 (rows)* 8 (column) * 10 (hfiles)= 1600 times, beside
+ * it will scan the full table 6*2^8=1536 times, so finally will have 1600*1536=2457600 bloom filter
+ * testing. (See HBASE-21520)
  */
-@RunWith(Parameterized.class)
-@Category(MediumTests.class)
-public class TestMultiColumnScanner {
+public abstract class TestMultiColumnScanner {
 
-  private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME =
       TestMultiColumnScanner.class.getSimpleName();
@@ -97,20 +100,19 @@ public class TestMultiColumnScanner {
   /** The probability that a column is skipped in a store file. */
   private static final double COLUMN_SKIP_IN_STORE_FILE_PROB = 0.7;
 
-  /** The probability of skipping a column in a single row */
-  private static final double COLUMN_SKIP_IN_ROW_PROB = 0.1;
-
-  /** The probability of skipping a column everywhere */
-  private static final double COLUMN_SKIP_EVERYWHERE_PROB = 0.1;
-
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
 
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  private final Compression.Algorithm comprAlgo;
-  private final BloomType bloomType;
-  private final DataBlockEncoding dataBlockEncoding;
+  @Parameter(0)
+  public Compression.Algorithm comprAlgo;
+
+  @Parameter(1)
+  public BloomType bloomType;
+
+  @Parameter(2)
+  public DataBlockEncoding dataBlockEncoding;
 
   // Some static sanity-checking.
   static {
@@ -121,25 +123,15 @@ public class TestMultiColumnScanner {
       assertTrue(TIMESTAMPS[i] < TIMESTAMPS[i + 1]);
   }
 
-  @Parameters
-  public static final Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<Object[]>();
-    for (Object[] bloomAndCompressionParams :
-        HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS) {
-      for (boolean useDataBlockEncoding : new boolean[]{false, true}) {
-        parameters.add(ArrayUtils.add(bloomAndCompressionParams,
-            useDataBlockEncoding));
-      }
+  public static Collection<Object[]> generateParams(Compression.Algorithm algo,
+      boolean useDataBlockEncoding) {
+    List<Object[]> parameters = new ArrayList<>();
+    for (BloomType bloomType : BloomType.values()) {
+      DataBlockEncoding dataBlockEncoding =
+          useDataBlockEncoding ? DataBlockEncoding.PREFIX : DataBlockEncoding.NONE;
+      parameters.add(new Object[] { algo, bloomType, dataBlockEncoding });
     }
     return parameters;
-  }
-
-  public TestMultiColumnScanner(Compression.Algorithm comprAlgo,
-      BloomType bloomType, boolean useDataBlockEncoding) {
-    this.comprAlgo = comprAlgo;
-    this.bloomType = bloomType;
-    this.dataBlockEncoding = useDataBlockEncoding ? DataBlockEncoding.PREFIX :
-        DataBlockEncoding.NONE;
   }
 
   @Test
@@ -161,24 +153,6 @@ public class TestMultiColumnScanner {
     Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
 
     Random rand = new Random(29372937L);
-    Set<String> rowQualSkip = new HashSet<String>();
-
-    // Skip some columns in some rows. We need to test scanning over a set
-    // of columns when some of the columns are not there.
-    for (String row : rows)
-      for (String qual : qualifiers)
-        if (rand.nextDouble() < COLUMN_SKIP_IN_ROW_PROB) {
-          LOG.info("Skipping " + qual + " in row " + row);
-          rowQualSkip.add(rowQualKey(row, qual));
-        }
-
-    // Also skip some columns in all rows.
-    for (String qual : qualifiers)
-      if (rand.nextDouble() < COLUMN_SKIP_EVERYWHERE_PROB) {
-        LOG.info("Skipping " + qual + " in all rows");
-        for (String row : rows)
-          rowQualSkip.add(rowQualKey(row, qual));
-      }
 
     for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
       for (String qual : qualifiers) {
@@ -307,10 +281,6 @@ public class TestMultiColumnScanner {
         kv.getQualifierLength());
   }
 
-  private static String rowQualKey(String row, String qual) {
-    return row + "_" + qual;
-  }
-
   static String createValue(String row, String qual, long ts) {
     return "value_for_" + row + "_" + qual + "_" + ts;
   }
@@ -330,10 +300,7 @@ public class TestMultiColumnScanner {
 
       lst.add(sb.toString());
     }
-
     return lst;
   }
-
-
 }
 
