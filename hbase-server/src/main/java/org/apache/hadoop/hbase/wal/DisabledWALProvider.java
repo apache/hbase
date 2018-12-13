@@ -27,7 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +51,32 @@ class DisabledWALProvider implements WALProvider {
 
   private static final Logger LOG = LoggerFactory.getLogger(DisabledWALProvider.class);
 
+  private static final WALIdentity DISABLED_WAL_IDENTITY = new WALIdentity() {
+    @Override
+    public int compareTo(WALIdentity o) {
+      if (equals(o)) {
+        return 0;
+      }
+      return 1;
+    }
+
+    @Override
+    public String getName() {
+      return "disabled-wal-id";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+  };
+
+
   WAL disabled;
 
   @Override
@@ -63,29 +87,7 @@ class DisabledWALProvider implements WALProvider {
     if (null == providerId) {
       providerId = "defaultDisabled";
     }
-    final Path path = new Path(FSUtils.getWALRootDir(conf), providerId);
-    disabled = new DisabledWAL(new WALIdentity() {
-
-      @Override
-      public int compareTo(WALIdentity o) {
-        return 0;
-      }
-
-      @Override
-      public String getName() {
-        return path.getName();
-      }
-
-      @Override
-      public boolean equals(Object obj) {
-        return true;
-      }
-
-      @Override
-      public int hashCode() {
-        return 0;
-      }
-    }, conf, null);
+    disabled = new DisabledWAL(DISABLED_WAL_IDENTITY, conf, null);
   }
 
   @Override
