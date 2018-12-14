@@ -120,7 +120,6 @@ Release Notes - HBase - Version 1.3.3 12/21/2018
     * [HBASE-21417] - Pre commit build is broken due to surefire plugin crashes
     * [HBASE-21439] - StochasticLoadBalancer RegionLoads aren’t being used in RegionLoad cost functions
     * [HBASE-21445] - CopyTable by bulkload will write hfile into yarn's HDFS 
-    * [HBASE-21504] - If enable FIFOCompactionPolicy, a compaction may write a "empty" hfile whose maxTimeStamp is long max. This kind of hfile will never be archived.
     * [HBASE-21546] - ConnectException in TestThriftHttpServer
     * [HBASE-21553] - schedLock not released in MasterProcedureScheduler
     * [HBASE-21582] - If call HBaseAdmin#snapshotAsync but forget call isSnapshotFinished, then SnapshotHFileCleaner will skip to run every time
