@@ -148,7 +148,7 @@ public class TimeBasedLimiter implements QuotaLimiter {
           reqSizeLimiter.waitInterval(estimateWriteSize + estimateReadSize));
     }
     if (!reqCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit + estimateReadCapacityUnit)) {
-      RpcThrottlingException.throwRequestSizeExceeded(
+      RpcThrottlingException.throwRequestCapacityUnitExceeded(
         reqCapacityUnitLimiter.waitInterval(estimateWriteCapacityUnit + estimateReadCapacityUnit));
     }
 
@@ -161,7 +161,7 @@ public class TimeBasedLimiter implements QuotaLimiter {
             writeSizeLimiter.waitInterval(estimateWriteSize));
       }
       if (!writeCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit)) {
-        RpcThrottlingException.throwWriteSizeExceeded(
+        RpcThrottlingException.throwWriteCapacityUnitExceeded(
           writeCapacityUnitLimiter.waitInterval(estimateWriteCapacityUnit));
       }
     }
@@ -175,8 +175,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
             readSizeLimiter.waitInterval(estimateReadSize));
       }
       if (!readCapacityUnitLimiter.canExecute(estimateReadCapacityUnit)) {
-        RpcThrottlingException
-            .throwWriteSizeExceeded(readCapacityUnitLimiter.waitInterval(estimateReadCapacityUnit));
+        RpcThrottlingException.throwReadCapacityUnitExceeded(
+          readCapacityUnitLimiter.waitInterval(estimateReadCapacityUnit));
       }
     }
   }
