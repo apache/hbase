@@ -1082,6 +1082,34 @@ Copyright 2006 Envoi Solutions LLC
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>com.squareup.okhttp</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>2.4.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.squareup.okio</groupId>
+      <artifactId>okio</artifactId>
+      <version>1.4.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 <!-- Permissive licenses that need text in LICENSE -->
   <supplement>
     <project>
@@ -2061,6 +2089,24 @@ Copyright (c) 2007-2011 The JRuby project
         <license>
           <name>Apache License, Version 2.0</name>
           <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>net.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <version>1.0</version>
+      <organization>
+        <name>Brian Goetz and Tim Peierls</name>
+        <url>http://www.jcip.net</url>
+      </organization>
+      <licenses>
+        <license>
+          <name>Creative Commons Attribution License, Version 2.5</name>
+          <url>http://creativecommons.org/licenses/by/2.5</url>
           <distribution>repo</distribution>
         </license>
       </licenses>
