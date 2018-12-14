@@ -790,8 +790,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     Cell previousIndexedKey = null;
     do {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && (nextIndexedKey == previousIndexedKey || matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0)) {
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY &&
+          (nextIndexedKey == previousIndexedKey ||
+          matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0)) {
         this.heap.next();
         ++kvsScanned;
         previousIndexedKey = nextIndexedKey;
@@ -815,8 +816,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     Cell previousIndexedKey = null;
     do {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && (nextIndexedKey == previousIndexedKey || matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0)) {
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY &&
+          (nextIndexedKey == previousIndexedKey ||
+          matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0)) {
         this.heap.next();
         ++kvsScanned;
         previousIndexedKey = nextIndexedKey;
