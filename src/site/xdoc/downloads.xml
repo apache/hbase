@@ -88,23 +88,23 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        1.4.8
+        1.4.9
       </td>
       <td style="test-align: left">
-        2018/10/08
+        2018/12/14
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/1.4.8/compat-check-report.html">1.4.7 vs 1.4.8</a>
+        <a href="https://apache.org/dist/hbase/1.4.9/compat-check-report.html">1.4.8 vs 1.4.9</a>
       </td>
       <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.4.8/CHANGES.txt">Changes</a>
+        <a href="https://github.com/apache/hbase/blob/rel/1.4.9/CHANGES.txt">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://s.apache.org/hbase-1.4.8-jira-release-notes">Release Notes</a>
+        <a href="https://s.apache.org/hbase-1.4.9-jira-release-notes">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.8/hbase-1.4.8-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/1.4.8/hbase-1.4.8-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.4.8/hbase-1.4.8-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.8/hbase-1.4.8-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/1.4.8/hbase-1.4.8-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.4.8/hbase-1.4.8-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.9/hbase-1.4.9-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/1.4.9/hbase-1.4.9-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.4.9/hbase-1.4.9-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.9/hbase-1.4.9-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/1.4.9/hbase-1.4.9-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/1.4.9/hbase-1.4.9-bin.tar.gz.asc">asc</a>)
       </td>
     </tr>
     <tr>
