@@ -66,10 +66,13 @@ public class TestCleanupMetaWAL {
         .getRegionServer(TEST_UTIL.getMiniHBaseCluster().getServerWithMeta());
     TEST_UTIL.getAdmin()
         .move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), null);
+    LOG.info("KILL");
     TEST_UTIL.getMiniHBaseCluster().killRegionServer(serverWithMeta.getServerName());
-    TEST_UTIL.waitFor(10000, () ->
+    LOG.info("WAIT");
+    TEST_UTIL.waitFor(30000, () ->
         TEST_UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
             .filter(p -> p instanceof ServerCrashProcedure && p.isFinished()).count() > 0);
+    LOG.info("DONE WAITING");
     MasterFileSystem fs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path walPath = new Path(fs.getWALRootDir(), HConstants.HREGION_LOGDIR_NAME);
     for (FileStatus status : FSUtils.listStatus(fs.getFileSystem(), walPath)) {
@@ -77,7 +80,5 @@ public class TestCleanupMetaWAL {
         fail("Should not have splitting wal dir here:" + status);
       }
     }
-
-
   }
 }
