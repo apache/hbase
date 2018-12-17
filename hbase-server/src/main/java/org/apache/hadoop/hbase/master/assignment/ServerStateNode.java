@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * State of Server; list of hosted regions, etc.
  */
 @InterfaceAudience.Private
-class ServerStateNode implements Comparable<ServerStateNode> {
+public class ServerStateNode implements Comparable<ServerStateNode> {
 
   private final Set<RegionStateNode> regions;
   private final ServerName serverName;

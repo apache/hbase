@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Server State.
  */
 @InterfaceAudience.Private
-enum ServerState {
+public enum ServerState {
   /**
    * Initial state. Available.
    */
