@@ -169,8 +169,9 @@ public class NettyRpcServer extends RpcServer {
 
   @Override
   public int getNumOpenConnections() {
+    int channelsCount = allChannels.size();
     // allChannels also contains the server channel, so exclude that from the count.
-    return allChannels.size() - 1;
+    return channelsCount > 0 ? channelsCount - 1 : channelsCount;
   }
 
   @Override
