@@ -3849,7 +3849,8 @@ public class HRegionServer extends HasThread implements
 
     @Override
     public void run() {
-      LOG.warn("Aborting region server timed out, terminate forcibly...");
+      LOG.warn("Aborting region server timed out, terminating forcibly. Thread dump to stdout.");
+      Threads.printThreadInfo(System.out, "Zombie HRegionServer");
       System.exit(1);
     }
   }
