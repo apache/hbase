@@ -2094,7 +2094,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         ClientProtos.Result pbr = ProtobufUtil.toResult(r);
         builder.setResult(pbr);
       }
-      if (r != null) {
+      //r.cells is null when an table.exists(get) call
+      if (r != null && r.rawCells() != null) {
         quota.addGetResult(r);
       }
       return builder.build();
