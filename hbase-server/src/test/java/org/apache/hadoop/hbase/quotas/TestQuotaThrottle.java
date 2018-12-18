@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -484,6 +485,23 @@ public class TestQuotaThrottle {
     triggerNamespaceCacheRefresh(true, TABLE_NAMES[1]);
     assertEquals(30, doGets(30, tables[0]));
     assertEquals(30, doGets(30, tables[1]));
+  }
+
+  @Test
+  public void testTableExistsGetThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+
+    // Add throttle quota
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+        ThrottleType.REQUEST_NUMBER, 100, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAMES[0]);
+    // An exists call when having throttle quota
+    table.exists(new Get(Bytes.toBytes("abc")));
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(true, TABLE_NAMES[0]);
   }
 
   private int doPuts(int maxOps, final HTable... tables) throws Exception {
