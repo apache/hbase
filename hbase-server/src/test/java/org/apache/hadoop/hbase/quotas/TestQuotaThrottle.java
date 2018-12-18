@@ -509,6 +509,23 @@ public class TestQuotaThrottle {
     assertEquals(30, doGets(30, tables[1]));
   }
 
+  @Test
+  public void testTableExistsGetThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+
+    // Add throttle quota
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0], ThrottleType.REQUEST_NUMBER,
+      100, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAMES[0]);
+    // An exists call when having throttle quota
+    table.exists(new Get(Bytes.toBytes("abc")));
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(true, TABLE_NAMES[0]);
+  }
+
   private int doPuts(int maxOps, final Table... tables) throws Exception {
     int count = 0;
     try {
