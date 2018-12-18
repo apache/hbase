@@ -1300,8 +1300,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
       DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
-    if (cacheConf.getBlockCache().isPresent()) {
-      BlockCache cache = cacheConf.getBlockCache().get();
+    BlockCache cache = cacheConf.getBlockCache().orElse(null);
+    if (cache != null) {
       HFileBlock cachedBlock =
           (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics);
       if (cachedBlock != null) {
