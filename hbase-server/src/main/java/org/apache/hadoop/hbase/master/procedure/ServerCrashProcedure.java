@@ -333,17 +333,6 @@ public class ServerCrashProcedure
     return ServerOperationType.CRASH_HANDLER;
   }
 
-  /**
-   * For this procedure, yield at end of each successful flow step so that all crashed servers
-   * can make progress rather than do the default which has each procedure running to completion
-   * before we move to the next. For crashed servers, especially if running with distributed log
-   * replay, we will want all servers to come along; we do not want the scenario where a server is
-   * stuck waiting for regions to online so it can replay edits.
-   */
-  @Override
-  protected boolean isYieldBeforeExecuteFromState(MasterProcedureEnv env, ServerCrashState state) {
-    return true;
-  }
 
   @Override
   protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
@@ -389,5 +378,10 @@ public class ServerCrashProcedure
   @Override
   protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
     return env.getMasterServices().getMasterMetrics().getServerCrashProcMetrics();
+  }
+
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
   }
 }

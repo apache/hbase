@@ -560,15 +560,18 @@ public class ServerManager {
       return false;
     }
     LOG.info("Processing expiration of " + serverName + " on " + this.master.getServerName());
-    master.getAssignmentManager().submitServerCrash(serverName, true);
-
-    // Tell our listeners that a server was removed
-    if (!this.listeners.isEmpty()) {
-      for (ServerListener listener : this.listeners) {
-        listener.serverRemoved(serverName);
+    long pid = master.getAssignmentManager().submitServerCrash(serverName, true);
+    if (pid <= 0) {
+      return false;
+    } else {
+      // Tell our listeners that a server was removed
+      if (!this.listeners.isEmpty()) {
+        for (ServerListener listener : this.listeners) {
+          listener.serverRemoved(serverName);
+        }
       }
+      return true;
     }
-    return true;
   }
 
   @VisibleForTesting

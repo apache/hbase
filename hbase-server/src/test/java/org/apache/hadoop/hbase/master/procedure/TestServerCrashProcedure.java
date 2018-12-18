@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -167,6 +168,43 @@ public class TestServerCrashProcedure {
     } catch (Throwable throwable) {
       LOG.error("Test failed!", throwable);
       throw throwable;
+    }
+  }
+
+  @Test
+  public void testConcurrentSCPForSameServer() throws Exception {
+    final TableName tableName = TableName.valueOf("testConcurrentSCPForSameServer");
+    try (Table t = createTable(tableName)) {
+      // Load the table with a bit of data so some logs to split and some edits in each region.
+      this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
+      final int count = util.countRows(t);
+      assertTrue("expected some rows", count > 0);
+      // find the first server that match the request and executes the test
+      ServerName rsToKill = null;
+      for (RegionInfo hri : util.getAdmin().getRegions(tableName)) {
+        final ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(util, hri);
+        if (AssignmentTestingUtil.isServerHoldingMeta(util, serverName) == true) {
+          rsToKill = serverName;
+          break;
+        }
+      }
+      HMaster master = util.getHBaseCluster().getMaster();
+      final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
+      ServerCrashProcedure procB =
+          new ServerCrashProcedure(pExecutor.getEnvironment(), rsToKill, false, false);
+      AssignmentTestingUtil.killRs(util, rsToKill);
+      long procId = getSCPProcId(pExecutor);
+      Procedure procA = pExecutor.getProcedure(procId);
+      LOG.info("submit SCP procedureA");
+      util.waitFor(5000, () -> procA.hasLock());
+      LOG.info("procedureA acquired the lock");
+      assertEquals(Procedure.LockState.LOCK_EVENT_WAIT,
+          procB.acquireLock(pExecutor.getEnvironment()));
+      LOG.info("procedureB should not be able to get the lock");
+      util.waitFor(60000,
+        () -> procB.acquireLock(pExecutor.getEnvironment()) == Procedure.LockState.LOCK_ACQUIRED);
+      LOG.info("when procedure B get the lock, procedure A should be finished");
+      assertTrue(procA.isFinished());
     }
   }
 

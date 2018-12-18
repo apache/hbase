@@ -128,6 +128,9 @@ public class RegionServerTracker extends ZKListener {
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
     splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
       forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
+    //create ServerNode for all possible live servers from wal directory
+    liveServersFromWALDir.stream()
+        .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =

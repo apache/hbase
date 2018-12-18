@@ -738,7 +738,8 @@ public class RegionStates {
     serverMap.remove(serverName);
   }
 
-  ServerStateNode getServerNode(final ServerName serverName) {
+  @VisibleForTesting
+  public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
   }
 
