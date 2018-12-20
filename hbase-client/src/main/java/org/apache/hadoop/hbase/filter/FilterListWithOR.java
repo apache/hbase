@@ -82,30 +82,40 @@ public class FilterListWithOR extends FilterListBase {
    * next family for RegionScanner, INCLUDE_AND_NEXT_ROW is the same. so we should pass current cell
    * to the filter, if row mismatch or row match but column family mismatch. (HBASE-18368)
    * @see org.apache.hadoop.hbase.filter.Filter.ReturnCode
+   * @param subFilter which sub-filter to calculate the return code by using previous cell and
+   *          previous return code.
+   * @param prevCell the previous cell passed to given sub-filter.
+   * @param currentCell the current cell which will pass to given sub-filter.
+   * @param prevCode the previous return code for given sub-filter.
+   * @return return code calculated by using previous cell and previous return code. null means can
+   *         not decide which return code should return, so we will pass the currentCell to
+   *         subFilter for getting currentCell's return code, and it won't impact the sub-filter's
+   *         internal states.
    */
-  private boolean shouldPassCurrentCellToFilter(Cell prevCell, Cell currentCell,
-      ReturnCode prevCode) throws IOException {
+  private ReturnCode calculateReturnCodeByPrevCellAndRC(Filter subFilter, Cell currentCell,
+      Cell prevCell, ReturnCode prevCode) throws IOException {
     if (prevCell == null || prevCode == null) {
-      return true;
+      return null;
     }
     switch (prevCode) {
     case INCLUDE:
     case SKIP:
-      return true;
+        return null;
     case SEEK_NEXT_USING_HINT:
-      Cell nextHintCell = getNextCellHint(prevCell);
-      return nextHintCell == null || this.compareCell(currentCell, nextHintCell) >= 0;
+        Cell nextHintCell = subFilter.getNextCellHint(prevCell);
+        return nextHintCell != null && compareCell(currentCell, nextHintCell) < 0
+          ? ReturnCode.SEEK_NEXT_USING_HINT : null;
     case NEXT_COL:
     case INCLUDE_AND_NEXT_COL:
-      // Once row changed, reset() will clear prevCells, so we need not to compare their rows
-      // because rows are the same here.
-      return !CellUtil.matchingColumn(prevCell, currentCell);
+        // Once row changed, reset() will clear prevCells, so we need not to compare their rows
+        // because rows are the same here.
+        return CellUtil.matchingColumn(prevCell, currentCell) ? ReturnCode.NEXT_COL : null;
     case NEXT_ROW:
     case INCLUDE_AND_SEEK_NEXT_ROW:
-      // As described above, rows are definitely the same, so we only compare the family.
-      return !CellUtil.matchingFamily(prevCell, currentCell);
+        // As described above, rows are definitely the same, so we only compare the family.
+        return CellUtil.matchingFamily(prevCell, currentCell) ? ReturnCode.NEXT_ROW : null;
     default:
-      throw new IllegalStateException("Received code is not valid.");
+        throw new IllegalStateException("Received code is not valid.");
     }
   }
 
@@ -239,7 +249,7 @@ public class FilterListWithOR extends FilterListBase {
   private void updatePrevCellList(int index, Cell currentCell, ReturnCode currentRC) {
     if (currentCell == null || currentRC == ReturnCode.INCLUDE || currentRC == ReturnCode.SKIP) {
       // If previous return code is INCLUDE or SKIP, we should always pass the next cell to the
-      // corresponding sub-filter(need not test shouldPassCurrentCellToFilter() method), So we
+      // corresponding sub-filter(need not test calculateReturnCodeByPrevCellAndRC() method), So we
       // need not save current cell to prevCellList for saving heap memory.
       prevCellList.set(index, null);
     } else {
@@ -253,27 +263,26 @@ public class FilterListWithOR extends FilterListBase {
       return ReturnCode.INCLUDE;
     }
     ReturnCode rc = null;
-    boolean everyFilterReturnHint = true;
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       subFiltersIncludedCell.set(i, false);
 
       Cell prevCell = this.prevCellList.get(i);
       ReturnCode prevCode = this.prevFilterRCList.get(i);
-      if (filter.filterAllRemaining() || !shouldPassCurrentCellToFilter(prevCell, c, prevCode)) {
-        everyFilterReturnHint = false;
+      if (filter.filterAllRemaining()) {
         continue;
       }
-
-      ReturnCode localRC = filter.filterCell(c);
+      ReturnCode localRC = calculateReturnCodeByPrevCellAndRC(filter, c, prevCell, prevCode);
+      if (localRC == null) {
+        // Can not get return code based on previous cell and previous return code. In other words,
+        // we should pass the current cell to this sub-filter to get the return code, and it won't
+        // impact the sub-filter's internal state.
+        localRC = filter.filterCell(c);
+      }
 
       // Update previous return code and previous cell for filter[i].
       updatePrevFilterRCList(i, localRC);
       updatePrevCellList(i, c, localRC);
-
-      if (localRC != ReturnCode.SEEK_NEXT_USING_HINT) {
-        everyFilterReturnHint = false;
-      }
 
       rc = mergeReturnCode(rc, localRC);
 
@@ -283,15 +292,9 @@ public class FilterListWithOR extends FilterListBase {
         subFiltersIncludedCell.set(i, true);
       }
     }
-
-    if (everyFilterReturnHint) {
-      return ReturnCode.SEEK_NEXT_USING_HINT;
-    } else if (rc == null) {
-      // Each sub-filter in filter list got true for filterAllRemaining().
-      return ReturnCode.SKIP;
-    } else {
-      return rc;
-    }
+    // Each sub-filter in filter list got true for filterAllRemaining(), if rc is null, so we should
+    // return SKIP.
+    return rc == null ? ReturnCode.SKIP : rc;
   }
 
   @Override
