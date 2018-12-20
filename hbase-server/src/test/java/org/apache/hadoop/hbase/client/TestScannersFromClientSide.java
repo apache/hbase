@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.TestFromClientSide3.generateHugeValue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -907,6 +908,48 @@ public class TestScannersFromClientSide {
       try (ResultScanner scanner = table.getScanner(scan)) {
         assertNull(scanner.next());
       }
+    }
+  }
+
+  @Test
+  public void testReverseScanWithFlush() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    final int BATCH_SIZE = 10;
+    final int ROWS_TO_INSERT = 100;
+    final byte[] LARGE_VALUE = generateHugeValue(128 * 1024);
+
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY);
+        Admin admin = TEST_UTIL.getAdmin()) {
+      List<Put> putList = new ArrayList<>();
+      for (long i = 0; i < ROWS_TO_INSERT; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn(FAMILY, QUALIFIER, LARGE_VALUE);
+        putList.add(put);
+
+        if (putList.size() >= BATCH_SIZE) {
+          table.put(putList);
+          admin.flush(tableName);
+          putList.clear();
+        }
+      }
+
+      if (!putList.isEmpty()) {
+        table.put(putList);
+        admin.flush(tableName);
+        putList.clear();
+      }
+
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      int count = 0;
+
+      try (ResultScanner results = table.getScanner(scan)) {
+        for (Result result : results) {
+          count++;
+        }
+      }
+      assertEquals("Expected " + ROWS_TO_INSERT + " rows in the table but it is " + count,
+          ROWS_TO_INSERT, count);
     }
   }
 }

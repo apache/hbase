@@ -1055,7 +1055,7 @@ public class TestFromClientSide3 {
     }
   }
 
-  private static byte[] generateHugeValue(int size) {
+  static byte[] generateHugeValue(int size) {
     Random rand = ThreadLocalRandom.current();
     byte[] value = new byte[size];
     for (int i = 0; i < value.length; i++) {
