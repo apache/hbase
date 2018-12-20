@@ -170,7 +170,13 @@ public class TestStoreScanner {
       if (count == null) {
         count = new AtomicInteger(0);
       }
-      heap = new KeyValueHeapWithCount(scanners, comparator, count);
+      heap = newKVHeap(scanners, comparator);
+    }
+
+    @Override
+    protected KeyValueHeap newKVHeap(List<? extends KeyValueScanner> scanners,
+        CellComparator comparator) throws IOException {
+      return new KeyValueHeapWithCount(scanners, comparator, count);
     }
 
     @Override
