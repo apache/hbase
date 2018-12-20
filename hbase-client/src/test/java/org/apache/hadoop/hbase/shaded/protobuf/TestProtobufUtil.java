@@ -246,6 +246,7 @@ public class TestProtobufUtil {
     scanBuilder.setCacheBlocks(false);
     scanBuilder.setCaching(1024);
     scanBuilder.setTimeRange(ProtobufUtil.toTimeRange(TimeRange.allTime()));
+    scanBuilder.setIncludeStopRow(false);
     ClientProtos.Scan expectedProto = scanBuilder.build();
 
     ClientProtos.Scan actualProto = ProtobufUtil.toScan(

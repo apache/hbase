@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -868,6 +869,43 @@ public class TestScannersFromClientSide {
       try (ResultScanner scanner = table.getScanner(scan)) {
         Result result = scanner.next();
         assertEquals(3, result.size());
+      }
+    }
+  }
+
+  @Test
+  public void testScanWithSameStartRowStopRow() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
+
+      Scan scan = new Scan().withStartRow(ROW).withStopRow(ROW);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, true).withStopRow(ROW, true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertArrayEquals(ROW, result.getRow());
+        assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, true).withStopRow(ROW, false);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, false).withStopRow(ROW, false);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
+      }
+
+      scan = new Scan().withStartRow(ROW, false).withStopRow(ROW, true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        assertNull(scanner.next());
       }
     }
   }
