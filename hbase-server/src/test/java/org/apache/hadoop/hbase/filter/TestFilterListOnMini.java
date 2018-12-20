@@ -23,13 +23,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -84,5 +84,53 @@ public class TestFilterListOnMini {
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       Assert.assertEquals(2, rr.size());
     }
+  }
+
+  /**
+   * Test case for HBASE-21620
+   */
+  @Test
+  public void testColumnPrefixFilterConcatWithOR() throws Exception {
+    TableName tn = TableName.valueOf(name.getMethodName());
+    byte[] cf1 = Bytes.toBytes("f1");
+    byte[] row = Bytes.toBytes("row");
+    byte[] value = Bytes.toBytes("value");
+    String[] columns = new String[]{
+      "1544768273917010001_lt",
+      "1544768273917010001_w_1",
+      "1544768723910010001_ca_1",
+      "1544768723910010001_lt",
+      "1544768723910010001_ut_1",
+      "1544768723910010001_w_5",
+      "1544769779710010001_lt",
+      "1544769779710010001_w_5",
+      "1544769883529010001_lt",
+      "1544769883529010001_w_5",
+      "1544769915805010001_lt",
+      "1544769915805010001_w_5",
+      "1544779883529010001_lt",
+      "1544770422942010001_lt",
+      "1544770422942010001_w_5"
+    };
+    Table table = TEST_UTIL.createTable(tn, cf1);
+    for (int i = 0; i < columns.length; i++) {
+      Put put = new Put(row).addColumn(cf1, Bytes.toBytes(columns[i]), value);
+      table.put(put);
+    }
+    Scan scan = new Scan();
+    scan.withStartRow(row).withStopRow(row, true)
+        .setFilter(new FilterList(Operator.MUST_PASS_ONE,
+            new ColumnPrefixFilter(Bytes.toBytes("1544770422942010001_")),
+            new ColumnPrefixFilter(Bytes.toBytes("1544769883529010001_"))));
+    ResultScanner scanner = table.getScanner(scan);
+    Result result;
+    int resultCount = 0;
+    int cellCount = 0;
+    while ((result = scanner.next()) != null) {
+      cellCount += result.listCells().size();
+      resultCount++;
+    }
+    Assert.assertEquals(resultCount, 1);
+    Assert.assertEquals(cellCount, 4);
   }
 }
