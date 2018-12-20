@@ -1094,7 +1094,7 @@ public class TestFromClientSide3 {
     }
 
     Scan scan = new Scan();
-    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(3)
+    scan.withStartRow(ROW).withStopRow(ROW, true).addFamily(FAMILY).setBatch(3)
         .setMaxResultSize(4 * 1024 * 1024);
     Result result;
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -1117,7 +1117,7 @@ public class TestFromClientSide3 {
     }
 
     scan = new Scan();
-    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(2)
+    scan.withStartRow(ROW).withStopRow(ROW, true).addFamily(FAMILY).setBatch(2)
         .setMaxResultSize(4 * 1024 * 1024);
     try (ResultScanner scanner = table.getScanner(scan)) {
       List<Result> list = new ArrayList<>();
