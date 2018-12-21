@@ -179,6 +179,12 @@ module Shell
           error = regex.match(str)
           raise error[:message].capitalize unless error.nil?
         end
+        if cause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
+          regex = /.*UnsupportedOperationException: quota support disabled.*/
+          error = regex.match(cause.message)
+          error_msg = 'Quota Support disabled. Please enable in configuration.'
+          raise error_msg unless error.nil?
+        end
 
         # Throw the other exception which hasn't been handled above
         raise cause
