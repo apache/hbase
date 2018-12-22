@@ -261,7 +261,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
       if (spaceProto.getRemove()) {
         builder.append(", REMOVE => ").append(spaceProto.getRemove());
       } else {
-        builder.append(", LIMIT => ").append(spaceProto.getSoftLimit());
+        builder.append(", LIMIT => ").append(sizeToString(spaceProto.getSoftLimit()));
         builder.append(", VIOLATION_POLICY => ").append(spaceProto.getViolationPolicy());
       }
       builder.append(" } ");
