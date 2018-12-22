@@ -205,7 +205,7 @@ class SpaceLimitSettings extends QuotaSettings {
     if (proto.getQuota().getRemove()) {
       sb.append(", REMOVE => ").append(proto.getQuota().getRemove());
     } else {
-      sb.append(", LIMIT => ").append(proto.getQuota().getSoftLimit());
+      sb.append(", LIMIT => ").append(sizeToString(proto.getQuota().getSoftLimit()));
       sb.append(", VIOLATION_POLICY => ").append(proto.getQuota().getViolationPolicy());
     }
     return sb.toString();
