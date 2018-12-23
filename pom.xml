@@ -1077,6 +1077,11 @@
             <artifactId>extra-enforcer-rules</artifactId>
             <version>${extra.enforcer.version}</version>
           </dependency>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
         </dependencies>
         <!-- version set by parent -->
         <executions>
@@ -1186,6 +1191,79 @@
                 </evaluateBeanshell>
               </rules>
               <skip>${skip.license.check}</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use SLF4j for logging</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.commons.logging.Log</bannedImport>
+                    <bannedImport>org.apache.commons.logging.LogFactory</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded version in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>com.google.common.**</bannedImport>
+                    <bannedImport>io.netty.**</bannedImport>
+                    <bannedImport>org.apache.commons.cli.**</bannedImport>
+                    <bannedImport>org.apache.commons.collections.**</bannedImport>
+                    <bannedImport>org.apache.commons.collections4.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Do not use shaded classes from other dependencies</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.curator.shaded.**</bannedImport>
+                    <bannedImport>org.apache.htrace.shaded.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded gson in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>org.codehaus.jackson.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use commons lang 3</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.commons.lang.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use yetus IA and IS annotations</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.classificatio.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Do not use htrace v3</reason>
+                  <bannedImports>
+                    <bannedImport>org.htrace.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
             </configuration>
           </execution>
         </executions>
@@ -1599,8 +1677,9 @@
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
-    <enforcer.version>3.0.0-M1</enforcer.version>
+    <extra.enforcer.version>1.0-beta-9</extra.enforcer.version>
+    <enforcer.version>3.0.0-M2</enforcer.version>
+    <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
