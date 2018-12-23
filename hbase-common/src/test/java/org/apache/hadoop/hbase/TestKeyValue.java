@@ -19,7 +19,11 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,17 +36,25 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import junit.framework.TestCase;
 
-public class TestKeyValue extends TestCase {
+@Category(SmallTests.class)
+public class TestKeyValue {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestKeyValue.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestKeyValue.class);
 
+  @Test
   public void testColumnCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
     byte [] family1 = Bytes.toBytes("abc");
@@ -66,6 +78,7 @@ public class TestKeyValue extends TestCase {
    * Test a corner case when the family qualifier is a prefix of the
    *  column qualifier.
    */
+  @Test
   public void testColumnCompare_prefix() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
     byte [] family1 = Bytes.toBytes("abc");
@@ -77,14 +90,16 @@ public class TestKeyValue extends TestCase {
     assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
   }
 
+  @Test
   public void testBasics() throws Exception {
     LOG.info("LOWKEY: " + KeyValue.LOWESTKEY.toString());
-    check(Bytes.toBytes(getName()),
-      Bytes.toBytes(getName()), Bytes.toBytes(getName()), 1,
-      Bytes.toBytes(getName()));
+    String name = "testBasics";
+    check(Bytes.toBytes(name),
+      Bytes.toBytes(name), Bytes.toBytes(name), 1,
+      Bytes.toBytes(name));
     // Test empty value and empty column -- both should work. (not empty fam)
-    check(Bytes.toBytes(getName()), Bytes.toBytes(getName()), null, 1, null);
-    check(HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes(getName()), null, 1, null);
+    check(Bytes.toBytes(name), Bytes.toBytes(name), null, 1, null);
+    check(HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes(name), null, 1, null);
     // empty qual is equivalent to null qual
     assertEquals(
       new KeyValue(Bytes.toBytes("rk"), Bytes.toBytes("fam"), null, 1, (byte[]) null),
@@ -102,6 +117,7 @@ public class TestKeyValue extends TestCase {
     LOG.info(kv.toString());
   }
 
+  @Test
   public void testPlainCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
     final byte [] b = Bytes.toBytes("bbb");
@@ -129,6 +145,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(CellComparatorImpl.COMPARATOR.compare(aaa, aaa) == 0);
   }
 
+  @Test
   public void testMoreComparisons() throws Exception {
     long now = System.currentTimeMillis();
 
@@ -157,6 +174,7 @@ public class TestKeyValue extends TestCase {
     metacomparisons(CellComparatorImpl.META_COMPARATOR);
   }
 
+  @Test
   public void testMetaComparatorTableKeysWithCommaOk() {
     CellComparator c = CellComparatorImpl.META_COMPARATOR;
     long now = System.currentTimeMillis();
@@ -172,6 +190,7 @@ public class TestKeyValue extends TestCase {
    * See HBASE-832
    * @throws IOException
    */
+  @Test
   public void testKeyValueBorderCases() throws IOException {
     // % sorts before , so if we don't do special comparator, rowB would
     // come before rowA.
@@ -222,6 +241,7 @@ public class TestKeyValue extends TestCase {
           Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)) > 0);
   }
 
+  @Test
   public void testBinaryKeys() throws Exception {
     Set<KeyValue> set = new TreeSet<>(CellComparatorImpl.COMPARATOR);
     final byte [] fam = Bytes.toBytes("col");
@@ -243,7 +263,7 @@ public class TestKeyValue extends TestCase {
       for (KeyValue k: set) {
         assertTrue(count++ == k.getTimestamp());
       }
-    } catch (junit.framework.AssertionFailedError e) {
+    } catch (java.lang.AssertionError e) {
       // Expected
       assertion = true;
     }
@@ -257,6 +277,7 @@ public class TestKeyValue extends TestCase {
     }
   }
 
+  @Test
   public void testStackedUpKeyValue() {
     // Test multiple KeyValues in a single blob.
 
@@ -288,6 +309,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(cmp > 0);
   }
 
+  @Test
   public void testCompareWithoutRow() {
     final CellComparator c = CellComparatorImpl.COMPARATOR;
     byte[] row = Bytes.toBytes("row");
@@ -335,6 +357,7 @@ public class TestKeyValue extends TestCase {
     assertKVLessWithoutRow(c, commonLength + 6, kv0_1, kv0_2);
   }
 
+  @Test
   public void testFirstLastOnRow() {
     final CellComparator c = CellComparatorImpl.COMPARATOR;
     long ts = 1;
@@ -381,6 +404,7 @@ public class TestKeyValue extends TestCase {
     assertKVLess(c, firstOnRowABufferFamQual, lastOnRowA);
   }
 
+  @Test
   public void testCreateKeyOnly() throws Exception {
     long ts = 1;
     byte [] value = Bytes.toBytes("a real value");
@@ -402,6 +426,7 @@ public class TestKeyValue extends TestCase {
     }
   }
 
+  @Test
   public void testCreateKeyValueFromKey() {
     KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
         Bytes.toBytes("myQualifier"), 12345L, Bytes.toBytes("myValue"));
@@ -425,6 +450,7 @@ public class TestKeyValue extends TestCase {
    * Tests that getTimestamp() does always return the proper timestamp, even after updating it.
    * See HBASE-6265.
    */
+  @Test
   public void testGetTimestamp() {
     KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
       Bytes.toBytes("myQualifier"), HConstants.LATEST_TIMESTAMP,
@@ -436,6 +462,7 @@ public class TestKeyValue extends TestCase {
     assertEquals(12345L, time2);
   }
 
+  @Test
   public void testKVsWithTags() {
     byte[] row = Bytes.toBytes("myRow");
     byte[] cf = Bytes.toBytes("myCF");
@@ -499,6 +526,7 @@ public class TestKeyValue extends TestCase {
     assertFalse(tagItr.hasNext());
   }
 
+  @Test
   public void testMetaKeyComparator() {
     CellComparator c = CellComparatorImpl.META_COMPARATOR;
     long now = System.currentTimeMillis();
@@ -544,6 +572,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(c.compare(a, b) < 0);
   }
 
+  @Test
   public void testEqualsAndHashCode() throws Exception {
     KeyValue kvA1 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
         Bytes.toBytes("qualA"), Bytes.toBytes("1"));
@@ -562,6 +591,7 @@ public class TestKeyValue extends TestCase {
 
   }
 
+  @Test
   public void testKeyValueSerialization() throws Exception {
     KeyValue[] keyValues = new KeyValue[] {
         new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
@@ -704,7 +734,7 @@ public class TestKeyValue extends TestCase {
         KeyValueUtil.createKeyValueFromInputStream(
           new DataInputStream(new ByteArrayInputStream(baos.toByteArray())), c.withTags);
         if (c.expectedMessage != null) {
-          fail("Should fail when parse key value from an invalid bytes for case#" + i + ". " + c);
+          Assert.fail("Should fail when parse kv from an invalid bytes, case#" + i + ". " + c);
         }
       } catch (IllegalArgumentException e) {
         assertEquals("Case#" + i + " failed," + c, c.getExpectedMessage(), e.getMessage());
