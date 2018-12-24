@@ -99,8 +99,7 @@ module Hbase
     define_test 'can set and remove quota' do
       command(:set_quota, TYPE => SPACE, LIMIT => '1G', POLICY => NO_INSERTS, TABLE => @test_name)
       output = capture_stdout{ command(:list_quotas) }
-      size = 1024 * 1024 * 1024
-      assert(output.include?("LIMIT => #{size}"))
+      assert(output.include?("LIMIT => 1G"))
       assert(output.include?("VIOLATION_POLICY => NO_INSERTS"))
       assert(output.include?("TYPE => SPACE"))
       assert(output.include?("TABLE => #{@test_name}"))
