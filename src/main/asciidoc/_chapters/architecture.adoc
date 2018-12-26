@@ -2543,12 +2543,6 @@ The most straightforward method is to either use the `TableOutputFormat` class f
 The bulk load feature uses a MapReduce job to output table data in HBase's internal data format, and then directly loads the generated StoreFiles into a running cluster.
 Using bulk load will use less CPU and network resources than simply using the HBase API.
 
-[[arch.bulk.load.limitations]]
-=== Bulk Load Limitations
-
-As bulk loading bypasses the write path, the WAL doesn't get written to as part of the process.
-Replication works by reading the WAL files so it won't see the bulk loaded data – and the same goes for the edits that use `Put.setDurability(SKIP_WAL)`. One way to handle that is to ship the raw files or the HFiles to the other cluster and do the other processing there.
-
 [[arch.bulk.load.arch]]
 === Bulk Load Architecture
 
@@ -2600,6 +2594,32 @@ To get started doing so, dig into `ImportTsv.java` and check the JavaDoc for HFi
 
 The import step of the bulk load can also be done programmatically.
 See the `LoadIncrementalHFiles` class for more information.
+
+[[arch.bulk.load.replication]]
+=== Bulk Loading Replication
+HBASE-13153 adds replication support for bulk loaded HFiles, available since HBase 1.3/2.0. This feature is enabled by setting `hbase.replication.bulkload.enabled` to `true` (default is `false`).
+You also need to copy the source cluster configuration files to the destination cluster.
+
+Additional configurations are required too:
+
+. `hbase.replication.source.fs.conf.provider`
++
+This defines the class which loads the source cluster file system client configuration in the destination cluster. This should be configured for all the RS in the destination cluster. Default is `org.apache.hadoop.hbase.replication.regionserver.DefaultSourceFSConfigurationProvider`.
++
+. `hbase.replication.conf.dir`
++
+This represents the base directory where the file system client configurations of the source cluster are copied to the destination cluster. This should be configured for all the RS in the destination cluster. Default is `$HBASE_CONF_DIR`.
++
+. `hbase.replication.cluster.id`
++
+This configuration is required in the cluster where replication for bulk loaded data is enabled. A source cluster is uniquely identified by the destination cluster using this id. This should be configured for all the RS in the source cluster configuration file for all the RS.
++
+
+
+
+For example: If source cluster FS client configurations are copied to the destination cluster under directory `/home/user/dc1/`, then `hbase.replication.cluster.id` should be configured as `dc1` and `hbase.replication.conf.dir` as `/home/user`.
+
+NOTE: `DefaultSourceFSConfigurationProvider` supports only `xml` type files. It loads source cluster FS client configuration only once, so if source cluster FS client configuration files are updated, every peer(s) cluster RS must be restarted to reload the configuration.
 
 [[arch.hdfs]]
 == HDFS
