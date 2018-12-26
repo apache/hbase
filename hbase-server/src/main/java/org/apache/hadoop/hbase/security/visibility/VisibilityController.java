@@ -127,6 +127,7 @@ import org.slf4j.LoggerFactory;
 public class VisibilityController implements MasterCoprocessor, RegionCoprocessor,
     VisibilityLabelsService.Interface, MasterObserver, RegionObserver {
 
+
   private static final Logger LOG = LoggerFactory.getLogger(VisibilityController.class);
   private static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + VisibilityController.class.getName());
@@ -688,8 +689,30 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
+  public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+    List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
+    for (Pair<Cell, Cell> pair : cellPairs) {
+      resultPairs
+          .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+    }
+    return resultPairs;
+  }
+
+  @Override
+  public List<Pair<Cell, Cell>> postAppendBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+    List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
+    for (Pair<Cell, Cell> pair : cellPairs) {
+      resultPairs
+          .add(new Pair<>(pair.getFirst(), createNewCellWithTags(mutation, pair.getSecond())));
+    }
+    return resultPairs;
+  }
+
+  private Cell createNewCellWithTags(Mutation mutation, Cell newCell) throws IOException {
     List<Tag> tags = Lists.newArrayList();
     CellVisibility cellVisibility = null;
     try {
@@ -715,8 +738,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       }
     }
 
-    Cell rewriteCell = PrivateCellUtil.createCell(newCell, tags);
-    return rewriteCell;
+    return PrivateCellUtil.createCell(newCell, tags);
   }
 
   @Override

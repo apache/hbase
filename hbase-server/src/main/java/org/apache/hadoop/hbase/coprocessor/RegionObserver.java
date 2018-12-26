@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -1029,10 +1030,56 @@ public interface RegionObserver {
    * @param oldCell old cell containing previous value
    * @param newCell the new cell containing the computed value
    * @return the new cell, possibly changed
+   * @deprecated Use {@link #postIncrementBeforeWAL} or {@link #postAppendBeforeWAL} instead.
    */
+  @Deprecated
   default Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
       MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
     return newCell;
+  }
+
+  /**
+   * Called after a list of new cells has been created during an increment operation, but before
+   * they are committed to the WAL or memstore.
+   *
+   * @param ctx       the environment provided by the region server
+   * @param mutation  the current mutation
+   * @param cellPairs a list of cell pair. The first cell is old cell which may be null.
+   *                  And the second cell is the new cell.
+   * @return a list of cell pair, possibly changed.
+   */
+  default List<Pair<Cell, Cell>> postIncrementBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+    List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
+    for (Pair<Cell, Cell> pair : cellPairs) {
+      resultPairs.add(new Pair<>(pair.getFirst(),
+          postMutationBeforeWAL(ctx, MutationType.INCREMENT, mutation, pair.getFirst(),
+              pair.getSecond())));
+    }
+    return resultPairs;
+  }
+
+  /**
+   * Called after a list of new cells has been created during an append operation, but before
+   * they are committed to the WAL or memstore.
+   *
+   * @param ctx       the environment provided by the region server
+   * @param mutation  the current mutation
+   * @param cellPairs a list of cell pair. The first cell is old cell which may be null.
+   *                  And the second cell is the new cell.
+   * @return a list of cell pair, possibly changed.
+   */
+  default List<Pair<Cell, Cell>> postAppendBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+    List<Pair<Cell, Cell>> resultPairs = new ArrayList<>(cellPairs.size());
+    for (Pair<Cell, Cell> pair : cellPairs) {
+      resultPairs.add(new Pair<>(pair.getFirst(),
+          postMutationBeforeWAL(ctx, MutationType.INCREMENT, mutation, pair.getFirst(),
+              pair.getSecond())));
+    }
+    return resultPairs;
   }
 
   /**

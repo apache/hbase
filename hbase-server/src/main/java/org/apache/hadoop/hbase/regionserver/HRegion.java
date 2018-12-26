@@ -70,6 +70,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -120,7 +122,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -8014,7 +8015,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Durability effectiveDurability, long now, List<Cell> deltas, List<Cell> results)
       throws IOException {
     byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
-    List<Cell> toApply = new ArrayList<>(deltas.size());
+    List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
     // Get previous values for all columns in this family.
     TimeRange tr = null;
     switch (op) {
@@ -8041,18 +8042,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           currentValuesIndex++;
         }
       }
+
       // Switch on whether this an increment or an append building the new Cell to apply.
       Cell newCell = null;
-      MutationType mutationType = null;
       switch (op) {
         case INCREMENT:
-          mutationType = MutationType.INCREMENT;
           long deltaAmount = getLongValue(delta);
           final long newValue = currentValue == null ? deltaAmount : getLongValue(currentValue) + deltaAmount;
           newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation, (oldCell) -> Bytes.toBytes(newValue));
           break;
         case APPEND:
-          mutationType = MutationType.APPEND;
           newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation, (oldCell) ->
             ByteBuffer.wrap(new byte[delta.getValueLength() + oldCell.getValueLength()])
                     .put(oldCell.getValueArray(), oldCell.getValueOffset(), oldCell.getValueLength())
@@ -8063,18 +8062,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         default: throw new UnsupportedOperationException(op.toString());
       }
 
-      // Give coprocessors a chance to update the new cell
-      if (coprocessorHost != null) {
-        newCell =
-            coprocessorHost.postMutationBeforeWAL(mutationType, mutation, currentValue, newCell);
-      }
-      toApply.add(newCell);
+      cellPairs.add(new Pair<>(currentValue, newCell));
       // Add to results to get returned to the Client. If null, cilent does not want results.
       if (results != null) {
         results.add(newCell);
       }
     }
-    return toApply;
+
+    // Give coprocessors a chance to update the new cells before apply to WAL or memstore
+    if (coprocessorHost != null) {
+      // Here the operation must be increment or append.
+      cellPairs = op == Operation.INCREMENT ?
+          coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs) :
+          coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
+    }
+    return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
   }
 
   private static Cell reckonDelta(final Cell delta, final Cell currentCell,

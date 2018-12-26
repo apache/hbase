@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -1849,14 +1850,34 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      MutationType opType, Mutation mutation, Cell oldCell, Cell newCell) throws IOException {
+  public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
     if (!cellFeaturesEnabled) {
-      return newCell;
+      return cellPairs;
     }
+    return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, pair.getFirst(), pair.getSecond())))
+        .collect(Collectors.toList());
+  }
 
+  @Override
+  public List<Pair<Cell, Cell>> postAppendBeforeWAL(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
+    // If the HFile version is insufficient to persist tags, we won't have any
+    // work to do here
+    if (!cellFeaturesEnabled) {
+      return cellPairs;
+    }
+    return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
+        createNewCellWithTags(mutation, pair.getFirst(), pair.getSecond())))
+        .collect(Collectors.toList());
+  }
+
+  private Cell createNewCellWithTags(Mutation mutation, Cell oldCell, Cell newCell) {
     // Collect any ACLs from the old cell
     List<Tag> tags = Lists.newArrayList();
     List<Tag> aclTags = Lists.newArrayList();
@@ -1901,8 +1922,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       return newCell;
     }
 
-    Cell rewriteCell = PrivateCellUtil.createCell(newCell, tags);
-    return rewriteCell;
+    return PrivateCellUtil.createCell(newCell, tags);
   }
 
   @Override
