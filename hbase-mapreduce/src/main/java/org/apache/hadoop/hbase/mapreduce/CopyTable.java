@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.mapreduce.Import.CellImporter;
+import org.apache.hadoop.hbase.mapreduce.Import.Importer;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -70,7 +72,33 @@ public class CopyTable extends Configured implements Tool {
   boolean bulkload = false;
   Path bulkloadDir = null;
 
+  boolean readingSnapshot = false;
+  String snapshot = null;
+
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
+  private Path generateUniqTempDir(boolean withDirCreated) throws IOException {
+    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    Path dir = new Path(fs.getWorkingDirectory(), NAME);
+    if (!fs.exists(dir)) {
+      fs.mkdirs(dir);
+    }
+    Path newDir = new Path(dir, UUID.randomUUID().toString());
+    if (withDirCreated) {
+      fs.mkdirs(newDir);
+    }
+    return newDir;
+  }
+
+  private void initCopyTableMapperReducerJob(Job job, Scan scan) throws IOException {
+    Class<? extends TableMapper> mapper = bulkload ? CellImporter.class : Importer.class;
+    if (readingSnapshot) {
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshot, scan, mapper, null, null, job, true,
+        generateUniqTempDir(true));
+    } else {
+      TableMapReduceUtil.initTableMapperJob(tableName, scan, mapper, null, null, job);
+    }
+  }
 
   /**
    * Sets up the actual job.
@@ -79,13 +107,13 @@ public class CopyTable extends Configured implements Tool {
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public Job createSubmittableJob(String[] args)
-  throws IOException {
+  public Job createSubmittableJob(String[] args) throws IOException {
     if (!doCommandLine(args)) {
       return null;
     }
 
-    Job job = Job.getInstance(getConf(), getConf().get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
+    String jobName = NAME + "_" + (tableName == null ? snapshot : tableName);
+    Job job = Job.getInstance(getConf(), getConf().get(JOB_NAME_CONF_KEY, jobName));
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
 
@@ -107,15 +135,15 @@ public class CopyTable extends Configured implements Tool {
       job.getConfiguration().set(TableInputFormat.SHUFFLE_MAPS, "true");
     }
     if (versions >= 0) {
-      scan.setMaxVersions(versions);
+      scan.readVersions(versions);
     }
 
     if (startRow != null) {
-      scan.setStartRow(Bytes.toBytesBinary(startRow));
+      scan.withStartRow(Bytes.toBytesBinary(startRow));
     }
 
     if (stopRow != null) {
-      scan.setStopRow(Bytes.toBytesBinary(stopRow));
+      scan.withStopRow(Bytes.toBytesBinary(stopRow));
     }
 
     if(families != null) {
@@ -140,24 +168,13 @@ public class CopyTable extends Configured implements Tool {
     job.setNumReduceTasks(0);
 
     if (bulkload) {
-      TableMapReduceUtil.initTableMapperJob(tableName, scan, Import.CellImporter.class, null, null,
-        job);
+      initCopyTableMapperReducerJob(job, scan);
 
       // We need to split the inputs by destination tables so that output of Map can be bulk-loaded.
       TableInputFormat.configureSplitTable(job, TableName.valueOf(dstTableName));
 
-      FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
-      Random rand = new Random();
-      Path root = new Path(fs.getWorkingDirectory(), "copytable");
-      fs.mkdirs(root);
-      while (true) {
-        bulkloadDir = new Path(root, "" + rand.nextLong());
-        if (!fs.exists(bulkloadDir)) {
-          break;
-        }
-      }
-
-      System.out.println("HFiles will be stored at " + this.bulkloadDir);
+      bulkloadDir = generateUniqTempDir(false);
+      LOG.info("HFiles will be stored at " + this.bulkloadDir);
       HFileOutputFormat2.setOutputPath(job, bulkloadDir);
       try (Connection conn = ConnectionFactory.createConnection(getConf());
           Admin admin = conn.getAdmin()) {
@@ -165,9 +182,7 @@ public class CopyTable extends Configured implements Tool {
           admin.getDescriptor((TableName.valueOf(dstTableName))));
       }
     } else {
-      TableMapReduceUtil.initTableMapperJob(tableName, scan,
-        Import.Importer.class, null, null, job);
-
+      initCopyTableMapperReducerJob(job, scan);
       TableMapReduceUtil.initTableReducerJob(dstTableName, null, job, null, peerAddress, null,
         null);
     }
@@ -183,7 +198,7 @@ public class CopyTable extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] " +
-        "[--new.name=NEW] [--peer.adr=ADR] <tablename>");
+        "[--new.name=NEW] [--peer.adr=ADR] <tablename | snapshotName>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" rs.class     hbase.regionserver.class of the peer cluster");
@@ -205,6 +220,7 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" all.cells    also copy delete markers and deleted cells");
     System.err.println(" bulkload     Write input into HFiles and bulk load to the destination "
         + "table");
+    System.err.println(" snapshot     Copy the data from snapshot to destination table.");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename    Name of the table to copy");
@@ -214,6 +230,12 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 " +
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
+    System.err.println(" To copy data from 'sourceTableSnapshot' to 'destTable': ");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+        + "--snapshot --new.name=destTable sourceTableSnapshot");
+    System.err.println(" To copy data from 'sourceTableSnapshot' and bulk load to 'destTable': ");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+        + "--new.name=destTable --snapshot --bulkload sourceTableSnapshot");
     System.err.println("For performance consider the following general option:\n"
         + "  It is recommended that you set the following to >=100. A higher value uses more memory but\n"
         + "  decreases the round trip time to the server and may increase performance.\n"
@@ -224,8 +246,6 @@ public class CopyTable extends Configured implements Tool {
   }
 
   private boolean doCommandLine(final String[] args) {
-    // Process command-line args. TODO: Better cmd-line processing
-    // (but hopefully something not as painful as cli options).
     if (args.length < 1) {
       printUsage(null);
       return false;
@@ -313,16 +333,24 @@ public class CopyTable extends Configured implements Tool {
           continue;
         }
 
-        if (i == args.length-1) {
-          tableName = cmd;
+        if(cmd.startsWith("--snapshot")){
+          readingSnapshot = true;
+          continue;
+        }
+
+        if (i == args.length - 1) {
+          if (readingSnapshot) {
+            snapshot = cmd;
+          } else {
+            tableName = cmd;
+          }
         } else {
           printUsage("Invalid argument '" + cmd + "'");
           return false;
         }
       }
       if (dstTableName == null && peerAddress == null) {
-        printUsage("At least a new table name or a " +
-            "peer address must be specified");
+        printUsage("At least a new table name or a peer address must be specified");
         return false;
       }
       if ((endTime != 0) && (startTime > endTime)) {
@@ -332,6 +360,22 @@ public class CopyTable extends Configured implements Tool {
 
       if (bulkload && peerAddress != null) {
         printUsage("Remote bulkload is not supported!");
+        return false;
+      }
+
+      if (readingSnapshot && peerAddress != null) {
+        printUsage("Loading data from snapshot to remote peer cluster is not supported.");
+        return false;
+      }
+
+      if (readingSnapshot && dstTableName == null) {
+        printUsage("The --new.name=<table> for destination table should be "
+            + "provided when copying data from snapshot .");
+        return false;
+      }
+
+      if (readingSnapshot && snapshot == null) {
+        printUsage("Snapshot shouldn't be null when --snapshot is enabled.");
         return false;
       }
 
@@ -371,6 +415,9 @@ public class CopyTable extends Configured implements Tool {
     }
     int code = 0;
     if (bulkload) {
+      LOG.info("Trying to bulk load data to destination table: " + dstTableName);
+      LOG.info("command: ./bin/hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles {} {}",
+        this.bulkloadDir.toString(), this.dstTableName);
       code = new LoadIncrementalHFiles(this.getConf())
           .run(new String[] { this.bulkloadDir.toString(), this.dstTableName });
       if (code == 0) {
