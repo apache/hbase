@@ -169,6 +169,16 @@ module Shell
           strs = str.split("\n")
           raise (strs[0]).to_s unless strs.empty?
         end
+        if cause.is_a?(org.apache.hadoop.hbase.quotas.SpaceLimitingException)
+          strs = cause.message.split("\n")
+          raise(strs[0]).to_s unless strs.empty?
+        end
+        if cause.is_a?(org.apache.hadoop.hbase.client.RetriesExhaustedException)
+          str = cause.cause.to_s
+          regex = /.*RpcThrottlingException: (?<message>[^\n]+).*/
+          error = regex.match(str)
+          raise error[:message].capitalize unless error.nil?
+        end
 
         # Throw the other exception which hasn't been handled above
         raise cause
