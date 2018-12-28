@@ -272,6 +272,20 @@ function get_include_exclude_tests_arg
         yetus_error "Wget error $? in fetching includes file from url" \
              "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
       fi
+  else
+    # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
+    FLAKY_URL="https://builds.apache.org/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/excludes/"
+    if wget "${FLAKY_URL}" -O "excludes"; then
+      excludes=$(cat excludes)
+        yetus_debug "excludes=${excludes}"
+        if [[ -n "${excludes}" ]]; then
+          eval "${__resultvar}='-Dtest.exclude.pattern=${excludes}'"
+        fi
+        rm excludes
+      else
+        yetus_error "Wget error $? in fetching excludes file from url" \
+             "${FLAKY_URL}. Ignoring and proceeding."
+      fi
   fi
 }
 
