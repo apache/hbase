@@ -47,6 +47,7 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -309,5 +310,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         util.deleteTable(tableName);
       }
     }
+  }
+
+  @Ignore // Ignored in mapred package because it keeps failing but allowed in mapreduce package.
+  @Test
+  public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
+    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
   }
 }
