@@ -131,8 +131,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       "hbase.region.replica.replication.writer.threads", 3);
     controller = new PipelineController();
     entryBuffers = new EntryBuffers(controller,
-      this.conf.getInt("hbase.region.replica.replication.buffersize",
-          128*1024*1024));
+        this.conf.getLong("hbase.region.replica.replication.buffersize", 128 * 1024 * 1024));
 
     // use the regular RPC timeout for replica replication RPC's
     this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
