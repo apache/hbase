@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
+ */
 public enum TDataBlockEncoding implements org.apache.thrift.TEnum {
   /**
    * Disable data block encoding.
