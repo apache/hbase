@@ -104,11 +104,6 @@ public abstract class TableSnapshotInputFormatTestBase {
   }
 
   @Test
-  public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
-  }
-
-  @Test
   // run the MR job while HBase is offline
   public void testWithMapReduceAndOfflineHBaseMultiRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 1, 8, true);
