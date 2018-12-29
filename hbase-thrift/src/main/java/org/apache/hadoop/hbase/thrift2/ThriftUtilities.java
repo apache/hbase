@@ -34,9 +34,14 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -48,28 +53,42 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
+import org.apache.hadoop.hbase.thrift2.generated.TBloomFilterType;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
+import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompressionAlgorithm;
 import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
+import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
+import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TKeepDeletedCells;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
+import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TServerName;
+import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -78,6 +97,12 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {
+
+  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
+  private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
+  private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
+
+
 
   private ThriftUtilities() {
     throw new UnsupportedOperationException("Can't initialize class");
@@ -128,6 +153,20 @@ public class ThriftUtilities {
     if (in.isSetTargetReplicaId()) {
       out.setReplicaId(in.getTargetReplicaId());
     }
+
+    if (in.isSetCacheBlocks()) {
+      out.setCacheBlocks(in.isCacheBlocks());
+    }
+    if (in.isSetStoreLimit()) {
+      out.setMaxResultsPerColumnFamily(in.getStoreLimit());
+    }
+    if (in.isSetStoreOffset()) {
+      out.setRowOffsetPerColumnFamily(in.getStoreOffset());
+    }
+    if (in.isSetExistence_only()) {
+      out.setCheckExistenceOnly(in.isExistence_only());
+    }
+
 
     if (!in.isSetColumns()) {
       return out;
@@ -183,6 +222,7 @@ public class ThriftUtilities {
       col.setQualifier(CellUtil.cloneQualifier(kv));
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
+      col.setType(kv.getType().getCode());
       if (kv.getTagsLength() > 0) {
         col.setTags(PrivateCellUtil.cloneTags(kv));
       }
@@ -191,6 +231,8 @@ public class ThriftUtilities {
     out.setColumnValues(columnValues);
 
     out.setStale(in.isStale());
+
+    out.setPartial(in.mayHaveMoreCellsInRow());
     return out;
   }
 
@@ -371,6 +413,15 @@ public class ThriftUtilities {
     return out;
   }
 
+  public static TDeleteType deleteTypeFromHBase(Cell.Type type) {
+    switch (type) {
+      case Delete: return TDeleteType.DELETE_COLUMN;
+      case DeleteColumn: return TDeleteType.DELETE_COLUMNS;
+      case DeleteFamily: return TDeleteType.DELETE_FAMILY;
+      case DeleteFamilyVersion: return TDeleteType.DELETE_FAMILY_VERSION;
+      default: throw new IllegalArgumentException("Unknow delete type " + type);
+    }  }
+
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
@@ -380,17 +431,33 @@ public class ThriftUtilities {
       out.setTimestamp(rowTimestamp);
     }
 
-    // Map<family, List<KeyValue>>
-    for (Map.Entry<byte[], List<org.apache.hadoop.hbase.Cell>> familyEntry:
+    for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
+          ByteBuffer.wrap(attribute.getValue()));
+    }
+    if (in.getDurability() != Durability.USE_DEFAULT)  {
+      out.setDurability(durabilityFromHBase(in.getDurability()));
+    }
+    // Delete the whole row
+    if (in.getFamilyCellMap().size() == 0) {
+      return out;
+    }
+    TDeleteType type = null;
+    for (Map.Entry<byte[], List<Cell>> familyEntry:
         in.getFamilyCellMap().entrySet()) {
+      byte[] family = familyEntry.getKey();
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
-      for (org.apache.hadoop.hbase.Cell cell: familyEntry.getValue()) {
-        byte[] family = CellUtil.cloneFamily(cell);
+      for (Cell cell: familyEntry.getValue()) {
+        TDeleteType cellDeleteType = deleteTypeFromHBase(cell.getType());
+        if (type == null) {
+          type = cellDeleteType;
+        } else if (type != cellDeleteType){
+          throw new RuntimeException("Only the same delete type is supported, but two delete type "
+              + "is founded, one is " + type + " the other one is " + cellDeleteType);
+        }
         byte[] qualifier = CellUtil.cloneQualifier(cell);
         long timestamp = cell.getTimestamp();
-        if (family != null) {
-          column.setFamily(family);
-        }
+        column.setFamily(family);
         if (qualifier != null) {
           column.setQualifier(qualifier);
         }
@@ -401,6 +468,7 @@ public class ThriftUtilities {
       columns.add(column);
     }
     out.setColumns(columns);
+    out.setDeleteType(type);
 
     return out;
   }
@@ -527,6 +595,10 @@ public class ThriftUtilities {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
 
+    if (in.isSetReturnResults()) {
+      out.setReturnResults(in.isReturnResults());
+    }
+
     return out;
   }
 
@@ -546,6 +618,10 @@ public class ThriftUtilities {
 
     if(append.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
+    }
+
+    if (append.isSetReturnResults()) {
+      out.setReturnResults(append.isReturnResults());
     }
 
     return out;
@@ -601,11 +677,12 @@ public class ThriftUtilities {
 
   private static Durability durabilityFromThrift(TDurability tDurability) {
     switch (tDurability.getValue()) {
+      case 0: return Durability.USE_DEFAULT;
       case 1: return Durability.SKIP_WAL;
       case 2: return Durability.ASYNC_WAL;
       case 3: return Durability.SYNC_WAL;
       case 4: return Durability.FSYNC_WAL;
-      default: return null;
+      default: return Durability.USE_DEFAULT;
     }
   }
 
@@ -638,4 +715,322 @@ public class ThriftUtilities {
       default: return Consistency.STRONG;
     }
   }
+
+  public static TableName tableNameFromThrift(TTableName tableName) {
+    return TableName.valueOf(tableName.getNs(), tableName.getQualifier());
+  }
+
+  public static List<TableName> tableNamesFromThrift(List<TTableName> tableNames) {
+    List<TableName> out = new ArrayList<>(tableNames.size());
+    for (TTableName tableName : tableNames) {
+      out.add(tableNameFromThrift(tableName));
+    }
+    return out;
+  }
+
+  public static TTableName tableNameFromHBase(TableName table) {
+    TTableName tableName = new TTableName();
+    tableName.setNs(table.getNamespace());
+    tableName.setQualifier(table.getQualifier());
+    return tableName;
+  }
+
+  public static List<TTableName> tableNamesFromHBase(TableName[] in) {
+    List<TTableName> out = new ArrayList<>(in.length);
+    for (TableName tableName : in) {
+      out.add(tableNameFromHBase(tableName));
+    }
+    return out;
+  }
+
+  public static byte[][] splitKeyFromThrift(List<ByteBuffer> in) {
+    if (in == null || in.size() == 0) {
+      return null;
+    }
+    byte[][] out = new byte[in.size()][];
+    int index = 0;
+    for (ByteBuffer key : in) {
+      out[index++] = key.array();
+    }
+    return out;
+  }
+
+  public static BloomType bloomFilterFromThrift(TBloomFilterType in) {
+    switch (in.getValue()) {
+      case 0: return BloomType.NONE;
+      case 1: return BloomType.ROW;
+      case 2: return BloomType.ROWCOL;
+      case 3: return BloomType.ROWPREFIX_FIXED_LENGTH;
+      case 4: return BloomType.ROWPREFIX_DELIMITED;
+      default: return BloomType.ROW;
+    }
+  }
+
+  public static Compression.Algorithm compressionAlgorithmFromThrift(TCompressionAlgorithm in) {
+    switch (in.getValue()) {
+      case 0: return Compression.Algorithm.LZO;
+      case 1: return Compression.Algorithm.GZ;
+      case 2: return Compression.Algorithm.NONE;
+      case 3: return Compression.Algorithm.SNAPPY;
+      case 4: return Compression.Algorithm.LZ4;
+      case 5: return Compression.Algorithm.BZIP2;
+      case 6: return Compression.Algorithm.ZSTD;
+      default: return Compression.Algorithm.NONE;
+    }
+  }
+
+  public static DataBlockEncoding dataBlockEncodingFromThrift(TDataBlockEncoding in) {
+    switch (in.getValue()) {
+      case 0: return DataBlockEncoding.NONE;
+      case 2: return DataBlockEncoding.PREFIX;
+      case 3: return DataBlockEncoding.DIFF;
+      case 4: return DataBlockEncoding.FAST_DIFF;
+      case 7: return DataBlockEncoding.ROW_INDEX_V1;
+      default: return DataBlockEncoding.NONE;
+    }
+  }
+
+  public static KeepDeletedCells keepDeletedCellsFromThrift(TKeepDeletedCells in) {
+    switch (in.getValue()) {
+      case 0: return KeepDeletedCells.FALSE;
+      case 1: return KeepDeletedCells.TRUE;
+      case 2: return KeepDeletedCells.TTL;
+      default: return KeepDeletedCells.FALSE;
+    }
+  }
+
+  public static ColumnFamilyDescriptor columnFamilyDescriptorFromThrift(
+      TColumnFamilyDescriptor in) {
+    ColumnFamilyDescriptorBuilder builder = ColumnFamilyDescriptorBuilder
+        .newBuilder(in.getName());
+
+    if (in.isSetAttributes()) {
+      for (Map.Entry<ByteBuffer, ByteBuffer> attribute : in.getAttributes().entrySet()) {
+        builder.setValue(attribute.getKey().array(), attribute.getValue().array());
+      }
+    }
+    if (in.isSetConfiguration()) {
+      for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+        builder.setConfiguration(conf.getKey(), conf.getValue());
+      }
+    }
+    if (in.isSetBlockSize()) {
+      builder.setBlocksize(in.getBlockSize());
+    }
+    if (in.isSetBloomnFilterType()) {
+      builder.setBloomFilterType(bloomFilterFromThrift(in.getBloomnFilterType()));
+    }
+    if (in.isSetCompressionType()) {
+      builder.setCompressionType(compressionAlgorithmFromThrift(in.getCompressionType()));
+    }
+    if (in.isSetDfsReplication()) {
+      builder.setDFSReplication(in.getDfsReplication());
+    }
+    if (in.isSetDataBlockEncoding()) {
+      builder.setDataBlockEncoding(dataBlockEncodingFromThrift(in.getDataBlockEncoding()));
+    }
+    if (in.isSetKeepDeletedCells()) {
+      builder.setKeepDeletedCells(keepDeletedCellsFromThrift(in.getKeepDeletedCells()));
+    }
+    if (in.isSetMaxVersions()) {
+      builder.setMaxVersions(in.getMaxVersions());
+    }
+    if (in.isSetMinVersions()) {
+      builder.setMinVersions(in.getMinVersions());
+    }
+    if (in.isSetScope()) {
+      builder.setScope(in.getScope());
+    }
+    if (in.isSetTimeToLive()) {
+      builder.setTimeToLive(in.getTimeToLive());
+    }
+    if (in.isSetBlockCacheEnabled()) {
+      builder.setBlockCacheEnabled(in.isBlockCacheEnabled());
+    }
+    if (in.isSetCacheBloomsOnWrite()) {
+      builder.setCacheBloomsOnWrite(in.isCacheBloomsOnWrite());
+    }
+    if (in.isSetCacheDataOnWrite()) {
+      builder.setCacheDataOnWrite(in.isCacheDataOnWrite());
+    }
+    if (in.isSetCacheIndexesOnWrite()) {
+      builder.setCacheIndexesOnWrite(in.isCacheIndexesOnWrite());
+    }
+    if (in.isSetCompressTags()) {
+      builder.setCompressTags(in.isCompressTags());
+    }
+    if (in.isSetEvictBlocksOnClose()) {
+      builder.setEvictBlocksOnClose(in.isEvictBlocksOnClose());
+    }
+    if (in.isSetInMemory()) {
+      builder.setInMemory(in.isInMemory());
+    }
+
+
+    return builder.build();
+  }
+
+  public static NamespaceDescriptor namespaceDescriptorFromThrift(TNamespaceDescriptor in) {
+    NamespaceDescriptor.Builder builder = NamespaceDescriptor.create(in.getName());
+    if (in.isSetConfiguration()) {
+      for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+        builder.addConfiguration(conf.getKey(), conf.getValue());
+      }
+    }
+    return builder.build();
+  }
+
+  public static TNamespaceDescriptor namespaceDescriptorFromHBase(NamespaceDescriptor in) {
+    TNamespaceDescriptor out = new TNamespaceDescriptor();
+    out.setName(in.getName());
+    for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+      out.putToConfiguration(conf.getKey(), conf.getValue());
+    }
+    return out;
+  }
+
+  public static List<TNamespaceDescriptor> namespaceDescriptorsFromHBase(
+      NamespaceDescriptor[] in) {
+    List<TNamespaceDescriptor> out = new ArrayList<>(in.length);
+    for (NamespaceDescriptor descriptor : in) {
+      out.add(namespaceDescriptorFromHBase(descriptor));
+    }
+    return out;
+  }
+
+  public static TableDescriptor tableDescriptorFromThrift(TTableDescriptor in) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder
+        .newBuilder(tableNameFromThrift(in.getTableName()));
+    for (TColumnFamilyDescriptor column : in.getColumns()) {
+      builder.setColumnFamily(columnFamilyDescriptorFromThrift(column));
+    }
+    if (in.isSetAttributes()) {
+      for (Map.Entry<ByteBuffer, ByteBuffer> attribute : in.getAttributes().entrySet()) {
+        builder.setValue(attribute.getKey().array(), attribute.getValue().array());
+      }
+    }
+    if (in.isSetDurability()) {
+      builder.setDurability(durabilityFromThrift(in.getDurability()));
+    }
+    return builder.build();
+  }
+
+  private static TDurability durabilityFromHBase(Durability durability) {
+    switch (durability) {
+      case USE_DEFAULT: return TDurability.USE_DEFAULT;
+      case SKIP_WAL: return TDurability.SKIP_WAL;
+      case ASYNC_WAL: return TDurability.ASYNC_WAL;
+      case SYNC_WAL: return TDurability.SYNC_WAL;
+      case FSYNC_WAL: return TDurability.FSYNC_WAL;
+      default: return null;
+    }
+  }
+
+  public static TTableDescriptor tableDescriptorFromHBase(TableDescriptor in) {
+    TTableDescriptor out = new TTableDescriptor();
+    out.setTableName(tableNameFromHBase(in.getTableName()));
+    Map<Bytes, Bytes> attributes = in.getValues();
+    for (Map.Entry<Bytes, Bytes> attribute : attributes.entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
+          ByteBuffer.wrap(attribute.getValue().get()));
+    }
+    for (ColumnFamilyDescriptor column : in.getColumnFamilies()) {
+      out.addToColumns(columnFamilyDescriptorFromHBase(column));
+    }
+    out.setDurability(durabilityFromHBase(in.getDurability()));
+    return out;
+  }
+
+  public static List<TTableDescriptor> tableDescriptorsFromHBase(List<TableDescriptor> in) {
+    List<TTableDescriptor> out = new ArrayList<>(in.size());
+    for (TableDescriptor descriptor : in) {
+      out.add(tableDescriptorFromHBase(descriptor));
+    }
+    return out;
+  }
+
+  public static List<TTableDescriptor> tableDescriptorsFromHBase(TableDescriptor[] in) {
+    List<TTableDescriptor> out = new ArrayList<>(in.length);
+    for (TableDescriptor descriptor : in) {
+      out.add(tableDescriptorFromHBase(descriptor));
+    }
+    return out;
+  }
+
+
+  public static TBloomFilterType bloomFilterFromHBase(BloomType in) {
+    switch (in) {
+      case NONE: return TBloomFilterType.NONE;
+      case ROW: return TBloomFilterType.ROW;
+      case ROWCOL: return TBloomFilterType.ROWCOL;
+      case ROWPREFIX_FIXED_LENGTH: return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
+      case ROWPREFIX_DELIMITED: return TBloomFilterType.ROWPREFIX_DELIMITED;
+      default: return TBloomFilterType.ROW;
+    }
+  }
+
+  public static TCompressionAlgorithm compressionAlgorithmFromHBase(Compression.Algorithm in) {
+    switch (in) {
+      case LZO: return TCompressionAlgorithm.LZO;
+      case GZ: return TCompressionAlgorithm.GZ;
+      case NONE: return TCompressionAlgorithm.NONE;
+      case SNAPPY: return TCompressionAlgorithm.SNAPPY;
+      case LZ4: return TCompressionAlgorithm.LZ4;
+      case BZIP2: return TCompressionAlgorithm.BZIP2;
+      case ZSTD: return TCompressionAlgorithm.ZSTD;
+      default: return TCompressionAlgorithm.NONE;
+    }
+  }
+
+  public static TDataBlockEncoding dataBlockEncodingFromHBase(DataBlockEncoding in) {
+    switch (in) {
+      case NONE: return TDataBlockEncoding.NONE;
+      case PREFIX: return TDataBlockEncoding.PREFIX;
+      case DIFF: return TDataBlockEncoding.DIFF;
+      case FAST_DIFF: return TDataBlockEncoding.FAST_DIFF;
+      case ROW_INDEX_V1: return TDataBlockEncoding.ROW_INDEX_V1;
+      default: return TDataBlockEncoding.NONE;
+    }
+  }
+
+  public static TKeepDeletedCells keepDeletedCellsFromHBase(KeepDeletedCells in) {
+    switch (in) {
+      case FALSE: return TKeepDeletedCells.FALSE;
+      case TRUE: return TKeepDeletedCells.TRUE;
+      case TTL: return TKeepDeletedCells.TTL;
+      default: return TKeepDeletedCells.FALSE;
+    }
+  }
+
+  public static TColumnFamilyDescriptor columnFamilyDescriptorFromHBase(
+      ColumnFamilyDescriptor in) {
+    TColumnFamilyDescriptor out = new TColumnFamilyDescriptor();
+    out.setName(in.getName());
+    for (Map.Entry<Bytes, Bytes> attribute : in.getValues().entrySet()) {
+      out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
+          ByteBuffer.wrap(attribute.getValue().get()));
+    }
+    for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
+      out.putToConfiguration(conf.getKey(), conf.getValue());
+    }
+    out.setBlockSize(in.getBlocksize());
+    out.setBloomnFilterType(bloomFilterFromHBase(in.getBloomFilterType()));
+    out.setCompressionType(compressionAlgorithmFromHBase(in.getCompressionType()));
+    out.setDfsReplication(in.getDFSReplication());
+    out.setDataBlockEncoding(dataBlockEncodingFromHBase(in.getDataBlockEncoding()));
+    out.setKeepDeletedCells(keepDeletedCellsFromHBase(in.getKeepDeletedCells()));
+    out.setMaxVersions(in.getMaxVersions());
+    out.setMinVersions(in.getMinVersions());
+    out.setScope(in.getScope());
+    out.setTimeToLive(in.getTimeToLive());
+    out.setBlockCacheEnabled(in.isBlockCacheEnabled());
+    out.setCacheBloomsOnWrite(in.isCacheBloomsOnWrite());
+    out.setCacheDataOnWrite(in.isCacheDataOnWrite());
+    out.setCacheIndexesOnWrite(in.isCacheIndexesOnWrite());
+    out.setCompressTags(in.isCompressTags());
+    out.setEvictBlocksOnClose(in.isEvictBlocksOnClose());
+    out.setInMemory(in.isInMemory());
+    return out;
+  }
+
 }

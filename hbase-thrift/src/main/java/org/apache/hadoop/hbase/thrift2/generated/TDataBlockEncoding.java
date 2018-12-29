@@ -11,23 +11,19 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
-/**
- * Specify Durability:
- *  - SKIP_WAL means do not write the Mutation to the WAL.
- *  - ASYNC_WAL means write the Mutation to the WAL asynchronously,
- *  - SYNC_WAL means write the Mutation to the WAL synchronously,
- *  - FSYNC_WAL means Write the Mutation to the WAL synchronously and force the entries to disk.
- */
-public enum TDurability implements org.apache.thrift.TEnum {
-  USE_DEFAULT(0),
-  SKIP_WAL(1),
-  ASYNC_WAL(2),
-  SYNC_WAL(3),
-  FSYNC_WAL(4);
+public enum TDataBlockEncoding implements org.apache.thrift.TEnum {
+  /**
+   * Disable data block encoding.
+   */
+  NONE(0),
+  PREFIX(2),
+  DIFF(3),
+  FAST_DIFF(4),
+  ROW_INDEX_V1(7);
 
   private final int value;
 
-  private TDurability(int value) {
+  private TDataBlockEncoding(int value) {
     this.value = value;
   }
 
@@ -42,18 +38,18 @@ public enum TDurability implements org.apache.thrift.TEnum {
    * Find a the enum type by its integer value, as defined in the Thrift IDL.
    * @return null if the value is not found.
    */
-  public static TDurability findByValue(int value) { 
+  public static TDataBlockEncoding findByValue(int value) { 
     switch (value) {
       case 0:
-        return USE_DEFAULT;
-      case 1:
-        return SKIP_WAL;
+        return NONE;
       case 2:
-        return ASYNC_WAL;
+        return PREFIX;
       case 3:
-        return SYNC_WAL;
+        return DIFF;
       case 4:
-        return FSYNC_WAL;
+        return FAST_DIFF;
+      case 7:
+        return ROW_INDEX_V1;
       default:
         return null;
     }

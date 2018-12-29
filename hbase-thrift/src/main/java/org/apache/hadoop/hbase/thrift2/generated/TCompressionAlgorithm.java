@@ -11,23 +11,18 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
-/**
- * Specify Durability:
- *  - SKIP_WAL means do not write the Mutation to the WAL.
- *  - ASYNC_WAL means write the Mutation to the WAL asynchronously,
- *  - SYNC_WAL means write the Mutation to the WAL synchronously,
- *  - FSYNC_WAL means Write the Mutation to the WAL synchronously and force the entries to disk.
- */
-public enum TDurability implements org.apache.thrift.TEnum {
-  USE_DEFAULT(0),
-  SKIP_WAL(1),
-  ASYNC_WAL(2),
-  SYNC_WAL(3),
-  FSYNC_WAL(4);
+public enum TCompressionAlgorithm implements org.apache.thrift.TEnum {
+  LZO(0),
+  GZ(1),
+  NONE(2),
+  SNAPPY(3),
+  LZ4(4),
+  BZIP2(5),
+  ZSTD(6);
 
   private final int value;
 
-  private TDurability(int value) {
+  private TCompressionAlgorithm(int value) {
     this.value = value;
   }
 
@@ -42,18 +37,22 @@ public enum TDurability implements org.apache.thrift.TEnum {
    * Find a the enum type by its integer value, as defined in the Thrift IDL.
    * @return null if the value is not found.
    */
-  public static TDurability findByValue(int value) { 
+  public static TCompressionAlgorithm findByValue(int value) { 
     switch (value) {
       case 0:
-        return USE_DEFAULT;
+        return LZO;
       case 1:
-        return SKIP_WAL;
+        return GZ;
       case 2:
-        return ASYNC_WAL;
+        return NONE;
       case 3:
-        return SYNC_WAL;
+        return SNAPPY;
       case 4:
-        return FSYNC_WAL;
+        return LZ4;
+      case 5:
+        return BZIP2;
+      case 6:
+        return ZSTD;
       default:
         return null;
     }
