@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.KeepDeletedCells
+ */
 public enum TKeepDeletedCells implements org.apache.thrift.TEnum {
   /**
    * Deleted Cells are not retained.

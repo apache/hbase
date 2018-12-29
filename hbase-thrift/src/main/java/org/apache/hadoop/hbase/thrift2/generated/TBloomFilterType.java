@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.regionserver.BloomType
+ */
 public enum TBloomFilterType implements org.apache.thrift.TEnum {
   /**
    * Bloomfilters disabled

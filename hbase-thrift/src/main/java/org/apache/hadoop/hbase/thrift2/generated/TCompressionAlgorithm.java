@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.thrift.TEnum;
 
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.io.compress.Algorithm
+ */
 public enum TCompressionAlgorithm implements org.apache.thrift.TEnum {
   LZO(0),
   GZ(1),
