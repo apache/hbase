@@ -7924,12 +7924,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
       final byte[] columnFamilyName = entry.getKey();
       List<Cell> deltas = entry.getValue();
-      HStore store = this.stores.get(columnFamilyName);
       // Reckon for the Store what to apply to WAL and MemStore.
-      List<Cell> toApply =
-        reckonDeltasByStore(store, op, mutation, effectiveDurability, now, deltas, results);
+      List<Cell> toApply = reckonDeltasByStore(stores.get(columnFamilyName), op, mutation,
+        effectiveDurability, now, deltas, results);
       if (!toApply.isEmpty()) {
-        forMemStore.put(store, toApply);
+        for (Cell cell : toApply) {
+          HStore store = getStore(cell);
+          if (store == null) {
+            checkFamily(CellUtil.cloneFamily(cell));
+          } else {
+            forMemStore.computeIfAbsent(store, key -> new ArrayList<>()).add(cell);
+          }
+        }
         if (writeToWAL) {
           if (walEdit == null) {
             walEdit = new WALEdit();
