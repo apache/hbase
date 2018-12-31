@@ -18,7 +18,36 @@
 # limitations under the License.
 -->
 
+
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-21635](https://issues.apache.org/jira/browse/HBASE-21635) | *Major* | **Use maven enforcer to ban imports from illegal packages**
+
+Use de.skuzzle.enforcer.restrict-imports-enforcer-rule extension for maven enforcer plugin to ban illegal imports at compile time. Now if you use illegal imports, for example, import com.google.common.\*, there will be a compile error, instead of a checkstyle warning.
+
+
+---
+
+* [HBASE-21401](https://issues.apache.org/jira/browse/HBASE-21401) | *Critical* | **Sanity check when constructing the KeyValue**
+
+Add a sanity check when constructing KeyValue from a byte[]. we use the constructor when we're reading kv from socket or HFIle or WAL(replication). the santiy check isn't designed for discovering the bits corruption in network transferring or disk IO. It is designed to detect bugs inside HBase in advance. and HBASE-21459 indicated that there's extremely small performance loss for diff kinds of keyvalue.
+
+
+---
+
+* [HBASE-21554](https://issues.apache.org/jira/browse/HBASE-21554) | *Minor* | **Show replication endpoint classname for replication peer on master web UI**
+
+The replication UI on master will show the replication endpoint classname.
+
+
+---
+
+* [HBASE-21549](https://issues.apache.org/jira/browse/HBASE-21549) | *Major* | **Add shell command for serial replication peer**
+
+Add a SERIAL flag for add\_peer command to identifiy whether or not the replication peer is a serial replication peer. The default serial flag is false.
 
 
 ---
@@ -77,7 +106,6 @@ Use CompatRemoteProcedureResolver  instead of ExecuteProceduresRemoteCall to dis
 * [HBASE-21322](https://issues.apache.org/jira/browse/HBASE-21322) | *Major* | **Add a scheduleServerCrashProcedure() API to HbckService**
 
 Adds scheduleServerCrashProcedure to the HbckService.
-
 
 
 
