@@ -43,8 +43,10 @@ module HBaseConstants
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
   STOPROW = 'STOPROW'.freeze
   STARTROW = 'STARTROW'.freeze
+  STARTKEY = STARTROW
   ROWPREFIXFILTER = 'ROWPREFIXFILTER'.freeze
   ENDROW = STOPROW
+  ENDKEY = STOPROW
   RAW = 'RAW'.freeze
   LIMIT = 'LIMIT'.freeze
   METHOD = 'METHOD'.freeze
