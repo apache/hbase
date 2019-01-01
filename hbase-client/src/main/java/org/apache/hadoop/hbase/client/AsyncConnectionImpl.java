@@ -152,7 +152,6 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   // we will override this method for testing retry caller, so do not remove this method.
-  @VisibleForTesting
   AsyncRegionLocator getLocator() {
     return locator;
   }

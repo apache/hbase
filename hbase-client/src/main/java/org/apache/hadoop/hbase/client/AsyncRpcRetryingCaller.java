@@ -88,15 +88,15 @@ public abstract class AsyncRpcRetryingCaller<T> {
     return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
   }
 
-  protected long remainingTimeNs() {
+  protected final long remainingTimeNs() {
     return operationTimeoutNs - (System.nanoTime() - startNs);
   }
 
-  protected void completeExceptionally() {
+  protected final void completeExceptionally() {
     future.completeExceptionally(new RetriesExhaustedException(tries - 1, exceptions));
   }
 
-  protected void resetCallTimeout() {
+  protected final void resetCallTimeout() {
     long callTimeoutNs;
     if (operationTimeoutNs > 0) {
       callTimeoutNs = remainingTimeNs();
@@ -111,8 +111,15 @@ public abstract class AsyncRpcRetryingCaller<T> {
     resetController(controller, callTimeoutNs);
   }
 
-  protected void onError(Throwable error, Supplier<String> errMsg,
+  protected final void onError(Throwable error, Supplier<String> errMsg,
       Consumer<Throwable> updateCachedLocation) {
+    if (future.isDone()) {
+      // Give up if the future is already done, this is possible if user has already canceled the
+      // future. And for timeline consistent read, we will also cancel some requests if we have
+      // already get one of the responses.
+      LOG.debug("The future is already done, canceled={}, give up retrying", future.isCancelled());
+      return;
+    }
     error = translateException(error);
     if (error instanceof DoNotRetryIOException) {
       future.completeExceptionally(error);
