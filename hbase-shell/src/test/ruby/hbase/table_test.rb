@@ -476,6 +476,16 @@ module Hbase
       assert_not_nil(res['2']['x:b'])
     end
 
+    define_test "scan should support STARTKEY parameter" do
+      res = @test_table._scan_internal STARTKEY => '2'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_nil(res['1'])
+      assert_not_nil(res['2'])
+      assert_not_nil(res['2']['x:a'])
+      assert_not_nil(res['2']['x:b'])
+    end
+
     define_test "scan should support STOPROW parameter" do
       res = @test_table._scan_internal STOPROW => '2'
       assert_not_nil(res)
@@ -486,7 +496,27 @@ module Hbase
       assert_nil(res['2'])
     end
 
-    define_test "scan should support ROWPREFIXFILTER parameter (test 1)" do
+    define_test "scan should support ENDROW parameter" do
+      res = @test_table._scan_internal ENDROW => '2'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['1'])
+      assert_not_nil(res['1']['x:a'])
+      assert_not_nil(res['1']['x:b'])
+      assert_nil(res['2'])
+    end
+
+    define_test "scan should support ENDKEY parameter" do
+      res = @test_table._scan_internal ENDKEY => '2'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['1'])
+      assert_not_nil(res['1']['x:a'])
+      assert_not_nil(res['1']['x:b'])
+      assert_nil(res['2'])
+    end
+
+    define_test 'scan should support ROWPREFIXFILTER parameter (test 1)' do
       res = @test_table._scan_internal ROWPREFIXFILTER => '1'
       assert_not_nil(res)
       assert_kind_of(Hash, res)
@@ -496,7 +526,7 @@ module Hbase
       assert_nil(res['2'])
     end
 
-    define_test "scan should support ROWPREFIXFILTER parameter (test 2)" do
+    define_test 'scan should support ROWPREFIXFILTER parameter (test 2)' do
       res = @test_table._scan_internal ROWPREFIXFILTER => '2'
       assert_not_nil(res)
       assert_kind_of(Hash, res)
@@ -506,7 +536,7 @@ module Hbase
       assert_not_nil(res['2']['x:b'])
     end
 
-    define_test "scan should support LIMIT parameter" do
+    define_test 'scan should support LIMIT parameter' do
       res = @test_table._scan_internal LIMIT => 1
       assert_not_nil(res)
       assert_kind_of(Hash, res)
