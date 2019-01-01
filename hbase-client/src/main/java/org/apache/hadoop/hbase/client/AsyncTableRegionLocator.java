@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,5 +54,30 @@ public interface AsyncTableRegionLocator {
    * @param row Row to find.
    * @param reload true to reload information or false to use cached information
    */
-  CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload);
+  default CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload) {
+    return getRegionLocation(row, RegionReplicaUtil.DEFAULT_REPLICA_ID, reload);
+  }
+
+  /**
+   * Finds the region with the given <code>replicaId</code> on which the given row is being served.
+   * <p>
+   * Returns the location of the region with the given <code>replicaId</code> to which the row
+   * belongs.
+   * @param row Row to find.
+   * @param replicaId the replica id of the region
+   */
+  default CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId) {
+    return getRegionLocation(row, replicaId, false);
+  }
+
+  /**
+   * Finds the region with the given <code>replicaId</code> on which the given row is being served.
+   * <p>
+   * Returns the location of the region with the given <code>replicaId</code> to which the row
+   * belongs.
+   * @param row Row to find.
+   * @param replicaId the replica id of the region
+   * @param reload true to reload information or false to use cached information
+   */
+  CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId, boolean reload);
 }

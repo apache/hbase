@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
 /**
  * Retry caller for a single request, such as get, put, delete, etc.
@@ -45,18 +47,21 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
 
   private final byte[] row;
 
+  private final int replicaId;
+
   private final RegionLocateType locateType;
 
   private final Callable<T> callable;
 
   public AsyncSingleRequestRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
-      TableName tableName, byte[] row, RegionLocateType locateType, Callable<T> callable,
-      long pauseNs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
-      int startLogErrorsCnt) {
+      TableName tableName, byte[] row, int replicaId, RegionLocateType locateType,
+      Callable<T> callable, long pauseNs, int maxAttempts, long operationTimeoutNs,
+      long rpcTimeoutNs, int startLogErrorsCnt) {
     super(retryTimer, conn, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+      startLogErrorsCnt);
     this.tableName = tableName;
     this.row = row;
+    this.replicaId = replicaId;
     this.locateType = locateType;
     this.callable = callable;
   }
@@ -67,23 +72,22 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
       stub = conn.getRegionServerStub(loc.getServerName());
     } catch (IOException e) {
       onError(e,
-        () -> "Get async stub to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row)
-            + "' in " + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
-        err -> conn.getLocator().updateCachedLocation(loc, err));
+        () -> "Get async stub to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) +
+          "' in " + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
+        err -> conn.getLocator().updateCachedLocationOnError(loc, err));
       return;
     }
     resetCallTimeout();
-    callable.call(controller, loc, stub).whenComplete(
-      (result, error) -> {
-        if (error != null) {
-          onError(error,
-            () -> "Call to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) + "' in "
-                + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
-            err -> conn.getLocator().updateCachedLocation(loc, err));
-          return;
-        }
-        future.complete(result);
-      });
+    callable.call(controller, loc, stub).whenComplete((result, error) -> {
+      if (error != null) {
+        onError(error,
+          () -> "Call to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) + "' in " +
+            loc.getRegion().getEncodedName() + " of " + tableName + " failed",
+          err -> conn.getLocator().updateCachedLocationOnError(loc, err));
+        return;
+      }
+      future.complete(result);
+    });
   }
 
   @Override
@@ -98,18 +102,17 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
     } else {
       locateTimeoutNs = -1L;
     }
-    conn.getLocator()
-        .getRegionLocation(tableName, row, locateType, locateTimeoutNs)
-        .whenComplete(
-          (loc, error) -> {
-            if (error != null) {
-              onError(error, () -> "Locate '" + Bytes.toStringBinary(row) + "' in " + tableName
-                  + " failed", err -> {
-              });
-              return;
-            }
-            call(loc);
-          });
+    addListener(
+      conn.getLocator().getRegionLocation(tableName, row, replicaId, locateType, locateTimeoutNs),
+      (loc, error) -> {
+        if (error != null) {
+          onError(error,
+            () -> "Locate '" + Bytes.toStringBinary(row) + "' in " + tableName + " failed", err -> {
+            });
+          return;
+        }
+        call(loc);
+      });
   }
 
   @Override

@@ -17,22 +17,22 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
-
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
@@ -74,6 +74,8 @@ class AsyncRpcRetryingCallerFactory {
     private long rpcTimeoutNs = -1L;
 
     private RegionLocateType locateType = RegionLocateType.CURRENT;
+
+    private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
 
     public SingleRequestCallerBuilder<T> table(TableName tableName) {
       this.tableName = tableName;
@@ -121,11 +123,17 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public SingleRequestCallerBuilder<T> replicaId(int replicaId) {
+      this.replicaId = replicaId;
+      return this;
+    }
+
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
+      checkArgument(replicaId >= 0, "invalid replica id %s", replicaId);
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn,
-          checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"),
-          checkNotNull(locateType, "locateType is null"), checkNotNull(callable, "action is null"),
-          pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"), replicaId,
+        checkNotNull(locateType, "locateType is null"), checkNotNull(callable, "action is null"),
+        pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -241,11 +249,11 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncScanSingleRegionRpcRetryingCaller build() {
       checkArgument(scannerId != null, "invalid scannerId %d", scannerId);
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn,
-          checkNotNull(scan, "scan is null"), scanMetrics, scannerId,
-          checkNotNull(resultCache, "resultCache is null"),
-          checkNotNull(consumer, "consumer is null"), checkNotNull(stub, "stub is null"),
-          checkNotNull(loc, "location is null"), isRegionServerRemote, scannerLeaseTimeoutPeriodNs,
-          pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        checkNotNull(scan, "scan is null"), scanMetrics, scannerId,
+        checkNotNull(resultCache, "resultCache is null"),
+        checkNotNull(consumer, "consumer is null"), checkNotNull(stub, "stub is null"),
+        checkNotNull(loc, "location is null"), isRegionServerRemote, scannerLeaseTimeoutPeriodNs,
+        pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -311,7 +319,7 @@ class AsyncRpcRetryingCallerFactory {
 
     public <T> AsyncBatchRpcRetryingCaller<T> build() {
       return new AsyncBatchRpcRetryingCaller<>(retryTimer, conn, tableName, actions, pauseNs,
-          maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     public <T> List<CompletableFuture<T>> call() {
@@ -363,8 +371,8 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncMasterRequestRpcRetryingCaller<T> build() {
       return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn,
-          checkNotNull(callable, "action is null"), pauseNs, maxAttempts, operationTimeoutNs,
-          rpcTimeoutNs, startLogErrorsCnt);
+        checkNotNull(callable, "action is null"), pauseNs, maxAttempts, operationTimeoutNs,
+        rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -390,7 +398,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private ServerName serverName;
 
-    public AdminRequestCallerBuilder<T> action(AsyncAdminRequestRetryingCaller.Callable<T> callable) {
+    public AdminRequestCallerBuilder<T> action(
+        AsyncAdminRequestRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -420,15 +429,15 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public AdminRequestCallerBuilder<T> serverName(ServerName serverName){
+    public AdminRequestCallerBuilder<T> serverName(ServerName serverName) {
       this.serverName = serverName;
       return this;
     }
 
     public AsyncAdminRequestRetryingCaller<T> build() {
       return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
-          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, checkNotNull(serverName,
-            "serverName is null"), checkNotNull(callable, "action is null"));
+        operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
+        checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {
@@ -436,7 +445,7 @@ class AsyncRpcRetryingCallerFactory {
     }
   }
 
-  public <T> AdminRequestCallerBuilder<T> adminRequest(){
+  public <T> AdminRequestCallerBuilder<T> adminRequest() {
     return new AdminRequestCallerBuilder<>();
   }
 
@@ -488,8 +497,8 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncServerRequestRpcRetryingCaller<T> build() {
       return new AsyncServerRequestRpcRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
-          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, checkNotNull(serverName,
-            "serverName is null"), checkNotNull(callable, "action is null"));
+        operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
+        checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {
