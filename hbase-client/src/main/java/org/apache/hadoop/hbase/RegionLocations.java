@@ -56,8 +56,8 @@ public class RegionLocations {
     int index = 0;
     for (HRegionLocation loc : locations) {
       if (loc != null) {
-        if (loc.getRegionInfo().getReplicaId() >= maxReplicaId) {
-          maxReplicaId = loc.getRegionInfo().getReplicaId();
+        if (loc.getRegion().getReplicaId() >= maxReplicaId) {
+          maxReplicaId = loc.getRegion().getReplicaId();
           maxReplicaIdIndex = index;
         }
       }
@@ -72,7 +72,7 @@ public class RegionLocations {
       this.locations = new HRegionLocation[maxReplicaId + 1];
       for (HRegionLocation loc : locations) {
         if (loc != null) {
-          this.locations[loc.getRegionInfo().getReplicaId()] = loc;
+          this.locations[loc.getRegion().getReplicaId()] = loc;
         }
       }
     }
@@ -146,7 +146,7 @@ public class RegionLocations {
   public RegionLocations remove(HRegionLocation location) {
     if (location == null) return this;
     if (location.getRegion() == null) return this;
-    int replicaId = location.getRegionInfo().getReplicaId();
+    int replicaId = location.getRegion().getReplicaId();
     if (replicaId >= locations.length) return this;
 
     // check whether something to remove. HRL.compareTo() compares ONLY the
@@ -203,14 +203,14 @@ public class RegionLocations {
     // in case of region replication going down, we might have a leak here.
     int max = other.locations.length;
 
-    HRegionInfo regionInfo = null;
+    RegionInfo regionInfo = null;
     for (int i = 0; i < max; i++) {
       HRegionLocation thisLoc = this.getRegionLocation(i);
       HRegionLocation otherLoc = other.getRegionLocation(i);
-      if (regionInfo == null && otherLoc != null && otherLoc.getRegionInfo() != null) {
+      if (regionInfo == null && otherLoc != null && otherLoc.getRegion() != null) {
         // regionInfo is the first non-null HRI from other RegionLocations. We use it to ensure that
         // all replica region infos belong to the same region with same region id.
-        regionInfo = otherLoc.getRegionInfo();
+        regionInfo = otherLoc.getRegion();
       }
 
       HRegionLocation selectedLoc = selectRegionLocation(thisLoc,
@@ -232,7 +232,7 @@ public class RegionLocations {
       for (int i=0; i < newLocations.length; i++) {
         if (newLocations[i] != null) {
           if (!RegionReplicaUtil.isReplicasForSameRegion(regionInfo,
-            newLocations[i].getRegionInfo())) {
+            newLocations[i].getRegion())) {
             newLocations[i] = null;
           }
         }
@@ -273,9 +273,9 @@ public class RegionLocations {
       boolean checkForEquals, boolean force) {
     assert location != null;
 
-    int replicaId = location.getRegionInfo().getReplicaId();
+    int replicaId = location.getRegion().getReplicaId();
 
-    HRegionLocation oldLoc = getRegionLocation(location.getRegionInfo().getReplicaId());
+    HRegionLocation oldLoc = getRegionLocation(location.getRegion().getReplicaId());
     HRegionLocation selectedLoc = selectRegionLocation(oldLoc, location,
       checkForEquals, force);
 
@@ -288,8 +288,8 @@ public class RegionLocations {
     // ensure that all replicas share the same start code. Otherwise delete them
     for (int i=0; i < newLocations.length; i++) {
       if (newLocations[i] != null) {
-        if (!RegionReplicaUtil.isReplicasForSameRegion(location.getRegionInfo(),
-          newLocations[i].getRegionInfo())) {
+        if (!RegionReplicaUtil.isReplicasForSameRegion(location.getRegion(),
+          newLocations[i].getRegion())) {
           newLocations[i] = null;
         }
       }
@@ -317,8 +317,8 @@ public class RegionLocations {
   public HRegionLocation getRegionLocationByRegionName(byte[] regionName) {
     for (HRegionLocation loc : locations) {
       if (loc != null) {
-        if (Bytes.equals(loc.getRegionInfo().getRegionName(), regionName)
-            || Bytes.equals(loc.getRegionInfo().getEncodedNameAsBytes(), regionName)) {
+        if (Bytes.equals(loc.getRegion().getRegionName(), regionName)
+            || Bytes.equals(loc.getRegion().getEncodedNameAsBytes(), regionName)) {
           return loc;
         }
       }
@@ -331,7 +331,7 @@ public class RegionLocations {
   }
 
   public HRegionLocation getDefaultRegionLocation() {
-    return locations[HRegionInfo.DEFAULT_REPLICA_ID];
+    return locations[RegionInfo.DEFAULT_REPLICA_ID];
   }
 
   /**
