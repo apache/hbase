@@ -23,8 +23,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
-
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,24 +42,26 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Retry caller for batch.
@@ -121,10 +122,10 @@ class AsyncBatchRpcRetryingCaller<T> {
   private static final class ServerRequest {
 
     public final ConcurrentMap<byte[], RegionRequest> actionsByRegion =
-        new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+      new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
     public void addAction(HRegionLocation loc, Action action) {
-      computeIfAbsent(actionsByRegion, loc.getRegionInfo().getRegionName(),
+      computeIfAbsent(actionsByRegion, loc.getRegion().getRegionName(),
         () -> new RegionRequest(loc)).actions.add(action);
     }
   }
@@ -173,11 +174,10 @@ class AsyncBatchRpcRetryingCaller<T> {
       Throwable error, ServerName serverName) {
     if (tries > startLogErrorsCnt) {
       String regions =
-          regionsSupplier.get().map(r -> "'" + r.loc.getRegionInfo().getRegionNameAsString() + "'")
-              .collect(Collectors.joining(",", "[", "]"));
-      LOG.warn("Process batch for " + regions + " in " + tableName + " from " + serverName
-          + " failed, tries=" + tries,
-        error);
+        regionsSupplier.get().map(r -> "'" + r.loc.getRegion().getRegionNameAsString() + "'")
+          .collect(Collectors.joining(",", "[", "]"));
+      LOG.warn("Process batch for " + regions + " in " + tableName + " from " + serverName +
+        " failed, tries=" + tries, error);
     }
   }
 
@@ -191,7 +191,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       errors = action2Errors.computeIfAbsent(action, k -> new ArrayList<>());
     }
     errors.add(new ThrowableWithExtraContext(error, EnvironmentEdgeManager.currentTime(),
-        getExtraContextForError(serverName)));
+      getExtraContextForError(serverName)));
   }
 
   private void addError(Iterable<Action> actions, Throwable error, ServerName serverName) {
@@ -204,7 +204,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     ThrowableWithExtraContext errorWithCtx =
-        new ThrowableWithExtraContext(error, currentTime, extras);
+      new ThrowableWithExtraContext(error, currentTime, extras);
     List<ThrowableWithExtraContext> errors = removeErrors(action);
     if (errors == null) {
       errors = Collections.singletonList(errorWithCtx);
@@ -227,7 +227,7 @@ class AsyncBatchRpcRetryingCaller<T> {
         return;
       }
       future.completeExceptionally(new RetriesExhaustedException(tries,
-          Optional.ofNullable(removeErrors(action)).orElse(Collections.emptyList())));
+        Optional.ofNullable(removeErrors(action)).orElse(Collections.emptyList())));
     });
   }
 
@@ -242,9 +242,9 @@ class AsyncBatchRpcRetryingCaller<T> {
       // multiRequestBuilder will be populated with region actions.
       // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
       // action list.
-      RequestConverter.buildNoDataRegionActions(entry.getKey(),
-        entry.getValue().actions, cells, multiRequestBuilder, regionActionBuilder, actionBuilder,
-        mutationBuilder, nonceGroup, rowMutationsIndexMap);
+      RequestConverter.buildNoDataRegionActions(entry.getKey(), entry.getValue().actions, cells,
+        multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup,
+        rowMutationsIndexMap);
     }
     return multiRequestBuilder.build();
   }
@@ -254,15 +254,15 @@ class AsyncBatchRpcRetryingCaller<T> {
       RegionResult regionResult, List<Action> failedActions, Throwable regionException) {
     Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
-      LOG.error("Server " + serverName + " sent us neither result nor exception for row '"
-          + Bytes.toStringBinary(action.getAction().getRow()) + "' of "
-          + regionReq.loc.getRegionInfo().getRegionNameAsString());
+      LOG.error("Server " + serverName + " sent us neither result nor exception for row '" +
+        Bytes.toStringBinary(action.getAction().getRow()) + "' of " +
+        regionReq.loc.getRegion().getRegionNameAsString());
       addError(action, new RuntimeException("Invalid response"), serverName);
       failedActions.add(action);
     } else if (result instanceof Throwable) {
       Throwable error = translateException((Throwable) result);
       logException(tries, () -> Stream.of(regionReq), error, serverName);
-      conn.getLocator().updateCachedLocation(regionReq.loc, error);
+      conn.getLocator().updateCachedLocationOnError(regionReq.loc, error);
       if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
         failOne(action, tries, error, EnvironmentEdgeManager.currentTime(),
           getExtraContextForError(serverName));
@@ -281,20 +281,19 @@ class AsyncBatchRpcRetryingCaller<T> {
       RegionResult regionResult = resp.getResults().get(rn);
       Throwable regionException = resp.getException(rn);
       if (regionResult != null) {
-        regionReq.actions.forEach(
-          action -> onComplete(action, regionReq, tries, serverName, regionResult, failedActions,
-            regionException));
+        regionReq.actions.forEach(action -> onComplete(action, regionReq, tries, serverName,
+          regionResult, failedActions, regionException));
       } else {
         Throwable error;
         if (regionException == null) {
-          LOG.error(
-            "Server sent us neither results nor exceptions for " + Bytes.toStringBinary(rn));
+          LOG
+            .error("Server sent us neither results nor exceptions for " + Bytes.toStringBinary(rn));
           error = new RuntimeException("Invalid response");
         } else {
           error = translateException(regionException);
         }
         logException(tries, () -> Stream.of(regionReq), error, serverName);
-        conn.getLocator().updateCachedLocation(regionReq.loc, error);
+        conn.getLocator().updateCachedLocationOnError(regionReq.loc, error);
         if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
           failAll(regionReq.actions.stream(), tries, error, serverName);
           return;
@@ -314,8 +313,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       remainingNs = remainingTimeNs();
       if (remainingNs <= 0) {
         failAll(actionsByServer.values().stream().flatMap(m -> m.actionsByRegion.values().stream())
-            .flatMap(r -> r.actions.stream()),
-          tries);
+          .flatMap(r -> r.actions.stream()), tries);
         return;
       }
     } else {
@@ -366,15 +364,15 @@ class AsyncBatchRpcRetryingCaller<T> {
       ServerName serverName) {
     Throwable error = translateException(t);
     logException(tries, () -> actionsByRegion.values().stream(), error, serverName);
-    actionsByRegion
-        .forEach((rn, regionReq) -> conn.getLocator().updateCachedLocation(regionReq.loc, error));
+    actionsByRegion.forEach(
+      (rn, regionReq) -> conn.getLocator().updateCachedLocationOnError(regionReq.loc, error));
     if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
       failAll(actionsByRegion.values().stream().flatMap(r -> r.actions.stream()), tries, error,
         serverName);
       return;
     }
     List<Action> copiedActions = actionsByRegion.values().stream().flatMap(r -> r.actions.stream())
-        .collect(Collectors.toList());
+      .collect(Collectors.toList());
     addError(copiedActions, error, serverName);
     tryResubmit(copiedActions.stream(), tries);
   }
@@ -407,30 +405,30 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     ConcurrentMap<ServerName, ServerRequest> actionsByServer = new ConcurrentHashMap<>();
     ConcurrentLinkedQueue<Action> locateFailed = new ConcurrentLinkedQueue<>();
-    CompletableFuture.allOf(actions
-        .map(action -> conn.getLocator().getRegionLocation(tableName, action.getAction().getRow(),
-          RegionLocateType.CURRENT, locateTimeoutNs).whenComplete((loc, error) -> {
-            if (error != null) {
-              error = translateException(error);
-              if (error instanceof DoNotRetryIOException) {
-                failOne(action, tries, error, EnvironmentEdgeManager.currentTime(), "");
-                return;
-              }
-              addError(action, error, null);
-              locateFailed.add(action);
-            } else {
-              computeIfAbsent(actionsByServer, loc.getServerName(), ServerRequest::new)
-                  .addAction(loc, action);
+    addListener(CompletableFuture.allOf(actions
+      .map(action -> conn.getLocator().getRegionLocation(tableName, action.getAction().getRow(),
+        RegionLocateType.CURRENT, locateTimeoutNs).whenComplete((loc, error) -> {
+          if (error != null) {
+            error = translateException(error);
+            if (error instanceof DoNotRetryIOException) {
+              failOne(action, tries, error, EnvironmentEdgeManager.currentTime(), "");
+              return;
             }
-          }))
-        .toArray(CompletableFuture[]::new)).whenComplete((v, r) -> {
-          if (!actionsByServer.isEmpty()) {
-            send(actionsByServer, tries);
+            addError(action, error, null);
+            locateFailed.add(action);
+          } else {
+            computeIfAbsent(actionsByServer, loc.getServerName(), ServerRequest::new).addAction(loc,
+              action);
           }
-          if (!locateFailed.isEmpty()) {
-            tryResubmit(locateFailed.stream(), tries);
-          }
-        });
+        }))
+      .toArray(CompletableFuture[]::new)), (v, r) -> {
+        if (!actionsByServer.isEmpty()) {
+          send(actionsByServer, tries);
+        }
+        if (!locateFailed.isEmpty()) {
+          tryResubmit(locateFailed.stream(), tries);
+        }
+      });
   }
 
   public List<CompletableFuture<T>> call() {
