@@ -641,6 +641,80 @@ module Hbase
       assert_equal("value2", Bytes.to_string(peer_config.get_peer_data.get(Bytes.toBytes("data2"))))
     end
 
+    define_test "append_peer_exclude_namespaces: works with namespaces array" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = {CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+      command(:set_peer_replicate_all, @peer_id, true)
+
+      namespaces = ["ns1", "ns2"]
+      namespaces_str = "!ns1;ns2"
+      command(:append_peer_exclude_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      namespaces = ["ns3"]
+      namespaces_str = "!ns1;ns2;ns3"
+      command(:append_peer_exclude_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      # append a namespace which is already excluded in the peer config
+      command(:append_peer_exclude_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "remove_peer_exclude_namespaces: works with namespaces array" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = {CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+
+      namespaces = ["ns1", "ns2", "ns3"]
+      command(:set_peer_exclude_namespaces, @peer_id, namespaces)
+
+      namespaces = ["ns1", "ns2"]
+      namespaces_str = "!ns3"
+      command(:remove_peer_exclude_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      namespaces = ["ns3"]
+      namespaces_str = nil
+      command(:remove_peer_exclude_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      # remove a namespace which is not in peer config
+      command(:remove_peer_namespaces, @peer_id, namespaces)
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
     # assert_raise fails on native exceptions - https://jira.codehaus.org/browse/JRUBY-5279
     # Can't catch native Java exception with assert_raise in JRuby 1.6.8 as in the test below.
     # define_test "add_peer: adding a second peer with same id should error" do

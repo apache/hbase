@@ -285,6 +285,45 @@ module Hbase
       end
     end
 
+    # Append exclude namespaces config for the specified peer
+    def append_peer_exclude_namespaces(id, namespaces)
+      unless namespaces.nil?
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          if rpc.getExcludeNamespaces.nil?
+            ns_set = java.util.HashSet.new
+          else
+            ns_set = java.util.HashSet.new(rpc.getExcludeNamespaces)
+          end
+          namespaces.each do |n|
+            ns_set.add(n)
+          end
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setExcludeNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
+        end
+      end
+    end
+
+    # Remove exclude namespaces config for the specified peer
+    def remove_peer_exclude_namespaces(id, namespaces)
+      unless namespaces.nil?
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          ns_set = rpc.getExcludeNamespaces
+          unless ns_set.nil?
+            ns_set = java.util.HashSet.new(ns_set)
+            namespaces.each do |n|
+              ns_set.remove(n)
+            end
+          end
+          builder = ReplicationPeerConfig.newBuilder(rpc)
+          builder.setExcludeNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
+        end
+      end
+    end
+
     def set_peer_replicate_all(id, replicate_all)
       rpc = get_peer_config(id)
       return if rpc.nil?
