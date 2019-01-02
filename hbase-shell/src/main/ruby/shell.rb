@@ -382,6 +382,8 @@ Shell.load_command_group(
     append_peer_namespaces
     remove_peer_namespaces
     set_peer_exclude_namespaces
+    append_peer_exclude_namespaces
+    remove_peer_exclude_namespaces
     show_peer_tableCFs
     set_peer_tableCFs
     set_peer_exclude_tableCFs
