@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import static java.nio.ByteBuffer.wrap;
+import static org.apache.hadoop.hbase.thrift.HBaseServiceHandler.CLEANUP_INTERVAL;
+import static org.apache.hadoop.hbase.thrift.HBaseServiceHandler.MAX_IDLETIME;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
@@ -71,6 +73,7 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift.ErrorThrowingGetObserver;
+import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -115,7 +118,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
- * Unit testing for ThriftServer.HBaseHandler, a part of the org.apache.hadoop.hbase.thrift2
+ * Unit testing for ThriftServer.HBaseServiceHandler, a part of the org.apache.hadoop.hbase.thrift2
  * package.
  */
 @Category({ClientTests.class, MediumTests.class})
@@ -749,8 +752,8 @@ public class TestThriftHBaseServiceHandler {
     int cleanUpInterval = 100;
     Configuration conf = new Configuration(UTIL.getConfiguration());
     // Set the ConnectionCache timeout to trigger halfway through the trials
-    conf.setInt(ThriftHBaseServiceHandler.MAX_IDLETIME, (numTrials / 2) * trialPause);
-    conf.setInt(ThriftHBaseServiceHandler.CLEANUP_INTERVAL, cleanUpInterval);
+    conf.setInt(MAX_IDLETIME, (numTrials / 2) * trialPause);
+    conf.setInt(CLEANUP_INTERVAL, cleanUpInterval);
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(conf,
         UserProvider.instantiate(conf));
 
@@ -1206,7 +1209,7 @@ public class TestThriftHBaseServiceHandler {
     ThriftMetrics metrics = getMetrics(conf);
     ThriftHBaseServiceHandler hbaseHandler = createHandler();
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+        HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics,  conf);
     byte[] rowName = Bytes.toBytes("testMetrics");
     ByteBuffer table = wrap(tableAname);
 
@@ -1249,7 +1252,7 @@ public class TestThriftHBaseServiceHandler {
     ThriftHBaseServiceHandler hbaseHandler = createHandler();
     ThriftMetrics metrics = getMetrics(UTIL.getConfiguration());
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+        HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, null);
     ByteBuffer tTableName = wrap(tableName.getName());
 
     // check metrics increment with a successful get
@@ -1323,7 +1326,7 @@ public class TestThriftHBaseServiceHandler {
       ThriftHBaseServiceHandler hbaseHandler = createHandler();
       ThriftMetrics metrics = getMetrics(UTIL.getConfiguration());
       THBaseService.Iface handler =
-          ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+          HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, null);
       ByteBuffer tTableName = wrap(tableName.getName());
 
       // check metrics latency with a successful get
