@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.appendFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.columnFamilyDescriptorFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.compareOpFromThrift;
@@ -44,10 +46,6 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.tableNamesFromHBas
 import static org.apache.thrift.TBaseHelper.byteBufferToByteArray;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,7 +66,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.thrift.ThriftMetrics;
+import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
@@ -87,7 +85,6 @@ import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -99,7 +96,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class ThriftHBaseServiceHandler implements THBaseService.Iface {
+public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements THBaseService.Iface {
 
   // TODO: Size of pool configuraple
   private static final Logger LOG = LoggerFactory.getLogger(ThriftHBaseServiceHandler.class);
@@ -109,49 +106,9 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
   private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<>();
 
-  private final ConnectionCache connectionCache;
-
-  static final String CLEANUP_INTERVAL = "hbase.thrift.connection.cleanup-interval";
-  static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
-
   private static final IOException ioe
       = new DoNotRetryIOException("Thrift Server is in Read-only mode.");
   private boolean isReadOnly;
-
-  public static THBaseService.Iface newInstance(
-      THBaseService.Iface handler, ThriftMetrics metrics) {
-    return (THBaseService.Iface) Proxy.newProxyInstance(handler.getClass().getClassLoader(),
-      new Class[] { THBaseService.Iface.class }, new THBaseServiceMetricsProxy(handler, metrics));
-  }
-
-  private static final class THBaseServiceMetricsProxy implements InvocationHandler {
-    private final THBaseService.Iface handler;
-    private final ThriftMetrics metrics;
-
-    private THBaseServiceMetricsProxy(THBaseService.Iface handler, ThriftMetrics metrics) {
-      this.handler = handler;
-      this.metrics = metrics;
-    }
-
-    @Override
-    public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
-      Object result;
-      long start = now();
-      try {
-        result = m.invoke(handler, args);
-      } catch (InvocationTargetException e) {
-        metrics.exception(e.getCause());
-        throw e.getTargetException();
-      } catch (Exception e) {
-        metrics.exception(e);
-        throw new RuntimeException("unexpected invocation exception: " + e.getMessage());
-      } finally {
-        long processTime = now() - start;
-        metrics.incMethodTime(m.getName(), processTime);
-      }
-      return result;
-    }
-  }
 
   private static class TIOErrorWithCause extends TIOError {
     private Throwable cause;
@@ -188,20 +145,14 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
   }
 
-  private static long now() {
-    return System.nanoTime();
-  }
-
   ThriftHBaseServiceHandler(final Configuration conf,
       final UserProvider userProvider) throws IOException {
-    int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
-    int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
-    connectionCache = new ConnectionCache(
-      conf, userProvider, cleanInterval, maxIdleTime);
-    isReadOnly = conf.getBoolean("hbase.thrift.readonly", false);
+    super(conf, userProvider);
+    isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
   }
 
-  private Table getTable(ByteBuffer tableName) {
+  @Override
+  protected Table getTable(ByteBuffer tableName) {
     try {
       return connectionCache.getTable(Bytes.toString(byteBufferToByteArray(tableName)));
     } catch (IOException ie) {
@@ -249,10 +200,6 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
    */
   private ResultScanner getScanner(int id) {
     return scannerMap.get(id);
-  }
-
-  void setEffectiveUser(String effectiveUser) {
-    connectionCache.setEffectiveUser(effectiveUser);
   }
 
   /**

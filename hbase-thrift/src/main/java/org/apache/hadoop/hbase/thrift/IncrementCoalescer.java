@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -158,7 +157,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private final ConcurrentMap<FullyQualifiedRow, Long> countersMap =
       new ConcurrentHashMap<>(100000, 0.75f, 1500);
   private final ThreadPoolExecutor pool;
-  private final HBaseHandler handler;
+  private final ThriftHBaseServiceHandler handler;
 
   private int maxQueueSize = 500000;
   private static final int CORE_POOL_SIZE = 1;
@@ -166,7 +165,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private static final Logger LOG = LoggerFactory.getLogger(FullyQualifiedRow.class);
 
   @SuppressWarnings("deprecation")
-  public IncrementCoalescer(HBaseHandler hand) {
+  public IncrementCoalescer(ThriftHBaseServiceHandler hand) {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     pool =
@@ -205,6 +204,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       inc.getAmmount());
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private boolean internalQueueIncrement(byte[] tableName, byte[] rowKey, byte[] fam,
       byte[] qual, long ammount) throws TException {
     int countersMapSize = countersMap.size();

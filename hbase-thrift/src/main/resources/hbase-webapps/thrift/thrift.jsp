@@ -20,10 +20,10 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
+<%@ page import="org.apache.hadoop.hbase.thrift.ImplType" %>
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
