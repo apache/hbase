@@ -765,4 +765,14 @@ class AsyncHBaseAdmin implements AsyncAdmin {
       List<String> serverNamesList) {
     return wrap(rawAdmin.compactionSwitch(switchState, serverNamesList));
   }
+
+  @Override
+  public CompletableFuture<Boolean> switchRpcThrottle(boolean enable) {
+    return wrap(rawAdmin.switchRpcThrottle(enable));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isRpcThrottleEnabled() {
+    return wrap(rawAdmin.isRpcThrottleEnabled());
+  }
 }

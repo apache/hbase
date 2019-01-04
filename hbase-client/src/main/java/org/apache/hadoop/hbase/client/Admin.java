@@ -2796,4 +2796,17 @@ public interface Admin extends Abortable, Closeable {
    */
   void cloneTableSchema(final TableName tableName, final TableName newTableName,
       final boolean preserveSplits) throws IOException;
+
+  /**
+   * Switch the rpc throttle enable state.
+   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @return Previous rpc throttle enabled value
+   */
+  boolean switchRpcThrottle(final boolean enable) throws IOException;
+
+  /**
+   * Get if the rpc throttle is enabled.
+   * @return True if rpc throttle is enabled
+   */
+  boolean isRpcThrottleEnabled() throws IOException;
 }

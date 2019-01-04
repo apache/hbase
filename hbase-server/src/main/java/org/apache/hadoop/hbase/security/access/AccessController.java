@@ -2602,6 +2602,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     checkSystemOrSuperUser(getActiveUser(ctx));
   }
 
+  @Override
+  public void preSwitchRpcThrottle(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      boolean enable) throws IOException {
+    requirePermission(ctx, "switchRpcThrottle", Action.ADMIN);
+  }
+
+  @Override
+  public void preIsRpcThrottleEnabled(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission(ctx, "isRpcThrottleEnabled", Action.ADMIN);
+  }
+
   /**
    * Returns the active user to which authorization checks should be applied.
    * If we are in the context of an RPC call, the remote user is used,

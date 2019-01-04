@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -176,6 +177,14 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
       admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(ns)).get();
     }
     assertNumResults(0, null);
+  }
+
+  @Test
+  public void testSwitchRpcThrottle() throws Exception {
+    CompletableFuture<Boolean> future1 = ASYNC_CONN.getAdmin().switchRpcThrottle(true);
+    assertEquals(true, future1.get().booleanValue());
+    CompletableFuture<Boolean> future2 = ASYNC_CONN.getAdmin().isRpcThrottleEnabled();
+    assertEquals(true, future2.get().booleanValue());
   }
 
   private void assertNumResults(int expected, final QuotaFilter filter) throws Exception {

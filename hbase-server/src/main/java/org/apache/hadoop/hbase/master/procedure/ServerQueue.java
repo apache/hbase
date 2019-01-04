@@ -35,6 +35,8 @@ class ServerQueue extends Queue<ServerName> {
     switch (spi.getServerOperationType()) {
       case CRASH_HANDLER:
         return true;
+      case SWITCH_RPC_THROTTLE:
+        return false;
       default:
         break;
     }

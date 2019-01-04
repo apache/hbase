@@ -243,6 +243,10 @@ module Hbase
       QuotaTableUtil.getObservedSnapshotSizes(@admin.getConnection)
     end
 
+    def switch_rpc_throttle(enabled)
+      @admin.switchRpcThrottle(java.lang.Boolean.valueOf(enabled))
+    end
+
     def _parse_size(str_limit)
       str_limit = str_limit.downcase
       match = /(\d+)([bkmgtp%]*)/.match(str_limit)

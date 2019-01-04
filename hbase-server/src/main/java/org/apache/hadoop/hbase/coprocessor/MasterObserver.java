@@ -1519,4 +1519,40 @@ public interface MasterObserver {
    */
   default void postRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
       ServerName server, List<byte[]> encodedRegionNames) throws IOException {}
+
+  /**
+   * Called before switching rpc throttle enabled state.
+   * @param ctx the coprocessor instance's environment
+   * @param enable the rpc throttle value
+   */
+  default void preSwitchRpcThrottle(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean enable) throws IOException {
+  }
+
+  /**
+   * Called after switching rpc throttle enabled state.
+   * @param ctx the coprocessor instance's environment
+   * @param oldValue the previously rpc throttle value
+   * @param newValue the newly rpc throttle value
+   */
+  default void postSwitchRpcThrottle(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean oldValue, final boolean newValue) throws IOException {
+  }
+
+  /**
+   * Called before getting if is rpc throttle enabled.
+   * @param ctx the coprocessor instance's environment
+   */
+  default void preIsRpcThrottleEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+  }
+
+  /**
+   * Called after getting if is rpc throttle enabled.
+   * @param ctx the coprocessor instance's environment
+   * @param rpcThrottleEnabled the rpc throttle enabled value
+   */
+  default void postIsRpcThrottleEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean rpcThrottleEnabled) throws IOException {
+  }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -47,8 +48,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -518,6 +521,44 @@ public class TestQuotaAdmin {
     // Verify that we can also not fetch it via the API
     verifyNotFetchableViaAPI(admin);
 
+  }
+
+  @Test
+  public void testRpcThrottleWhenStartup() throws IOException, InterruptedException {
+    TEST_UTIL.getAdmin().switchRpcThrottle(false);
+    assertFalse(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+    TEST_UTIL.killMiniHBaseCluster();
+
+    TEST_UTIL.startMiniHBaseCluster();
+    assertFalse(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+    for (JVMClusterUtil.RegionServerThread rs : TEST_UTIL.getHBaseCluster()
+        .getRegionServerThreads()) {
+      RegionServerRpcQuotaManager quotaManager =
+          rs.getRegionServer().getRegionServerRpcQuotaManager();
+      assertFalse(quotaManager.isRpcThrottleEnabled());
+    }
+    // enable rpc throttle
+    TEST_UTIL.getAdmin().switchRpcThrottle(true);
+    assertTrue(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+  }
+
+  @Test
+  public void testSwitchRpcThrottle() throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    testSwitchRpcThrottle(admin, true, true);
+    testSwitchRpcThrottle(admin, true, false);
+    testSwitchRpcThrottle(admin, false, false);
+    testSwitchRpcThrottle(admin, false, true);
+  }
+
+  private void testSwitchRpcThrottle(Admin admin, boolean oldRpcThrottle, boolean newRpcThrottle)
+      throws IOException {
+    boolean state = admin.switchRpcThrottle(newRpcThrottle);
+    Assert.assertEquals(oldRpcThrottle, state);
+    Assert.assertEquals(newRpcThrottle, admin.isRpcThrottleEnabled());
+    TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
+        .forEach(rs -> Assert.assertEquals(newRpcThrottle,
+          rs.getRegionServer().getRegionServerRpcQuotaManager().isRpcThrottleEnabled()));
   }
 
   private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu)

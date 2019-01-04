@@ -186,6 +186,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormaliz
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -244,6 +246,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -3609,5 +3613,29 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         (s, c, req, done) -> s.clearRegionBlockCache(controller, req, done),
         resp -> ProtobufUtil.toCacheEvictionStats(resp.getStats())))
       .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> switchRpcThrottle(boolean enable) {
+    CompletableFuture<Boolean> future = this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this
+            .<SwitchRpcThrottleRequest, SwitchRpcThrottleResponse, Boolean> call(controller, stub,
+              SwitchRpcThrottleRequest.newBuilder().setRpcThrottleEnabled(enable).build(),
+              (s, c, req, done) -> s.switchRpcThrottle(c, req, done),
+              resp -> resp.getPreviousRpcThrottleEnabled()))
+        .call();
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isRpcThrottleEnabled() {
+    CompletableFuture<Boolean> future = this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this
+            .<IsRpcThrottleEnabledRequest, IsRpcThrottleEnabledResponse, Boolean> call(controller,
+              stub, IsRpcThrottleEnabledRequest.newBuilder().build(),
+              (s, c, req, done) -> s.isRpcThrottleEnabled(c, req, done),
+              resp -> resp.getRpcThrottleEnabled()))
+        .call();
+    return future;
   }
 }

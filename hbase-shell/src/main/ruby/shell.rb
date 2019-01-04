@@ -435,6 +435,8 @@ Shell.load_command_group(
     list_quota_table_sizes
     list_quota_snapshots
     list_snapshot_sizes
+    enable_rpc_throttle
+    disable_rpc_throttle
   ]
 )
 

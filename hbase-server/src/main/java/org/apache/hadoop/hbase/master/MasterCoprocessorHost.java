@@ -1777,4 +1777,41 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preSwitchRpcThrottle(boolean enable) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null :new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSwitchRpcThrottle(this, enable);
+      }
+    });
+  }
+
+  public void postSwitchRpcThrottle(final boolean oldValue, final boolean newValue)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSwitchRpcThrottle(this, oldValue, newValue);
+      }
+    });
+  }
+
+  public void preIsRpcThrottleEnabled() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preIsRpcThrottleEnabled(this);
+      }
+    });
+  }
+
+  public void postIsRpcThrottleEnabled(boolean enabled) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postIsRpcThrottleEnabled(this, enabled);
+      }
+    });
+  }
 }

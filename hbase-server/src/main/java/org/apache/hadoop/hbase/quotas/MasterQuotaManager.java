@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.SwitchRpcThrottleProcedure;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -52,8 +54,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize;
 
@@ -79,6 +85,8 @@ public class MasterQuotaManager implements RegionStateListener {
   private boolean initialized = false;
   private NamespaceAuditor namespaceQuotaManager;
   private ConcurrentHashMap<RegionInfo, SizeSnapshotWithTimestamp> regionSizes;
+  // Storage for quota rpc throttle
+  private RpcThrottleStorage rpcThrottleStorage;
 
   public MasterQuotaManager(final MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -107,6 +115,9 @@ public class MasterQuotaManager implements RegionStateListener {
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
     namespaceQuotaManager.start();
     initialized = true;
+
+    rpcThrottleStorage =
+        new RpcThrottleStorage(masterServices.getZooKeeper(), masterServices.getConfiguration());
   }
 
   public void stop() {
@@ -307,6 +318,49 @@ public class MasterQuotaManager implements RegionStateListener {
   public void removeNamespaceQuota(String namespace) throws IOException {
     if (initialized) {
       this.namespaceQuotaManager.deleteNamespace(namespace);
+    }
+  }
+
+  public SwitchRpcThrottleResponse switchRpcThrottle(SwitchRpcThrottleRequest request)
+      throws IOException {
+    boolean rpcThrottle = request.getRpcThrottleEnabled();
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preSwitchRpcThrottle(rpcThrottle);
+      boolean oldRpcThrottle = rpcThrottleStorage.isRpcThrottleEnabled();
+      if (rpcThrottle != oldRpcThrottle) {
+        LOG.info("{} switch rpc throttle from {} to {}", masterServices.getClientIdAuditPrefix(),
+          oldRpcThrottle, rpcThrottle);
+        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+        SwitchRpcThrottleProcedure procedure = new SwitchRpcThrottleProcedure(rpcThrottleStorage,
+            rpcThrottle, masterServices.getServerName(), latch);
+        masterServices.getMasterProcedureExecutor().submitProcedure(procedure);
+        latch.await();
+      } else {
+        LOG.warn("Skip switch rpc throttle to {} because it's the same with old value",
+          rpcThrottle);
+      }
+      SwitchRpcThrottleResponse response = SwitchRpcThrottleResponse.newBuilder()
+          .setPreviousRpcThrottleEnabled(oldRpcThrottle).build();
+      masterServices.getMasterCoprocessorHost().postSwitchRpcThrottle(oldRpcThrottle, rpcThrottle);
+      return response;
+    } else {
+      LOG.warn("Skip switch rpc throttle to {} because rpc quota is disabled", rpcThrottle);
+      return SwitchRpcThrottleResponse.newBuilder().setPreviousRpcThrottleEnabled(false).build();
+    }
+  }
+
+  public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(IsRpcThrottleEnabledRequest request)
+      throws IOException {
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preIsRpcThrottleEnabled();
+      boolean enabled = rpcThrottleStorage.isRpcThrottleEnabled();
+      IsRpcThrottleEnabledResponse response =
+          IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(enabled).build();
+      masterServices.getMasterCoprocessorHost().postIsRpcThrottleEnabled(enabled);
+      return response;
+    } else {
+      LOG.warn("Skip get rpc throttle because rpc quota is disabled");
+      return IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(false).build();
     }
   }
 

@@ -551,3 +551,18 @@ message OpenRegionProcedureStateData {
 message CloseRegionProcedureStateData {
   optional ServerName assign_candidate = 1;
 }
+
+enum SwitchRpcThrottleState {
+  UPDATE_SWITCH_RPC_THROTTLE_STORAGE = 1;
+  SWITCH_RPC_THROTTLE_ON_RS = 2;
+  POST_SWITCH_RPC_THROTTLE = 3;
+}
+
+message SwitchRpcThrottleStateData {
+  required bool rpc_throttle_enabled = 1;
+}
+
+message SwitchRpcThrottleRemoteStateData {
+  required ServerName target_server = 1;
+  required bool rpc_throttle_enabled = 2;
+}

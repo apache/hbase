@@ -173,6 +173,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMainte
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
@@ -4340,5 +4341,29 @@ public class HBaseAdmin implements Admin {
     } else {
       createTable(htd);
     }
+  }
+
+  @Override
+  public boolean switchRpcThrottle(final boolean enable) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master
+            .switchRpcThrottle(getRpcController(), MasterProtos.SwitchRpcThrottleRequest
+                .newBuilder().setRpcThrottleEnabled(enable).build())
+            .getPreviousRpcThrottleEnabled();
+      }
+    });
+  }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master.isRpcThrottleEnabled(getRpcController(),
+          IsRpcThrottleEnabledRequest.newBuilder().build()).getRpcThrottleEnabled();
+      }
+    });
   }
 }

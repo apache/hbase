@@ -635,6 +635,21 @@ message ClearDeadServersResponse {
   repeated ServerName server_name = 1;
 }
 
+message SwitchRpcThrottleRequest {
+  required bool rpc_throttle_enabled = 1;
+}
+
+message SwitchRpcThrottleResponse {
+  required bool previous_rpc_throttle_enabled = 1;
+}
+
+message IsRpcThrottleEnabledRequest {
+}
+
+message IsRpcThrottleEnabledResponse {
+  required bool rpc_throttle_enabled = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -992,6 +1007,12 @@ service MasterService {
   rpc ClearDeadServers(ClearDeadServersRequest)
     returns(ClearDeadServersResponse);
 
+  /** Turn the quota throttle on or off */
+  rpc SwitchRpcThrottle (SwitchRpcThrottleRequest) returns (SwitchRpcThrottleResponse);
+
+  /** Get if is rpc throttled enabled */
+  rpc IsRpcThrottleEnabled (IsRpcThrottleEnabledRequest)
+    returns (IsRpcThrottleEnabledResponse);
 }
 
 // HBCK Service definitions.

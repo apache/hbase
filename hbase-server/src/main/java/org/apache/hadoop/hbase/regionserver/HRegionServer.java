@@ -1963,6 +1963,8 @@ public class HRegionServer extends HasThread implements
       conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2));
     this.executorService.startExecutorService(ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL,
       conf.getInt("hbase.regionserver.executor.replay.sync.replication.wal.threads", 1));
+    this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
+      conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
     uncaughtExceptionHandler);
