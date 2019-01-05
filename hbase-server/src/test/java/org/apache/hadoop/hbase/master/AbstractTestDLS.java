@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delete;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_final_transition_failed;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_preempt_task;
@@ -143,7 +144,7 @@ public abstract class AbstractTestDLS {
     conf.setInt("zookeeper.recovery.retry", 0);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
-    conf.setInt("hbase.regionserver.wal.max.splitters", 3);
+    conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
     StartMiniClusterOption option = StartMiniClusterOption.builder()

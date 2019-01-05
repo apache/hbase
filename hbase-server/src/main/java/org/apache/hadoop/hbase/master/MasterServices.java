@@ -510,4 +510,11 @@ public interface MasterServices extends Server {
    * @return True if cluster is up; false if cluster is not up (we are shutting down).
    */
   boolean isClusterUp();
+
+  /**
+   * @return return null if current is zk-based WAL splitting
+   */
+  default SplitWALManager getSplitWALManager(){
+    return null;
+  }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
@@ -449,7 +450,7 @@ public class TestSplitLogWorker {
     final ServerName RS = ServerName.valueOf("rs,1,1");
     final int maxTasks = 3;
     Configuration testConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    testConf.setInt("hbase.regionserver.wal.max.splitters", maxTasks);
+    testConf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, maxTasks);
     RegionServerServices mockedRS = getRegionServer(RS);
     for (int i = 0; i < maxTasks; i++) {
       zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TATAS + i),
@@ -485,7 +486,7 @@ public class TestSplitLogWorker {
     final ServerName RS2 = ServerName.valueOf("rs,1,2");
     final int maxTasks = 3;
     Configuration testConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    testConf.setInt("hbase.regionserver.wal.max.splitters", maxTasks);
+    testConf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, maxTasks);
     RegionServerServices mockedRS = getRegionServer(RS);
 
     // create two RS nodes

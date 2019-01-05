@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
@@ -337,6 +339,13 @@ public class HMaster extends HRegionServer implements MasterServices {
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
   private MasterWalManager walManager;
+
+  // manager to manage procedure-based WAL splitting, can be null if current
+  // is zk-based WAL splitting. SplitWALManager will replace SplitLogManager
+  // and MasterWalManager, which means zk-based WAL splitting code will be
+  // useless after we switch to the procedure-based one. our eventual goal
+  // is to remove all the zk-based WAL splitting code.
+  private SplitWALManager splitWALManager;
 
   // server manager to deal with region server info
   private volatile ServerManager serverManager;
@@ -945,6 +954,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     // loading.
     this.serverManager = createServerManager(this);
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
+    if (!conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+      DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+      this.splitWALManager = new SplitWALManager(this);
+    }
     createProcedureExecutor();
     @SuppressWarnings("rawtypes")
     Map<Class<? extends Procedure>, List<Procedure<MasterProcedureEnv>>> procsByType =
@@ -1398,6 +1411,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public MasterWalManager getMasterWalManager() {
     return this.walManager;
+  }
+
+  @Override
+  public SplitWALManager getSplitWALManager() {
+    return splitWALManager;
   }
 
   @Override

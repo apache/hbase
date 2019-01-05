@@ -152,7 +152,7 @@ public class SplitLogWorker implements Runnable {
     return true;
   }
 
-  private static Status splitLog(String name, CancelableProgressable p, Configuration conf,
+  static Status splitLog(String name, CancelableProgressable p, Configuration conf,
       RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
     Path walDir;
     FileSystem fs;
@@ -175,9 +175,11 @@ public class SplitLogWorker implements Runnable {
     // interrupted or has encountered a transient error and when it has
     // encountered a bad non-retry-able persistent error.
     try {
-      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, name)), fs, conf,
-        p, sequenceIdChecker, server.getCoordinatedStateManager().getSplitLogWorkerCoordination(),
-        factory)) {
+      SplitLogWorkerCoordination splitLogWorkerCoordination =
+          server.getCoordinatedStateManager() == null ? null
+              : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
+      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, name)), fs, conf, p,
+        sequenceIdChecker, splitLogWorkerCoordination, factory)) {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {

@@ -22,6 +22,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,12 +49,16 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@RunWith(Parameterized.class)
 @Category({ MasterTests.class, LargeTests.class })
 public class TestRestartCluster {
 
@@ -63,12 +69,22 @@ public class TestRestartCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestRestartCluster.class);
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
+  @Parameterized.Parameter
+  public boolean splitWALCoordinatedByZK;
+
   private static final TableName[] TABLES = {
       TableName.valueOf("restartTableOne"),
       TableName.valueOf("restartTableTwo"),
       TableName.valueOf("restartTableThree")
   };
   private static final byte[] FAMILY = Bytes.toBytes("family");
+
+  @Before
+  public void setup() throws Exception {
+    LOG.info("WAL splitting coordinated by zk? {}", splitWALCoordinatedByZK);
+    UTIL.getConfiguration().setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+      splitWALCoordinatedByZK);
+  }
 
   @After public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
@@ -300,5 +316,10 @@ public class TestRestartCluster {
       }
       Thread.sleep(100);
     }
+  }
+
+  @Parameterized.Parameters
+  public static Collection coordinatedByZK() {
+    return Arrays.asList(false, true);
   }
 }

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.coordination;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -135,7 +138,8 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     this.server = server;
     this.worker = worker;
     this.splitTaskExecutor = splitExecutor;
-    maxConcurrentTasks = conf.getInt("hbase.regionserver.wal.max.splitters", DEFAULT_MAX_SPLITTERS);
+    maxConcurrentTasks =
+        conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER);
     reportPeriod =
         conf.getInt("hbase.splitlog.report.period",
           conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
