@@ -1072,11 +1072,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static long estimatedHeapSizeOf(final Cell cell) {
-    if (cell instanceof HeapSize) {
-      return ((HeapSize) cell).heapSize();
-    }
-    // TODO: Add sizing of references that hold the row, family, etc., arrays.
-    return estimatedSerializedSizeOf(cell);
+    return cell.heapSize();
   }
 
   /********************* tags *************************************/

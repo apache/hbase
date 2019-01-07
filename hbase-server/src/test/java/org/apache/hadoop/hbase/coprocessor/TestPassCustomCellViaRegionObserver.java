@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -213,6 +214,11 @@ public class TestPassCustomCellViaRegionObserver {
     Cell.Type type, byte[] value) {
     return new Cell() {
 
+      @Override
+      public long heapSize() {
+        return 0;
+      }
+
       private byte[] getArray(byte[] array) {
         return array == null ? HConstants.EMPTY_BYTE_ARRAY : array;
       }
@@ -294,6 +300,11 @@ public class TestPassCustomCellViaRegionObserver {
       @Override
       public int getValueLength() {
         return length(value);
+      }
+
+      @Override
+      public int getSerializedSize() {
+        return KeyValueUtil.getSerializedSize(this, true);
       }
 
       @Override

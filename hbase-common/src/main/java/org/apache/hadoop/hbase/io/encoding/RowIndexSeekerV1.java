@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
@@ -383,7 +384,9 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
         ByteBuffer buf = tmpPair.getFirst();
         if (buf.isDirect()) {
-          ret = new ByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId);
+          ret =
+              tagsLength > 0 ? new ByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId)
+                  : new NoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId);
         } else {
           if (tagsLength > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()

@@ -2323,6 +2323,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   @Override
+  public int getSerializedSize() {
+    return this.length;
+  }
+
+  @Override
   public void write(ByteBuffer buf, int offset) {
     ByteBufferUtils.copyFromArrayToBuffer(buf, offset, this.bytes, this.offset, this.length);
   }

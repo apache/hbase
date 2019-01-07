@@ -308,7 +308,7 @@ public class WALPrettyPrinter {
           if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
           }
-          op.put("total_size_sum", PrivateCellUtil.estimatedSizeOfCell(cell));
+          op.put("total_size_sum", cell.heapSize());
         }
         if (actions.isEmpty())
           continue;

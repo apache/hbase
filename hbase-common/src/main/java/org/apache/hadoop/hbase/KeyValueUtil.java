@@ -746,11 +746,14 @@ public class KeyValueUtil {
   }
 
   public static int getSerializedSize(Cell cell, boolean withTags) {
+    if (withTags) {
+      return cell.getSerializedSize();
+    }
     if (cell instanceof ExtendedCell) {
       return ((ExtendedCell) cell).getSerializedSize(withTags);
     }
     return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
-        cell.getValueLength(), cell.getTagsLength(), withTags);
+      cell.getValueLength(), cell.getTagsLength(), withTags);
   }
 
   public static int oswrite(final Cell cell, final OutputStream out, final boolean withTags)

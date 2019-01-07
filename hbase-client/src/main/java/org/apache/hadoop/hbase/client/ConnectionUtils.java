@@ -323,7 +323,7 @@ public final class ConnectionUtils {
     long estimatedHeapSizeOfResult = 0;
     // We don't make Iterator here
     for (Cell cell : rs.rawCells()) {
-      estimatedHeapSizeOfResult += PrivateCellUtil.estimatedSizeOfCell(cell);
+      estimatedHeapSizeOfResult += cell.heapSize();
     }
     return estimatedHeapSizeOfResult;
   }

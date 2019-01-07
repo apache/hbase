@@ -29,7 +29,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -369,7 +368,7 @@ public abstract class Segment implements MemStoreSizing {
       }
       res += indexEntryOnHeapSize(onHeap);
       if(onHeap) {
-        res += PrivateCellUtil.estimatedSizeOfCell(cell);
+        res += cell.heapSize();
       }
       res = ClassSize.align(res);
     }
@@ -386,7 +385,7 @@ public abstract class Segment implements MemStoreSizing {
       }
       res += indexEntryOffHeapSize(offHeap);
       if(offHeap) {
-        res += PrivateCellUtil.estimatedSizeOfCell(cell);
+        res += cell.heapSize();
       }
       res = ClassSize.align(res);
     }

@@ -287,6 +287,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
   }
 
   @Override
+  public int getSerializedSize() {
+    return this.length;
+  }
+
+  @Override
   public void write(ByteBuffer buf, int offset) {
     ByteBufferUtils.copyFromBufferToBuffer(this.buf, buf, this.offset, offset, this.length);
   }

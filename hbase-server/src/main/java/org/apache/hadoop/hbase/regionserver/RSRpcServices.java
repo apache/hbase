@@ -1365,6 +1365,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   /**
    * Method to account for the size of retained cells and retained data blocks.
+   * @param context rpc call context
+   * @param r result to add size.
+   * @param lastBlock last block to check whether we need to add the block size in context.
    * @return an object that represents the last referenced block from this response.
    */
   Object addSize(RpcCallContext context, Result r, Object lastBlock) {
@@ -3084,7 +3087,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
       long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-      ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
+      ScanResponse.Builder builder, MutableObject<Object> lastBlock, RpcCallContext context)
       throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
@@ -3214,10 +3217,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
 
           if (limitReached || !moreRows) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Done scanning. limitReached: " + limitReached + " moreRows: " + moreRows
-                  + " scannerContext: " + scannerContext);
-            }
             // We only want to mark a ScanResponse as a heartbeat message in the event that
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
@@ -3390,7 +3389,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     MutableObject<Object> lastBlock = new MutableObject<>();
     boolean scannerClosed = false;
     try {
-      List<Result> results = new ArrayList<>();
+      List<Result> results = new ArrayList<>(Math.min(rows, 512));
       if (rows > 0) {
         boolean done = false;
         // Call coprocessor. Get region info from scanner.
