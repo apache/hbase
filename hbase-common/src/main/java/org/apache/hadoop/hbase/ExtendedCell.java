@@ -90,6 +90,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
   /**
    * @return Serialized size (defaults to include tag length).
    */
+  @Override
   default int getSerializedSize() {
     return getSerializedSize(true);
   }
