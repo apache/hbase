@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
-public class StoppedRpcClientException extends HBaseIOException {
+public class StoppedRpcClientException extends DoNotRetryIOException {
   public StoppedRpcClientException() {
     super();
   }
