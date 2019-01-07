@@ -145,6 +145,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
                 + " of region " + region.getRegionInfo().getEncodedName()
                 + " Now waiting and blocking reads until observing a full flush cycle");
         }
+        region.setReadsEnabled(true);
         break;
       } else {
         if (response.hasWroteFlushWalMarker()) {
@@ -156,6 +157,7 @@ public class RegionReplicaFlushHandler extends EventHandler {
                   + " of region " + region.getRegionInfo().getEncodedName() + " Now waiting and "
                   + "blocking reads until observing a flush marker");
             }
+            region.setReadsEnabled(true);
             break;
           } else {
             // somehow we were not able to get the primary to write the flush request. It may be
