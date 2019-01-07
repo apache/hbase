@@ -1,6 +1,25 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.10
+
+** Bug
+    * [HBASE-15752] - ClassNotFoundException is encountered when custom WAL codec is not found in WALPlayer job
+    * [HBASE-21387] - Race condition surrounding in progress snapshot handling in snapshot cache leads to loss of snapshot files
+    * [HBASE-21492] - CellCodec Written To WAL Before It's Verified
+    * [HBASE-21504] - If enable FIFOCompactionPolicy, a compaction may write a "empty" hfile whose maxTimeStamp is long max. This kind of hfile will never be archived.
+    * [HBASE-21547] - Precommit uses master flaky list for other branches
+    * [HBASE-21582] - If call HBaseAdmin#snapshotAsync but forget call isSnapshotFinished, then SnapshotHFileCleaner will skip to run every time
+    * [HBASE-21592] - quota.addGetResult(r)  throw  NPE
+
+** Improvement
+    * [HBASE-21520] - TestMultiColumnScanner cost long time when using ROWCOL bloom type
+    * [HBASE-21567] - Allow overriding configs starting up the shell
+
+** Task
+    * [HBASE-21686] - Release 1.2.10
+
+
 Release Notes - HBase - Version 1.2.9 2018/11/27
 
 ** Sub-task
