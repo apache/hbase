@@ -261,12 +261,17 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> get(Get get) {
+    if (get.getConsistency() == Consistency.STRONG) {
+      return get(get, RegionReplicaUtil.DEFAULT_REPLICA_ID, readRpcTimeoutNs);
+    }
+    // user specifies a replica id explicitly, just send request to the specific replica
+    if (get.getReplicaId() >= 0) {
+      return get(get, get.getReplicaId(), readRpcTimeoutNs);
+    }
+
+    // Timeline consistent read, where we may send requests to other region replicas
     CompletableFuture<Result> primaryFuture =
       get(get, RegionReplicaUtil.DEFAULT_REPLICA_ID, readRpcTimeoutNs);
-    if (get.getConsistency() == Consistency.STRONG) {
-      return primaryFuture;
-    }
-    // Timeline consistent read, where we will send requests to other region replicas
     CompletableFuture<Result> future = new CompletableFuture<>();
     connect(primaryFuture, future);
     long primaryCallTimeoutNs = conn.connConf.getPrimaryCallTimeoutNs();
