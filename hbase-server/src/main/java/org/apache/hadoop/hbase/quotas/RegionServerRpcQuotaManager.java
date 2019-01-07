@@ -52,9 +52,14 @@ public class RegionServerRpcQuotaManager {
   private final RegionServerServices rsServices;
 
   private QuotaCache quotaCache = null;
+  private volatile boolean rpcThrottleEnabled;
+  // Storage for quota rpc throttle
+  private RpcThrottleStorage rpcThrottleStorage;
 
   public RegionServerRpcQuotaManager(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
+    rpcThrottleStorage =
+        new RpcThrottleStorage(rsServices.getZooKeeper(), rsServices.getConfiguration());
   }
 
   public void start(final RpcScheduler rpcScheduler) throws IOException {
@@ -68,6 +73,8 @@ public class RegionServerRpcQuotaManager {
     // Initialize quota cache
     quotaCache = new QuotaCache(rsServices);
     quotaCache.start();
+    rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
+    LOG.info("Start rpc quota manager and rpc throttle enabled is {}", rpcThrottleEnabled);
   }
 
   public void stop() {
@@ -76,8 +83,29 @@ public class RegionServerRpcQuotaManager {
     }
   }
 
-  public boolean isQuotaEnabled() {
+  @VisibleForTesting
+  protected boolean isRpcThrottleEnabled() {
+    return rpcThrottleEnabled;
+  }
+
+  private boolean isQuotaEnabled() {
     return quotaCache != null;
+  }
+
+  public void switchRpcThrottle(boolean enable) throws IOException {
+    if (isQuotaEnabled()) {
+      if (rpcThrottleEnabled != enable) {
+        boolean previousEnabled = rpcThrottleEnabled;
+        rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
+        LOG.info("Switch rpc throttle from {} to {}", previousEnabled, rpcThrottleEnabled);
+      } else {
+        LOG.warn(
+          "Skip switch rpc throttle because previous value {} is the same as current value {}",
+          rpcThrottleEnabled, enable);
+      }
+    } else {
+      LOG.warn("Skip switch rpc throttle to {} because rpc quota is disabled", enable);
+    }
   }
 
   @VisibleForTesting
@@ -93,7 +121,7 @@ public class RegionServerRpcQuotaManager {
    * @return the OperationQuota
    */
   public OperationQuota getQuota(final UserGroupInformation ugi, final TableName table) {
-    if (isQuotaEnabled() && !table.isSystemTable()) {
+    if (isQuotaEnabled() && !table.isSystemTable() && isRpcThrottleEnabled()) {
       UserQuotaState userQuotaState = quotaCache.getUserQuotaState(ugi);
       QuotaLimiter userLimiter = userQuotaState.getTableLimiter(table);
       boolean useNoop = userLimiter.isBypass();

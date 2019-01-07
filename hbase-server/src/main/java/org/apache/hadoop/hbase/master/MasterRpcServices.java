@@ -258,6 +258,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -2440,6 +2442,28 @@ public class MasterRpcServices extends RSRpcServices
       }
       return MasterProtos.ScheduleServerCrashProcedureResponse.newBuilder().addAllPid(pids).build();
     } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
+      SwitchRpcThrottleRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      return master.getMasterQuotaManager().switchRpcThrottle(request);
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterProtos.IsRpcThrottleEnabledResponse isRpcThrottleEnabled(RpcController controller,
+      MasterProtos.IsRpcThrottleEnabledRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      return master.getMasterQuotaManager().isRpcThrottleEnabled(request);
+    } catch (Exception e) {
       throw new ServiceException(e);
     }
   }

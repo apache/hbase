@@ -1256,4 +1256,17 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
       List<String> serverNamesList);
+
+  /**
+   * Switch the rpc throttle enabled state.
+   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @return Previous rpc throttle enabled value
+   */
+  CompletableFuture<Boolean> switchRpcThrottle(boolean enable);
+
+  /**
+   * Get if the rpc throttle is enabled.
+   * @return True if rpc throttle is enabled
+   */
+  CompletableFuture<Boolean> isRpcThrottleEnabled();
 }

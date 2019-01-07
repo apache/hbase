@@ -1934,6 +1934,8 @@ public class HRegionServer extends HasThread implements
     }
     this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PEER,
       conf.getInt("hbase.regionserver.executor.refresh.peer.threads", 2));
+    this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
+      conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
     uncaughtExceptionHandler);

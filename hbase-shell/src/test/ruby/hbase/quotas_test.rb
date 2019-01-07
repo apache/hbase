@@ -162,5 +162,13 @@ module Hbase
       output = capture_stdout{ command(:list_quotas) }
       assert(output.include?('0 row(s)'))
     end
+
+    define_test 'switch rpc throttle' do
+      output = capture_stdout { command(:disable_rpc_throttle) }
+      assert(output.include?('Previous rpc throttle state : true'))
+
+      output = capture_stdout { command(:enable_rpc_throttle) }
+      assert(output.include?('Previous rpc throttle state : false'))
+    end
   end
 end

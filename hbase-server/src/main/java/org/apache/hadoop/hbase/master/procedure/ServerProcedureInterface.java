@@ -27,8 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface ServerProcedureInterface {
   public enum ServerOperationType {
-    CRASH_HANDLER
-  };
+    CRASH_HANDLER, SWITCH_RPC_THROTTLE
+  }
 
   /**
    * @return Name of this server instance.
