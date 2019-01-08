@@ -142,7 +142,7 @@ echo "Current HBase commit: $CURRENT_HBASE_COMMIT"
 
 # Clone the hbase-site repo manually so it doesn't trigger spurious
 # commits in Jenkins.
-git clone --depth 1 --branch asf-site https://git-wip-us.apache.org/repos/asf/hbase-site.git
+git clone --depth 1 --branch asf-site https://gitbox.apache.org/repos/asf/hbase-site.git
 
 # Figure out if the commit of the hbase repo has already been built and bail if so.
 declare -i PUSHED
