@@ -6547,4 +6547,25 @@ public class TestFromClientSide {
     }
   }
 
+  @Test(expected = DoNotRetryIOException.class)
+  public void testCreateTableWithZeroRegionReplicas() throws Exception {
+    TableName tableName = TableName.valueOf("testCreateTableWithZeroRegionReplicas");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("cf"));
+    desc.setRegionReplication(0);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+  }
+
+  @Test(expected = DoNotRetryIOException.class)
+  public void testModifyTableWithZeroRegionReplicas() throws Exception {
+    TableName tableName = TableName.valueOf("testModifyTableWithZeroRegionReplicas");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("cf"));
+
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    HTableDescriptor newDesc = new HTableDescriptor(desc);
+    newDesc.setRegionReplication(0);
+
+    TEST_UTIL.getHBaseAdmin().modifyTable(tableName, newDesc);
+  }
 }
