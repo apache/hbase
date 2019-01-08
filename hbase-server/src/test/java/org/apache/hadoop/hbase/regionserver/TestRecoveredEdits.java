@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -38,9 +39,8 @@ import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -184,46 +184,61 @@ public class TestRecoveredEdits {
    * @throws IOException
    */
   private int verifyAllEditsMadeItIn(final FileSystem fs, final Configuration conf,
-      final Path edits, final HRegion region)
-  throws IOException {
+      final Path edits, final HRegion region) throws IOException {
     int count = 0;
-    // Based on HRegion#replayRecoveredEdits
-    WAL.Reader reader = null;
-    try {
-      reader = WALFactory.createReader(fs, edits, conf);
+    // Read all cells from recover edits
+    List<Cell> walCells = new ArrayList<>();
+    try (WAL.Reader reader = WALFactory.createReader(fs, edits, conf)) {
       WAL.Entry entry;
       while ((entry = reader.next()) != null) {
         WALKey key = entry.getKey();
         WALEdit val = entry.getEdit();
         count++;
         // Check this edit is for this region.
-        if (!Bytes.equals(key.getEncodedRegionName(),
-            region.getRegionInfo().getEncodedNameAsBytes())) {
+        if (!Bytes
+            .equals(key.getEncodedRegionName(), region.getRegionInfo().getEncodedNameAsBytes())) {
           continue;
         }
         Cell previous = null;
-        for (Cell cell: val.getCells()) {
+        for (Cell cell : val.getCells()) {
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
           if (previous != null && CellComparatorImpl.COMPARATOR.compareRows(previous, cell) == 0)
             continue;
           previous = cell;
-          Get g = new Get(CellUtil.cloneRow(cell));
-          Result r = region.get(g);
-          boolean found = false;
-          for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
-            Cell current = scanner.current();
-            if (PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, cell,
-              current) == 0) {
-              found = true;
-              break;
-            }
-          }
-          assertTrue("Failed to find " + cell, found);
+          walCells.add(cell);
         }
       }
-    } finally {
-      if (reader != null) reader.close();
     }
+
+    // Read all cells from region
+    List<Cell> regionCells = new ArrayList<>();
+    try (RegionScanner scanner = region.getScanner(new Scan())) {
+      List<Cell> tmpCells;
+      do {
+        tmpCells = new ArrayList<>();
+        scanner.nextRaw(tmpCells);
+        regionCells.addAll(tmpCells);
+      } while (!tmpCells.isEmpty());
+    }
+
+    Collections.sort(walCells, CellComparatorImpl.COMPARATOR);
+    int found = 0;
+    for (int i = 0, j = 0; i < walCells.size() && j < regionCells.size(); ) {
+      int compareResult = PrivateCellUtil
+          .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, walCells.get(i),
+              regionCells.get(j));
+      if (compareResult == 0) {
+        i++;
+        j++;
+        found++;
+      } else if (compareResult > 0) {
+        j++;
+      } else {
+        i++;
+      }
+    }
+    assertEquals("Only found " + found + " cells in region, but there are " + walCells.size() +
+        " cells in recover edits", found, walCells.size());
     return count;
   }
 }
