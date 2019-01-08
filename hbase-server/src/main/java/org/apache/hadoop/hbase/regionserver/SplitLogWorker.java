@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
+import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -78,57 +79,59 @@ public class SplitLogWorker implements Runnable {
     coordination.init(server, conf, splitTaskExecutor, this);
   }
 
-  public SplitLogWorker(final Server hserver, final Configuration conf,
-      final RegionServerServices server, final LastSequenceId sequenceIdChecker,
-      final WALFactory factory) {
-    this(hserver, conf, server, new TaskExecutor() {
-      @Override
-      public Status exec(String filename, CancelableProgressable p) {
-        Path walDir;
-        FileSystem fs;
-        try {
-          walDir = FSUtils.getWALRootDir(conf);
-          fs = walDir.getFileSystem(conf);
-        } catch (IOException e) {
-          LOG.warn("could not find root dir or fs", e);
-          return Status.RESIGNED;
-        }
-        // TODO have to correctly figure out when log splitting has been
-        // interrupted or has encountered a transient error and when it has
-        // encountered a bad non-retry-able persistent error.
-        try {
-          if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
-            fs, conf, p, sequenceIdChecker,
-              server.getCoordinatedStateManager().getSplitLogWorkerCoordination(), factory)) {
-            return Status.PREEMPTED;
-          }
-        } catch (InterruptedIOException iioe) {
-          LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
-          return Status.RESIGNED;
-        } catch (IOException e) {
-          if (e instanceof FileNotFoundException) {
-            // A wal file may not exist anymore. Nothing can be recovered so move on
-            LOG.warn("WAL {} does not exist anymore", filename, e);
-            return Status.DONE;
-          }
-          Throwable cause = e.getCause();
-          if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
-                  || cause instanceof ConnectException
-                  || cause instanceof SocketTimeoutException)) {
-            LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
-                + "resigning", e);
-            return Status.RESIGNED;
-          } else if (cause instanceof InterruptedException) {
-            LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
-            return Status.RESIGNED;
-          }
-          LOG.warn("log splitting of " + filename + " failed, returning error", e);
-          return Status.ERR;
-        }
+  public SplitLogWorker(Configuration conf, RegionServerServices server,
+      LastSequenceId sequenceIdChecker, WALFactory factory) {
+    this(server, conf, server, (f, p) -> splitLog(f, p, conf, server, sequenceIdChecker, factory));
+  }
+
+  static Status splitLog(String filename, CancelableProgressable p, Configuration conf,
+      RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
+    Path walDir;
+    FileSystem fs;
+    try {
+      walDir = FSUtils.getWALRootDir(conf);
+      fs = walDir.getFileSystem(conf);
+    } catch (IOException e) {
+      LOG.warn("could not find root dir or fs", e);
+      return Status.RESIGNED;
+    }
+    // TODO have to correctly figure out when log splitting has been
+    // interrupted or has encountered a transient error and when it has
+    // encountered a bad non-retry-able persistent error.
+    try {
+      SplitLogWorkerCoordination splitLogWorkerCoordination =
+          server.getCoordinatedStateManager() == null ? null
+              : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
+      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf,
+        p, sequenceIdChecker, splitLogWorkerCoordination, factory)) {
+        return Status.PREEMPTED;
+      }
+    } catch (InterruptedIOException iioe) {
+      LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
+      return Status.RESIGNED;
+    } catch (IOException e) {
+      if (e instanceof FileNotFoundException) {
+        // A wal file may not exist anymore. Nothing can be recovered so move on
+        LOG.warn("WAL {} does not exist anymore", filename, e);
         return Status.DONE;
       }
-    });
+      Throwable cause = e.getCause();
+      if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
+          || cause instanceof ConnectException || cause instanceof SocketTimeoutException)) {
+        LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
+            + "resigning",
+          e);
+        return Status.RESIGNED;
+      } else if (cause instanceof InterruptedException) {
+        LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
+        return Status.RESIGNED;
+      }
+      LOG.warn("log splitting of " + filename + " failed, returning error", e);
+      return Status.ERR;
+    }
+    return Status.DONE;
   }
+
 
   @Override
   public void run() {

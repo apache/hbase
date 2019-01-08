@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,9 +31,11 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterWalManager;
+import org.apache.hadoop.hbase.master.SplitWALManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -107,6 +112,7 @@ public class ServerCrashProcedure
   protected Flow executeFromState(MasterProcedureEnv env, ServerCrashState state)
       throws ProcedureSuspendedException, ProcedureYieldException {
     final MasterServices services = env.getMasterServices();
+    final AssignmentManager am = env.getAssignmentManager();
     // HBASE-14802
     // If we have not yet notified that we are processing a dead server, we should do now.
     if (!notifiedDeadServer) {
@@ -117,6 +123,7 @@ public class ServerCrashProcedure
     switch (state) {
       case SERVER_CRASH_START:
       case SERVER_CRASH_SPLIT_META_LOGS:
+      case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
       case SERVER_CRASH_ASSIGN_META:
         break;
       default:
@@ -137,8 +144,24 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_SPLIT_META_LOGS:
-          splitMetaLogs(env);
-          setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
+          if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+            splitMetaLogs(env);
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
+          } else {
+            am.getRegionStates().metaLogSplitting(serverName);
+            addChildProcedure(createSplittingWalProcedures(env, true));
+            setNextState(ServerCrashState.SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR);
+          }
+          break;
+        case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
+          if(isSplittingDone(env, true)){
+            cleanupSplitDir(env);
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
+            am.getRegionStates().metaLogSplit(serverName);
+          } else {
+            setNextState(ServerCrashState.SERVER_CRASH_SPLIT_META_LOGS);
+          }
           break;
         case SERVER_CRASH_ASSIGN_META:
           assignRegions(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
@@ -156,8 +179,24 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_SPLIT_LOGS:
-          splitLogs(env);
-          setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
+          if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+            splitLogs(env);
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
+          } else {
+            am.getRegionStates().logSplitting(this.serverName);
+            addChildProcedure(createSplittingWalProcedures(env, false));
+            setNextState(ServerCrashState.SERVER_CRASH_DELETE_SPLIT_WALS_DIR);
+          }
+          break;
+        case SERVER_CRASH_DELETE_SPLIT_WALS_DIR:
+          if (isSplittingDone(env, false)) {
+            cleanupSplitDir(env);
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
+            am.getRegionStates().logSplit(this.serverName);
+          } else {
+            setNextState(ServerCrashState.SERVER_CRASH_SPLIT_LOGS);
+          }
           break;
         case SERVER_CRASH_ASSIGN:
           // If no regions to assign, skip assign and skip to the finish.
@@ -179,6 +218,7 @@ public class ServerCrashProcedure
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
         case SERVER_CRASH_FINISH:
+          LOG.info("removed crashed server {} after splitting done", serverName);
           services.getAssignmentManager().getRegionStates().removeServer(serverName);
           services.getServerManager().getDeadServers().finish(serverName);
           return Flow.NO_MORE_STATE;
@@ -189,6 +229,34 @@ public class ServerCrashProcedure
       LOG.warn("Failed state=" + state + ", retry " + this + "; cycles=" + getCycles(), e);
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  private void cleanupSplitDir(MasterProcedureEnv env) {
+    SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
+    try {
+      splitWALManager.deleteWALDir(serverName);
+    } catch (IOException e) {
+      LOG.warn("remove WAL directory of server {} failed, ignore...", serverName, e);
+    }
+  }
+
+  private boolean isSplittingDone(MasterProcedureEnv env, boolean splitMeta) {
+    LOG.debug("check if splitting WALs of {} done? isMeta: {}", serverName, splitMeta);
+    SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
+    try {
+      return splitWALManager.getWALsToSplit(serverName, splitMeta).size() == 0;
+    } catch (IOException e) {
+      LOG.warn("get filelist of serverName {} failed, retry...", serverName, e);
+      return false;
+    }
+  }
+
+  private Procedure[] createSplittingWalProcedures(MasterProcedureEnv env, boolean splitMeta)
+      throws IOException {
+    LOG.info("Splitting WALs {}, isMeta: {}", this, splitMeta);
+    SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
+    List<Procedure> procedures = splitWALManager.splitWALs(serverName, splitMeta);
+    return procedures.toArray(new Procedure[procedures.size()]);
   }
 
   private boolean filterDefaultMetaRegions() {

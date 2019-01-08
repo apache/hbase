@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -44,9 +46,13 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@RunWith(Parameterized.class)
 @Category({MasterTests.class, LargeTests.class})
 public class TestServerCrashProcedure {
 
@@ -58,6 +64,9 @@ public class TestServerCrashProcedure {
 
   protected HBaseTestingUtility util;
 
+  @Parameter
+  public boolean splitWALCoordinatedByZK;
+
   private ProcedureMetrics serverCrashProcMetrics;
   private long serverCrashSubmittedCount = 0;
   private long serverCrashFailedCount = 0;
@@ -67,6 +76,10 @@ public class TestServerCrashProcedure {
     conf.set("hbase.balancer.tablesOnMaster", "none");
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 3);
+    conf.setBoolean("hbase.split.writer.creation.bounded", true);
+    conf.setInt("hbase.regionserver.hlog.splitlog.writer.threads", 8);
+    LOG.info("WAL splitting coordinated by zk? {}", splitWALCoordinatedByZK);
+    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK, splitWALCoordinatedByZK);
   }
 
   @Before
@@ -173,7 +186,8 @@ public class TestServerCrashProcedure {
 
   @Test
   public void testConcurrentSCPForSameServer() throws Exception {
-    final TableName tableName = TableName.valueOf("testConcurrentSCPForSameServer");
+    final TableName tableName =
+        TableName.valueOf("testConcurrentSCPForSameServer-" + splitWALCoordinatedByZK);
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
@@ -221,5 +235,10 @@ public class TestServerCrashProcedure {
   private void collectMasterMetrics() {
     serverCrashSubmittedCount = serverCrashProcMetrics.getSubmittedCounter().getCount();
     serverCrashFailedCount = serverCrashProcMetrics.getFailedCounter().getCount();
+  }
+
+  @Parameterized.Parameters
+  public static Collection coordinatedByZK() {
+    return Arrays.asList(false, true);
   }
 }

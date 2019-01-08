@@ -1347,6 +1347,14 @@ public final class HConstants {
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
       "hbase.client.fast.fail.interceptor.impl";
 
+  public static final String HBASE_SPLIT_WAL_COORDINATED_BY_ZK = "hbase.split.wal.zk.coordinated";
+
+  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = true;
+
+  public static final String HBASE_SPLIT_WAL_MAX_SPLITTER = "hbase.regionserver.wal.max.splitters";
+
+  public static final int DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER = 2;
+
   /** Config key for if the server should send backpressure and if the client should listen to
    * that backpressure from the server */
   public static final String ENABLE_CLIENT_BACKPRESSURE = "hbase.client.backpressure.enabled";

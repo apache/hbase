@@ -60,7 +60,8 @@ public class MasterWalManager {
     }
   };
 
-  final static PathFilter NON_META_FILTER = new PathFilter() {
+  @VisibleForTesting
+  public final static PathFilter NON_META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
       return !AbstractFSWALProvider.isMetaFile(p);
@@ -167,7 +168,6 @@ public class MasterWalManager {
 
   /**
    * @return listing of ServerNames found by parsing WAL directory paths in FS.
-   *
    */
   public Set<ServerName> getServerNamesFromWALDirPath(final PathFilter filter) throws IOException {
     FileStatus[] walDirForServerNames = getWALDirPaths(filter);
@@ -290,7 +290,7 @@ public class MasterWalManager {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK", justification=
       "We only release this lock when we set it. Updates to code that uses it should verify use " +
       "of the guard boolean.")
-  private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
+  List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<>();
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {

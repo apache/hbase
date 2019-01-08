@@ -36,6 +36,8 @@ class ServerQueue extends Queue<ServerName> {
       case CRASH_HANDLER:
         return true;
       case SWITCH_RPC_THROTTLE:
+      case SPLIT_WAL:
+      case SPLIT_WAL_REMOTE:
         return false;
       default:
         break;
