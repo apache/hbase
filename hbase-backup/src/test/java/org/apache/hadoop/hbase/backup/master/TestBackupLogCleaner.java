@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -151,8 +151,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
   }
 
   private List<FileStatus> getListOfWALFiles(Configuration c) throws IOException {
-    Path logRoot = new Path(FSUtils.getRootDir(c), HConstants.HREGION_LOGDIR_NAME);
-    FileSystem fs = FileSystem.get(c);
+    Path logRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
+    FileSystem fs = logRoot.getFileSystem(c);
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(logRoot, true);
     List<FileStatus> logFiles = new ArrayList<FileStatus>();
     while (it.hasNext()) {

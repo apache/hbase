@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -80,11 +81,11 @@ class WALEntryStream implements Closeable {
    * @param metrics replication metrics
    * @throws IOException
    */
-  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
+  public WALEntryStream(PriorityBlockingQueue<Path> logQueue, Configuration conf,
       long startPosition, WALFileLengthProvider walFileLengthProvider, ServerName serverName,
       MetricsSource metrics) throws IOException {
     this.logQueue = logQueue;
-    this.fs = fs;
+    this.fs = CommonFSUtils.getWALFileSystem(conf);
     this.conf = conf;
     this.currentPositionOfEntry = startPosition;
     this.walFileLengthProvider = walFileLengthProvider;
@@ -312,10 +313,10 @@ class WALEntryStream implements Closeable {
   }
 
   private Path getArchivedLog(Path path) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
 
     // Try found the log in old dir
-    Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
@@ -324,7 +325,7 @@ class WALEntryStream implements Closeable {
 
     // Try found the log in the seperate old log dir
     oldLogDir =
-        new Path(rootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+        new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
             .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
     archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {
@@ -381,7 +382,8 @@ class WALEntryStream implements Closeable {
   // For HBASE-15019
   private void recoverLease(final Configuration conf, final Path path) {
     try {
-      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
+
+      final FileSystem dfs = CommonFSUtils.getWALFileSystem(conf);
       FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
       fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override

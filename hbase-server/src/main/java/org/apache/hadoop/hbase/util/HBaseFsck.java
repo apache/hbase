@@ -1680,9 +1680,9 @@ public class HBaseFsck extends Configured implements Closeable {
    *          Meta recovery WAL directory inside WAL directory path.
    */
   private void removeHBCKMetaRecoveryWALDir(String walFactoryId) throws IOException {
-    Path rootdir = FSUtils.getRootDir(getConf());
-    Path walLogDir = new Path(new Path(rootdir, HConstants.HREGION_LOGDIR_NAME), walFactoryId);
-    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    Path walLogDir = new Path(new Path(CommonFSUtils.getWALRootDir(getConf()),
+          HConstants.HREGION_LOGDIR_NAME), walFactoryId);
+    FileSystem fs = CommonFSUtils.getWALFileSystem(getConf());
     FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
     if (walFiles == null || walFiles.length == 0) {
       LOG.info("HBCK meta recovery WAL directory is empty, removing it now.");

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -187,8 +188,9 @@ public class MasterWalManager {
    * @return List of all RegionServer WAL dirs; i.e. this.rootDir/HConstants.HREGION_LOGDIR_NAME.
    */
   public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
-    Path walDirPath = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] walDirForServerNames = FSUtils.listStatus(fs, walDirPath, filter);
+    Path walDirPath = new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+    FileStatus[] walDirForServerNames = FSUtils.listStatus(
+        CommonFSUtils.getWALFileSystem(conf), walDirPath, filter);
     return walDirForServerNames == null? new FileStatus[0]: walDirForServerNames;
   }
 
@@ -201,12 +203,12 @@ public class MasterWalManager {
    *             it.
    */
   @Deprecated
-  public Set<ServerName> getFailedServersFromLogFolders() {
+  public Set<ServerName> getFailedServersFromLogFolders() throws IOException {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
     Set<ServerName> serverNames = new HashSet<>();
-    Path logsDirPath = new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
+    Path logsDirPath = new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
 
     do {
       if (services.isStopped()) {

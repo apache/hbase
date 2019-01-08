@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.regionserver.FlushPolicyFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -981,10 +982,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       if (keys.isEmpty()) throw new RuntimeException("No keys to find");
       LOG.info("Count of keys to find: " + keys.size());
       for(byte [] key: keys)  LOG.info("Key: " + Bytes.toStringBinary(key));
-      Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
       // Now read all WALs. In two dirs. Presumes certain layout.
-      Path walsDir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
-      Path oldWalsDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+      Path walsDir = new Path(
+          CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_LOGDIR_NAME);
+      Path oldWalsDir = new Path(
+          CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_OLDLOGDIR_NAME);
       LOG.info("Running Search with keys inputDir=" + inputDir +", numMappers=" + numMappers +
         " against " + getConf().get(HConstants.HBASE_DIR));
       int ret = ToolRunner.run(getConf(), new WALSearcher(getConf()),
