@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -6707,5 +6708,31 @@ public class TestFromClientSide {
       // No more results in this scan
       assertNull(scanner.next());
     }
+  }
+
+  @Test(expected = DoNotRetryIOException.class)
+  public void testCreateTableWithZeroRegionReplicas() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
+        .setRegionReplication(0)
+        .build();
+
+    TEST_UTIL.getAdmin().createTable(desc);
+  }
+
+  @Test(expected = DoNotRetryIOException.class)
+  public void testModifyTableWithZeroRegionReplicas() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
+        .build();
+
+    TEST_UTIL.getAdmin().createTable(desc);
+    TableDescriptor newDesc = TableDescriptorBuilder.newBuilder(desc)
+        .setRegionReplication(0)
+        .build();
+
+    TEST_UTIL.getAdmin().modifyTable(newDesc);
   }
 }
