@@ -1864,6 +1864,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
 
+    // check that we have minimum 1 region replicas
+    int regionReplicas = htd.getRegionReplication();
+    if (regionReplicas < 1) {
+      String message = "Table region replication should be at least one.";
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
+    }
+
     for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       if (hcd.getTimeToLive() <= 0) {
         String message = "TTL for column family " + hcd.getNameAsString() + " must be positive.";
