@@ -168,13 +168,14 @@ code snippet
 [[repos]]
 == Apache HBase Repositories
 
-There are two different repositories for Apache HBase: Subversion (SVN) and Git.
-GIT is our repository of record for all but the Apache HBase website.
-We used to be on SVN.
-We migrated.
-See link:https://issues.apache.org/jira/browse/INFRA-7768[Migrate Apache HBase SVN Repos to Git].
-See link:https://hbase.apache.org/source-repository.html[Source Code
-                Management] page for contributor and committer links or search for HBase on the link:https://git.apache.org/[Apache Git] page.
+Apache HBase consists of multiple repositories which are hosted on https://gitbox.apache.org/[Apache GitBox].
+These are the following:
+
+* https://gitbox.apache.org/repos/asf?p=hbase.git[hbase] - main Apache HBase repository
+* https://gitbox.apache.org/repos/asf?p=hbase-connectors.git[hbase-connectors] - connectors to Apache Kafka and Apache Spark
+* https://gitbox.apache.org/repos/asf?p=hbase-operator-tools.git[hbase-operator-tools] - operability and supportability tools, such as <<HBCK2>>
+* https://gitbox.apache.org/repos/asf?p=hbase-site.git[hbase-site] - hbase.apache.org website
+* https://gitbox.apache.org/repos/asf?p=hbase-thirdparty.git[hbase-thirdparty] - relocated versions of popular third-party libraries
 
 == IDEs
 
@@ -1794,7 +1795,7 @@ If you submit a patch for one thing, don't do auto-reformatting or unrelated ref
 Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
 
 [[common.patch.feedback.tests]]
-===== Ambigious Unit Tests
+===== Ambiguous Unit Tests
 
 Make sure that you're clear about what you are testing in your unit tests and why.
 
@@ -1920,8 +1921,6 @@ If you are new to submitting patches to open source or new to submitting patches
  reading the link:https://commons.apache.org/patches.html[On Contributing Patches] page from
  link:https://commons.apache.org/[Apache Commons Project].
 It provides a nice overview that applies equally to the Apache HBase Project.
-link:https://accumulo.apache.org/git.html[Accumulo doc on how to contribute and develop] is also
-good read to understand development workflow.
 
 [[submitting.patches.create]]
 ==== Create Patch
