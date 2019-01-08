@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,6 +90,9 @@ public class TestRegionServerAbortTimeout {
 
   @AfterClass
   public static void tearDown() throws Exception {
+    // Wait the SCP of abort rs to finish
+    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
+        .filter(p -> p instanceof ServerCrashProcedure && p.isFinished()).count() > 0);
     UTIL.getAdmin().disableTable(TABLE_NAME);
     UTIL.getAdmin().deleteTable(TABLE_NAME);
     UTIL.shutdownMiniCluster();
