@@ -58,16 +58,9 @@ pipeline {
   stages {
     stage ('scm-checkout') {
       steps {
-        dir('component') {
-          checkout([
-            $class: 'GitSCM',
-            branches: scm.branches,
-            extensions: scm.extensions + [
-              [$class: 'CleanBeforeCheckout'],
-              [$class: 'CloneOption', honorRefspec: true, noTags: true, reference: '', shallow: true, depth: 30]],
-            userRemoteConfigs: scm.userRemoteConfigs
-          ])
-        }
+            dir('component') {
+              checkout scm
+            }
       }
     }
     stage ('thirdparty installs') {
@@ -210,14 +203,7 @@ pipeline {
             unstash 'yetus'
             // since we have a new node definition we need to re-do the scm checkout
             dir('component') {
-              checkout([
-                $class: 'GitSCM',
-                branches: scm.branches,
-                extensions: scm.extensions + [
-                  [$class: 'CleanBeforeCheckout'],
-                  [$class: 'CloneOption', honorRefspec: true, noTags: true, reference: '', shallow: true, depth: 30]],
-                userRemoteConfigs: scm.userRemoteConfigs
-              ])
+              checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
@@ -284,14 +270,7 @@ pipeline {
 '''
             unstash 'yetus'
             dir('component') {
-              checkout([
-                $class: 'GitSCM',
-                branches: scm.branches,
-                extensions: scm.extensions + [
-                  [$class: 'CleanBeforeCheckout'],
-                  [$class: 'CloneOption', honorRefspec: true, noTags: true, reference: '', shallow: true, depth: 30]],
-                userRemoteConfigs: scm.userRemoteConfigs
-              ])
+              checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
@@ -371,14 +350,7 @@ pipeline {
 '''
             unstash 'yetus'
             dir('component') {
-              checkout([
-                $class: 'GitSCM',
-                branches: scm.branches,
-                extensions: scm.extensions + [
-                  [$class: 'CleanBeforeCheckout'],
-                  [$class: 'CloneOption', honorRefspec: true, noTags: true, reference: '', shallow: true, depth: 30]],
-                userRemoteConfigs: scm.userRemoteConfigs
-              ])
+              checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
@@ -465,14 +437,7 @@ pipeline {
 '''
             unstash 'yetus'
             dir('component') {
-              checkout([
-                $class: 'GitSCM',
-                branches: scm.branches,
-                extensions: scm.extensions + [
-                  [$class: 'CleanBeforeCheckout'],
-                  [$class: 'CloneOption', honorRefspec: true, noTags: true, reference: '', shallow: true, depth: 30]],
-                userRemoteConfigs: scm.userRemoteConfigs
-              ])
+              checkout scm
             }
             sh '''#!/usr/bin/env bash
               set -e
