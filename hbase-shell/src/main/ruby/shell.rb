@@ -389,6 +389,8 @@ Shell.load_command_group(
     show_peer_tableCFs
     set_peer_tableCFs
     set_peer_exclude_tableCFs
+    append_peer_exclude_tableCFs
+    remove_peer_exclude_tableCFs
     set_peer_bandwidth
     list_replicated_tables
     append_peer_tableCFs
