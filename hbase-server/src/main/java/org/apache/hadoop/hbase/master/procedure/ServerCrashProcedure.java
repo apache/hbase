@@ -172,6 +172,9 @@ public class ServerCrashProcedure
             services.getAssignmentManager().getRegionsOnServer(serverName);
           // Where to go next? Depends on whether we should split logs at all or
           // if we should do distributed log splitting.
+          if (regionsOnCrashedServer != null) {
+            LOG.info("{} had {} regions", serverName, regionsOnCrashedServer.size());
+          }
           if (!this.shouldSplitWal) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
           } else {

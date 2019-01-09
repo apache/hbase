@@ -146,15 +146,17 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
-  public boolean isInState(final State... expected) {
-    if (expected != null && expected.length > 0) {
-      boolean expectedState = false;
-      for (int i = 0; i < expected.length; ++i) {
-        expectedState |= (getState() == expected[i]);
-      }
-      return expectedState;
+  /**
+   * Notice that, we will return true if {@code expected} is empty.
+   * <p/>
+   * This is a bit strange but we need this logic, for example, we can change the state to OPENING
+   * from any state, as in SCP we will not change the state to CLOSED before opening the region.
+   */
+  public boolean isInState(State... expected) {
+    if (expected.length == 0) {
+      return true;
     }
-    return true;
+    return getState().matches(expected);
   }
 
   public boolean isStuck() {
