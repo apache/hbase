@@ -192,7 +192,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(String key, String value) {
-    getDelegateeForModification().setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    getDelegateeForModification().setValue(key, value);
     return this;
   }
 

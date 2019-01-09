@@ -752,20 +752,38 @@ module Hbase
       end
     end
 
-    define_test "Split count for a table" do
-      @testTableName = "tableWithSplits"
-      create_test_table_with_splits(@testTableName, SPLITS => ['10', '20', '30', '40'])
-      @table = table(@testTableName)
-      splits = @table._get_splits_internal()
-      #Total splits is 5 but here count is 4 as we ignore implicit empty split.
+    define_test 'Split count for a table' do
+      @test_table_name = 'table_with_splits'
+      create_test_table_with_splits(@test_table_name, SPLITS => %w[10 20 30 40])
+      @table = table(@test_table_name)
+      splits = @table._get_splits_internal
+      # Total splits is 5 but here count is 4 as we ignore implicit empty split.
       assert_equal(4, splits.size)
-      assert_equal(["10", "20", "30", "40"], splits)
-      drop_test_table(@testTableName)
+      assert_equal(%w[10 20 30 40], splits)
+      drop_test_table(@test_table_name)
     end
 
-    define_test "Split count for a empty table" do
-      splits = @test_table._get_splits_internal()
-      #Empty split should not be part of this array.
+    define_test 'Split count for a table by file' do
+      @test_table_name = 'table_with_splits_file'
+      @splits_file = 'target/generated-test-sources/splits.txt'
+      File.exist?(@splits_file) && File.delete(@splits_file)
+      file = File.new(@splits_file, 'w')
+      %w[10 20 30 40].each { |item| file.puts item }
+      file.close
+      create_test_table_with_splits_file(@test_table_name,
+                                         SPLITS_FILE => @splits_file)
+      @table = table(@test_table_name)
+      splits = @table._get_splits_internal
+      # Total splits is 5 but here count is 4 as we ignore implicit empty split.
+      assert_equal(4, splits.size)
+      assert_equal(%w[10 20 30 40], splits)
+      drop_test_table(@test_table_name)
+      File.delete(@splits_file)
+    end
+
+    define_test 'Split count for a empty table' do
+      splits = @test_table._get_splits_internal
+      # Empty split should not be part of this array.
       assert_equal(0, splits.size)
       assert_equal([], splits)
     end
