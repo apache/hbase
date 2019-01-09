@@ -21,11 +21,9 @@ package org.apache.hadoop.hbase.client;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -49,8 +47,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -59,6 +63,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Spins up the minicluster once at test start and then takes it down afterward.
  * Add any testing of HBaseHbck functionality here.
  */
+@RunWith(Parameterized.class)
 @Category({LargeTests.class, ClientTests.class})
 public class TestHbck {
   @ClassRule
@@ -71,19 +76,39 @@ public class TestHbck {
   @Rule
   public TestName name = new TestName();
 
+  @Parameter
+  public boolean async;
+
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
 
   private static ProcedureExecutor<MasterProcedureEnv> procExec;
+
+  private static AsyncConnection ASYNC_CONN;
+
+  @Parameters(name = "{index}: async={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { false }, new Object[] { true });
+  }
+
+  private Hbck getHbck() throws Exception {
+    if (async) {
+      return ASYNC_CONN.getHbck().get();
+    } else {
+      return TEST_UTIL.getHbck();
+    }
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
     procExec = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -120,16 +145,15 @@ public class TestHbck {
 
     //bypass the procedure
     List<Long> pids = Arrays.<Long>asList(procId);
-    List<Boolean> results =
-        TEST_UTIL.getHbck().bypassProcedure(pids, 30000, false, false);
+    List<Boolean> results = getHbck().bypassProcedure(pids, 30000, false, false);
     assertTrue("Failed to by pass procedure!", results.get(0));
     TEST_UTIL.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
     LOG.info("{} finished", proc);
   }
 
   @Test
-  public void testSetTableStateInMeta() throws IOException {
-    Hbck hbck = TEST_UTIL.getHbck();
+  public void testSetTableStateInMeta() throws Exception {
+    Hbck hbck = getHbck();
     // set table state to DISABLED
     hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.DISABLED));
     // Method {@link Hbck#setTableStateInMeta()} returns previous state, which in this case
@@ -141,8 +165,8 @@ public class TestHbck {
   }
 
   @Test
-  public void testAssigns() throws IOException {
-    Hbck hbck = TEST_UTIL.getHbck();
+  public void testAssigns() throws Exception {
+    Hbck hbck = getHbck();
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
       for (RegionInfo ri: regions) {
@@ -183,7 +207,7 @@ public class TestHbck {
     TEST_UTIL.loadTable(TEST_UTIL.getConnection().getTable(TABLE_NAME), Bytes.toBytes("family1"),
       true);
     ServerName serverName = testRs.getServerName();
-    Hbck hbck = TEST_UTIL.getHbck();
+    Hbck hbck = getHbck();
     List<Long> pids =
         hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
     assertTrue(pids.get(0) > 0);

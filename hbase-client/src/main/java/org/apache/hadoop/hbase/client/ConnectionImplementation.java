@@ -436,14 +436,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(masterServer + " is dead.");
     }
     String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
-        masterServer, this.hostnamesCanChange);
+      masterServer, this.hostnamesCanChange);
 
-    return new HBaseHbck(this,
-        (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
-          BlockingRpcChannel channel =
-              this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
-          return MasterProtos.HbckService.newBlockingStub(channel);
-        }));
+    return new HBaseHbck(
+      (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+        BlockingRpcChannel channel =
+          this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
+        return MasterProtos.HbckService.newBlockingStub(channel);
+      }), rpcControllerFactory);
   }
 
   @Override
