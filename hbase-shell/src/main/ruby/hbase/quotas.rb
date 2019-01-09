@@ -45,6 +45,7 @@ module HBaseQuotasConstants
 end
 
 module Hbase
+  # rubocop:disable Metrics/ClassLength
   class QuotasAdmin
     def initialize(admin)
       @admin = admin
@@ -117,6 +118,8 @@ module Hbase
       @admin.setQuota(settings)
     end
 
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity
     def limit_space(args)
       raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
       # Let the user provide a raw number
@@ -126,6 +129,10 @@ module Hbase
                 # Parse a string a 1K, 2G, etc.
                 _parse_size(args[LIMIT])
               end
+      if limit <= 0
+        raise(ArgumentError, 'Invalid space limit, must be greater than 0')
+      end
+
       # Extract the policy, failing if something bogus was provided
       policy = SpaceViolationPolicy.valueOf(args[POLICY])
       # Create a table or namespace quota
@@ -145,6 +152,8 @@ module Hbase
       # Apply the quota
       @admin.setQuota(settings)
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
 
     def remove_space_limit(args)
       raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
@@ -249,7 +258,7 @@ module Hbase
 
     def _parse_size(str_limit)
       str_limit = str_limit.downcase
-      match = /(\d+)([bkmgtp%]*)/.match(str_limit)
+      match = /^(\d+)([bkmgtp%]?)$/.match(str_limit)
       if match
         if match[2] == '%'
           return match[1].to_i
@@ -261,23 +270,23 @@ module Hbase
       end
     end
 
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def _parse_limit(str_limit, type_cls, type)
       str_limit = str_limit.downcase
-      match = /(\d+)(req|cu|[bkmgtp])\/(sec|min|hour|day)/.match(str_limit)
+      match = /^(\d+)(req|cu|[bkmgtp])\/(sec|min|hour|day)$/.match(str_limit)
       if match
+        limit = match[1].to_i
         if match[2] == 'req'
-          limit = match[1].to_i
           type = type_cls.valueOf(type + '_NUMBER')
         elsif match[2] == 'cu'
-          limit = match[1].to_i
           type = type_cls.valueOf(type + '_CAPACITY_UNIT')
         else
-          limit = _size_from_str(match[1].to_i, match[2])
+          limit = _size_from_str(limit, match[2])
           type = type_cls.valueOf(type + '_SIZE')
         end
 
         if limit <= 0
-          raise(ArgumentError, 'Invalid throttle limit, must be greater then 0')
+          raise(ArgumentError, 'Invalid throttle limit, must be greater than 0')
         end
 
         case match[3]
@@ -292,6 +301,7 @@ module Hbase
         raise(ArgumentError, 'Invalid throttle limit syntax')
       end
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def _size_from_str(value, suffix)
       case suffix
@@ -304,4 +314,5 @@ module Hbase
       value
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end
