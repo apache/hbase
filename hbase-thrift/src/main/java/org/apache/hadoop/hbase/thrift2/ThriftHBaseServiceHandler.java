@@ -575,7 +575,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   public List<TTableDescriptor> getTableDescriptorsByPattern(String regex, boolean includeSysTables)
       throws TIOError, TException {
     try {
-      Pattern pattern = Pattern.compile(regex);
+      Pattern pattern = (regex == null ? null : Pattern.compile(regex));
       List<TableDescriptor> tableDescriptors = connectionCache.getAdmin()
           .listTableDescriptors(pattern, includeSysTables);
       return tableDescriptorsFromHBase(tableDescriptors);
@@ -600,7 +600,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   public List<TTableName> getTableNamesByPattern(String regex, boolean includeSysTables)
       throws TIOError, TException {
     try {
-      Pattern pattern = Pattern.compile(regex);
+      Pattern pattern = (regex == null ? null : Pattern.compile(regex));
       TableName[] tableNames = connectionCache.getAdmin()
           .listTableNames(pattern, includeSysTables);
       return tableNamesFromHBase(tableNames);
