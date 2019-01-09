@@ -146,6 +146,7 @@ struct TGet {
   12: optional i32 storeLimit
   13: optional i32 storeOffset
   14: optional bool existence_only
+  15: optional binary filterBytes
 
 }
 
@@ -262,6 +263,8 @@ struct TScan {
   15: optional i32 limit
   16: optional TConsistency consistency
   17: optional i32 targetReplicaId
+  18: optional binary filterBytes
+
 }
 
 /**
@@ -402,7 +405,7 @@ enum TKeepDeletedCells {
  */
 struct TTableName {
   /** namespace name */
-  1: required binary ns
+  1: optional binary ns
   /** tablename */
   2: required binary qualifier
 }
@@ -828,7 +831,7 @@ service THBaseService {
   **/
   list<TTableDescriptor> getTableDescriptorsByPattern(
     /** The regular expression to match against */
-    1: required string regex
+    1: optional string regex
     /** set to false if match only against userspace tables */
     2: required bool includeSysTables
   ) throws (1: TIOError io)
@@ -848,7 +851,7 @@ service THBaseService {
   **/
   list<TTableName> getTableNamesByPattern(
     /** The regular expression to match against */
-    1: required string regex
+    1: optional string regex
     /** set to false if match only against userspace tables */
     2: required bool includeSysTables
   ) throws (1: TIOError io)
@@ -871,7 +874,7 @@ service THBaseService {
     /** table descriptor for table */
     1: required TTableDescriptor desc
     /** rray of split keys for the initial regions of the table */
-    2: required list<binary> splitKeys
+    2: optional list<binary> splitKeys
   ) throws (1: TIOError io)
 
   /**
@@ -946,7 +949,7 @@ service THBaseService {
     /** the tablename to check */
     1: required TTableName tableName
     /** keys to check if the table has been created with all split keys */
-    2: required list<binary> splitKeys
+    2: optional list<binary> splitKeys
   ) throws (1: TIOError io)
 
   /**

@@ -144,8 +144,16 @@ public final class Constants {
   public static final String THRIFT_READONLY_ENABLED = "hbase.thrift.readonly";
   public static final boolean THRIFT_READONLY_ENABLED_DEFAULT = false;
 
+  public static final String HBASE_THRIFT_CLIENT_SCANNER_CACHING =
+      "hbase.thrift.client.scanner.caching";
 
+  public static final int HBASE_THRIFT_CLIENT_SCANNER_CACHING_DEFAULT = 20;
 
+  public static final String HBASE_THRIFT_SERVER_NAME = "hbase.thrift.server.name";
+  public static final String HBASE_THRIFT_SERVER_PORT = "hbase.thrift.server.port";
+
+  public static final String HBASE_THRIFT_CLIENT_BUIDLER_CLASS =
+      "hbase.thrift.client.builder.class";
 
 
 }
