@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,9 +67,9 @@ public class HBaseHbck implements Hbck {
 
   private RpcControllerFactory rpcControllerFactory;
 
-  HBaseHbck(ClusterConnection connection, BlockingInterface hbck) throws IOException {
+  HBaseHbck(BlockingInterface hbck, RpcControllerFactory rpcControllerFactory) {
     this.hbck = hbck;
-    this.rpcControllerFactory = connection.getRpcControllerFactory();
+    this.rpcControllerFactory = rpcControllerFactory;
   }
 
   @Override
