@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -52,7 +51,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test RSGroupBasedLoadBalancer with StochasticLoadBalancer as internal balancer
  */
-@Category(SmallTests.class)
+@Category(LargeTests.class)
 public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
     extends RSGroupableBalancerTestBase {
   @ClassRule
