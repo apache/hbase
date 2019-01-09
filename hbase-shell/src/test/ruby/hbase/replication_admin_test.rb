@@ -361,6 +361,76 @@ module Hbase
       replication_admin.remove_peer(@peer_id)
     end
 
+    define_test "append_peer_exclude_tableCFs: works with exclude table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = {CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+      assert_equal(1, command(:list_peers).length)
+      peer = command(:list_peers).get(0)
+      assert_equal(@peer_id, peer.getPeerId)
+      assert_equal(cluster_key, peer.getPeerConfig.getClusterKey)
+
+      # set exclude-table-cfs
+      exclude_table_cfs = {"table1" => [], "ns2:table2" => ["cf1", "cf2"]}
+      command(:set_peer_exclude_tableCFs, @peer_id, exclude_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # append empty exclude-table-cfs
+      append_table_cfs = {}
+      command(:append_peer_exclude_tableCFs, @peer_id, append_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # append exclude-table-cfs which don't exist in peer' exclude-table-cfs
+      append_table_cfs = {"table3" => ["cf3"]}
+      exclude_table_cfs = {"table1" => [], "ns2:table2" => ["cf1", "cf2"], "table3" => ["cf3"]}
+      command(:append_peer_exclude_tableCFs, @peer_id, append_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # append exclude-table-cfs which exist in peer' exclude-table-cfs
+      append_table_cfs = {"table1" => ["cf1"], "ns2:table2" => ["cf1", "cf3"], "table3" => []}
+      exclude_table_cfs = {"table1" => [], "ns2:table2" => ["cf1", "cf2", "cf3"], "table3" => []}
+      command(:append_peer_exclude_tableCFs, @peer_id, append_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test 'remove_peer_exclude_tableCFs: works with exclude table-cfs map' do
+      cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
+      args = {CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+      assert_equal(1, command(:list_peers).length)
+      peer = command(:list_peers).get(0)
+      assert_equal(@peer_id, peer.getPeerId)
+      assert_equal(cluster_key, peer.getPeerConfig.getClusterKey)
+
+      # set exclude-table-cfs
+      exclude_table_cfs = {'table1' => [], 'table2' => ['cf1'], 'ns3:table3' => ['cf1', 'cf2']}
+      command(:set_peer_exclude_tableCFs, @peer_id, exclude_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # remove empty exclude-table-cfs
+      remove_table_cfs = {}
+      command(:remove_peer_exclude_tableCFs, @peer_id, remove_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # remove exclude-table-cfs which exist in pees' exclude table cfs
+      remove_table_cfs = {'table1' => [], 'table2' => ['cf1']}
+      exclude_table_cfs = {'ns3:table3' => ['cf1', 'cf2']}
+      command(:remove_peer_exclude_tableCFs, @peer_id, remove_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # remove exclude-table-cfs which exist in pees' exclude-table-cfs
+      remove_table_cfs = {'ns3:table3' => ['cf2', 'cf3']}
+      exclude_table_cfs = {'ns3:table3' => ['cf1']}
+      command(:remove_peer_exclude_tableCFs, @peer_id, remove_table_cfs)
+      assert_tablecfs_equal(exclude_table_cfs, command(:get_peer_config, @peer_id).getExcludeTableCFsMap())
+
+      # cleanup for future tests
+      replication_admin.remove_peer(@peer_id)
+    end
+
     define_test "set_peer_namespaces: works with namespaces array" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       namespaces = ["ns1", "ns2"]

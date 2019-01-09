@@ -210,6 +210,38 @@ module Hbase
       @admin.removeReplicationPeerTableCFs(id, map)
     end
 
+    # Append exclude-tableCFs to the exclude-tableCFs config for the specified peer
+    def append_peer_exclude_tableCFs(id, excludeTableCFs)
+      unless excludeTableCFs.nil?
+        # convert tableCFs to TableName
+        map = java.util.HashMap.new
+        excludeTableCFs.each do |key, val|
+          map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+        end
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          rpc = ReplicationPeerConfigUtil.appendExcludeTableCFsToReplicationPeerConfig(map, rpc)
+          @admin.updateReplicationPeerConfig(id, rpc)
+        end
+      end
+    end
+
+    # Remove some exclude-tableCFs from the exclude-tableCFs config for the specified peer
+    def remove_peer_exclude_tableCFs(id, excludeTableCFs)
+      unless excludeTableCFs.nil?
+        # convert tableCFs to TableName
+        map = java.util.HashMap.new
+        excludeTableCFs.each do |key, val|
+          map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+        end
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          rpc = ReplicationPeerConfigUtil.removeExcludeTableCFsFromReplicationPeerConfig(map, rpc, id)
+          @admin.updateReplicationPeerConfig(id, rpc)
+        end
+      end
+    end
+
     # Set new namespaces config for the specified peer
     def set_peer_namespaces(id, namespaces)
       unless namespaces.nil?
