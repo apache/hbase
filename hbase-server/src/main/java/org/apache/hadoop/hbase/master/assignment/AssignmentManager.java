@@ -1293,14 +1293,17 @@ public class AssignmentManager {
         }
         RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
         // Do not need to lock on regionNode, as we can make sure that before we finish loading
-        // meta, all the related procedures can not be executed. The only exception is formeta
+        // meta, all the related procedures can not be executed. The only exception is for meta
         // region related operations, but here we do not load the informations for meta region.
         regionNode.setState(localState);
         regionNode.setLastHost(lastHost);
         regionNode.setRegionLocation(regionLocation);
         regionNode.setOpenSeqNum(openSeqNum);
 
-        if (localState == State.OPEN) {
+        // Note: keep consistent with other methods, see region(Opening|Opened|Closing)
+        //       RIT/ServerCrash handling should take care of the transiting regions.
+        if (localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING,
+          State.MERGING)) {
           assert regionLocation != null : "found null region location for " + regionNode;
           regionStates.addRegionToServer(regionNode);
         } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
