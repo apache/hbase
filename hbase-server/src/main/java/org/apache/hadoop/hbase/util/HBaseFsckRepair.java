@@ -31,7 +31,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -143,16 +146,17 @@ public class HBaseFsckRepair {
   }
 
   /**
-   * Contacts a region server and waits up to hbase.hbck.close.timeout ms
-   * (default 120s) to close the region.  This bypasses the active hmaster.
+   * Contacts a region server and waits up to hbase.hbck.close.timeout ms (default 120s) to close
+   * the region. This bypasses the active hmaster.
    */
-  @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(Connection connection,
-      ServerName server, RegionInfo region) throws IOException, InterruptedException {
-    long timeout = connection.getConfiguration()
-      .getLong("hbase.hbck.close.timeout", 120000);
-    ServerManager.closeRegionSilentlyAndWait((ClusterConnection)connection, server,
-         region, timeout);
+  public static void closeRegionSilentlyAndWait(Connection connection, ServerName server,
+      RegionInfo region) throws IOException, InterruptedException {
+    long timeout = connection.getConfiguration().getLong("hbase.hbck.close.timeout", 120000);
+    // this is a bit ugly but it is only used in the old hbck and tests, so I think it is fine.
+    try (AsyncClusterConnection asyncConn = ClusterConnectionFactory
+      .createAsyncClusterConnection(connection.getConfiguration(), null, User.getCurrent())) {
+      ServerManager.closeRegionSilentlyAndWait(asyncConn, server, region, timeout);
+    }
   }
 
   /**
