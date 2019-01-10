@@ -145,7 +145,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     }
   }
 
-  ThriftHBaseServiceHandler(final Configuration conf,
+  public ThriftHBaseServiceHandler(final Configuration conf,
       final UserProvider userProvider) throws IOException {
     super(conf, userProvider);
     isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);

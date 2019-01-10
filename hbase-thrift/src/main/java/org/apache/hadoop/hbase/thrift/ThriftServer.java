@@ -196,6 +196,10 @@ public class ThriftServer  extends Configured implements Tool {
     this.conf = HBaseConfiguration.create(conf);
   }
 
+  protected ThriftMetrics createThriftMetrics(Configuration conf) {
+    return new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
+  }
+
   protected void setupParamters() throws IOException {
     // login the server principal (if using secure Hadoop)
     UserProvider userProvider = UserProvider.instantiate(conf);
@@ -210,7 +214,7 @@ public class ThriftServer  extends Configured implements Tool {
     this.serviceUGI = userProvider.getCurrent().getUGI();
 
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
-    this.metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
+    this.metrics = createThriftMetrics(conf);
     this.pauseMonitor = new JvmPauseMonitor(conf, this.metrics.getSource());
     this.hbaseServiceHandler = createHandler(conf, userProvider);
     this.hbaseServiceHandler.initMetrics(metrics);
@@ -278,11 +282,19 @@ public class ThriftServer  extends Configured implements Tool {
         HbaseHandlerMetricsProxy.newInstance((Hbase.Iface) hbaseServiceHandler, metrics, conf));
   }
 
+  /**
+   * the thrift server, not null means the server is started, for test only
+   * @return the tServer
+   */
   @VisibleForTesting
   public TServer getTserver() {
     return tserver;
   }
 
+  /**
+   * the Jetty server, not null means the HTTP server is started, for test only
+   * @return the http server
+   */
   @VisibleForTesting
   public Server getHttpServer() {
     return httpServer;
@@ -301,14 +313,24 @@ public class ThriftServer  extends Configured implements Tool {
   }
 
   /**
+   * Create a Servlet for the http server
+   * @param protocolFactory protocolFactory
+   * @return the servlet
+   * @throws IOException IOException
+   */
+  protected TServlet createTServlet(TProtocolFactory protocolFactory) throws IOException {
+    return new ThriftHttpServlet(processor, protocolFactory, serviceUGI,
+        conf, hbaseServiceHandler, securityEnabled, doAsEnabled);
+  }
+
+  /**
    * Setup a HTTP Server using Jetty to serve calls from THttpClient
    *
    * @throws IOException IOException
    */
   protected void setupHTTPServer() throws IOException {
     TProtocolFactory protocolFactory = new TBinaryProtocol.Factory();
-    TServlet thriftHttpServlet = new ThriftHttpServlet(processor, protocolFactory, serviceUGI,
-        conf, hbaseServiceHandler, securityEnabled, doAsEnabled);
+    TServlet thriftHttpServlet = createTServlet(protocolFactory);
 
     // Set the default max thread number to 100 to limit
     // the number of concurrent requests so that Thrfit HTTP server doesn't OOM easily.
@@ -509,7 +531,7 @@ public class ThriftServer  extends Configured implements Tool {
     }
   }
 
-  private TServer getTNonBlockingServer(TNonblockingServerTransport serverTransport,
+  protected TServer getTNonBlockingServer(TNonblockingServerTransport serverTransport,
       TProtocolFactory protocolFactory, TProcessor processor, TTransportFactory transportFactory,
       InetSocketAddress inetSocketAddress) {
     LOG.info("starting HBase Nonblocking Thrift server on " + inetSocketAddress.toString());
@@ -520,7 +542,7 @@ public class ThriftServer  extends Configured implements Tool {
     return new TNonblockingServer(serverArgs);
   }
 
-  private TServer getTHsHaServer(TNonblockingServerTransport serverTransport,
+  protected TServer getTHsHaServer(TNonblockingServerTransport serverTransport,
       TProtocolFactory protocolFactory, TProcessor processor, TTransportFactory transportFactory,
       InetSocketAddress inetSocketAddress) {
     LOG.info("starting HBase HsHA Thrift server on " + inetSocketAddress.toString());
@@ -537,7 +559,7 @@ public class ThriftServer  extends Configured implements Tool {
     return new THsHaServer(serverArgs);
   }
 
-  private TServer getTThreadedSelectorServer(TNonblockingServerTransport serverTransport,
+  protected TServer getTThreadedSelectorServer(TNonblockingServerTransport serverTransport,
       TProtocolFactory protocolFactory, TProcessor processor, TTransportFactory transportFactory,
       InetSocketAddress inetSocketAddress) {
     LOG.info("starting HBase ThreadedSelector Thrift server on " + inetSocketAddress.toString());
@@ -557,7 +579,7 @@ public class ThriftServer  extends Configured implements Tool {
     return new TThreadedSelectorServer(serverArgs);
   }
 
-  private TServer getTThreadPoolServer(TProtocolFactory protocolFactory, TProcessor processor,
+  protected TServer getTThreadPoolServer(TProtocolFactory protocolFactory, TProcessor processor,
       TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws Exception {
     LOG.info("starting HBase ThreadPool Thrift server on " + inetSocketAddress.toString());
     // Thrift's implementation uses '0' as a placeholder for 'use the default.'
@@ -576,7 +598,7 @@ public class ThriftServer  extends Configured implements Tool {
     return new TBoundedThreadPoolServer(serverArgs, metrics);
   }
 
-  private TProtocolFactory getProtocolFactory() {
+  protected TProtocolFactory getProtocolFactory() {
     TProtocolFactory protocolFactory;
 
     if (conf.getBoolean(COMPACT_CONF_KEY, COMPACT_CONF_DEFAULT)) {
@@ -590,7 +612,7 @@ public class ThriftServer  extends Configured implements Tool {
     return protocolFactory;
   }
 
-  ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
+  protected ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
       int minWorkers, int maxWorkers) {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
@@ -601,7 +623,7 @@ public class ThriftServer  extends Configured implements Tool {
     return threadPool;
   }
 
-  private InetAddress getBindAddress(Configuration conf)
+  protected InetAddress getBindAddress(Configuration conf)
       throws UnknownHostException {
     String bindAddressStr = conf.get(BIND_CONF_KEY, DEFAULT_BIND_ADDR);
     return InetAddress.getByName(bindAddressStr);
@@ -714,7 +736,7 @@ public class ThriftServer  extends Configured implements Tool {
   /**
    * Parse the command line options to set parameters the conf.
    */
-  private void processOptions(final String[] args) throws Exception {
+  protected void processOptions(final String[] args) throws Exception {
     if (args == null || args.length == 0) {
       return;
     }
