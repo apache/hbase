@@ -48,13 +48,15 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -67,6 +69,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
@@ -660,35 +663,39 @@ public class ServerManager {
   }
 
   /**
-   * Contacts a region server and waits up to timeout ms
-   * to close the region.  This bypasses the active hmaster.
+   * Contacts a region server and waits up to timeout ms to close the region. This bypasses the
+   * active hmaster.
    */
-  public static void closeRegionSilentlyAndWait(ClusterConnection connection,
-    ServerName server, RegionInfo region, long timeout) throws IOException, InterruptedException {
-    AdminService.BlockingInterface rs = connection.getAdmin(server);
-    HBaseRpcController controller = connection.getRpcControllerFactory().newController();
+  public static void closeRegionSilentlyAndWait(AsyncClusterConnection connection,
+      ServerName server, RegionInfo region, long timeout) throws IOException, InterruptedException {
+    AsyncRegionServerAdmin admin = connection.getRegionServerAdmin(server);
     try {
-      ProtobufUtil.closeRegion(controller, rs, server, region.getRegionName());
+      FutureUtils.get(
+        admin.closeRegion(ProtobufUtil.buildCloseRegionRequest(server, region.getRegionName())));
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {
-      controller.reset();
       try {
-        RegionInfo rsRegion =
-          ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
-        if (rsRegion == null) return;
-      } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) // no need to retry again
+        RegionInfo rsRegion = ProtobufUtil.toRegionInfo(FutureUtils
+          .get(
+            admin.getRegionInfo(RequestConverter.buildGetRegionInfoRequest(region.getRegionName())))
+          .getRegionInfo());
+        if (rsRegion == null) {
           return;
-        LOG.warn("Exception when retrieving regioninfo from: "
-          + region.getRegionNameAsString(), ioe);
+        }
+      } catch (IOException ioe) {
+        if (ioe instanceof NotServingRegionException) {
+          // no need to retry again
+          return;
+        }
+        LOG.warn("Exception when retrieving regioninfo from: " + region.getRegionNameAsString(),
+          ioe);
       }
       Thread.sleep(1000);
     }
-    throw new IOException("Region " + region + " failed to close within"
-        + " timeout " + timeout);
+    throw new IOException("Region " + region + " failed to close within" + " timeout " + timeout);
   }
 
   /**
