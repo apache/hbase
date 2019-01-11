@@ -283,7 +283,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       tableDescriptors = ((HRegionServer) server).getTableDescriptors();
     }
     replicationEndpoint
-      .init(new ReplicationEndpoint.Context(conf, replicationPeer.getConfiguration(), fs,
+      .init(new ReplicationEndpoint.Context(server, conf, replicationPeer.getConfiguration(), fs,
         replicationPeer.getId(), clusterId, replicationPeer, metrics, tableDescriptors, server));
     replicationEndpoint.start();
     replicationEndpoint.awaitRunning(waitOnEndpointSeconds, TimeUnit.SECONDS);
