@@ -275,7 +275,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
       @Override
       public AsyncTable<AdvancedScanResultConsumer> build() {
-        return new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
+        return new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
       }
     };
   }
@@ -287,7 +287,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
       @Override
       public AsyncTable<ScanResultConsumer> build() {
-        RawAsyncTableImpl rawTable = new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
+        RawAsyncTableImpl rawTable =
+          new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
       }
     };

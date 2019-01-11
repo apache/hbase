@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
 /**
@@ -42,7 +42,7 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
   private final Callable<T> callable;
   private ServerName serverName;
 
-  public AsyncServerRequestRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
+  public AsyncServerRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
       long pauseNs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
       int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
     super(retryTimer, conn, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
@@ -70,11 +70,5 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
       }
       future.complete(result);
     });
-  }
-
-  @Override
-  CompletableFuture<T> call() {
-    doCall();
-    return future;
   }
 }

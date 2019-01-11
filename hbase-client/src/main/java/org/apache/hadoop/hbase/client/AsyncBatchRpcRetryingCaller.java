@@ -56,7 +56,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
@@ -80,7 +80,7 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncBatchRpcRetryingCaller.class);
 
-  private final HashedWheelTimer retryTimer;
+  private final Timer retryTimer;
 
   private final AsyncConnectionImpl conn;
 
@@ -130,7 +130,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
   }
 
-  public AsyncBatchRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
+  public AsyncBatchRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
       TableName tableName, List<? extends Row> actions, long pauseNs, int maxAttempts,
       long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;

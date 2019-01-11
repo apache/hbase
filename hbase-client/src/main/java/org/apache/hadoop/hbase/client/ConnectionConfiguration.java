@@ -41,6 +41,9 @@ public class ConnectionConfiguration {
   public static final String PRIMARY_CALL_TIMEOUT_MICROSECOND =
     "hbase.client.primaryCallTimeout.get";
   public static final int PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT = 10000; // 10ms
+  public static final String PRIMARY_SCAN_TIMEOUT_MICROSECOND =
+    "hbase.client.replicaCallTimeout.scan";
+  public static final int PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT = 1000000; // 1s
 
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
@@ -92,11 +95,11 @@ public class ConnectionConfiguration {
       conf.getInt(PRIMARY_CALL_TIMEOUT_MICROSECOND, PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT);
 
     this.replicaCallTimeoutMicroSecondScan =
-        conf.getInt("hbase.client.replicaCallTimeout.scan", 1000000); // 1000 ms
+      conf.getInt(PRIMARY_SCAN_TIMEOUT_MICROSECOND, PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT);
 
     this.metaReplicaCallTimeoutMicroSecondScan =
-        conf.getInt(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
-            HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT);
+      conf.getInt(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
+        HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT);
 
     this.retries = conf.getInt(
        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
