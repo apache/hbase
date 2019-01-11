@@ -26,6 +26,8 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TI
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_META_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
@@ -41,6 +43,8 @@ import static org.apache.hadoop.hbase.client.AsyncProcess.DEFAULT_START_LOG_ERRO
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_SCAN_TIMEOUT_MICROSECOND;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFER_SIZE_DEFAULT;
@@ -100,6 +104,10 @@ class AsyncConnectionConfiguration {
   // timeout, we will send request to secondaries.
   private final long primaryCallTimeoutNs;
 
+  private final long primaryScanTimeoutNs;
+
+  private final long primaryMetaScanTimeoutNs;
+
   @SuppressWarnings("deprecation")
   AsyncConnectionConfiguration(Configuration conf) {
     this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
@@ -132,6 +140,11 @@ class AsyncConnectionConfiguration {
         WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT));
     this.primaryCallTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
       conf.getLong(PRIMARY_CALL_TIMEOUT_MICROSECOND, PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT));
+    this.primaryScanTimeoutNs = TimeUnit.MICROSECONDS.toNanos(
+      conf.getLong(PRIMARY_SCAN_TIMEOUT_MICROSECOND, PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT));
+    this.primaryMetaScanTimeoutNs =
+      TimeUnit.MICROSECONDS.toNanos(conf.getLong(HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
+        HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT));
   }
 
   long getMetaOperationTimeoutNs() {
@@ -192,5 +205,13 @@ class AsyncConnectionConfiguration {
 
   long getPrimaryCallTimeoutNs() {
     return primaryCallTimeoutNs;
+  }
+
+  long getPrimaryScanTimeoutNs() {
+    return primaryScanTimeoutNs;
+  }
+
+  long getPrimaryMetaScanTimeoutNs() {
+    return primaryMetaScanTimeoutNs;
   }
 }
