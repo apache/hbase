@@ -60,7 +60,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -69,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
  * The implementation of AsyncConnection.
  */
 @InterfaceAudience.Private
-class AsyncConnectionImpl implements AsyncClusterConnection {
+class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
@@ -89,7 +88,7 @@ class AsyncConnectionImpl implements AsyncClusterConnection {
 
   private final int rpcTimeout;
 
-  private final RpcClient rpcClient;
+  protected final RpcClient rpcClient;
 
   final RpcControllerFactory rpcControllerFactory;
 
@@ -218,14 +217,8 @@ class AsyncConnectionImpl implements AsyncClusterConnection {
   }
 
   // ditto
-  @Override
-  public NonceGenerator getNonceGenerator() {
+  NonceGenerator getNonceGenerator() {
     return nonceGenerator;
-  }
-
-  @Override
-  public RpcClient getRpcClient() {
-    return rpcClient;
   }
 
   private ClientService.Interface createRegionServerStub(ServerName serverName) throws IOException {
@@ -379,17 +372,5 @@ class AsyncConnectionImpl implements AsyncClusterConnection {
 
   Optional<MetricsConnection> getConnectionMetrics() {
     return metrics;
-  }
-
-  @Override
-  public AsyncRegionServerAdmin getRegionServerAdmin(ServerName serverName) {
-    return new AsyncRegionServerAdmin(serverName, this);
-  }
-
-  @Override
-  public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
-      boolean writeFlushWALMarker) {
-    RawAsyncHBaseAdmin admin = (RawAsyncHBaseAdmin) getAdmin();
-    return admin.flushRegionInternal(regionName, writeFlushWALMarker);
   }
 }
