@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.google.protobuf.RpcChannel;
@@ -36,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -45,11 +45,10 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -77,9 +76,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType
 @InterfaceAudience.Private
 class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RawAsyncTableImpl.class);
-
   private final AsyncConnectionImpl conn;
+
+  private final Timer retryTimer;
 
   private final TableName tableName;
 
@@ -103,8 +102,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private final int startLogErrorsCnt;
 
-  RawAsyncTableImpl(AsyncConnectionImpl conn, AsyncTableBuilderBase<?> builder) {
+  RawAsyncTableImpl(AsyncConnectionImpl conn, Timer retryTimer, AsyncTableBuilderBase<?> builder) {
     this.conn = conn;
+    this.retryTimer = retryTimer;
     this.tableName = builder.tableName;
     this.rpcTimeoutNs = builder.rpcTimeoutNs;
     this.readRpcTimeoutNs = builder.readRpcTimeoutNs;
@@ -219,8 +219,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return newCaller(row.getRow(), rpcTimeoutNs);
   }
 
-  private CompletableFuture<Result> get(Get get, int replicaId, long timeoutNs) {
-    return this.<Result> newCaller(get, timeoutNs)
+  private CompletableFuture<Result> get(Get get, int replicaId) {
+    return this.<Result> newCaller(get, readRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl
         .<Get, GetRequest, GetResponse, Result> call(controller, loc, stub, get,
           RequestConverter::buildGetRequest, (s, c, req, done) -> s.get(c, req, done),
@@ -228,78 +228,11 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       .replicaId(replicaId).call();
   }
 
-  // Connect the two futures, if the src future is done, then mark the dst future as done. And if
-  // the dst future is done, then cancel the src future. This is used for timeline consistent read.
-  private <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture) {
-    addListener(srcFuture, (r, e) -> {
-      if (e != null) {
-        dstFuture.completeExceptionally(e);
-      } else {
-        dstFuture.complete(r);
-      }
-    });
-    // The cancellation may be a dummy one as the dstFuture may be completed by this srcFuture.
-    // Notice that this is a bit tricky, as the execution chain maybe 'complete src -> complete dst
-    // -> cancel src', for now it seems to be fine, as the will use CAS to set the result first in
-    // CompletableFuture. If later this causes problems, we could use whenCompleteAsync to break the
-    // tie.
-    addListener(dstFuture, (r, e) -> srcFuture.cancel(false));
-  }
-
-  private void timelineConsistentGet(Get get, RegionLocations locs,
-      CompletableFuture<Result> future) {
-    if (future.isDone()) {
-      // do not send requests to secondary replicas if the future is done, i.e, the primary request
-      // has already been finished.
-      return;
-    }
-    for (int replicaId = 1, n = locs.size(); replicaId < n; replicaId++) {
-      CompletableFuture<Result> secondaryFuture = get(get, replicaId, readRpcTimeoutNs);
-      connect(secondaryFuture, future);
-    }
-  }
-
   @Override
   public CompletableFuture<Result> get(Get get) {
-    if (get.getConsistency() == Consistency.STRONG) {
-      return get(get, RegionReplicaUtil.DEFAULT_REPLICA_ID, readRpcTimeoutNs);
-    }
-    // user specifies a replica id explicitly, just send request to the specific replica
-    if (get.getReplicaId() >= 0) {
-      return get(get, get.getReplicaId(), readRpcTimeoutNs);
-    }
-
-    // Timeline consistent read, where we may send requests to other region replicas
-    CompletableFuture<Result> primaryFuture =
-      get(get, RegionReplicaUtil.DEFAULT_REPLICA_ID, readRpcTimeoutNs);
-    CompletableFuture<Result> future = new CompletableFuture<>();
-    connect(primaryFuture, future);
-    long primaryCallTimeoutNs = conn.connConf.getPrimaryCallTimeoutNs();
-    long startNs = System.nanoTime();
-    addListener(conn.getLocator().getRegionLocations(tableName, get.getRow(),
-      RegionLocateType.CURRENT, false, readRpcTimeoutNs), (locs, error) -> {
-        if (error != null) {
-          LOG.warn(
-            "Failed to locate all the replicas for table={}, row='{}'," +
-              " give up timeline consistent read",
-            tableName, Bytes.toStringBinary(get.getRow()), error);
-          return;
-        }
-        if (locs.size() <= 1) {
-          LOG.warn(
-            "There are no secondary replicas for region {}," + " give up timeline consistent read",
-            locs.getDefaultRegionLocation().getRegion());
-          return;
-        }
-        long delayNs = primaryCallTimeoutNs - (System.nanoTime() - startNs);
-        if (delayNs <= 0) {
-          timelineConsistentGet(get, locs, future);
-        } else {
-          AsyncConnectionImpl.RETRY_TIMER.newTimeout(
-            timeout -> timelineConsistentGet(get, locs, future), delayNs, TimeUnit.NANOSECONDS);
-        }
-      });
-    return future;
+    return timelineConsistentRead(conn.getLocator(), tableName, get, get.getRow(),
+      RegionLocateType.CURRENT, replicaId -> get(get, replicaId), readRpcTimeoutNs,
+      conn.connConf.getPrimaryCallTimeoutNs(), retryTimer);
   }
 
   @Override
@@ -494,8 +427,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   public void scan(Scan scan, AdvancedScanResultConsumer consumer) {
-    new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, pauseNs,
-      maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt).start();
+    new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, retryTimer,
+      pauseNs, maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt).start();
   }
 
   private long resultSize2CacheSize(long maxResultSize) {
