@@ -164,8 +164,9 @@ public class AsyncRegionServerAdmin {
       cellScanner);
   }
 
-  public CompletableFuture<ReplicateWALEntryResponse> replay(ReplicateWALEntryRequest request) {
-    return call((stub, controller, done) -> stub.replay(controller, request, done));
+  public CompletableFuture<ReplicateWALEntryResponse> replay(ReplicateWALEntryRequest request,
+      CellScanner cellScanner) {
+    return call((stub, controller, done) -> stub.replay(controller, request, done), cellScanner);
   }
 
   public CompletableFuture<RollWALWriterResponse> rollWALWriter(RollWALWriterRequest request) {
