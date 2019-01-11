@@ -154,15 +154,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   private int binarySearch(Cell seekCell, boolean seekBefore) {
     int low = 0;
     int high = rowNumber - 1;
-    int mid = (low + high) >>> 1;
+    int mid = low + ((high - low) >> 1);
     int comp = 0;
     SimpleMutableByteRange row = new SimpleMutableByteRange();
     while (low <= high) {
-      mid = (low + high) >>> 1;
+      mid = low + ((high - low) >> 1);
       getRow(mid, row);
-      comp = comparator.compareRows(row.getBytes(), row.getOffset(),
-          row.getLength(), seekCell.getRowArray(), seekCell.getRowOffset(),
-          seekCell.getRowLength());
+      comp = compareRows(row, seekCell);
       if (comp < 0) {
         low = mid + 1;
       } else if (comp > 0) {
@@ -182,6 +180,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     } else {
       return mid;
     }
+  }
+
+  private int compareRows(SimpleMutableByteRange row, Cell seekCell) {
+    return comparator.compareRows(row.getBytes(), row.getOffset(),
+      row.getLength(), seekCell.getRowArray(), seekCell.getRowOffset(),
+      seekCell.getRowLength());
   }
 
   private void getRow(int index, SimpleMutableByteRange row) {

@@ -533,7 +533,7 @@ public class HFileBlockIndex {
       // keys[low - 1] < key < keys[high + 1] while narrowing down the range.
       KeyValue.KeyOnlyKeyValue nonRootIndexKV = new KeyValue.KeyOnlyKeyValue();
       while (low <= high) {
-        mid = (low + high) >>> 1;
+        mid = low + ((high - low) >> 1);
 
         // Midkey's offset relative to the end of secondary index
         int midKeyRelOffset = nonRootIndex.getInt(
