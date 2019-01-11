@@ -185,7 +185,6 @@ public class RegionReplicaFlushHandler extends EventHandler {
             "Was not able to trigger a flush from primary region due to old server version? " +
               "Continuing to open the secondary region replica: " +
               region.getRegionInfo().getRegionNameAsString());
-          region.setReadsEnabled(true);
           break;
         }
       }
@@ -195,6 +194,6 @@ public class RegionReplicaFlushHandler extends EventHandler {
         throw new InterruptedIOException(e.getMessage());
       }
     }
+    region.setReadsEnabled(true);
   }
-
 }
