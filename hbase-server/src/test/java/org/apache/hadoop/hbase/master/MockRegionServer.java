@@ -56,6 +56,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactionSwitchRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -505,6 +507,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public MergeRegionsResponse mergeRegions(RpcController controller,
       MergeRegionsRequest request) throws ServiceException {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public CompactionSwitchResponse compactionSwitch(RpcController controller,
+      CompactionSwitchRequest request) throws ServiceException {
     return null;
   }
 

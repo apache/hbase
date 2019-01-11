@@ -96,4 +96,9 @@ public interface CompactionRequestor {
   CompactionRequest requestCompaction(
     final Region r, final Store s, final String why, int pri, CompactionRequest request, User user
   ) throws IOException;
+
+  /**
+   * on/off compaction
+   */
+  void switchCompaction(boolean onOrOff);
 }

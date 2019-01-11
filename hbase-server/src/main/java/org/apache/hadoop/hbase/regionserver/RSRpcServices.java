@@ -112,6 +112,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactionSwitchRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactionSwitchResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -1512,6 +1514,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           Store.PRIORITY_USER, null, RpcServer.getRequestUser());
       }
       return CompactRegionResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public CompactionSwitchResponse compactionSwitch(RpcController controller,
+      CompactionSwitchRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      boolean prevState = regionServer.compactSplitThread.isCompactionsEnabled();
+      CompactionSwitchResponse response =
+          CompactionSwitchResponse.newBuilder().setPrevState(prevState).build();
+      if (prevState == request.getEnabled()) {
+        // passed in requested state is same as current state. No action required
+        return response;
+      }
+      regionServer.compactSplitThread.switchCompaction(request.getEnabled());
+      return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }

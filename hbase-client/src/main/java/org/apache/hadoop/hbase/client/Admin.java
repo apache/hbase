@@ -634,6 +634,19 @@ public interface Admin extends Abortable, Closeable {
     throws IOException;
 
   /**
+   * Turn the compaction on or off. Disabling compactions will also interrupt any currently ongoing
+   * compactions. It is ephemeral. This setting will be lost on restart of the server. Compaction
+   * can also be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled
+   * in hbase-site.xml.
+   *
+   * @param switchState     Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param serverNamesList list of region servers.
+   * @return Previous compaction states for region servers
+   */
+  Map<ServerName, Boolean> compactionSwitch(boolean switchState, List<String> serverNamesList)
+      throws IOException;
+
+ /**
    * Compact all regions on the region server
    * @param sn the region server name
    * @param major if it's major compaction

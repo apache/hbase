@@ -58,7 +58,6 @@ import java.util.NavigableSet;
 import java.util.RandomAccess;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
@@ -5793,7 +5792,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Determines whether multiple column families are present
    * Precondition: familyPaths is not null
    *
-   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   * @param familyPaths
    */
   private static boolean hasMultipleColumnFamilies(Collection<Pair<byte[], String>> familyPaths) {
     boolean multipleFamilies = false;
@@ -6591,9 +6590,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * This function is to maintain backward compatibility for 0.94 filters. HBASE-6429 combines
-     * both filterRow & filterRow(List<KeyValue> kvs) functions. While 0.94 code or older, it may
+     * both filterRow & filterRow(List&lt;KeyValue&gt; kvs) functions. While 0.94 code or older, it may
      * not implement hasFilterRow as HBase-6429 expects because 0.94 hasFilterRow() only returns
-     * true when filterRow(List<KeyValue> kvs) is overridden not the filterRow(). Therefore, the
+     * true when filterRow(List&lt;KeyValue&gt; kvs) is overridden not the filterRow(). Therefore, the
      * filterRow() will be skipped.
      */
     private boolean filterRow() throws IOException {
@@ -7739,20 +7738,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * @param cell
-   * @param tags
-   * @return The passed-in List<Tag> but with the tags from <code>cell</code> added.
-   */
-  private static List<Tag> carryForwardTags(final Cell cell, final List<Tag> tags) {
-    if (cell.getTagsLength() <= 0) return tags;
-    List<Tag> newTags = tags == null? new ArrayList<Tag>(): /*Append Tags*/tags;
-    Iterator<Tag> i =
-        CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-    while (i.hasNext()) newTags.add(i.next());
-    return newTags;
-  }
-
-  /**
    * Run a Get against passed in <code>store</code> on passed <code>row</code>, etc.
    * @param store
    * @param row
@@ -8668,7 +8653,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       break;
     }
     if (op == Operation.MERGE_REGION || op == Operation.SPLIT_REGION
-        || op == Operation.COMPACT_REGION) {
+        || op == Operation.COMPACT_REGION || op == Operation.COMPACT_SWITCH) {
       // split, merge or compact region doesn't need to check the closing/closed state or lock the
       // region
       return;

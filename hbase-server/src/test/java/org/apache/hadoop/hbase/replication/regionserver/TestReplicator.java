@@ -345,6 +345,12 @@ public class TestReplicator extends TestReplicationBase {
       }
 
       @Override
+      public CompactionSwitchResponse compactionSwitch(RpcController controller,
+          CompactionSwitchRequest request) throws ServiceException {
+        return null;
+      }
+
+      @Override
       public CompactRegionResponse compactRegion(RpcController controller,
           CompactRegionRequest request) throws ServiceException {
         return delegate.compactRegion(controller, request);

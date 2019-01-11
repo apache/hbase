@@ -38,8 +38,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -87,7 +85,6 @@ import org.mockito.stubbing.Answer;
 @Category(MediumTests.class)
 public class TestCompaction {
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
 
@@ -354,6 +351,73 @@ public class TestCompaction {
     assertTrue("Failed count should have increased (pre=" + preFailedCount +
         ", post=" + postFailedCount + ")",
         postFailedCount > preFailedCount);
+  }
+
+  /**
+   * Test no new Compaction requests are generated after calling stop compactions
+   */
+  @Test
+  public void testStopStartCompaction() throws IOException {
+    // setup a compact/split thread on a mock server
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+    // setup a region/store with some files
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < HStore.DEFAULT_BLOCKING_STOREFILE_COUNT - 1; i++) {
+      createStoreFile(r);
+    }
+    thread.switchCompaction(false);
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER, new CompactionRequest(), null);
+    assertEquals(false, thread.isCompactionsEnabled());
+    assertEquals(0, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
+      .getActiveCount());
+    thread.switchCompaction(true);
+    assertEquals(true, thread.isCompactionsEnabled());
+    thread.requestCompaction(r, store, "test", Store.PRIORITY_USER, new CompactionRequest(), null);
+    assertEquals(1, thread.getLongCompactions().getActiveCount() + thread.getShortCompactions()
+      .getActiveCount());
+  }
+
+  @Test
+  public void testInterruptingRunningCompactions() throws Exception {
+    // setup a compact/split thread on a mock server
+    conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
+      WaitThroughPutController.class.getName());
+    HRegionServer mockServer = Mockito.mock(HRegionServer.class);
+    Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
+    CompactSplitThread thread = new CompactSplitThread(mockServer);
+
+    Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
+
+    // setup a region/store with some files
+    Store store = r.getStore(COLUMN_FAMILY);
+    int jmax = (int) Math.ceil(15.0 / compactionThreshold);
+    byte[] pad = new byte[1000]; // 1 KB chunk
+    for (int i = 0; i < compactionThreshold; i++) {
+      HRegionIncommon loader = new HRegionIncommon(r);
+      Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
+      p.setDurability(Durability.SKIP_WAL);
+      for (int j = 0; j < jmax; j++) {
+        p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
+      }
+      HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+      loader.put(p);
+      r.flush(true);
+    }
+    Store s = r.getStore(COLUMN_FAMILY);
+    int initialFiles = s.getStorefilesCount();
+
+    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER,
+      new CompactionRequest(), null);
+
+    Thread.sleep(3000);
+    thread.switchCompaction(false);
+    assertEquals(initialFiles, s.getStorefilesCount());
+    //don't mess up future tests
+    thread.switchCompaction(true);
   }
 
   /**
@@ -713,6 +777,22 @@ public class TestCompaction {
     public void afterExecute() {
       super.afterExecute();
       this.done.countDown();
+    }
+  }
+
+  /**
+   * Simple {@link CompactionLifeCycleTracker} on which you can wait until the requested compaction
+   * finishes.
+   */
+  public static class WaitThroughPutController extends NoLimitThroughputController{
+
+    public WaitThroughPutController() {
+    }
+
+    @Override
+    public long control(String compactionName, long size) throws InterruptedException {
+      Thread.sleep(6000000);
+      return 6000000;
     }
   }
 }
