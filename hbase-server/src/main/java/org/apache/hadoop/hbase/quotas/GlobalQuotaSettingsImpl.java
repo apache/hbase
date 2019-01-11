@@ -121,6 +121,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     if (other instanceof ThrottleSettings) {
       ThrottleSettings otherThrottle = (ThrottleSettings) other;
       if (!otherThrottle.proto.hasType() || !otherThrottle.proto.hasTimedQuota()) {
+        // It means it's a remove request
         // To prevent the "empty" row in QuotaTableUtil.QUOTA_TABLE_NAME
         throttleBuilder = null;
       } else {
@@ -186,6 +187,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         }
 
         if (quotaToMerge.getRemove()) {
+          // It means it's a remove request
           // Update the builder to propagate the removal
           spaceBuilder.setRemove(true).clearSoftLimit().clearViolationPolicy();
         } else {
@@ -195,21 +197,22 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
       }
     }
 
+    boolean removeSpaceBuilder =
+        (spaceBuilder == null) || (spaceBuilder.hasRemove() && spaceBuilder.getRemove());
+
     Boolean bypassGlobals = this.bypassGlobals;
     if (other instanceof QuotaGlobalsSettingsBypass) {
       bypassGlobals = ((QuotaGlobalsSettingsBypass) other).getBypass();
     }
 
-    if (throttleBuilder == null &&
-        (spaceBuilder == null || (spaceBuilder.hasRemove() && spaceBuilder.getRemove()))
-        && bypassGlobals == null) {
+    if (throttleBuilder == null && removeSpaceBuilder && bypassGlobals == null) {
       return null;
     }
 
     return new GlobalQuotaSettingsImpl(
         getUserName(), getTableName(), getNamespace(),
         (throttleBuilder == null ? null : throttleBuilder.build()), bypassGlobals,
-        (spaceBuilder == null ? null : spaceBuilder.build()));
+        (removeSpaceBuilder ? null : spaceBuilder.build()));
   }
 
   private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {
@@ -314,17 +317,5 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
       quotas.put(ThrottleType.WRITE_CAPACITY_UNIT, proto.getWriteCapacityUnit());
     }
     return quotas;
-  }
-
-  private void clearThrottleBuilder(QuotaProtos.Throttle.Builder builder) {
-    builder.clearReadNum();
-    builder.clearReadSize();
-    builder.clearReqNum();
-    builder.clearReqSize();
-    builder.clearWriteNum();
-    builder.clearWriteSize();
-    builder.clearReadCapacityUnit();
-    builder.clearReadCapacityUnit();
-    builder.clearWriteCapacityUnit();
   }
 }
