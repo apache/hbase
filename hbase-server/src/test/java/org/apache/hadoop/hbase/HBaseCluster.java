@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -336,7 +337,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    */
   public ServerName getServerHoldingMeta() throws IOException {
     return getServerHoldingRegion(TableName.META_TABLE_NAME,
-      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
   }
 
   /**
@@ -346,7 +347,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return ServerName that hosts the region or null
    */
   public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-  throws IOException;
+      throws IOException;
 
   /**
    * @return whether we are interacting with a distributed cluster as opposed to an
