@@ -23,10 +23,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,24 +38,22 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.WALObserver;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
-import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint.RegionReplicaReplayCallable;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,8 +72,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
 /**
  * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this
@@ -178,39 +176,34 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void testReplayCallable() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
-    ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
 
-    //load some data to primary
+    // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
     Assert.assertEquals(1000, entries.size());
-    // replay the edits to the secondary using replay callable
-    replicateUsingCallable(connection, entries);
+    try (AsyncClusterConnection conn = ClusterConnectionFactory
+      .createAsyncClusterConnection(HTU.getConfiguration(), null, User.getCurrent())) {
+      // replay the edits to the secondary using replay callable
+      replicateUsingCallable(conn, entries);
+    }
 
     Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);
     closeRegion(HTU, rs0, hriSecondary);
-    connection.close();
   }
 
-  private void replicateUsingCallable(ClusterConnection connection, Queue<Entry> entries)
-      throws IOException, RuntimeException {
+  private void replicateUsingCallable(AsyncClusterConnection connection, Queue<Entry> entries)
+      throws IOException, ExecutionException, InterruptedException {
     Entry entry;
     while ((entry = entries.poll()) != null) {
       byte[] row = CellUtil.cloneRow(entry.getEdit().getCells().get(0));
-      RegionLocations locations = connection.locateRegion(tableName, row, true, true);
-      RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
-        RpcControllerFactory.instantiate(connection.getConfiguration()),
-        table.getName(), locations.getRegionLocation(1),
-        locations.getRegionLocation(1).getRegionInfo(), row, Lists.newArrayList(entry),
-        new AtomicLong());
-
-      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(
-        connection.getConfiguration());
-      factory.<ReplicateWALEntryResponse> newCaller().callWithRetries(callable, 10000);
+      RegionLocations locations = connection.getRegionLocations(tableName, row, true).get();
+      connection
+        .replay(tableName, locations.getRegionLocation(1).getRegion().getEncodedNameAsBytes(), row,
+          Collections.singletonList(entry), 1, Integer.MAX_VALUE, TimeUnit.SECONDS.toNanos(10))
+        .get();
     }
   }
 
@@ -218,49 +211,49 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void testReplayCallableWithRegionMove() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly while
     // the region is moved to another location.It tests handling of RME.
-    openRegion(HTU, rs0, hriSecondary);
-    ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
-    //load some data to primary
-    HTU.loadNumericRows(table, f, 0, 1000);
+    try (AsyncClusterConnection conn = ClusterConnectionFactory
+      .createAsyncClusterConnection(HTU.getConfiguration(), null, User.getCurrent())) {
+      openRegion(HTU, rs0, hriSecondary);
+      // load some data to primary
+      HTU.loadNumericRows(table, f, 0, 1000);
 
-    Assert.assertEquals(1000, entries.size());
-    // replay the edits to the secondary using replay callable
-    replicateUsingCallable(connection, entries);
+      Assert.assertEquals(1000, entries.size());
 
-    Region region = rs0.getRegion(hriSecondary.getEncodedName());
-    HTU.verifyNumericRows(region, f, 0, 1000);
+      // replay the edits to the secondary using replay callable
+      replicateUsingCallable(conn, entries);
 
-    HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
+      Region region = rs0.getRegion(hriSecondary.getEncodedName());
+      HTU.verifyNumericRows(region, f, 0, 1000);
 
-    // move the secondary region from RS0 to RS1
-    closeRegion(HTU, rs0, hriSecondary);
-    openRegion(HTU, rs1, hriSecondary);
+      HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
 
-    // replicate the new data
-    replicateUsingCallable(connection, entries);
+      // move the secondary region from RS0 to RS1
+      closeRegion(HTU, rs0, hriSecondary);
+      openRegion(HTU, rs1, hriSecondary);
 
-    region = rs1.getRegion(hriSecondary.getEncodedName());
-    // verify the new data. old data may or may not be there
-    HTU.verifyNumericRows(region, f, 1000, 2000);
+      // replicate the new data
+      replicateUsingCallable(conn, entries);
 
-    HTU.deleteNumericRows(table, f, 0, 2000);
-    closeRegion(HTU, rs1, hriSecondary);
-    connection.close();
+      region = rs1.getRegion(hriSecondary.getEncodedName());
+      // verify the new data. old data may or may not be there
+      HTU.verifyNumericRows(region, f, 1000, 2000);
+
+      HTU.deleteNumericRows(table, f, 0, 2000);
+      closeRegion(HTU, rs1, hriSecondary);
+    }
   }
 
   @Test
   public void testRegionReplicaReplicationEndpointReplicate() throws Exception {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);
-    ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     RegionReplicaReplicationEndpoint replicator = new RegionReplicaReplicationEndpoint();
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
     when(context.getConfiguration()).thenReturn(HTU.getConfiguration());
     when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
-
+    when(context.getServer()).thenReturn(rs0);
+    when(context.getTableDescriptors()).thenReturn(rs0.getTableDescriptors());
     replicator.init(context);
     replicator.startAsync();
 
@@ -272,12 +265,11 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     final String fakeWalGroupId = "fakeWALGroup";
     replicator.replicate(new ReplicateContext().setEntries(Lists.newArrayList(entries))
         .setWalGroupId(fakeWalGroupId));
-
+    replicator.stop();
     Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);
     closeRegion(HTU, rs0, hriSecondary);
-    connection.close();
   }
 }
