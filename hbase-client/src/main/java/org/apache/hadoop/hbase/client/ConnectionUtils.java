@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -31,11 +32,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -53,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -123,9 +127,8 @@ public final class ConnectionUtils {
   }
 
   /**
-   * A ClusterConnection that will short-circuit RPC making direct invocations against the
-   * localhost if the invocation target is 'this' server; save on network and protobuf
-   * invocations.
+   * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
+   * if the invocation target is 'this' server; save on network and protobuf invocations.
    */
   // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
   @VisibleForTesting // Class is visible so can assert we are short-circuiting when expected.
@@ -136,8 +139,7 @@ public final class ConnectionUtils {
 
     private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
         ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client)
-    throws IOException {
+        ClientService.BlockingInterface client) throws IOException {
       super(conf, pool, user);
       this.serverName = serverName;
       this.localHostAdmin = admin;
@@ -157,7 +159,8 @@ public final class ConnectionUtils {
     @Override
     public MasterKeepAliveConnection getMaster() throws IOException {
       if (this.localHostClient instanceof MasterService.BlockingInterface) {
-        return new ShortCircuitMasterConnection((MasterService.BlockingInterface)this.localHostClient);
+        return new ShortCircuitMasterConnection(
+          (MasterService.BlockingInterface) this.localHostClient);
       }
       return super.getMaster();
     }
@@ -335,8 +338,8 @@ public final class ConnectionUtils {
       return result;
     }
     Cell[] rawCells = result.rawCells();
-    int index =
-        Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator.getInstance()::compareWithoutRow);
+    int index = Arrays.binarySearch(rawCells, keepCellsAfter,
+      CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {
       index = -index - 1;
     } else {
@@ -406,7 +409,7 @@ public final class ConnectionUtils {
 
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 
   public static ScanResultCache createScanResultCache(Scan scan) {
@@ -488,5 +491,85 @@ public final class ConnectionUtils {
       return;
     }
     scanMetrics.countOfRegions.incrementAndGet();
+  }
+
+  /**
+   * Connect the two futures, if the src future is done, then mark the dst future as done. And if
+   * the dst future is done, then cancel the src future. This is used for timeline consistent read.
+   */
+  private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture) {
+    addListener(srcFuture, (r, e) -> {
+      if (e != null) {
+        dstFuture.completeExceptionally(e);
+      } else {
+        dstFuture.complete(r);
+      }
+    });
+    // The cancellation may be a dummy one as the dstFuture may be completed by this srcFuture.
+    // Notice that this is a bit tricky, as the execution chain maybe 'complete src -> complete dst
+    // -> cancel src', for now it seems to be fine, as the will use CAS to set the result first in
+    // CompletableFuture. If later this causes problems, we could use whenCompleteAsync to break the
+    // tie.
+    addListener(dstFuture, (r, e) -> srcFuture.cancel(false));
+  }
+
+  private static <T> void sendRequestsToSecondaryReplicas(
+      Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
+      CompletableFuture<T> future) {
+    if (future.isDone()) {
+      // do not send requests to secondary replicas if the future is done, i.e, the primary request
+      // has already been finished.
+      return;
+    }
+    for (int replicaId = 1, n = locs.size(); replicaId < n; replicaId++) {
+      CompletableFuture<T> secondaryFuture = requestReplica.apply(replicaId);
+      connect(secondaryFuture, future);
+    }
+  }
+
+  static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
+      TableName tableName, Query query, byte[] row, RegionLocateType locateType,
+      Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
+      long primaryCallTimeoutNs, Timer retryTimer) {
+    if (query.getConsistency() == Consistency.STRONG) {
+      return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    }
+    // user specifies a replica id explicitly, just send request to the specific replica
+    if (query.getReplicaId() >= 0) {
+      return requestReplica.apply(query.getReplicaId());
+    }
+    // Timeline consistent read, where we may send requests to other region replicas
+    CompletableFuture<T> primaryFuture = requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    CompletableFuture<T> future = new CompletableFuture<>();
+    connect(primaryFuture, future);
+    long startNs = System.nanoTime();
+    // after the getRegionLocations, all the locations for the replicas of this region should have
+    // been cached, so it is not big deal to locate them again when actually sending requests to
+    // these replicas.
+    addListener(locator.getRegionLocations(tableName, row, locateType, false, rpcTimeoutNs),
+      (locs, error) -> {
+        if (error != null) {
+          LOG.warn(
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
+              " give up timeline consistent read",
+            tableName, Bytes.toStringBinary(row), locateType, error);
+          return;
+        }
+        if (locs.size() <= 1) {
+          LOG.warn(
+            "There are no secondary replicas for region {}, give up timeline consistent read",
+            locs.getDefaultRegionLocation().getRegion());
+          return;
+        }
+        long delayNs = primaryCallTimeoutNs - (System.nanoTime() - startNs);
+        if (delayNs <= 0) {
+          sendRequestsToSecondaryReplicas(requestReplica, locs, future);
+        } else {
+          retryTimer.newTimeout(
+            timeout -> sendRequestsToSecondaryReplicas(requestReplica, locs, future), delayNs,
+            TimeUnit.NANOSECONDS);
+        }
+      });
+    return future;
   }
 }

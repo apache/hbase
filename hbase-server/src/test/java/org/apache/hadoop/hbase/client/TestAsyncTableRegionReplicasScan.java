@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -30,26 +33,44 @@ import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncTableRegionReplicasGet extends AbstractTestAsyncTableRegionReplicasRead {
+public class TestAsyncTableRegionReplicasScan extends AbstractTestAsyncTableRegionReplicasRead {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasGet.class);
+    HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasScan.class);
+
+  private static int ROW_COUNT = 1000;
+
+  private static byte[] getRow(int i) {
+    return Bytes.toBytes(String.format("%s-%03d", Bytes.toString(ROW), i));
+  }
+
+  private static byte[] getValue(int i) {
+    return Bytes.toBytes(String.format("%s-%03d", Bytes.toString(VALUE), i));
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     startClusterAndCreateTable();
     AsyncTable<?> table = ASYNC_CONN.getTable(TABLE_NAME);
-    table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
-    waitUntilAllReplicasHaveRow(ROW);
+    for (int i = 0; i < ROW_COUNT; i++) {
+      table.put(new Put(getRow(i)).addColumn(FAMILY, QUALIFIER, getValue(i))).get();
+    }
+    waitUntilAllReplicasHaveRow(getRow(ROW_COUNT - 1));
   }
 
   @Override
-  protected void readAndCheck(AsyncTable<?> table, int replicaId) throws Exception {
-    Get get = new Get(ROW).setConsistency(Consistency.TIMELINE);
+  protected void readAndCheck(AsyncTable<?> table, int replicaId) throws IOException {
+    Scan scan = new Scan().setConsistency(Consistency.TIMELINE).setCaching(1);
     if (replicaId >= 0) {
-      get.setReplicaId(replicaId);
+      scan.setReplicaId(replicaId);
     }
-    assertArrayEquals(VALUE, table.get(get).get().getValue(FAMILY, QUALIFIER));
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      for (int i = 0; i < 1000; i++) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertArrayEquals(getValue(i), result.getValue(FAMILY, QUALIFIER));
+      }
+    }
   }
 }
