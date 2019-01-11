@@ -46,6 +46,6 @@ public final class ClusterConnectionFactory {
       SocketAddress localAddress, User user) throws IOException {
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
     String clusterId = FutureUtils.get(registry.getClusterId());
-    return new AsyncConnectionImpl(conf, registry, clusterId, localAddress, user);
+    return new AsyncClusterConnectionImpl(conf, registry, clusterId, localAddress, user);
   }
 }

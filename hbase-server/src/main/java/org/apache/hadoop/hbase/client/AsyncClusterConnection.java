@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
@@ -49,4 +53,17 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Flush a region and get the response.
    */
   CompletableFuture<FlushRegionResponse> flush(byte[] regionName, boolean writeFlushWALMarker);
+
+  /**
+   * Replicate wal edits for replica regions. The return value is the edits we skipped, as the
+   * original return value is useless.
+   */
+  CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
+      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs);
+
+  /**
+   * Return all the replicas for a region. Used for regiong replica replication.
+   */
+  CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
+      boolean reload);
 }
