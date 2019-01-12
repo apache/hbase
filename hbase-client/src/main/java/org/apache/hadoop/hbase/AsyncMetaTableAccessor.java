@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.MetaTableAccessor.CollectingVisitor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
@@ -74,9 +71,6 @@ public class AsyncMetaTableAccessor {
 
   public static CompletableFuture<Boolean> tableExists(AsyncTable<?> metaTable,
       TableName tableName) {
-    if (tableName.equals(META_TABLE_NAME)) {
-      return CompletableFuture.completedFuture(true);
-    }
     return getTableState(metaTable, tableName).thenApply(Optional::isPresent);
   }
 

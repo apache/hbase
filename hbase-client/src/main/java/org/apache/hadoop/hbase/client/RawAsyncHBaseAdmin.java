@@ -404,6 +404,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return CompletableFuture.completedFuture(true);
+    }
     return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
   }
 
@@ -583,6 +586,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return CompletableFuture.completedFuture(true);
+    }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
       if (error != null) {
@@ -600,6 +606,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return CompletableFuture.completedFuture(false);
+    }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
       if (error != null) {
@@ -629,6 +638,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Boolean> isTableAvailable(TableName tableName,
       Optional<byte[][]> splitKeys) {
+    if (TableName.isMetaTableName(tableName)) {
+      return connection.registry.getMetaRegionLocation().thenApply(locs -> Stream
+        .of(locs.getRegionLocations()).allMatch(loc -> loc != null && loc.getServerName() != null));
+    }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(isTableEnabled(tableName), (enabled, error) -> {
       if (error != null) {
