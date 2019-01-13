@@ -109,8 +109,7 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         .roundRobinAssignment(regions, servers);
     //test empty region/servers scenario
     //this should not throw an NPE
-    loadBalancer.roundRobinAssignment(regions,
-        Collections.EMPTY_LIST);
+    loadBalancer.roundRobinAssignment(regions, Collections.emptyList());
     //test regular scenario
     assertTrue(assignments.keySet().size() == servers.size());
     for (ServerName sn : assignments.keySet()) {

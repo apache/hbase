@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseCluster;
@@ -81,7 +82,7 @@ public abstract class TestRSGroupsBase {
   protected static RSGroupAdminEndpoint rsGroupAdminEndpoint;
   protected static CPMasterObserver observer;
 
-  public final static long WAIT_TIMEOUT = 60000*5;
+  public final static long WAIT_TIMEOUT = 60000;
   public final static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
   public static int NUM_DEAD_SERVERS = 0;
 
@@ -110,7 +111,7 @@ public abstract class TestRSGroupsBase {
   protected static void initialize() throws Exception {
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
-    master = ((MiniHBaseCluster)cluster).getMaster();
+    master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     //wait for balancer to come online
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -120,7 +121,7 @@ public abstract class TestRSGroupsBase {
             ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
       }
     });
-    admin.setBalancerRunning(false,true);
+    admin.balancerSwitch(false, true);
     rsGroupAdmin = new VerifyingRSGroupAdminClient(
         new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -206,7 +207,8 @@ public abstract class TestRSGroupsBase {
   }
 
   public void deleteTableIfNecessary() throws IOException {
-    for (TableDescriptor desc : TEST_UTIL.getAdmin().listTables(tablePrefix+".*")) {
+    for (TableDescriptor desc : TEST_UTIL.getAdmin()
+      .listTableDescriptors(Pattern.compile(tablePrefix + ".*"))) {
       TEST_UTIL.deleteTable(desc.getTableName());
     }
   }
@@ -287,7 +289,17 @@ public abstract class TestRSGroupsBase {
   }
 
   public String getGroupName(String baseName) {
-    return groupPrefix+"_"+baseName+"_"+rand.nextInt(Integer.MAX_VALUE);
+    return groupPrefix + "_" + baseName + "_" + rand.nextInt(Integer.MAX_VALUE);
+  }
+
+  /**
+   * The server name in group does not contain the start code, this method will find out the start
+   * code and construct the ServerName object.
+   */
+  protected ServerName getServerName(Address addr) {
+    return TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer().getServerName()).filter(sn -> sn.getAddress().equals(addr))
+      .findFirst().get();
   }
 
   public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {

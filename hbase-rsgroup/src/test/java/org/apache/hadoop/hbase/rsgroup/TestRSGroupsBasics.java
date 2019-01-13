@@ -27,20 +27,19 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -52,18 +51,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
+    HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBasics.class);
 
@@ -100,7 +95,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
   @Test
   public void testCreateAndDrop() throws Exception {
     TEST_UTIL.createTable(tableName, Bytes.toBytes("cf"));
-    //wait for created table to be assigned
+    // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -112,36 +107,33 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @Test
   public void testCreateMultiRegion() throws IOException {
-    byte[] end = {1,3,5,7,9};
-    byte[] start = {0,2,4,6,8};
-    byte[][] f = {Bytes.toBytes("f")};
-    TEST_UTIL.createTable(tableName, f,1,start,end,10);
+    byte[] end = { 1, 3, 5, 7, 9 };
+    byte[] start = { 0, 2, 4, 6, 8 };
+    byte[][] f = { Bytes.toBytes("f") };
+    TEST_UTIL.createTable(tableName, f, 1, start, end, 10);
   }
 
   @Test
   public void testNamespaceCreateAndAssign() throws Exception {
     LOG.info("testNamespaceCreateAndAssign");
-    String nsName = tablePrefix+"_foo";
+    String nsName = tablePrefix + "_foo";
     final TableName tableName = TableName.valueOf(nsName, tablePrefix + "_testCreateAndAssign");
     RSGroupInfo appInfo = addGroup("appInfo", 1);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     admin.createTable(desc);
-    //wait for created table to be assigned
+    // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         return getTableRegionMap().get(desc.getTableName()) != null;
       }
     });
-    ServerName targetServer =
-        ServerName.parseServerName(appInfo.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface rs =
-      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    //verify it was assigned to the right group
-    Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(rs).size());
+    ServerName targetServer = getServerName(appInfo.getServers().iterator().next());
+    // verify it was assigned to the right group
+    Assert.assertEquals(1, admin.getRegions(targetServer).size());
   }
 
   @Test
@@ -152,12 +144,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     final RSGroupInfo appInfo = addGroup("appInfo", 1);
     Iterator<Address> iterator = appInfo.getServers().iterator();
     List<ServerName> serversToDecommission = new ArrayList<>();
-    ServerName targetServer = ServerName.parseServerName(iterator.next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    targetServer = ProtobufUtil.toServerName(
-        targetRS.getServerInfo(null, GetServerInfoRequest.newBuilder().build()).getServerInfo()
-            .getServerName());
+    ServerName targetServer = getServerName(iterator.next());
     assertTrue(master.getServerManager().getOnlineServers().containsKey(targetServer));
     serversToDecommission.add(targetServer);
     admin.decommissionRegionServers(serversToDecommission, true);
@@ -165,9 +152,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     try {
       admin.createTable(desc);
       fail("Shouldn't create table successfully!");
@@ -181,7 +168,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     admin.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         return getTableRegionMap().get(desc.getTableName()) != null;
       }
     });
@@ -192,11 +180,11 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     LOG.info("testDefaultNamespaceCreateAndAssign");
     String tableName = tablePrefix + "_testCreateAndAssign";
     admin.modifyNamespace(NamespaceDescriptor.create("default")
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor("f"));
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     admin.createTable(desc);
-    //wait for created table to be assigned
+    // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -227,33 +215,27 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 3);
     NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
 
-    ServerName targetServer = ServerName.parseServerName(
-        newGroup.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    ServerName targetServer = getServerName(newGroup.getServers().iterator().next());
     try {
-      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
-          GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-      NUM_DEAD_SERVERS ++;
-    } catch(Exception e) {
+      // stopping may cause an exception
+      // due to the connection loss
+      admin.stopRegionServer(targetServer.getAddress().toString());
+      NUM_DEAD_SERVERS++;
+    } catch (Exception e) {
     }
-    //wait for stopped regionserver to dead server list
+    // wait for stopped regionserver to dead server list
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return !master.getServerManager().areDeadServersInProgress()
-            && cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
+        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS &&
+          !master.getServerManager().areDeadServersInProgress();
       }
     });
     assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
     assertTrue(cluster.getClusterMetrics().getDeadServerNames().contains(targetServer));
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
-    //clear dead servers list
+    // clear dead servers list
     List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
     assertEquals(0, notClearedServers.size());
 
@@ -267,19 +249,13 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     LOG.info("testClearNotProcessedDeadServer");
     NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
     RSGroupInfo appInfo = addGroup("deadServerGroup", 1);
-    ServerName targetServer =
-        ServerName.parseServerName(appInfo.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    ServerName targetServer = getServerName(appInfo.getServers().iterator().next());
     try {
-      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
-          AdminProtos.GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-      NUM_DEAD_SERVERS ++;
-    } catch(Exception e) {
+      // stopping may cause an exception
+      // due to the connection loss
+      admin.stopRegionServer(targetServer.getAddress().toString());
+      NUM_DEAD_SERVERS++;
+    } catch (Exception e) {
     }
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -287,8 +263,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
         return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
       }
     });
-    List<ServerName> notClearedServers =
-        admin.clearDeadServers(Lists.newArrayList(targetServer));
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
     assertEquals(1, notClearedServers.size());
   }
 

@@ -172,6 +172,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     ListMultimap<String,RegionInfo> regionMap = ArrayListMultimap.create();
     ListMultimap<String,ServerName> serverMap = ArrayListMultimap.create();
     generateGroupMaps(regions, servers, regionMap, serverMap);
+    LOG.info("=======" + regionMap + ", " + serverMap);
     for(String groupKey : regionMap.keySet()) {
       if (regionMap.get(groupKey).size() > 0) {
         Map<ServerName, List<RegionInfo>> result =
@@ -189,6 +190,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         }
       }
     }
+    LOG.info("=======" + assignments);
     return assignments;
   }
 
@@ -296,7 +298,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       return filterServers(RSGroupInfo.getServers(), onlineServers);
     } else {
       LOG.warn("RSGroup Information found to be null. Some regions might be unassigned.");
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
   }
 
