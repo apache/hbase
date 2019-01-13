@@ -23,18 +23,18 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -45,15 +45,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
+    HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBalance.class);
 
@@ -81,17 +80,15 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
   public void testGroupBalance() throws Exception {
     LOG.info(name.getMethodName());
     String newGroupName = getGroupName(name.getMethodName());
-    final RSGroupInfo newGroup = addGroup(newGroupName, 3);
+    addGroup(newGroupName, 3);
 
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", name.getMethodName());
-    admin.createNamespace(
-        NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
-    byte [] startKey = Bytes.toBytes("aaaaa");
-    byte [] endKey = Bytes.toBytes("zzzzz");
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+    byte[] startKey = Bytes.toBytes("aaaaa");
+    byte[] endKey = Bytes.toBytes("zzzzz");
     admin.createTable(desc, startKey, endKey, 6);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -104,12 +101,11 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       }
     });
 
-    //make assignment uneven, move all regions to one server
-    Map<ServerName,List<String>> assignMap =
-        getTableServerRegionMap().get(tableName);
+    // make assignment uneven, move all regions to one server
+    Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableName);
     final ServerName first = assignMap.entrySet().iterator().next().getKey();
-    for(RegionInfo region: admin.getTableRegions(tableName)) {
-      if(!assignMap.get(first).contains(region.getRegionNameAsString())) {
+    for (RegionInfo region : admin.getRegions(tableName)) {
+      if (!assignMap.get(first).contains(region.getRegionNameAsString())) {
         admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(first.getServerName()));
       }
     }
@@ -128,18 +124,18 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       }
     });
 
-    //balance the other group and make sure it doesn't affect the new group
-    admin.setBalancerRunning(true,true);
+    // balance the other group and make sure it doesn't affect the new group
+    admin.balancerSwitch(true, true);
     rsGroupAdmin.balanceRSGroup(RSGroupInfo.DEFAULT_GROUP);
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
-    //disable balance, balancer will not be run and return false
-    admin.setBalancerRunning(false,true);
+    // disable balance, balancer will not be run and return false
+    admin.balancerSwitch(false, true);
     assertFalse(rsGroupAdmin.balanceRSGroup(newGroupName));
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
-    //enable balance
-    admin.setBalancerRunning(true,true);
+    // enable balance
+    admin.balancerSwitch(true, true);
     rsGroupAdmin.balanceRSGroup(newGroupName);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -152,25 +148,25 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
         return true;
       }
     });
-    admin.setBalancerRunning(false,true);
+    admin.balancerSwitch(false, true);
   }
 
   @Test
   public void testMisplacedRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(tablePrefix+"_testMisplacedRegions");
+    final TableName tableName = TableName.valueOf(tablePrefix + "_testMisplacedRegions");
     LOG.info("testMisplacedRegions");
 
     final RSGroupInfo RSGroupInfo = addGroup("testMisplacedRegions", 1);
 
-    TEST_UTIL.createMultiRegionTable(tableName, new byte[]{'f'}, 15);
+    TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
-    rsGroupAdminEndpoint.getGroupInfoManager()
-        .moveTables(Sets.newHashSet(tableName), RSGroupInfo.getName());
+    rsGroupAdminEndpoint.getGroupInfoManager().moveTables(Sets.newHashSet(tableName),
+      RSGroupInfo.getName());
 
-    admin.setBalancerRunning(true,true);
+    admin.balancerSwitch(true, true);
     assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()));
-    admin.setBalancerRunning(false,true);
+    admin.balancerSwitch(false, true);
     assertTrue(observer.preBalanceRSGroupCalled);
     assertTrue(observer.postBalanceRSGroupCalled);
 
@@ -178,9 +174,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         ServerName serverName =
-            ServerName.valueOf(RSGroupInfo.getServers().iterator().next().toString(), 1);
-        return admin.getConnection().getAdmin()
-            .getOnlineRegions(serverName).size() == 15;
+          ServerName.valueOf(RSGroupInfo.getServers().iterator().next().toString(), 1);
+        return admin.getConnection().getAdmin().getRegions(serverName).size() == 15;
       }
     });
   }

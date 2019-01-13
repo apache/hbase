@@ -17,21 +17,17 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertFalse;
-
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.net.Address;
-
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -43,17 +39,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsKillRS.class);
+    HBaseClassTestRule.forClass(TestRSGroupsKillRS.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsKillRS.class);
 
@@ -74,21 +67,20 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
   @After
   public void afterMethod() throws Exception {
-    tearDownAfterMethod();
+   // tearDownAfterMethod();
   }
 
   @Test
   public void testKillRS() throws Exception {
     RSGroupInfo appInfo = addGroup("appInfo", 1);
 
-    final TableName tableName = TableName.valueOf(tablePrefix+"_ns", name.getMethodName());
-    admin.createNamespace(
-        NamespaceDescriptor.create(tableName.getNamespaceAsString())
-            .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor("f"));
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     admin.createTable(desc);
-    //wait for created table to be assigned
+    // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -96,40 +88,41 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
       }
     });
 
-    ServerName targetServer = ServerName.parseServerName(
-        appInfo.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    RegionInfo targetRegion = ProtobufUtil.getOnlineRegions(targetRS).get(0);
-    Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
+    ServerName targetServer = getServerName(appInfo.getServers().iterator().next());
+    Assert.assertEquals(1, admin.getRegions(targetServer).size());
 
     try {
-      //stopping may cause an exception
-      //due to the connection loss
-      targetRS.stopServer(null,
-          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
-    } catch(Exception e) {
+      // stopping may cause an exception
+      // due to the connection loss
+      admin.stopRegionServer(targetServer.getAddress().toString());
+    } catch (Exception e) {
     }
-    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
-
-    //wait for created table to be assigned
+    // wait until the server is actually down
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterMetrics().getRegionStatesInTransition().isEmpty();
+        return !cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer);
+      }
+    });
+    // there is only one rs in the group and we killed it, so the region can not be online, until
+    // later we add new servers to it.
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !cluster.getClusterMetrics().getRegionStatesInTransition().isEmpty();
       }
     });
     Set<Address> newServers = Sets.newHashSet();
-    newServers.add(
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
+    newServers
+      .add(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
     rsGroupAdmin.moveServers(newServers, appInfo.getName());
 
-    //Make sure all the table's regions get reassigned
-    //disabling the table guarantees no conflicting assign/unassign (ie SSH) happens
+    // Make sure all the table's regions get reassigned
+    // disabling the table guarantees no conflicting assign/unassign (ie SSH) happens
     admin.disableTable(tableName);
     admin.enableTable(tableName);
 
-    //wait for region to be assigned
+    // wait for region to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -137,13 +130,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
       }
     });
 
-    targetServer = ServerName.parseServerName(
-        newServers.iterator().next().toString());
-    targetRS =
-      ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
-    Assert.assertEquals(tableName,
-        ProtobufUtil.getOnlineRegions(targetRS).get(0).getTable());
+    ServerName targetServer1 = getServerName(newServers.iterator().next());
+    Assert.assertEquals(1, admin.getRegions(targetServer1).size());
+    Assert.assertEquals(tableName, admin.getRegions(targetServer1).get(0).getTable());
   }
-
 }

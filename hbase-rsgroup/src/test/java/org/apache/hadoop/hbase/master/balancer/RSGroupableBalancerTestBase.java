@@ -31,14 +31,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -71,7 +70,7 @@ public class RSGroupableBalancerTestBase {
   static List<ServerName> servers;
   static Map<String, RSGroupInfo> groupMap;
   static Map<TableName, String> tableMap = new HashMap<>();
-  static List<HTableDescriptor> tableDescs;
+  static List<TableDescriptor> tableDescs;
   int[] regionAssignment = new int[] { 2, 5, 7, 10, 4, 3, 1 };
   static int regionId = 0;
 
@@ -390,19 +389,19 @@ public class RSGroupableBalancerTestBase {
    * @param hasBogusTable there is a table that does not determine the group
    * @return the list of table descriptors
    */
-  protected static List<HTableDescriptor> constructTableDesc(boolean hasBogusTable) {
-    List<HTableDescriptor> tds = Lists.newArrayList();
+  protected static List<TableDescriptor> constructTableDesc(boolean hasBogusTable) {
+    List<TableDescriptor> tds = Lists.newArrayList();
     int index = rand.nextInt(groups.length);
     for (int i = 0; i < tables.length; i++) {
-      HTableDescriptor htd = new HTableDescriptor(tables[i]);
-      int grpIndex = (i + index) % groups.length ;
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tables[i]).build();
+      int grpIndex = (i + index) % groups.length;
       String groupName = groups[grpIndex];
       tableMap.put(tables[i], groupName);
       tds.add(htd);
     }
     if (hasBogusTable) {
       tableMap.put(table0, "");
-      tds.add(new HTableDescriptor(table0));
+      tds.add(TableDescriptorBuilder.newBuilder(table0).build());
     }
     return tds;
   }
@@ -452,7 +451,7 @@ public class RSGroupableBalancerTestBase {
       }
     }
 
-    for(HTableDescriptor desc : tableDescs){
+    for(TableDescriptor desc : tableDescs){
       if(gm.getRSGroupOfTable(desc.getTableName()).endsWith(groupOfServer.getName())){
         tableName = desc.getTableName();
       }
