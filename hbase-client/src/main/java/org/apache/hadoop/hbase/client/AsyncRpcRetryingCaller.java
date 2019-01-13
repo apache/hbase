@@ -26,13 +26,19 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,32 +116,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     resetController(controller, callTimeoutNs);
   }
 
-  protected final void onError(Throwable error, Supplier<String> errMsg,
-      Consumer<Throwable> updateCachedLocation) {
-    if (future.isDone()) {
-      // Give up if the future is already done, this is possible if user has already canceled the
-      // future. And for timeline consistent read, we will also cancel some requests if we have
-      // already get one of the responses.
-      LOG.debug("The future is already done, canceled={}, give up retrying", future.isCancelled());
-      return;
-    }
-    error = translateException(error);
-    if (error instanceof DoNotRetryIOException) {
-      future.completeExceptionally(error);
-      return;
-    }
-    if (tries > startLogErrorsCnt) {
-      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts
-          + ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs)
-          + " ms, time elapsed = " + elapsedMs() + " ms", error);
-    }
-    RetriesExhaustedException.ThrowableWithExtraContext qt = new RetriesExhaustedException.ThrowableWithExtraContext(
-        error, EnvironmentEdgeManager.currentTime(), "");
-    exceptions.add(qt);
-    if (tries >= maxAttempts) {
-      completeExceptionally();
-      return;
-    }
+  private void tryScheduleRetry(Throwable error, Consumer<Throwable> updateCachedLocation) {
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
@@ -147,9 +128,67 @@ public abstract class AsyncRpcRetryingCaller<T> {
     } else {
       delayNs = getPauseTime(pauseNs, tries - 1);
     }
-    updateCachedLocation.accept(error);
     tries++;
     retryTimer.newTimeout(t -> doCall(), delayNs, TimeUnit.NANOSECONDS);
+  }
+
+  protected Optional<TableName> getTableName() {
+    return Optional.empty();
+  }
+
+  protected final void onError(Throwable t, Supplier<String> errMsg,
+      Consumer<Throwable> updateCachedLocation) {
+    if (future.isDone()) {
+      // Give up if the future is already done, this is possible if user has already canceled the
+      // future. And for timeline consistent read, we will also cancel some requests if we have
+      // already get one of the responses.
+      LOG.debug("The future is already done, canceled={}, give up retrying", future.isCancelled());
+      return;
+    }
+    Throwable error = translateException(t);
+    if (error instanceof DoNotRetryIOException) {
+      future.completeExceptionally(error);
+      return;
+    }
+    if (tries > startLogErrorsCnt) {
+      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts +
+        ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) +
+        " ms, time elapsed = " + elapsedMs() + " ms", error);
+    }
+    updateCachedLocation.accept(error);
+    RetriesExhaustedException.ThrowableWithExtraContext qt =
+      new RetriesExhaustedException.ThrowableWithExtraContext(error,
+        EnvironmentEdgeManager.currentTime(), "");
+    exceptions.add(qt);
+    if (tries >= maxAttempts) {
+      completeExceptionally();
+      return;
+    }
+    // check whether the table has been disabled, notice that the check will introduce a request to
+    // meta, so here we only check for disabled for some specific exception types.
+    if (error instanceof NotServingRegionException || error instanceof RegionOfflineException) {
+      Optional<TableName> tableName = getTableName();
+      if (tableName.isPresent()) {
+        FutureUtils.addListener(conn.getAdmin().isTableDisabled(tableName.get()), (disabled, e) -> {
+          if (e != null) {
+            if (e instanceof TableNotFoundException) {
+              future.completeExceptionally(e);
+            } else {
+              // failed to test whether the table is disabled, not a big deal, continue retrying
+              tryScheduleRetry(error, updateCachedLocation);
+            }
+            return;
+          }
+          if (disabled) {
+            future.completeExceptionally(new TableNotEnabledException(tableName.get()));
+          } else {
+            tryScheduleRetry(error, updateCachedLocation);
+          }
+        });
+      }
+    } else {
+      tryScheduleRetry(error, updateCachedLocation);
+    }
   }
 
   protected abstract void doCall();
