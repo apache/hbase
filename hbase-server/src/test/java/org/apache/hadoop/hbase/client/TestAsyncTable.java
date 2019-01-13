@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,6 +44,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -115,8 +120,11 @@ public class TestAsyncTable {
   }
 
   @Before
-  public void setUp() throws IOException, InterruptedException {
+  public void setUp() throws IOException, InterruptedException, ExecutionException {
     row = Bytes.toBytes(testName.getMethodName().replaceAll("[^0-9A-Za-z]", "_"));
+    if (ASYNC_CONN.getAdmin().isTableDisabled(TABLE_NAME).get()) {
+      ASYNC_CONN.getAdmin().enableTable(TABLE_NAME).get();
+    }
   }
 
   @Test
@@ -283,14 +291,14 @@ public class TestAsyncTable {
   public void testMutateRow() throws InterruptedException, ExecutionException, IOException {
     AsyncTable<?> table = getTable.get();
     RowMutations mutation = new RowMutations(row);
-    mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, 1), VALUE));
+    mutation.add((Mutation) new Put(row).addColumn(FAMILY, concat(QUALIFIER, 1), VALUE));
     table.mutateRow(mutation).get();
     Result result = table.get(new Get(row)).get();
     assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, 1)));
 
     mutation = new RowMutations(row);
-    mutation.add(new Delete(row).addColumn(FAMILY, concat(QUALIFIER, 1)));
-    mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, 2), VALUE));
+    mutation.add((Mutation) new Delete(row).addColumn(FAMILY, concat(QUALIFIER, 1)));
+    mutation.add((Mutation) new Put(row).addColumn(FAMILY, concat(QUALIFIER, 2), VALUE));
     table.mutateRow(mutation).get();
     result = table.get(new Get(row)).get();
     assertNull(result.getValue(FAMILY, concat(QUALIFIER, 1)));
@@ -314,8 +322,9 @@ public class TestAsyncTable {
     IntStream.range(0, count).forEach(i -> {
       RowMutations mutation = new RowMutations(row);
       try {
-        mutation.add(new Delete(row).addColumn(FAMILY, QUALIFIER));
-        mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, i), concat(VALUE, i)));
+        mutation.add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER));
+        mutation
+          .add((Mutation) new Put(row).addColumn(FAMILY, concat(QUALIFIER, i), concat(VALUE, i)));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -399,5 +408,18 @@ public class TestAsyncTable {
       .thenDelete(delete)
       .get();
     assertTrue(ok);
+  }
+
+  @Test
+  public void testDisabled() throws InterruptedException, ExecutionException {
+    ASYNC_CONN.getAdmin().disableTable(TABLE_NAME).get();
+    try {
+      getTable.get().get(new Get(row)).get();
+      fail("Should fail since table has been disabled");
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      assertThat(cause, instanceOf(TableNotEnabledException.class));
+      assertThat(cause.getMessage(), containsString(TABLE_NAME.getNameAsString()));
+    }
   }
 }

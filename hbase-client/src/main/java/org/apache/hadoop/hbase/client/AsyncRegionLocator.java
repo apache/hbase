@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -107,13 +105,14 @@ class AsyncRegionLocator {
       }
       HRegionLocation loc = locs.getRegionLocation(replicaId);
       if (loc == null) {
-        future
-          .completeExceptionally(new RegionException("No location for " + tableName + ", row='" +
+        future.completeExceptionally(
+          new RegionOfflineException("No location for " + tableName + ", row='" +
             Bytes.toStringBinary(row) + "', locateType=" + type + ", replicaId=" + replicaId));
       } else if (loc.getServerName() == null) {
-        future.completeExceptionally(new HBaseIOException("No server address listed for region '" +
-          loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row) +
-          "', locateType=" + type + ", replicaId=" + replicaId));
+        future.completeExceptionally(
+          new RegionOfflineException("No server address listed for region '" +
+            loc.getRegion().getRegionNameAsString() + ", row='" + Bytes.toStringBinary(row) +
+            "', locateType=" + type + ", replicaId=" + replicaId));
       } else {
         future.complete(loc);
       }
