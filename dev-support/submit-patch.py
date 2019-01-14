@@ -22,6 +22,7 @@
 # are not updated. Review board id is retrieved from the remote link in the jira.
 # Print help: submit-patch.py --h
 import argparse
+from builtins import input, str
 import getpass
 import git
 import json
@@ -146,7 +147,7 @@ def get_patch_name_with_version(patch_name_prefix):
     if html.status_code != 200:
         log_fatal_and_exit(" Cannot fetch jira information. Status code %s", html.status_code)
     # Iterate over patch names starting from version 1 and return when name is not already used.
-    content = unicode(html.content, 'utf-8')
+    content = str(html.content, 'utf-8')
     for i in range(1, 1000):
         name = patch_name_prefix + "." + ('{0:03d}'.format(i)) + ".patch"
         if name not in content:
@@ -196,10 +197,10 @@ def get_credentials():
             log_fatal_and_exit(" Couldn't decrypt ~/.apache-creds file. Exiting..")
         creds = json.loads(content)
     else:
-        creds['jira_username'] = raw_input("Jira username:")
+        creds['jira_username'] = input("Jira username:")
         creds['jira_password'] = getpass.getpass("Jira password:")
         if not args.skip_review_board:
-            creds['rb_username'] = raw_input("Review Board username:")
+            creds['rb_username'] = input("Review Board username:")
             creds['rb_password'] = getpass.getpass("Review Board password:")
     return creds
 
