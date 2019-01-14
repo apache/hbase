@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -77,34 +79,38 @@ public class TestSequenceIdAccounting {
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
     Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
-    assertTrue(sida.areAllLower(m));
+    assertTrue(sida.areAllLower(m, null));
     long sequenceid = 1;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
-    assertTrue(sida.areAllLower(m));
+    assertTrue(sida.areAllLower(m, null));
     m.put(ENCODED_REGION_NAME, sequenceid);
-    assertFalse(sida.areAllLower(m));
+    assertFalse(sida.areAllLower(m, null));
+    ArrayList<byte[]> regions = new ArrayList<>();
+    assertFalse(sida.areAllLower(m, regions));
+    assertEquals(1, regions.size());
+    assertArrayEquals(ENCODED_REGION_NAME, regions.get(0));
     long lowest = sida.getLowestSequenceId(ENCODED_REGION_NAME);
     assertEquals("Lowest should be first sequence id inserted", 1, lowest);
     m.put(ENCODED_REGION_NAME, lowest);
-    assertFalse(sida.areAllLower(m));
+    assertFalse(sida.areAllLower(m, null));
     // Now make sure above works when flushing.
     sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES);
-    assertFalse(sida.areAllLower(m));
+    assertFalse(sida.areAllLower(m, null));
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
-    assertTrue(sida.areAllLower(m));
+    assertTrue(sida.areAllLower(m, null));
     // Let the flush complete and if we ask if the sequenceid is lower, should be yes since no edits
     sida.completeCacheFlush(ENCODED_REGION_NAME);
     m.put(ENCODED_REGION_NAME, sequenceid);
-    assertTrue(sida.areAllLower(m));
+    assertTrue(sida.areAllLower(m, null));
     // Flush again but add sequenceids while we are flushing.
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     lowest = sida.getLowestSequenceId(ENCODED_REGION_NAME);
     m.put(ENCODED_REGION_NAME, lowest);
-    assertFalse(sida.areAllLower(m));
+    assertFalse(sida.areAllLower(m, null));
     sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES);
     // The cache flush will clear out all sequenceid accounting by region.
     assertEquals(HConstants.NO_SEQNUM, sida.getLowestSequenceId(ENCODED_REGION_NAME));
@@ -116,7 +122,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
-    assertTrue(sida.areAllLower(m));
+    assertTrue(sida.areAllLower(m, null));
   }
 
   @Test

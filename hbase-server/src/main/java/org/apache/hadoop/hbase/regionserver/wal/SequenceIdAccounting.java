@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -377,9 +378,11 @@ class SequenceIdAccounting {
    * sequenceids, sequenceids we are holding on to in this accounting instance.
    * @param sequenceids Keyed by encoded region name. Cannot be null (doesn't make sense for it to
    *          be null).
+   * @param keysBlocking An optional collection that is used to return the specific keys that are
+   *          causing this method to return false.
    * @return true if all sequenceids are lower, older than, the old sequenceids in this instance.
    */
-  boolean areAllLower(Map<byte[], Long> sequenceids) {
+  boolean areAllLower(Map<byte[], Long> sequenceids, Collection<byte[]> keysBlocking) {
     Map<byte[], Long> flushing = null;
     Map<byte[], Long> unflushed = null;
     synchronized (this.tieLock) {
@@ -388,6 +391,7 @@ class SequenceIdAccounting {
       flushing = flattenToLowestSequenceId(this.flushingSequenceIds);
       unflushed = flattenToLowestSequenceId(this.lowestUnflushedSequenceIds);
     }
+    boolean result = true;
     for (Map.Entry<byte[], Long> e : sequenceids.entrySet()) {
       long oldestFlushing = Long.MAX_VALUE;
       long oldestUnflushed = Long.MAX_VALUE;
@@ -399,10 +403,15 @@ class SequenceIdAccounting {
       }
       long min = Math.min(oldestFlushing, oldestUnflushed);
       if (min <= e.getValue()) {
-        return false;
+        if (keysBlocking == null) {
+          return false;
+        }
+        result = false;
+        keysBlocking.add(e.getKey());
+        // Continue examining the map so we could log all regions blocking this WAL.
       }
     }
-    return true;
+    return result;
   }
 
   /**

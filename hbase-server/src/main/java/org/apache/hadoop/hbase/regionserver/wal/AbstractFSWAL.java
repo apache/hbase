@@ -109,8 +109,12 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
-
   private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWAL.class);
+
+  private static final String SURVIVED_TOO_LONG_SEC_KEY = "hbase.regionserver.wal.too.old.sec";
+  private static final int SURVIVED_TOO_LONG_SEC_DEFAULT = 900;
+  /** Don't log blocking regions more frequently than this. */
+  private static final long SURVIVED_TOO_LONG_LOG_INTERVAL_NS = TimeUnit.MINUTES.toNanos(5);
 
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
 
@@ -172,6 +176,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   private final long walSyncTimeoutNs;
 
+  private final long walTooOldNs;
+
   // If > than this size, roll the log.
   protected final long logrollsize;
 
@@ -230,6 +236,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected volatile boolean closed = false;
 
   protected final AtomicBoolean shutdown = new AtomicBoolean(false);
+
+  private long nextLogTooOldNs = System.nanoTime();
+
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name. Throws
    * an IllegalArgumentException if used to compare paths from different wals.
@@ -251,9 +260,15 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
      */
     public final long logSize;
 
+    /**
+     * The nanoTime of the log rolling, used to determine the time interval that has passed since.
+     */
+    public final long rollTimeNs;
+
     public WalProps(Map<byte[], Long> encodedName2HighestSequenceId, long logSize) {
       this.encodedName2HighestSequenceId = encodedName2HighestSequenceId;
       this.logSize = logSize;
+      this.rollTimeNs = System.nanoTime();
     }
   }
 
@@ -425,6 +440,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }
     };
     this.implClassName = getClass().getSimpleName();
+    this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
+            SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
   }
 
   /**
@@ -613,12 +630,23 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   private void cleanOldLogs() throws IOException {
     List<Pair<Path, Long>> logsToArchive = null;
+    long now = System.nanoTime();
+    boolean mayLogTooOld = nextLogTooOldNs > now;
+    ArrayList<byte[]> regionsBlockingWal = null;
     // For each log file, look at its Map of regions to highest sequence id; if all sequence ids
     // are older than what is currently in memory, the WAL can be GC'd.
     for (Map.Entry<Path, WalProps> e : this.walFile2Props.entrySet()) {
       Path log = e.getKey();
+      ArrayList<byte[]> regionsBlockingThisWal = null;
+      long ageNs = now - e.getValue().rollTimeNs;
+      if (ageNs > walTooOldNs) {
+        if (mayLogTooOld && regionsBlockingWal == null) {
+          regionsBlockingWal = new ArrayList<>();
+        }
+        regionsBlockingThisWal = regionsBlockingWal;
+      }
       Map<byte[], Long> sequenceNums = e.getValue().encodedName2HighestSequenceId;
-      if (this.sequenceIdAccounting.areAllLower(sequenceNums)) {
+      if (this.sequenceIdAccounting.areAllLower(sequenceNums, regionsBlockingThisWal)) {
         if (logsToArchive == null) {
           logsToArchive = new ArrayList<>();
         }
@@ -626,6 +654,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         if (LOG.isTraceEnabled()) {
           LOG.trace("WAL file ready for archiving " + log);
         }
+      } else if (regionsBlockingThisWal != null) {
+        StringBuilder sb = new StringBuilder(log.toString()).append(" has not been archived for ")
+          .append(TimeUnit.NANOSECONDS.toSeconds(ageNs)).append(" seconds; blocked by: ");
+        boolean isFirst = true;
+        for (byte[] region : regionsBlockingThisWal) {
+          if (!isFirst) {
+            sb.append("; ");
+          }
+          isFirst = false;
+          sb.append(Bytes.toString(region));
+        }
+        LOG.warn(sb.toString());
+        nextLogTooOldNs = now + SURVIVED_TOO_LONG_LOG_INTERVAL_NS;
+        regionsBlockingThisWal.clear();
       }
     }
     if (logsToArchive != null) {
