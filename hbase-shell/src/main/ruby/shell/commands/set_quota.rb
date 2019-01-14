@@ -26,11 +26,12 @@ Set a quota for a user, table, or namespace.
 Syntax : set_quota TYPE => <type>, <args>
 
 TYPE => THROTTLE
-User can either set quota on read, write or on both the requests together(i.e., read+write)
+User can either set quota on read, write or on both the requests together(i.e., read+write).
 The read, write, or read+write(default throttle type) request limit can be expressed using
-the form 100req/sec, 100req/min and the read, write, read+write(default throttle type) limit
+the form 100req/sec, 100req/min; the read, write, read+write(default throttle type) limit
 can be expressed using the form 100k/sec, 100M/min with (B, K, M, G, T, P) as valid size unit
-and (sec, min, hour, day) as valid time unit.
+; the read, write, read+write(default throttle type) limit can be expressed using the form
+100CU/sec as capacity unit. The valid time units are (sec, min, hour, day).
 Currently the throttle limit is per machine - a limit of 100req/min
 means that each machine can execute 100req/min.
 
@@ -41,6 +42,9 @@ For example:
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+
+    hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10CU/sec'
+    hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10CU/sec'
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE

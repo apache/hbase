@@ -39,12 +39,15 @@ message TimedQuota {
 }
 
 enum ThrottleType {
-  REQUEST_NUMBER = 1;
-  REQUEST_SIZE   = 2;
-  WRITE_NUMBER   = 3;
-  WRITE_SIZE     = 4;
-  READ_NUMBER    = 5;
-  READ_SIZE      = 6;
+  REQUEST_NUMBER        = 1;
+  REQUEST_SIZE          = 2;
+  WRITE_NUMBER          = 3;
+  WRITE_SIZE            = 4;
+  READ_NUMBER           = 5;
+  READ_SIZE             = 6;
+  REQUEST_CAPACITY_UNIT = 7;
+  WRITE_CAPACITY_UNIT   = 8;
+  READ_CAPACITY_UNIT    = 9;
 }
 
 message Throttle {
@@ -56,6 +59,10 @@ message Throttle {
 
   optional TimedQuota read_num  = 5;
   optional TimedQuota read_size = 6;
+
+  optional TimedQuota req_capacity_unit   = 7;
+  optional TimedQuota write_capacity_unit = 8;
+  optional TimedQuota read_capacity_unit  = 9;
 }
 
 message ThrottleRequest {

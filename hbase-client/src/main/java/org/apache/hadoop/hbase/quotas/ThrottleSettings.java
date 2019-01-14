@@ -10,6 +10,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
@@ -18,6 +20,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleRequest;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -53,6 +56,11 @@ class ThrottleSettings extends QuotaSettings {
     builder.setThrottle(proto);
   }
 
+  @VisibleForTesting
+  ThrottleRequest getProto() {
+    return proto;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
@@ -66,18 +74,22 @@ class ThrottleSettings extends QuotaSettings {
       builder.append(", LIMIT => ");
       if (timedQuota.hasSoftLimit()) {
         switch (getThrottleType()) {
-        case REQUEST_NUMBER:
-        case WRITE_NUMBER:
-        case READ_NUMBER:
-          builder.append(String.format("%dreq", timedQuota.getSoftLimit()));
-          break;
-        case REQUEST_SIZE:
-        case WRITE_SIZE:
-        case READ_SIZE:
-          builder.append(sizeToString(timedQuota.getSoftLimit()));
-          break;
-        default:
-          throw new RuntimeException("Invalid throttle type: " + getThrottleType());
+          case REQUEST_NUMBER:
+          case WRITE_NUMBER:
+          case READ_NUMBER:
+            builder.append(String.format("%dreq", timedQuota.getSoftLimit()));
+            break;
+          case REQUEST_SIZE:
+          case WRITE_SIZE:
+          case READ_SIZE:
+            builder.append(sizeToString(timedQuota.getSoftLimit()));
+            break;
+          case REQUEST_CAPACITY_UNIT:
+          case READ_CAPACITY_UNIT:
+          case WRITE_CAPACITY_UNIT:
+            builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+            break;
+          default:
         }
       } else if (timedQuota.hasShare()) {
         builder.append(String.format("%.2f%%", timedQuota.getShare()));

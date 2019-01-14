@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
-import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
@@ -403,50 +402,70 @@ public class MasterQuotaManager implements RegionStateListener {
       throttle = quotas.hasThrottle() ? quotas.getThrottle().toBuilder() : Throttle.newBuilder();
 
       switch (req.getType()) {
-      case REQUEST_NUMBER:
-        if (req.hasTimedQuota()) {
-          throttle.setReqNum(req.getTimedQuota());
-        } else {
-          throttle.clearReqNum();
-        }
-        break;
-      case REQUEST_SIZE:
-        if (req.hasTimedQuota()) {
-          throttle.setReqSize(req.getTimedQuota());
-        } else {
-          throttle.clearReqSize();
-        }
-        break;
-      case WRITE_NUMBER:
-        if (req.hasTimedQuota()) {
-          throttle.setWriteNum(req.getTimedQuota());
-        } else {
-          throttle.clearWriteNum();
-        }
-        break;
-      case WRITE_SIZE:
-        if (req.hasTimedQuota()) {
-          throttle.setWriteSize(req.getTimedQuota());
-        } else {
-          throttle.clearWriteSize();
-        }
-        break;
-      case READ_NUMBER:
-        if (req.hasTimedQuota()) {
-          throttle.setReadNum(req.getTimedQuota());
-        } else {
-          throttle.clearReqNum();
-        }
-        break;
-      case READ_SIZE:
-        if (req.hasTimedQuota()) {
-          throttle.setReadSize(req.getTimedQuota());
+        case REQUEST_NUMBER:
+          if (req.hasTimedQuota()) {
+            throttle.setReqNum(req.getTimedQuota());
+          } else {
+            throttle.clearReqNum();
+          }
+          break;
+        case REQUEST_SIZE:
+          if (req.hasTimedQuota()) {
+            throttle.setReqSize(req.getTimedQuota());
+          } else {
+            throttle.clearReqSize();
+          }
+          break;
+        case WRITE_NUMBER:
+          if (req.hasTimedQuota()) {
+            throttle.setWriteNum(req.getTimedQuota());
+          } else {
+            throttle.clearWriteNum();
+          }
+          break;
+        case WRITE_SIZE:
+          if (req.hasTimedQuota()) {
+            throttle.setWriteSize(req.getTimedQuota());
+          } else {
+            throttle.clearWriteSize();
+          }
+          break;
+        case READ_NUMBER:
+          if (req.hasTimedQuota()) {
+            throttle.setReadNum(req.getTimedQuota());
+          } else {
+            throttle.clearReqNum();
+          }
+          break;
+        case READ_SIZE:
+          if (req.hasTimedQuota()) {
+            throttle.setReadSize(req.getTimedQuota());
         } else {
           throttle.clearReadSize();
         }
-        break;
-      default:
-        throw new RuntimeException("Invalid throttle type: " + req.getType());
+        case REQUEST_CAPACITY_UNIT:
+          if (req.hasTimedQuota()) {
+            throttle.setReqCapacityUnit(req.getTimedQuota());
+          } else {
+            throttle.clearReqCapacityUnit();
+          }
+          break;
+        case READ_CAPACITY_UNIT:
+          if (req.hasTimedQuota()) {
+            throttle.setReadCapacityUnit(req.getTimedQuota());
+          } else {
+            throttle.clearReadCapacityUnit();
+          }
+          break;
+        case WRITE_CAPACITY_UNIT:
+          if (req.hasTimedQuota()) {
+            throttle.setWriteCapacityUnit(req.getTimedQuota());
+          } else {
+            throttle.clearWriteCapacityUnit();
+          }
+          break;
+        default:
+          throw new RuntimeException("Invalid throttle type: " + req.getType());
       }
       quotas.setThrottle(throttle.build());
     } else {

@@ -13,7 +13,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
 
 /**
  * Noop quota limiter returned when no limiter is associated to the user/table
@@ -29,22 +28,24 @@ final class NoopQuotaLimiter implements QuotaLimiter {
 
   @Override
   public void checkQuota(long writeReqs, long estimateWriteSize, long readReqs,
-      long estimateReadSize) throws RpcThrottlingException {
+      long estimateReadSize, long estimateWriteCapacityUnit, long estimateReadCapacityUnit)
+      throws RpcThrottlingException {
     // no-op
   }
 
   @Override
-  public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize) {
+  public void grabQuota(long writeReqs, long writeSize, long readReqs, long readSize,
+      long writeCapacityUnit, long readCapacityUnit) {
     // no-op
   }
 
   @Override
-  public void consumeWrite(final long size) {
+  public void consumeWrite(final long size, long capacityUnit) {
     // no-op
   }
 
   @Override
-  public void consumeRead(final long size) {
+  public void consumeRead(final long size, long capacityUnit) {
     // no-op
   }
 

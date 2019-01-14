@@ -54,6 +54,13 @@ public class QuotaUtil extends QuotaTableUtil {
       "hbase.quota.retryable.throttlingexception";
   public static final boolean QUOTA_RETRYABLE_THROTTING_EXCEPTION_DEFAULT = false;
 
+  public static final String READ_CAPACITY_UNIT_CONF_KEY = "hbase.quota.read.capacity.unit";
+  // the default one read capacity unit is 1024 bytes (1KB)
+  public static final long DEFAULT_READ_CAPACITY_UNIT = 1024;
+  public static final String WRITE_CAPACITY_UNIT_CONF_KEY = "hbase.quota.write.capacity.unit";
+  // the default one write capacity unit is 1024 bytes (1KB)
+  public static final long DEFAULT_WRITE_CAPACITY_UNIT = 1024;
+
   /** Table descriptor for Quota internal table */
   public static final HTableDescriptor QUOTA_TABLE_DESC = new HTableDescriptor(QUOTA_TABLE_NAME);
   static {
