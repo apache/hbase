@@ -94,6 +94,7 @@ public class SplitWALProcedure
           setNextState(MasterProcedureProtos.SplitWALState.ACQUIRE_SPLIT_WAL_WORKER);
           return Flow.HAS_MORE_STATE;
         }
+        ServerCrashProcedure.updateProgress(env, getParentProcId());
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);

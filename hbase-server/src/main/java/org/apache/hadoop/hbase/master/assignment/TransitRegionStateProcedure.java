@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -398,6 +399,8 @@ public class TransitRegionStateProcedure
     regionNode.setOpenSeqNum(openSeqNum);
     env.getAssignmentManager().regionOpened(regionNode);
     if (lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED) {
+      // if parent procedure is ServerCrashProcedure, update progress
+      ServerCrashProcedure.updateProgress(env, getParentProcId());
       // we are done
       regionNode.unsetProcedure(this);
     }

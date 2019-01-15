@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.master.SplitWALManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -82,6 +84,10 @@ public class ServerCrashProcedure
 
   private boolean carryingMeta = false;
   private boolean shouldSplitWal;
+  private MonitoredTask status;
+  // currentRunningState is updated when ServerCrashProcedure get scheduled, child procedures update
+  // progress will not update the state because the actual state is overwritten by its next state
+  private ServerCrashState currentRunningState = getInitialState();
 
   /**
    * Call this constructor queuing up a Procedure.
@@ -113,6 +119,7 @@ public class ServerCrashProcedure
       throws ProcedureSuspendedException, ProcedureYieldException {
     final MasterServices services = env.getMasterServices();
     final AssignmentManager am = env.getAssignmentManager();
+    updateProgress(true);
     // HBASE-14802
     // If we have not yet notified that we are processing a dead server, we should do now.
     if (!notifiedDeadServer) {
@@ -224,6 +231,7 @@ public class ServerCrashProcedure
           LOG.info("removed crashed server {} after splitting done", serverName);
           services.getAssignmentManager().getRegionStates().removeServer(serverName);
           services.getServerManager().getDeadServers().finish(serverName);
+          updateProgress(true);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -297,6 +305,25 @@ public class ServerCrashProcedure
     }
     am.getRegionStates().logSplit(this.serverName);
     LOG.debug("Done splitting WALs {}", this);
+  }
+
+  void updateProgress(boolean updateState) {
+    String msg = "Processing ServerCrashProcedure of " + serverName;
+    if (status == null) {
+      status = TaskMonitor.get().createStatus(msg);
+      return;
+    }
+    if (currentRunningState == ServerCrashState.SERVER_CRASH_FINISH) {
+      status.markComplete(msg + " done");
+      return;
+    }
+    if (updateState) {
+      currentRunningState = getCurrentState();
+    }
+    int childrenLatch = getChildrenLatch();
+    status.setStatus(msg + " current State " + currentRunningState
+        + (childrenLatch > 0 ? "; remaining num of running child procedures = " + childrenLatch
+            : ""));
   }
 
   @Override
@@ -387,6 +414,7 @@ public class ServerCrashProcedure
         this.regionsOnCrashedServer.add(ProtobufUtil.toRegionInfo(ri));
       }
     }
+    updateProgress(false);
   }
 
   @Override
@@ -454,5 +482,16 @@ public class ServerCrashProcedure
   @Override
   protected boolean holdLock(MasterProcedureEnv env) {
     return true;
+  }
+
+  public static void updateProgress(MasterProcedureEnv env, long parentId) {
+    if (parentId == NO_PROC_ID) {
+      return;
+    }
+    Procedure parentProcedure =
+        env.getMasterServices().getMasterProcedureExecutor().getProcedure(parentId);
+    if (parentProcedure != null && parentProcedure instanceof ServerCrashProcedure) {
+      ((ServerCrashProcedure) parentProcedure).updateProgress(false);
+    }
   }
 }
