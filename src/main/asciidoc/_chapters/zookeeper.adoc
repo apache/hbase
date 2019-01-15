@@ -407,7 +407,7 @@ Next checkout code and run a sanity check.
 
 ----
 
-git clone git://git.apache.org/hbase.git
+git clone https://gitbox.apache.org/repos/asf/hbase.git
 cd hbase
 mvn clean test -Dtest=TestZooKeeperACL
 ----
