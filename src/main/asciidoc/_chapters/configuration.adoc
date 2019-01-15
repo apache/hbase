@@ -614,12 +614,25 @@ If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be spe
 [[config_timeouts]]
 === Timeout settings
 
-HBase provides many timeout settings to limit the execution time of different remote operations.
+HBase provides a wide variety of timeout settings to limit the execution time of various remote operations.
 
-The `hbase.rpc.timeout` property limits how long an RPC call can run before it times out.
-You can also specify a timeout for read and write operations using `hbase.rpc.read.timeout` and `hbase.rpc.write.timeout` configuration properties. In the absence of these properties `hbase.rpc.timeout` will be used.
+* hbase.rpc.timeout
+* hbase.rpc.read.timeout
+* hbase.rpc.write.timeout
+* hbase.client.operation.timeout
+* hbase.client.meta.operation.timeout
+* hbase.client.scanner.timeout.period
+
+The `hbase.rpc.timeout` property limits how long a single RPC call can run before timing out.
+To fine tune read or write related RPC timeouts set `hbase.rpc.read.timeout` and `hbase.rpc.write.timeout` configuration properties.
+In the absence of these properties `hbase.rpc.timeout` will be used.
+
 A higher-level timeout is `hbase.client.operation.timeout` which is valid for each client call.
-Timeout for scan operations is controlled differently. To set it you can use `hbase.client.scanner.timeout.period` property.
+When an RPC call fails for instance for a timeout due to `hbase.rpc.timeout` it will be retried until `hbase.client.operation.timeout` is reached.
+Client operation timeout for system tables can be fine tuned by setting `hbase.client.meta.operation.timeout` configuration value.
+When this is not set its value will use `hbase.client.operation.timeout`.
+
+Timeout for scan operations is controlled differently. Use `hbase.client.scanner.timeout.period` property to set this timeout.
 
 [[example_config]]
 == Example Configurations

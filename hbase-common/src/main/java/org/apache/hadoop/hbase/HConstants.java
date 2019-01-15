@@ -309,7 +309,7 @@ public final class HConstants {
   /** Parameter name for HBase client operation timeout. */
   public static final String HBASE_CLIENT_OPERATION_TIMEOUT = "hbase.client.operation.timeout";
 
-  /** Parameter name for HBase client operation timeout. */
+  /** Parameter name for HBase client meta operation timeout. */
   public static final String HBASE_CLIENT_META_OPERATION_TIMEOUT =
     "hbase.client.meta.operation.timeout";
 
