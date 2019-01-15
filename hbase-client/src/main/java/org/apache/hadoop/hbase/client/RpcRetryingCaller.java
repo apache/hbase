@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.protobuf.ServiceException;
 
@@ -149,10 +150,21 @@ public class RpcRetryingCaller<T> {
         interceptor.handleFailure(context, t);
         t = translateException(t);
         if (tries > startLogErrorsCnt) {
-          LOG.info("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
-              (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
-              + "cancelled=" + cancelled.get() + ", msg="
-              + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail());
+          if (LOG.isInfoEnabled()) {
+            StringBuilder builder = new StringBuilder("Call exception, tries=").append(tries)
+                .append(", retries=").append(retries).append(", started=")
+                .append(EnvironmentEdgeManager.currentTime() - this.globalStartTime)
+                .append(" ms ago, ").append("cancelled=").append(cancelled.get())
+                .append(", msg=").append(t.getMessage())
+                .append(", details=").append(callable.getExceptionMessageAdditionalDetail())
+                .append(", see https://s.apache.org/timeout");
+            if (LOG.isDebugEnabled()) {
+              builder.append(", exception=").append(StringUtils.stringifyException(t));
+              LOG.debug(builder.toString());
+            } else {
+              LOG.info(builder.toString());
+            }
+          }
         }
 
         callable.throwable(t, retries != 1);

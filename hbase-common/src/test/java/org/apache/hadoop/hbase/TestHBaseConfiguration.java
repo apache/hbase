@@ -51,31 +51,6 @@ public class TestHBaseConfiguration {
   }
 
   @Test
-  public void testGetIntDeprecated() {
-    int VAL = 1, VAL2 = 2;
-    String NAME = "foo";
-    String DEPRECATED_NAME = "foo.deprecated";
-
-    Configuration conf = HBaseConfiguration.create();
-    conf.setInt(NAME, VAL);
-    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
-
-    conf = HBaseConfiguration.create();
-    conf.setInt(DEPRECATED_NAME, VAL);
-    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
-
-    conf = HBaseConfiguration.create();
-    conf.setInt(DEPRECATED_NAME, VAL);
-    conf.setInt(NAME, VAL);
-    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
-
-    conf = HBaseConfiguration.create();
-    conf.setInt(DEPRECATED_NAME, VAL);
-    conf.setInt(NAME, VAL2); // deprecated value will override this
-    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
-  }
-
-  @Test
   public void testSubset() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     // subset is used in TableMapReduceUtil#initCredentials to support different security

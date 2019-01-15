@@ -634,7 +634,30 @@ Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally
 ----
 
-If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], and so on.
+If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], and so on.
+
+[[config_timeouts]]
+=== Timeout settings
+
+HBase provides a wide variety of timeout settings to limit the execution time of various remote operations.
+
+* hbase.rpc.timeout
+* hbase.rpc.read.timeout
+* hbase.rpc.write.timeout
+* hbase.client.operation.timeout
+* hbase.client.meta.operation.timeout
+* hbase.client.scanner.timeout.period
+
+The `hbase.rpc.timeout` property limits how long a single RPC call can run before timing out.
+To fine tune read or write related RPC timeouts set `hbase.rpc.read.timeout` and `hbase.rpc.write.timeout` configuration properties.
+In the absence of these properties `hbase.rpc.timeout` will be used.
+
+A higher-level timeout is `hbase.client.operation.timeout` which is valid for each client call.
+When an RPC call fails for instance for a timeout due to `hbase.rpc.timeout` it will be retried until `hbase.client.operation.timeout` is reached.
+Client operation timeout for system tables can be fine tuned by setting `hbase.client.meta.operation.timeout` configuration value.
+When this is not set its value will use `hbase.client.operation.timeout`.
+
+Timeout for scan operations is controlled differently. Use `hbase.client.scanner.timeout.period` property to set this timeout.
 
 [[example_config]]
 == Example Configurations
