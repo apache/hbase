@@ -173,8 +173,7 @@ GIT is our repository of record for all but the Apache HBase website.
 We used to be on SVN.
 We migrated.
 See link:https://issues.apache.org/jira/browse/INFRA-7768[Migrate Apache HBase SVN Repos to Git].
-See link:https://hbase.apache.org/source-repository.html[Source Code
-                Management] page for contributor and committer links or search for HBase on the link:https://git.apache.org/[Apache Git] page.
+See link:https://hbase.apache.org/source-repository.html[Source Code Management] page for contributor and committer links or search for HBase on the link:https://gitbox.apache.org/repos/asf/[Apache Git] page.
 
 == IDEs
 
