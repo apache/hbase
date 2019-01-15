@@ -608,7 +608,7 @@ See also Jesse Andersen's link:http://blog.cloudera.com/blog/2014/04/how-to-use-
 
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual <<trouble.client.scantimeout>>.
 Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call.
-It can be prevented by having `hbase.rpc.timeout` > `hbase.regionserver.lease.period`.
+It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`.
 Harsh J investigated the issue as part of the mailing list thread link:https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
 
 [[trouble.client.scarylogs]]
