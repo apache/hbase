@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -38,9 +39,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -77,40 +78,30 @@ public class TestCopyTable {
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
-    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    try (Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+         Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);) {
+      // put rows into the first table
+      loadData(t1, FAMILY, COLUMN1);
 
-    // put rows into the first table
-    for (int i = 0; i < 10; i++) {
-      Put p = new Put(Bytes.toBytes("row" + i));
-      p.add(FAMILY, COLUMN1, COLUMN1);
-      t1.put(p);
+      CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
+      int code;
+      if (bulkload) {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
+            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+            "--bulkload", TABLENAME1.getNameAsString() });
+      } else {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
+            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+            TABLENAME1.getNameAsString() });
+      }
+      assertEquals("copy job failed", 0, code);
+
+      // verify the data was copied into table 2
+      verifyRows(t2, FAMILY, COLUMN1);
+    } finally {
+      TEST_UTIL.deleteTable(TABLENAME1);
+      TEST_UTIL.deleteTable(TABLENAME2);
     }
-
-    CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
-
-    int code;
-    if (bulkload) {
-      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-          "--bulkload", TABLENAME1.getNameAsString() });
-    } else {
-      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-          TABLENAME1.getNameAsString() });
-    }
-    assertEquals("copy job failed", 0, code);
-
-    // verify the data was copied into table 2
-    for (int i = 0; i < 10; i++) {
-      Get g = new Get(Bytes.toBytes("row" + i));
-      Result r = t2.get(g);
-      assertEquals(1, r.size());
-      assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
-    }
-
-    t1.close();
-    t2.close();
-    TEST_UTIL.deleteTable(TABLENAME1);
-    TEST_UTIL.deleteTable(TABLENAME2);
   }
 
   /**
@@ -251,14 +242,78 @@ public class TestCopyTable {
     assertTrue(data.toString().contains("Usage:"));
   }
 
-  private boolean runCopy(String[] args) throws IOException, InterruptedException,
-      ClassNotFoundException {
-    GenericOptionsParser opts = new GenericOptionsParser(
-        new Configuration(TEST_UTIL.getConfiguration()), args);
-    Configuration configuration = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = new CopyTable(configuration).createSubmittableJob(args);
-    job.waitForCompletion(false);
-    return job.isSuccessful();
+  private boolean runCopy(String[] args) throws Exception {
+    CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
+    int code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy, args);
+    return code == 0;
+  }
+
+  private void loadData(Table t, byte[] family, byte[] column) throws IOException {
+    for (int i = 0; i < 10; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Put p = new Put(row);
+      p.addColumn(family, column, row);
+      t.put(p);
+    }
+  }
+
+  private void verifyRows(Table t, byte[] family, byte[] column) throws IOException {
+    for (int i = 0; i < 10; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Get g = new Get(row).addFamily(family);
+      Result r = t.get(g);
+      Assert.assertNotNull(r);
+      Assert.assertEquals(1, r.size());
+      Cell cell = r.rawCells()[0];
+      Assert.assertTrue(CellUtil.matchingQualifier(cell, column));
+      Assert.assertEquals(Bytes.compareTo(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength(), row, 0, row.length), 0);
+    }
+  }
+
+  private void testCopyTableBySnapshot(String tablePrefix, boolean bulkLoad)
+      throws Exception {
+    TableName table1 = TableName.valueOf(tablePrefix + 1);
+    TableName table2 = TableName.valueOf(tablePrefix + 2);
+    Table t1 = TEST_UTIL.createTable(table1, FAMILY_A);
+    Table t2 = TEST_UTIL.createTable(table2, FAMILY_A);
+    loadData(t1, FAMILY_A, Bytes.toBytes("qualifier"));
+    String snapshot = tablePrefix + "_snapshot";
+    TEST_UTIL.getHBaseAdmin().snapshot(snapshot, table1);
+    boolean success;
+    if (bulkLoad) {
+      success =
+          runCopy(new String[] { "--snapshot", "--new.name=" + table2, "--bulkload", snapshot });
+    } else {
+      success = runCopy(new String[] { "--snapshot", "--new.name=" + table2, snapshot });
+    }
+    Assert.assertTrue(success);
+    verifyRows(t2, FAMILY_A, Bytes.toBytes("qualifier"));
+  }
+
+  @Test
+  public void testLoadingSnapshotToTable() throws Exception {
+    testCopyTableBySnapshot("testLoadingSnapshotToTable", false);
+  }
+
+  @Test
+  public void testLoadingSnapshotAndBulkLoadToTable() throws Exception {
+    testCopyTableBySnapshot("testLoadingSnapshotAndBulkLoadToTable", true);
+  }
+
+  @Test
+  public void testLoadingSnapshotToRemoteCluster() throws Exception {
+    Assert.assertFalse(runCopy(
+      new String[] { "--snapshot", "--peerAdr=hbase://remoteHBase", "sourceSnapshotName" }));
+  }
+
+  @Test
+  public void testLoadingSnapshotWithoutSnapshotName() throws Exception {
+    Assert.assertFalse(runCopy(new String[] { "--snapshot", "--peerAdr=hbase://remoteHBase" }));
+  }
+
+  @Test
+  public void testLoadingSnapshotWithoutDestTable() throws Exception {
+    Assert.assertFalse(runCopy(new String[] { "--snapshot", "sourceSnapshotName" }));
   }
 }
