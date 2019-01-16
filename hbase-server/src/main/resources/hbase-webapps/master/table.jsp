@@ -310,10 +310,11 @@ if ( fqtn != null ) {
     if (quota == null || !quota.hasSpace()) {
       quota = QuotaTableUtil.getNamespaceQuota(master.getConnection(), tn.getNamespaceAsString());
       if (quota != null) {
-        masterSnapshot = QuotaTableUtil.getCurrentSnapshot(master.getConnection(), tn.getNamespaceAsString());
+        masterSnapshot = master.getQuotaObserverChore().getNamespaceQuotaSnapshots()
+          .get(tn.getNamespaceAsString());
       }
     } else {
-      masterSnapshot = QuotaTableUtil.getCurrentSnapshot(master.getConnection(), tn);
+      masterSnapshot = master.getQuotaObserverChore().getTableQuotaSnapshots().get(tn);
     }
     if (quota != null && quota.hasSpace()) {
       SpaceQuota spaceQuota = quota.getSpace();

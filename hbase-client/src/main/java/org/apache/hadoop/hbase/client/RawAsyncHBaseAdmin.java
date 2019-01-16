@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -123,6 +124,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -252,6 +254,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -3650,5 +3659,57 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               resp -> resp.getRpcThrottleEnabled()))
         .call();
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, Long>> getSpaceQuotaTableSizes() {
+    return this.<Map<TableName, Long>> newMasterCaller().action((controller, stub) -> this
+      .<GetSpaceQuotaRegionSizesRequest, GetSpaceQuotaRegionSizesResponse,
+      Map<TableName, Long>> call(controller, stub,
+        RequestConverter.buildGetSpaceQuotaRegionSizesRequest(),
+        (s, c, req, done) -> s.getSpaceQuotaRegionSizes(c, req, done),
+        resp -> resp.getSizesList().stream().collect(Collectors
+          .toMap(sizes -> ProtobufUtil.toTableName(sizes.getTableName()), RegionSizes::getSize))))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, SpaceQuotaSnapshot>> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) {
+    return this.<Map<TableName, SpaceQuotaSnapshot>> newAdminCaller()
+      .action((controller, stub) -> this
+        .<GetSpaceQuotaSnapshotsRequest, GetSpaceQuotaSnapshotsResponse,
+        Map<TableName, SpaceQuotaSnapshot>> adminCall(controller, stub,
+          RequestConverter.buildGetSpaceQuotaSnapshotsRequest(),
+          (s, c, req, done) -> s.getSpaceQuotaSnapshots(controller, req, done),
+          resp -> resp.getSnapshotsList().stream()
+            .collect(Collectors.toMap(snapshot -> ProtobufUtil.toTableName(snapshot.getTableName()),
+              snapshot -> SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot())))))
+      .serverName(serverName).call();
+  }
+
+  private CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(
+      Converter<SpaceQuotaSnapshot, GetQuotaStatesResponse> converter) {
+    return this.<SpaceQuotaSnapshot> newMasterCaller()
+      .action((controller, stub) -> this
+        .<GetQuotaStatesRequest, GetQuotaStatesResponse, SpaceQuotaSnapshot> call(controller, stub,
+          RequestConverter.buildGetQuotaStatesRequest(),
+          (s, c, req, done) -> s.getQuotaStates(c, req, done), converter))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(String namespace) {
+    return getCurrentSpaceQuotaSnapshot(resp -> resp.getNsSnapshotsList().stream()
+      .filter(s -> s.getNamespace().equals(namespace)).findFirst()
+      .map(s -> SpaceQuotaSnapshot.toSpaceQuotaSnapshot(s.getSnapshot())).orElse(null));
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(TableName tableName) {
+    HBaseProtos.TableName protoTableName = ProtobufUtil.toProtoTableName(tableName);
+    return getCurrentSpaceQuotaSnapshot(resp -> resp.getTableSnapshotsList().stream()
+      .filter(s -> s.getTableName().equals(protoTableName)).findFirst()
+      .map(s -> SpaceQuotaSnapshot.toSpaceQuotaSnapshot(s.getSnapshot())).orElse(null));
   }
 }

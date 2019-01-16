@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -107,6 +108,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -205,6 +207,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
@@ -4365,5 +4372,83 @@ public class HBaseAdmin implements Admin {
           IsRpcThrottleEnabledRequest.newBuilder().build()).getRpcThrottleEnabled();
       }
     });
+  }
+
+  @Override
+  public Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException {
+    return executeCallable(
+      new MasterCallable<Map<TableName, Long>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected Map<TableName, Long> rpcCall() throws Exception {
+          GetSpaceQuotaRegionSizesResponse resp = master.getSpaceQuotaRegionSizes(
+            getRpcController(), RequestConverter.buildGetSpaceQuotaRegionSizesRequest());
+          Map<TableName, Long> tableSizes = new HashMap<>();
+          for (RegionSizes sizes : resp.getSizesList()) {
+            TableName tn = ProtobufUtil.toTableName(sizes.getTableName());
+            tableSizes.put(tn, sizes.getSize());
+          }
+          return tableSizes;
+        }
+      });
+  }
+
+  @Override
+  public Map<TableName, SpaceQuotaSnapshot> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) throws IOException {
+    final AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
+    Callable<GetSpaceQuotaSnapshotsResponse> callable =
+      new Callable<GetSpaceQuotaSnapshotsResponse>() {
+        @Override
+        public GetSpaceQuotaSnapshotsResponse call() throws Exception {
+          return admin.getSpaceQuotaSnapshots(rpcControllerFactory.newController(),
+            RequestConverter.buildGetSpaceQuotaSnapshotsRequest());
+        }
+      };
+    GetSpaceQuotaSnapshotsResponse resp = ProtobufUtil.call(callable);
+    Map<TableName, SpaceQuotaSnapshot> snapshots = new HashMap<>();
+    for (TableQuotaSnapshot snapshot : resp.getSnapshotsList()) {
+      snapshots.put(ProtobufUtil.toTableName(snapshot.getTableName()),
+        SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot()));
+    }
+    return snapshots;
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(String namespace) throws IOException {
+    return executeCallable(
+      new MasterCallable<SpaceQuotaSnapshot>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected SpaceQuotaSnapshot rpcCall() throws Exception {
+          GetQuotaStatesResponse resp = master.getQuotaStates(getRpcController(),
+            RequestConverter.buildGetQuotaStatesRequest());
+          for (GetQuotaStatesResponse.NamespaceQuotaSnapshot nsSnapshot : resp
+            .getNsSnapshotsList()) {
+            if (namespace.equals(nsSnapshot.getNamespace())) {
+              return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(nsSnapshot.getSnapshot());
+            }
+          }
+          return null;
+        }
+      });
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(TableName tableName) throws IOException {
+    return executeCallable(
+      new MasterCallable<SpaceQuotaSnapshot>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected SpaceQuotaSnapshot rpcCall() throws Exception {
+          GetQuotaStatesResponse resp = master.getQuotaStates(getRpcController(),
+            RequestConverter.buildGetQuotaStatesRequest());
+          HBaseProtos.TableName protoTableName = ProtobufUtil.toProtoTableName(tableName);
+          for (GetQuotaStatesResponse.TableQuotaSnapshot tableSnapshot : resp
+            .getTableSnapshotsList()) {
+            if (protoTableName.equals(tableSnapshot.getTableName())) {
+              return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(tableSnapshot.getSnapshot());
+            }
+          }
+          return null;
+        }
+      });
   }
 }

@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
@@ -774,5 +774,26 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isRpcThrottleEnabled() {
     return wrap(rawAdmin.isRpcThrottleEnabled());
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, Long>> getSpaceQuotaTableSizes() {
+    return wrap(rawAdmin.getSpaceQuotaTableSizes());
+  }
+
+  @Override
+  public CompletableFuture<Map<TableName, SpaceQuotaSnapshot>> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) {
+    return wrap(rawAdmin.getRegionServerSpaceQuotaSnapshots(serverName));
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(String namespace) {
+    return wrap(rawAdmin.getCurrentSpaceQuotaSnapshot(namespace));
+  }
+
+  @Override
+  public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(TableName tableName) {
+    return wrap(rawAdmin.getCurrentSpaceQuotaSnapshot(tableName));
   }
 }

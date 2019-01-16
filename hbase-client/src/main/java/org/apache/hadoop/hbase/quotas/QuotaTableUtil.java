@@ -27,23 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.QuotaStatusCalls;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -55,21 +47,20 @@ import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Helper class to interact with the quota table.
@@ -561,87 +552,6 @@ public class QuotaTableUtil {
       }
       return snapshotSizes;
     }
-  }
-
-  /* =========================================================================
-   *  Space quota status RPC helpers
-   */
-  /**
-   * Fetches the table sizes on the filesystem as tracked by the HBase Master.
-   */
-  public static Map<TableName,Long> getMasterReportedTableSizes(
-      Connection conn) throws IOException {
-    if (!(conn instanceof ClusterConnection)) {
-      throw new IllegalArgumentException("Expected a ClusterConnection");
-    }
-    ClusterConnection clusterConn = (ClusterConnection) conn;
-    GetSpaceQuotaRegionSizesResponse response = QuotaStatusCalls.getMasterRegionSizes(
-        clusterConn, 0);
-    Map<TableName,Long> tableSizes = new HashMap<>();
-    for (RegionSizes sizes : response.getSizesList()) {
-      TableName tn = ProtobufUtil.toTableName(sizes.getTableName());
-      tableSizes.put(tn, sizes.getSize());
-    }
-    return tableSizes;
-  }
-
-  /**
-   * Fetches the observed {@link SpaceQuotaSnapshot}s observed by a RegionServer.
-   */
-  public static Map<TableName,SpaceQuotaSnapshot> getRegionServerQuotaSnapshots(
-      Connection conn, ServerName regionServer) throws IOException {
-    if (!(conn instanceof ClusterConnection)) {
-      throw new IllegalArgumentException("Expected a ClusterConnection");
-    }
-    ClusterConnection clusterConn = (ClusterConnection) conn;
-    GetSpaceQuotaSnapshotsResponse response = QuotaStatusCalls.getRegionServerQuotaSnapshot(
-        clusterConn, 0, regionServer);
-    Map<TableName,SpaceQuotaSnapshot> snapshots = new HashMap<>();
-    for (TableQuotaSnapshot snapshot : response.getSnapshotsList()) {
-      snapshots.put(
-          ProtobufUtil.toTableName(snapshot.getTableName()),
-          SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot()));
-    }
-    return snapshots;
-  }
-
-  /**
-   * Returns the Master's view of a quota on the given {@code tableName} or null if the
-   * Master has no quota information on that table.
-   */
-  public static SpaceQuotaSnapshot getCurrentSnapshot(
-      Connection conn, TableName tn) throws IOException {
-    if (!(conn instanceof ClusterConnection)) {
-      throw new IllegalArgumentException("Expected a ClusterConnection");
-    }
-    ClusterConnection clusterConn = (ClusterConnection) conn;
-    GetQuotaStatesResponse resp = QuotaStatusCalls.getMasterQuotaStates(clusterConn, 0);
-    HBaseProtos.TableName protoTableName = ProtobufUtil.toProtoTableName(tn);
-    for (GetQuotaStatesResponse.TableQuotaSnapshot tableSnapshot : resp.getTableSnapshotsList()) {
-      if (protoTableName.equals(tableSnapshot.getTableName())) {
-        return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(tableSnapshot.getSnapshot());
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Returns the Master's view of a quota on the given {@code namespace} or null if the
-   * Master has no quota information on that namespace.
-   */
-  public static SpaceQuotaSnapshot getCurrentSnapshot(
-      Connection conn, String namespace) throws IOException {
-    if (!(conn instanceof ClusterConnection)) {
-      throw new IllegalArgumentException("Expected a ClusterConnection");
-    }
-    ClusterConnection clusterConn = (ClusterConnection) conn;
-    GetQuotaStatesResponse resp = QuotaStatusCalls.getMasterQuotaStates(clusterConn, 0);
-    for (GetQuotaStatesResponse.NamespaceQuotaSnapshot nsSnapshot : resp.getNsSnapshotsList()) {
-      if (namespace.equals(nsSnapshot.getNamespace())) {
-        return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(nsSnapshot.getSnapshot());
-      }
-    }
-    return null;
   }
 
   /* =========================================================================

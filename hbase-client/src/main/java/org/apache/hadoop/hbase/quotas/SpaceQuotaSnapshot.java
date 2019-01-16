@@ -17,7 +17,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.Objects;
-
+import java.util.Optional;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -28,7 +28,7 @@ import org.apache.hadoop.util.StringUtils;
  * A point-in-time view of a space quota on a table.
  */
 @InterfaceAudience.Private
-public class SpaceQuotaSnapshot {
+public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
   private static final SpaceQuotaSnapshot NO_SUCH_SNAPSHOT = new SpaceQuotaSnapshot(
       SpaceQuotaStatus.notInViolation(), 0, Long.MAX_VALUE);
   private final SpaceQuotaStatus quotaStatus;
@@ -41,26 +41,25 @@ public class SpaceQuotaSnapshot {
    * there is guaranteed to be a non-null violation policy.
    */
   @InterfaceAudience.Private
-  public static class SpaceQuotaStatus {
+  public static class SpaceQuotaStatus implements SpaceQuotaStatusView {
     private static final SpaceQuotaStatus NOT_IN_VIOLATION = new SpaceQuotaStatus(null, false);
-    final SpaceViolationPolicy policy;
+    final Optional<SpaceViolationPolicy> policy;
     final boolean inViolation;
 
     /**
      * Constructs a {@code SpaceQuotaSnapshot} which is in violation of the provided {@code policy}.
-     *
+     * <p/>
      * Use {@link #notInViolation()} to obtain an instance of this class for the cases when the
      * quota is not in violation.
-     *
      * @param policy The non-null policy being violated.
      */
     public SpaceQuotaStatus(SpaceViolationPolicy policy) {
       // If the caller is instantiating a status, the policy must be non-null
-      this (Objects.requireNonNull(policy), true);
+      this(Objects.requireNonNull(policy), true);
     }
 
     private SpaceQuotaStatus(SpaceViolationPolicy policy, boolean inViolation) {
-      this.policy = policy;
+      this.policy = Optional.ofNullable(policy);
       this.inViolation = inViolation;
     }
 
@@ -68,13 +67,15 @@ public class SpaceQuotaSnapshot {
      * Returns the violation policy, which may be null. It is guaranteed to be non-null if
      * {@link #isInViolation()} is {@code true}, but may be null otherwise.
      */
-    public SpaceViolationPolicy getPolicy() {
+    @Override
+    public Optional<SpaceViolationPolicy> getPolicy() {
       return policy;
     }
 
     /**
      * @return {@code true} if the quota is being violated, {@code false} otherwise.
      */
+    @Override
     public boolean isInViolation() {
       return inViolation;
     }
@@ -113,7 +114,7 @@ public class SpaceQuotaSnapshot {
       QuotaProtos.SpaceQuotaStatus.Builder builder = QuotaProtos.SpaceQuotaStatus.newBuilder();
       builder.setInViolation(status.inViolation);
       if (status.isInViolation()) {
-        builder.setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(status.getPolicy()));
+        builder.setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(status.getPolicy().get()));
       }
       return builder.build();
     }
@@ -136,6 +137,7 @@ public class SpaceQuotaSnapshot {
   /**
    * Returns the status of the quota.
    */
+  @Override
   public SpaceQuotaStatus getQuotaStatus() {
     return quotaStatus;
   }
@@ -143,6 +145,7 @@ public class SpaceQuotaSnapshot {
   /**
    * Returns the current usage, in bytes, of the target (e.g. table, namespace).
    */
+  @Override
   public long getUsage() {
     return usage;
   }
@@ -150,6 +153,7 @@ public class SpaceQuotaSnapshot {
   /**
    * Returns the limit, in bytes, of the target (e.g. table, namespace).
    */
+  @Override
   public long getLimit() {
     return limit;
   }
