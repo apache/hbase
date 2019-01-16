@@ -362,6 +362,9 @@ Shell.load_command_group(
     stop_master
     stop_regionserver
     rit
+    list_decommissioned_regionservers
+    decommission_regionservers
+    recommission_regionserver
   ],
   # TODO: remove older hlog_roll command
   aliases: {
