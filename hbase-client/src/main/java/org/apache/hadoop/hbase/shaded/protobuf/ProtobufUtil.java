@@ -2384,14 +2384,27 @@ public final class ProtobufUtil {
    */
   public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
     switch (proto) {
-      case REQUEST_NUMBER: return ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return ThrottleType.READ_SIZE;
+      case REQUEST_NUMBER:
+        return ThrottleType.REQUEST_NUMBER;
+      case REQUEST_SIZE:
+        return ThrottleType.REQUEST_SIZE;
+      case REQUEST_CAPACITY_UNIT:
+        return ThrottleType.REQUEST_CAPACITY_UNIT;
+      case WRITE_NUMBER:
+        return ThrottleType.WRITE_NUMBER;
+      case WRITE_SIZE:
+        return ThrottleType.WRITE_SIZE;
+      case READ_NUMBER:
+        return ThrottleType.READ_NUMBER;
+      case READ_SIZE:
+        return ThrottleType.READ_SIZE;
+      case READ_CAPACITY_UNIT:
+        return ThrottleType.READ_CAPACITY_UNIT;
+      case WRITE_CAPACITY_UNIT:
+        return ThrottleType.WRITE_CAPACITY_UNIT;
+      default:
+        throw new RuntimeException("Invalid ThrottleType " + proto);
     }
-    throw new RuntimeException("Invalid ThrottleType " + proto);
   }
 
   /**
@@ -2402,14 +2415,27 @@ public final class ProtobufUtil {
    */
   public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
     switch (type) {
-      case REQUEST_NUMBER: return QuotaProtos.ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return QuotaProtos.ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return QuotaProtos.ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return QuotaProtos.ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return QuotaProtos.ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return QuotaProtos.ThrottleType.READ_SIZE;
+      case REQUEST_NUMBER:
+        return QuotaProtos.ThrottleType.REQUEST_NUMBER;
+      case REQUEST_SIZE:
+        return QuotaProtos.ThrottleType.REQUEST_SIZE;
+      case WRITE_NUMBER:
+        return QuotaProtos.ThrottleType.WRITE_NUMBER;
+      case WRITE_SIZE:
+        return QuotaProtos.ThrottleType.WRITE_SIZE;
+      case READ_NUMBER:
+        return QuotaProtos.ThrottleType.READ_NUMBER;
+      case READ_SIZE:
+        return QuotaProtos.ThrottleType.READ_SIZE;
+      case REQUEST_CAPACITY_UNIT:
+        return QuotaProtos.ThrottleType.REQUEST_CAPACITY_UNIT;
+      case READ_CAPACITY_UNIT:
+        return QuotaProtos.ThrottleType.READ_CAPACITY_UNIT;
+      case WRITE_CAPACITY_UNIT:
+        return QuotaProtos.ThrottleType.WRITE_CAPACITY_UNIT;
+      default:
+        throw new RuntimeException("Invalid ThrottleType " + type);
     }
-    throw new RuntimeException("Invalid ThrottleType " + type);
   }
 
   /**
