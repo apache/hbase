@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseIOException;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class StoppedRpcClientException extends HBaseIOException {
+public class StoppedRpcClientException extends DoNotRetryIOException {
   public StoppedRpcClientException() {
     super();
   }
