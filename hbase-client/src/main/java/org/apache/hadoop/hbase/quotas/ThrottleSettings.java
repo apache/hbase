@@ -95,6 +95,12 @@ class ThrottleSettings extends QuotaSettings {
           case READ_SIZE:
             builder.append(sizeToString(timedQuota.getSoftLimit()));
             break;
+          case REQUEST_CAPACITY_UNIT:
+          case READ_CAPACITY_UNIT:
+          case WRITE_CAPACITY_UNIT:
+            builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+            break;
+          default:
         }
       } else if (timedQuota.hasShare()) {
         builder.append(String.format("%.2f%%", timedQuota.getShare()));

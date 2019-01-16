@@ -41,4 +41,13 @@ public enum ThrottleType {
 
   /** Throttling based on the read data size */
   READ_SIZE,
+
+  /** Throttling based on the read+write capacity unit */
+  REQUEST_CAPACITY_UNIT,
+
+  /** Throttling based on the write data capacity unit */
+  WRITE_CAPACITY_UNIT,
+
+  /** Throttling based on the read data capacity unit */
+  READ_CAPACITY_UNIT,
 }

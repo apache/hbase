@@ -521,18 +521,68 @@ public class TestQuotaThrottle {
     Table table = TEST_UTIL.getConnection().getTable(TABLE_NAMES[0]);
     // An exists call when having throttle quota
     table.exists(new Get(Bytes.toBytes("abc")));
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(true, TABLE_NAMES[0]);
+  }
+
+  @Test
+  public void testTableWriteCapacityUnitThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+
+    // Add 6CU/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+      ThrottleType.WRITE_CAPACITY_UNIT, 6, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 capacity units because each put size is 1 capacity unit
+    assertEquals(6, doPuts(20, 10, tables[0]));
+
+    // wait a minute and you should execute at max 3 capacity units because each put size is 2
+    // capacity unit
+    waitMinuteQuota();
+    assertEquals(3, doPuts(20, 1025, tables[0]));
 
     admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
     triggerTableCacheRefresh(true, TABLE_NAMES[0]);
   }
 
+  @Test
+  public void testTableReadCapacityUnitThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+
+    // Add 6CU/min limit
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+      ThrottleType.READ_CAPACITY_UNIT, 6, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    assertEquals(20, doPuts(20, 10, tables[0]));
+    // should execute at max 6 capacity units because each get size is 1 capacity unit
+    assertEquals(6, doGets(20, tables[0]));
+
+    assertEquals(20, doPuts(20, 2015, tables[0]));
+    // wait a minute and you should execute at max 3 capacity units because each get size is 2
+    // capacity unit on tables[0]
+    waitMinuteQuota();
+    assertEquals(3, doGets(20, tables[0]));
+  }
+
   private int doPuts(int maxOps, final Table... tables) throws Exception {
+    return doPuts(maxOps, -1, tables);
+  }
+
+  private int doPuts(int maxOps, int valueSize, final Table... tables) throws Exception {
     int count = 0;
     try {
       while (count < maxOps) {
         Put put = new Put(Bytes.toBytes("row-" + count));
-        put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes("data-" + count));
-        for (final Table table: tables) {
+        byte[] value;
+        if (valueSize < 0) {
+          value = Bytes.toBytes("data-" + count);
+        } else {
+          value = generateValue(valueSize);
+        }
+        put.addColumn(FAMILY, QUALIFIER, value);
+        for (final Table table : tables) {
           table.put(put);
         }
         count += tables.length;
@@ -541,6 +591,14 @@ public class TestQuotaThrottle {
       LOG.error("put failed after nRetries=" + count, e);
     }
     return count;
+  }
+
+  private byte[] generateValue(int valueSize) {
+    byte[] bytes = new byte[valueSize];
+    for (int i = 0; i < valueSize; i++) {
+      bytes[i] = 'a';
+    }
+    return bytes;
   }
 
   private long doGets(int maxOps, final Table... tables) throws Exception {
