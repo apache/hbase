@@ -1076,14 +1076,36 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Returns servername corresponding to passed server_name_string
+    def getServerName(server_name_string)
+      regionservers = getRegionServers
+
+      if ServerName.isFullServerName(server_name_string)
+        return ServerName.valueOf(server_name_string)
+      else
+        name_list = server_name_string.split(',')
+
+        regionservers.each do|sn|
+          if name_list[0] == sn.hostname && (name_list[1].nil? ? true : (name_list[1] == sn.port.to_s))
+            return sn
+          end
+        end
+      end
+
+      return nil
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of servernames
-    def getServerNames(servers)
+    def getServerNames(servers, should_return_all_if_servers_empty)
       regionservers = getRegionServers
       servernames = []
 
       if servers.empty?
         # if no servers were specified as arguments, get a list of all servers
-        servernames = regionservers
+        if should_return_all_if_servers_empty
+          servernames = regionservers
+        end
       else
         # Strings replace with ServerName objects in servers array
         i = 0
@@ -1322,6 +1344,77 @@ module Hbase
                               preserve_splits)
     end
 
+    #----------------------------------------------------------------------------------------------
+    # List decommissioned RegionServers
+    def list_decommissioned_regionservers
+      @admin.listDecommissionedRegionServers
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Decommission a list of region servers, optionally offload corresponding regions
+    def decommission_regionservers(host_or_servers, should_offload)
+      # Fail if host_or_servers is neither a string nor an array
+      unless host_or_servers.is_a?(Array) || host_or_servers.is_a?(String)
+        raise(ArgumentError,
+             "#{host_or_servers.class} of #{host_or_servers.inspect} is not of Array/String type")
+      end
+
+      # Fail if should_offload is neither a TrueClass/FalseClass nor a string
+      unless (!!should_offload == should_offload) || should_offload.is_a?(String)
+        raise(ArgumentError, "#{should_offload} is not a boolean value")
+      end
+
+      # If a string is passed, convert  it to an array
+      _host_or_servers =  host_or_servers.is_a?(Array) ?
+                          host_or_servers :
+                          java.util.Arrays.asList(host_or_servers)
+
+      # Retrieve the server names corresponding to passed _host_or_servers list
+      server_names = getServerNames(_host_or_servers, false)
+
+      # Fail, if we can not find any server(s) corresponding to the passed host_or_servers
+      if server_names.empty?
+        raise(ArgumentError,
+             "Could not find any server(s) with specified name(s): #{host_or_servers}")
+      end
+
+      @admin.decommissionRegionServers(server_names,
+                                       java.lang.Boolean.valueOf(should_offload))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Recommission a region server, optionally load a list of passed regions
+    def recommission_regionserver(server_name_string, encoded_region_names)
+      # Fail if server_name_string is not a string
+      unless server_name_string.is_a?(String)
+        raise(ArgumentError,
+             "#{server_name_string.class} of #{server_name_string.inspect} is not of String type")
+      end
+
+      # Fail if encoded_region_names is not an array
+      unless encoded_region_names.is_a?(Array)
+        raise(ArgumentError,
+             "#{encoded_region_names.class} of #{encoded_region_names.inspect} is not of Array type")
+      end
+
+      # Convert encoded_region_names from string to bytes (element-wise)
+      region_names_in_bytes = encoded_region_names
+                              .map {|region_name| region_name.to_java_bytes}
+                              .compact
+
+      # Retrieve the server name corresponding to the passed server_name_string
+      server_name = getServerName(server_name_string)
+
+      # Fail if we can not find a server corresponding to the passed server_name_string
+      if server_name.nil?
+        raise(ArgumentError,
+             "Could not find any server with name #{server_name_string}")
+      end
+
+      @admin.recommissionRegionServer(server_name, region_names_in_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Stop the active Master
     def stop_master
       @admin.stopMaster

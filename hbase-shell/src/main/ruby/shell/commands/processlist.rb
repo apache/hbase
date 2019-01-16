@@ -49,7 +49,7 @@ EOF
           hosts = args
         end
 
-        hosts = admin.getServerNames(hosts)
+        hosts = admin.getServerNames(hosts, true)
 
         if hosts.nil?
           puts 'No regionservers available.'

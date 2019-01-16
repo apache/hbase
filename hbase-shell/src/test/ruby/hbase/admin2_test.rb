@@ -291,5 +291,146 @@ module Hbase
       drop_test_table(new_table)
     end
   end
+
+class CommissioningTest < Test::Unit::TestCase
+    include TestHelpers
+
+    def setup
+      setup_hbase
+      # Create test table if it does not exist
+      @test_name = 'hbase_shell_commissioning_test'
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test 'list decommissioned regionservers' do
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      command(:decommission_regionservers, server_name)
+      begin
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        puts "#{output}"
+        assert output.include? 'DECOMMISSIONED REGION SERVERS'
+        assert output.include? "#{server_name}"
+        assert output.include? '1 row(s)'
+      ensure
+        command(:recommission_regionserver, server_name)
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        puts "#{output}"
+        assert output.include? 'DECOMMISSIONED REGION SERVERS'
+        assert (output.include? "#{server_name}") ? false : true
+        assert output.include? '0 row(s)'
+      end
+    end
+
+    define_test 'decommission regionservers without offload' do
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      command(:decommission_regionservers, server_name, false)
+      begin
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name}")
+      ensure
+        command(:recommission_regionserver, server_name)
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name}") ? false : true
+      end
+    end
+
+    define_test 'decommission regionservers with server names as list' do
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      command(:decommission_regionservers, [server_name])
+      begin
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name}")
+      ensure
+        command(:recommission_regionserver, server_name)
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name}") ? false : true
+      end
+    end
+
+    define_test 'decommission regionservers with server host name only' do
+      server_name = admin.getServerNames([], true)[0]
+      host_name = server_name.getHostname
+      server_name_str = server_name.getServerName
+      command(:decommission_regionservers, host_name)
+      begin
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert output.include? "#{server_name_str}"
+      ensure
+        command(:recommission_regionserver, host_name)
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name_str}") ? false : true
+      end
+    end
+
+    define_test 'decommission regionservers with server host name and port' do
+      server_name = admin.getServerNames([], true)[0]
+      host_name_and_port = server_name.getHostname + ',' +server_name.getPort.to_s
+      server_name_str = server_name.getServerName
+      command(:decommission_regionservers, host_name_and_port)
+      begin
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert output.include? "#{server_name_str}"
+      ensure
+        command(:recommission_regionserver, host_name_and_port)
+        output = capture_stdout { command(:list_decommissioned_regionservers) }
+        assert (output.include? "#{server_name_str}") ? false : true
+      end
+    end
+
+    define_test 'decommission regionservers with non-existant server name' do
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      assert_raise(ArgumentError) do
+        command(:decommission_regionservers, 'dummy')
+      end
+    end
+
+    define_test 'recommission regionserver with non-existant server name' do
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      assert_raise(ArgumentError) do
+        command(:recommission_regionserver, 'dummy')
+      end
+    end
+
+    define_test 'decommission regionservers with invalid argument' do
+      assert_raise(ArgumentError) do
+        command(:decommission_regionservers, 1)
+      end
+
+      assert_raise(ArgumentError) do
+        command(:decommission_regionservers, {1=>1})
+      end
+
+      assert_raise(ArgumentError) do
+       command(:decommission_regionservers, 'dummy', 1)
+      end
+
+      assert_raise(ArgumentError) do
+        command(:decommission_regionservers, 'dummy', {1=>1})
+      end
+    end
+
+    define_test 'recommission regionserver with invalid argument' do
+      assert_raise(ArgumentError) do
+        command(:recommission_regionserver, 1)
+      end
+
+      assert_raise(ArgumentError) do
+        command(:recommission_regionserver, {1=>1})
+      end
+
+      assert_raise(ArgumentError) do
+        command(:recommission_regionserver, 'dummy', 1)
+      end
+
+      assert_raise(ArgumentError) do
+        command(:recommission_regionserver, 'dummy', {1=>1})
+      end
+    end
+  end
   # rubocop:enable ClassLength
 end
