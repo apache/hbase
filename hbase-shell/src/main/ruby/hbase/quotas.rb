@@ -175,7 +175,7 @@ module Hbase
     end
 
     def get_master_table_sizes
-      QuotaTableUtil.getMasterReportedTableSizes(@admin.getConnection)
+      @admin.getSpaceQuotaTableSizes
     end
 
     def get_quota_snapshots(regionserver = nil)
@@ -192,8 +192,7 @@ module Hbase
 
     def get_rs_quota_snapshots(rs)
       # Reads the snapshots from a specific regionserver
-      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection,
-                                                   ServerName.valueOf(rs))
+      @admin.getRegionServerSpaceQuotaSnapshots(ServerName.valueOf(rs))
     end
 
     def set_global_bypass(bypass, args)

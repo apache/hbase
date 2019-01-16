@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -2770,4 +2771,27 @@ public interface Admin extends Abortable, Closeable {
    * @return True if rpc throttle is enabled
    */
   boolean isRpcThrottleEnabled() throws IOException;
+
+  /**
+   * Fetches the table sizes on the filesystem as tracked by the HBase Master.
+   */
+  Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException;
+
+  /**
+   * Fetches the observed {@link SpaceQuotaSnapshotView}s observed by a RegionServer.
+   */
+  Map<TableName, ? extends SpaceQuotaSnapshotView> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) throws IOException;
+
+  /**
+   * Returns the Master's view of a quota on the given {@code namespace} or null if the Master has
+   * no quota information on that namespace.
+   */
+  SpaceQuotaSnapshotView getCurrentSpaceQuotaSnapshot(String namespace) throws IOException;
+
+  /**
+   * Returns the Master's view of a quota on the given {@code tableName} or null if the Master has
+   * no quota information on that table.
+   */
+  SpaceQuotaSnapshotView getCurrentSpaceQuotaSnapshot(TableName tableName) throws IOException;
 }

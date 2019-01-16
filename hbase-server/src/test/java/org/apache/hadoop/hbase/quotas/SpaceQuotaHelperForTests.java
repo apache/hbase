@@ -397,9 +397,9 @@ public class SpaceQuotaHelperForTests {
     public boolean evaluate() throws Exception {
       SpaceQuotaSnapshot snapshot;
       if (null == ns) {
-        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+        snapshot = (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn);
       } else {
-        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, ns);
+        snapshot = (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(ns);
       }
 
       LOG.debug("Saw quota snapshot for " + (null == tn ? ns : tn) + ": " + snapshot);

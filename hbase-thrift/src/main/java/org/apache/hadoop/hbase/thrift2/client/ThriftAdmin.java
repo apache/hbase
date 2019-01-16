@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -1385,5 +1386,27 @@ public class ThriftAdmin implements Admin {
   @Override
   public Future<Void> deleteNamespaceAsync(String name) {
     throw new NotImplementedException("deleteNamespaceAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException {
+    throw new NotImplementedException("getSpaceQuotaTableSizes not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Map<TableName, SpaceQuotaSnapshot> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) throws IOException {
+    throw new NotImplementedException(
+      "getRegionServerSpaceQuotaSnapshots not supported in ThriftAdmin");
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(String namespace) throws IOException {
+    throw new NotImplementedException("getCurrentSpaceQuotaSnapshot not supported in ThriftAdmin");
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(TableName tableName) throws IOException {
+    throw new NotImplementedException("getCurrentSpaceQuotaSnapshot not supported in ThriftAdmin");
   }
 }

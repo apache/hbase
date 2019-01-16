@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
-
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -28,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -40,6 +38,7 @@ import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -1269,4 +1268,29 @@ public interface AsyncAdmin {
    * @return True if rpc throttle is enabled
    */
   CompletableFuture<Boolean> isRpcThrottleEnabled();
+
+  /**
+   * Fetches the table sizes on the filesystem as tracked by the HBase Master.
+   */
+  CompletableFuture<Map<TableName, Long>> getSpaceQuotaTableSizes();
+
+  /**
+   * Fetches the observed {@link SpaceQuotaSnapshotView}s observed by a RegionServer.
+   */
+  CompletableFuture<? extends Map<TableName, ? extends SpaceQuotaSnapshotView>>
+      getRegionServerSpaceQuotaSnapshots(ServerName serverName);
+
+  /**
+   * Returns the Master's view of a quota on the given {@code namespace} or null if the Master has
+   * no quota information on that namespace.
+   */
+  CompletableFuture<? extends SpaceQuotaSnapshotView>
+      getCurrentSpaceQuotaSnapshot(String namespace);
+
+  /**
+   * Returns the Master's view of a quota on the given {@code tableName} or null if the Master has
+   * no quota information on that table.
+   */
+  CompletableFuture<? extends SpaceQuotaSnapshotView> getCurrentSpaceQuotaSnapshot(
+      TableName tableName);
 }

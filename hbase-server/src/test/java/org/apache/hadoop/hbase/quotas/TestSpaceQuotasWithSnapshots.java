@@ -122,7 +122,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, tn, null);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, tn).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -217,7 +217,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, null, ns);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, ns).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(ns).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -241,7 +241,7 @@ public class TestSpaceQuotasWithSnapshots {
     TEST_UTIL.waitFor(30 * 1000, 500, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        Map<TableName,Long> sizes = QuotaTableUtil.getMasterReportedTableSizes(conn);
+        Map<TableName, Long> sizes = conn.getAdmin().getSpaceQuotaTableSizes();
         LOG.debug("Master observed table sizes from region size reports: " + sizes);
         Long size = sizes.get(tn);
         if (null == size) {
@@ -374,7 +374,7 @@ public class TestSpaceQuotasWithSnapshots {
     waitForStableQuotaSize(conn, tn, null);
 
     // The actual size on disk after we wrote our data the first time
-    final long actualInitialSize = QuotaTableUtil.getCurrentSnapshot(conn, tn).getUsage();
+    final long actualInitialSize = conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn).getUsage();
     LOG.info("Initial table size was " + actualInitialSize);
 
     LOG.info("Snapshot the table");
@@ -397,7 +397,8 @@ public class TestSpaceQuotasWithSnapshots {
     });
 
     // We know that reports were sent by our RS, verify that they take up zero size.
-    SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn2);
+    SpaceQuotaSnapshot snapshot =
+      (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn2);
     assertNotNull(snapshot);
     assertEquals(0, snapshot.getUsage());
 
@@ -436,7 +437,7 @@ public class TestSpaceQuotasWithSnapshots {
   }
 
   long getRegionSizeReportForTable(Connection conn, TableName tn) throws IOException {
-    Map<TableName,Long> sizes = QuotaTableUtil.getMasterReportedTableSizes(conn);
+    Map<TableName, Long> sizes = conn.getAdmin().getSpaceQuotaTableSizes();
     Long value = sizes.get(tn);
     if (null == value) {
       return 0L;
