@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,21 +24,23 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 
 /**
  * @since 2.0.0
@@ -129,7 +130,6 @@ public class ColumnFamilyDescriptorBuilder {
   private static final Bytes BLOOMFILTER_BYTES = new Bytes(Bytes.toBytes(BLOOMFILTER));
   @InterfaceAudience.Private
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
-  private static final Bytes REPLICATION_SCOPE_BYTES = new Bytes(Bytes.toBytes(REPLICATION_SCOPE));
   @InterfaceAudience.Private
   public static final String MAX_VERSIONS = HConstants.VERSIONS;
   private static final Bytes MAX_VERSIONS_BYTES = new Bytes(Bytes.toBytes(MAX_VERSIONS));
@@ -778,8 +778,7 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public Compression.Algorithm getCompressionType() {
       return getStringOrDefault(COMPRESSION_BYTES,
-              Compression.Algorithm::valueOf,
-              DEFAULT_COMPRESSION);
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), DEFAULT_COMPRESSION);
     }
 
     /**
@@ -799,8 +798,7 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public DataBlockEncoding getDataBlockEncoding() {
       return getStringOrDefault(DATA_BLOCK_ENCODING_BYTES,
-              DataBlockEncoding::valueOf,
-              DataBlockEncoding.NONE);
+        n -> DataBlockEncoding.valueOf(n.toUpperCase()), DataBlockEncoding.NONE);
     }
 
     /**
@@ -833,8 +831,7 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public Compression.Algorithm getCompactionCompressionType() {
       return getStringOrDefault(COMPRESSION_COMPACT_BYTES,
-              Compression.Algorithm::valueOf,
-              getCompressionType());
+        n -> Compression.Algorithm.valueOf(n.toUpperCase()), getCompressionType());
     }
 
     /**
@@ -868,7 +865,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public MemoryCompactionPolicy getInMemoryCompaction() {
-      return getStringOrDefault(IN_MEMORY_COMPACTION_BYTES, MemoryCompactionPolicy::valueOf, null);
+      return getStringOrDefault(IN_MEMORY_COMPACTION_BYTES,
+        n -> MemoryCompactionPolicy.valueOf(n.toUpperCase()), null);
     }
 
     /**
@@ -962,7 +960,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public BloomType getBloomFilterType() {
-      return getStringOrDefault(BLOOMFILTER_BYTES, BloomType::valueOf, DEFAULT_BLOOMFILTER);
+      return getStringOrDefault(BLOOMFILTER_BYTES, n -> BloomType.valueOf(n.toUpperCase()),
+        DEFAULT_BLOOMFILTER);
     }
 
     public ModifyableColumnFamilyDescriptor setBloomFilterType(final BloomType bt) {
@@ -1302,7 +1301,8 @@ public class ColumnFamilyDescriptorBuilder {
     @Override
     public MobCompactPartitionPolicy getMobCompactPartitionPolicy() {
       return getStringOrDefault(MOB_COMPACT_PARTITION_POLICY_BYTES,
-              MobCompactPartitionPolicy::valueOf, DEFAULT_MOB_COMPACT_PARTITION_POLICY);
+        n -> MobCompactPartitionPolicy.valueOf(n.toUpperCase()),
+        DEFAULT_MOB_COMPACT_PARTITION_POLICY);
     }
 
     /**
