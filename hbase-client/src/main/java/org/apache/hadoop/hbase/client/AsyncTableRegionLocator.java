@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -39,7 +40,7 @@ public interface AsyncTableRegionLocator {
 
   /**
    * Finds the region on which the given row is being served. Does not reload the cache.
-   * <p>
+   * <p/>
    * Returns the location of the region to which the row belongs.
    * @param row Row to find.
    */
@@ -49,7 +50,7 @@ public interface AsyncTableRegionLocator {
 
   /**
    * Finds the region on which the given row is being served.
-   * <p>
+   * <p/>
    * Returns the location of the region to which the row belongs.
    * @param row Row to find.
    * @param reload true to reload information or false to use cached information
@@ -60,7 +61,7 @@ public interface AsyncTableRegionLocator {
 
   /**
    * Finds the region with the given <code>replicaId</code> on which the given row is being served.
-   * <p>
+   * <p/>
    * Returns the location of the region with the given <code>replicaId</code> to which the row
    * belongs.
    * @param row Row to find.
@@ -72,7 +73,7 @@ public interface AsyncTableRegionLocator {
 
   /**
    * Finds the region with the given <code>replicaId</code> on which the given row is being served.
-   * <p>
+   * <p/>
    * Returns the location of the region with the given <code>replicaId</code> to which the row
    * belongs.
    * @param row Row to find.
@@ -80,4 +81,10 @@ public interface AsyncTableRegionLocator {
    * @param reload true to reload information or false to use cached information
    */
   CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId, boolean reload);
+
+  /**
+   * Retrieves all of the regions associated with this table.
+   * @return a {@link List} of all regions associated with this table.
+   */
+  CompletableFuture<List<HRegionLocation>> getAllRegionLocations();
 }

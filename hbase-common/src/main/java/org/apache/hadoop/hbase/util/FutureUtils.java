@@ -57,4 +57,23 @@ public final class FutureUtils {
       }
     });
   }
+
+  /**
+   * Almost the same with the {@link #addListener(CompletableFuture, BiConsumer)} method above, the
+   * difference is that in this method we will call
+   * {@link CompletableFuture#whenCompleteAsync(BiConsumer)} instead of
+   * {@link CompletableFuture#whenComplete(BiConsumer)}.
+   * @see #addListener(CompletableFuture, BiConsumer)
+   */
+  @SuppressWarnings("FutureReturnValueIgnored")
+  public static <T> void addListenerAsync(CompletableFuture<T> future,
+      BiConsumer<? super T, ? super Throwable> action) {
+    future.whenCompleteAsync((resp, error) -> {
+      try {
+        action.accept(resp, error);
+      } catch (Throwable t) {
+        LOG.error("Unexpected error caught when processing CompletableFuture", t);
+      }
+    });
+  }
 }
