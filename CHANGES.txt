@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.10
+Release Notes - HBase - Version 1.2.10 2019/01/17
 
 ** Bug
     * [HBASE-15752] - ClassNotFoundException is encountered when custom WAL codec is not found in WALPlayer job
