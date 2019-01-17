@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
@@ -254,7 +253,7 @@ public class FilterListWithOR extends FilterListBase {
       // need not save current cell to prevCellList for saving heap memory.
       prevCellList.set(index, null);
     } else {
-      prevCellList.set(index, KeyValueUtil.toNewKeyCell(currentCell));
+      prevCellList.set(index, currentCell);
     }
   }
 
