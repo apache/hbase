@@ -72,6 +72,7 @@ public class MasterQuotaManager implements RegionStateListener {
   private NamedLock<String> namespaceLocks;
   private NamedLock<TableName> tableLocks;
   private NamedLock<String> userLocks;
+  private NamedLock<String> regionServerLocks;
   private boolean initialized = false;
   private NamespaceAuditor namespaceQuotaManager;
   private ConcurrentHashMap<RegionInfo, SizeSnapshotWithTimestamp> regionSizes;
@@ -100,6 +101,7 @@ public class MasterQuotaManager implements RegionStateListener {
     namespaceLocks = new NamedLock<>();
     tableLocks = new NamedLock<>();
     userLocks = new NamedLock<>();
+    regionServerLocks = new NamedLock<>();
     regionSizes = new ConcurrentHashMap<>();
 
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
@@ -152,9 +154,16 @@ public class MasterQuotaManager implements RegionStateListener {
       } finally {
         namespaceLocks.unlock(req.getNamespace());
       }
+    } else if (req.hasRegionServer()) {
+      regionServerLocks.lock(req.getRegionServer());
+      try {
+        setRegionServerQuota(req.getRegionServer(), req);
+      } finally {
+        regionServerLocks.unlock(req.getRegionServer());
+      }
     } else {
-      throw new DoNotRetryIOException(
-        new UnsupportedOperationException("a user, a table or a namespace must be specified"));
+      throw new DoNotRetryIOException(new UnsupportedOperationException(
+          "a user, a table, a namespace or region server must be specified"));
     }
     return SetQuotaResponse.newBuilder().build();
   }
@@ -164,8 +173,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(req.getUserName(), null, null, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName));
+        return new GlobalQuotaSettingsImpl(req.getUserName(), null, null, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -191,8 +200,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(userName, table, null, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName, table));
+        return new GlobalQuotaSettingsImpl(userName, table, null, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName, table));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -219,8 +228,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(userName, null, namespace, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName, namespace));
+        return new GlobalQuotaSettingsImpl(userName, null, namespace, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName, namespace));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -249,8 +258,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(null, table, null, QuotaUtil.getTableQuota(
-            masterServices.getConnection(), table));
+        return new GlobalQuotaSettingsImpl(null, table, null, null,
+            QuotaUtil.getTableQuota(masterServices.getConnection(), table));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -276,8 +285,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(null, null, namespace, QuotaUtil.getNamespaceQuota(
-                masterServices.getConnection(), namespace));
+        return new GlobalQuotaSettingsImpl(null, null, namespace, null,
+            QuotaUtil.getNamespaceQuota(masterServices.getConnection(), namespace));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -295,6 +304,38 @@ public class MasterQuotaManager implements RegionStateListener {
       @Override
       public void postApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
         masterServices.getMasterCoprocessorHost().postSetNamespaceQuota(namespace, quotaPojo);
+      }
+    });
+  }
+
+  public void setRegionServerQuota(final String regionServer, final SetQuotaRequest req)
+      throws IOException, InterruptedException {
+    setQuota(req, new SetQuotaOperations() {
+      @Override
+      public GlobalQuotaSettingsImpl fetch() throws IOException {
+        return new GlobalQuotaSettingsImpl(null, null, null, regionServer,
+            QuotaUtil.getRegionServerQuota(masterServices.getConnection(), regionServer));
+      }
+
+      @Override
+      public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        QuotaUtil.addRegionServerQuota(masterServices.getConnection(), regionServer,
+          ((GlobalQuotaSettingsImpl) quotaPojo).toQuotas());
+      }
+
+      @Override
+      public void delete() throws IOException {
+        QuotaUtil.deleteRegionServerQuota(masterServices.getConnection(), regionServer);
+      }
+
+      @Override
+      public void preApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        masterServices.getMasterCoprocessorHost().preSetRegionServerQuota(regionServer, quotaPojo);
+      }
+
+      @Override
+      public void postApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        masterServices.getMasterCoprocessorHost().postSetRegionServerQuota(regionServer, quotaPojo);
       }
     });
   }

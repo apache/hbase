@@ -82,8 +82,11 @@ module Hbase
         namespace = args.delete(NAMESPACE)
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit)
+      elsif args.key?(REGIONSERVER)
+        # TODO: Setting specified region server quota isn't supported currently and using 'all' for all RS
+        settings = QuotaSettingsFactory.throttleRegionServer('all', type, limit, time_unit)
       else
-        raise 'One of USER, TABLE or NAMESPACE must be specified'
+        raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
       end
       @admin.setQuota(settings)
     end
@@ -112,8 +115,13 @@ module Hbase
         namespace = args.delete(NAMESPACE)
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
         settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
+      elsif args.key?(REGIONSERVER)
+        regionServer = args.delete(REGIONSERVER)
+        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
+        # TODO: Setting specified region server quota isn't supported currently and using 'all' for all RS
+        settings = QuotaSettingsFactory.unthrottleRegionServer('all')
       else
-        raise 'One of USER, TABLE or NAMESPACE must be specified'
+        raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
       end
       @admin.setQuota(settings)
     end
@@ -233,7 +241,8 @@ module Hbase
           owner = {
             USER => settings.getUserName,
             TABLE => settings.getTableName,
-            NAMESPACE => settings.getNamespace
+            NAMESPACE => settings.getNamespace,
+            REGIONSERVER => settings.getRegionServer
           }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
 
           yield owner, settings.to_s

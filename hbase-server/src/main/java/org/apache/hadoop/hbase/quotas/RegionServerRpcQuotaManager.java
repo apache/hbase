@@ -22,19 +22,19 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Region Server Quota Manager.
@@ -135,14 +135,17 @@ public class RegionServerRpcQuotaManager {
       } else {
         QuotaLimiter nsLimiter = quotaCache.getNamespaceLimiter(table.getNamespaceAsString());
         QuotaLimiter tableLimiter = quotaCache.getTableLimiter(table);
-        useNoop &= tableLimiter.isBypass() && nsLimiter.isBypass();
+        QuotaLimiter rsLimiter = quotaCache
+            .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY);
+        useNoop &= tableLimiter.isBypass() && nsLimiter.isBypass() && rsLimiter.isBypass();
         if (LOG.isTraceEnabled()) {
-          LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" +
-                    userLimiter + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter);
+          LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" + userLimiter
+              + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter + " rsLimiter="
+              + rsLimiter);
         }
         if (!useNoop) {
           return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter,
-              tableLimiter, nsLimiter);
+              tableLimiter, nsLimiter, rsLimiter);
         }
       }
     }

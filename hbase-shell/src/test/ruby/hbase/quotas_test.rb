@@ -251,6 +251,27 @@ module Hbase
       output = capture_stdout { command(:enable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : false'))
     end
+
+    define_test 'can set and remove region server quota' do
+      command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '1CU/sec')
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('REGIONSERVER => all'))
+      assert(output.include?('TYPE => THROTTLE'))
+      assert(output.include?('THROTTLE_TYPE => REQUEST_CAPACITY_UNIT'))
+      assert(output.include?('LIMIT => 1CU/sec'))
+
+      command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '2req/sec')
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('REGIONSERVER => all'))
+      assert(output.include?('TYPE => THROTTLE'))
+      assert(output.include?('THROTTLE_TYPE => WRITE'))
+      assert(output.include?('THROTTLE_TYPE => REQUEST_CAPACITY_UNIT'))
+      assert(output.include?('LIMIT => 2req/sec'))
+
+      command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE)
+      output = capture_stdout{ command(:list_quotas) }
+      assert(output.include?('0 row(s)'))
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

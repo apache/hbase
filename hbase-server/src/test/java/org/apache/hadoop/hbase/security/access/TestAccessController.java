@@ -2697,6 +2697,15 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
+    AccessTestAction setRegionServerQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetRegionServerQuota(ObserverContextImpl.createAndPrepare(CP_ENV),
+          null, null);
+        return null;
+      }
+    };
+
     verifyAllowed(setUserQuotaAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(setUserQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
@@ -2714,6 +2723,10 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(setNamespaceQuotaAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(setNamespaceQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    verifyAllowed(setRegionServerQuotaAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(setRegionServerQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 

@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
@@ -37,8 +37,8 @@ public class QuotaSettingsFactory {
     private final boolean bypassGlobals;
 
     QuotaGlobalsSettingsBypass(final String userName, final TableName tableName,
-      final String namespace, final boolean bypassGlobals) {
-      super(userName, tableName, namespace);
+        final String namespace, final String regionServer, final boolean bypassGlobals) {
+      super(userName, tableName, namespace, regionServer);
       this.bypassGlobals = bypassGlobals;
     }
 
@@ -80,35 +80,42 @@ public class QuotaSettingsFactory {
    *  QuotaSettings from the Quotas object
    */
   static List<QuotaSettings> fromUserQuotas(final String userName, final Quotas quotas) {
-    return fromQuotas(userName, null, null, quotas);
+    return fromQuotas(userName, null, null, null, quotas);
   }
 
   static List<QuotaSettings> fromUserQuotas(final String userName, final TableName tableName,
       final Quotas quotas) {
-    return fromQuotas(userName, tableName, null, quotas);
+    return fromQuotas(userName, tableName, null, null, quotas);
   }
 
   static List<QuotaSettings> fromUserQuotas(final String userName, final String namespace,
       final Quotas quotas) {
-    return fromQuotas(userName, null, namespace, quotas);
+    return fromQuotas(userName, null, namespace, null, quotas);
   }
 
   static List<QuotaSettings> fromTableQuotas(final TableName tableName, final Quotas quotas) {
-    return fromQuotas(null, tableName, null, quotas);
+    return fromQuotas(null, tableName, null, null, quotas);
   }
 
   static List<QuotaSettings> fromNamespaceQuotas(final String namespace, final Quotas quotas) {
-    return fromQuotas(null, null, namespace, quotas);
+    return fromQuotas(null, null, namespace, null, quotas);
+  }
+
+  static List<QuotaSettings> fromRegionServerQuotas(final String regionServer,
+      final Quotas quotas) {
+    return fromQuotas(null, null, null, regionServer, quotas);
   }
 
   private static List<QuotaSettings> fromQuotas(final String userName, final TableName tableName,
-      final String namespace, final Quotas quotas) {
+      final String namespace, final String regionServer, final Quotas quotas) {
     List<QuotaSettings> settings = new ArrayList<>();
     if (quotas.hasThrottle()) {
-      settings.addAll(fromThrottle(userName, tableName, namespace, quotas.getThrottle()));
+      settings
+          .addAll(fromThrottle(userName, tableName, namespace, regionServer, quotas.getThrottle()));
     }
     if (quotas.getBypassGlobals() == true) {
-      settings.add(new QuotaGlobalsSettingsBypass(userName, tableName, namespace, true));
+      settings
+          .add(new QuotaGlobalsSettingsBypass(userName, tableName, namespace, regionServer, true));
     }
     if (quotas.hasSpace()) {
       settings.add(fromSpace(tableName, namespace, quotas.getSpace()));
@@ -116,43 +123,44 @@ public class QuotaSettingsFactory {
     return settings;
   }
 
-  protected static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
-      final String namespace, final QuotaProtos.Throttle throttle) {
+  protected static List<QuotaSettings> fromThrottle(final String userName,
+      final TableName tableName, final String namespace, final String regionServer,
+      final QuotaProtos.Throttle throttle) {
     List<QuotaSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.REQUEST_NUMBER, throttle.getReqNum()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.REQUEST_NUMBER, throttle.getReqNum()));
     }
     if (throttle.hasReqSize()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.REQUEST_SIZE, throttle.getReqSize()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.REQUEST_SIZE, throttle.getReqSize()));
     }
     if (throttle.hasWriteNum()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.WRITE_NUMBER, throttle.getWriteNum()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.WRITE_NUMBER, throttle.getWriteNum()));
     }
     if (throttle.hasWriteSize()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.WRITE_SIZE, throttle.getWriteSize()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.WRITE_SIZE, throttle.getWriteSize()));
     }
     if (throttle.hasReadNum()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.READ_NUMBER, throttle.getReadNum()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.READ_NUMBER, throttle.getReadNum()));
     }
     if (throttle.hasReadSize()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-          ThrottleType.READ_SIZE, throttle.getReadSize()));
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
+        ThrottleType.READ_SIZE, throttle.getReadSize()));
     }
     if (throttle.hasReqCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.REQUEST_CAPACITY_UNIT, throttle.getReqCapacityUnit()));
     }
     if (throttle.hasReadCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.READ_CAPACITY_UNIT, throttle.getReadCapacityUnit()));
     }
     if (throttle.hasWriteCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
+      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
         ThrottleType.WRITE_CAPACITY_UNIT, throttle.getWriteCapacityUnit()));
     }
     return settings;
@@ -195,7 +203,7 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings throttleUser(final String userName, final ThrottleType type,
       final long limit, final TimeUnit timeUnit) {
-    return throttle(userName, null, null, type, limit, timeUnit);
+    return throttle(userName, null, null, null, type, limit, timeUnit);
   }
 
   /**
@@ -210,7 +218,7 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings throttleUser(final String userName, final TableName tableName,
       final ThrottleType type, final long limit, final TimeUnit timeUnit) {
-    return throttle(userName, tableName, null, type, limit, timeUnit);
+    return throttle(userName, tableName, null, null, type, limit, timeUnit);
   }
 
   /**
@@ -225,7 +233,7 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings throttleUser(final String userName, final String namespace,
       final ThrottleType type, final long limit, final TimeUnit timeUnit) {
-    return throttle(userName, null, namespace, type, limit, timeUnit);
+    return throttle(userName, null, namespace, null, type, limit, timeUnit);
   }
 
   /**
@@ -235,7 +243,7 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUser(final String userName) {
-    return throttle(userName, null, null, null, 0, null);
+    return throttle(userName, null, null, null, null, 0, null);
   }
 
   /**
@@ -246,7 +254,7 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUser(final String userName, final TableName tableName) {
-    return throttle(userName, tableName, null, null, 0, null);
+    return throttle(userName, tableName, null, null, null, 0, null);
   }
 
   /**
@@ -257,7 +265,7 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUser(final String userName, final String namespace) {
-    return throttle(userName, null, namespace, null, 0, null);
+    return throttle(userName, null, namespace, null, null, 0, null);
   }
 
   /**
@@ -271,7 +279,7 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings throttleTable(final TableName tableName, final ThrottleType type,
       final long limit, final TimeUnit timeUnit) {
-    return throttle(null, tableName, null, type, limit, timeUnit);
+    return throttle(null, tableName, null, null, type, limit, timeUnit);
   }
 
   /**
@@ -281,7 +289,7 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings unthrottleTable(final TableName tableName) {
-    return throttle(null, tableName, null, null, 0, null);
+    return throttle(null, tableName, null, null, null, 0, null);
   }
 
   /**
@@ -295,7 +303,7 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings throttleNamespace(final String namespace, final ThrottleType type,
       final long limit, final TimeUnit timeUnit) {
-    return throttle(null, null, namespace, type, limit, timeUnit);
+    return throttle(null, null, namespace, null, type, limit, timeUnit);
   }
 
   /**
@@ -305,12 +313,36 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings unthrottleNamespace(final String namespace) {
-    return throttle(null, null, namespace, null, 0, null);
+    return throttle(null, null, namespace, null, null, 0, null);
+  }
+
+  /**
+   * Throttle the specified region server.
+   *
+   * @param regionServer the region server to throttle
+   * @param type the type of throttling
+   * @param limit the allowed number of request/data per timeUnit
+   * @param timeUnit the limit time unit
+   * @return the quota settings
+   */
+  public static QuotaSettings throttleRegionServer(final String regionServer,
+      final ThrottleType type, final long limit, final TimeUnit timeUnit) {
+    return throttle(null, null, null, regionServer, type, limit, timeUnit);
+  }
+
+  /**
+   * Remove the throttling for the specified region server.
+   *
+   * @param regionServer the region Server
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleRegionServer(final String regionServer) {
+    return throttle(null, null, null, regionServer, null, 0, null);
   }
 
   /* Throttle helper */
   private static QuotaSettings throttle(final String userName, final TableName tableName,
-      final String namespace, final ThrottleType type, final long limit,
+      final String namespace, final String regionServer, final ThrottleType type, final long limit,
       final TimeUnit timeUnit) {
     QuotaProtos.ThrottleRequest.Builder builder = QuotaProtos.ThrottleRequest.newBuilder();
     if (type != null) {
@@ -319,7 +351,7 @@ public class QuotaSettingsFactory {
     if (timeUnit != null) {
       builder.setTimedQuota(ProtobufUtil.toTimedQuota(limit, timeUnit, QuotaScope.MACHINE));
     }
-    return new ThrottleSettings(userName, tableName, namespace, builder.build());
+    return new ThrottleSettings(userName, tableName, namespace, regionServer, builder.build());
   }
 
   /* ==========================================================================
@@ -334,7 +366,7 @@ public class QuotaSettingsFactory {
    * @return the quota settings
    */
   public static QuotaSettings bypassGlobals(final String userName, final boolean bypassGlobals) {
-    return new QuotaGlobalsSettingsBypass(userName, null, null, bypassGlobals);
+    return new QuotaGlobalsSettingsBypass(userName, null, null, null,  bypassGlobals);
   }
 
   /* ==========================================================================

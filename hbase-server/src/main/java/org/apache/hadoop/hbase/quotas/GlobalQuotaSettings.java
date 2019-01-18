@@ -35,8 +35,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 @InterfaceStability.Evolving
 public abstract class GlobalQuotaSettings extends QuotaSettings {
 
-  protected GlobalQuotaSettings(String userName, TableName tableName, String namespace) {
-    super(userName, tableName, namespace);
+  protected GlobalQuotaSettings(String userName, TableName tableName, String namespace,
+      String regionServer) {
+    super(userName, tableName, namespace, regionServer);
   }
 
   /**

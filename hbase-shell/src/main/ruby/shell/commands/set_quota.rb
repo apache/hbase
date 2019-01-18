@@ -22,7 +22,7 @@ module Shell
     class SetQuota < Command
       def help
         <<-EOF
-Set a quota for a user, table, or namespace.
+Set a quota for a user, table, namespace or region server.
 Syntax : set_quota TYPE => <type>, <args>
 
 TYPE => THROTTLE
@@ -54,6 +54,10 @@ For example:
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
     hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => NONE
+
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '30000req/sec'
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', THROTTLE_TYPE => WRITE, LIMIT => '20000req/sec'
+    hbase> set_quota TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE
 
     hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true
 

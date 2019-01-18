@@ -37,7 +37,7 @@ class SpaceLimitSettings extends QuotaSettings {
   private final SpaceLimitRequest proto;
 
   SpaceLimitSettings(TableName tableName, long sizeLimit, SpaceViolationPolicy violationPolicy) {
-    super(null, Objects.requireNonNull(tableName), null);
+    super(null, Objects.requireNonNull(tableName), null, null);
     validateSizeLimit(sizeLimit);
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
@@ -46,12 +46,12 @@ class SpaceLimitSettings extends QuotaSettings {
    * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code tableName}.
    */
   SpaceLimitSettings(TableName tableName) {
-    super(null, Objects.requireNonNull(tableName), null);
+    super(null, Objects.requireNonNull(tableName), null, null);
     proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(String namespace, long sizeLimit, SpaceViolationPolicy violationPolicy) {
-    super(null, null, Objects.requireNonNull(namespace));
+    super(null, null, Objects.requireNonNull(namespace), null);
     validateSizeLimit(sizeLimit);
     proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
   }
@@ -60,12 +60,12 @@ class SpaceLimitSettings extends QuotaSettings {
    * Constructs a {@code SpaceLimitSettings} to remove a space quota on the given {@code namespace}.
    */
   SpaceLimitSettings(String namespace) {
-    super(null, null, Objects.requireNonNull(namespace));
+    super(null, null, Objects.requireNonNull(namespace), null);
     proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(TableName tableName, String namespace, SpaceLimitRequest req) {
-    super(null, tableName, namespace);
+    super(null, tableName, namespace, null);
     proto = req;
   }
 

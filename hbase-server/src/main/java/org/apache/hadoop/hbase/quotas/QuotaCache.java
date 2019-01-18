@@ -34,14 +34,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Cache that keeps track of the quota settings for the users and tables that
@@ -69,6 +69,8 @@ public class QuotaCache implements Stoppable {
   private final ConcurrentHashMap<String, QuotaState> namespaceQuotaCache = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<TableName, QuotaState> tableQuotaCache = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, QuotaState> regionServerQuotaCache =
+      new ConcurrentHashMap<>();
   private final RegionServerServices rsServices;
 
   private QuotaRefresherChore refreshChore;
@@ -147,6 +149,16 @@ public class QuotaCache implements Stoppable {
   }
 
   /**
+   * Returns the limiter associated to the specified region server.
+   *
+   * @param regionServer the region server to limit
+   * @return the limiter associated to the specified region server
+   */
+  public QuotaLimiter getRegionServerQuotaLimiter(final String regionServer) {
+    return getQuotaState(this.regionServerQuotaCache, regionServer).getGlobalLimiter();
+  }
+
+  /**
    * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
    * returned and the quota request will be enqueued for the next cache refresh.
    */
@@ -168,6 +180,11 @@ public class QuotaCache implements Stoppable {
   @VisibleForTesting
   Map<String, QuotaState> getNamespaceQuotaCache() {
     return namespaceQuotaCache;
+  }
+
+  @VisibleForTesting
+  Map<String, QuotaState> getRegionServerQuotaCache() {
+    return regionServerQuotaCache;
   }
 
   @VisibleForTesting
@@ -203,10 +220,13 @@ public class QuotaCache implements Stoppable {
           QuotaCache.this.namespaceQuotaCache.putIfAbsent(ns, new QuotaState());
         }
       }
+      QuotaCache.this.regionServerQuotaCache.putIfAbsent(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY,
+        new QuotaState());
 
       fetchNamespaceQuotaState();
       fetchTableQuotaState();
       fetchUserQuotaState();
+      fetchRegionServerQuotaState();
       lastUpdate = EnvironmentEdgeManager.currentTime();
     }
 
@@ -255,6 +275,21 @@ public class QuotaCache implements Stoppable {
           return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), gets);
         }
       });
+    }
+
+    private void fetchRegionServerQuotaState() {
+      fetch("regionServer", QuotaCache.this.regionServerQuotaCache,
+        new Fetcher<String, QuotaState>() {
+          @Override
+          public Get makeGet(final Map.Entry<String, QuotaState> entry) {
+            return QuotaUtil.makeGetForRegionServerQuotas(entry.getKey());
+          }
+
+          @Override
+          public Map<String, QuotaState> fetchEntries(final List<Get> gets) throws IOException {
+            return QuotaUtil.fetchRegionServerQuotas(rsServices.getConnection(), gets);
+          }
+        });
     }
 
     private <K, V extends QuotaState> void fetch(final String type,
