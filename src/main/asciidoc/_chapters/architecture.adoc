@@ -1785,6 +1785,9 @@ For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/defa
 If you leave off the option -v to see just a summary on the HFile.
 See usage for other things to do with the `hfile` tool.
 
+NOTE: In the output of this tool, you might see 'seqid=0' for certain keys in places such as 'Mid-key'/'firstKey'/'lastKey'. These are
+ 'KeyOnlyKeyValue' type instances - meaning their seqid is irrelevant & we just need the keys of these Key-Value instances.
+
 [[store.file.dir]]
 ===== StoreFile Directory Structure on HDFS
 
