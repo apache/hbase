@@ -135,13 +135,16 @@ public class SpaceQuotaHelperForTests {
         for (QuotaSettings quotaSettings : scanner) {
           final String namespace = quotaSettings.getNamespace();
           final TableName tableName = quotaSettings.getTableName();
+          final String userName = quotaSettings.getUserName();
           if (namespace != null) {
             LOG.debug("Deleting quota for namespace: " + namespace);
             QuotaUtil.deleteNamespaceQuota(conn, namespace);
-          } else {
-            assert tableName != null;
-            LOG.debug("Deleting quota for table: "+ tableName);
+          } else if (tableName != null) {
+            LOG.debug("Deleting quota for table: " + tableName);
             QuotaUtil.deleteTableQuota(conn, tableName);
+          } else if (userName != null) {
+            LOG.debug("Deleting quota for user: " + userName);
+            QuotaUtil.deleteUserQuota(conn, userName);
           }
         }
       } finally {

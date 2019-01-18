@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -159,6 +160,13 @@ public class TestSnapshotQuotaObserverChore {
     TableName tn1 = helper.createTableWithRegions(ns.getName(), 1);
     TableName tn2 = helper.createTableWithRegions(ns.getName(), 1);
     TableName tn3 = helper.createTableWithRegions(1);
+
+    // Set a throttle quota on 'default' namespace
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(tn3.getNamespaceAsString(),
+      ThrottleType.WRITE_NUMBER, 100, TimeUnit.SECONDS));
+    // Set a user throttle quota
+    admin.setQuota(
+      QuotaSettingsFactory.throttleUser("user", ThrottleType.WRITE_NUMBER, 100, TimeUnit.MINUTES));
 
     // Set a space quota on the namespace
     admin.setQuota(QuotaSettingsFactory.limitNamespaceSpace(
