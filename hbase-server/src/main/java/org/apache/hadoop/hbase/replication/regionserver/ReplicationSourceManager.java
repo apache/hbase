@@ -63,9 +63,9 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -149,14 +149,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final SyncReplicationPeerMappingManager syncReplicationPeerMappingManager;
 
   private final Configuration conf;
-  private final FileSystem fs;
   // The paths to the latest log of each wal group, for new coming peers
   private final Map<String, WALIdentity> latestWalIds;
-  // Path to the wals directories
-  private final Path logDir;
-  // Path to the wal archive
-  private final Path oldLogDir;
-  private final WALFileLengthProvider walFileLengthProvider;
   // The number of ms that we wait before moving znodes, HBASE-3596
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
@@ -172,6 +166,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   // Maximum number of retries before taking bold actions when deleting remote wal files for sync
   // replication peer.
   private final int maxRetriesMultiplier;
+  private final WALProvider walProvider;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -180,16 +175,14 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param replicationTracker
    * @param conf the configuration to use
    * @param server the server for this region server
-   * @param fs the file system to use
-   * @param logDir the directory that contains all wal directories of live RSs
-   * @param oldLogDir the directory where old logs are archived
-   * @param clusterId
+   * @param clusterId id of the cluster
+   * @param walProvider Wal Provider
    */
   public ReplicationSourceManager(ReplicationQueueStorage queueStorage,
       ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
-      Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
-      WALFileLengthProvider walFileLengthProvider,
-      SyncReplicationPeerMappingManager syncReplicationPeerMappingManager) throws IOException {
+      Server server, UUID clusterId,
+      SyncReplicationPeerMappingManager syncReplicationPeerMappingManager, WALProvider walProvider)
+      throws IOException {
     this.sources = new ConcurrentHashMap<>();
     this.queueStorage = queueStorage;
     this.replicationPeers = replicationPeers;
@@ -199,13 +192,10 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.walsByIdRecoveredQueues = new ConcurrentHashMap<>();
     this.oldsources = new ArrayList<>();
     this.conf = conf;
-    this.fs = fs;
-    this.logDir = logDir;
-    this.oldLogDir = oldLogDir;
+    this.walProvider = walProvider;
     // 30 seconds
     this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 30000);
     this.clusterId = clusterId;
-    this.walFileLengthProvider = walFileLengthProvider;
     this.syncReplicationPeerMappingManager = syncReplicationPeerMappingManager;
     this.replicationTracker.registerListener(this);
     // It's preferable to failover 1 RS at a time, but with good zk servers
@@ -352,8 +342,8 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     MetricsSource metrics = new MetricsSource(queueId);
     // init replication source
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
-      walFileLengthProvider, metrics);
+    src.init(conf, this, queueStorage, replicationPeer, server, queueId, clusterId,
+       metrics, walProvider);
     return src;
   }
 
@@ -487,7 +477,8 @@ public class ReplicationSourceManager implements ReplicationListener {
         toRemove.terminate(terminateMessage);
       }
       for (NavigableSet<String> walsByGroup : walsById.get(peerId).values()) {
-        walsByGroup.forEach(wal -> src.enqueueLog(new FSWALIdentity(new Path(this.logDir, wal))));
+        walsByGroup.forEach(
+          wal -> src.enqueueLog(walProvider.createWalIdentity(server.getServerName(), wal, false)));
       }
     }
     LOG.info("Startup replication source for " + src.getPeerId());
@@ -508,7 +499,8 @@ public class ReplicationSourceManager implements ReplicationListener {
         ReplicationSourceInterface replicationSource = createSource(queueId, peer);
         this.oldsources.add(replicationSource);
         for (SortedSet<String> walsByGroup : walsByIdRecoveredQueues.get(queueId).values()) {
-          walsByGroup.forEach(wal -> src.enqueueLog(new FSWALIdentity(wal)));
+          walsByGroup.forEach(wal -> src
+              .enqueueLog(walProvider.createWalIdentity(server.getServerName(), wal, false)));
         }
         toStartup.add(replicationSource);
       }
@@ -675,6 +667,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   private void removeRemoteWALs(String peerId, String remoteWALDir, Collection<String> wals)
       throws IOException {
     Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
+    //Currently Sync replication is only supported on FS based WALProvider
+    //TODO: Abstract FileSystem once all APIs for Sync replication is conciled for remote calls.
     FileSystem fs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
     for (String wal : wals) {
       Path walFile = new Path(remoteWALDirForPeer, wal);
@@ -964,7 +958,7 @@ public class ReplicationSourceManager implements ReplicationListener {
             }
             oldsources.add(src);
             for (String wal : walsSet) {
-              src.enqueueLog(new FSWALIdentity(new Path(oldLogDir, wal)));
+              src.enqueueLog(walProvider.createWalIdentity(server.getServerName(), wal, true));
             }
             src.startup();
           }
@@ -1057,30 +1051,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   @VisibleForTesting
   public AtomicLong getTotalBufferUsed() {
     return totalBufferUsed;
-  }
-
-  /**
-   * Get the directory where wals are archived
-   * @return the directory where wals are archived
-   */
-  public Path getOldLogDir() {
-    return this.oldLogDir;
-  }
-
-  /**
-   * Get the directory where wals are stored by their RSs
-   * @return the directory where wals are stored by their RSs
-   */
-  public Path getLogDir() {
-    return this.logDir;
-  }
-
-  /**
-   * Get the handle on the local file system
-   * @return Handle on the local file system
-   */
-  public FileSystem getFs() {
-    return this.fs;
   }
 
   /**

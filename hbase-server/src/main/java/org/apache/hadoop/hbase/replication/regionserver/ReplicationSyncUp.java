@@ -21,17 +21,15 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -75,14 +73,12 @@ public class ReplicationSyncUp extends Configured implements Tool {
     Configuration conf = getConf();
     try (ZKWatcher zkw =
       new ZKWatcher(conf, "syncupReplication" + System.currentTimeMillis(), abortable, true)) {
-      Path walRootDir = FSUtils.getWALRootDir(conf);
-      FileSystem fs = FSUtils.getWALFileSystem(conf);
-      Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-      Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
-
       System.out.println("Start Replication Server start");
+      DummyServer dummyServer = new DummyServer(zkw);
+      WALFactory factory =
+          new WALFactory(conf, dummyServer.getServerName().toString());
       Replication replication = new Replication();
-      replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir, null);
+      replication.initialize(dummyServer, factory.getWALProvider());
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init().get();
       while (manager.activeFailoverTaskCount() > 0) {
@@ -99,7 +95,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     return 0;
   }
 
-  class DummyServer implements Server {
+  public class DummyServer implements Server {
     String hostname;
     ZKWatcher zkw;
 

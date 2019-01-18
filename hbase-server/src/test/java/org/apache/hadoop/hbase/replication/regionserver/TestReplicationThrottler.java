@@ -58,8 +58,8 @@ public class TestReplicationThrottler {
     assertEquals(0, ticks1);
     assertEquals(0, ticks2);
 
-    throttler1.addPushSize(1000);
-    throttler2.addPushSize(1000);
+    throttler1.addPushSize(1000L);
+    throttler2.addPushSize(1000L);
 
     ticks1 = throttler1.getNextSleepInterval(5);
     ticks2 = throttler2.getNextSleepInterval(5);

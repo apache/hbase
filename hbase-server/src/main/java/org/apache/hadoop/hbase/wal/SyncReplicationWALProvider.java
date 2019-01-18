@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.function.BiPredicate;
@@ -36,14 +37,19 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -347,6 +353,25 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @VisibleForTesting
   WALProvider getWrappedProvider() {
     return provider;
+  }
+
+  @Override
+  public WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue,
+      Configuration conf, long startPosition, ServerName serverName, MetricsSource metrics)
+      throws IOException {
+    return new FSWALEntryStream(CommonFSUtils.getWALFileSystem(conf), logQueue, conf, startPosition,
+        serverName, metrics, this);
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    return provider.createWalIdentity(serverName, walName, isArchive);
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
+      throws IOException {
+    return provider.locateWalId(wal, server, deadRegionServers);
   }
 
 }

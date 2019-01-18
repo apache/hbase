@@ -27,18 +27,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -92,6 +98,11 @@ public class IOTestProvider implements WALProvider {
   protected AtomicBoolean initialized = new AtomicBoolean(false);
 
   private List<WALActionsListener> listeners = new ArrayList<>();
+
+  private Path oldLogDir;
+
+  private Path rootDir;
+
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
@@ -106,6 +117,8 @@ public class IOTestProvider implements WALProvider {
     this.factory = factory;
     this.conf = conf;
     this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
+    rootDir = FSUtils.getRootDir(conf);
+    oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
   @Override
@@ -288,4 +301,32 @@ public class IOTestProvider implements WALProvider {
     // TODO Implement WALProvider.addWALActionLister
 
   }
+
+  @Override
+  public WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue,
+      Configuration conf, long startPosition, ServerName serverName, MetricsSource metrics)
+      throws IOException {
+    return new FSWALEntryStream(CommonFSUtils.getWALFileSystem(conf), logQueue, conf, startPosition,
+        serverName, metrics, this);
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    Path walPath;
+    if (isArchive) {
+      walPath = new Path(oldLogDir, walName);
+    } else {
+      Path logDir =
+          new Path(rootDir, AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+      walPath = new Path(logDir, walName);
+    }
+    return new FSWALIdentity(walPath);
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
+      throws IOException {
+    return wal;
+  }
+
 }

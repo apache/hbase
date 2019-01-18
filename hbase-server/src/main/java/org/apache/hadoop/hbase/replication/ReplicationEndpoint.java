@@ -23,15 +23,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ReplicationEndpoint is a plugin which implements replication
@@ -55,7 +53,6 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   class Context {
     private final Configuration localConf;
     private final Configuration conf;
-    private final FileSystem fs;
     private final TableDescriptors tableDescriptors;
     private final ReplicationPeer replicationPeer;
     private final String peerId;
@@ -67,7 +64,6 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     public Context(
         final Configuration localConf,
         final Configuration conf,
-        final FileSystem fs,
         final String peerId,
         final UUID clusterId,
         final ReplicationPeer replicationPeer,
@@ -76,7 +72,6 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
         final Abortable abortable) {
       this.localConf = localConf;
       this.conf = conf;
-      this.fs = fs;
       this.clusterId = clusterId;
       this.peerId = peerId;
       this.replicationPeer = replicationPeer;
@@ -89,9 +84,6 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
     }
     public Configuration getLocalConfiguration() {
       return localConf;
-    }
-    public FileSystem getFilesystem() {
-      return fs;
     }
     public UUID getClusterId() {
       return clusterId;

@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase.wal;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -109,8 +112,37 @@ public interface WALProvider {
    */
   void addWALActionsListener(WALActionsListener listener);
 
-  default WALFileLengthProvider getWALFileLengthProvider() {
-    return path -> getWALs().stream().map(w -> w.getLogFileSizeIfBeingWritten(path))
-        .filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
-  }
+  /**
+   * Streaming implementation to retrieve WAL entries from given set of Wals. This class is given a
+   * queue of WAL
+   * @param logQueue Queue of wals
+   * @param conf configuration
+   * @param startPosition start position for the first wal in the queue
+   * @param serverName name of the server
+   * @param metrics metric source
+   * @return WALEntryStream
+   * @throws IOException IOException
+   */
+  WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue, Configuration conf,
+      long startPosition, ServerName serverName, MetricsSource metrics) throws IOException;
+
+  /**
+   * Create wal identity wrapper for wal Name
+   * @param serverName regionserver name
+   * @param walName Name of the wal
+   * @param isArchive where it is archived
+   * @return WALIdentity
+   */
+  WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive);
+
+  /**
+   * Get the updated walId if it is moved after the server is dead
+   * @param wal original walId
+   * @param server server which is dead
+   * @param deadRegionServers list of dead region servers
+   * @return updated walId after relocation
+   * @throws IOException IOException
+   */
+  WALIdentity locateWalId(WALIdentity wal, Server server,
+      List<ServerName> deadRegionServers) throws IOException;
 }

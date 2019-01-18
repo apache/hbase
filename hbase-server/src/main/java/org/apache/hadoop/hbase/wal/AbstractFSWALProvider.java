@@ -23,28 +23,36 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -62,6 +70,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implements WALProvider {
 
+  // Path to the wals directories
+  // Path to the wal archive
   private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWALProvider.class);
 
   /** Separate old log into different dir by regionserver name **/
@@ -94,6 +104,12 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
+  private Path rootDir;
+
+  private Path oldLogDir;
+
+  private FileSystem fs;
+
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
@@ -118,6 +134,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
+    rootDir = FSUtils.getRootDir(conf);
+    oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.fs = CommonFSUtils.getWALFileSystem(conf);
     doInit(conf);
   }
 
@@ -553,5 +572,88 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   public static long getWALStartTimeFromWALName(String name) {
     return Long.parseLong(getWALNameGroupFromWALName(name, 2));
+  }
+
+  @Override
+  public WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue,
+      Configuration conf, long startPosition, ServerName serverName, MetricsSource metrics)
+      throws IOException {
+    return new FSWALEntryStream(fs, logQueue, conf, startPosition,
+        serverName, metrics, this);
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    Path walPath;
+    if (isArchive) {
+      walPath = new Path(oldLogDir, walName);
+    } else {
+      Path logDir =
+          new Path(rootDir, AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+      walPath = new Path(logDir, walName);
+    }
+    return new FSWALIdentity(walPath);
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity walId, Server server,
+      List<ServerName> deadRegionServers) throws IOException {
+    FSWALIdentity fsWALId = ((FSWALIdentity) walId);
+    if (fs.exists(fsWALId.getPath())) {
+      // still in same location, don't need to
+      // do anything
+      return fsWALId;
+    }
+    // Path changed - try to find the right path.
+    if (server instanceof ReplicationSyncUp.DummyServer) {
+      // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
+      // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
+      Path newPath = getReplSyncUpPath(server.getServerName(), ((FSWALIdentity) fsWALId).getPath());
+      return new FSWALIdentity(newPath);
+    } else {
+      // See if Path exists in the dead RS folder (there could be a chain of failures
+      // to look at)
+      LOG.info("NB dead servers : " + deadRegionServers.size());
+
+      for (ServerName curDeadServerName : deadRegionServers) {
+        final Path deadRsDirectory = new Path(rootDir,
+            AbstractFSWALProvider.getWALDirectoryName(curDeadServerName.getServerName()));
+        Path[] locs = new Path[] { new Path(deadRsDirectory, fsWALId.getName()), new Path(
+            deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), fsWALId.getName()) };
+        for (Path possibleLogLocation : locs) {
+          LOG.info("Possible location " + possibleLogLocation.toUri().toString());
+          if (fs.exists(possibleLogLocation)) {
+            // We found the right new location
+            LOG.info("Log " + fsWALId + " still exists at " + possibleLogLocation);
+            return new FSWALIdentity(possibleLogLocation);
+          }
+        }
+      }
+      // didn't find a new location
+      LOG.error(
+        String.format("WAL Path %s doesn't exist and couldn't find its new location", fsWALId));
+      return fsWALId;
+    }
+  }
+
+  // N.B. the ReplicationSyncUp tool sets the manager.getWALDir to the root of the wal
+  // area rather than to the wal area for a particular region server.
+  private Path getReplSyncUpPath(ServerName server, Path path) throws IOException {
+    Path logDir = new Path(rootDir,
+        AbstractFSWALProvider.getWALDirectoryName(server.getServerName().toString()));
+    FileStatus[] rss = fs.listStatus(logDir);
+    for (FileStatus rs : rss) {
+      Path p = rs.getPath();
+      FileStatus[] logs = fs.listStatus(p);
+      for (FileStatus log : logs) {
+        p = new Path(p, log.getPath().getName());
+        if (p.getName().equals(path.getName())) {
+          LOG.info("Log " + p.getName() + " found at " + p);
+          return p;
+        }
+      }
+    }
+    LOG.error("Didn't find path for: " + path.getName());
+    return path;
   }
 }

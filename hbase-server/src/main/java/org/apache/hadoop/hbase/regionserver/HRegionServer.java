@@ -3006,7 +3006,7 @@ public class HRegionServer extends HasThread implements
       throw new IOException("Could not find class for " + classname);
     }
     T service = ReflectionUtils.newInstance(clazz, conf);
-    service.initialize(server, walFs, logDir, oldLogDir, walProvider);
+    service.initialize(server, walProvider);
     return service;
   }
 

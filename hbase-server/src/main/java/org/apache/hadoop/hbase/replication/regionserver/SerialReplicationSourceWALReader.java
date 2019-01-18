@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,10 +42,10 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
 
   private final SerialReplicationChecker checker;
 
-  public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
+  public SerialReplicationSourceWALReader(Configuration conf,
       PriorityBlockingQueue<WALIdentity> logQueue, long startPosition, WALEntryFilter filter,
       ReplicationSource source) {
-    super(fs, conf, logQueue, startPosition, filter, source);
+    super(conf, logQueue, startPosition, filter, source);
     checker = new SerialReplicationChecker(conf, source);
   }
 

@@ -151,10 +151,9 @@ public class TestWALFactory {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
         SampleRegionWALCoprocessor.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);
-
+    hbaseWALDir = TEST_UTIL.createWALRootDir();
     conf = TEST_UTIL.getConfiguration();
     cluster = TEST_UTIL.getDFSCluster();
-
     hbaseDir = TEST_UTIL.createRootDir();
     hbaseWALDir = TEST_UTIL.createWALRootDir();
   }
@@ -679,7 +678,7 @@ public class TestWALFactory {
 
   @Test
   public void testWALProviders() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     // if providers are not set but enable SyncReplicationWALProvider by default for master node
     // with not only system tables
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
@@ -695,7 +694,7 @@ public class TestWALFactory {
 
   @Test
   public void testOnlySetWALProvider() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(WAL_PROVIDER, WALFactory.Providers.multiwal.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
     WALProvider wrappedWALProvider = ((SyncReplicationWALProvider) walFactory.getWALProvider())
@@ -709,7 +708,7 @@ public class TestWALFactory {
 
   @Test
   public void testOnlySetMetaWALProvider() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(META_WAL_PROVIDER, WALFactory.Providers.asyncfs.name());
     WALFactory walFactory = new WALFactory(conf, this.currentServername.toString());
     WALProvider wrappedWALProvider = ((SyncReplicationWALProvider) walFactory.getWALProvider())
@@ -722,7 +721,7 @@ public class TestWALFactory {
 
   @Test
   public void testDefaultProvider() throws IOException {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     // AsyncFSWal is the default, we should be able to request any WAL.
     final WALFactory normalWalFactory = new WALFactory(conf, this.currentServername.toString());
     Class<? extends WALProvider> fshLogProvider = normalWalFactory.getProviderClass(
@@ -745,7 +744,7 @@ public class TestWALFactory {
 
   @Test
   public void testCustomProvider() throws IOException {
-    final Configuration config = new Configuration();
+    final Configuration config = new Configuration(TEST_UTIL.getConfiguration());
     config.set(WALFactory.WAL_PROVIDER, IOTestProvider.class.getName());
     final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
     Class<? extends WALProvider> walProvider = walFactory.getProviderClass(
@@ -757,7 +756,7 @@ public class TestWALFactory {
 
   @Test
   public void testCustomMetaProvider() throws IOException {
-    final Configuration config = new Configuration();
+    final Configuration config = new Configuration(TEST_UTIL.getConfiguration());
     config.set(WALFactory.META_WAL_PROVIDER, IOTestProvider.class.getName());
     final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
     Class<? extends WALProvider> walProvider = walFactory.getProviderClass(

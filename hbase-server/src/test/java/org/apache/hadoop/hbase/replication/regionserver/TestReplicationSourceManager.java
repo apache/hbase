@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp.DummyServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -90,6 +91,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -196,7 +198,10 @@ public abstract class TestReplicationSourceManager {
     logDir = utility.getDataTestDir(HConstants.HREGION_LOGDIR_NAME);
     remoteLogDir = utility.getDataTestDir(ReplicationUtils.REMOTE_WAL_DIR_NAME);
     replication = new Replication();
-    replication.initialize(new DummyServer(), fs, logDir, oldLogDir, null);
+    DummyServer dummyServer = new DummyServer();
+    WALFactory factory =
+        new WALFactory(conf, dummyServer.getServerName().toString());
+    replication.initialize(dummyServer, factory.getWALProvider());
     managerOfCluster = getManagerFromCluster();
     if (managerOfCluster != null) {
       // After replication procedure, we need to add peer by hand (other than by receiving
@@ -822,10 +827,9 @@ public abstract class TestReplicationSourceManager {
   static class FailInitializeDummyReplicationSource extends ReplicationSourceDummy {
 
     @Override
-    public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+    public void init(Configuration conf, ReplicationSourceManager manager,
         ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-        UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-        throws IOException {
+        UUID clusterId, MetricsSource metrics, WALProvider provider) throws IOException {
       throw new IOException("Failing deliberately");
     }
   }

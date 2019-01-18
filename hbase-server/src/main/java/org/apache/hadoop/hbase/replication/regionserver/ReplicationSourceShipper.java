@@ -148,8 +148,8 @@ public class ReplicationSourceShipper extends Thread {
    * get batchEntry size excludes bulk load file sizes.
    * Uses ReplicationSourceWALReader's static method.
    */
-  private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
-    int totalSize = 0;
+  private long getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
+    long totalSize = 0;
     for(Entry entry : entryBatch.getWalEntries()) {
       totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
     }
@@ -172,7 +172,7 @@ public class ReplicationSourceShipper extends Thread {
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
-    int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
+    long sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
     while (isActive()) {
       try {
         try {
@@ -290,7 +290,7 @@ public class ReplicationSourceShipper extends Thread {
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this,
-      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
+      name + ".replicationSource.shipper " + walGroupId + "," + source.getQueueId(), handler);
   }
 
   WALIdentity getCurrentWALIdentity() {

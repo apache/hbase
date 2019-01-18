@@ -26,15 +26,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -88,6 +95,7 @@ public class RegionGroupingProvider implements WALProvider {
     }
   }
 
+
   /**
    * instantiate a strategy from a config property.
    * requires conf to have already been set (as well as anything the provider might need to read).
@@ -137,6 +145,7 @@ public class RegionGroupingProvider implements WALProvider {
   private List<WALActionsListener> listeners = new ArrayList<>();
   private String providerId;
   private Class<? extends WALProvider> providerClass;
+  private WALProvider delegateProvider;
 
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
@@ -156,6 +165,8 @@ public class RegionGroupingProvider implements WALProvider {
     this.providerId = sb.toString();
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
     this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
+    delegateProvider = WALFactory.createProvider(providerClass);
+    delegateProvider.init(factory, conf, providerId);
   }
 
   private WALProvider createProvider(String group) throws IOException {
@@ -285,4 +296,24 @@ public class RegionGroupingProvider implements WALProvider {
     // extra code actually works, then we will have other big problems. So leave it as is.
     listeners.add(listener);
   }
+
+  @Override
+  public WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue,
+      Configuration conf, long startPosition, ServerName serverName, MetricsSource metrics)
+      throws IOException {
+    return new FSWALEntryStream(CommonFSUtils.getWALFileSystem(conf), logQueue, conf, startPosition,
+      serverName, metrics, this);
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    return delegateProvider.createWalIdentity(serverName, walName, isArchive);
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
+      throws IOException {
+    return delegateProvider.locateWalId(wal, server, deadRegionServers);
+  }
+
 }

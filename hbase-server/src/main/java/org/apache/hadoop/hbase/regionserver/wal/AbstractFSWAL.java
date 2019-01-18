@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
@@ -996,11 +995,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
    */
   @Override
-  public OptionalLong getLogFileSizeIfBeingWritten(WALIdentity walId) {
+  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
     rollWriterLock.lock();
     try {
-      FSWALIdentity currentPath = new FSWALIdentity(getOldPath());
-      if (walId.equals(currentPath)) {
+      Path currentPath = getOldPath();
+      if (path.equals(currentPath)) {
         W writer = this.writer;
         return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
       } else {

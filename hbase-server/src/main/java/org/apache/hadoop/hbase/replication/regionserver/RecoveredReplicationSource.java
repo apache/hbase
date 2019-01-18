@@ -18,21 +18,15 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,17 +38,16 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RecoveredReplicationSource extends ReplicationSource {
 
+  private String actualPeerId;
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
 
-  private String actualPeerId;
-
   @Override
-  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+  public void init(Configuration conf, ReplicationSourceManager manager,
       ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
-    super.init(conf, fs, manager, queueStorage, replicationPeer, server, peerClusterZnode,
-      clusterId, walFileLengthProvider, metrics);
+      String peerClusterZnode, UUID clusterId, MetricsSource metrics, WALProvider walProvider)
+      throws IOException {
+    super.init(conf, manager, queueStorage, replicationPeer, server, peerClusterZnode, clusterId,
+      metrics, walProvider);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 
@@ -62,88 +55,6 @@ public class RecoveredReplicationSource extends ReplicationSource {
   protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId,
       PriorityBlockingQueue<WALIdentity> queue) {
     return new RecoveredReplicationSourceShipper(conf, walGroupId, queue, this, queueStorage);
-  }
-
-  public void locateRecoveredWalIds(PriorityBlockingQueue<WALIdentity> queue) throws IOException {
-    boolean hasPathChanged = false;
-    PriorityBlockingQueue<WALIdentity> newWalIds =
-        new PriorityBlockingQueue<WALIdentity>(queueSizePerGroup, new LogsComparator());
-    pathsLoop: for (WALIdentity walId : queue) {
-      if (fs.exists(((FSWALIdentity) walId).getPath())) {
-        // still in same location, don't need to
-        // do anything
-        newWalIds.add(walId);
-        continue;
-      }
-      // Path changed - try to find the right path.
-      hasPathChanged = true;
-      if (server instanceof ReplicationSyncUp.DummyServer) {
-        // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
-        // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
-        Path newPath = getReplSyncUpPath(((FSWALIdentity)walId).getPath());
-        newWalIds.add(new FSWALIdentity(newPath));
-        continue;
-      } else {
-        // See if Path exists in the dead RS folder (there could be a chain of failures
-        // to look at)
-        List<ServerName> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
-        LOG.info("NB dead servers : " + deadRegionServers.size());
-        final Path walDir = FSUtils.getWALRootDir(conf);
-        for (ServerName curDeadServerName : deadRegionServers) {
-          final Path deadRsDirectory =
-              new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName
-                  .getServerName()));
-          Path[] locs = new Path[] { new Path(deadRsDirectory, walId.getName()), new Path(
-              deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), walId.getName()) };
-          for (Path possibleLogLocation : locs) {
-            LOG.info("Possible location " + possibleLogLocation.toUri().toString());
-            if (manager.getFs().exists(possibleLogLocation)) {
-              // We found the right new location
-              LOG.info("Log " + walId + " still exists at " + possibleLogLocation);
-              newWalIds.add(new FSWALIdentity(possibleLogLocation));
-              continue pathsLoop;
-            }
-          }
-        }
-        // didn't find a new location
-        LOG.error(
-          String.format("WAL Path %s doesn't exist and couldn't find its new location", walId));
-        newWalIds.add(walId);
-      }
-    }
-
-    if (hasPathChanged) {
-      if (newWalIds.size() != queue.size()) { // this shouldn't happen
-        LOG.error("Recovery queue size is incorrect");
-        throw new IOException("Recovery queue size error");
-      }
-      // put the correct locations in the queue
-      // since this is a recovered queue with no new incoming logs,
-      // there shouldn't be any concurrency issues
-      queue.clear();
-      for (WALIdentity walId : newWalIds) {
-        queue.add(walId);
-      }
-    }
-  }
-
-  // N.B. the ReplicationSyncUp tool sets the manager.getWALDir to the root of the wal
-  // area rather than to the wal area for a particular region server.
-  private Path getReplSyncUpPath(Path path) throws IOException {
-    FileStatus[] rss = fs.listStatus(manager.getLogDir());
-    for (FileStatus rs : rss) {
-      Path p = rs.getPath();
-      FileStatus[] logs = fs.listStatus(p);
-      for (FileStatus log : logs) {
-        p = new Path(p, log.getPath().getName());
-        if (p.getName().equals(path.getName())) {
-          LOG.info("Log " + p.getName() + " found at " + p);
-          return p;
-        }
-      }
-    }
-    LOG.error("Didn't find path for: " + path.getName());
-    return path;
   }
 
   void tryFinish() {
@@ -166,5 +77,37 @@ public class RecoveredReplicationSource extends ReplicationSource {
   @Override
   public boolean isRecovered() {
     return true;
+  }
+
+  /**
+   * Get the updated queue of the wals if the wals are moved to another location.
+   * @param queue Updated queue with the new walIds
+   * @throws IOException IOException
+   */
+  public void locateRecoveredWalIds(PriorityBlockingQueue<WALIdentity> queue) throws IOException {
+    PriorityBlockingQueue<WALIdentity> newWalIds =
+        new PriorityBlockingQueue<WALIdentity>(queueSizePerGroup, new LogsComparator());
+    boolean hasPathChanged = false;
+    for (WALIdentity wal : queue) {
+      WALIdentity updateRecoveredWalIds = this.getWalProvider().locateWalId(wal, server,
+        this.replicationQueueInfo.getDeadRegionServers());
+      if (!updateRecoveredWalIds.equals(wal)) {
+        hasPathChanged = true;
+      }
+      newWalIds.add(updateRecoveredWalIds);
+    }
+    if (hasPathChanged) {
+      if (newWalIds.size() != queue.size()) { // this shouldn't happen
+        LOG.error("Recovery queue size is incorrect");
+        throw new IOException("Recovery queue size error");
+      }
+      // put the correct locations in the queue
+      // since this is a recovered queue with no new incoming logs,
+      // there shouldn't be any concurrency issues
+      queue.clear();
+      for (WALIdentity walId : newWalIds) {
+        queue.add(walId);
+      }
+    }
   }
 }

@@ -24,16 +24,22 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -267,7 +273,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public OptionalLong getLogFileSizeIfBeingWritten(WALIdentity path) {
+    public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
       return OptionalLong.empty();
     }
   }
@@ -286,4 +292,87 @@ class DisabledWALProvider implements WALProvider {
   public void addWALActionsListener(WALActionsListener listener) {
     disabled.registerWALActionsListener(listener);
   }
+
+  @Override
+  public WALEntryStream getWalStream(PriorityBlockingQueue<WALIdentity> logQueue,
+      Configuration conf, long startPosition, ServerName serverName, MetricsSource metrics)
+      throws IOException {
+    return new WALEntryStream() {
+
+      @Override
+      public void close() throws IOException {
+      }
+
+      @Override
+      public void seek(long pos) throws IOException {
+      }
+
+      @Override
+      public void reset() throws IOException {
+      }
+
+      @Override
+      public Entry next(Entry reuse) throws IOException {
+        return null;
+      }
+
+      @Override
+      public Entry next() throws IOException {
+        return null;
+      }
+
+      @Override
+      public long getPosition() throws IOException {
+        return 0;
+      }
+
+      @Override
+      public Entry peek() throws IOException {
+        return null;
+      }
+
+      @Override
+      public boolean hasNext() throws IOException {
+        return false;
+      }
+
+      @Override
+      public WALIdentity getCurrentWalIdentity() {
+        return null;
+      }
+    };
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    return new WALIdentity() {
+
+      @Override
+      public int compareTo(WALIdentity o) {
+        return 0;
+      }
+
+      @Override
+      public String getName() {
+        return walName;
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        return obj instanceof WALIdentity;
+      }
+
+      @Override
+      public int hashCode() {
+        return 0;
+      }
+    };
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
+      throws IOException {
+    return wal;
+  }
+
 }

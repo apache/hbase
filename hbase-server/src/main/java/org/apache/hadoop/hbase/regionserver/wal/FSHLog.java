@@ -215,7 +215,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       5);
     this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
     this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
-
     // This is the 'writer' -- a single threaded executor. This single thread 'consumes' what is
     // put on the ring buffer.
     String hostingThreadName = Thread.currentThread().getName();
@@ -308,7 +307,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     SyncFuture syncFuture = null;
     SafePointZigZagLatch zigzagLatch = null;
     long sequence = -1L;
-    if (this.ringBufferEventHandler != null) {
+    if (this.ringBufferEventHandler != null && writer != null) {
       // Get sequence first to avoid dead lock when ring buffer is full
       // Considering below sequence
       // 1. replaceWriter is called and zigzagLatch is initialized

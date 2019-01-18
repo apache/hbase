@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.OptionalLong;
-
-import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,5 +29,5 @@ import org.apache.yetus.audience.InterfaceAudience;
 @FunctionalInterface
 public interface WALFileLengthProvider {
 
-  OptionalLong getLogFileSizeIfBeingWritten(WALIdentity walId);
+  OptionalLong getLogFileSizeIfBeingWritten(Path walId);
 }

@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -38,7 +36,7 @@ public interface ReplicationService {
    * @param walProvider can be null if not initialized inside a live region server environment, for
    *          example, {@code ReplicationSyncUp}.
    */
-  void initialize(Server rs, FileSystem fs, Path logdir, Path oldLogDir, WALProvider walProvider)
+  void initialize(Server rs, WALProvider walProvider)
       throws IOException;
 
   /**

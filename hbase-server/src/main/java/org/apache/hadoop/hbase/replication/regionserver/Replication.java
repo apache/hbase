@@ -20,13 +20,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,7 +84,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   }
 
   @Override
-  public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
+  public void initialize(Server server,
       WALProvider walProvider) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
@@ -125,9 +123,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     }
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
-        walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty(),
-        mapping);
+        replicationTracker, conf, this.server, clusterId, mapping, walProvider);
     this.syncReplicationPeerInfoProvider =
         new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;

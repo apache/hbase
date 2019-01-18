@@ -86,7 +86,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
 
   private ClusterConnection conn;
-  private Configuration localConf;
   private Configuration conf;
   // How long should we sleep for each retry
   private long sleepForRetries;
@@ -117,7 +116,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   public void init(Context context) throws IOException {
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
-    this.localConf = HBaseConfiguration.create(ctx.getLocalConfiguration());
     decorateConf();
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",

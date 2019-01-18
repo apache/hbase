@@ -23,9 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,6 +35,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -48,14 +47,20 @@ public interface ReplicationSourceInterface {
   /**
    * Initializer for the source
    * @param conf the configuration to use
-   * @param fs the file system to use
    * @param manager the manager to use
+   * @param queueStorage replication queue storage
+   * @param replicationPeer Replication Peer
    * @param server the server for this region server
+   * @param queueId Id of the queue
+   * @param clusterId id of the cluster
+   * @param metrics metric source for publishing replication metrics
+   * @param walProvider wal provider
+   * @throws IOException IOException
    */
-  void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+  void init(Configuration conf, ReplicationSourceManager manager,
       ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException;
+      String queueId, UUID clusterId, MetricsSource metrics, WALProvider walProvider)
+      throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -160,11 +165,6 @@ public interface ReplicationSourceInterface {
   ReplicationSourceManager getSourceManager();
 
   /**
-   * @return the wal file length provider
-   */
-  WALFileLengthProvider getWALFileLengthProvider();
-
-  /**
    * Try to throttle when the peer config with a bandwidth
    * @param batchSize entries size will be pushed
    * @throws InterruptedException
@@ -176,7 +176,7 @@ public interface ReplicationSourceInterface {
    * @param entries pushed
    * @param batchSize entries size pushed
    */
-  void postShipEdits(List<Entry> entries, int batchSize);
+  void postShipEdits(List<Entry> entries, long batchSize);
 
   /**
    * The queue of WALs only belong to one region server. This will return the server name which all
