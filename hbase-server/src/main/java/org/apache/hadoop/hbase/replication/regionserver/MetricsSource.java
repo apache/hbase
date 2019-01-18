@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -37,10 +35,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class MetricsSource implements BaseSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsSource.class);
-
   // tracks last shipped timestamp for each wal group
-  private Map<String, Long> lastTimeStamps = new HashMap<String, Long>();
+  private Map<String, Long> lastTimestamps = new HashMap<>();
+  private Map<String, Long> ageOfLastShippedOp = new HashMap<>();
   private long lastHFileRefsQueueSize = 0;
   private String id;
 
@@ -87,7 +84,8 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
-    this.lastTimeStamps.put(walGroup, timestamp);
+    this.ageOfLastShippedOp.put(walGroup, age);
+    this.lastTimestamps.put(walGroup, timestamp);
   }
 
   /**
@@ -105,14 +103,32 @@ public class MetricsSource implements BaseSource {
     this.singleSourceSourceByTable.get(tableName).setLastShippedAge(age);
   }
   /**
+   * get the last timestamp of given wal group. If the walGroup is null, return 0.
+   * @param walGroup which group we are getting
+   * @return timeStamp
+   */
+  public long getLastTimeStampOfWalGroup(String walGroup) {
+    return this.lastTimestamps.get(walGroup) == null ? 0 : lastTimestamps.get(walGroup);
+  }
+
+  /**
+   * get age of last shipped op of given wal group. If the walGroup is null, return 0
+   * @param walGroup which group we are getting
+   * @return age
+   */
+  public long getAgeofLastShippedOp(String walGroup) {
+    return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
+  }
+
+  /**
    * Convenience method to use the last given timestamp to refresh the age of the last edit. Used
    * when replication fails and need to keep that metric accurate.
    * @param walGroupId id of the group to update
    */
   public void refreshAgeOfLastShippedOp(String walGroupId) {
-    Long lastTimestamp = this.lastTimeStamps.get(walGroupId);
+    Long lastTimestamp = this.lastTimestamps.get(walGroupId);
     if (lastTimestamp == null) {
-      this.lastTimeStamps.put(walGroupId, 0L);
+      this.lastTimestamps.put(walGroupId, 0L);
       lastTimestamp = 0L;
     }
     if (lastTimestamp > 0) {
@@ -204,7 +220,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
-    lastTimeStamps.clear();
+    lastTimestamps.clear();
+    ageOfLastShippedOp.clear();
     lastHFileRefsQueueSize = 0;
   }
 
@@ -230,7 +247,7 @@ public class MetricsSource implements BaseSource {
    */
   public long getTimeStampOfLastShippedOp() {
     long lastTimestamp = 0L;
-    for (long ts : lastTimeStamps.values()) {
+    for (long ts : lastTimestamps.values()) {
       if (ts > lastTimestamp) {
         lastTimestamp = ts;
       }

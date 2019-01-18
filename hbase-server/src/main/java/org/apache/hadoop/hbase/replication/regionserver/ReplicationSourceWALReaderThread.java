@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -251,7 +252,11 @@ public class ReplicationSourceWALReaderThread extends Thread {
     return entryBatchQueue.take();
   }
 
-  public long getEntrySizeIncludeBulkLoad(Entry entry) {
+  public WALEntryBatch poll(long timeout) throws InterruptedException {
+    return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
+  }
+
+  private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
     WALKey key = entry.getKey();
     return edit.heapSize() + sizeOfStoreFilesIncludeBulkLoad(edit) +
@@ -469,10 +474,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
 
     private void incrementHeapSize(long increment) {
       heapSize += increment;
-    }
-
-    private void setLastPosition(String region, Long sequenceId) {
-      getLastSeqIds().put(region, sequenceId);
     }
   }
 }

@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -105,5 +108,10 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public MetricsSource getSourceMetrics() {
     return metrics;
+  }
+
+  @Override
+  public Map<String, ReplicationStatus> getWalGroupStatus() {
+    return new HashMap<>();
   }
 }

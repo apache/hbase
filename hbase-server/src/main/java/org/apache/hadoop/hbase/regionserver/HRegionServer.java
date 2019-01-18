@@ -164,6 +164,8 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -2830,6 +2832,20 @@ public class HRegionServer extends HasThread implements
                               ReflectionUtils.newInstance(clazz, conf);
     service.initialize(server, walFs, walDir, oldLogDir);
     return service;
+  }
+
+  public Map<String, ReplicationStatus> getWalGroupsReplicationStatus(){
+    Map<String, ReplicationStatus> walGroupsReplicationStatus = new TreeMap<>();
+    if(!this.isOnline()){
+      return walGroupsReplicationStatus;
+    }
+    List<ReplicationSourceInterface> allSources = new ArrayList<>();
+    allSources.addAll(replicationSourceHandler.getReplicationManager().getSources());
+    allSources.addAll(replicationSourceHandler.getReplicationManager().getOldSources());
+    for(ReplicationSourceInterface source: allSources){
+      walGroupsReplicationStatus.putAll(source.getWalGroupStatus());
+    }
+    return walGroupsReplicationStatus;
   }
 
   /**

@@ -43,6 +43,7 @@ org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.Admin;
 org.apache.hadoop.hbase.client.HConnectionManager;
+org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.HTableDescriptor;
@@ -52,6 +53,9 @@ org.apache.hadoop.hbase.tool.Canary;
 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+org.apache.hadoop.hbase.replication.ReplicationPeer;
+org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+org.apache.hadoop.hbase.replication.ReplicationSerDeHelper;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.security.access.AccessControlLists;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
@@ -231,6 +235,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     </div>
                 </div>
             </div>
+        </section>
+        <section>
+            <h2>Peers</h2>
+            <& peerConfigs &>
         </section>
         <%if master.getAssignmentManager() != null %>
         <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
@@ -553,4 +561,38 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
 </table>
 </%if>
+</%def>
+
+<%def peerConfigs>
+<%java>
+    Map<String, ReplicationPeerConfig> peers = null;
+    try (ReplicationAdmin admin = new ReplicationAdmin(master.getConfiguration())) {
+        peers = admin.listPeerConfigs();
+    }
+</%java>
+<table class="table table-striped">
+    <tr>
+        <th>Peer Id</th>
+        <th>Cluster Key</th>
+        <th>Bandwidth</th>
+        <th>Table Cfs</th>
+    </tr>
+<%if (peers != null && peers.size() > 0)%>
+    <%for Map.Entry<String, ReplicationPeerConfig> peer : peers.entrySet() %>
+    <%java>
+        String peerId = peer.getKey();
+        ReplicationPeerConfig peerConfig = peer.getValue();
+    </%java>
+    <tr>
+        <td><% peerId %></td>
+        <td><% peerConfig.getClusterKey() %></td>
+        <td><% peerConfig.getBandwidth() == 0? "UNLIMITED" : StringUtils.humanReadableInt(peerConfig.getBandwidth()) %></td>
+        <td>
+           <% peerConfig.getTableCFsMap() == null ? "" : ReplicationSerDeHelper.convertToString(peerConfig.getTableCFsMap()).replaceAll(";", "; ") %>
+        </td>
+    </tr>
+    </%for>
+</%if>
+<tr><td>Total: <% (peers != null) ? peers.size() : 0 %></td></tr>
+</table>
 </%def>

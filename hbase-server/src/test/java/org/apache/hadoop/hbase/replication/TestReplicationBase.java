@@ -77,6 +77,7 @@ public class TestReplicationBase {
   protected static final byte[] famName = Bytes.toBytes("f");
   protected static final byte[] row = Bytes.toBytes("row");
   protected static final byte[] noRepfamName = Bytes.toBytes("norep");
+  protected static final String PEER_ID2 = "2";
 
   /**
    * @throws java.lang.Exception

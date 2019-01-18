@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -501,6 +502,38 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
   }
 
+  @Override
+  public Map<String, ReplicationStatus> getWalGroupStatus() {
+    Map<String, ReplicationStatus> sourceReplicationStatus = new TreeMap<>();
+    long lastTimeStamp, ageOfLastShippedOp, replicationDelay, fileSize;
+    for (ReplicationSourceShipperThread worker : workerThreads.values()) {
+      String walGroupId = worker.getWalGroupId();
+      lastTimeStamp = metrics.getLastTimeStampOfWalGroup(walGroupId);
+      ageOfLastShippedOp = metrics.getAgeofLastShippedOp(walGroupId);
+      int queueSize = queues.get(walGroupId).size();
+      replicationDelay =
+          ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
+      Path currentPath = worker.getCurrentPath();
+      try {
+        fileSize = fs.getContentSummary(currentPath).getLength();
+      } catch (IOException e) {
+        fileSize = -1;
+      }
+      ReplicationStatus.ReplicationStatusBuilder statusBuilder = ReplicationStatus.newBuilder();
+      statusBuilder.withPeerId(this.getPeerClusterId())
+          .withQueueSize(queueSize)
+          .withWalGroup(walGroupId)
+          .withCurrentPath(currentPath)
+          .withCurrentPosition(worker.getCurrentPosition())
+          .withFileSize(fileSize)
+          .withAgeOfLastShippedOp(ageOfLastShippedOp)
+          .withReplicationDelay(replicationDelay);
+      sourceReplicationStatus.put(this.getPeerClusterId() + "=>" + walGroupId,
+        statusBuilder.build());
+    }
+    return sourceReplicationStatus;
+  }
+
   // This thread reads entries from a queue and ships them.
   // Entries are placed onto the queue by ReplicationSourceWALReaderThread
   public class ReplicationSourceShipperThread extends Thread {
@@ -523,6 +556,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       this.queue = queue;
       this.replicationQueueInfo = replicationQueueInfo;
       this.source = source;
+    }
+
+    public String getWalGroupId() {
+      return walGroupId;
     }
 
     @Override

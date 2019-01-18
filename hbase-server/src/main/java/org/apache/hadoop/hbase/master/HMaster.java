@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
@@ -3291,5 +3292,25 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public LoadBalancer getLoadBalancer() {
     return balancer;
+  }
+
+  public HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>>
+    getReplicationLoad(ServerName[] serverNames) {
+    HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>> replicationLoadSourceMap =
+        new HashMap<>();
+    for (ServerName serverName : serverNames) {
+      List<ReplicationLoadSource> replicationLoadSources =
+        getServerManager().getLoad(serverName).getReplicationLoadSourceList();
+      for (ReplicationLoadSource replicationLoadSource : replicationLoadSources) {
+        List<Pair<ServerName, ReplicationLoadSource>> list =
+          replicationLoadSourceMap.get(replicationLoadSource.getPeerID());
+        if (list == null) {
+          list = new ArrayList<Pair<ServerName, ReplicationLoadSource>>();
+          replicationLoadSourceMap.put(replicationLoadSource.getPeerID(), list);
+        }
+        list.add(new Pair<>(serverName, replicationLoadSource));
+      }
+    }
+    return replicationLoadSourceMap;
   }
 }

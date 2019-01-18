@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -127,4 +128,9 @@ public interface ReplicationSourceInterface {
    */
   MetricsSource getSourceMetrics();
 
+  /**
+   * get the stat of replication for each wal group.
+   * @return stat of replication
+   */
+  Map<String, ReplicationStatus> getWalGroupStatus();
 }
