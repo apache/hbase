@@ -27,13 +27,14 @@ import java.util.Map.Entry;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Implementation of {@link GlobalQuotaSettings} to hide the Protobuf messages we use internally.
@@ -45,18 +46,18 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
   private final Boolean bypassGlobals;
   private final QuotaProtos.SpaceQuota spaceProto;
 
-  protected GlobalQuotaSettingsImpl(
-      String username, TableName tableName, String namespace, QuotaProtos.Quotas quotas) {
-    this(username, tableName, namespace,
+  protected GlobalQuotaSettingsImpl(String username, TableName tableName, String namespace,
+      String regionServer, QuotaProtos.Quotas quotas) {
+    this(username, tableName, namespace, regionServer,
         (quotas != null && quotas.hasThrottle() ? quotas.getThrottle() : null),
         (quotas != null && quotas.hasBypassGlobals() ? quotas.getBypassGlobals() : null),
         (quotas != null && quotas.hasSpace() ? quotas.getSpace() : null));
   }
 
-  protected GlobalQuotaSettingsImpl(
-      String userName, TableName tableName, String namespace, QuotaProtos.Throttle throttleProto,
-      Boolean bypassGlobals, QuotaProtos.SpaceQuota spaceProto) {
-    super(userName, tableName, namespace);
+  protected GlobalQuotaSettingsImpl(String userName, TableName tableName, String namespace,
+      String regionServer, QuotaProtos.Throttle throttleProto, Boolean bypassGlobals,
+      QuotaProtos.SpaceQuota spaceProto) {
+    super(userName, tableName, namespace, regionServer);
     this.throttleProto = throttleProto;
     this.bypassGlobals = bypassGlobals;
     this.spaceProto = spaceProto;
@@ -67,12 +68,12 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     // Very similar to QuotaSettingsFactory
     List<QuotaSettings> settings = new ArrayList<>();
     if (throttleProto != null) {
-      settings.addAll(QuotaSettingsFactory.fromThrottle(
-          getUserName(), getTableName(), getNamespace(), throttleProto));
+      settings.addAll(QuotaSettingsFactory.fromThrottle(getUserName(), getTableName(),
+        getNamespace(), getRegionServer(), throttleProto));
     }
     if (bypassGlobals != null && bypassGlobals.booleanValue()) {
-      settings.add(new QuotaGlobalsSettingsBypass(
-          getUserName(), getTableName(), getNamespace(), true));
+      settings.add(new QuotaGlobalsSettingsBypass(getUserName(), getTableName(), getNamespace(),
+          getRegionServer(), true));
     }
     if (spaceProto != null) {
       settings.add(QuotaSettingsFactory.fromSpace(getTableName(), getNamespace(), spaceProto));
@@ -210,7 +211,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     }
 
     return new GlobalQuotaSettingsImpl(
-        getUserName(), getTableName(), getNamespace(),
+        getUserName(), getTableName(), getNamespace(), getRegionServer(),
         (throttleBuilder == null ? null : throttleBuilder.build()), bypassGlobals,
         (removeSpaceBuilder ? null : spaceBuilder.build()));
   }

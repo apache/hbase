@@ -572,6 +572,7 @@ message SetQuotaRequest {
   optional ThrottleRequest throttle = 7;
 
   optional SpaceLimitRequest space_limit = 8;
+  optional string region_server = 9;
 }
 
 message SetQuotaResponse {

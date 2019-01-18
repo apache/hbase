@@ -1285,6 +1285,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preSetRegionServerQuota(final String regionServer, final GlobalQuotaSettings quotas)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSetRegionServerQuota(this, regionServer, quotas);
+      }
+    });
+  }
+
+  public void postSetRegionServerQuota(final String regionServer, final GlobalQuotaSettings quotas)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSetRegionServerQuota(this, regionServer, quotas);
+      }
+    });
+  }
+
   public void preMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables,
       final String targetGroup) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {

@@ -99,6 +99,13 @@ public class QuotaTableUtil {
   protected static final byte[] QUOTA_USER_ROW_KEY_PREFIX = Bytes.toBytes("u.");
   protected static final byte[] QUOTA_TABLE_ROW_KEY_PREFIX = Bytes.toBytes("t.");
   protected static final byte[] QUOTA_NAMESPACE_ROW_KEY_PREFIX = Bytes.toBytes("n.");
+  protected static final byte[] QUOTA_REGION_SERVER_ROW_KEY_PREFIX = Bytes.toBytes("r.");
+
+  /*
+   * TODO: Setting specified region server quota isn't supported currently and the row key "r.all"
+   * represents the throttle quota of all region servers
+   */
+  public static final String QUOTA_REGION_SERVER_ROW_KEY = "all";
 
   /* =========================================================================
    *  Quota "settings" helpers
@@ -134,6 +141,11 @@ public class QuotaTableUtil {
     return getQuotas(connection, rowKey, QUOTA_QUALIFIER_SETTINGS);
   }
 
+  public static Quotas getRegionServerQuota(final Connection connection, final String regionServer)
+      throws IOException {
+    return getQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
   private static Quotas getQuotas(final Connection connection, final byte[] rowKey,
       final byte[] qualifier) throws IOException {
     Get get = new Get(rowKey);
@@ -153,6 +165,12 @@ public class QuotaTableUtil {
 
   public static Get makeGetForNamespaceQuotas(final String namespace) {
     Get get = new Get(getNamespaceRowKey(namespace));
+    get.addFamily(QUOTA_FAMILY_INFO);
+    return get;
+  }
+
+  public static Get makeGetForRegionServerQuotas(final String regionServer) {
+    Get get = new Get(getRegionServerRowKey(regionServer));
     get.addFamily(QUOTA_FAMILY_INFO);
     return get;
   }
@@ -220,6 +238,9 @@ public class QuotaTableUtil {
     } else if (StringUtils.isNotEmpty(filter.getNamespaceFilter())) {
       filterList.addFilter(new RowFilter(CompareOperator.EQUAL,
           new RegexStringComparator(getNamespaceRowKeyRegex(filter.getNamespaceFilter()), 0)));
+    } else if (StringUtils.isNotEmpty(filter.getRegionServerFilter())) {
+      filterList.addFilter(new RowFilter(CompareOperator.EQUAL, new RegexStringComparator(
+          getRegionServerRowKeyRegex(filter.getRegionServerFilter()), 0)));
     }
     return filterList;
   }
@@ -318,8 +339,13 @@ public class QuotaTableUtil {
       throws IOException;
   }
 
-  public static interface QuotasVisitor extends UserQuotasVisitor,
-      TableQuotasVisitor, NamespaceQuotasVisitor {
+  private static interface RegionServerQuotasVisitor {
+    void visitRegionServerQuotas(final String regionServer, final Quotas quotas)
+      throws IOException;
+  }
+
+  public static interface QuotasVisitor extends UserQuotasVisitor, TableQuotasVisitor,
+      NamespaceQuotasVisitor, RegionServerQuotasVisitor {
   }
 
   public static void parseResult(final Result result, final QuotasVisitor visitor)
@@ -331,6 +357,8 @@ public class QuotaTableUtil {
       parseTableResult(result, visitor);
     } else if (isUserRowKey(row)) {
       parseUserResult(result, visitor);
+    } else if (isRegionServerRowKey(row)) {
+      parseRegionServerResult(result, visitor);
     } else {
       LOG.warn("unexpected row-key: " + Bytes.toString(row));
     }
@@ -364,6 +392,11 @@ public class QuotaTableUtil {
       public void visitNamespaceQuotas(String namespace, Quotas quotas) {
         quotaSettings.addAll(QuotaSettingsFactory.fromNamespaceQuotas(namespace, quotas));
       }
+
+      @Override
+      public void visitRegionServerQuotas(String regionServer, Quotas quotas) {
+        quotaSettings.addAll(QuotaSettingsFactory.fromRegionServerQuotas(regionServer, quotas));
+      }
     });
   }
 
@@ -379,6 +412,21 @@ public class QuotaTableUtil {
     if (data != null) {
       Quotas quotas = quotasFromData(data);
       visitor.visitNamespaceQuotas(namespace, quotas);
+    }
+  }
+
+  private static void parseRegionServerResult(final Result result,
+      final RegionServerQuotasVisitor visitor) throws IOException {
+    String rs = getRegionServerFromRowKey(result.getRow());
+    parseRegionServerResult(rs, result, visitor);
+  }
+
+  private static void parseRegionServerResult(final String regionServer, final Result result,
+      final RegionServerQuotasVisitor visitor) throws IOException {
+    byte[] data = result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
+    if (data != null) {
+      Quotas quotas = quotasFromData(data);
+      visitor.visitRegionServerQuotas(regionServer, quotas);
     }
   }
 
@@ -621,6 +669,10 @@ public class QuotaTableUtil {
     return Bytes.add(QUOTA_NAMESPACE_ROW_KEY_PREFIX, Bytes.toBytes(namespace));
   }
 
+  protected static byte[] getRegionServerRowKey(final String regionServer) {
+    return Bytes.add(QUOTA_REGION_SERVER_ROW_KEY_PREFIX, Bytes.toBytes(regionServer));
+  }
+
   protected static byte[] getSettingsQualifierForUserTable(final TableName tableName) {
     return Bytes.add(QUOTA_QUALIFIER_SETTINGS_PREFIX, tableName.getName());
   }
@@ -640,6 +692,10 @@ public class QuotaTableUtil {
 
   protected static String getNamespaceRowKeyRegex(final String namespace) {
     return getRowKeyRegEx(QUOTA_NAMESPACE_ROW_KEY_PREFIX, namespace);
+  }
+
+  private static String getRegionServerRowKeyRegex(final String regionServer) {
+    return getRowKeyRegEx(QUOTA_REGION_SERVER_ROW_KEY_PREFIX, regionServer);
   }
 
   private static String getRowKeyRegEx(final byte[] prefix, final String regex) {
@@ -662,6 +718,14 @@ public class QuotaTableUtil {
 
   protected static String getNamespaceFromRowKey(final byte[] key) {
     return Bytes.toString(key, QUOTA_NAMESPACE_ROW_KEY_PREFIX.length);
+  }
+
+  protected static boolean isRegionServerRowKey(final byte[] key) {
+    return Bytes.startsWith(key, QUOTA_REGION_SERVER_ROW_KEY_PREFIX);
+  }
+
+  protected static String getRegionServerFromRowKey(final byte[] key) {
+    return Bytes.toString(key, QUOTA_REGION_SERVER_ROW_KEY_PREFIX.length);
   }
 
   protected static boolean isTableRowKey(final byte[] key) {

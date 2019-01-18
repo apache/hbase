@@ -174,6 +174,7 @@ public class TestQuotaAdmin {
             assertEquals(userName, throttle.getUserName());
             assertEquals(null, throttle.getTableName());
             assertEquals(null, throttle.getNamespace());
+            assertEquals(null, throttle.getRegionServer());
             assertEquals(6, throttle.getSoftLimit());
             assertEquals(TimeUnit.MINUTES, throttle.getTimeUnit());
             countThrottle++;
@@ -521,6 +522,51 @@ public class TestQuotaAdmin {
     // Verify that we can also not fetch it via the API
     verifyNotFetchableViaAPI(admin);
 
+  }
+
+  @Test
+  public void testSetAndRemoveRegionServerQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    String regionServer = QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY;
+    QuotaFilter rsFilter = new QuotaFilter().setRegionServerFilter(regionServer);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES));
+    assertNumResults(1, rsFilter);
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.REQUEST_NUMBER, 20, TimeUnit.MINUTES));
+    assertNumResults(1, rsFilter);
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 20, TimeUnit.MINUTES);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      30, TimeUnit.SECONDS));
+    int count = 0;
+    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration(), rsFilter);
+    try {
+      for (QuotaSettings settings : scanner) {
+        assertTrue(settings.getQuotaType() == QuotaType.THROTTLE);
+        ThrottleSettings throttleSettings = (ThrottleSettings) settings;
+        assertEquals(regionServer, throttleSettings.getRegionServer());
+        count++;
+        if (throttleSettings.getThrottleType() == ThrottleType.REQUEST_NUMBER) {
+          assertEquals(20, throttleSettings.getSoftLimit());
+          assertEquals(TimeUnit.MINUTES, throttleSettings.getTimeUnit());
+        } else if (throttleSettings.getThrottleType() == ThrottleType.READ_NUMBER) {
+          assertEquals(30, throttleSettings.getSoftLimit());
+          assertEquals(TimeUnit.SECONDS, throttleSettings.getTimeUnit());
+        }
+      }
+    } finally {
+      scanner.close();
+    }
+    assertEquals(2, count);
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(regionServer));
+    assertNumResults(0, new QuotaFilter().setRegionServerFilter(regionServer));
   }
 
   @Test

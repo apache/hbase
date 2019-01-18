@@ -33,6 +33,7 @@ public class QuotaFilter {
   private String namespaceRegex;
   private String tableRegex;
   private String userRegex;
+  private String regionServerRegex;
 
   public QuotaFilter() {
   }
@@ -71,6 +72,17 @@ public class QuotaFilter {
   }
 
   /**
+   * Set the region server filter regex
+   * @param regex the region server filter
+   * @return the quota filter object
+   */
+  public QuotaFilter setRegionServerFilter(final String regex) {
+    this.regionServerRegex = regex;
+    hasFilters |= StringUtils.isNotEmpty(regex);
+    return this;
+  }
+
+  /**
    * Add a type to the filter list
    * @param type the type to filter on
    * @return the quota filter object
@@ -104,5 +116,10 @@ public class QuotaFilter {
   /** @return the User filter regex */
   public String getUserFilter() {
     return userRegex;
+  }
+
+  /** @return the RegionServer filter regex */
+  public String getRegionServerFilter() {
+    return regionServerRegex;
   }
 }

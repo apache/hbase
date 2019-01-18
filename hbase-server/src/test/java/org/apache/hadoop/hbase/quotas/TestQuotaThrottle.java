@@ -570,6 +570,31 @@ public class TestQuotaThrottle {
     triggerTableCacheRefresh(true, TABLE_NAMES[0]);
   }
 
+  @Test
+  public void testRegionServerThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0], ThrottleType.WRITE_NUMBER, 5,
+      TimeUnit.MINUTES));
+
+    // requests are throttled by table quota
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(
+      QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, ThrottleType.WRITE_NUMBER, 7, TimeUnit.MINUTES));
+    triggerCacheRefresh(false, false, true, false, true, TABLE_NAMES[0]);
+    assertEquals(5, doPuts(10, tables[0]));
+
+    // requests are throttled by region server quota
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(
+      QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY, ThrottleType.WRITE_NUMBER, 4, TimeUnit.MINUTES));
+    triggerCacheRefresh(false, false, false, false, true, TABLE_NAMES[0]);
+    assertEquals(4, doPuts(10, tables[0]));
+
+    // unthrottle
+    admin.setQuota(
+      QuotaSettingsFactory.unthrottleRegionServer(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY));
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerCacheRefresh(true, false, true, false, true, TABLE_NAMES[0]);
+  }
+
   private int doPuts(int maxOps, final Table... tables) throws Exception {
     return doPuts(maxOps, -1, tables);
   }
@@ -622,19 +647,19 @@ public class TestQuotaThrottle {
   }
 
   private void triggerUserCacheRefresh(boolean bypass, TableName... tables) throws Exception {
-    triggerCacheRefresh(bypass, true, false, false, tables);
+    triggerCacheRefresh(bypass, true, false, false, false, tables);
   }
 
   private void triggerTableCacheRefresh(boolean bypass, TableName... tables) throws Exception {
-    triggerCacheRefresh(bypass, false, true, false, tables);
+    triggerCacheRefresh(bypass, false, true, false, false, tables);
   }
 
   private void triggerNamespaceCacheRefresh(boolean bypass, TableName... tables) throws Exception {
-    triggerCacheRefresh(bypass, false, false, true, tables);
+    triggerCacheRefresh(bypass, false, false, true, false, tables);
   }
 
   private void triggerCacheRefresh(boolean bypass, boolean userLimiter, boolean tableLimiter,
-      boolean nsLimiter, final TableName... tables) throws Exception {
+      boolean nsLimiter, boolean rsLimiter, final TableName... tables) throws Exception {
     envEdge.incValue(2 * REFRESH_TIME);
     for (RegionServerThread rst: TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       RegionServerRpcQuotaManager quotaManager = rst.getRegionServer().getRegionServerRpcQuotaManager();
@@ -663,6 +688,11 @@ public class TestQuotaThrottle {
           if (nsLimiter) {
             isBypass &= quotaCache.getNamespaceLimiter(table.getNamespaceAsString()).isBypass();
           }
+          if (rsLimiter) {
+            isBypass &= quotaCache
+                .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY)
+                .isBypass();
+          }
           if (isBypass != bypass) {
             envEdge.incValue(100);
             isUpdated = false;
@@ -675,6 +705,7 @@ public class TestQuotaThrottle {
       LOG.debug(Objects.toString(quotaCache.getNamespaceQuotaCache()));
       LOG.debug(Objects.toString(quotaCache.getTableQuotaCache()));
       LOG.debug(Objects.toString(quotaCache.getUserQuotaCache()));
+      LOG.debug(Objects.toString(quotaCache.getRegionServerQuotaCache()));
     }
   }
 

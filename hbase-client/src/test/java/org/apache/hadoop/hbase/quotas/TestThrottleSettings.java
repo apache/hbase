@@ -48,7 +48,7 @@ public class TestThrottleSettings {
         .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest tr1 = ThrottleRequest.newBuilder().setTimedQuota(tq1)
         .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
-    ThrottleSettings orig = new ThrottleSettings("joe", null, null, tr1);
+    ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, tr1);
 
     TimedQuota tq2 = TimedQuota.newBuilder().setSoftLimit(10)
         .setScope(QuotaProtos.QuotaScope.MACHINE)
@@ -56,7 +56,7 @@ public class TestThrottleSettings {
     ThrottleRequest tr2 = ThrottleRequest.newBuilder().setTimedQuota(tq2)
         .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
 
-    ThrottleSettings merged = orig.merge(new ThrottleSettings("joe", null, null, tr2));
+    ThrottleSettings merged = orig.merge(new ThrottleSettings("joe", null, null, null, tr2));
 
     assertEquals(10, merged.getSoftLimit());
     assertEquals(ThrottleType.REQUEST_NUMBER, merged.getThrottleType());
@@ -70,7 +70,7 @@ public class TestThrottleSettings {
         .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest requestsQuotaReq = ThrottleRequest.newBuilder().setTimedQuota(requestsQuota)
         .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
-    ThrottleSettings orig = new ThrottleSettings("joe", null, null, requestsQuotaReq);
+    ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, requestsQuotaReq);
 
     TimedQuota readsQuota = TimedQuota.newBuilder().setSoftLimit(10)
         .setScope(QuotaProtos.QuotaScope.MACHINE)
@@ -79,7 +79,7 @@ public class TestThrottleSettings {
         .setType(QuotaProtos.ThrottleType.READ_NUMBER).build();
 
     try {
-      orig.merge(new ThrottleSettings("joe", null, null, readsQuotaReq));
+      orig.merge(new ThrottleSettings("joe", null, null, null, readsQuotaReq));
       fail("A read throttle should not be capable of being merged with a request quota");
     } catch (IllegalArgumentException e) {
       // Pass
@@ -93,13 +93,13 @@ public class TestThrottleSettings {
         .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest tr1 = ThrottleRequest.newBuilder().setTimedQuota(tq1)
         .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
-    ThrottleSettings orig = new ThrottleSettings("joe", null, null, tr1);
+    ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, tr1);
 
     ThrottleRequest tr2 = ThrottleRequest.newBuilder()
         .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
 
     assertTrue(
         "The same object should be returned by merge, but it wasn't",
-        orig == orig.merge(new ThrottleSettings("joe", null, null, tr2)));
+      orig == orig.merge(new ThrottleSettings("joe", null, null, null, tr2)));
   }
 }

@@ -22,24 +22,26 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
-import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
 
 @InterfaceAudience.Public
 public abstract class QuotaSettings {
   private final String userName;
   private final String namespace;
   private final TableName tableName;
+  private final String regionServer;
 
-  protected QuotaSettings(final String userName, final TableName tableName,
-      final String namespace) {
+  protected QuotaSettings(final String userName, final TableName tableName, final String namespace,
+      final String regionServer) {
     this.userName = userName;
     this.namespace = namespace;
     this.tableName = tableName;
+    this.regionServer = regionServer;
   }
 
   public abstract QuotaType getQuotaType();
@@ -54,6 +56,10 @@ public abstract class QuotaSettings {
 
   public String getNamespace() {
     return namespace;
+  }
+
+  public String getRegionServer() {
+    return regionServer;
   }
 
   /**
@@ -78,6 +84,10 @@ public abstract class QuotaSettings {
     if (request.hasNamespace()) {
       namespace = request.getNamespace();
     }
+    String regionServer = null;
+    if (request.hasRegionServer()) {
+      regionServer = request.getRegionServer();
+    }
     if (request.hasBypassGlobals()) {
       // Make sure we don't have either of the two below limits also included
       if (request.hasSpaceLimit() || request.hasThrottle()) {
@@ -85,7 +95,7 @@ public abstract class QuotaSettings {
             "SetQuotaRequest has multiple limits: " + TextFormat.shortDebugString(request));
       }
       return new QuotaGlobalsSettingsBypass(
-          username, tableName, namespace, request.getBypassGlobals());
+          username, tableName, namespace, regionServer, request.getBypassGlobals());
     } else if (request.hasSpaceLimit()) {
       // Make sure we don't have the below limit as well
       if (request.hasThrottle()) {
@@ -100,7 +110,8 @@ public abstract class QuotaSettings {
       return QuotaSettingsFactory.fromSpace(
           tableName, namespace, request.getSpaceLimit().getQuota());
     } else if (request.hasThrottle()) {
-      return new ThrottleSettings(username, tableName, namespace, request.getThrottle());
+      return new ThrottleSettings(username, tableName, namespace, regionServer,
+          request.getThrottle());
     } else {
       throw new IllegalStateException("Unhandled SetRequestRequest state");
     }
@@ -122,6 +133,9 @@ public abstract class QuotaSettings {
     }
     if (settings.getNamespace() != null) {
       builder.setNamespace(settings.getNamespace());
+    }
+    if (settings.getRegionServer() != null) {
+      builder.setRegionServer(settings.getRegionServer());
     }
     settings.setupSetQuotaRequest(builder);
     return builder.build();
@@ -151,6 +165,9 @@ public abstract class QuotaSettings {
       builder.append("NAMESPACE => '");
       builder.append(namespace);
       builder.append("', ");
+    }
+    if (regionServer != null) {
+      builder.append("REGIONSERVER => ").append(regionServer).append(", ");
     }
     return builder.toString();
   }
@@ -202,6 +219,9 @@ public abstract class QuotaSettings {
     }
     if (!Objects.equals(getNamespace(), mergee.getNamespace())) {
       throw new IllegalArgumentException("Mismatched namespace on settings to merge");
+    }
+    if (!Objects.equals(getRegionServer(), mergee.getRegionServer())) {
+      throw new IllegalArgumentException("Mismatched region server on settings to merge");
     }
   }
 }

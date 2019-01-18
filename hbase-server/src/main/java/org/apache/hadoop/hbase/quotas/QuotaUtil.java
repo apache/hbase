@@ -29,10 +29,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -40,10 +36,15 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
 /**
  * Helper class to interact with the quota table
@@ -142,6 +143,16 @@ public class QuotaUtil extends QuotaTableUtil {
         getSettingsQualifierForUserNamespace(namespace));
   }
 
+  public static void addRegionServerQuota(final Connection connection, final String regionServer,
+      final Quotas data) throws IOException {
+    addQuotas(connection, getRegionServerRowKey(regionServer), data);
+  }
+
+  public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
+      throws IOException {
+    deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
   private static void addQuotas(final Connection connection, final byte[] rowKey,
       final Quotas data) throws IOException {
     addQuotas(connection, rowKey, QUOTA_QUALIFIER_SETTINGS, data);
@@ -228,6 +239,17 @@ public class QuotaUtil extends QuotaTableUtil {
       public String getKeyFromRow(final byte[] row) {
         assert isNamespaceRowKey(row);
         return getNamespaceFromRowKey(row);
+      }
+    });
+  }
+
+  public static Map<String, QuotaState> fetchRegionServerQuotas(final Connection connection,
+      final List<Get> gets) throws IOException {
+    return fetchGlobalQuotas("regionServer", connection, gets, new KeyFromRow<String>() {
+      @Override
+      public String getKeyFromRow(final byte[] row) {
+        assert isRegionServerRowKey(row);
+        return getRegionServerFromRowKey(row);
       }
     });
   }

@@ -1093,6 +1093,24 @@ public interface MasterObserver {
       final String namespace, final GlobalQuotaSettings quotas) throws IOException {}
 
   /**
+   * Called before the quota for the region server is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionServer the name of the region server
+   * @param quotas the current quota for the region server
+   */
+  default void preSetRegionServerQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String regionServer, final GlobalQuotaSettings quotas) throws IOException {}
+
+  /**
+   * Called after the quota for the region server is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param regionServer the name of the region server
+   * @param quotas the resulting quota for the region server
+   */
+  default void postSetRegionServerQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String regionServer, final GlobalQuotaSettings quotas) throws IOException {}
+
+  /**
    * Called before merge regions request.
    * @param ctx coprocessor environment
    * @param regionsToMerge regions to be merged
