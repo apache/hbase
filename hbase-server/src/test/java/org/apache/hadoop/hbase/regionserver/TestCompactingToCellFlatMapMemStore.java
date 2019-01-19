@@ -283,13 +283,13 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     // simulate flusher
-    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+      mss.getCellsCount());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
 
     memstore.clearSnapshot(snapshot.getId());
-
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -922,7 +922,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     }
     MemStoreSize mss = memstoreSizing.getMemStoreSize();
     regionServicesForStores.addMemStoreSize(mss.getDataSize(), mss.getHeapSize(),
-        mss.getOffHeapSize());
+      mss.getOffHeapSize(), mss.getCellsCount());
     return mss.getDataSize();
   }
 

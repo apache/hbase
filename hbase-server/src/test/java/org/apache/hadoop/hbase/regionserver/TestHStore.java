@@ -264,7 +264,7 @@ public class TestHStore {
         MemStoreSizing kvSize = new NonThreadSafeMemStoreSizing();
         store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), kvSize);
         // add the heap size of active (mutable) segment
-        kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
+        kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0, 0);
         mss = store.memstore.getFlushableSize();
         assertEquals(kvSize.getMemStoreSize(), mss);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
@@ -277,12 +277,12 @@ public class TestHStore {
         }
         // due to snapshot, change mutable to immutable segment
         kvSize.incMemStoreSize(0,
-            CSLMImmutableSegment.DEEP_OVERHEAD_CSLM-MutableSegment.DEEP_OVERHEAD, 0);
+          CSLMImmutableSegment.DEEP_OVERHEAD_CSLM - MutableSegment.DEEP_OVERHEAD, 0, 0);
         mss = store.memstore.getFlushableSize();
         assertEquals(kvSize.getMemStoreSize(), mss);
         MemStoreSizing kvSize2 = new NonThreadSafeMemStoreSizing();
-        store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
-        kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
+        store.add(new KeyValue(row, family, qf2, 2, (byte[]) null), kvSize2);
+        kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0, 0);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
         assertEquals(kvSize.getMemStoreSize(), mss);

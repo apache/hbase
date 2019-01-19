@@ -308,9 +308,10 @@ public class CompactingMemStore extends AbstractMemStore {
    * @param memstoreSizing object to accumulate region size changes
    * @return true iff can proceed with applying the update
    */
-  @Override protected boolean preUpdate(MutableSegment currentActive, Cell cell,
+  @Override
+  protected boolean preUpdate(MutableSegment currentActive, Cell cell,
       MemStoreSizing memstoreSizing) {
-    if(currentActive.sharedLock()) {
+    if (currentActive.sharedLock()) {
       if (checkAndAddToActiveSize(currentActive, cell, memstoreSizing)) {
         return true;
       }
@@ -501,11 +502,11 @@ public class CompactingMemStore extends AbstractMemStore {
     while (segmentDataSize + cellSize < inmemoryFlushSize || inWalReplay) {
       // when replaying edits from WAL there is no need in in-memory flush regardless the size
       // otherwise size below flush threshold try to update atomically
-      if(currActive.compareAndSetDataSize(segmentDataSize, segmentDataSize + cellSize)) {
-        if(memstoreSizing != null){
-          memstoreSizing.incMemStoreSize(cellSize, 0, 0);
+      if (currActive.compareAndSetDataSize(segmentDataSize, segmentDataSize + cellSize)) {
+        if (memstoreSizing != null) {
+          memstoreSizing.incMemStoreSize(cellSize, 0, 0, 0);
         }
-        //enough space for cell - no need to flush
+        // enough space for cell - no need to flush
         return false;
       }
       segmentDataSize = currActive.getDataSize();
