@@ -29,15 +29,13 @@ public class RpcThrottlingException extends HBaseIOException {
   @InterfaceAudience.Public
   public enum Type {
     NumRequestsExceeded, RequestSizeExceeded, NumReadRequestsExceeded, NumWriteRequestsExceeded,
-    WriteSizeExceeded, ReadSizeExceeded, RequestCapacityUnitExceeded, ReadCapacityUnitExceeded,
-    WriteCapacityUnitExceeded
+    WriteSizeExceeded, ReadSizeExceeded,
   }
 
   private static final String[] MSG_TYPE =
       new String[] { "number of requests exceeded", "request size limit exceeded",
         "number of read requests exceeded", "number of write requests exceeded",
-        "write size limit exceeded", "read size limit exceeded", "request capacity unit exceeded",
-        "read capacity unit exceeded", "write capacity unit exceeded" };
+        "write size limit exceeded", "read size limit exceeded", };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -100,21 +98,6 @@ public class RpcThrottlingException extends HBaseIOException {
 
   public static void throwReadSizeExceeded(final long waitInterval) throws RpcThrottlingException {
     throwThrottlingException(Type.ReadSizeExceeded, waitInterval);
-  }
-
-  public static void throwRequestCapacityUnitExceeded(final long waitInterval)
-      throws RpcThrottlingException {
-    throwThrottlingException(Type.RequestCapacityUnitExceeded, waitInterval);
-  }
-
-  public static void throwReadCapacityUnitExceeded(final long waitInterval)
-      throws RpcThrottlingException {
-    throwThrottlingException(Type.ReadCapacityUnitExceeded, waitInterval);
-  }
-
-  public static void throwWriteCapacityUnitExceeded(final long waitInterval)
-      throws RpcThrottlingException {
-    throwThrottlingException(Type.WriteCapacityUnitExceeded, waitInterval);
   }
 
   private static void throwThrottlingException(final Type type, final long waitInterval)
