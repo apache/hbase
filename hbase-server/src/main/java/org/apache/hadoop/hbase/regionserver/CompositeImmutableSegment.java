@@ -190,7 +190,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Updates the heap size counter of the segment by the given delta
    */
   @Override
-  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead) {
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead, int cellsCount) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 

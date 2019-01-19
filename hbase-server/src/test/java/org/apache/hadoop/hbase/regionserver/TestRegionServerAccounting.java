@@ -50,22 +50,18 @@ public class TestRegionServerAccounting {
   public void testOnheapMemstoreHigherWaterMarkLimits() {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     long dataSize = regionServerAccounting.getGlobalMemStoreLimit();
-    MemStoreSize memstoreSize =
-        new MemStoreSize(dataSize, dataSize, 0);
+    MemStoreSize memstoreSize = new MemStoreSize(dataSize, dataSize, 0, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
-    assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
-      regionServerAccounting.isAboveHighWaterMark());
+    assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK, regionServerAccounting.isAboveHighWaterMark());
   }
 
   @Test
   public void testOnheapMemstoreLowerWaterMarkLimits() {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     long dataSize = regionServerAccounting.getGlobalMemStoreLimit();
-    MemStoreSize memstoreSize =
-        new MemStoreSize(dataSize, dataSize, 0);
+    MemStoreSize memstoreSize = new MemStoreSize(dataSize, dataSize, 0, 0);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
-    assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
-      regionServerAccounting.isAboveLowWaterMark());
+    assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK, regionServerAccounting.isAboveLowWaterMark());
   }
 
   @Test
@@ -76,7 +72,7 @@ public class TestRegionServerAccounting {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach offheap limit as data size is higher and not due to heap size
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L * 1024L), 0, (1L * 1024L * 1024L * 1024L));
+        new MemStoreSize((3L * 1024L * 1024L * 1024L), 0, (1L * 1024L * 1024L * 1024L), 100);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_OFFHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
@@ -90,11 +86,9 @@ public class TestRegionServerAccounting {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
     long dataSize = regionServerAccounting.getGlobalOnHeapMemStoreLimit();
-    MemStoreSize memstoreSize =
-        new MemStoreSize(dataSize, dataSize, 0);
+    MemStoreSize memstoreSize = new MemStoreSize(dataSize, dataSize, 0, 100);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
-    assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
-      regionServerAccounting.isAboveHighWaterMark());
+    assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK, regionServerAccounting.isAboveHighWaterMark());
   }
 
   @Test
@@ -105,10 +99,9 @@ public class TestRegionServerAccounting {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach offheap limit as data size is higher and not due to heap size
     MemStoreSize memstoreSize =
-        new MemStoreSize((3L * 1024L * 1024L * 1024L), 0, (1L * 1024L * 1024L * 1024L));
+        new MemStoreSize((3L * 1024L * 1024L * 1024L), 0, (1L * 1024L * 1024L * 1024L), 100);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
-    assertEquals(FlushType.ABOVE_OFFHEAP_LOWER_MARK,
-      regionServerAccounting.isAboveLowWaterMark());
+    assertEquals(FlushType.ABOVE_OFFHEAP_LOWER_MARK, regionServerAccounting.isAboveLowWaterMark());
   }
 
   @Test
@@ -119,10 +112,8 @@ public class TestRegionServerAccounting {
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
     long dataSize = regionServerAccounting.getGlobalOnHeapMemStoreLimit();
-    MemStoreSize memstoreSize =
-        new MemStoreSize(dataSize, dataSize, 0);
+    MemStoreSize memstoreSize = new MemStoreSize(dataSize, dataSize, 0, 100);
     regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
-    assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
-      regionServerAccounting.isAboveLowWaterMark());
+    assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK, regionServerAccounting.isAboveLowWaterMark());
   }
 }

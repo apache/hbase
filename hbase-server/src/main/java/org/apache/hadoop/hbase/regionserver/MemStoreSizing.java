@@ -53,7 +53,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MemStoreSizing {
-  static final MemStoreSizing DUD = new MemStoreSizing() {
+  MemStoreSizing DUD = new MemStoreSizing() {
     private final MemStoreSize mss = new MemStoreSize();
 
     @Override
@@ -77,8 +77,13 @@ public interface MemStoreSizing {
     }
 
     @Override
-    public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta,
-        long offHeapSizeDelta) {
+    public int getCellsCount() {
+      return this.mss.getCellsCount();
+    }
+
+    @Override
+    public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+        int cellsCountDelta) {
       throw new RuntimeException("I'm a DUD, you can't use me!");
     }
   };
@@ -86,27 +91,31 @@ public interface MemStoreSizing {
   /**
    * @return The new dataSize ONLY as a convenience
    */
-  long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta);
+  long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+      int cellsCount);
 
   default long incMemStoreSize(MemStoreSize delta) {
-    return incMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
+    return incMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize(),
+      delta.getCellsCount());
   }
 
   /**
    * @return The new dataSize ONLY as a convenience
    */
   default long decMemStoreSize(long dataSizeDelta, long heapSizeDelta,
-      long offHeapSizeDelta) {
-    return incMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta);
+      long offHeapSizeDelta, int cellsCountDelta) {
+    return incMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta, -cellsCountDelta);
   }
 
   default long decMemStoreSize(MemStoreSize delta) {
-    return incMemStoreSize(-delta.getDataSize(), -delta.getHeapSize(), -delta.getOffHeapSize());
+    return incMemStoreSize(-delta.getDataSize(), -delta.getHeapSize(), -delta.getOffHeapSize(),
+      -delta.getCellsCount());
   }
 
   long getDataSize();
   long getHeapSize();
   long getOffHeapSize();
+  int getCellsCount();
 
   /**
    * @return Use this datastructure to return all three settings, {@link #getDataSize()},
