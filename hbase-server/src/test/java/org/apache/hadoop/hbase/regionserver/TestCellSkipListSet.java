@@ -48,20 +48,20 @@ public class TestCellSkipListSet extends TestCase {
   }
 
   public void testAdd() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.csls.add(kv);
     assertTrue(this.csls.contains(kv));
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.getDelegatee().size());
     Cell first = this.csls.first();
     assertTrue(kv.equals(first));
     assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
       first.getValueArray(), first.getValueOffset(), first.getValueLength()));
     // Now try overwritting
-    byte [] overwriteValue = Bytes.toBytes("overwrite");
+    byte[] overwriteValue = Bytes.toBytes("overwrite");
     KeyValue overwrite = new KeyValue(bytes, bytes, bytes, overwriteValue);
     this.csls.add(overwrite);
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.getDelegatee().size());
     first = this.csls.first();
     assertTrue(Bytes.equals(overwrite.getValueArray(), overwrite.getValueOffset(),
       overwrite.getValueLength(), first.getValueArray(), first.getValueOffset(),

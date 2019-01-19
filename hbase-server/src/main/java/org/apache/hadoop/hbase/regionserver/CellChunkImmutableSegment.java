@@ -57,10 +57,10 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     // memStoreLAB cannot be null in this class
     boolean onHeap = getMemStoreLAB().isOnHeap();
     // initiate the heapSize with the size of the segment metadata
-    if(onHeap) {
-      incMemStoreSize(0, indexOverhead, 0);
+    if (onHeap) {
+      incMemStoreSize(0, indexOverhead, 0, 0);
     } else {
-      incMemStoreSize(0, 0, indexOverhead);
+      incMemStoreSize(0, 0, indexOverhead, 0);
     }
     // build the new CellSet based on CellArrayMap and update the CellSet of the new Segment
     initializeCellSet(numOfCells, iterator, action);
@@ -79,12 +79,12 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     boolean onHeap = getMemStoreLAB().isOnHeap();
     // initiate the heapSize with the size of the segment metadata
     if(onHeap) {
-      incMemStoreSize(0, indexOverhead, 0);
-      memstoreSizing.incMemStoreSize(0, indexOverhead, 0);
+      incMemStoreSize(0, indexOverhead, 0, 0);
+      memstoreSizing.incMemStoreSize(0, indexOverhead, 0, 0);
     } else {
-      incMemStoreSize(0, -CSLMImmutableSegment.DEEP_OVERHEAD_CSLM, DEEP_OVERHEAD_CCM);
-      memstoreSizing.incMemStoreSize(0, -CSLMImmutableSegment.DEEP_OVERHEAD_CSLM,
-          DEEP_OVERHEAD_CCM);
+      incMemStoreSize(0, -CSLMImmutableSegment.DEEP_OVERHEAD_CSLM, DEEP_OVERHEAD_CCM, 0);
+      memstoreSizing.incMemStoreSize(0, -CSLMImmutableSegment.DEEP_OVERHEAD_CSLM, DEEP_OVERHEAD_CCM,
+        0);
     }
     int numOfCells = segment.getCellsCount();
     // build the new CellSet based on CellChunkMap
@@ -95,11 +95,11 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     // (reinitializeCellSet doesn't take the care for the sizes)
     long newSegmentSizeDelta = numOfCells*(indexEntrySize()-ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
     if(onHeap) {
-      incMemStoreSize(0, newSegmentSizeDelta, 0);
-      memstoreSizing.incMemStoreSize(0, newSegmentSizeDelta, 0);
+      incMemStoreSize(0, newSegmentSizeDelta, 0, 0);
+      memstoreSizing.incMemStoreSize(0, newSegmentSizeDelta, 0, 0);
     } else {
-      incMemStoreSize(0, 0, newSegmentSizeDelta);
-      memstoreSizing.incMemStoreSize(0, 0, newSegmentSizeDelta);
+      incMemStoreSize(0, 0, newSegmentSizeDelta, 0);
+      memstoreSizing.incMemStoreSize(0, 0, newSegmentSizeDelta, 0);
 
     }
   }
@@ -335,9 +335,9 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     long newCellSize = getCellLength(cell);
     long heapOverhead = newHeapSize - oldHeapSize;
     long offHeapOverhead = newOffHeapSize - oldOffHeapSize;
-    incMemStoreSize(newCellSize - oldCellSize, heapOverhead, offHeapOverhead);
+    incMemStoreSize(newCellSize - oldCellSize, heapOverhead, offHeapOverhead, 0);
     if(memstoreSizing != null) {
-      memstoreSizing.incMemStoreSize(newCellSize - oldCellSize, heapOverhead, offHeapOverhead);
+      memstoreSizing.incMemStoreSize(newCellSize - oldCellSize, heapOverhead, offHeapOverhead, 0);
     }
     return cell;
   }

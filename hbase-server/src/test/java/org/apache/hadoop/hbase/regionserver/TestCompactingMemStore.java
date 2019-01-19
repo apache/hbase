@@ -679,7 +679,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     // simulate flusher
-    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+      mss.getCellsCount());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(7, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -756,7 +757,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     mss = memstore.getFlushableSize();
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     // simulate flusher
-    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    region.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+      mss.getCellsCount());
     ImmutableSegment s = memstore.getSnapshot();
     assertEquals(4, s.getCellsCount());
     assertEquals(0, regionServicesForStores.getMemStoreSize());
@@ -831,6 +833,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     byte[] qf = Bytes.toBytes("testqualifier");
     long size = hmc.getActive().getDataSize();
     long heapOverhead = hmc.getActive().getHeapSize();
+    int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
@@ -843,7 +846,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
     regionServicesForStores.addMemStoreSize(hmc.getActive().getDataSize() - size,
-        hmc.getActive().getHeapSize() - heapOverhead, 0);
+      hmc.getActive().getHeapSize() - heapOverhead, 0,
+      hmc.getActive().getCellsCount() - cellsCount);
     return totalLen;
   }
 
@@ -853,6 +857,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     byte[] qf = Bytes.toBytes("testqualifier");
     long size = hmc.getActive().getDataSize();
     long heapOverhead = hmc.getActive().getHeapSize();
+    int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
@@ -864,7 +869,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
     regionServicesForStores.addMemStoreSize(hmc.getActive().getDataSize() - size,
-            hmc.getActive().getHeapSize() - heapOverhead, 0);
+      hmc.getActive().getHeapSize() - heapOverhead, 0, cellsCount);
     return totalLen;
   }
 

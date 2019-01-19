@@ -57,8 +57,9 @@ public class RegionServicesForStores {
     this.region = region;
   }
 
-  public void addMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
-    region.incMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
+  public void addMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+      int cellsCountDelta) {
+    region.incMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta, cellsCountDelta);
   }
 
   public RegionInfo getRegionInfo() {

@@ -1256,28 +1256,32 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * store
    */
   void incMemStoreSize(MemStoreSize mss) {
-    incMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    incMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+      mss.getCellsCount());
   }
 
-  void incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+  void incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+      int cellsCountDelta) {
     if (this.rsAccounting != null) {
       rsAccounting.incGlobalMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
     }
-    long dataSize =
-        this.memStoreSizing.incMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
+    long dataSize = this.memStoreSizing.incMemStoreSize(dataSizeDelta, heapSizeDelta,
+      offHeapSizeDelta, cellsCountDelta);
     checkNegativeMemStoreDataSize(dataSize, dataSizeDelta);
   }
 
   void decrMemStoreSize(MemStoreSize mss) {
-    decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+      mss.getCellsCount());
   }
 
-  void decrMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+  void decrMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+      int cellsCountDelta) {
     if (this.rsAccounting != null) {
       rsAccounting.decGlobalMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
     }
-    long dataSize =
-        this.memStoreSizing.decMemStoreSize(dataSizeDelta, heapSizeDelta, offHeapSizeDelta);
+    long dataSize = this.memStoreSizing.decMemStoreSize(dataSizeDelta, heapSizeDelta,
+      offHeapSizeDelta, cellsCountDelta);
     checkNegativeMemStoreDataSize(dataSize, -dataSizeDelta);
   }
 
@@ -2801,7 +2805,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // Set down the memstore size by amount of flush.
       MemStoreSize mss = prepareResult.totalFlushableSize.getMemStoreSize();
-      this.decrMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+      this.decrMemStoreSize(mss);
 
       // Increase the size of this Region for the purposes of quota. Noop if quotas are disabled.
       // During startup, quota manager may not be initialized yet.
@@ -3228,7 +3232,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       });
       // update memStore size
       region.incMemStoreSize(memStoreAccounting.getDataSize(), memStoreAccounting.getHeapSize(),
-          memStoreAccounting.getOffHeapSize());
+        memStoreAccounting.getOffHeapSize(), memStoreAccounting.getCellsCount());
     }
 
     public boolean isDone() {

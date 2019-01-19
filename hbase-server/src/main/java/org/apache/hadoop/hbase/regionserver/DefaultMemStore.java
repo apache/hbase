@@ -104,8 +104,8 @@ public class DefaultMemStore extends AbstractMemStore {
         // regionServices can be null when testing
         if (regionServices != null) {
           regionServices.addMemStoreSize(memstoreAccounting.getDataSize(),
-              memstoreAccounting.getHeapSize(),
-              memstoreAccounting.getOffHeapSize());
+            memstoreAccounting.getHeapSize(), memstoreAccounting.getOffHeapSize(),
+            memstoreAccounting.getCellsCount());
         }
         this.snapshot = immutableSegment;
         resetActive();

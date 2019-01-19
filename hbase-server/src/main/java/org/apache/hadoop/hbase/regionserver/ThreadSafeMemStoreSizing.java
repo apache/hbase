@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,31 +36,36 @@ class ThreadSafeMemStoreSizing implements MemStoreSizing {
   private final AtomicLong dataSize = new AtomicLong();
   private final AtomicLong heapSize = new AtomicLong();
   private final AtomicLong offHeapSize = new AtomicLong();
+  private final AtomicInteger cellsCount = new AtomicInteger();
 
   ThreadSafeMemStoreSizing() {
-    this(0, 0, 0);
+    this(0, 0, 0, 0);
   }
 
   ThreadSafeMemStoreSizing(MemStoreSize mss) {
-    this(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+    this(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(), mss.getCellsCount());
   }
 
-  ThreadSafeMemStoreSizing(long dataSize, long heapSize, long offHeapSize) {
-    incMemStoreSize(dataSize, heapSize, offHeapSize);
+  ThreadSafeMemStoreSizing(long dataSize, long heapSize, long offHeapSize, int cellsCount) {
+    incMemStoreSize(dataSize, heapSize, offHeapSize, cellsCount);
   }
 
   public MemStoreSize getMemStoreSize() {
-    return new MemStoreSize(getDataSize(), getHeapSize(), getOffHeapSize());
+    return new MemStoreSize(getDataSize(), getHeapSize(), getOffHeapSize(), getCellsCount());
   }
 
-  public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
+  @Override
+  public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
+      int cellsCountDelta) {
     this.offHeapSize.addAndGet(offHeapSizeDelta);
     this.heapSize.addAndGet(heapSizeDelta);
+    this.cellsCount.addAndGet(cellsCountDelta);
     return this.dataSize.addAndGet(dataSizeDelta);
   }
 
-  @Override public boolean compareAndSetDataSize(long expected, long updated) {
-    return dataSize.compareAndSet(expected,updated);
+  @Override
+  public boolean compareAndSetDataSize(long expected, long updated) {
+    return dataSize.compareAndSet(expected, updated);
   }
 
   @Override
@@ -75,6 +81,11 @@ class ThreadSafeMemStoreSizing implements MemStoreSizing {
   @Override
   public long getOffHeapSize() {
     return offHeapSize.get();
+  }
+
+  @Override
+  public int getCellsCount() {
+    return cellsCount.get();
   }
 
   @Override
