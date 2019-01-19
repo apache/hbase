@@ -102,7 +102,7 @@ public class RegionServerRpcQuotaManager {
           LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" + userLimiter);
         }
         if (!useNoop) {
-          return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter);
+          return new DefaultOperationQuota(userLimiter);
         }
       } else {
         QuotaLimiter nsLimiter = quotaCache.getNamespaceLimiter(table.getNamespaceAsString());
@@ -113,8 +113,7 @@ public class RegionServerRpcQuotaManager {
                     userLimiter + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter);
         }
         if (!useNoop) {
-          return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter,
-              tableLimiter, nsLimiter);
+          return new DefaultOperationQuota(userLimiter, tableLimiter, nsLimiter);
         }
       }
     }

@@ -149,16 +149,6 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           case READ_SIZE:
             throttleBuilder.setReadSize(otherProto.getTimedQuota());
             break;
-          case REQUEST_CAPACITY_UNIT:
-            throttleBuilder.setReqCapacityUnit(otherProto.getTimedQuota());
-            break;
-          case READ_CAPACITY_UNIT:
-            throttleBuilder.setReadCapacityUnit(otherProto.getTimedQuota());
-            break;
-          case WRITE_CAPACITY_UNIT:
-            throttleBuilder.setWriteCapacityUnit(otherProto.getTimedQuota());
-            break;
-          default:
         }
       }
     }
@@ -242,11 +232,6 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
             case READ_SIZE:
               builder.append(sizeToString(timedQuota.getSoftLimit()));
               break;
-            case REQUEST_CAPACITY_UNIT:
-            case READ_CAPACITY_UNIT:
-            case WRITE_CAPACITY_UNIT:
-              builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
-            default:
           }
         } else if (timedQuota.hasShare()) {
           builder.append(String.format("%.2f%%", timedQuota.getShare()));
@@ -304,15 +289,6 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     if (proto.hasWriteSize()) {
       quotas.put(ThrottleType.WRITE_SIZE, proto.getWriteSize());
     }
-    if (proto.hasReqCapacityUnit()) {
-      quotas.put(ThrottleType.REQUEST_CAPACITY_UNIT, proto.getReqCapacityUnit());
-    }
-    if (proto.hasReadCapacityUnit()) {
-      quotas.put(ThrottleType.READ_CAPACITY_UNIT, proto.getReqCapacityUnit());
-    }
-    if (proto.hasWriteCapacityUnit()) {
-      quotas.put(ThrottleType.WRITE_CAPACITY_UNIT, proto.getWriteCapacityUnit());
-    }
     return quotas;
   }
 
@@ -323,8 +299,5 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     builder.clearReqSize();
     builder.clearWriteNum();
     builder.clearWriteSize();
-    builder.clearReadCapacityUnit();
-    builder.clearReadCapacityUnit();
-    builder.clearWriteCapacityUnit();
   }
 }

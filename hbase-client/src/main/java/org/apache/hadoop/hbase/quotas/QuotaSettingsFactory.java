@@ -143,18 +143,6 @@ public class QuotaSettingsFactory {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
           ThrottleType.READ_SIZE, throttle.getReadSize()));
     }
-    if (throttle.hasReqCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-        ThrottleType.REQUEST_CAPACITY_UNIT, throttle.getReqCapacityUnit()));
-    }
-    if (throttle.hasReadCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-        ThrottleType.READ_CAPACITY_UNIT, throttle.getReadCapacityUnit()));
-    }
-    if (throttle.hasWriteCapacityUnit()) {
-      settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace,
-        ThrottleType.WRITE_CAPACITY_UNIT, throttle.getWriteCapacityUnit()));
-    }
     return settings;
   }
 

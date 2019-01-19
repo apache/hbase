@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -35,29 +34,20 @@ public class DefaultOperationQuota implements OperationQuota {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultOperationQuota.class);
 
   private final List<QuotaLimiter> limiters;
-  private final long writeCapacityUnit;
-  private final long readCapacityUnit;
-
   private long writeAvailable = 0;
   private long readAvailable = 0;
   private long writeConsumed = 0;
   private long readConsumed = 0;
-  private long writeCapacityUnitConsumed = 0;
-  private long readCapacityUnitConsumed = 0;
   private final long[] operationSize;
 
-  public DefaultOperationQuota(final Configuration conf, final QuotaLimiter... limiters) {
-    this(conf, Arrays.asList(limiters));
+  public DefaultOperationQuota(final QuotaLimiter... limiters) {
+    this(Arrays.asList(limiters));
   }
 
   /**
    * NOTE: The order matters. It should be something like [user, table, namespace, global]
    */
-  public DefaultOperationQuota(final Configuration conf, final List<QuotaLimiter> limiters) {
-    this.writeCapacityUnit =
-        conf.getLong(QuotaUtil.WRITE_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_WRITE_CAPACITY_UNIT);
-    this.readCapacityUnit =
-        conf.getLong(QuotaUtil.READ_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_READ_CAPACITY_UNIT);
+  public DefaultOperationQuota(final List<QuotaLimiter> limiters) {
     this.limiters = limiters;
     int size = OperationType.values().length;
     operationSize = new long[size];
@@ -68,28 +58,24 @@ public class DefaultOperationQuota implements OperationQuota {
   }
 
   @Override
-  public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
+  public void checkQuota(int numWrites, int numReads, int numScans)
+      throws RpcThrottlingException {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
-    readConsumed = estimateConsume(OperationType.GET, numReads, 100);
+    readConsumed  = estimateConsume(OperationType.GET, numReads, 100);
     readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
-
-    writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
-    readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
 
     writeAvailable = Long.MAX_VALUE;
     readAvailable = Long.MAX_VALUE;
-    for (final QuotaLimiter limiter : limiters) {
+    for (final QuotaLimiter limiter: limiters) {
       if (limiter.isBypass()) continue;
 
-      limiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed);
+      limiter.checkQuota(numWrites, writeConsumed, numReads + numScans, readConsumed);
       readAvailable = Math.min(readAvailable, limiter.getReadAvailable());
       writeAvailable = Math.min(writeAvailable, limiter.getWriteAvailable());
     }
 
-    for (final QuotaLimiter limiter : limiters) {
-      limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed,
-        writeCapacityUnitConsumed, readCapacityUnitConsumed);
+    for (final QuotaLimiter limiter: limiters) {
+      limiter.grabQuota(numWrites, writeConsumed, numReads + numScans, readConsumed);
     }
   }
 
@@ -97,21 +83,12 @@ public class DefaultOperationQuota implements OperationQuota {
   public void close() {
     // Adjust the quota consumed for the specified operation
     long writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
-    long readDiff = operationSize[OperationType.GET.ordinal()]
-        + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
-    long writeCapacityUnitDiff = calculateWriteCapacityUnitDiff(
-      operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
-    long readCapacityUnitDiff = calculateReadCapacityUnitDiff(
-      operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()],
-      readConsumed);
+    long readDiff = operationSize[OperationType.GET.ordinal()] +
+        operationSize[OperationType.SCAN.ordinal()] - readConsumed;
 
-    for (final QuotaLimiter limiter : limiters) {
-      if (writeDiff != 0) {
-        limiter.consumeWrite(writeDiff, writeCapacityUnitDiff);
-      }
-      if (readDiff != 0) {
-        limiter.consumeRead(readDiff, readCapacityUnitDiff);
-      }
+    for (final QuotaLimiter limiter: limiters) {
+      if (writeDiff != 0) limiter.consumeWrite(writeDiff);
+      if (readDiff != 0) limiter.consumeRead(readDiff);
     }
   }
 
@@ -145,21 +122,5 @@ public class DefaultOperationQuota implements OperationQuota {
       return avgSize * numReqs;
     }
     return 0;
-  }
-
-  private long calculateWriteCapacityUnit(final long size) {
-    return (long) Math.ceil(size * 1.0 / this.writeCapacityUnit);
-  }
-
-  private long calculateReadCapacityUnit(final long size) {
-    return (long) Math.ceil(size * 1.0 / this.readCapacityUnit);
-  }
-
-  private long calculateWriteCapacityUnitDiff(final long actualSize, final long estimateSize) {
-    return calculateWriteCapacityUnit(actualSize) - calculateWriteCapacityUnit(estimateSize);
-  }
-
-  private long calculateReadCapacityUnitDiff(final long actualSize, final long estimateSize) {
-    return calculateReadCapacityUnit(actualSize) - calculateReadCapacityUnit(estimateSize);
   }
 }
