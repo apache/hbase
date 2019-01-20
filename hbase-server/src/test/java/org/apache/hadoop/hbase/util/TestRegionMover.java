@@ -18,21 +18,25 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.io.FileWriter;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,24 +47,25 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category(MediumTests.class)
+@Category({ MiscTests.class, MediumTests.class })
 public class TestRegionMover {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionMover.class);
+    HBaseClassTestRule.forClass(TestRegionMover.class);
 
-  final Logger LOG = LoggerFactory.getLogger(getClass());
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover.class);
+
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
   @AfterClass
@@ -76,124 +81,64 @@ public class TestRegionMover {
     if (admin.tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    tableDesc.addFamily(fam1);
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+    String startKey = "a";
+    String endKey = "z";
+    admin.createTable(tableDesc, startKey.getBytes(), endKey.getBytes(), 9);
+  }
 
-    try {
-      admin.setBalancerRunning(false, true);
-      String startKey = "a";
-      String endKey = "z";
-      admin.createTable(tableDesc, startKey.getBytes(), endKey.getBytes(), 9);
-    } finally {
-      if (admin != null) {
-        admin.close();
-      }
+  @Test
+  public void testWithAck() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getAddress().toString();
+    int numRegions = regionServer.getNumberOfOnlineRegions();
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).maxthreads(8);
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.info("Unloading " + regionServer.getServerName());
+      rm.unload();
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      LOG.info("Successfully Unloaded\nNow Loading");
+      rm.load();
+      assertEquals(numRegions, regionServer.getNumberOfOnlineRegions());
+      // Repeat the same load. It should be very fast because all regions are already moved.
+      rm.load();
     }
   }
 
-  @Test
-  public void testLoadWithAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    String rsName = regionServer.getServerName().getHostname();
-    int port = regionServer.getServerName().getPort();
-    int noRegions = regionServer.getNumberOfOnlineRegions();
-    String rs = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(true).maxthreads(8);
-    RegionMover rm = rmBuilder.build();
-    LOG.info("Unloading " + rs);
-    rm.unload();
-    assertEquals(0, regionServer.getNumberOfOnlineRegions());
-    LOG.info("Successfully Unloaded\nNow Loading");
-    rm.load();
-    assertEquals(noRegions, regionServer.getNumberOfOnlineRegions());
-  }
-
-  /** Test to unload a regionserver first and then load it using no Ack mode
-   * we check if some regions are loaded on the region server(since no ack is best effort)
-   */
-  @Test
-  public void testLoadWithoutAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    final HRegionServer regionServer = cluster.getRegionServer(0);
-    String rsName = regionServer.getServerName().getHostname();
-    int port = regionServer.getServerName().getPort();
-    int noRegions = regionServer.getNumberOfOnlineRegions();
-    String rs = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(true);
-    RegionMover rm = rmBuilder.build();
-    LOG.info("Unloading " + rs);
-    rm.unload();
-    assertEquals(0, regionServer.getNumberOfOnlineRegions());
-    LOG.info("Successfully Unloaded\nNow Loading");
-    rm = rmBuilder.ack(false).build();
-    rm.load();
-    TEST_UTIL.waitFor(5000, 500, new Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return regionServer.getNumberOfOnlineRegions() > 0;
-      }
-    });
-  }
-
-  @Test
-  public void testUnloadWithoutAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    final HRegionServer regionServer = cluster.getRegionServer(0);
-    final int noRegions = regionServer.getNumberOfOnlineRegions();
-    String rsName = regionServer.getServerName().getHostname();
-    int port = regionServer.getServerName().getPort();
-    String rs = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(false);
-    RegionMover rm = rmBuilder.build();
-    LOG.info("Unloading " + rs);
-    rm.unload();
-    TEST_UTIL.waitFor(5000, 500, new Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return regionServer.getNumberOfOnlineRegions() < noRegions;
-      }
-    });
-  }
-
-  @Test
-  public void testUnloadWithAck() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    String rsName = regionServer.getServerName().getHostname();
-    int port = regionServer.getServerName().getPort();
-    String rs = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(true);
-    RegionMover rm = rmBuilder.build();
-    rm.unload();
-    LOG.info("Unloading " + rs);
-    assertEquals(0, regionServer.getNumberOfOnlineRegions());
-  }
-
   /**
-   * Test that loading the same region set doesn't cause timeout loop during meta load.
+   * Test to unload a regionserver first and then load it using no Ack mode.
    */
   @Test
-  public void testRepeatedLoad() throws Exception {
+  public void testWithoutAck() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
-    String rsName = regionServer.getServerName().getHostname();
-    int port = regionServer.getServerName().getPort();
-    String rs = rsName + ":" + Integer.toString(port);
-    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
-      .ack(true);
-    RegionMover rm = rmBuilder.build();
-    rm.unload();
-    assertEquals(0, regionServer.getNumberOfOnlineRegions());
-    rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration()).ack(true);
-    rm = rmBuilder.build();
-    rm.load();
-    rm.load(); //Repeat the same load. It should be very fast because all regions are already moved.
+    String rsName = regionServer.getServerName().getAddress().toString();
+    int numRegions = regionServer.getNumberOfOnlineRegions();
+    RegionMoverBuilder rmBuilder =
+      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(false);
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.info("Unloading " + regionServer.getServerName());
+      rm.unload();
+      TEST_UTIL.waitFor(30000, 1000, new Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return regionServer.getNumberOfOnlineRegions() == 0;
+        }
+      });
+      LOG.info("Successfully Unloaded\nNow Loading");
+      rm.load();
+      // In UT we only have 10 regions so it is not likely to fail, so here we check for all
+      // regions, in the real production this may not be true.
+      TEST_UTIL.waitFor(30000, 1000, new Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return regionServer.getNumberOfOnlineRegions() == numRegions;
+        }
+      });
+    }
   }
 
   /**
@@ -218,13 +163,14 @@ public class TestRegionMover {
     String rs = rsName + ":" + Integer.toString(port);
     RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
       .ack(true).excludeFile(excludeFile.getCanonicalPath());
-    RegionMover rm = rmBuilder.build();
-    rm.unload();
-    LOG.info("Unloading " + rs);
-    assertEquals(0, regionServer.getNumberOfOnlineRegions());
-    assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
-    LOG.info("Before:" + regionsExcludeServer + " After:"
-        + cluster.getRegionServer(1).getNumberOfOnlineRegions());
+    try (RegionMover rm = rmBuilder.build()) {
+      rm.unload();
+      LOG.info("Unloading " + rs);
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
+      LOG.info("Before:" + regionsExcludeServer + " After:" +
+        cluster.getRegionServer(1).getNumberOfOnlineRegions());
+    }
   }
 
   @Test
@@ -241,6 +187,55 @@ public class TestRegionMover {
     assertEquals(PORT, rmBuilder.port);
     if (originalPort != null) {
       conf.set(HConstants.REGIONSERVER_PORT, originalPort);
+    }
+  }
+
+  /**
+   * UT for HBASE-21746
+   */
+  @Test
+  public void testLoadMetaRegion() throws Exception {
+    HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer())
+      .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get();
+    int onlineRegions = rsWithMeta.getNumberOfOnlineRegions();
+    String rsName = rsWithMeta.getServerName().getAddress().toString();
+    try (RegionMover rm =
+      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).build()) {
+      LOG.info("Unloading " + rsWithMeta.getServerName());
+      rm.unload();
+      assertEquals(0, rsWithMeta.getNumberOfOnlineRegions());
+      LOG.info("Loading " + rsWithMeta.getServerName());
+      rm.load();
+      assertEquals(onlineRegions, rsWithMeta.getNumberOfOnlineRegions());
+    }
+  }
+
+  /**
+   * UT for HBASE-21746
+   */
+  @Test
+  public void testTargetServerDeadWhenLoading() throws Exception {
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    String rsName = rs.getServerName().getAddress().toString();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    // wait 5 seconds at most
+    conf.setInt(RegionMover.SERVERSTART_WAIT_MAX_KEY, 5);
+    String filename =
+      new Path(TEST_UTIL.getDataTestDir(), "testTargetServerDeadWhenLoading").toString();
+    // unload the region server
+    try (RegionMover rm =
+      new RegionMoverBuilder(rsName, conf).filename(filename).ack(true).build()) {
+      LOG.info("Unloading " + rs.getServerName());
+      rm.unload();
+      assertEquals(0, rs.getNumberOfOnlineRegions());
+    }
+    String inexistRsName = "whatever:123";
+    try (RegionMover rm =
+      new RegionMoverBuilder(inexistRsName, conf).filename(filename).ack(true).build()) {
+      // load the regions to an inexist region server, which should fail and return false
+      LOG.info("Loading to an inexist region server {}", inexistRsName);
+      assertFalse(rm.load());
     }
   }
 }
