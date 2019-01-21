@@ -495,6 +495,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @return Name of this table and then a map of all of the column family
    * descriptors (with only the non-default column family attributes)
    */
+  @Override
   public String toStringCustomizedValues() {
     return delegatee.toStringCustomizedValues();
   }

@@ -1033,6 +1033,7 @@ public class TableDescriptorBuilder {
      * @return Name of this table and then a map of all of the column family
      * descriptors (with only the non-default column family attributes)
      */
+    @Override
     public String toStringCustomizedValues() {
       StringBuilder s = new StringBuilder();
       s.append('\'').append(Bytes.toString(name.getName())).append('\'');
