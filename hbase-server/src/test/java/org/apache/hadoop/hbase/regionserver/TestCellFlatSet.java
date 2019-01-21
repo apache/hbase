@@ -295,7 +295,7 @@ public class TestCellFlatSet {
 
     for (Cell kv: cellArray) {
       // do we have enough space to write the cell data on the data chunk?
-      if (dataOffset + KeyValueUtil.length(kv) > chunkCreator.getChunkSize()) {
+      if (dataOffset + kv.getSerializedSize() > chunkCreator.getChunkSize()) {
         // allocate more data chunks if needed
         dataChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
         dataBuffer = dataChunk.getData();
@@ -314,7 +314,7 @@ public class TestCellFlatSet {
       }
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataChunk.getId()); // write data chunk id
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataStartOfset);          // offset
-      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, KeyValueUtil.length(kv)); // length
+      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, kv.getSerializedSize()); // length
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
     }
 
@@ -357,7 +357,7 @@ public class TestCellFlatSet {
       // write data chunk id
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataJumboChunk.getId());
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataStartOfset);          // offset
-      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, KeyValueUtil.length(kv)); // length
+      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, kv.getSerializedSize()); // length
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
 
       // Jumbo chunks are working only with one cell per chunk, thus always allocate a new jumbo

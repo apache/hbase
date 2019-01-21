@@ -622,7 +622,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         // new row
         collectRow();
       }
-      curRowBytes += KeyValueUtil.length(cell);
+      curRowBytes += cell.getSerializedSize();
       curRowKeyLength = KeyValueUtil.keyLength(cell);
       curRowCols++;
       prevCell = cell;

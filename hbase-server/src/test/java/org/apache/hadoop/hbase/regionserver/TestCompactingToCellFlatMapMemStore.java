@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -636,10 +635,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
 
     // test 1 bucket
     int totalCellsLen = addRowsByKeys(memstore, keys1);
-    long oneCellOnCSLMHeapSize =
-        ClassSize.align(
-            ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + KeyValueUtil
-                .length(kv));
+    long oneCellOnCSLMHeapSize = ClassSize.align(
+      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + kv.getSerializedSize());
 
     long totalHeapSize = numOfCells * oneCellOnCSLMHeapSize + MutableSegment.DEEP_OVERHEAD;
     assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
@@ -648,7 +645,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline and flatten
     assertEquals(0, memstore.getSnapshot().getCellsCount());
     long oneCellOnCCMHeapSize =
-        ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+        ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(kv.getSerializedSize());
     totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
         + numOfCells * oneCellOnCCMHeapSize;
 
@@ -721,7 +718,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // One cell is duplicated, but it shouldn't be compacted because we are in BASIC mode.
     // totalCellsLen should remain the same
     long oneCellOnCCMHeapSize =
-            ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+            ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(kv.getSerializedSize());
     totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
             + numOfCells * oneCellOnCCMHeapSize;
 
@@ -796,7 +793,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // One cell is duplicated, but it shouldn't be compacted because we are in BASIC mode.
     // totalCellsLen should remain the same
     long oneCellOnCCMHeapSize =
-        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(kv.getSerializedSize());
     totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
             + numOfCells * oneCellOnCCMHeapSize;
 
@@ -876,7 +873,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     KeyValue kv = new KeyValue(Bytes.toBytes("A"), Bytes.toBytes("testfamily"),
             Bytes.toBytes("testqualifier"), System.currentTimeMillis(), val);
     long oneCellOnCCMHeapSize =
-        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+        (long) ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(kv.getSerializedSize());
     long oneCellOnCSLMHeapSize =
         ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize());
     long totalHeapSize = MutableSegment.DEEP_OVERHEAD;
@@ -932,7 +929,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
             System.currentTimeMillis(), val);
     return ClassSize.align(
-        ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + KeyValueUtil.length(kv));
+        ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + kv.getSerializedSize());
   }
 
   private long cellAfterFlushSize() {
@@ -945,8 +942,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
 
     return toCellChunkMap ?
         ClassSize.align(
-        ClassSize.CELL_CHUNK_MAP_ENTRY + KeyValueUtil.length(kv)) :
+        ClassSize.CELL_CHUNK_MAP_ENTRY + kv.getSerializedSize()) :
         ClassSize.align(
-        ClassSize.CELL_ARRAY_MAP_ENTRY + KeyValue.FIXED_OVERHEAD + KeyValueUtil.length(kv));
+        ClassSize.CELL_ARRAY_MAP_ENTRY + KeyValue.FIXED_OVERHEAD + kv.getSerializedSize());
   }
 }
