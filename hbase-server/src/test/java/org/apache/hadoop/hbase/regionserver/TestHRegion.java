@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
@@ -2364,11 +2363,11 @@ public class TestHRegion {
 
     Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
       System.currentTimeMillis(), KeyValue.Type.Put.getCode(), value1);
-    final long originalSize = KeyValueUtil.length(originalCell);
+    final long originalSize = originalCell.getSerializedSize();
 
     Cell addCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
       System.currentTimeMillis(), KeyValue.Type.Put.getCode(), Bytes.toBytes("xxxxxxxxxx"));
-    final long addSize = KeyValueUtil.length(addCell);
+    final long addSize = addCell.getSerializedSize();
 
     LOG.info("originalSize:" + originalSize
       + ", addSize:" + addSize);

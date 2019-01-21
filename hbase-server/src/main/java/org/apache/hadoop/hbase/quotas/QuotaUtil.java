@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -290,9 +289,9 @@ public class QuotaUtil extends QuotaTableUtil {
    */
   public static long calculateMutationSize(final Mutation mutation) {
     long size = 0;
-    for (Map.Entry<byte [], List<Cell>> entry : mutation.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> entry : mutation.getFamilyCellMap().entrySet()) {
       for (Cell cell : entry.getValue()) {
-        size += KeyValueUtil.length(cell);
+        size += cell.getSerializedSize();
       }
     }
     return size;
@@ -301,7 +300,7 @@ public class QuotaUtil extends QuotaTableUtil {
   public static long calculateResultSize(final Result result) {
     long size = 0;
     for (Cell cell : result.rawCells()) {
-      size += KeyValueUtil.length(cell);
+      size += cell.getSerializedSize();
     }
     return size;
   }
@@ -310,7 +309,7 @@ public class QuotaUtil extends QuotaTableUtil {
     long size = 0;
     for (Result result: results) {
       for (Cell cell : result.rawCells()) {
-        size += KeyValueUtil.length(cell);
+        size += cell.getSerializedSize();
       }
     }
     return size;

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -933,7 +932,7 @@ public class HTable implements Table {
     if (maxKeyValueSize > 0) {
       for (List<Cell> list : put.getFamilyCellMap().values()) {
         for (Cell cell : list) {
-          if (KeyValueUtil.length(cell) > maxKeyValueSize) {
+          if (cell.getSerializedSize() > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
           }
         }

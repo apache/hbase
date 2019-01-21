@@ -48,16 +48,6 @@ public class KeyValueUtil {
 
   /**************** length *********************/
 
-  /**
-   * Returns number of bytes this cell would have been used if serialized as in {@link KeyValue}
-   * @param cell
-   * @return the length
-   */
-  public static int length(final Cell cell) {
-    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
-        cell.getValueLength(), cell.getTagsLength(), true);
-  }
-
   public static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
     if (withTags) {
       return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen));
@@ -134,7 +124,7 @@ public class KeyValueUtil {
   }
 
   public static byte[] copyToNewByteArray(final Cell cell) {
-    int v1Length = length(cell);
+    int v1Length = cell.getSerializedSize();
     byte[] backingBytes = new byte[v1Length];
     appendToByteArray(cell, backingBytes, 0, true);
     return backingBytes;

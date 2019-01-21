@@ -268,7 +268,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     if (this.buf.hasArray()) {
       return ClassSize.align(FIXED_OVERHEAD + length);
     }
-    return ClassSize.align(FIXED_OVERHEAD) + KeyValueUtil.length(this);
+    return ClassSize.align(FIXED_OVERHEAD) + this.getSerializedSize();
   }
 
   @Override

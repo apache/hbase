@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -260,7 +259,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
 
     offset = ByteBufferUtils.putInt(idxBuffer, offset, dataChunkID);    // write data chunk id
     offset = ByteBufferUtils.putInt(idxBuffer, offset, cell.getOffset());          // offset
-    offset = ByteBufferUtils.putInt(idxBuffer, offset, KeyValueUtil.length(cell)); // length
+    offset = ByteBufferUtils.putInt(idxBuffer, offset, cell.getSerializedSize()); // length
     offset = ByteBufferUtils.putLong(idxBuffer, offset, cell.getSequenceId());     // seqId
 
     return offset;

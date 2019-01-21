@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
@@ -102,6 +103,8 @@ public class TestKeyOnlyFilter {
     assertTrue(CellUtil.matchingValue(KeyOnlyKeyValue, keyOnlyCell));
     assertTrue(KeyOnlyKeyValue.getValueLength() == keyOnlyByteBufferedCell
         .getValueLength());
+    assertEquals(8 + keyLen + (lenAsVal ? 4 : 0), KeyOnlyKeyValue.getSerializedSize());
+    assertEquals(8 + keyLen + (lenAsVal ? 4 : 0), keyOnlyCell.getSerializedSize());
     if (keyOnlyByteBufferedCell.getValueLength() > 0) {
       assertTrue(CellUtil.matchingValue(KeyOnlyKeyValue,
           keyOnlyByteBufferedCell));
