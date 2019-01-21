@@ -514,10 +514,17 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       replicationDelay =
           ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
       Path currentPath = worker.getCurrentPath();
-      try {
-        fileSize = fs.getContentSummary(currentPath).getLength();
-      } catch (IOException e) {
-        fileSize = -1;
+      fileSize = -1;
+      if (currentPath != null) {
+        try {
+          fileSize = fs.getContentSummary(currentPath).getLength();
+        } catch (IOException e) {
+          // Ignore, only affects the UI, which will show a size of -1 as expected
+          // when there is a problem getting the file size
+        }
+      } else {
+        currentPath = new Path("NO_LOGS_IN_QUEUE");
+        LOG.warn("No replication ongoing, waiting for new log");
       }
       ReplicationStatus.ReplicationStatusBuilder statusBuilder = ReplicationStatus.newBuilder();
       statusBuilder.withPeerId(this.getPeerClusterId())
