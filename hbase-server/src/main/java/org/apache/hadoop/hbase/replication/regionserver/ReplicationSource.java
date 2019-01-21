@@ -329,11 +329,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
       replicationDelay =
           ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
       Path currentPath = shipper.getCurrentPath();
-      try {
-        fileSize = getFileSize(currentPath);
-      } catch (IOException e) {
-        LOG.warn("Ignore the exception as the file size of HLog only affects the web ui", e);
-        fileSize = -1;
+      fileSize = -1;
+      if (currentPath != null) {
+        try {
+          fileSize = getFileSize(currentPath);
+        } catch (IOException e) {
+          LOG.warn("Ignore the exception as the file size of HLog only affects the web ui", e);
+        }
+      } else {
+        currentPath = new Path("NO_LOGS_IN_QUEUE");
+        LOG.warn("No replication ongoing, waiting for new log");
       }
       ReplicationStatus.ReplicationStatusBuilder statusBuilder = ReplicationStatus.newBuilder();
       statusBuilder.withPeerId(this.getPeerId())
