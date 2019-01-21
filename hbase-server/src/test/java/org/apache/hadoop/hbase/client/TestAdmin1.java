@@ -1555,4 +1555,24 @@ public class TestAdmin1 {
       // expected
     }
   }
+
+  @Test
+  public void testModifyTableOnTableWithRegionReplicas() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf")))
+        .setRegionReplication(5)
+        .build();
+
+    admin.createTable(desc);
+
+    int maxFileSize = 10000000;
+    TableDescriptor newDesc = TableDescriptorBuilder.newBuilder(desc)
+        .setMaxFileSize(maxFileSize)
+        .build();
+
+    admin.modifyTable(newDesc);
+    TableDescriptor newTableDesc = admin.getDescriptor(tableName);
+    assertEquals(maxFileSize, newTableDesc.getMaxFileSize());
+  }
 }
