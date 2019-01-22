@@ -6352,6 +6352,19 @@ public class TestFromClientSide {
     assertEquals(4, count); // 003 004 005 006
   }
 
+  private static Pair<byte[][], byte[][]> getStartEndKeys(List<RegionLocations> regions) {
+    final byte[][] startKeyList = new byte[regions.size()][];
+    final byte[][] endKeyList = new byte[regions.size()][];
+
+    for (int i = 0; i < regions.size(); i++) {
+      RegionInfo region = regions.get(i).getRegionLocation().getRegion();
+      startKeyList[i] = region.getStartKey();
+      endKeyList[i] = region.getEndKey();
+    }
+
+    return new Pair<>(startKeyList, endKeyList);
+  }
+
   @Test
   public void testGetStartEndKeysWithRegionReplicas() throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
@@ -6376,7 +6389,7 @@ public class TestFromClientSide {
         regionLocations.add(new RegionLocations(arr));
       }
 
-      Pair<byte[][], byte[][]> startEndKeys = locator.getStartEndKeys(regionLocations);
+      Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(regionLocations);
 
       assertEquals(KEYS.length + 1, startEndKeys.getFirst().length);
 
