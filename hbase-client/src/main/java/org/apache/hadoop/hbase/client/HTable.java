@@ -157,7 +157,7 @@ public class HTable implements Table {
    * @param pool ExecutorService to be used.
    */
   @InterfaceAudience.Private
-  protected HTable(final ClusterConnection connection,
+  protected HTable(final ConnectionImplementation connection,
       final TableBuilderBase builder,
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,
