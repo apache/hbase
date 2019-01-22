@@ -59,7 +59,8 @@ module Hbase
     end
   end
 
-    # Simple administration methods tests
+  # Simple administration methods tests
+  # rubocop:disable Metrics/ClassLength
   class AdminMethodsTest < Test::Unit::TestCase
     include TestHelpers
 
@@ -193,7 +194,7 @@ module Hbase
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
-     end
+    end
 
     define_test "create should work with hash column args" do
       drop_test_table(@create_test_name)
@@ -267,8 +268,61 @@ module Hbase
       end
     end
 
-    define_test "describe should return a description" do
-      assert_not_nil admin.describe(@test_name)
+    define_test 'describe should return a description and quotas' do
+      drop_test_table(@create_test_name)
+      command(:create, @create_test_name, 'cf1', 'cf2')
+      command(:set_quota,
+              TYPE => SPACE,
+              LIMIT => '1G',
+              POLICY => NO_INSERTS,
+              TABLE => @create_test_name)
+      output = capture_stdout { command(:describe, @create_test_name) }
+
+      assert(output.include?("Table #{@create_test_name} is ENABLED"))
+      assert(output.include?('COLUMN FAMILIES DESCRIPTION'))
+      assert(output.include?("NAME => 'cf1'"))
+      assert(output.include?("NAME => 'cf2'"))
+      assert(output.include?('2 row(s)'))
+
+      assert(output.include?('QUOTAS'))
+      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
+      assert(output.include?('TYPE => SPACE'))
+      assert(output.include?('1 row(s)'))
+
+      command(:set_quota,
+              TYPE => SPACE,
+              LIMIT => NONE,
+              TABLE => @create_test_name)
+      output = capture_stdout { command(:describe, @create_test_name) }
+      assert(output.include?('0 row(s)'))
+    end
+
+    define_test 'describe_namespace should return a description and quotas' do
+      ns = @create_test_name
+      command(:create_namespace, ns)
+      command(:set_quota,
+              TYPE => SPACE,
+              LIMIT => '1G',
+              POLICY => NO_INSERTS,
+              NAMESPACE => ns)
+      output = capture_stdout { command(:describe_namespace, ns) }
+
+      assert(output.include?('DESCRIPTION'))
+      assert(output.include?("NAME => '#{ns}'"))
+
+      assert(output.include?('QUOTAS'))
+      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
+      assert(output.include?('TYPE => SPACE'))
+      assert(output.include?('1 row(s)'))
+
+      command(:set_quota,
+              TYPE => SPACE,
+              LIMIT => NONE,
+              NAMESPACE => ns)
+      output = capture_stdout { command(:describe_namespace, ns) }
+      assert(output.include?('0 row(s)'))
     end
 
     #-------------------------------------------------------------------------------
@@ -332,6 +386,7 @@ module Hbase
       end
     end
   end
+  # rubocop:enable Metrics/ClassLength
 
   # Simple administration methods tests
   class AdminCloneTableSchemaTest < Test::Unit::TestCase
