@@ -438,6 +438,9 @@ implements ServerProcedureInterface {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     // TODO: For Matteo. Below BLOCKs!!!! Redo so can relinquish executor while it is running.
     mfs.splitLog(this.serverName);
+    if (!carryingMeta) {
+      mfs.archiveMetaLog(this.serverName);
+    }
     am.getRegionStates().logSplit(this.serverName);
   }
 
