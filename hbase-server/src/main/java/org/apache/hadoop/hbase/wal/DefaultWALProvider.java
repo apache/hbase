@@ -407,4 +407,13 @@ public class DefaultWALProvider implements WALProvider {
     return name.substring(0, endIndex);
   }
 
+  /*
+   * only public so WALSplitter can use.
+   * @return archived location of a WAL file with the given path p
+   */
+  public static Path getWALArchivePath(Path archiveDir, Path p) {
+    return new Path(archiveDir, p.getName());
+  }
+
+
 }
