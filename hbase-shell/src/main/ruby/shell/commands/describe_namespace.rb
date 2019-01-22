@@ -27,12 +27,22 @@ Describe the named namespace. For example:
 EOF
       end
 
+      # rubocop:disable Metrics/AbcSize
       def command(namespace)
         desc = admin.describe_namespace(namespace)
 
         formatter.header(['DESCRIPTION'], [64])
         formatter.row([desc], true, [64])
+
+        puts
+        formatter.header(%w[QUOTAS])
+        ns = namespace.to_s
+        count = quotas_admin.list_quotas(NAMESPACE => ns) do |_, quota|
+          formatter.row([quota])
+        end
+        formatter.footer(count)
       end
+      # rubocop:enable Metrics/AbcSize
     end
   end
 end
