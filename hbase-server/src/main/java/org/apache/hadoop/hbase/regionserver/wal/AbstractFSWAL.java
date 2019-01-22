@@ -631,7 +631,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   private void cleanOldLogs() throws IOException {
     List<Pair<Path, Long>> logsToArchive = null;
     long now = System.nanoTime();
-    boolean mayLogTooOld = nextLogTooOldNs > now;
+    boolean mayLogTooOld = nextLogTooOldNs <= now;
     ArrayList<byte[]> regionsBlockingWal = null;
     // For each log file, look at its Map of regions to highest sequence id; if all sequence ids
     // are older than what is currently in memory, the WAL can be GC'd.
