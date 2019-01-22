@@ -23,11 +23,11 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>1.4.9</version>
+    <version>1.4.10-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-error-prone</artifactId>
-  <version>1.4.9</version>
+  <version>1.4.10-SNAPSHOT</version>
   <name>Apache HBase - Error Prone Rules</name>
   <description>Module to hold error prone custom rules for HBase.</description>
 
