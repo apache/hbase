@@ -95,7 +95,7 @@ public class TestRpcHandlerException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     Abortable abortable = new AbortServer();
     CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
-    RpcScheduler scheduler = new SimpleRpcScheduler(CONF, 2, 0, 0, qosFunction, abortable, 0);
+    RpcScheduler scheduler = new SimpleRpcScheduler(CONF, 2, 0, 0, 0, qosFunction, abortable, 0);
     RpcServer rpcServer = RpcServerFactory.createRpcServer(null, "testRpcServer",
         Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
         new InetSocketAddress("localhost", 0), CONF, scheduler);
