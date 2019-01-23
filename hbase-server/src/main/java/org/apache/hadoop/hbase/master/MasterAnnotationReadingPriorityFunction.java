@@ -43,6 +43,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * processing of the request to online meta. To accomplish this this priority function makes sure
  * that all requests to transition meta are handled in different threads from other report region
  * in transition calls.
+ * After HBASE-21754, ReportRegionStateTransitionRequest for meta region will be assigned a META_QOS
+ * , a separate executor called metaTransitionExecutor will execute it. Other transition request
+ * will be executed in priorityExecutor to prevent being mixed with normal requests
  */
 @InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction {
@@ -78,13 +81,13 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
         if (rst.getRegionInfoList() != null) {
           for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
             TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (tn.isSystemTable()) {
-              return HConstants.SYSTEMTABLE_QOS;
+            if (TableName.META_TABLE_NAME.equals(tn)) {
+              return HConstants.META_QOS;
             }
           }
         }
       }
-      return HConstants.NORMAL_QOS;
+      return HConstants.HIGH_QOS;
     }
 
     // Handle the rest of the different reasons to change priority.

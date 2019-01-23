@@ -96,9 +96,9 @@ public class TestMasterQosFunction extends QosTestHelper {
             .addTransition(normalTransition).build();
 
     final String reportFuncName = "ReportRegionStateTransition";
-    checkMethod(conf, reportFuncName, HConstants.SYSTEMTABLE_QOS, qosFunction,
+    checkMethod(conf, reportFuncName, HConstants.META_QOS, qosFunction,
         metaTransitionRequest);
-    checkMethod(conf, reportFuncName, HConstants.NORMAL_QOS, qosFunction, normalTransitionRequest);
+    checkMethod(conf, reportFuncName, HConstants.HIGH_QOS, qosFunction, normalTransitionRequest);
   }
 
   @Test

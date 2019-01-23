@@ -31,6 +31,8 @@ public interface MetricsHBaseServerWrapper {
 
   int getPriorityQueueLength();
 
+  int getMetaPriorityQueueLength();
+
   int getNumOpenConnections();
 
   int getActiveRpcHandlerCount();

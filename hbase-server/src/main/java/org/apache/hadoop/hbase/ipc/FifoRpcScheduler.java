@@ -180,6 +180,11 @@ public class FifoRpcScheduler extends RpcScheduler {
   }
 
   @Override
+  public int getMetaPriorityQueueLength() {
+    return 0;
+  }
+
+  @Override
   public CallQueueInfo getCallQueueInfo() {
     String queueName = "Fifo Queue";
 

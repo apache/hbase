@@ -74,6 +74,9 @@ public abstract class RpcScheduler {
   /** Retrieves length of the priority queue for metrics. */
   public abstract int getPriorityQueueLength();
 
+  /** Retrieves length of the meta priority queue for metrics. */
+  public abstract int getMetaPriorityQueueLength();
+
   /** Retrieves length of the replication queue for metrics. */
   public abstract int getReplicationQueueLength();
 
