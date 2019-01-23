@@ -41,6 +41,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   private final RpcExecutor priorityExecutor;
   private final RpcExecutor replicationExecutor;
 
+  /**
+   * This executor is only for meta transition
+   */
+  private final RpcExecutor metaTransitionExecutor;
+
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
 
@@ -59,6 +64,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       int handlerCount,
       int priorityHandlerCount,
       int replicationHandlerCount,
+      int metaTransitionHandler,
       PriorityFunction priority,
       Abortable server,
       int highPriorityLevel) {
@@ -97,18 +103,18 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.replicationExecutor = replicationHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
         "replication.FPBQ", replicationHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
         maxQueueLength, priority, conf, abortable) : null;
+
+    this.metaTransitionExecutor = metaTransitionHandler > 0 ?
+        new FastPathBalancedQueueRpcExecutor("metaPriority.FPBQ", metaTransitionHandler,
+            RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+            abortable) :
+        null;
   }
 
-
-  public SimpleRpcScheduler(
-	      Configuration conf,
-	      int handlerCount,
-	      int priorityHandlerCount,
-	      int replicationHandlerCount,
-	      PriorityFunction priority,
-	      int highPriorityLevel) {
-	  this(conf, handlerCount, priorityHandlerCount, replicationHandlerCount, priority,
-	    null, highPriorityLevel);
+  public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
+      int replicationHandlerCount, PriorityFunction priority, int highPriorityLevel) {
+    this(conf, handlerCount, priorityHandlerCount, replicationHandlerCount, 0, priority, null,
+        highPriorityLevel);
   }
 
   /**
@@ -123,6 +129,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     }
     if (replicationExecutor != null) {
       replicationExecutor.resizeQueues(conf);
+    }
+    if (metaTransitionExecutor != null) {
+      metaTransitionExecutor.resizeQueues(conf);
     }
 
     String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
@@ -140,15 +149,31 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   @Override
   public void start() {
     callExecutor.start(port);
-    if (priorityExecutor != null) priorityExecutor.start(port);
-    if (replicationExecutor != null) replicationExecutor.start(port);
+    if (priorityExecutor != null) {
+      priorityExecutor.start(port);
+    }
+    if (replicationExecutor != null) {
+      replicationExecutor.start(port);
+    }
+    if (metaTransitionExecutor != null) {
+      metaTransitionExecutor.start(port);
+    }
+
   }
 
   @Override
   public void stop() {
     callExecutor.stop();
-    if (priorityExecutor != null) priorityExecutor.stop();
-    if (replicationExecutor != null) replicationExecutor.stop();
+    if (priorityExecutor != null) {
+      priorityExecutor.stop();
+    }
+    if (replicationExecutor != null) {
+      replicationExecutor.stop();
+    }
+    if (metaTransitionExecutor != null) {
+      metaTransitionExecutor.stop();
+    }
+
   }
 
   @Override
@@ -159,13 +184,20 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (level == HConstants.PRIORITY_UNSET) {
       level = HConstants.NORMAL_QOS;
     }
-    if (priorityExecutor != null && level > highPriorityLevel) {
+    if (metaTransitionExecutor != null && level == HConstants.META_QOS) {
+      return metaTransitionExecutor.dispatch(callTask);
+    } else if (priorityExecutor != null && level > highPriorityLevel) {
       return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
       return replicationExecutor.dispatch(callTask);
     } else {
       return callExecutor.dispatch(callTask);
     }
+  }
+
+  @Override
+  public int getMetaPriorityQueueLength() {
+    return metaTransitionExecutor == null ? 0 : metaTransitionExecutor.getQueueLength();
   }
 
   @Override
@@ -187,7 +219,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public int getActiveRpcHandlerCount() {
     return callExecutor.getActiveHandlerCount() +
            (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount()) +
-           (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
+           (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount()) +
+           (metaTransitionExecutor == null ? 0 : metaTransitionExecutor.getActiveHandlerCount());
   }
 
   @Override
@@ -236,22 +269,29 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     CallQueueInfo callQueueInfo = new CallQueueInfo();
 
-    if(null!=callExecutor) {
+    if (null != callExecutor) {
       queueName = "Call Queue";
       callQueueInfo.setCallMethodCount(queueName, callExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, callExecutor.getCallQueueSizeSummary());
     }
 
-    if(null!=priorityExecutor) {
+    if (null != priorityExecutor) {
       queueName = "Priority Queue";
       callQueueInfo.setCallMethodCount(queueName, priorityExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, priorityExecutor.getCallQueueSizeSummary());
     }
 
-    if(null!=replicationExecutor) {
+    if (null != replicationExecutor) {
       queueName = "Replication Queue";
       callQueueInfo.setCallMethodCount(queueName, replicationExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, replicationExecutor.getCallQueueSizeSummary());
+    }
+
+    if (null != metaTransitionExecutor) {
+      queueName = "Meta Transition Queue";
+      callQueueInfo.setCallMethodCount(queueName,
+          metaTransitionExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, metaTransitionExecutor.getCallQueueSizeSummary());
     }
 
     return callQueueInfo;

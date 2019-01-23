@@ -613,7 +613,8 @@ public class SimpleRpcServer extends RpcServer {
             "; connections=" + size() +
             ", queued calls size (bytes)=" + callQueueSizeInBytes.sum() +
             ", general queued calls=" + scheduler.getGeneralQueueLength() +
-            ", priority queued calls=" + scheduler.getPriorityQueueLength());
+            ", priority queued calls=" + scheduler.getPriorityQueueLength() +
+            ", meta priority queued calls=" + scheduler.getMetaPriorityQueueLength());
       }
       return connection;
     }

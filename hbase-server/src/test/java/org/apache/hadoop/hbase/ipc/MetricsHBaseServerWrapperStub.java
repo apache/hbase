@@ -88,4 +88,10 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   public int getActiveScanRpcHandlerCount() {
     return 6;
   }
+
+  @Override
+  public int getMetaPriorityQueueLength() {
+    return 1;
+  }
+
 }

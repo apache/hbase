@@ -1035,6 +1035,11 @@ public final class HConstants {
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
       "hbase.regionserver.replication.handler.count";
   public static final int DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT = 3;
+  // Meta Transition handlers to deal with meta ReportRegionStateTransitionRequest. Meta transition
+  // should be dealt with in a separate handler in case blocking other region's transition.
+  public static final String MASTER_META_TRANSITION_HANDLER_COUNT =
+      "hbase.master.meta.transition.handler.count";
+  public static final int MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT = 1;
 
   @Deprecated // unused. see HBASE-10569. remove this in 3.0
   public static final String MASTER_HANDLER_COUNT = "hbase.master.handler.count";
@@ -1102,7 +1107,7 @@ public final class HConstants {
    * by different set of handlers. For example, HIGH_QOS tagged methods are
    * handled by high priority handlers.
    */
-  // normal_QOS < replication_QOS < replay_QOS < QOS_threshold < admin_QOS < high_QOS
+  // normal_QOS < replication_QOS < replay_QOS < QOS_threshold < admin_QOS < high_QOS < meta_QOS
   public static final int PRIORITY_UNSET = -1;
   public static final int NORMAL_QOS = 0;
   public static final int REPLICATION_QOS = 5;
@@ -1111,6 +1116,8 @@ public final class HConstants {
   public static final int ADMIN_QOS = 100;
   public static final int HIGH_QOS = 200;
   public static final int SYSTEMTABLE_QOS = HIGH_QOS;
+  public static final int META_QOS = 300;
+
 
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = "archive";

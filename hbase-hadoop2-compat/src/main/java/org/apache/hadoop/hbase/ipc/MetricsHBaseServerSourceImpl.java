@@ -152,6 +152,8 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
               REPLICATION_QUEUE_DESC), wrapper.getReplicationQueueLength())
           .addGauge(Interns.info(PRIORITY_QUEUE_NAME, PRIORITY_QUEUE_DESC),
               wrapper.getPriorityQueueLength())
+          .addGauge(Interns.info(METAPRIORITY_QUEUE_NAME, METAPRIORITY_QUEUE_DESC),
+              wrapper.getMetaPriorityQueueLength())
           .addGauge(Interns.info(NUM_OPEN_CONNECTIONS_NAME,
               NUM_OPEN_CONNECTIONS_DESC), wrapper.getNumOpenConnections())
           .addGauge(Interns.info(NUM_ACTIVE_HANDLER_NAME,
