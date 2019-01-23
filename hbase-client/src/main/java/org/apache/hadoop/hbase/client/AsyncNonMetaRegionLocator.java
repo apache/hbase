@@ -29,7 +29,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAft
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
 import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.util.Arrays;

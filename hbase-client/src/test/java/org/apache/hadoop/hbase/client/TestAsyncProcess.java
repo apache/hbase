@@ -1762,7 +1762,7 @@ public class TestAsyncProcess {
     long expectedSleep = 0L;
     for (int i = 0; i < retries; i++) {
       expectedSleep += ConnectionUtils.getPauseTime(specialPause, i);
-      // Prevent jitter in CollectionUtils#getPauseTime to affect result
+      // Prevent jitter in ConcurrentMapUtils#getPauseTime to affect result
       actualSleep += (long) (specialPause * 0.01f);
     }
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
