@@ -68,6 +68,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
   }
 
   @Override
+  public int getMetaPriorityQueueLength() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getMetaPriorityQueueLength();
+  }
+
+  @Override
   public int getNumOpenConnections() {
     if (!isServerStarted()) {
       return 0;
@@ -97,6 +105,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.getScheduler().getActivePriorityRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveMetaPriorityRpcHandlerCount() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getActiveMetaPriorityRpcHandlerCount();
   }
 
   @Override

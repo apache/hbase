@@ -49,6 +49,8 @@ public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
         HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
       conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
+        conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
+            HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
       priority,
       server,
       HConstants.QOS_THRESHOLD);

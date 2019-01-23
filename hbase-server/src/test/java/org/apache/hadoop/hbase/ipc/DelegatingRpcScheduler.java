@@ -80,6 +80,16 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   }
 
   @Override
+  public int getActiveMetaPriorityRpcHandlerCount() {
+    return delegate.getActiveMetaPriorityRpcHandlerCount();
+  }
+
+  @Override
+  public int getMetaPriorityQueueLength() {
+    return delegate.getMetaPriorityQueueLength();
+  }
+
+  @Override
   public long getNumGeneralCallsDropped() {
     return delegate.getNumGeneralCallsDropped();
   }

@@ -108,4 +108,14 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   public long getNettyDmUsage() {
     return 100L;
   }
+
+  @Override
+  public int getMetaPriorityQueueLength() {
+    return 1;
+  }
+
+  @Override
+  public int getActiveMetaPriorityRpcHandlerCount() {
+    return 1;
+  }
 }
