@@ -32,7 +32,7 @@ You cannot skip major versions when upgrading. If you are upgrading from version
 Review <<configuration>>, in particular <<hadoop>>. Familiarize yourself with <<hbase_supported_tested_definitions>>.
 
 [[hbase.versioning]]
-== HBase version number and compatibility
+== HBase Version Number and Compatibility
 
 [[hbase.versioning.post10]]
 === Aspirational Semantic Versioning
