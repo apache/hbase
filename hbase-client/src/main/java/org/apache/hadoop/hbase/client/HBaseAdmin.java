@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -43,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -234,6 +236,7 @@ public class HBaseAdmin implements Admin {
   private boolean aborted;
   private int operationTimeout;
   private int rpcTimeout;
+  private int getProcedureTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
@@ -260,6 +263,8 @@ public class HBaseAdmin implements Admin {
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.syncWaitTimeout = this.conf.getInt(
       "hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
+    this.getProcedureTimeout =
+        this.conf.getInt("hbase.client.procedure.future.get.timeout.msec", 10 * 60000); // 10min
 
     this.rpcCallerFactory = connection.getRpcRetryingCallerFactory();
     this.rpcControllerFactory = connection.getRpcControllerFactory();
@@ -3403,7 +3408,15 @@ public class HBaseAdmin implements Admin {
     @Override
     public V get() throws InterruptedException, ExecutionException {
       // TODO: should we ever spin forever?
-      throw new UnsupportedOperationException();
+      // fix HBASE-21715. TODO: If the function call get() without timeout limit is not allowed,
+      // is it possible to compose instead of inheriting from the class Future for this class?
+      try {
+        return get(admin.getProcedureTimeout, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException e) {
+        LOG.warn("Failed to get the procedure with procId=" + procId + " throws exception " + e
+            .getMessage(), e);
+        return null;
+      }
     }
 
     @Override
