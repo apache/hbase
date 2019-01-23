@@ -40,7 +40,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -375,6 +374,7 @@ public class TestSimpleRpcScheduler {
       when(putCall.getHeader()).thenReturn(putHead);
 
       assertTrue(scheduler.dispatch(putCallTask));
+      waitUntilQueueEmpty(scheduler);
 
       schedConf.setInt("hbase.ipc.server.max.callqueue.length", 0);
       scheduler.onConfigurationChange(schedConf);
