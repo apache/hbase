@@ -149,7 +149,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
-    return new AsyncTableRegionLocatorImpl(tableName, locator);
+    return new AsyncTableRegionLocatorImpl(tableName, this);
   }
 
   // we will override this method for testing retry caller, so do not remove this method.
