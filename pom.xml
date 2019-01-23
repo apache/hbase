@@ -119,7 +119,7 @@
       <subscribe>user-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>user-unsubscribe@hbase.apache.org</unsubscribe>
       <post>user@hbase.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
+      <archive>https://lists.apache.org/list.html?user@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
@@ -130,7 +130,7 @@
       <subscribe>dev-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>dev-unsubscribe@hbase.apache.org</unsubscribe>
       <post>dev@hbase.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
+      <archive>https://lists.apache.org/list.html?dev@hbase.apache.org</archive>
       <otherArchives>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
@@ -140,19 +140,19 @@
       <name>Commits List</name>
       <subscribe>commits-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>commits-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-commits/</archive>
+      <archive>https://lists.apache.org/list.html?commits@hbase.apache.org</archive>
     </mailingList>
     <mailingList>
       <name>Issues List</name>
       <subscribe>issues-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>issues-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-issues/</archive>
+      <archive>https://lists.apache.org/list.html?issues@hbase.apache.org</archive>
     </mailingList>
     <mailingList>
       <name>Builds List</name>
       <subscribe>builds-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
+      <archive>https://lists.apache.org/list.html?builds@hbase.apache.org</archive>
     </mailingList>
   </mailingLists>
   <developers>
