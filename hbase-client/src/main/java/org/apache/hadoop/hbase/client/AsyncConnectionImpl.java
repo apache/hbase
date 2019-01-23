@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.CollectionUtils;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -168,7 +168,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
-    return CollectionUtils.computeIfAbsentEx(rsStubs,
+    return ConcurrentMapUtils.computeIfAbsentEx(rsStubs,
       getStubKey(ClientService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
       () -> createRegionServerStub(serverName));
   }
@@ -182,7 +182,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
-    return CollectionUtils.computeIfAbsentEx(adminSubs,
+    return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
       getStubKey(AdminService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
       () -> createAdminServerStub(serverName));
   }

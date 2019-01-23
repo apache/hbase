@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static com.codahale.metrics.MetricRegistry.name;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
