@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -172,6 +174,9 @@ public class CellSkipListSet implements NavigableSet<Cell> {
   }
 
   public int size() {
+    if (delegatee instanceof ConcurrentSkipListMap) {
+      throw new UnsupportedOperationException("ConcurrentSkipListMap.size() is time-consuming");
+    }
     return this.delegatee.size();
   }
 
@@ -181,5 +186,10 @@ public class CellSkipListSet implements NavigableSet<Cell> {
 
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @VisibleForTesting
+  int sizeForTests() {
+    return this.delegatee.size();
   }
 }

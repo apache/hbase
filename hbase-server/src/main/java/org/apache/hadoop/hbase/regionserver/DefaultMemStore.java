@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -131,7 +132,7 @@ public class DefaultMemStore implements MemStore {
       }
     }
     MemStoreSnapshot memStoreSnapshot = new MemStoreSnapshot(this.snapshotId,
-        snapshotSection.getCellSkipListSet().size(), snapshotSection.getHeapSize().get(),
+        snapshotSection.getCellsCount().get(), snapshotSection.getHeapSize().get(),
         snapshotSection.getTimeRangeTracker(),
         new CollectionBackedScanner(snapshotSection.getCellSkipListSet(), this.comparator),
         this.tagsPresent);
@@ -226,6 +227,9 @@ public class DefaultMemStore implements MemStore {
   private long internalAdd(final Cell toAdd, boolean mslabUsed) {
     boolean notPresent = addToCellSet(toAdd);
     long s = heapSizeChange(toAdd, notPresent);
+    if (notPresent) {
+      activeSection.getCellsCount().incrementAndGet();
+    }
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
@@ -284,6 +288,7 @@ public class DefaultMemStore implements MemStore {
       snapshotSection.getCellSkipListSet().remove(cell);
       long sz = heapSizeChange(cell, true);
       snapshotSection.getHeapSize().addAndGet(-sz);
+      snapshotSection.getCellsCount().decrementAndGet();
     }
     // If the key is in the memstore, delete it. Update this.size.
     found = activeSection.getCellSkipListSet().get(cell);
@@ -291,6 +296,7 @@ public class DefaultMemStore implements MemStore {
       removeFromCellSet(cell);
       long sz = heapSizeChange(found, true);
       activeSection.getHeapSize().addAndGet(-sz);
+      activeSection.getCellsCount().decrementAndGet();
     }
   }
 
@@ -579,6 +585,7 @@ public class DefaultMemStore implements MemStore {
             long delta = heapSizeChange(cur, true);
             addedSize -= delta;
             activeSection.getHeapSize().addAndGet(-delta);
+            activeSection.getCellsCount().decrementAndGet();
             if (removedCells != null) {
               removedCells.add(cur);
             }
@@ -1002,7 +1009,7 @@ public class DefaultMemStore implements MemStore {
     @Override
     public synchronized boolean seekToLastRow() {
       Cell first = activeAtCreation.getCellSkipListSet().isEmpty() ? null
-        : activeAtCreation.getCellSkipListSet().last();
+          : activeAtCreation.getCellSkipListSet().last();
       Cell second = snapshotAtCreation.getCellSkipListSet().isEmpty() ? null
           : snapshotAtCreation.getCellSkipListSet().last();
       Cell higherCell = getHighest(first, second);
@@ -1025,7 +1032,8 @@ public class DefaultMemStore implements MemStore {
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       (2 * ClassSize.ATOMIC_LONG) + (2 * ClassSize.TIMERANGE_TRACKER) +
-      (2 * ClassSize.CELL_SKIPLIST_SET) + (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
+      (2 * ClassSize.CELL_SKIPLIST_SET) + (2 * ClassSize.CONCURRENT_SKIPLISTMAP) +
+      ClassSize.ATOMIC_INTEGER);
 
   /*
    * Calculate how the MemStore size has changed.  Includes overhead of the
@@ -1117,6 +1125,7 @@ public class DefaultMemStore implements MemStore {
      * Used to track own heapSize.
      */
     private final AtomicLong heapSize;
+    private final AtomicInteger cellCount;
     private final MemStoreLAB allocator;
 
     static Section newSnapshotSection(final KeyValue.KVComparator c) {
@@ -1132,6 +1141,7 @@ public class DefaultMemStore implements MemStore {
             final Configuration conf, long initHeapSize) {
       this.cellSet = new CellSkipListSet(c);
       this.heapSize = new AtomicLong(initHeapSize);
+      this.cellCount = new AtomicInteger(0);
       if (conf != null && conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
         String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
         this.allocator = ReflectionUtils.instantiateWithCustomCtor(className,
@@ -1153,9 +1163,12 @@ public class DefaultMemStore implements MemStore {
       return heapSize;
     }
 
+    AtomicInteger getCellsCount() {
+      return cellCount;
+    }
+
     MemStoreLAB getMemStoreLAB() {
       return allocator;
     }
-
   }
 }

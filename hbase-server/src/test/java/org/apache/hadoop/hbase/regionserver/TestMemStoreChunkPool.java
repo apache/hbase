@@ -115,13 +115,13 @@ public class TestMemStoreChunkPool {
 
     // Creating a snapshot
     MemStoreSnapshot snapshot = memstore.snapshot();
-    assertEquals(3, memstore.snapshotSection.getCellSkipListSet().size());
+    assertEquals(3, memstore.snapshotSection.getCellSkipListSet().sizeForTests());
 
     // Adding value to "new" memstore
-    assertEquals(0, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(0, memstore.activeSection.getCellSkipListSet().sizeForTests());
     memstore.add(new KeyValue(row, fam, qf4, val));
     memstore.add(new KeyValue(row, fam, qf5, val));
-    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().sizeForTests());
     memstore.clearSnapshot(snapshot.getId());
 
     int chunkCount = chunkPool.getPoolSize();
@@ -152,13 +152,13 @@ public class TestMemStoreChunkPool {
 
     // Creating a snapshot
     MemStoreSnapshot snapshot = memstore.snapshot();
-    assertEquals(3, memstore.snapshotSection.getCellSkipListSet().size());
+    assertEquals(3, memstore.snapshotSection.getCellSkipListSet().sizeForTests());
 
     // Adding value to "new" memstore
-    assertEquals(0, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(0, memstore.activeSection.getCellSkipListSet().sizeForTests());
     memstore.add(new KeyValue(row, fam, qf4, val));
     memstore.add(new KeyValue(row, fam, qf5, val));
-    assertEquals(2, memstore.activeSection.getCellSkipListSet().size());
+    assertEquals(2, memstore.activeSection.getCellSkipListSet().sizeForTests());
 
     // opening scanner before clear the snapshot
     List<KeyValueScanner> scanners = memstore.getScanners(0);

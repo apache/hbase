@@ -44,7 +44,7 @@ public class TestCellSkipListSet extends TestCase {
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.csls.add(kv);
     assertTrue(this.csls.contains(kv));
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.sizeForTests());
     Cell first = this.csls.first();
     assertTrue(kv.equals(first));
     assertTrue(Bytes.equals(kv.getValue(), first.getValue()));
@@ -52,7 +52,7 @@ public class TestCellSkipListSet extends TestCase {
     byte [] overwriteValue = Bytes.toBytes("overwrite");
     KeyValue overwrite = new KeyValue(bytes, bytes, bytes, overwriteValue);
     this.csls.add(overwrite);
-    assertEquals(1, this.csls.size());
+    assertEquals(1, this.csls.sizeForTests());
     first = this.csls.first();
     assertTrue(Bytes.equals(overwrite.getValue(), first.getValue()));
     assertFalse(Bytes.equals(overwrite.getValue(), kv.getValue()));
