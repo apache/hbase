@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -3072,7 +3071,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Returns an {@link Hbck} instance. Needs be closed when done.
    */
   public Hbck getHbck() throws IOException {
-    return ((ClusterConnection) getConnection()).getHbck();
+    return getConnection().getHbck();
   }
 
   /**

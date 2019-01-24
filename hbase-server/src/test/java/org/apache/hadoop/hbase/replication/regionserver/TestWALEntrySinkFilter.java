@@ -546,6 +546,10 @@ public class TestWALEntrySinkFilter {
         }
       };
     }
+
+    @Override
+    public void clearRegionLocationCache() {
+    }
   }
 }
 

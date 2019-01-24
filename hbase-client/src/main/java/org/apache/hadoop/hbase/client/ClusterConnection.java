@@ -107,9 +107,12 @@ public interface ClusterConnection extends Connection {
       final byte [] row) throws IOException;
 
   /**
-   * Allows flushing the region cache.
+   * @deprecated {@link #clearRegionLocationCache()} instead.
    */
-  void clearRegionCache();
+  @Deprecated
+  default void clearRegionCache() {
+    clearRegionLocationCache();
+  }
 
   void cacheLocation(final TableName tableName, final RegionLocations location);
 
@@ -326,36 +329,4 @@ public interface ClusterConnection extends Connection {
    * @throws IOException if a remote or network exception occurs
    */
   int getCurrentNrHRS() throws IOException;
-
-  /**
-   * Retrieve an Hbck implementation to fix an HBase cluster.
-   * The returned Hbck is not guaranteed to be thread-safe. A new instance should be created by
-   * each thread. This is a lightweight operation. Pooling or caching of the returned Hbck instance
-   * is not recommended.
-   * <br>
-   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
-   *<br>
-   * This will be used mostly by hbck tool.
-   *
-   * @return an Hbck instance for active master. Active master is fetched from the zookeeper.
-   */
-  Hbck getHbck() throws IOException;
-
-  /**
-   * Retrieve an Hbck implementation to fix an HBase cluster.
-   * The returned Hbck is not guaranteed to be thread-safe. A new instance should be created by
-   * each thread. This is a lightweight operation. Pooling or caching of the returned Hbck instance
-   * is not recommended.
-   * <br>
-   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
-   *<br>
-   * This will be used mostly by hbck tool. This may only be used to by pass getting
-   * registered master from ZK. In situations where ZK is not available or active master is not
-   * registered with ZK and user can get master address by other means, master can be explicitly
-   * specified.
-   *
-   * @param masterServer explicit {@link ServerName} for master server
-   * @return an Hbck instance for a specified master server
-   */
-  Hbck getHbck(ServerName masterServer) throws IOException;
 }
