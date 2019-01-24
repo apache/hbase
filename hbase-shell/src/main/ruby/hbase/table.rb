@@ -508,6 +508,13 @@ EOF
         # Normalize column names
         columns = [columns] if columns.class == String
         limit = args['LIMIT'] || -1
+        replica_id = args[REGION_REPLICA_ID]
+        isolation_level = args[ISOLATION_LEVEL]
+        read_type = args[READ_TYPE]
+        allow_partial_results = args[ALLOW_PARTIAL_RESULTS].nil? ? false : args[ALLOW_PARTIAL_RESULTS]
+        batch = args[BATCH] || -1
+        max_result_size = args[MAX_RESULT_SIZE] || -1
+
         unless columns.is_a?(Array)
           raise ArgumentError, 'COLUMNS must be specified as a String or an Array'
         end
@@ -549,10 +556,16 @@ EOF
         scan.setMaxVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
         scan.setRaw(raw)
-        scan.setCaching(limit) if limit > 0
+        scan.setLimit(limit) if limit > 0
         set_attributes(scan, attributes) if attributes
         set_authorizations(scan, authorizations) if authorizations
         scan.setConsistency(org.apache.hadoop.hbase.client.Consistency.valueOf(consistency)) if consistency
+        scan.setReplicaId(replica_id) if replica_id
+        scan.setIsolationLevel(org.apache.hadoop.hbase.client.IsolationLevel.valueOf(isolation_level)) if isolation_level
+        scan.setReadType(org.apache.hadoop.hbase.client::Scan::ReadType.valueOf(read_type)) if read_type
+        scan.setAllowPartialResults(allow_partial_results) if allow_partial_results
+        scan.setBatch(batch) if batch > 0
+        scan.setMaxResultSize(max_result_size) if max_result_size > 0
       else
         scan = org.apache.hadoop.hbase.client.Scan.new
       end
@@ -571,7 +584,6 @@ EOF
       raise(ArgumentError, 'Scan argument should be org.apache.hadoop.hbase.client.Scan') \
         unless scan.nil? || scan.is_a?(org.apache.hadoop.hbase.client.Scan)
 
-      limit = args['LIMIT'] || -1
       maxlength = args.delete('MAXLENGTH') || -1
       converter = args.delete(FORMATTER) || nil
       converter_class = args.delete(FORMATTER_CLASS) || 'org.apache.hadoop.hbase.util.Bytes'
@@ -605,13 +617,8 @@ EOF
             res[key][column] = cell
           end
         end
-
         # One more row processed
         count += 1
-        if limit > 0 && count >= limit
-          # If we reached the limit, exit before the next call to hasNext
-          break
-        end
       end
 
       scanner.close
