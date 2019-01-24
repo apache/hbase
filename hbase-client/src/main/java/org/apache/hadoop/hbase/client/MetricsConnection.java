@@ -74,6 +74,7 @@ public class MetricsConnection implements StatisticTrackable {
     private long startTime = 0;
     private long callTimeMs = 0;
     private int concurrentCallsPerServer = 0;
+    private int numActionsPerServer = 0;
 
     public long getRequestSizeBytes() {
       return requestSizeBytes;
@@ -113,6 +114,14 @@ public class MetricsConnection implements StatisticTrackable {
 
     public void setConcurrentCallsPerServer(int callsPerServer) {
       this.concurrentCallsPerServer = callsPerServer;
+    }
+
+    public int getNumActionsPerServer() {
+      return numActionsPerServer;
+    }
+
+    public void setNumActionsPerServer(int numActionsPerServer) {
+      this.numActionsPerServer = numActionsPerServer;
     }
   }
 
@@ -281,6 +290,7 @@ public class MetricsConnection implements StatisticTrackable {
   @VisibleForTesting protected final Counter hedgedReadOps;
   @VisibleForTesting protected final Counter hedgedReadWin;
   @VisibleForTesting protected final Histogram concurrentCallsPerServerHist;
+  @VisibleForTesting protected final Histogram numActionsPerServerHist;
 
   // dynamic metrics
 
@@ -337,8 +347,10 @@ public class MetricsConnection implements StatisticTrackable {
     this.putTracker = new CallTracker(this.registry, "Mutate", "Put", scope);
     this.multiTracker = new CallTracker(this.registry, "Multi", scope);
     this.runnerStats = new RunnerStats(this.registry);
-    this.concurrentCallsPerServerHist = registry.histogram(name(MetricsConnection.class, 
+    this.concurrentCallsPerServerHist = registry.histogram(name(MetricsConnection.class,
       "concurrentCallsPerServer", scope));
+    this.numActionsPerServerHist = registry.histogram(name(MetricsConnection.class,
+      "numActionsPerServer", scope));
 
     this.reporter = JmxReporter.forRegistry(this.registry).build();
     this.reporter.start();
@@ -442,59 +454,60 @@ public class MetricsConnection implements StatisticTrackable {
     // if we could dispatch based on something static, ie, request Message type.
     if (method.getService() == ClientService.getDescriptor()) {
       switch(method.getIndex()) {
-      case 0:
-        assert "Get".equals(method.getName());
-        getTracker.updateRpc(stats);
-        return;
-      case 1:
-        assert "Mutate".equals(method.getName());
-        final MutationType mutationType = ((MutateRequest) param).getMutation().getMutateType();
-        switch(mutationType) {
-        case APPEND:
-          appendTracker.updateRpc(stats);
+        case 0:
+          assert "Get".equals(method.getName());
+          getTracker.updateRpc(stats);
           return;
-        case DELETE:
-          deleteTracker.updateRpc(stats);
+        case 1:
+          assert "Mutate".equals(method.getName());
+          final MutationType mutationType = ((MutateRequest) param).getMutation().getMutateType();
+          switch(mutationType) {
+            case APPEND:
+              appendTracker.updateRpc(stats);
+              return;
+            case DELETE:
+              deleteTracker.updateRpc(stats);
+              return;
+            case INCREMENT:
+              incrementTracker.updateRpc(stats);
+              return;
+            case PUT:
+              putTracker.updateRpc(stats);
+              return;
+            default:
+              throw new RuntimeException("Unrecognized mutation type " + mutationType);
+          }
+        case 2:
+          assert "Scan".equals(method.getName());
+          scanTracker.updateRpc(stats);
           return;
-        case INCREMENT:
-          incrementTracker.updateRpc(stats);
-          return;
-        case PUT:
-          putTracker.updateRpc(stats);
+        case 3:
+          assert "BulkLoadHFile".equals(method.getName());
+          // use generic implementation
+          break;
+        case 4:
+          assert "PrepareBulkLoad".equals(method.getName());
+          // use generic implementation
+          break;
+        case 5:
+          assert "CleanupBulkLoad".equals(method.getName());
+          // use generic implementation
+          break;
+        case 6:
+          assert "ExecService".equals(method.getName());
+          // use generic implementation
+          break;
+        case 7:
+          assert "ExecRegionServerService".equals(method.getName());
+          // use generic implementation
+          break;
+        case 8:
+          assert "Multi".equals(method.getName());
+          numActionsPerServerHist.update(stats.getNumActionsPerServer());
+          multiTracker.updateRpc(stats);
           return;
         default:
-          throw new RuntimeException("Unrecognized mutation type " + mutationType);
-        }
-      case 2:
-        assert "Scan".equals(method.getName());
-        scanTracker.updateRpc(stats);
-        return;
-      case 3:
-        assert "BulkLoadHFile".equals(method.getName());
-        // use generic implementation
-        break;
-      case 4:
-        assert "PrepareBulkLoad".equals(method.getName());
-        // use generic implementation
-        break;
-      case 5:
-        assert "CleanupBulkLoad".equals(method.getName());
-        // use generic implementation
-        break;
-      case 6:
-        assert "ExecService".equals(method.getName());
-        // use generic implementation
-        break;
-      case 7:
-        assert "ExecRegionServerService".equals(method.getName());
-        // use generic implementation
-        break;
-      case 8:
-        assert "Multi".equals(method.getName());
-        multiTracker.updateRpc(stats);
-        return;
-      default:
-        throw new RuntimeException("Unrecognized ClientService RPC type " + method.getFullName());
+          throw new RuntimeException("Unrecognized ClientService RPC type " + method.getFullName());
       }
     }
     // Fallback to dynamic registry lookup for DDL methods.

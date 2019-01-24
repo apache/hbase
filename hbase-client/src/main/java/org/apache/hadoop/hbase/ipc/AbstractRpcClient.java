@@ -70,6 +70,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
  * Provides the basics for a RpcClient implementation like configuration and Logging.
  * <p>
@@ -401,6 +403,17 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       final RpcCallback<Message> callback) {
     final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
     cs.setStartTime(EnvironmentEdgeManager.currentTime());
+
+    if (param instanceof ClientProtos.MultiRequest) {
+      ClientProtos.MultiRequest req = (ClientProtos.MultiRequest) param;
+      int numActions = 0;
+      for (ClientProtos.RegionAction regionAction : req.getRegionActionList()) {
+        numActions += regionAction.getActionCount();
+      }
+
+      cs.setNumActionsPerServer(numActions);
+    }
+
     final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
     Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
         hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
