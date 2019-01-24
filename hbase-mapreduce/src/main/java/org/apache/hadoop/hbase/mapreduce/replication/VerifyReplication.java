@@ -122,10 +122,9 @@ public class VerifyReplication extends Configured implements Tool {
   public static class Verifier
       extends TableMapper<ImmutableBytesWritable, Put> {
 
-
-
-    public static enum Counters {
-      GOODROWS, BADROWS, ONLY_IN_SOURCE_TABLE_ROWS, ONLY_IN_PEER_TABLE_ROWS, CONTENT_DIFFERENT_ROWS}
+    public enum Counters {
+      GOODROWS, BADROWS, ONLY_IN_SOURCE_TABLE_ROWS, ONLY_IN_PEER_TABLE_ROWS, CONTENT_DIFFERENT_ROWS
+    }
 
     private Connection sourceConnection;
     private Table sourceTable;
