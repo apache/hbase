@@ -596,7 +596,8 @@ public class TestStore {
     this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilessize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
+    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore)
+      .activeSection.getCellSkipListSet().sizeForTests());
   }
 
   private void assertCheck() {
@@ -641,7 +642,8 @@ public class TestStore {
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
     // from the one we inserted up there, and a new one
-    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
+    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore)
+      .activeSection.getCellSkipListSet().sizeForTests());
 
     // how many key/values for this row are there?
     Get get = new Get(row);
@@ -742,7 +744,8 @@ public class TestStore {
     // then flush.
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
-    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore).activeSection.getCellSkipListSet().size());
+    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore)
+      .activeSection.getCellSkipListSet().sizeForTests());
 
     // now increment again:
     newValue += 1;
