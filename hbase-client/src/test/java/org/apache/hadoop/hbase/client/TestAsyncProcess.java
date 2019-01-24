@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -1794,6 +1795,39 @@ public class TestAsyncProcess {
     expectedSleep += normalPause;
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
     Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
+  }
+
+  @Test
+  public void testRetryWithExceptionClearsMetaCache() throws Exception {
+    ClusterConnection conn = createHConnection();
+    Configuration myConf = conn.getConfiguration();
+    myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+
+    AsyncProcessWithFailure ap =
+        new AsyncProcessWithFailure(conn, myConf, new RegionOpeningException("test"));
+    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
+    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
+
+    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+
+    Assert.assertEquals(
+        conn.locateRegion(DUMMY_TABLE, DUMMY_BYTES_1, true, true).toString(),
+        new RegionLocations(loc1).toString());
+
+    Mockito.verify(conn, Mockito.times(0)).clearCaches(Mockito.any());
+
+    Put p = createPut(1, true);
+    mutator.mutate(p);
+
+    try {
+      mutator.flush();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+      assertEquals(1, expected.getNumExceptions());
+      assertTrue(expected.getRow(0) == p);
+    }
+
+    Mockito.verify(conn, Mockito.times(1)).clearCaches(loc1.getServerName());
   }
 
   @Test
