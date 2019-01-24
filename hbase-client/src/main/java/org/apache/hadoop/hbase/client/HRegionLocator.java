@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -72,7 +74,6 @@ public class HRegionLocator implements RegionLocator {
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    TableName tableName = getName();
     ArrayList<HRegionLocation> regions = new ArrayList<>();
     for (RegionLocations locations : listRegionLocations()) {
       for (HRegionLocation location : locations.getRegionLocations()) {
@@ -94,6 +95,10 @@ public class HRegionLocator implements RegionLocator {
   }
 
   private List<RegionLocations> listRegionLocations() throws IOException {
+    if (TableName.isMetaTableName(tableName)) {
+      return Collections
+        .singletonList(connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true));
+    }
     final List<RegionLocations> regions = new ArrayList<>();
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
       @Override
@@ -109,5 +114,4 @@ public class HRegionLocator implements RegionLocator {
     MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
     return regions;
   }
-
 }
