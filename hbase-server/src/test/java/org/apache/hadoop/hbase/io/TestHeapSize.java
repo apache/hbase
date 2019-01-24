@@ -305,13 +305,15 @@ public class TestHeapSize  {
     actual = DefaultMemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     expected += (2 * ClassSize.estimateBase(AtomicLong.class, false));
+    expected += ClassSize.estimateBase(AtomicInteger.class, false);
     expected += (2 * ClassSize.estimateBase(CellSkipListSet.class, false));
     expected += (2 * ClassSize.estimateBase(ConcurrentSkipListMap.class, false));
     expected += (2 * ClassSize.estimateBase(TimeRangeTracker.class, false));
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicInteger.class, true);
       ClassSize.estimateBase(CellSkipListSet.class, true);
       ClassSize.estimateBase(CellSkipListSet.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
