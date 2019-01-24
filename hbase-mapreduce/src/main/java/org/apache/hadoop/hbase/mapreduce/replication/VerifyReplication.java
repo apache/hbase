@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -96,6 +97,7 @@ public class VerifyReplication extends Configured implements Tool {
   String families = null;
   String delimiter = "";
   String peerId = null;
+  String peerQuorumAddress = null;
   String rowPrefixes = null;
   int sleepMsBeforeReCompare = 0;
   boolean verbose = false;
@@ -385,7 +387,6 @@ public class VerifyReplication extends Configured implements Tool {
     if (!doCommandLine(args)) {
       return null;
     }
-    conf.set(NAME+".peerId", peerId);
     conf.set(NAME+".tableName", tableName);
     conf.setLong(NAME+".startTime", startTime);
     conf.setLong(NAME+".endTime", endTime);
@@ -401,14 +402,23 @@ public class VerifyReplication extends Configured implements Tool {
       conf.set(NAME+".rowPrefixes", rowPrefixes);
     }
 
-    Pair<ReplicationPeerConfig, Configuration> peerConfigPair = getPeerQuorumConfig(conf, peerId);
-    ReplicationPeerConfig peerConfig = peerConfigPair.getFirst();
-    String peerQuorumAddress = peerConfig.getClusterKey();
-    LOG.info("Peer Quorum Address: " + peerQuorumAddress + ", Peer Configuration: " +
+    String peerQuorumAddress;
+    Pair<ReplicationPeerConfig, Configuration> peerConfigPair = null;
+    if (peerId != null) {
+      peerConfigPair = getPeerQuorumConfig(conf, peerId);
+      ReplicationPeerConfig peerConfig = peerConfigPair.getFirst();
+      peerQuorumAddress = peerConfig.getClusterKey();
+      LOG.info("Peer Quorum Address: " + peerQuorumAddress + ", Peer Configuration: " +
         peerConfig.getConfiguration());
-    conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
-    HBaseConfiguration.setWithPrefix(conf, PEER_CONFIG_PREFIX,
+      conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
+      HBaseConfiguration.setWithPrefix(conf, PEER_CONFIG_PREFIX,
         peerConfig.getConfiguration().entrySet());
+    } else {
+      assert this.peerQuorumAddress != null;
+      peerQuorumAddress = this.peerQuorumAddress;
+      LOG.info("Peer Quorum Address: " + peerQuorumAddress);
+      conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
+    }
 
     conf.setInt(NAME + ".versions", versions);
     LOG.info("Number of version: " + versions);
@@ -463,9 +473,13 @@ public class VerifyReplication extends Configured implements Tool {
     } else {
       TableMapReduceUtil.initTableMapperJob(tableName, scan, Verifier.class, null, null, job);
     }
-    Configuration peerClusterConf = peerConfigPair.getSecond();
-    // Obtain the auth token from peer cluster
-    TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
+
+    if (peerId != null) {
+      assert peerConfigPair != null;
+      Configuration peerClusterConf = peerConfigPair.getSecond();
+      // Obtain the auth token from peer cluster
+      TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
+    }
 
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
@@ -610,7 +624,11 @@ public class VerifyReplication extends Configured implements Tool {
         }
 
         if (i == args.length-2) {
-          peerId = cmd;
+          if (isPeerQuorumAddress(cmd)) {
+            peerQuorumAddress = cmd;
+          } else {
+            peerId = cmd;
+          }
         }
 
         if (i == args.length-1) {
@@ -651,6 +669,16 @@ public class VerifyReplication extends Configured implements Tool {
     return true;
   }
 
+  private boolean isPeerQuorumAddress(String cmd) {
+    try {
+      ZKConfig.validateClusterKey(cmd);
+    } catch (IOException e) {
+      // not a quorum address
+      return false;
+    }
+    return true;
+  }
+
   /*
    * @param errorMsg Error message.  Can be null.
    */
@@ -660,8 +688,9 @@ public class VerifyReplication extends Configured implements Tool {
     }
     System.err.println("Usage: verifyrep [--starttime=X]" +
         " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] " +
-        "[--batch=] [--verbose] [--sourceSnapshotName=P] [--sourceSnapshotTmpDir=Q] [--peerSnapshotName=R] "
-            + "[--peerSnapshotTmpDir=S] [--peerFSAddress=T] [--peerHBaseRootAddress=U]  <peerid> <tablename>");
+        "[--batch=] [--verbose] [--sourceSnapshotName=P] [--sourceSnapshotTmpDir=Q] "
+      + "[--peerSnapshotName=R] [--peerSnapshotTmpDir=S] [--peerFSAddress=T] "
+      + "[--peerHBaseRootAddress=U] <peerid|peerQuorumAddress> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
@@ -686,6 +715,8 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println();
     System.err.println("Args:");
     System.err.println(" peerid       Id of the peer used for verification, must match the one given for replication");
+    System.err.println(" peerQuorumAddress   quorumAdress of the peer used for verification. The "
+      + "format is zk_quorum:zk_port:zk_hbase_path");
     System.err.println(" tablename    Name of the table to verify");
     System.err.println();
     System.err.println("Examples:");
