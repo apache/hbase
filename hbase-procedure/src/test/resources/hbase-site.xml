@@ -25,4 +25,13 @@
     <name>hbase.procedure.store.wal.use.hsync</name>
     <value>false</value>
   </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+    <description>
+      Controls whether HBase will check for stream capabilities (hflush/hsync).
+      Disable this if you intend to run on LocalFileSystem.
+      WARNING: Doing so may expose you to additional risk of data loss!
+    </description>
+  </property>
 </configuration>

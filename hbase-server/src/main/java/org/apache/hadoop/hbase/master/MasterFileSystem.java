@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -166,7 +167,8 @@ public class MasterFileSystem {
     checkRootDir(this.rootdir, conf, this.fs, HConstants.HBASE_DIR, HBASE_DIR_PERMS);
     // if the log directory is different from root, check if it exists
     if (!this.walRootDir.equals(this.rootdir)) {
-      checkRootDir(this.walRootDir, conf, this.walFs, HFileSystem.HBASE_WAL_DIR, HBASE_WAL_DIR_PERMS);
+      checkRootDir(this.walRootDir, conf, this.walFs, CommonFSUtils.HBASE_WAL_DIR,
+        HBASE_WAL_DIR_PERMS);
     }
 
     // check if temp directory exists and clean it

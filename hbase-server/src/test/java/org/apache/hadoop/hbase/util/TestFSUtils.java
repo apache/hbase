@@ -37,16 +37,15 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -57,58 +56,17 @@ import org.junit.experimental.categories.Category;
 public class TestFSUtils {
   private static final Log LOG = LogFactory.getLog(TestFSUtils.class);
 
-  /**
-   * Test path compare and prefix checking.
-   * @throws IOException
-   */
-  @Test
-  public void testMatchingTail() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    final FileSystem fs = htu.getTestFileSystem();
-    Path rootdir = htu.getDataTestDir();
-    assertTrue(rootdir.depth() > 1);
-    Path partPath = new Path("a", "b");
-    Path fullPath = new Path(rootdir, partPath);
-    Path fullyQualifiedPath = fs.makeQualified(fullPath);
-    assertFalse(FSUtils.isMatchingTail(fullPath, partPath));
-    assertFalse(FSUtils.isMatchingTail(fullPath, partPath.toString()));
-    assertTrue(FSUtils.isStartingWithPath(rootdir, fullPath.toString()));
-    assertTrue(FSUtils.isStartingWithPath(fullyQualifiedPath, fullPath.toString()));
-    assertFalse(FSUtils.isStartingWithPath(rootdir, partPath.toString()));
-    assertFalse(FSUtils.isMatchingTail(fullyQualifiedPath, partPath));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath.toString()));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fs.makeQualified(fullPath)));
-    assertTrue(FSUtils.isStartingWithPath(rootdir, fullyQualifiedPath.toString()));
-    assertFalse(FSUtils.isMatchingTail(fullPath, new Path("x")));
-    assertFalse(FSUtils.isMatchingTail(new Path("x"), fullPath));
+  private HBaseTestingUtility htu;
+  private Configuration conf;
+
+  @Before
+  public void setUp() throws IOException {
+    htu = new HBaseTestingUtility();
+    conf = htu.getConfiguration();
   }
 
   @Test
-  public void testVersion() throws DeserializationException, IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    final FileSystem fs = htu.getTestFileSystem();
-    final Path rootdir = htu.getDataTestDir();
-    assertNull(FSUtils.getVersion(fs, rootdir));
-    // Write out old format version file.  See if we can read it in and convert.
-    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    FSDataOutputStream s = fs.create(versionFile);
-    final String version = HConstants.FILE_SYSTEM_VERSION;
-    s.writeUTF(version);
-    s.close();
-    assertTrue(fs.exists(versionFile));
-    FileStatus [] status = fs.listStatus(versionFile);
-    assertNotNull(status);
-    assertTrue(status.length > 0);
-    String newVersion = FSUtils.getVersion(fs, rootdir);
-    assertEquals(version.length(), newVersion.length());
-    assertEquals(version, newVersion);
-    // File will have been converted. Exercise the pb format
-    assertEquals(version, FSUtils.getVersion(fs, rootdir));
-    FSUtils.checkVersion(fs, rootdir, true);
-  }
-
-  @Test public void testIsHDFS() throws Exception {
+  public void testIsHDFS() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     htu.getConfiguration().setBoolean("dfs.support.append", false);
     assertFalse(FSUtils.isHDFS(htu.getConfiguration()));
@@ -236,10 +194,32 @@ public class TestFSUtils {
   }
 
   @Test
-  public void testPermMask() throws Exception {
+  public void testVersion() throws DeserializationException, IOException {
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
+    assertNull(FSUtils.getVersion(fs, rootdir));
+    // Write out old format version file.  See if we can read it in and convert.
+    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    FSDataOutputStream s = fs.create(versionFile);
+    final String version = HConstants.FILE_SYSTEM_VERSION;
+    s.writeUTF(version);
+    s.close();
+    assertTrue(fs.exists(versionFile));
+    FileStatus [] status = fs.listStatus(versionFile);
+    assertNotNull(status);
+    assertTrue(status.length > 0);
+    String newVersion = FSUtils.getVersion(fs, rootdir);
+    assertEquals(version.length(), newVersion.length());
+    assertEquals(version, newVersion);
+    // File will have been converted. Exercise the pb format
+    assertEquals(version, FSUtils.getVersion(fs, rootdir));
+    FSUtils.checkVersion(fs, rootdir, true);
+  }
 
-    Configuration conf = HBaseConfiguration.create();
-    FileSystem fs = FileSystem.get(conf);
+  @Test
+  public void testPermMask() throws Exception {
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
 
     // default fs permission
     FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
@@ -278,10 +258,9 @@ public class TestFSUtils {
 
   @Test
   public void testDeleteAndExists() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
-    FileSystem fs = FileSystem.get(conf);
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
     String file = UUID.randomUUID().toString();
@@ -305,6 +284,7 @@ public class TestFSUtils {
       FSUtils.delete(fs, p1, true);
     }
   }
+
 
   @Test
   public void testFilteredStatusDoesNotThrowOnNotFound() throws Exception {
@@ -357,6 +337,26 @@ public class TestFSUtils {
     }
   }
 
+  @Test
+  public void testSetStoragePolicyDefault() throws Exception {
+    verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
+  }
+
+  /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyValidButMaybeNotPresent() throws Exception {
+    verifyFileInDirWithStoragePolicy("ALL_SSD");
+  }
+
+  /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyInvalid() throws Exception {
+    verifyFileInDirWithStoragePolicy(INVALID_STORAGE_POLICY);
+  }
+
+  final String INVALID_STORAGE_POLICY = "1772";
+
+  // Here instead of TestCommonFSUtils because we need a minicluster
   private void verifyFileInDirWithStoragePolicy(final String policy) throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
@@ -397,108 +397,42 @@ public class TestFSUtils {
     }
   }
 
-  @Test
-  public void testSetStoragePolicyDefault() throws Exception {
-    verifyNoHDFSApiInvocationForDefaultPolicy();
-    verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
-  }
-
-  /**
-   * Note: currently the default policy is set to defer to HDFS and this case is to verify the
-   * logic, will need to remove the check if the default policy is changed
-   */
-  private void verifyNoHDFSApiInvocationForDefaultPolicy() {
-    FileSystem testFs = new AlwaysFailSetStoragePolicyFileSystem();
-    // There should be no exception thrown when setting to default storage policy, which indicates
-    // the HDFS API hasn't been called
-    try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), HConstants.DEFAULT_WAL_STORAGE_POLICY,
-        true);
-    } catch (IOException e) {
-      Assert.fail("Should have bypassed the FS API when setting default storage policy");
-    }
-    // There should be exception thrown when given non-default storage policy, which indicates the
-    // HDFS API has been called
-    try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
-      Assert.fail("Should have invoked the FS API but haven't");
-    } catch (IOException e) {
-      // expected given an invalid path
-    }
-  }
-
-  class AlwaysFailSetStoragePolicyFileSystem extends DistributedFileSystem {
-    @Override
-    public void setStoragePolicy(final Path src, final String policyName) throws IOException {
-      throw new IOException("The setStoragePolicy method is invoked");
-    }
-  }
-
-  /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
-  @Test
-  public void testSetStoragePolicyValidButMaybeNotPresent() throws Exception {
-    verifyFileInDirWithStoragePolicy("ALL_SSD");
-  }
-
-  final String INVALID_STORAGE_POLICY = "1772";
-
-  /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
-  @Test
-  public void testSetStoragePolicyInvalid() throws Exception {
-    verifyFileInDirWithStoragePolicy(INVALID_STORAGE_POLICY);
-  }
-
-  @Test
-  public void testSetWALRootDir() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
-    Path p = new Path("file:///hbase/root");
-    FSUtils.setWALRootDir(conf, p);
-    assertEquals(p.toString(), conf.get(HFileSystem.HBASE_WAL_DIR));
-  }
-
-  @Test
-  public void testGetWALRootDir() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
-    Path root = new Path("file:///hbase/root");
-    Path walRoot = new Path("file:///hbase/logroot");
-    FSUtils.setRootDir(conf, root);
-    assertEquals(FSUtils.getRootDir(conf), root);
-    assertEquals(FSUtils.getWALRootDir(conf), root);
-    FSUtils.setWALRootDir(conf, walRoot);
-    assertEquals(FSUtils.getWALRootDir(conf), walRoot);
-  }
-
-  @Test(expected=IllegalStateException.class)
-  public void testGetWALRootDirIllegalWALDir() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
-    Path root = new Path("file:///hbase/root");
-    Path invalidWALDir = new Path("file:///hbase/root/logroot");
-    FSUtils.setRootDir(conf, root);
-    FSUtils.setWALRootDir(conf, invalidWALDir);
-    FSUtils.getWALRootDir(conf);
-  }
-
-  @Test
-  public void testRemoveWALRootPath() throws Exception {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
-    Configuration conf = htu.getConfiguration();
-    FSUtils.setRootDir(conf, new Path("file:///user/hbase"));
-    Path testFile = new Path(FSUtils.getRootDir(conf), "test/testfile");
-    Path tmpFile = new Path("file:///test/testfile");
-    assertEquals(FSUtils.removeWALRootPath(testFile, conf), "test/testfile");
-    assertEquals(FSUtils.removeWALRootPath(tmpFile, conf), tmpFile.toString());
-    FSUtils.setWALRootDir(conf, new Path("file:///user/hbaseLogDir"));
-    assertEquals(FSUtils.removeWALRootPath(testFile, conf), testFile.toString());
-    Path logFile = new Path(FSUtils.getWALRootDir(conf), "test/testlog");
-    assertEquals(FSUtils.removeWALRootPath(logFile, conf), "test/testlog");
-  }
-
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
     assertTrue(fileSys.delete(name, true));
     assertTrue(!fileSys.exists(name));
   }
+
+  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
+
+  static {
+    boolean tmp = false;
+    try {
+      Class.forName("org.apache.hadoop.fs.StreamCapabilities");
+      tmp = true;
+      LOG.debug("Test thought StreamCapabilities class was present.");
+    } catch (ClassNotFoundException exception) {
+      LOG.debug("Test didn't think StreamCapabilities class was present.");
+    } finally {
+      STREAM_CAPABILITIES_IS_PRESENT = tmp;
+    }
+  }
+
+  // Here instead of TestCommonFSUtils because we need a minicluster
+  @Test
+  public void checkStreamCapabilitiesOnHdfsDataOutputStream() throws Exception {
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    try (FileSystem filesystem = cluster.getFileSystem()) {
+      FSDataOutputStream stream = filesystem.create(new Path("/tmp/foobar"));
+      assertTrue(FSUtils.hasCapability(stream, "hsync"));
+      assertTrue(FSUtils.hasCapability(stream, "hflush"));
+      assertNotEquals("We expect HdfsDataOutputStream to say it has a dummy capability iff the " +
+          "StreamCapabilities class is not defined.",
+          STREAM_CAPABILITIES_IS_PRESENT,
+          FSUtils.hasCapability(stream, "a capability that hopefully HDFS doesn't add."));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }

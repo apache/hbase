@@ -74,7 +74,7 @@ public class TestStressWALProcedureStore {
     assertTrue(testDir.depth() > 1);
 
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procStore.start(PROCEDURE_STORE_SLOTS);
     procStore.recoverLease();
 

@@ -132,7 +132,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     Path logDir = new Path(testDir, "proc-logs");
     System.out.println("\n\nLogs directory : " + logDir.toString() + "\n\n");
     fs.delete(logDir, true);
-    store = ProcedureTestingUtility.createWalStore(conf, fs, logDir);
+    store = ProcedureTestingUtility.createWalStore(conf, logDir);
     store.start(1);
     store.recoverLease();
     store.load(new LoadCounter());

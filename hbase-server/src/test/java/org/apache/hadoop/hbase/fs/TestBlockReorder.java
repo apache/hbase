@@ -42,6 +42,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -51,7 +53,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -463,7 +464,7 @@ public class TestBlockReorder {
       // Should be reordered, as we pretend to be a file name with a compliant stuff
       Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
       Assert.assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
-      String pseudoLogFile = conf.get(HFileSystem.HBASE_WAL_DIR) + "/" +
+      String pseudoLogFile = conf.get(CommonFSUtils.HBASE_WAL_DIR) + "/" +
           HConstants.HREGION_LOGDIR_NAME + "/" + host1 + ",6977,6576" + "/mylogfile";
 
       // Check that it will be possible to extract a ServerName from our construction

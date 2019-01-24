@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -65,8 +64,6 @@ public class TestDefaultWALProvider {
 
   protected static Configuration conf;
   protected static FileSystem fs;
-  protected static FileSystem walFs;
-  protected static Path walRootDir;
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected MultiVersionConcurrencyControl mvcc;
 
@@ -80,7 +77,6 @@ public class TestDefaultWALProvider {
     for (FileStatus dir : entries) {
       fs.delete(dir.getPath(), true);
     }
-    walFs.delete(walRootDir, true);
   }
 
   @After
@@ -106,15 +102,13 @@ public class TestDefaultWALProvider {
     TEST_UTIL.startMiniDFSCluster(3);
 
     // Set up a working space for our tests.
-    walRootDir = TEST_UTIL.createWALRootDir();
+    TEST_UTIL.createRootDir();
     conf = TEST_UTIL.getConfiguration();
-    fs = FSUtils.getRootDirFileSystem(conf);
-    walFs = FSUtils.getWALFileSystem(conf);
+    fs = TEST_UTIL.getDFSCluster().getFileSystem();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    walFs.delete(walRootDir, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -125,12 +119,13 @@ public class TestDefaultWALProvider {
   @Test
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
-    String hl = walRootDir + "/" +
+    String hl = FSUtils.getRootDir(conf) + "/" +
         DefaultWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, null));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, walRootDir.toUri().toString()));
+    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
+        FSUtils.getRootDir(conf).toUri().toString()));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, ""));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, hl));
@@ -139,7 +134,7 @@ public class TestDefaultWALProvider {
 
     final String wals = "/WALs/";
     ServerName parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
-      walRootDir.toUri().toString() + wals + sn +
+      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "/localhost%2C32984%2C1343316388997.1343316390417");
     assertEquals("standard",  sn, parsed);
 
@@ -147,11 +142,10 @@ public class TestDefaultWALProvider {
     assertEquals("subdir", sn, parsed);
 
     parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
-      walRootDir.toUri().toString() + wals + sn +
+      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
       "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
   }
-
 
   protected void addEdits(WAL log, HRegionInfo hri, HTableDescriptor htd,
                         int times) throws IOException {

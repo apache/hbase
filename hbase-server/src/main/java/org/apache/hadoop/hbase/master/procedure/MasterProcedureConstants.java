@@ -24,9 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public final class MasterProcedureConstants {
   private MasterProcedureConstants() {}
 
-  /** Used to construct the name of the log directory for master procedures */
-  public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
-
   /** Number of threads used by the procedure executor */
   public static final String MASTER_PROCEDURE_THREADS = "hbase.master.procedure.threads";
   public static final int DEFAULT_MIN_MASTER_PROCEDURE_THREADS = 4;

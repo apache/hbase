@@ -99,7 +99,7 @@ public class TestWALProcedureStoreOnHDFS {
     MiniDFSCluster dfs = UTIL.startMiniDFSCluster(3);
 
     Path logDir = new Path(new Path(dfs.getFileSystem().getUri()), "/test-logs");
-    store = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(), dfs.getFileSystem(), logDir);
+    store = ProcedureTestingUtility.createWalStore(UTIL.getConfiguration(), logDir);
     store.registerListener(stopProcedureListener);
     store.start(8);
     store.recoverLease();

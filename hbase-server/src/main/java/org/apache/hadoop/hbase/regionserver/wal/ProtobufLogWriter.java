@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -77,7 +79,7 @@ public class ProtobufLogWriter extends WriterBase {
   @Override
   @SuppressWarnings("deprecation")
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
-  throws IOException {
+      throws IOException {
     super.init(fs, path, conf, overwritable);
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
@@ -87,6 +89,11 @@ public class ProtobufLogWriter extends WriterBase {
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
     long blockSize = WALUtil.getWALBlockSize(conf, fs, path);
     output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize, null);
+    // TODO Be sure to add a check for hsync if this branch includes HBASE-19024
+    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true) &&
+        !(CommonFSUtils.hasCapability(output, "hflush"))) {
+      throw new StreamLacksCapabilityException("hflush");
+    }
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     boolean doTagCompress = doCompress
         && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);

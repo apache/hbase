@@ -49,7 +49,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -157,10 +156,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EncryptionTest;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -452,7 +451,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
-    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
+    LOG.info("hbase.rootdir=" + CommonFSUtils.getRootDir(this.conf) +
       ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
     // Disable usage of meta replicas in the master
@@ -1311,23 +1310,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    final Path walDir = new Path(FSUtils.getWALRootDir(this.conf),
-        MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
-
-    final FileSystem walFs = walDir.getFileSystem(conf);
-
-    // Create the log directory for the procedure store
-    if (!walFs.exists(walDir)) {
-      if (!walFs.mkdirs(walDir)) {
-        throw new IOException("Unable to mkdir " + walDir);
-      }
-    }
-    // Now that it exists, set the log policy
-    String storagePolicy =
-        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
-    FSUtils.setStoragePolicy(walFs, walDir, storagePolicy);
-
-    procedureStore = new WALProcedureStore(conf, walFs, walDir,
+    final Path walDir = new Path(CommonFSUtils.getWALRootDir(this.conf),
+      WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
+    procedureStore = new WALProcedureStore(conf, walDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,

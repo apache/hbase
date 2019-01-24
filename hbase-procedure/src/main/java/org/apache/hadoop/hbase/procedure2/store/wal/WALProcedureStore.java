@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -66,6 +68,9 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceStability.Evolving
 public class WALProcedureStore extends ProcedureStoreBase {
   private static final Log LOG = LogFactory.getLog(WALProcedureStore.class);
+
+  /** Used to construct the name of the log directory for master procedures */
+  public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
 
   public interface LeaseRecovery {
     void recoverFileLease(FileSystem fs, Path path) throws IOException;
@@ -115,6 +120,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final Configuration conf;
   private final FileSystem fs;
   private final Path walDir;
+  private final boolean enforceStreamCapability;
 
   private final AtomicReference<Throwable> syncException = new AtomicReference<Throwable>();
   private final AtomicBoolean loading = new AtomicBoolean(true);
@@ -170,12 +176,24 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  public WALProcedureStore(final Configuration conf, final FileSystem fs, final Path walDir,
-      final LeaseRecovery leaseRecovery) {
-    this.fs = fs;
+  public WALProcedureStore(final Configuration conf, final Path walDir,
+      final LeaseRecovery leaseRecovery) throws IOException {
     this.conf = conf;
     this.walDir = walDir;
     this.leaseRecovery = leaseRecovery;
+    this.fs = walDir.getFileSystem(conf);
+    this.enforceStreamCapability =
+      conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);
+
+    // Create the log directory for the procedure store
+    if (!fs.exists(walDir)) {
+      if (!fs.mkdirs(walDir)) {
+        throw new IOException("Unable to mkdir " + walDir);
+      }
+    }
+    // Now that it exists, set the log policy
+    CommonFSUtils.setStoragePolicy(fs, conf, walDir, HConstants.WAL_STORAGE_POLICY,
+      HConstants.DEFAULT_WAL_STORAGE_POLICY);
   }
 
   @Override
@@ -843,6 +861,17 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (RemoteException re) {
       LOG.warn("failed to create log file with id=" + logId, re);
       return false;
+    }
+    // After we create the stream but before we attempt to use it at all
+    // ensure that we can provide the level of data safety we're configured
+    // to provide.
+    final String durability = useHsync ? "hsync" : "hflush";
+    if (enforceStreamCapability && !(CommonFSUtils.hasCapability(newStream, durability))) {
+      throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
+        " for proper operation during component failures, but the underlying filesystem does " +
+        "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY +
+        "' to set the desired level of robustness and ensure the config value of '" +
+        CommonFSUtils.HBASE_WAL_DIR + "' points to a FileSystem mount that can provide it.");
     }
     try {
       ProcedureWALFormat.writeHeader(newStream, header);

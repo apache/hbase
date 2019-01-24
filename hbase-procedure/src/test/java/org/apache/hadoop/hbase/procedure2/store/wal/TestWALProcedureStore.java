@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,7 +46,6 @@ import org.apache.hadoop.io.IOUtils;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -61,7 +59,6 @@ public class TestWALProcedureStore {
   private static final Log LOG = LogFactory.getLog(TestWALProcedureStore.class);
 
   private static final int PROCEDURE_STORE_SLOTS = 1;
-  private static final Procedure NULL_PROC = null;
 
   private WALProcedureStore procStore;
 
@@ -78,7 +75,7 @@ public class TestWALProcedureStore {
     assertTrue(testDir.depth() > 1);
 
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procStore.start(PROCEDURE_STORE_SLOTS);
     procStore.recoverLease();
     procStore.load(new LoadCounter());
@@ -458,7 +455,7 @@ public class TestWALProcedureStore {
     assertEquals(procs.length + 2, status.length);
 
     // simulate another active master removing the wals
-    procStore = new WALProcedureStore(htu.getConfiguration(), fs, logDir,
+    procStore = new WALProcedureStore(htu.getConfiguration(), logDir,
         new WALProcedureStore.LeaseRecovery() {
       private int count = 0;
 
