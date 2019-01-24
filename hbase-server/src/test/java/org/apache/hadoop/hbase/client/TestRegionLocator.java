@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
@@ -29,8 +30,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRegionLocator extends AbstractTestRegionLocator {
 
@@ -38,52 +37,64 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionLocator.class);
 
-  private static RegionLocator LOCATOR;
-
   @BeforeClass
   public static void setUp() throws Exception {
     startClusterAndCreateTable();
-    LOCATOR = UTIL.getConnection().getRegionLocator(TABLE_NAME);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    Closeables.close(LOCATOR, true);
     UTIL.shutdownMiniCluster();
   }
 
   @Override
-  protected byte[][] getStartKeys() throws IOException {
-    return LOCATOR.getStartKeys();
+  protected byte[][] getStartKeys(TableName tableName) throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getStartKeys();
+    }
   }
 
   @Override
-  protected byte[][] getEndKeys() throws IOException {
-    return LOCATOR.getEndKeys();
+  protected byte[][] getEndKeys(TableName tableName) throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getEndKeys();
+    }
   }
 
   @Override
-  protected Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
-    return LOCATOR.getStartEndKeys();
+  protected Pair<byte[][], byte[][]> getStartEndKeys(TableName tableName) throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getStartEndKeys();
+    }
   }
 
   @Override
-  protected HRegionLocation getRegionLocation(byte[] row, int replicaId) throws IOException {
-    return LOCATOR.getRegionLocation(row, replicaId);
+  protected HRegionLocation getRegionLocation(TableName tableName, byte[] row, int replicaId)
+      throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getRegionLocation(row, replicaId);
+    }
   }
 
   @Override
-  protected List<HRegionLocation> getRegionLocations(byte[] row) throws IOException {
-    return LOCATOR.getRegionLocations(row);
+  protected List<HRegionLocation> getRegionLocations(TableName tableName, byte[] row)
+      throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getRegionLocations(row);
+    }
   }
 
   @Override
-  protected List<HRegionLocation> getAllRegionLocations() throws IOException {
-    return LOCATOR.getAllRegionLocations();
+  protected List<HRegionLocation> getAllRegionLocations(TableName tableName) throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getAllRegionLocations();
+    }
   }
 
   @Override
-  protected void clearCache() throws IOException {
-    LOCATOR.clearRegionLocationCache();
+  protected void clearCache(TableName tableName) throws IOException {
+    try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      locator.clearRegionLocationCache();
+    }
   }
 }

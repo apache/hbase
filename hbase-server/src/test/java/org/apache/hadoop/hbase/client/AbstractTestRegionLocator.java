@@ -47,6 +47,7 @@ public abstract class AbstractTestRegionLocator {
   protected static byte[][] SPLIT_KEYS;
 
   protected static void startClusterAndCreateTable() throws Exception {
+    UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, REGION_REPLICATION);
     UTIL.startMiniCluster(3);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
@@ -57,12 +58,17 @@ public abstract class AbstractTestRegionLocator {
     }
     UTIL.getAdmin().createTable(td, SPLIT_KEYS);
     UTIL.waitTableAvailable(TABLE_NAME);
+    try (AsyncRegistry registry = AsyncRegistryFactory.getRegistry(UTIL.getConfiguration())) {
+      RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(registry,
+        REGION_REPLICATION);
+    }
     UTIL.getAdmin().balancerSwitch(false, true);
   }
 
   @After
   public void tearDownAfterTest() throws IOException {
-    clearCache();
+    clearCache(TABLE_NAME);
+    clearCache(TableName.META_TABLE_NAME);
   }
 
   private byte[] getStartKey(int index) {
@@ -89,9 +95,9 @@ public abstract class AbstractTestRegionLocator {
 
   @Test
   public void testStartEndKeys() throws IOException {
-    assertStartKeys(getStartKeys());
-    assertEndKeys(getEndKeys());
-    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys();
+    assertStartKeys(getStartKeys(TABLE_NAME));
+    assertEndKeys(getEndKeys(TABLE_NAME));
+    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(TABLE_NAME);
     assertStartKeys(startEndKeys.getFirst());
     assertEndKeys(startEndKeys.getSecond());
   }
@@ -102,19 +108,24 @@ public abstract class AbstractTestRegionLocator {
     assertArrayEquals(startKey, region.getStartKey());
     assertArrayEquals(getEndKey(index), region.getEndKey());
     assertEquals(replicaId, region.getReplicaId());
-    ServerName expected =
-      UTIL.getMiniHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
-        .filter(rs -> rs.getRegions(TABLE_NAME).stream().map(Region::getRegionInfo)
-          .anyMatch(r -> r.containsRow(startKey) && r.getReplicaId() == replicaId))
-        .findFirst().get().getServerName();
+    ServerName expected = findRegionLocation(TABLE_NAME, region.getStartKey(), replicaId);
     assertEquals(expected, loc.getServerName());
+  }
+
+  private ServerName findRegionLocation(TableName tableName, byte[] startKey, int replicaId) {
+    return UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer())
+      .filter(rs -> rs.getRegions(tableName).stream().map(Region::getRegionInfo)
+        .anyMatch(r -> r.containsRow(startKey) && r.getReplicaId() == replicaId))
+      .findFirst().get().getServerName();
   }
 
   @Test
   public void testGetRegionLocation() throws IOException {
     for (int i = 0; i <= SPLIT_KEYS.length; i++) {
       for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
-        assertRegionLocation(getRegionLocation(getStartKey(i), replicaId), i, replicaId);
+        assertRegionLocation(getRegionLocation(TABLE_NAME, getStartKey(i), replicaId), i,
+          replicaId);
       }
     }
   }
@@ -122,7 +133,7 @@ public abstract class AbstractTestRegionLocator {
   @Test
   public void testGetRegionLocations() throws IOException {
     for (int i = 0; i <= SPLIT_KEYS.length; i++) {
-      List<HRegionLocation> locs = getRegionLocations(getStartKey(i));
+      List<HRegionLocation> locs = getRegionLocations(TABLE_NAME, getStartKey(i));
       assertEquals(REGION_REPLICATION, locs.size());
       for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
         assertRegionLocation(locs.get(replicaId), i, replicaId);
@@ -132,7 +143,7 @@ public abstract class AbstractTestRegionLocator {
 
   @Test
   public void testGetAllRegionLocations() throws IOException {
-    List<HRegionLocation> locs = getAllRegionLocations();
+    List<HRegionLocation> locs = getAllRegionLocations(TABLE_NAME);
     assertEquals(REGION_REPLICATION * (SPLIT_KEYS.length + 1), locs.size());
     Collections.sort(locs, (l1, l2) -> {
       int c = Bytes.compareTo(l1.getRegion().getStartKey(), l2.getRegion().getStartKey());
@@ -148,18 +159,60 @@ public abstract class AbstractTestRegionLocator {
     }
   }
 
-  protected abstract byte[][] getStartKeys() throws IOException;
+  private void assertMetaStartOrEndKeys(byte[][] keys) {
+    assertEquals(1, keys.length);
+    assertArrayEquals(HConstants.EMPTY_BYTE_ARRAY, keys[0]);
+  }
 
-  protected abstract byte[][] getEndKeys() throws IOException;
+  private void assertMetaRegionLocation(HRegionLocation loc, int replicaId) {
+    RegionInfo region = loc.getRegion();
+    assertArrayEquals(HConstants.EMPTY_START_ROW, region.getStartKey());
+    assertArrayEquals(HConstants.EMPTY_END_ROW, region.getEndKey());
+    assertEquals(replicaId, region.getReplicaId());
+    ServerName expected =
+      findRegionLocation(TableName.META_TABLE_NAME, region.getStartKey(), replicaId);
+    assertEquals(expected, loc.getServerName());
+  }
 
-  protected abstract Pair<byte[][], byte[][]> getStartEndKeys() throws IOException;
+  private void assertMetaRegionLocations(List<HRegionLocation> locs) {
+    assertEquals(REGION_REPLICATION, locs.size());
+    for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
+      assertMetaRegionLocation(locs.get(replicaId), replicaId);
+    }
+  }
 
-  protected abstract HRegionLocation getRegionLocation(byte[] row, int replicaId)
+  @Test
+  public void testMeta() throws IOException {
+    assertMetaStartOrEndKeys(getStartKeys(TableName.META_TABLE_NAME));
+    assertMetaStartOrEndKeys(getEndKeys(TableName.META_TABLE_NAME));
+    Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(TableName.META_TABLE_NAME);
+    assertMetaStartOrEndKeys(startEndKeys.getFirst());
+    assertMetaStartOrEndKeys(startEndKeys.getSecond());
+    for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
+      assertMetaRegionLocation(
+        getRegionLocation(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, replicaId),
+        replicaId);
+    }
+    assertMetaRegionLocations(
+      getRegionLocations(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW));
+    assertMetaRegionLocations(getAllRegionLocations(TableName.META_TABLE_NAME));
+  }
+
+  protected abstract byte[][] getStartKeys(TableName tableName) throws IOException;
+
+  protected abstract byte[][] getEndKeys(TableName tableName) throws IOException;
+
+  protected abstract Pair<byte[][], byte[][]> getStartEndKeys(TableName tableName)
       throws IOException;
 
-  protected abstract List<HRegionLocation> getRegionLocations(byte[] row) throws IOException;
+  protected abstract HRegionLocation getRegionLocation(TableName tableName, byte[] row,
+      int replicaId) throws IOException;
 
-  protected abstract List<HRegionLocation> getAllRegionLocations() throws IOException;
+  protected abstract List<HRegionLocation> getRegionLocations(TableName tableName, byte[] row)
+      throws IOException;
 
-  protected abstract void clearCache() throws IOException;
+  protected abstract List<HRegionLocation> getAllRegionLocations(TableName tableName)
+      throws IOException;
+
+  protected abstract void clearCache(TableName tableName) throws IOException;
 }

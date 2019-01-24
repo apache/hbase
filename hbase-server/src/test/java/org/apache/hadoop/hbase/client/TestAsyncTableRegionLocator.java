@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
@@ -42,13 +43,10 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
 
   private static AsyncConnection CONN;
 
-  private static AsyncTableRegionLocator LOCATOR;
-
   @BeforeClass
   public static void setUp() throws Exception {
     startClusterAndCreateTable();
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
-    LOCATOR = CONN.getRegionLocator(TABLE_NAME);
   }
 
   @AfterClass
@@ -58,18 +56,19 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
   }
 
   @Override
-  protected byte[][] getStartKeys() throws IOException {
-    return get(LOCATOR.getStartKeys()).toArray(new byte[0][]);
+  protected byte[][] getStartKeys(TableName tableName) throws IOException {
+    return get(CONN.getRegionLocator(tableName).getStartKeys()).toArray(new byte[0][]);
   }
 
   @Override
-  protected byte[][] getEndKeys() throws IOException {
-    return get(LOCATOR.getEndKeys()).toArray(new byte[0][]);
+  protected byte[][] getEndKeys(TableName tableName) throws IOException {
+    return get(CONN.getRegionLocator(tableName).getEndKeys()).toArray(new byte[0][]);
   }
 
   @Override
-  protected Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
-    List<Pair<byte[], byte[]>> startEndKeys = get(LOCATOR.getStartEndKeys());
+  protected Pair<byte[][], byte[][]> getStartEndKeys(TableName tableName) throws IOException {
+    List<Pair<byte[], byte[]>> startEndKeys =
+      get(CONN.getRegionLocator(tableName).getStartEndKeys());
     byte[][] startKeys = new byte[startEndKeys.size()][];
     byte[][] endKeys = new byte[startEndKeys.size()][];
     for (int i = 0, n = startEndKeys.size(); i < n; i++) {
@@ -81,22 +80,24 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
   }
 
   @Override
-  protected HRegionLocation getRegionLocation(byte[] row, int replicaId) throws IOException {
-    return get(LOCATOR.getRegionLocation(row, replicaId));
+  protected HRegionLocation getRegionLocation(TableName tableName, byte[] row, int replicaId)
+      throws IOException {
+    return get(CONN.getRegionLocator(tableName).getRegionLocation(row, replicaId));
   }
 
   @Override
-  protected List<HRegionLocation> getRegionLocations(byte[] row) throws IOException {
-    return get(LOCATOR.getRegionLocations(row));
+  protected List<HRegionLocation> getRegionLocations(TableName tableName, byte[] row)
+      throws IOException {
+    return get(CONN.getRegionLocator(tableName).getRegionLocations(row));
   }
 
   @Override
-  protected List<HRegionLocation> getAllRegionLocations() throws IOException {
-    return get(LOCATOR.getAllRegionLocations());
+  protected List<HRegionLocation> getAllRegionLocations(TableName tableName) throws IOException {
+    return get(CONN.getRegionLocator(tableName).getAllRegionLocations());
   }
 
   @Override
-  protected void clearCache() throws IOException {
-    LOCATOR.clearRegionLocationCache();
+  protected void clearCache(TableName tableName) throws IOException {
+    CONN.getRegionLocator(tableName).clearRegionLocationCache();
   }
 }
