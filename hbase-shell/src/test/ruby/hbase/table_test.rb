@@ -602,6 +602,30 @@ module Hbase
       assert_nil(res['2']['x:b'])
     end
 
+    define_test 'scan should support REGION_REPLICA_ID' do
+      res = @test_table._scan_internal REGION_REPLICA_ID => 0
+      assert_not_nil(res)
+    end
+
+    define_test 'scan should support ISOLATION_LEVEL' do
+      res = @test_table._scan_internal ISOLATION_LEVEL => 'READ_COMMITTED'
+      assert_not_nil(res)
+    end
+
+    define_test 'scan should support READ_TYPE parameter' do
+      res = @test_table._scan_internal READ_TYPE => 'PREAD'
+      assert_not_nil(res)
+      res = @test_table._scan_internal READ_TYPE => 'STREAM'
+      assert_not_nil(res)
+      res = @test_table._scan_internal READ_TYPE => 'DEFAULT'
+      assert_not_nil(res)
+    end
+
+    define_test 'scan should support ALLOW_PARTIAL_RESULTS' do
+      res = @test_table._scan_internal ALLOW_PARTIAL_RESULTS => true
+      assert_not_nil(res)
+    end
+
     define_test "scan should work with raw and version parameter" do
       # Create test table if it does not exist
       @test_name_raw = "hbase_shell_tests_raw_scan"

@@ -25,7 +25,9 @@ module Shell
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
 TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, ROWPREFIXFILTER, TIMESTAMP,
-MAXLENGTH or COLUMNS, CACHE or RAW, VERSIONS, ALL_METRICS or METRICS
+MAXLENGTH, COLUMNS, CACHE, RAW, VERSIONS, ALL_METRICS, METRICS,
+REGION_REPLICA_ID, ISOLATION_LEVEL, READ_TYPE, ALLOW_PARTIAL_RESULTS,
+BATCH or MAX_RESULT_SIZE
 
 If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
@@ -56,6 +58,8 @@ Some examples:
   hbase> scan 't1', {FILTER =>
     org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
   hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}
+  hbase> scan 't1', {ISOLATION_LEVEL => 'READ_UNCOMMITTED'}
+  hbase> scan 't1', {MAX_RESULT_SIZE => 123456}
 For setting the Operation Attributes
   hbase> scan 't1', { COLUMNS => ['c1', 'c2'], ATTRIBUTES => {'mykey' => 'myvalue'}}
   hbase> scan 't1', { COLUMNS => ['c1', 'c2'], AUTHORIZATIONS => ['PRIVATE','SECRET']}
@@ -71,6 +75,11 @@ cells). This option cannot be combined with requesting specific COLUMNS.
 Disabled by default.  Example:
 
   hbase> scan 't1', {RAW => true, VERSIONS => 10}
+
+There is yet another option -- READ_TYPE -- which instructs the scanner to
+use a specific read type. Example:
+
+  hbase> scan 't1', {READ_TYPE => 'PREAD'}
 
 Besides the default 'toStringBinary' format, 'scan' supports custom formatting
 by column.  A user can define a FORMATTER by adding it to the column name in
