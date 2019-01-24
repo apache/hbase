@@ -319,4 +319,9 @@ public class ThriftConnection implements Connection {
   public RegionLocator getRegionLocator(TableName tableName) throws IOException {
     throw new NotImplementedException("batchCoprocessorService not supported in ThriftTable");
   }
+
+  @Override
+  public void clearRegionLocationCache() {
+    throw new NotImplementedException("clearRegionLocationCache not supported in ThriftTable");
+  }
 }

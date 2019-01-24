@@ -89,6 +89,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -991,7 +992,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public void clearRegionCache() {
+  public void clearRegionLocationCache() {
     metaCache.clearCache();
   }
 
