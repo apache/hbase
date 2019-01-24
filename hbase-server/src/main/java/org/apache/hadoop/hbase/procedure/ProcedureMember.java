@@ -119,6 +119,7 @@ public class ProcedureMember implements Closeable {
    *         could not be started. In the latter case, the subprocedure holds a reference to
    *         the exception that caused the failure.
    */
+  @SuppressWarnings("FutureReturnValueIgnored")
   public boolean submitSubprocedure(Subprocedure subproc) {
      // if the submitted subprocedure was null, bail.
     if (subproc == null) {
