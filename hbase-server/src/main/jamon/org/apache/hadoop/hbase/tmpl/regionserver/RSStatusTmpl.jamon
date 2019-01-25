@@ -51,6 +51,34 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     : masterAddressTracker.getMasterAddress();
   int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
+
+<%class>
+  public String formatZKString() {
+    StringBuilder quorums = new StringBuilder();
+    String zkQuorum = regionServer.getZooKeeper().getQuorum();
+
+    if (null == zkQuorum) {
+      return quorums.toString();
+    }
+
+    String[] zks = zkQuorum.split(",");
+
+    if (zks.length == 0) {
+      return quorums.toString();
+    }
+
+    for(int i = 0; i < zks.length; ++i) {
+      quorums.append(zks[i].trim());
+
+      if (i != (zks.length - 1)) {
+        quorums.append("<br/>");
+      }
+    }
+
+    return quorums.toString();
+  }
+</%class>
+
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
@@ -177,7 +205,8 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
         </tr>
         <tr>
             <td>ZooKeeper Quorum</td>
-            <td><% regionServer.getZooKeeper().getQuorum() %></td>
+            <%escape #n>
+            <td><% formatZKString() %></td>
             <td>Addresses of all registered ZK servers</td>
         </tr>
         <tr>
