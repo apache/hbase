@@ -19,12 +19,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
-import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
-import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
 
 /**
  * Implementations of this interface will keep and return to clients
@@ -47,15 +42,4 @@ public interface CoordinatedStateManager {
    * Method to retrieve coordination for split log manager
    */
   SplitLogManagerCoordination getSplitLogManagerCoordination();
-  /**
-   * Method to retrieve {@link org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs}
-   */
-  ProcedureCoordinatorRpcs getProcedureCoordinatorRpcs(String procType, String coordNode)
-      throws IOException;
-
-  /**
-   * Method to retrieve {@link org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs}
-   */
-  ProcedureMemberRpcs getProcedureMemberRpcs(String procType) throws KeeperException;
-
 }
