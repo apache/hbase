@@ -959,14 +959,84 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 [[compaction.tool]]
 === Offline Compaction Tool
 
-See the usage for the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
-Run it like:
+*CompactionTool* provides a way of running compactions (either minor or major) as an independent
+process from the RegionServer. It reuses same internal implementation classes executed by RegionServer
+compaction feature. However, since this runs on a complete separate independent java process, it
+releases RegionServers from the overhead involved in rewrite a set of hfiles, which can be critical
+for latency sensitive use cases.
 
-[source, bash]
+Usage:
 ----
 $ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+
+Usage: java org.apache.hadoop.hbase.regionserver.CompactionTool \
+  [-compactOnce] [-major] [-mapred] [-D<property=value>]* files...
+
+Options:
+ mapred         Use MapReduce to run compaction.
+ compactOnce    Execute just one compaction step. (default: while needed)
+ major          Trigger major compaction.
+
+Note: -D properties will be applied to the conf used.
+For example:
+ To stop delete of compacted file, pass -Dhbase.compactiontool.delete=false
+ To set tmp dir, pass -Dhbase.tmp.dir=ALTERNATE_DIR
+
+Examples:
+ To compact the full 'TestTable' using MapReduce:
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool -mapred hdfs://hbase/data/default/TestTable
+
+ To compact column family 'x' of the table 'TestTable' region 'abc':
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool hdfs://hbase/data/default/TestTable/abc/x
 ----
+
+As shown by usage options above, *CompactionTool* can run as a standalone client or a mapreduce job.
+When running as mapreduce job, each family dir is handled as an input split, and is processed
+by a separate map task.
+
+The *compactionOnce* parameter controls how many compaction cycles will be performed until
+*CompactionTool* program decides to finish its work. If omitted, it will assume it should keep
+running compactions on each specified family as determined by the given compaction policy
+configured. For more info on compaction policy, see <<compaction,compaction>>.
+
+If a major compaction is desired, *major* flag can be specified. If omitted, *CompactionTool* will
+assume minor compaction is wanted by default.
+
+It also allows for configuration overrides with `-D` flag. In the usage section above, for example,
+`-Dhbase.compactiontool.delete=false` option will instruct compaction engine to not delete original
+files from temp folder.
+
+Files targeted for compaction must be specified as parent hdfs dirs. It allows for multiple dirs
+definition, as long as each for these dirs are either a *family*, a *region*, or a *table* dir. If a
+table or region dir is passed, the program will recursively iterate through related sub-folders,
+effectively running compaction for each family found below the table/region level.
+
+Since these dirs are nested under *hbase* hdfs directory tree, *CompactionTool* requires hbase super
+user permissions in order to have access to required hfiles.
+
+.Running in MapReduce mode
+[NOTE]
+====
+MapReduce mode offers the ability to process each family dir in parallel, as a separate map task.
+Generally, it would make sense to run in this mode when specifying one or more table dirs as targets
+for compactions. The caveat, though, is that if number of families to be compacted become too large,
+the related mapreduce job may have indirect impacts on *RegionServers* performance .
+Since *NodeManagers* are normally co-located with RegionServers, such large jobs could
+compete for IO/Bandwidth resources with the *RegionServers*.
+====
+
+.MajorCompaction completely disabled on RegionServers due performance impacts
+[NOTE]
+====
+*Major compactions* can be a costly operation (see <<compaction,compaction>>), and can indeed
+impact performance on RegionServers, leading operators to completely disable it for critical
+low latency application. *CompactionTool* could be used as an alternative in such scenarios,
+although, additional custom application logic would need to be implemented, such as deciding
+scheduling and selection of tables/regions/families target for a given compaction run.
+====
+
+For additional details about CompactionTool, see also
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
 
 === `hbase clean`
 
