@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
@@ -346,7 +345,7 @@ public class TestLoadIncrementalHFiles {
     if (copyFiles) {
       conf.setBoolean(LoadIncrementalHFiles.ALWAYS_COPY_FILES, true);
     }
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(conf);
     List<String> args = Lists.newArrayList(baseDirectory.toString(), tableName.toString());
     if (depth == 3) {
       args.add("-loadTable");
@@ -356,17 +355,17 @@ public class TestLoadIncrementalHFiles {
       if (deleteFile) {
         fs.delete(last, true);
       }
-      Map<LoadQueueItem, ByteBuffer> loaded = loader.run(map, tableName);
+      Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> loaded = loader.bulkLoad(tableName, map);
       if (deleteFile) {
         expectedRows -= 1000;
-        for (LoadQueueItem item : loaded.keySet()) {
+        for (BulkLoadHFiles.LoadQueueItem item : loaded.keySet()) {
           if (item.getFilePath().getName().equals(last.getName())) {
             fail(last + " should be missing");
           }
         }
       }
     } else {
-      loader.run(args.toArray(new String[]{}));
+      loader.run(args.toArray(new String[] {}));
     }
 
     if (copyFiles) {

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.tool;
 
+import static java.lang.String.format;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -46,7 +48,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import static java.lang.String.format;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -87,13 +88,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -104,22 +98,41 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
+ * @deprecated since 2.2.0, will be removed in 3.0.0. Use {@link BulkLoadHFiles} instead. Please
+ *             rewrite your code if you rely on methods other than the {@link #run(Map, TableName)}
+ *             and {@link #run(String, TableName)}, as all the methods other than them will be
+ *             removed with no replacement.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(LoadIncrementalHFiles.class);
 
-  public static final String NAME = "completebulkload";
-  static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
+  /**
+   * @deprecated since 2.2.0, will be removed in 3.0.0, with no replacement. End user should not
+   *             depend on this value.
+   */
+  @Deprecated
+  public static final String NAME = BulkLoadHFilesTool.NAME;
+  static final String RETRY_ON_IO_EXCEPTION = BulkLoadHFiles.RETRY_ON_IO_EXCEPTION;
   public static final String MAX_FILES_PER_REGION_PER_FAMILY =
-      "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
-  private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
-  public final static String CREATE_TABLE_CONF_KEY = "create.table";
-  public final static String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
-  public final static String ALWAYS_COPY_FILES = "always.copy.files";
+    BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY;
+  private static final String ASSIGN_SEQ_IDS = BulkLoadHFiles.ASSIGN_SEQ_IDS;
+  public final static String CREATE_TABLE_CONF_KEY = BulkLoadHFiles.CREATE_TABLE_CONF_KEY;
+  public final static String IGNORE_UNMATCHED_CF_CONF_KEY =
+    BulkLoadHFiles.IGNORE_UNMATCHED_CF_CONF_KEY;
+  public final static String ALWAYS_COPY_FILES = BulkLoadHFiles.ALWAYS_COPY_FILES;
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
@@ -142,28 +155,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * the case where a region has split during the process of the load. When this happens, the HFile
    * is split into two physical parts across the new region boundary, and each part is added back
    * into the queue. The import process finishes when the queue is empty.
+   * @deprecated Use {@link BulkLoadHFiles} instead.
    */
   @InterfaceAudience.Public
-  public static class LoadQueueItem {
-    private final byte[] family;
-    private final Path hfilePath;
+  @Deprecated
+  public static class LoadQueueItem extends BulkLoadHFiles.LoadQueueItem {
 
     public LoadQueueItem(byte[] family, Path hfilePath) {
-      this.family = family;
-      this.hfilePath = hfilePath;
-    }
-
-    @Override
-    public String toString() {
-      return "family:" + Bytes.toString(family) + " path:" + hfilePath.toString();
-    }
-
-    public byte[] getFamily() {
-      return family;
-    }
-
-    public Path getFilePath() {
-      return hfilePath;
+      super(family, hfilePath);
     }
   }
 
@@ -825,8 +824,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * If the table is created for the first time, then "completebulkload" reads the files twice. More
    * modifications necessary if we want to avoid doing it.
    */
-  private void createTable(TableName tableName, String dirPath, Admin admin) throws IOException {
-    final Path hfofDir = new Path(dirPath);
+  private void createTable(TableName tableName, Path hfofDir, Admin admin) throws IOException {
     final FileSystem fs = hfofDir.getFileSystem(getConf());
 
     // Add column families
@@ -1148,13 +1146,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return getConf().getBoolean(ALWAYS_COPY_FILES, false);
   }
 
-  /**
-   * Perform bulk load on the given table.
-   * @param hfofDir the directory that was provided as the output path of a job using
-   *          HFileOutputFormat
-   * @param tableName the table to load into
-   */
-  public Map<LoadQueueItem, ByteBuffer> run(String hfofDir, TableName tableName)
+  protected final Map<LoadQueueItem, ByteBuffer> run(Path hfofDir, TableName tableName)
       throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(getConf());
         Admin admin = connection.getAdmin()) {
@@ -1169,10 +1161,20 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       try (Table table = connection.getTable(tableName);
           RegionLocator locator = connection.getRegionLocator(tableName)) {
-        return doBulkLoad(new Path(hfofDir), admin, table, locator, isSilence(),
+        return doBulkLoad(hfofDir, admin, table, locator, isSilence(),
             isAlwaysCopyFiles());
       }
     }
+  }
+  /**
+   * Perform bulk load on the given table.
+   * @param hfofDir the directory that was provided as the output path of a job using
+   *          HFileOutputFormat
+   * @param tableName the table to load into
+   */
+  public Map<LoadQueueItem, ByteBuffer> run(String hfofDir, TableName tableName)
+      throws IOException {
+    return run(new Path(hfofDir), tableName);
   }
 
   /**
