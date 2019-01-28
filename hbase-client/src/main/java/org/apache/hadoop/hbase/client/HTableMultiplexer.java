@@ -50,19 +50,21 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
- * Each put will be sharded into different buffer queues based on its destination region server.
- * So each region server buffer queue will only have the puts which share the same destination.
- * And each queue will have a flush worker thread to flush the puts request to the region server.
- * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that
- * particular queue.
- *
- * Also all the puts will be retried as a configuration number before dropping.
- * And the HTableMultiplexer can report the number of buffered requests and the number of the
- * failed (dropped) requests in total or on per region server basis.
- *
+ * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables. Each put
+ * will be sharded into different buffer queues based on its destination region server. So each
+ * region server buffer queue will only have the puts which share the same destination. And each
+ * queue will have a flush worker thread to flush the puts request to the region server. If any
+ * queue is full, the HTableMultiplexer starts to drop the Put requests for that particular queue.
+ * </p>
+ * Also all the puts will be retried as a configuration number before dropping. And the
+ * HTableMultiplexer can report the number of buffered requests and the number of the failed
+ * (dropped) requests in total or on per region server basis.
+ * <p/>
  * This class is thread safe.
+ * @deprecated since 2.2.0, will be removed in 3.0.0, without replacement. Please use
+ *             {@link BufferedMutator} for batching mutations.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class HTableMultiplexer {
   private static final Logger LOG = LoggerFactory.getLogger(HTableMultiplexer.class.getName());
@@ -128,7 +130,6 @@ public class HTableMultiplexer {
    * been closed.
    * @throws IOException If there is an error closing the connection.
    */
-  @SuppressWarnings("deprecation")
   public synchronized void close() throws IOException {
     if (!getConnection().isClosed()) {
       getConnection().close();
@@ -262,10 +263,13 @@ public class HTableMultiplexer {
   }
 
   /**
-   * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer.
-   * report the number of buffered requests and the number of the failed (dropped) requests
-   * in total or on per region server basis.
+   * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer. report the
+   * number of buffered requests and the number of the failed (dropped) requests in total or on per
+   * region server basis.
+   * @deprecated since 2.2.0, will be removed in 3.0.0, without replacement. Please use
+   *             {@link BufferedMutator} for batching mutations.
    */
+  @Deprecated
   @InterfaceAudience.Public
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
