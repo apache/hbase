@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,6 +39,7 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -222,6 +226,21 @@ public class HConnectionTestingUtility {
     synchronized (ConnectionManager.CONNECTION_INSTANCES) {
       return ConnectionManager.CONNECTION_INSTANCES.size();
     }
+  }
+
+  public static HConnectionImplementation requireHConnImpl(Connection conn) {
+    assertNotNull("Cannot operate on a null Connection", conn);
+    assertEquals("This method requires an HConnectionImplementation",
+        HConnectionImplementation.class, conn.getClass());
+    return (HConnectionImplementation) conn;
+  }
+
+  public static RecoverableZooKeeper unwrapZK(Connection conn) throws IOException {
+    return requireHConnImpl(conn).getKeepAliveZooKeeperWatcher().getRecoverableZooKeeper();
+  }
+
+  public static void clearRegionCache(Connection conn) throws IOException {
+    requireHConnImpl(conn).clearRegionCache();
   }
 
   /**

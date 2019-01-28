@@ -24,13 +24,18 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounter.BackoffPolicy;
+import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -44,8 +49,6 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
 
 /**
  * A zookeeper that can handle 'recoverable' errors.
@@ -73,6 +76,7 @@ import org.apache.htrace.TraceScope;
 @InterfaceAudience.Private
 public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
+
   // the actual ZooKeeper client instance
   private ZooKeeper zk;
   private final RetryCounterFactory retryCounterFactory;
@@ -83,6 +87,7 @@ public class RecoverableZooKeeper {
   private int sessionTimeout;
   private String quorumServers;
   private final Random salter;
+  private final RetryCounter authFailedRetryCounter;
 
   // The metadata attached to each piece of data has the
   // format:
@@ -97,18 +102,11 @@ public class RecoverableZooKeeper {
   private static final int ID_LENGTH_OFFSET = MAGIC_SIZE;
   private static final int ID_LENGTH_SIZE =  Bytes.SIZEOF_INT;
 
-  public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
-  throws IOException {
-    this(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
-        null);
-  }
-
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier)
-  throws IOException {
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
+      int authFailedRetries, int authFailedPause) throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries+1, retryIntervalMillis, maxSleepTime);
@@ -127,6 +125,14 @@ public class RecoverableZooKeeper {
     this.quorumServers = quorumServers;
     try {checkZk();} catch (Exception x) {/* ignore */}
     salter = new Random();
+
+    RetryConfig authFailedRetryConfig = new RetryConfig(
+        authFailedRetries + 1,
+        authFailedPause,
+        authFailedPause,
+        TimeUnit.MILLISECONDS,
+        new BackoffPolicy());
+    this.authFailedRetryCounter = new RetryCounter(authFailedRetryConfig);
   }
 
   /**
@@ -137,14 +143,49 @@ public class RecoverableZooKeeper {
    */
   protected synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
-      try {
-        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
-      } catch (IOException ex) {
-        LOG.warn("Unable to create ZooKeeper Connection", ex);
-        throw new KeeperException.OperationTimeoutException();
-      }
+      this.zk = createNewZooKeeper();
     }
     return zk;
+  }
+
+  /**
+   * Creates a new ZooKeeper client. Implemented in its own method to
+   * allow for mock'ed objects to be returned for testing.
+   */
+  ZooKeeper createNewZooKeeper() throws KeeperException {
+    try {
+      return new ZooKeeper(quorumServers, sessionTimeout, watcher);
+    } catch (IOException ex) {
+      LOG.warn("Unable to create ZooKeeper Connection", ex);
+      throw new KeeperException.OperationTimeoutException();
+    }
+  }
+
+  public synchronized void reconnectAfterAuthFailure() throws InterruptedException,
+        KeeperException {
+    if (zk != null) {
+      LOG.info("Closing ZooKeeper connection which saw AUTH_FAILED, session" +
+          " was: 0x"+Long.toHexString(zk.getSessionId()));
+      zk.close();
+      // Null out the ZK object so checkZk() will create a new one
+      zk = null;
+      // Check our maximum number of retries before retrying
+      if (!authFailedRetryCounter.shouldRetry()) {
+        throw new RuntimeException("Exceeded the configured retries for handling ZooKeeper"
+            + " AUTH_FAILED exceptions (" + authFailedRetryCounter.getMaxAttempts() + ")");
+      }
+      // Avoid a fast retry loop.
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Sleeping " + authFailedRetryCounter.getBackoffTime()
+            + "ms before re-creating ZooKeeper object after AUTH_FAILED state ("
+            + authFailedRetryCounter.getAttemptTimes() + "/"
+            + authFailedRetryCounter.getMaxAttempts() + ")");
+      }
+      authFailedRetryCounter.sleepUntilNextRetry();
+    }
+    checkZk();
+    LOG.info("Recreated a ZooKeeper, session" +
+        " is: 0x"+Long.toHexString(zk.getSessionId()));
   }
 
   public synchronized void reconnectAfterExpiration()
@@ -192,6 +233,10 @@ public class RecoverableZooKeeper {
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "delete");
               break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
+              retryOrThrow(retryCounter, e, "delete");
+              break;
 
             default:
               throw e;
@@ -222,6 +267,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "exists");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "exists");
               break;
 
@@ -255,6 +304,10 @@ public class RecoverableZooKeeper {
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "exists");
               break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
+              retryOrThrow(retryCounter, e, "exists");
+              break;
 
             default:
               throw e;
@@ -269,7 +322,7 @@ public class RecoverableZooKeeper {
 
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
       String opName) throws KeeperException {
-    LOG.debug("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
+    LOG.debug("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e, e);
     if (!retryCounter.shouldRetry()) {
       LOG.error("ZooKeeper " + opName + " failed after "
         + retryCounter.getMaxAttempts() + " attempts");
@@ -294,6 +347,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "getChildren");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
@@ -325,6 +382,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "getChildren");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
@@ -359,6 +420,10 @@ public class RecoverableZooKeeper {
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getData");
               break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
+              retryOrThrow(retryCounter, e, "getData");
+              break;
 
             default:
               throw e;
@@ -389,6 +454,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "getData");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "getData");
               break;
 
@@ -424,6 +493,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "setData");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "setData");
               break;
             case BADVERSION:
@@ -473,6 +546,10 @@ public class RecoverableZooKeeper {
             case OPERATIONTIMEOUT:
               retryOrThrow(retryCounter, e, "getAcl");
               break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
+              retryOrThrow(retryCounter, e, "getAcl");
+              break;
 
             default:
               throw e;
@@ -502,6 +579,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "setAcl");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "setAcl");
               break;
 
@@ -588,6 +669,10 @@ public class RecoverableZooKeeper {
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
+          case AUTHFAILED:
+            reconnectAfterAuthFailure();
+            retryOrThrow(retryCounter, e, "create");
+            break;
 
           default:
             throw e;
@@ -619,6 +704,10 @@ public class RecoverableZooKeeper {
         switch (e.code()) {
           case CONNECTIONLOSS:
           case OPERATIONTIMEOUT:
+            retryOrThrow(retryCounter, e, "create");
+            break;
+          case AUTHFAILED:
+            reconnectAfterAuthFailure();
             retryOrThrow(retryCounter, e, "create");
             break;
 
@@ -674,6 +763,10 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "multi");
+              break;
+            case AUTHFAILED:
+              reconnectAfterAuthFailure();
               retryOrThrow(retryCounter, e, "multi");
               break;
 

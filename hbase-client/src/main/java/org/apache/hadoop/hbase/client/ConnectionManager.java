@@ -1468,16 +1468,32 @@ class ConnectionManager {
     @Override
     public void clearRegionCache() {
       metaCache.clearCache();
+      clearMetaRegionLocation();
     }
 
     @Override
     public void clearRegionCache(final TableName tableName) {
-      metaCache.clearCache(tableName);
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        clearMetaRegionLocation();
+      } else {
+        metaCache.clearCache(tableName);
+      }
     }
 
     @Override
     public void clearRegionCache(final byte[] tableName) {
-      clearRegionCache(TableName.valueOf(tableName));
+      if (Bytes.equals(TableName.META_TABLE_NAME.getName(), tableName)) {
+        clearMetaRegionLocation();
+      } else {
+        clearRegionCache(TableName.valueOf(tableName));
+      }
+    }
+
+    private void clearMetaRegionLocation() {
+      // Meta's location is cached separately from the MetaCache
+      synchronized (metaRegionLock) {
+        this.metaLocations = null;
+      }
     }
 
     /**

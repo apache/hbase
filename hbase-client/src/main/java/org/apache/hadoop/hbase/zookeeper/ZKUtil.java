@@ -96,9 +96,37 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class ZKUtil {
   private static final Log LOG = LogFactory.getLog(ZKUtil.class);
 
+  // Configuration keys/defaults for handling AUTH_FAILED
+  public static final String AUTH_FAILED_RETRIES_KEY = "hbase.zookeeper.authfailed.retries.number";
+  public static final int AUTH_FAILED_RETRIES_DEFAULT = 15;
+  public static final String AUTH_FAILED_PAUSE_KEY = "hbase.zookeeper.authfailed.pause";
+  public static final int AUTH_FAILED_PAUSE_DEFAULT = 100;
+
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   public static final char ZNODE_PATH_SEPARATOR = '/';
   private static int zkDumpConnectionTimeOut;
+
+  /**
+   * Interface to allow custom implementations of RecoverableZooKeeper to be created.
+   */
+  public static interface ZooKeeperFactory {
+    /**
+     * Creates a new instance of a RecoverableZooKeeper.
+     */
+    RecoverableZooKeeper create(String quorumServers, int sessionTimeout,
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime,
+      String identifier, int authFailedRetries, int authFailedPause) throws IOException;
+  }
+
+  public static class DefaultZooKeeperFactory implements ZooKeeperFactory {
+    @Override
+    public RecoverableZooKeeper create(String quorumServers, int sessionTimeout,
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime,
+      String identifier, int authFailedRetries, int authFailedPause) throws IOException {
+      return new RecoverableZooKeeper(quorumServers, sessionTimeout, watcher, maxRetries,
+          retryIntervalMillis, maxSleepTime, identifier, authFailedRetries, authFailedPause);
+    }
+  }
 
   /**
    * Creates a new connection to ZooKeeper, pulling settings and ensemble config
@@ -140,8 +168,22 @@ public class ZKUtil {
     int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
     zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
         1000);
-    return new RecoverableZooKeeper(ensemble, timeout, watcher,
-        retry, retryIntervalMillis, maxSleepTime, identifier);
+
+    int authFailedRetries = conf.getInt(AUTH_FAILED_RETRIES_KEY, AUTH_FAILED_RETRIES_DEFAULT);
+    int authFailedPause = conf.getInt(AUTH_FAILED_PAUSE_KEY, AUTH_FAILED_PAUSE_DEFAULT);
+
+    Class<? extends ZooKeeperFactory> factoryClz = conf.getClass("zookeeper.factory.class",
+        DefaultZooKeeperFactory.class, ZooKeeperFactory.class);
+    try {
+      ZooKeeperFactory factory = factoryClz.newInstance();
+      return factory.create(ensemble, timeout, watcher, retry, retryIntervalMillis,
+          maxSleepTime, identifier, authFailedRetries, authFailedPause);
+    } catch (Exception e) {
+      if (e instanceof RuntimeException) {
+        throw (RuntimeException) e;
+      }
+      throw new RuntimeException(e);
+    }
   }
 
   /**
