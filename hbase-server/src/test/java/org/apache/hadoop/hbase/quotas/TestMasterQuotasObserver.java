@@ -146,16 +146,13 @@ public class TestMasterQuotasObserver {
     if (admin.tableExists(tn)) {
       dropTable(admin, tn);
     }
-
     createTable(admin, tn);
     assertEquals(0, getNumSpaceQuotas());
     assertEquals(0, getThrottleQuotas());
-
     // Set Both quotas
     QuotaSettings settings =
         QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
-
     settings =
         QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
@@ -163,8 +160,34 @@ public class TestMasterQuotasObserver {
     assertEquals(1, getNumSpaceQuotas());
     assertEquals(1, getThrottleQuotas());
 
-    // Delete the table and observe the quotas being automatically deleted as well
+    // Remove Space quota
+    settings = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    admin.setQuota(settings);
+    assertEquals(0, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Set back the space quota
+    settings = QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Remove the throttle quota
+    settings = QuotaSettingsFactory.unthrottleTable(tn);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(0, getThrottleQuotas());
+
+    // Set back the throttle quota
+    settings =
+        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Drop the table and check that both the quotas have been dropped as well
     dropTable(admin, tn);
+
     assertEquals(0, getNumSpaceQuotas());
     assertEquals(0, getThrottleQuotas());
   }
@@ -225,7 +248,6 @@ public class TestMasterQuotasObserver {
   public void testNamespaceSpaceAndRPCQuotaRemoved() throws Exception {
     final Connection conn = TEST_UTIL.getConnection();
     final Admin admin = conn.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
     final String ns = testName.getMethodName();
     // Drop the ns if it somehow exists
     if (namespaceExists(ns)) {
@@ -235,6 +257,7 @@ public class TestMasterQuotasObserver {
     // Create the ns
     NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
     admin.createNamespace(desc);
+
     assertEquals(0, getNumSpaceQuotas());
     assertEquals(0, getThrottleQuotas());
 
@@ -250,8 +273,34 @@ public class TestMasterQuotasObserver {
     assertEquals(1, getNumSpaceQuotas());
     assertEquals(1, getThrottleQuotas());
 
-    // Delete the namespace and observe the quotas being automatically deleted as well
+    // Remove Space quota
+    settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
+    admin.setQuota(settings);
+    assertEquals(0, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Set back the space quota
+    settings = QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Remove the throttle quota
+    settings = QuotaSettingsFactory.unthrottleNamespace(ns);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(0, getThrottleQuotas());
+
+    // Set back the throttle quota
+    settings =
+        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    admin.setQuota(settings);
+    assertEquals(1, getNumSpaceQuotas());
+    assertEquals(1, getThrottleQuotas());
+
+    // Delete the namespace and check that both the quotas have been dropped as well
     admin.deleteNamespace(ns);
+
     assertEquals(0, getNumSpaceQuotas());
     assertEquals(0, getThrottleQuotas());
   }
