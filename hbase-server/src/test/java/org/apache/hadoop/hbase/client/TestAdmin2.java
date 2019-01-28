@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -792,5 +793,65 @@ public class TestAdmin2 {
       // Make sure that the store size is still the actual file system's store size.
       Assert.assertEquals(expectedStoreFilesSize, store.getSize());
     }
+  }
+
+  @Test
+  public void testTableSplitFollowedByModify() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, Bytes.toBytes("f"));
+
+    // get the original table region count
+    List<RegionInfo> regions = admin.getRegions(tableName);
+    int originalCount = regions.size();
+    assertEquals(1, originalCount);
+
+    // split the table and wait until region count increases
+    admin.split(tableName, Bytes.toBytes(3));
+    TEST_UTIL.waitFor(30000, new Predicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.getRegions(tableName).size() > originalCount;
+      }
+    });
+
+    // do some table modification
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+        .setMaxFileSize(11111111)
+        .build();
+    admin.modifyTable(tableDesc);
+    assertEquals(11111111, admin.getDescriptor(tableName).getMaxFileSize());
+  }
+
+  @Test
+  public void testTableMergeFollowedByModify() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, new byte[][] { Bytes.toBytes("f") },
+      new byte[][] { Bytes.toBytes(3) });
+
+    // assert we have at least 2 regions in the table
+    List<RegionInfo> regions = admin.getRegions(tableName);
+    int originalCount = regions.size();
+    assertTrue(originalCount >= 2);
+
+    byte[] nameOfRegionA = regions.get(0).getEncodedNameAsBytes();
+    byte[] nameOfRegionB = regions.get(1).getEncodedNameAsBytes();
+
+    // merge the table regions and wait until region count decreases
+    admin.mergeRegionsAsync(nameOfRegionA, nameOfRegionB, true);
+    TEST_UTIL.waitFor(30000, new Predicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.getRegions(tableName).size() < originalCount;
+      }
+    });
+
+    // do some table modification
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
+        .setMaxFileSize(11111111)
+        .build();
+    admin.modifyTable(tableDesc);
+    assertEquals(11111111, admin.getDescriptor(tableName).getMaxFileSize());
   }
 }

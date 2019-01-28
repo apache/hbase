@@ -1370,7 +1370,9 @@ public class AssignmentManager implements ServerListener {
     final List<RegionState> states = regionStates.getTableRegionStates(tableName);
     int ritCount = 0;
     for (RegionState regionState: states) {
-      if (!regionState.isOpened()) ritCount++;
+      if (!regionState.isOpened() && !regionState.isSplit()) {
+        ritCount++;
+      }
     }
     return new Pair<Integer, Integer>(ritCount, states.size());
   }
