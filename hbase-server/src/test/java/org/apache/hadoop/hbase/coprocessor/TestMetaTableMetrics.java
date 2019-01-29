@@ -222,10 +222,6 @@ public class TestMetaTableMetrics {
             jmxMetrics.stream().filter(metric -> metric.matches(putWithClientMetricNameRegex))
                     .count();
     assertEquals(5L, putWithClientMetricsCount);
-
-
-
-
   }
 
 }
