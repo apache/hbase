@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -1572,5 +1573,43 @@ public interface MasterObserver {
    */
   default void postIsRpcThrottleEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final boolean rpcThrottleEnabled) throws IOException {
+  }
+
+  /**
+   * Called before granting user permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userPermission the user and permissions
+   * @param mergeExistingPermissions True if merge with previous granted permissions
+   */
+  default void preGrant(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission, boolean mergeExistingPermissions) throws IOException {
+  }
+
+  /**
+   * Called after granting user permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userPermission the user and permissions
+   * @param mergeExistingPermissions True if merge with previous granted permissions
+   */
+  default void postGrant(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission, boolean mergeExistingPermissions) throws IOException {
+  }
+
+  /**
+   * Called before revoking user permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userPermission the user and permissions
+   */
+  default void preRevoke(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission) throws IOException {
+  }
+
+  /**
+   * Called after revoking user permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userPermission the user and permissions
+   */
+  default void postRevoke(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission) throws IOException {
   }
 }

@@ -91,6 +91,8 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -113,6 +115,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
@@ -4463,5 +4467,31 @@ public class HBaseAdmin implements Admin {
           return null;
         }
       });
+  }
+
+  @Override
+  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        GrantRequest req =
+            ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
+        this.master.grant(getRpcController(), req);
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void revoke(UserPermission userPermission) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
+        this.master.revoke(getRpcController(), req);
+        return null;
+      }
+    });
   }
 }

@@ -36,6 +36,7 @@ import "Procedure.proto";
 import "Quota.proto";
 import "Replication.proto";
 import "Snapshot.proto";
+import "AccessControl.proto";
 
 /* Column-level protobufs */
 
@@ -1014,6 +1015,10 @@ service MasterService {
   /** Get if is rpc throttled enabled */
   rpc IsRpcThrottleEnabled (IsRpcThrottleEnabledRequest)
     returns (IsRpcThrottleEnabledResponse);
+
+  rpc Grant(GrantRequest) returns (GrantResponse);
+
+  rpc Revoke(RevokeRequest) returns (RevokeResponse);
 }
 
 // HBCK Service definitions.

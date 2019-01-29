@@ -1170,13 +1170,10 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY,
-              null, false, Action.READ);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().grant(new UserPermission(USER_RO.getShortName(),
+              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)),
+            false);
         }
         return null;
       }
@@ -1185,13 +1182,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction revokeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.revoke(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
-            Action.READ);
+        try(Connection conn = ConnectionFactory.createConnection(conf)) {
+            conn.getAdmin().revoke(new UserPermission(USER_RO.getShortName(),
+                            new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)));
         }
         return null;
       }
@@ -1225,6 +1218,57 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
+    AccessTestAction preGrantAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGrant(ObserverContextImpl.createAndPrepare(CP_ENV),
+          new UserPermission(USER_RO.getShortName(),
+              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)),
+          false);
+        return null;
+      }
+    };
+
+    AccessTestAction preRevokeAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRevoke(ObserverContextImpl.createAndPrepare(CP_ENV),
+          new UserPermission(USER_RO.getShortName(),
+              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)));
+        return null;
+      }
+    };
+
+    AccessTestAction grantCPAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY,
+            null, false, Action.READ);
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction revokeCPAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.revoke(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY,
+            null, Action.READ);
+        }
+        return null;
+      }
+    };
+
     verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
     verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
         USER_GROUP_WRITE, USER_GROUP_CREATE);
@@ -1240,6 +1284,22 @@ public class TestAccessController extends SecureTestUtil {
       verifyAllowed(getGlobalPermissionsAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
       verifyDenied(getGlobalPermissionsAction, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
         USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+      verifyAllowed(preGrantAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(preGrantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+      verifyAllowed(preRevokeAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(preRevokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+      verifyAllowed(grantCPAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(grantCPAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+      verifyAllowed(revokeCPAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(revokeCPAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
     } finally {
       // Cleanup, Grant the revoked permission back to the user
       grantOnTable(TEST_UTIL, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,

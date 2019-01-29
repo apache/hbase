@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1831,6 +1832,44 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postIsRpcThrottleEnabled(this, enabled);
+      }
+    });
+  }
+
+  public void preGrant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preGrant(this, userPermission, mergeExistingPermissions);
+      }
+    });
+  }
+
+  public void postGrant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postGrant(this, userPermission, mergeExistingPermissions);
+      }
+    });
+  }
+
+  public void preRevoke(UserPermission userPermission) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRevoke(this, userPermission);
+      }
+    });
+  }
+
+  public void postRevoke(UserPermission userPermission) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRevoke(this, userPermission);
       }
     });
   }

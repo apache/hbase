@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -92,8 +93,11 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -114,6 +118,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -2499,6 +2507,50 @@ public class MasterRpcServices extends RSRpcServices
       return master.getMasterQuotaManager().isRpcThrottleEnabled(request);
     } catch (Exception e) {
       throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GrantResponse grant(RpcController controller, GrantRequest request)
+      throws ServiceException {
+    try {
+      final UserPermission perm =
+          ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
+      boolean mergeExistingPermissions = request.getMergeExistingPermissions();
+      if (master.cpHost != null) {
+        master.cpHost.preGrant(perm, mergeExistingPermissions);
+      }
+      try (Table table = master.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
+        AccessControlLists.addUserPermission(getConfiguration(), perm, table,
+          mergeExistingPermissions);
+      }
+      if (master.cpHost != null) {
+        master.cpHost.postGrant(perm, mergeExistingPermissions);
+      }
+      return GrantResponse.getDefaultInstance();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public RevokeResponse revoke(RpcController controller, RevokeRequest request)
+      throws ServiceException {
+    try {
+      final UserPermission userPermission =
+          ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
+      if (master.cpHost != null) {
+        master.cpHost.preRevoke(userPermission);
+      }
+      try (Table table = master.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
+        AccessControlLists.removeUserPermission(master.getConfiguration(), userPermission, table);
+      }
+      if (master.cpHost != null) {
+        master.cpHost.postRevoke(userPermission);
+      }
+      return RevokeResponse.getDefaultInstance();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 
