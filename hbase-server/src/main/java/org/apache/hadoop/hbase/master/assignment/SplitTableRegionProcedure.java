@@ -504,6 +504,14 @@ public class SplitTableRegionProcedure
       return false;
     }
 
+    if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isSplitEnabled()) {
+      LOG.warn("pid={}, split is disabled for the table! Skipping split of {}", getProcId(),
+        parentHRI);
+      setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString()
+          + " failed as region split is disabled for the table"));
+      return false;
+    }
+
     // set node state as SPLITTING
     node.setState(State.SPLITTING);
 

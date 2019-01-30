@@ -523,6 +523,14 @@ public class MergeTableRegionsProcedure
       return false;
     }
 
+    if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
+      String regionsStr = Arrays.deepToString(regionsToMerge);
+      LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
+      super.setFailure(getClass().getSimpleName(), new IOException(
+          "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
+      return false;
+    }
+
     // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
     // along with the failure, so we can see why regions are not mergeable at this time.
     IOException mergeableCheckIOE = null;

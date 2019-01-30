@@ -1322,8 +1322,8 @@ public interface Admin extends Abortable, Closeable {
       boolean forcible) throws IOException;
 
   /**
-   + Split a table. The method will execute split action for each region in table.
-   + Asynchronous operation.
+   * Split a table. The method will execute split action for each region in table.
+   * Asynchronous operation.
    * @param tableName table to split
    * @throws IOException if a remote or network exception occurs
    */
