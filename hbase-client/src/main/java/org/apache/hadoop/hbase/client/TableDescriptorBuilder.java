@@ -93,6 +93,22 @@ public class TableDescriptorBuilder {
 
   /**
    * Used by HBase Shell interface to access this metadata
+   * attribute which denotes if the table is split enabled.
+   */
+  @InterfaceAudience.Private
+  public static final String SPLIT_ENABLED = "SPLIT_ENABLED";
+  private static final Bytes SPLIT_ENABLED_KEY = new Bytes(Bytes.toBytes(SPLIT_ENABLED));
+
+  /**
+   * Used by HBase Shell interface to access this metadata
+   * attribute which denotes if the table is merge enabled.
+   */
+  @InterfaceAudience.Private
+  public static final String MERGE_ENABLED = "MERGE_ENABLED";
+  private static final Bytes MERGE_ENABLED_KEY = new Bytes(Bytes.toBytes(MERGE_ENABLED));
+
+  /**
+   * Used by HBase Shell interface to access this metadata
    * attribute which represents the maximum size of the memstore after which its
    * contents are flushed onto the disk.
    */
@@ -186,6 +202,16 @@ public class TableDescriptorBuilder {
    * Constant that denotes whether the table is compaction enabled by default
    */
   public static final boolean DEFAULT_COMPACTION_ENABLED = true;
+
+  /**
+   * Constant that denotes whether the table is split enabled by default
+   */
+  public static final boolean DEFAULT_SPLIT_ENABLED = true;
+
+  /**
+   * Constant that denotes whether the table is merge enabled by default
+   */
+  public static final boolean DEFAULT_MERGE_ENABLED = true;
 
   /**
    * Constant that denotes whether the table is normalized by default.
@@ -384,6 +410,16 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setCompactionEnabled(final boolean isEnable) {
     desc.setCompactionEnabled(isEnable);
+    return this;
+  }
+
+  public TableDescriptorBuilder setSplitEnabled(final boolean isEnable) {
+    desc.setSplitEnabled(isEnable);
+    return this;
+  }
+
+  public TableDescriptorBuilder setMergeEnabled(final boolean isEnable) {
+    desc.setMergeEnabled(isEnable);
     return this;
   }
 
@@ -733,6 +769,48 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setCompactionEnabled(final boolean isEnable) {
       return setValue(COMPACTION_ENABLED_KEY, Boolean.toString(isEnable));
+    }
+
+    /**
+     * Check if the split enable flag of the table is true. If flag is false then no split will be
+     * done.
+     *
+     * @return true if table region split enabled
+     */
+    @Override
+    public boolean isSplitEnabled() {
+      return getOrDefault(SPLIT_ENABLED_KEY, Boolean::valueOf, DEFAULT_SPLIT_ENABLED);
+    }
+
+    /**
+     * Setting the table region split enable flag.
+     * @param isEnable True if enable region split.
+     *
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setSplitEnabled(final boolean isEnable) {
+      return setValue(SPLIT_ENABLED_KEY, Boolean.toString(isEnable));
+    }
+
+    /**
+     * Check if the region merge enable flag of the table is true. If flag is false then no merge
+     * will be done.
+     *
+     * @return true if table region merge enabled
+     */
+    @Override
+    public boolean isMergeEnabled() {
+      return getOrDefault(MERGE_ENABLED_KEY, Boolean::valueOf, DEFAULT_MERGE_ENABLED);
+    }
+
+    /**
+     * Setting the table region merge enable flag.
+     * @param isEnable True if enable region merge.
+     *
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor setMergeEnabled(final boolean isEnable) {
+      return setValue(MERGE_ENABLED_KEY, Boolean.toString(isEnable));
     }
 
     /**

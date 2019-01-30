@@ -225,13 +225,17 @@ module Hbase
               FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
               REGION_MEMSTORE_REPLICATION => 'TRUE',
               SPLIT_POLICY => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy',
-              COMPACTION_ENABLED => 'false')
+              COMPACTION_ENABLED => 'false',
+              SPLIT_ENABLED => 'false',
+              MERGE_ENABLED => 'false')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
       assert_match(/987654321/, admin.describe(@create_test_name))
       assert_match(/77/, admin.describe(@create_test_name))
-      assert_match(/COMPACTION_ENABLED/, admin.describe(@create_test_name))
-      assert_match(/REGION_MEMSTORE_REPLICATION/, admin.describe(@create_test_name))
+      assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'MERGE_ENABLED' => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'REGION_MEMSTORE_REPLICATION' => 'true'/, admin.describe(@create_test_name))
       assert_match(/org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy/,
         admin.describe(@create_test_name))
       assert_match(/org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy/,
@@ -254,10 +258,15 @@ module Hbase
 
     define_test "create should work when attributes value 'false' is not enclosed in single quotation marks" do
       drop_test_table(@create_test_name)
-      command(:create, @create_test_name,{NAME => 'a', BLOCKCACHE => false}, {COMPACTION_ENABLED => false})
+      command(:create, @create_test_name, {NAME => 'a', BLOCKCACHE => false},
+              COMPACTION_ENABLED => false,
+              SPLIT_ENABLED => false,
+              MERGE_ENABLED => false)
       assert_equal(['a:'], table(@create_test_name).get_all_columns.sort)
-      assert_match(/BLOCKCACHE/, admin.describe(@create_test_name))
-      assert_match(/COMPACTION_ENABLED/, admin.describe(@create_test_name))
+      assert_match(/BLOCKCACHE => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
+      assert_match(/'MERGE_ENABLED' => 'false'/, admin.describe(@create_test_name))
     end
 
     #-------------------------------------------------------------------------------
