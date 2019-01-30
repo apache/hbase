@@ -162,6 +162,8 @@
               </relocations>
               <artifactSet>
                 <excludes>
+                  <!-- exclude J2EE modules that come in for JDK11+ -->
+                  <exclude>javax.annotation:javax.annotation-api</exclude>
                   <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
                     -->
                   <exclude>org.apache.hbase.thirdparty:*</exclude>
@@ -274,6 +276,18 @@
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>javax.annotation</groupId>
+          <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>

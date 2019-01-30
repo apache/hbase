@@ -138,6 +138,7 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
+              <excludeTypes>pom</excludeTypes>
               <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
               <includes>**\/NOTICE,**\/NOTICE.txt</includes>
             </configuration>

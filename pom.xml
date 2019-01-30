@@ -1612,7 +1612,7 @@
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
-    <maven.compiler.version>3.6.1</maven.compiler.version>
+    <maven.compiler.version>3.8.0</maven.compiler.version>
     <maven.dependency.version>3.0.1</maven.dependency.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.install.version>2.5.2</maven.install.version>
@@ -2404,7 +2404,7 @@
     <profile>
       <id>build-with-jdk8</id>
       <activation>
-        <jdk>1.8</jdk>
+        <jdk>[1.8,)</jdk>
       </activation>
       <build>
         <pluginManagement>
@@ -2431,6 +2431,27 @@
           </plugins>
         </pluginManagement>
       </build>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+          </dependency>
+          <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-ri</artifactId>
+            <version>2.3.1</version>
+            <type>pom</type>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
