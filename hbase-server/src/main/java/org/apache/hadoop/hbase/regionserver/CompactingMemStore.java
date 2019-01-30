@@ -63,6 +63,10 @@ public class CompactingMemStore extends AbstractMemStore {
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
   private static final int IN_MEMORY_FLUSH_MULTIPLIER = 1;
+  // In-Memory compaction pool size
+  public static final String IN_MEMORY_CONPACTION_POOL_SIZE_KEY =
+      "hbase.regionserver.inmemory.compaction.pool.size";
+  public static final int IN_MEMORY_CONPACTION_POOL_SIZE_DEFAULT = 10;
 
   private static final Logger LOG = LoggerFactory.getLogger(CompactingMemStore.class);
   private HStore store;

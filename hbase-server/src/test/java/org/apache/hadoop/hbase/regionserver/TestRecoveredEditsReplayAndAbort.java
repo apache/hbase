@@ -122,6 +122,7 @@ public class TestRecoveredEditsReplayAndAbort {
     Mockito.when(rs.getNonceManager()).thenReturn(null);
     Mockito.when(rs.getServerName()).thenReturn(ServerName
         .valueOf("test", 0, 111));
+    Mockito.when(rs.getConfiguration()).thenReturn(CONF);
     //create a region
     TableName testTable = TableName.valueOf("testRecoveredEidtsReplayAndAbort");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable)
