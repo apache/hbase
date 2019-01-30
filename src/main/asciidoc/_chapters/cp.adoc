@@ -483,6 +483,7 @@ The following Observer coprocessor prevents the details of the user `admin` from
 returned in a `Get` or `Scan` of the `users` table.
 
 . Write a class that implements the
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionCoprocessor.html[RegionCoprocessor],
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/coprocessor/RegionObserver.html[RegionObserver]
 class.
 
@@ -500,15 +501,19 @@ empty result. Otherwise, process the request as normal.
 
 Following are the implementation of the above steps:
 
-
 [source,java]
 ----
-public class RegionObserverExample implements RegionObserver {
+public class RegionObserverExample implements RegionCoprocessor, RegionObserver {
 
     private static final byte[] ADMIN = Bytes.toBytes("admin");
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("details");
     private static final byte[] COLUMN = Bytes.toBytes("Admin_det");
     private static final byte[] VALUE = Bytes.toBytes("You can't see Admin details");
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get, final List<Cell> results)
