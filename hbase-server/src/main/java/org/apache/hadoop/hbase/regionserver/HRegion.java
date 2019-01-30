@@ -295,7 +295,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
-  private final RegionServicesForStores regionServicesForStores = new RegionServicesForStores(this);
+  @VisibleForTesting
+  RegionServicesForStores regionServicesForStores;
 
   // Debug possible data loss due to WAL off
   final LongAdder numMutationsWithoutWAL = new LongAdder();
@@ -773,6 +774,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     this.rsServices = rsServices;
+    this.regionServicesForStores = new RegionServicesForStores(this, rsServices);
     setHTableSpecificConf();
     this.scannerReadPoints = new ConcurrentHashMap<>();
 

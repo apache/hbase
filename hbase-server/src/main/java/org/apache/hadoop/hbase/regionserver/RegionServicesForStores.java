@@ -18,12 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,22 +37,18 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public class RegionServicesForStores {
 
-  private static final int POOL_SIZE = 10;
-  private static final ThreadPoolExecutor INMEMORY_COMPACTION_POOL =
-      new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 60, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<>(),
-          new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-              String name = Thread.currentThread().getName() + "-inmemoryCompactions-" +
-                  System.currentTimeMillis();
-              return new Thread(r, name);
-            }
-          });
   private final HRegion region;
+  private final RegionServerServices rsServices;
+  private int inMemoryPoolSize;
 
-  public RegionServicesForStores(HRegion region) {
+  public RegionServicesForStores(HRegion region, RegionServerServices rsServices) {
     this.region = region;
+    this.rsServices = rsServices;
+    if (this.rsServices != null) {
+      this.inMemoryPoolSize = rsServices.getConfiguration().getInt(
+        CompactingMemStore.IN_MEMORY_CONPACTION_POOL_SIZE_KEY,
+        CompactingMemStore.IN_MEMORY_CONPACTION_POOL_SIZE_DEFAULT);
+    }
   }
 
   public void blockUpdates() {
@@ -78,7 +72,14 @@ public class RegionServicesForStores {
     return region.getWAL();
   }
 
-  public ThreadPoolExecutor getInMemoryCompactionPool() { return INMEMORY_COMPACTION_POOL; }
+  ThreadPoolExecutor getInMemoryCompactionPool() {
+    if (rsServices != null) {
+      return rsServices.getExecutorService().getExecutorLazily(ExecutorType.RS_IN_MEMORY_COMPACTION,
+        inMemoryPoolSize);
+    } else {
+      return null;
+    }
+  }
 
   public long getMemStoreFlushSize() {
     return region.getMemStoreFlushSize();
