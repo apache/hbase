@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -788,5 +789,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<SpaceQuotaSnapshot> getCurrentSpaceQuotaSnapshot(TableName tableName) {
     return wrap(rawAdmin.getCurrentSpaceQuotaSnapshot(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> grant(UserPermission userPermission,
+      boolean mergeExistingPermissions) {
+    return wrap(rawAdmin.grant(userPermission, mergeExistingPermissions));
+  }
+
+  @Override
+  public CompletableFuture<Void> revoke(UserPermission userPermission) {
+    return wrap(rawAdmin.revoke(userPermission));
   }
 }

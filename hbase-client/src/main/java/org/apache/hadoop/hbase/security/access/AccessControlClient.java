@@ -94,10 +94,9 @@ public class AccessControlClient {
       final String userName, final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
       final Permission.Action... actions) throws Throwable {
     // TODO: Priority is not used.
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, tableName,
-        family, qual, mergeExistingPermissions, actions);
-    }
+    UserPermission userPermission =
+        new UserPermission(userName, new TablePermission(tableName, family, qual, actions));
+    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
   }
 
   /**
@@ -129,11 +128,9 @@ public class AccessControlClient {
    */
   private static void grant(Connection connection, final String namespace, final String userName,
       boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
-    // TODO: Pass an rpcController.
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, namespace,
-        mergeExistingPermissions, actions);
-    }
+    UserPermission userPermission =
+        new UserPermission(userName, new NamespacePermission(namespace, actions));
+    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
   }
 
   /**
@@ -152,7 +149,7 @@ public class AccessControlClient {
   }
 
   /**
-   * Grants permission on the specified namespace for the specified user.
+   * Grant global permissions for the specified user.
    * @param connection
    * @param userName
    * @param mergeExistingPermissions If set to false, later granted permissions will override
@@ -163,11 +160,8 @@ public class AccessControlClient {
    */
   private static void grant(Connection connection, final String userName,
       boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
-    // TODO: Pass an rpcController
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName,
-              mergeExistingPermissions, actions);
-    }
+    UserPermission userPermission = new UserPermission(userName, new GlobalPermission(actions));
+    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
   }
 
   /**
@@ -204,19 +198,13 @@ public class AccessControlClient {
   public static void revoke(Connection connection, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    /** TODO: Pass an rpcController
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-    controller.setPriority(tableName);
-    */
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.revoke(null, getAccessControlServiceStub(table), username, tableName,
-        family, qualifier, actions);
-    }
+    UserPermission userPermission =
+        new UserPermission(username, new TablePermission(tableName, family, qualifier, actions));
+    connection.getAdmin().revoke(userPermission);
   }
 
   /**
-   * Revokes the permission on the table for the specified user.
+   * Revokes the permission on the namespace for the specified user.
    * @param connection The Connection instance to use
    * @param namespace
    * @param userName
@@ -225,14 +213,9 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    /** TODO: Pass an rpcController
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-      */
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.revoke(null, getAccessControlServiceStub(table), userName, namespace,
-        actions);
-    }
+    UserPermission userPermission =
+        new UserPermission(userName, new NamespacePermission(namespace, actions));
+    connection.getAdmin().revoke(userPermission);
   }
 
   /**
@@ -241,13 +224,8 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String userName,
       final Permission.Action... actions) throws Throwable {
-    /** TODO: Pass an rpc controller.
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-      */
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.revoke(null, getAccessControlServiceStub(table), userName, actions);
-    }
+    UserPermission userPermission = new UserPermission(userName, new GlobalPermission(actions));
+    connection.getAdmin().revoke(userPermission);
   }
 
   /**

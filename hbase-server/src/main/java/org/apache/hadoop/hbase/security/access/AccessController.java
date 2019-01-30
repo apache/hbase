@@ -2053,6 +2053,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   /* ---- Protobuf AccessControlService implementation ---- */
 
+  /**
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   */
+  @Deprecated
   @Override
   public void grant(RpcController controller,
       AccessControlProtos.GrantRequest request,
@@ -2070,36 +2074,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           LOG.debug("Received request from {} to grant access permission {}",
             caller.getName(), perm.toString());
         }
+        preGrantOrRevoke(caller, "grant", perm);
 
-        switch(request.getUserPermission().getPermission().getType()) {
-          case Global :
-            accessChecker.requireGlobalPermission(caller, "grant", Action.ADMIN, "");
-            break;
-          case Table :
-            TablePermission tablePerm = (TablePermission) perm.getPermission();
-            accessChecker.requirePermission(caller, "grant", tablePerm.getTableName(),
-              tablePerm.getFamily(), tablePerm.getQualifier(), null, Action.ADMIN);
-            break;
-          case Namespace :
-            NamespacePermission namespacePer = (NamespacePermission) perm.getPermission();
-            accessChecker.requireNamespacePermission(caller, "grant", namespacePer.getNamespace(),
-                null, Action.ADMIN);
-           break;
-        }
-
-        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            // regionEnv is set at #start. Hopefully not null at this point.
-            try (Table table = regionEnv.getConnection().
-                getTable(AccessControlLists.ACL_TABLE_NAME)) {
-              AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm, table,
-                  request.getMergeExistingPermissions());
-            }
-            return null;
-          }
-        });
-
+        // regionEnv is set at #start. Hopefully not null at this point.
+        regionEnv.getConnection().getAdmin().grant(perm, request.getMergeExistingPermissions());
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should store permission changes in addition to auth results
           AUDITLOG.trace("Granted permission " + perm.toString());
@@ -2116,9 +2094,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     done.run(response);
   }
 
+  /**
+   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
+   */
+  @Deprecated
   @Override
-  public void revoke(RpcController controller,
-      AccessControlProtos.RevokeRequest request,
+  public void revoke(RpcController controller, AccessControlProtos.RevokeRequest request,
       RpcCallback<AccessControlProtos.RevokeResponse> done) {
     final UserPermission perm = AccessControlUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.RevokeResponse response = null;
@@ -2133,35 +2114,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           LOG.debug("Received request from {} to revoke access permission {}",
             caller.getShortName(), perm.toString());
         }
-
-        switch(request.getUserPermission().getPermission().getType()) {
-          case Global :
-            accessChecker.requireGlobalPermission(caller, "revoke", Action.ADMIN, "");
-            break;
-          case Table :
-            TablePermission tablePerm = (TablePermission) perm.getPermission();
-            accessChecker.requirePermission(caller, "revoke", tablePerm.getTableName(),
-              tablePerm.getFamily(), tablePerm.getQualifier(), null, Action.ADMIN);
-            break;
-          case Namespace :
-            NamespacePermission namespacePer = (NamespacePermission) perm.getPermission();
-            accessChecker.requireNamespacePermission(caller, "revoke",
-              namespacePer.getNamespace(), null, Action.ADMIN);
-            break;
-        }
-
-        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            // regionEnv is set at #start. Hopefully not null here.
-            try (Table table = regionEnv.getConnection().
-                getTable(AccessControlLists.ACL_TABLE_NAME)) {
-              AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm, table);
-            }
-            return null;
-          }
-        });
-
+        preGrantOrRevoke(caller, "revoke", perm);
+        // regionEnv is set at #start. Hopefully not null here.
+        regionEnv.getConnection().getAdmin().revoke(perm);
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should record all permission changes
           AUDITLOG.trace("Revoked permission " + perm.toString());
@@ -2673,5 +2628,37 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       ResponseConverter.setControllerException(controller, ioe);
     }
     done.run(response);
+  }
+
+  @Override
+  public void preGrant(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission, boolean mergeExistingPermissions) throws IOException {
+    preGrantOrRevoke(getActiveUser(ctx), "grant", userPermission);
+  }
+
+  @Override
+  public void preRevoke(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      UserPermission userPermission) throws IOException {
+    preGrantOrRevoke(getActiveUser(ctx), "revoke", userPermission);
+  }
+
+  private void preGrantOrRevoke(User caller, String request, UserPermission userPermission)
+      throws IOException {
+    switch (userPermission.getPermission().scope) {
+      case GLOBAL:
+        accessChecker.requireGlobalPermission(caller, request, Action.ADMIN, "");
+        break;
+      case NAMESPACE:
+        NamespacePermission namespacePerm = (NamespacePermission) userPermission.getPermission();
+        accessChecker.requireNamespacePermission(caller, request, namespacePerm.getNamespace(),
+          null, Action.ADMIN);
+        break;
+      case TABLE:
+        TablePermission tablePerm = (TablePermission) userPermission.getPermission();
+        accessChecker.requirePermission(caller, request, tablePerm.getTableName(),
+          tablePerm.getFamily(), tablePerm.getQualifier(), null, Action.ADMIN);
+        break;
+      default:
+    }
   }
 }

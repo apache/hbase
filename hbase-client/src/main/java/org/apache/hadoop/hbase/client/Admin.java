@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -2794,4 +2795,23 @@ public interface Admin extends Abortable, Closeable {
    * no quota information on that table.
    */
   SpaceQuotaSnapshotView getCurrentSpaceQuotaSnapshot(TableName tableName) throws IOException;
+
+  /**
+   * Grants user specific permissions
+   *
+   * @param userPermission user and permissions
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *          previous granted permissions. otherwise, it'll merge with previous granted
+   *          permissions.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void grant(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException;
+
+  /**
+   * Revokes user specific permissions
+   *
+   * @param userPermission user and permissions
+   * @throws IOException if a remote or network exception occurs
+   */
+  void revoke(UserPermission userPermission) throws IOException;
 }
