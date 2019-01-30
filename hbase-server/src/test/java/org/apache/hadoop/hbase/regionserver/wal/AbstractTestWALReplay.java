@@ -681,6 +681,7 @@ public abstract class AbstractTestWALReplay {
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("foo", 10, 10));
+    when(rsServices.getConfiguration()).thenReturn(conf);
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         CustomStoreFlusher.class.getName());

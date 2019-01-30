@@ -32,10 +32,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -126,11 +126,22 @@ public class ExecutorService {
   public void startExecutorService(final ExecutorType type, final int maxThreads) {
     String name = type.getExecutorName(this.servername);
     if (isExecutorServiceRunning(name)) {
-      LOG.debug("Executor service " + toString() + " already running on " +
-          this.servername);
+      LOG.debug("Executor service " + toString() + " already running on " + this.servername);
       return;
     }
     startExecutorService(name, maxThreads);
+  }
+
+  /**
+   * Initialize the executor lazily, Note if an executor need to be initialized lazily, then all
+   * paths should use this method to get the executor, should not start executor by using
+   * {@link ExecutorService#startExecutorService(ExecutorType, int)}
+   */
+  public ThreadPoolExecutor getExecutorLazily(ExecutorType type, int maxThreads) {
+    String name = type.getExecutorName(this.servername);
+    return executorMap
+        .computeIfAbsent(name, (executorName) -> new Executor(executorName, maxThreads))
+        .getThreadPoolExecutor();
   }
 
   public void submit(final EventHandler eh) {
