@@ -34,7 +34,6 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -375,12 +374,8 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, false, actions);
-          }
+          connection.getAdmin().grant(new UserPermission(user, new GlobalPermission(actions)),
+            false);
         }
         return null;
       }
@@ -398,12 +393,7 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.revoke(null, protocol, user, actions);
-          }
+          connection.getAdmin().revoke(new UserPermission(user, new GlobalPermission(actions)));
         }
         return null;
       }
@@ -421,12 +411,8 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, namespace, false, actions);
-          }
+          connection.getAdmin()
+              .grant(new UserPermission(user, new NamespacePermission(namespace, actions)), false);
         }
         return null;
       }
@@ -486,12 +472,8 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.revoke(null, protocol, user, namespace, actions);
-          }
+          connection.getAdmin()
+              .revoke(new UserPermission(user, new NamespacePermission(namespace, actions)));
         }
         return null;
       }
@@ -510,12 +492,9 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.grant(null, protocol, user, table, family, qualifier, false, actions);
-          }
+          connection.getAdmin().grant(
+            new UserPermission(user, new TablePermission(table, family, qualifier, actions)),
+            false);
         }
         return null;
       }
@@ -576,12 +555,8 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-            AccessControlService.BlockingInterface protocol =
-                AccessControlService.newBlockingStub(service);
-            AccessControlUtil.revoke(null, protocol, user, table, family, qualifier, actions);
-          }
+          connection.getAdmin().revoke(
+            new UserPermission(user, new TablePermission(table, family, qualifier, actions)));
         }
         return null;
       }

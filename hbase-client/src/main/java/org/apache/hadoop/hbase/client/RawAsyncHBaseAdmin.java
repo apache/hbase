@@ -81,6 +81,8 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -100,6 +102,10 @@ import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -3698,5 +3704,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return getCurrentSpaceQuotaSnapshot(resp -> resp.getTableSnapshotsList().stream()
       .filter(s -> s.getTableName().equals(protoTableName)).findFirst()
       .map(s -> SpaceQuotaSnapshot.toSpaceQuotaSnapshot(s.getSnapshot())).orElse(null));
+  }
+
+  @Override
+  public CompletableFuture<Void> grant(UserPermission userPermission,
+      boolean mergeExistingPermissions) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.<GrantRequest, GrantResponse, Void> call(controller,
+          stub, ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions),
+          (s, c, req, done) -> s.grant(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> revoke(UserPermission userPermission) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.<RevokeRequest, RevokeResponse, Void> call(controller,
+          stub, ShadedAccessControlUtil.buildRevokeRequest(userPermission),
+          (s, c, req, done) -> s.revoke(c, req, done), resp -> null))
+        .call();
   }
 }

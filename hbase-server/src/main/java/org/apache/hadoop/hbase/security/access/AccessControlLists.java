@@ -130,7 +130,7 @@ public class AccessControlLists {
    * @param t acl table instance. It is closed upon method return.
    * @throws IOException in the case of an error accessing the metadata table
    */
-  static void addUserPermission(Configuration conf, UserPermission userPerm, Table t,
+  public static void addUserPermission(Configuration conf, UserPermission userPerm, Table t,
       boolean mergeExistingPermissions) throws IOException {
     Permission permission = userPerm.getPermission();
     Permission.Action[] actions = permission.getActions();
@@ -222,7 +222,7 @@ public class AccessControlLists {
    * @param t acl table
    * @throws IOException if there is an error accessing the metadata table
    */
-  static void removeUserPermission(Configuration conf, UserPermission userPerm, Table t)
+  public static void removeUserPermission(Configuration conf, UserPermission userPerm, Table t)
       throws IOException {
     if (null == userPerm.getPermission().getActions() ||
         userPerm.getPermission().getActions().length == 0) {

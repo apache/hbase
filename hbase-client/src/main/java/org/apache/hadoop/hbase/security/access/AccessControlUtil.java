@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -490,7 +491,9 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, boolean mergeExistingPermissions,
       Permission.Action... actions) throws ServiceException {
@@ -517,7 +520,9 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be granted
    * @throws ServiceException
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
       byte[] f, byte[] q, boolean mergeExistingPermissions, Permission.Action... actions)
@@ -543,7 +548,9 @@ public class AccessControlUtil {
    * @param namespace the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
       boolean mergeExistingPermissions, Permission.Action... actions) throws ServiceException {
@@ -567,7 +574,9 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to revoke permissions
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName,
       Permission.Action... actions) throws ServiceException {
@@ -595,7 +604,9 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
       byte[] f, byte[] q, Permission.Action... actions) throws ServiceException {
@@ -620,7 +631,9 @@ public class AccessControlUtil {
    * @param namespace optional table name
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
+  @Deprecated
   public static void revoke(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
       Permission.Action... actions) throws ServiceException {
