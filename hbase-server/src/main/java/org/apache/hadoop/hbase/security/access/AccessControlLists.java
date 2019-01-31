@@ -24,7 +24,6 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -184,20 +183,7 @@ public class AccessControlLists {
           );
     }
     try {
-      /**
-       * TODO: Use Table.put(Put) instead. This Table.put() happens within the RS. We are already in
-       * AccessController. Means already there was an RPC happened to server (Actual grant call from
-       * client side). At RpcServer we have a ThreadLocal where we keep the CallContext and inside
-       * that the current RPC called user info is set. The table on which put was called is created
-       * via the RegionCP env and that uses a special Connection. The normal RPC channel will be by
-       * passed here means there would have no further contact on to the RpcServer. So the
-       * ThreadLocal is never getting reset. We ran the new put as a super user (User.runAsLoginUser
-       * where the login user is the user who started RS process) but still as per the RPC context
-       * it is the old user. When AsyncProcess was used, the execute happen via another thread from
-       * pool and so old ThreadLocal variable is not accessible and so it looks as if no Rpc context
-       * and we were relying on the super user who starts the RS process.
-       */
-      t.put(Collections.singletonList(p));
+      t.put(p);
     } finally {
       t.close();
     }
