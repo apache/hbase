@@ -328,13 +328,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         break;
       }
     }
-    postSync(System.nanoTime() - startTimeNs, finishSync(true));
+
+    boolean doRequestRoll = postSync(System.nanoTime() - startTimeNs, finishSync(true));
     if (trySetReadyForRolling()) {
       // we have just finished a roll, then do not need to check for log rolling, the writer will be
       // closed soon.
       return;
     }
-    if (writer.getLength() < logrollsize || rollRequested) {
+    if ((!doRequestRoll && writer.getLength() < logrollsize) || rollRequested) {
       return;
     }
     rollRequested = true;

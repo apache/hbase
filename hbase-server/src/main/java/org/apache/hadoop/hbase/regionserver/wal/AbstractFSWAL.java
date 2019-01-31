@@ -116,8 +116,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /** Don't log blocking regions more frequently than this. */
   private static final long SURVIVED_TOO_LONG_LOG_INTERVAL_NS = TimeUnit.MINUTES.toNanos(5);
 
+  private static final String SLOW_SYNC_TIME_MS ="hbase.regionserver.hlog.slowsync.ms";
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
 
+  private static final String ROLL_ON_SYNC_TIME_MS = "hbase.regionserver.hlog.roll.on.sync.ms";
+  protected static final int DEFAULT_ROLL_ON_SYNC_TIME_MS = 10000; // in ms
+
+  private static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.hlog.sync.timeout";
   private static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
   /**
@@ -172,7 +177,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected final SequenceIdAccounting sequenceIdAccounting = new SequenceIdAccounting();
 
-  protected final long slowSyncNs;
+  /** The slow sync will be logged; the very slow sync will cause the WAL to be rolled. */
+  protected final long slowSyncNs, rollOnSyncNs;
 
   private final long walSyncTimeoutNs;
 
@@ -429,10 +435,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
       walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
-    this.slowSyncNs = TimeUnit.MILLISECONDS
-        .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
-    this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
-        .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
+    this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(
+      conf.getInt(SLOW_SYNC_TIME_MS, DEFAULT_SLOW_SYNC_TIME_MS));
+    this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(
+      conf.getInt(ROLL_ON_SYNC_TIME_MS, DEFAULT_ROLL_ON_SYNC_TIME_MS));
+    this.walSyncTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
+      conf.getLong(WAL_SYNC_TIMEOUT_MS, DEFAULT_WAL_SYNC_TIMEOUT_MS));
+
     this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
       @Override
       protected SyncFuture initialValue() {
@@ -988,7 +997,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return len;
   }
 
-  protected final void postSync(final long timeInNanos, final int handlerSyncs) {
+  protected final boolean postSync(long timeInNanos, int handlerSyncs) {
     if (timeInNanos > this.slowSyncNs) {
       String msg = new StringBuilder().append("Slow sync cost: ").append(timeInNanos / 1000000)
           .append(" ms, current pipeline: ").append(Arrays.toString(getPipeline())).toString();
@@ -1000,6 +1009,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         listener.postSync(timeInNanos, handlerSyncs);
       }
     }
+    if (timeInNanos > this.rollOnSyncNs) {
+      LOG.info("Trying to request a roll due to a very long sync ({} ms)", timeInNanos / 1000000);
+      return true;
+    }
+    return false;
   }
 
   protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,

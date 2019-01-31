@@ -257,7 +257,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     long startTimeNanos = System.nanoTime();
     try {
       nextWriter.sync(useHsync);
-      postSync(System.nanoTime() - startTimeNanos, 0);
+      boolean doRequestRoll = postSync(System.nanoTime() - startTimeNanos, 0);
+      if (doRequestRoll) {
+        LOG.info("Ignoring a roll request after a sync for a new file");
+      }
     } catch (IOException e) {
       // optimization failed, no need to abort here.
       LOG.warn("pre-sync failed but an optimization so keep going", e);
@@ -576,6 +579,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
+          boolean wasRollRequested = false;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
             writer.sync(useHsync);
@@ -596,12 +600,16 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // Can we release other syncs?
             syncCount += releaseSyncFutures(currentSequence, lastException);
             if (lastException != null) {
+              wasRollRequested = true;
               requestLogRoll();
             } else {
-              checkLogRoll();
+              wasRollRequested = checkLogRoll();
             }
           }
-          postSync(System.nanoTime() - start, syncCount);
+          boolean doRequestRoll = postSync(System.nanoTime() - start, syncCount);
+          if (!wasRollRequested && doRequestRoll) {
+            requestLogRoll();
+          }
         } catch (InterruptedException e) {
           // Presume legit interrupt.
           Thread.currentThread().interrupt();
@@ -615,10 +623,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * Schedule a log roll if needed.
    */
-  private void checkLogRoll() {
+  private boolean checkLogRoll() {
     // Will return immediately if we are in the middle of a WAL log roll currently.
     if (!rollWriterLock.tryLock()) {
-      return;
+      return false;
     }
     boolean lowReplication;
     try {
@@ -628,7 +636,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
     if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
       requestLogRoll(lowReplication);
+      return true;
     }
+    return false;
   }
 
   /**
