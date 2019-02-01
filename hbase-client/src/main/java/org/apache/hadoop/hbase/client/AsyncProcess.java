@@ -136,7 +136,7 @@ class AsyncProcess {
   // TODO: many of the fields should be made private
   final long id;
 
-  final ClusterConnection connection;
+  final ConnectionImplementation connection;
   private final RpcRetryingCallerFactory rpcCallerFactory;
   final RpcControllerFactory rpcFactory;
 
@@ -161,7 +161,7 @@ class AsyncProcess {
   public static final String LOG_DETAILS_PERIOD = "hbase.client.log.detail.period.ms";
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
   private final int periodToLog;
-  AsyncProcess(ClusterConnection hc, Configuration conf,
+  AsyncProcess(ConnectionImplementation hc, Configuration conf,
       RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");

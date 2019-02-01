@@ -44,23 +44,22 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -708,7 +707,7 @@ public class RegionSplitter {
     Path tableDir = tableDirAndSplitFile.getFirst();
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
     // Clear the cache to forcibly refresh region information
-    ((ClusterConnection)connection).clearRegionLocationCache();
+    connection.clearRegionLocationCache();
     TableDescriptor htd = null;
     try (Table table = connection.getTable(tableName)) {
       htd = table.getDescriptor();
@@ -769,7 +768,7 @@ public class RegionSplitter {
         } catch (NoServerForRegionException nsfre) {
           LOG.debug("No Server Exception thrown for: " + splitAlgo.rowToStr(start));
           physicalSplitting.add(region);
-          ((ClusterConnection)connection).clearRegionLocationCache();
+          connection.clearRegionLocationCache();
         }
       }
 

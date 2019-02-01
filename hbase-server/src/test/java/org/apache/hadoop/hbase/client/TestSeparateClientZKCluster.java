@@ -204,7 +204,7 @@ public class TestSeparateClientZKCluster {
   public void testMetaMoveDuringClientZkClusterRestart() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    Connection conn = TEST_UTIL.getConnection();
     Admin admin = conn.getAdmin();
     HTable table = (HTable) conn.getTable(tn);
     try {

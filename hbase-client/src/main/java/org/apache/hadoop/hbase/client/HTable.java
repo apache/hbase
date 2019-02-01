@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType
 public class HTable implements Table {
   private static final Logger LOG = LoggerFactory.getLogger(HTable.class);
   private static final Consistency DEFAULT_CONSISTENCY = Consistency.STRONG;
-  private final ClusterConnection connection;
+  private final ConnectionImplementation connection;
   private final TableName tableName;
   private final Configuration configuration;
   private final ConnectionConfiguration connConfiguration;
