@@ -175,8 +175,8 @@ public class TestAsyncProcessWithRegionException {
     }
   }
 
-  private static ClusterConnection createHConnection() throws IOException {
-    ClusterConnection hc = Mockito.mock(ClusterConnection.class);
+  private static ConnectionImplementation createHConnection() throws IOException {
+    ConnectionImplementation hc = Mockito.mock(ConnectionImplementation.class);
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(ng.getNonceGroup()).thenReturn(HConstants.NO_NONCE);
     Mockito.when(hc.getNonceGenerator()).thenReturn(ng);
@@ -190,8 +190,8 @@ public class TestAsyncProcessWithRegionException {
     return hc;
   }
 
-  private static void setMockLocation(ClusterConnection hc, byte[] row, RegionLocations result)
-    throws IOException {
+  private static void setMockLocation(ConnectionImplementation hc, byte[] row,
+      RegionLocations result) throws IOException {
     Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row), Mockito.anyBoolean(),
       Mockito.anyBoolean(), Mockito.anyInt())).thenReturn(result);
     Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row), Mockito.anyBoolean(),
@@ -201,7 +201,7 @@ public class TestAsyncProcessWithRegionException {
   private static class MyAsyncProcess extends AsyncProcess {
     private final ExecutorService service = Executors.newFixedThreadPool(5);
 
-    MyAsyncProcess(ClusterConnection hc, Configuration conf) {
+    MyAsyncProcess(ConnectionImplementation hc, Configuration conf) {
       super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
     }
 

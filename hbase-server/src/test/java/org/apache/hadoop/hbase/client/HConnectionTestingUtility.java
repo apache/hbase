@@ -20,44 +20,43 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Threads;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
- * {@link ClusterConnection} testing utility.
+ * {@link ConnectionImplementation} testing utility.
  */
 public class HConnectionTestingUtility {
   /*
-   * Not part of {@link HBaseTestingUtility} because this class is not
-   * in same package as {@link ClusterConnection}.  Would have to reveal ugly
-   * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
+   * Not part of {@link HBaseTestingUtility} because this class is not in same package as {@link
+   * ConnectionImplementation}. Would have to reveal ugly {@link ConnectionImplementation} innards
+   * to HBaseTestingUtility to give it access.
    */
   /**
-   * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
-   * configuration instance.  Minimally the mock will return
-   * &lt;code>conf&lt;/conf> when {@link ClusterConnection#getConfiguration()} is invoked.
-   * Be sure to shutdown the connection when done by calling
-   * {@link Connection#close()} else it will stick around; this is probably not what you want.
+   * Get a Mocked {@link ConnectionImplementation} that goes with the passed <code>conf</code>
+   * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
+   * {@link ConnectionImplementation#getConfiguration()} is invoked. Be sure to shutdown the
+   * connection when done by calling {@link Connection#close()} else it will stick around; this is
+   * probably not what you want.
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code>
+   * @return ConnectionImplementation object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
-  public static ClusterConnection getMockedConnection(final Configuration conf)
+  public static ConnectionImplementation getMockedConnection(final Configuration conf)
   throws ZooKeeperConnectionException {
     ConnectionImplementation connection = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
@@ -70,37 +69,30 @@ public class HConnectionTestingUtility {
   }
 
   /**
-   * Calls {@link #getMockedConnection(Configuration)} and then mocks a few
-   * more of the popular {@link ClusterConnection} methods so they do 'normal'
-   * operation (see return doc below for list). Be sure to shutdown the
-   * connection when done by calling {@link Connection#close()} else it will stick around;
-   * this is probably not what you want.
-   *
+   * Calls {@link #getMockedConnection(Configuration)} and then mocks a few more of the popular
+   * {@link ConnectionImplementation} methods so they do 'normal' operation (see return doc below
+   * for list). Be sure to shutdown the connection when done by calling {@link Connection#close()}
+   * else it will stick around; this is probably not what you want.
    * @param conf Configuration to use
-   * @param admin An AdminProtocol; can be null but is usually
-   * itself a mock.
-   * @param client A ClientProtocol; can be null but is usually
-   * itself a mock.
-   * @param sn ServerName to include in the region location returned by this
-   * <code>connection</code>
-   * @param hri RegionInfo to include in the location returned when
-   * getRegionLocator is called on the mocked connection
+   * @param admin An AdminProtocol; can be null but is usually itself a mock.
+   * @param client A ClientProtocol; can be null but is usually itself a mock.
+   * @param sn ServerName to include in the region location returned by this <code>connection</code>
+   * @param hri RegionInfo to include in the location returned when getRegionLocator is called on
+   *          the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
-   * {@link ClusterConnection#getConfiguration()} is called, a 'location' when
-   * {@link ClusterConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)}
-   * is called,
-   * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
-   * {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
-   * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link Connection#close()} when done with this mocked Connection.
-   * @throws IOException
+   *         {@link ConnectionImplementation#getConfiguration()} is called, a 'location' when
+   *         {@link ConnectionImplementation#getRegionLocation(TableName,byte[], boolean)}
+   *         is called, and that returns the passed
+   *         {@link AdminProtos.AdminService.BlockingInterface} instance when
+   *         {@link ConnectionImplementation#getAdmin(ServerName)} is called, returns the passed
+   *         {@link ClientProtos.ClientService.BlockingInterface} instance when
+   *         {@link ConnectionImplementation#getClient(ServerName)} is called (Be sure to call
+   *         {@link Connection#close()} when done with this mocked Connection.
    */
-  public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
+  public static ConnectionImplementation getMockedConnectionAndDecorate(final Configuration conf,
       final AdminProtos.AdminService.BlockingInterface admin,
-      final ClientProtos.ClientService.BlockingInterface client,
-      final ServerName sn, final RegionInfo hri)
-  throws IOException {
+      final ClientProtos.ClientService.BlockingInterface client, final ServerName sn,
+      final RegionInfo hri) throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     Mockito.doNothing().when(c).close();
@@ -141,18 +133,17 @@ public class HConnectionTestingUtility {
   }
 
   /**
-   * Get a Mockito spied-upon {@link ClusterConnection} that goes with the passed
-   * <code>conf</code> configuration instance.
-   * Be sure to shutdown the connection when done by calling
-   * {@link Connection#close()} else it will stick around; this is probably not what you want.
+   * Get a Mockito spied-upon {@link ConnectionImplementation} that goes with the passed
+   * <code>conf</code> configuration instance. Be sure to shutdown the connection when done by
+   * calling {@link Connection#close()} else it will stick around; this is probably not what you
+   * want.
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
-   * [Dead link]: See also
-   * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
+   * @return ConnectionImplementation object for <code>conf</code>
+   * @throws ZooKeeperConnectionException [Dead link]: See also
+   *           {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
-  public static ClusterConnection getSpiedConnection(final Configuration conf)
-  throws IOException {
+  public static ConnectionImplementation getSpiedConnection(final Configuration conf)
+      throws IOException {
     ConnectionImplementation connection =
       Mockito.spy(new ConnectionImplementation(conf, null, null));
     return connection;

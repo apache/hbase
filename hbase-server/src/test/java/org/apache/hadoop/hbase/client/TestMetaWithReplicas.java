@@ -253,7 +253,7 @@ public class TestMetaWithReplicas {
           util.getHBaseClusterInterface().killRegionServer(primary);
           util.getHBaseClusterInterface().waitForRegionServerToStop(primary, 60000);
         }
-        ((ClusterConnection)c).clearRegionCache();
+        c.clearRegionLocationCache();
       }
       LOG.info("Running GETs");
       Get get = null;
@@ -276,7 +276,7 @@ public class TestMetaWithReplicas {
         util.getHBaseClusterInterface().startRegionServer(primary.getHostname(), 0);
         util.getHBaseClusterInterface().waitForActiveAndReadyMaster();
         LOG.info("Master active!");
-        ((ClusterConnection)c).clearRegionCache();
+        c.clearRegionLocationCache();
       }
       conf.setBoolean(HConstants.USE_META_REPLICAS, false);
       LOG.info("Running GETs no replicas");
@@ -352,19 +352,24 @@ public class TestMetaWithReplicas {
     };
   }
 
+  private List<HRegionLocation> getMetaRegionLocations() throws IOException {
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      return locator.getAllRegionLocations();
+    }
+  }
+
   @Nullable
   private String checkMetaLocationAndExplain(int originalReplicaCount)
       throws KeeperException, IOException {
     List<String> metaZnodes = TEST_UTIL.getZooKeeperWatcher().getMetaReplicaNodes();
     if (metaZnodes.size() == originalReplicaCount) {
-      RegionLocations rl = ((ClusterConnection) TEST_UTIL.getConnection())
-          .locateRegion(TableName.META_TABLE_NAME,
-              HConstants.EMPTY_START_ROW, false, false);
-      for (HRegionLocation location : rl.getRegionLocations()) {
+      List<HRegionLocation> locs = getMetaRegionLocations();
+      for (HRegionLocation location : locs) {
         if (location == null) {
-          return "Null location found in " + rl.toString();
+          return "Null location found in " + locs;
         }
-        if (location.getRegionInfo() == null) {
+        if (location.getRegion() == null) {
           return "Null regionInfo for location " + location;
         }
         if (location.getHostname() == null) {
@@ -387,8 +392,7 @@ public class TestMetaWithReplicas {
   public void testHBaseFsckWithFewerMetaReplicas() throws Exception {
     ClusterConnection c = (ClusterConnection)ConnectionFactory.createConnection(
         TEST_UTIL.getConfiguration());
-    RegionLocations rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
-        false, false);
+    RegionLocations rl = new RegionLocations(getMetaRegionLocations());
     HBaseFsckRepair.closeRegionSilentlyAndWait(c,
         rl.getRegionLocation(1).getServerName(), rl.getRegionLocation(1).getRegionInfo());
     // check that problem exists
@@ -405,8 +409,7 @@ public class TestMetaWithReplicas {
   public void testHBaseFsckWithFewerMetaReplicaZnodes() throws Exception {
     ClusterConnection c = (ClusterConnection)ConnectionFactory.createConnection(
         TEST_UTIL.getConfiguration());
-    RegionLocations rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
-        false, false);
+    RegionLocations rl = new RegionLocations(getMetaRegionLocations());
     HBaseFsckRepair.closeRegionSilentlyAndWait(c,
         rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
@@ -484,17 +487,14 @@ public class TestMetaWithReplicas {
     // can be recovered
     try (ClusterConnection conn = (ClusterConnection)
         ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      RegionLocations rl = conn.
-          locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
-      HRegionLocation hrl = rl.getRegionLocation(1);
+      HRegionLocation hrl = getMetaRegionLocations().get(1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);
       int i = 0;
       do {
         LOG.debug("Waiting for the replica " + hrl.getRegionInfo() + " to come up");
         Thread.sleep(10000); //wait for the detection/recovery
-        rl = conn.locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
-        hrl = rl.getRegionLocation(1);
+        hrl = getMetaRegionLocations().get(1);
         i++;
       } while ((hrl == null || hrl.getServerName().equals(oldServer)) && i < 3);
       assertTrue(i != 3);
