@@ -69,7 +69,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   // Keep lastResult returned successfully in case we have to reset scanner.
   protected Result lastResult = null;
   protected final long maxScannerResultSize;
-  private final ClusterConnection connection;
+  private final ConnectionImplementation connection;
   protected final TableName tableName;
   protected final int scannerTimeout;
   protected RpcRetryingCaller<Result[]> caller;
@@ -94,7 +94,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * @throws IOException
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
+      ConnectionImplementation connection, RpcRetryingCallerFactory rpcFactory,
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
       throws IOException {
     if (LOG.isTraceEnabled()) {
@@ -138,7 +138,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     initCache();
   }
 
-  protected ClusterConnection getConnection() {
+  protected ConnectionImplementation getConnection() {
     return this.connection;
   }
 

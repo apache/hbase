@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -366,24 +366,15 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   private ClusterConnection getMockedConnection(final Configuration conf)
       throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
-    ClusterConnection c = Mockito.mock(ClusterConnection.class);
-    Mockito.when(c.getConfiguration()).thenReturn(conf);
-    Mockito.doNothing().when(c).close();
-    // Make it so we return a particular location when asked.
-    final HRegionLocation loc = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO,
-        ServerName.valueOf("example.org", 1234, 0));
-    Mockito.when(
-      c.getRegionLocation((TableName) Mockito.any(), (byte[]) Mockito.any(), Mockito.anyBoolean()))
-        .thenReturn(loc);
-    Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any())).thenReturn(loc);
-    ClientProtos.ClientService.BlockingInterface hri =
-        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+    ServerName sn = ServerName.valueOf("example.org", 1234, 0);
+    RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    ClientProtos.ClientService.BlockingInterface client =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     Mockito
-        .when(
-          hri.bulkLoadHFile((RpcController) Mockito.any(), (BulkLoadHFileRequest) Mockito.any()))
-        .thenThrow(new ServiceException(new IOException("injecting bulk load error")));
-    Mockito.when(c.getClient(Mockito.any())).thenReturn(hri);
-    return c;
+      .when(
+        client.bulkLoadHFile((RpcController) Mockito.any(), (BulkLoadHFileRequest) Mockito.any()))
+      .thenThrow(new ServiceException(new IOException("injecting bulk load error")));
+    return HConnectionTestingUtility.getMockedConnectionAndDecorate(conf, null, client, sn, hri);
   }
 
   /**
