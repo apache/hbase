@@ -140,7 +140,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
             params.getOperationTimeout() : conn.getConnectionConfiguration().getOperationTimeout());
     this.ap = ap;
   }
-  BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
+
+  BufferedMutatorImpl(ConnectionImplementation conn, RpcRetryingCallerFactory rpcCallerFactory,
       RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
     this(conn, params,
       // puts need to track errors globally due to how the APIs currently work.

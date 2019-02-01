@@ -175,17 +175,17 @@ public class TestAsyncProcess {
       return r;
     }
 
-    public MyAsyncProcess(ClusterConnection hc, Configuration conf) {
-      super(hc, conf,
-          new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
+    public MyAsyncProcess(ConnectionImplementation hc, Configuration conf) {
+      super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
       service = Executors.newFixedThreadPool(5);
       this.conf = conf;
     }
 
-    public MyAsyncProcess(ClusterConnection hc, Configuration conf, AtomicInteger nbThreads) {
+    public MyAsyncProcess(ConnectionImplementation hc, Configuration conf,
+        AtomicInteger nbThreads) {
       super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
-      service = new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
-          new SynchronousQueue<>(), new CountingThreadFactory(nbThreads));
+      service = new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS, new SynchronousQueue<>(),
+        new CountingThreadFactory(nbThreads));
     }
 
     public <CResult> AsyncRequestFuture submit(ExecutorService pool, TableName tableName,
@@ -326,7 +326,8 @@ public class TestAsyncProcess {
 
     private final IOException ioe;
 
-    public AsyncProcessWithFailure(ClusterConnection hc, Configuration conf, IOException ioe) {
+    public AsyncProcessWithFailure(ConnectionImplementation hc, Configuration conf,
+        IOException ioe) {
       super(hc, conf);
       this.ioe = ioe;
       serverTrackerTimeout = 1L;
@@ -376,7 +377,7 @@ public class TestAsyncProcess {
       customPrimarySleepMs.put(server, primaryMs);
     }
 
-    public MyAsyncProcessWithReplicas(ClusterConnection hc, Configuration conf) {
+    public MyAsyncProcessWithReplicas(ConnectionImplementation hc, Configuration conf) {
       super(hc, conf);
     }
 
@@ -622,7 +623,7 @@ public class TestAsyncProcess {
   }
 
   private void doSubmitRequest(long maxHeapSizePerRequest, long putsHeapSize) throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     final String defaultClazz =
         conn.getConfiguration().get(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY);
     final long defaultHeapSizePerRequest = conn.getConfiguration().getLong(
@@ -718,7 +719,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmit() throws Exception {
-    ClusterConnection hc = createHConnection();
+    ConnectionImplementation hc = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(hc, CONF);
 
     List<Put> puts = new ArrayList<>(1);
@@ -730,7 +731,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitWithCB() throws Exception {
-    ClusterConnection hc = createHConnection();
+    ConnectionImplementation hc = createConnectionImpl();
     final AtomicInteger updateCalled = new AtomicInteger(0);
     Batch.Callback<Object> cb = new Batch.Callback<Object>() {
       @Override
@@ -751,7 +752,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitBusyRegion() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     final String defaultClazz =
         conn.getConfiguration().get(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY);
     conn.getConfiguration().set(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY,
@@ -779,7 +780,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitBusyRegionServer() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     final String defaultClazz =
         conn.getConfiguration().get(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY);
@@ -810,7 +811,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testFail() throws Exception {
-    MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF);
+    MyAsyncProcess ap = new MyAsyncProcess(createConnectionImpl(), CONF);
 
     List<Put> puts = new ArrayList<>(1);
     Put p = createPut(1, false);
@@ -836,7 +837,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSubmitTrue() throws IOException {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     final MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     final String defaultClazz =
         conn.getConfiguration().get(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY);
@@ -885,7 +886,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testFailAndSuccess() throws Exception {
-    MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF);
+    MyAsyncProcess ap = new MyAsyncProcess(createConnectionImpl(), CONF);
 
     List<Put> puts = new ArrayList<>(3);
     puts.add(createPut(1, false));
@@ -912,7 +913,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testFlush() throws Exception {
-    MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF);
+    MyAsyncProcess ap = new MyAsyncProcess(createConnectionImpl(), CONF);
 
     List<Put> puts = new ArrayList<>(3);
     puts.add(createPut(1, false));
@@ -929,7 +930,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testTaskCountWithoutClientBackoffPolicy() throws IOException, InterruptedException {
-    ClusterConnection hc = createHConnection();
+    ConnectionImplementation hc = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(hc, CONF);
     testTaskCount(ap);
   }
@@ -939,7 +940,7 @@ public class TestAsyncProcess {
     Configuration copyConf = new Configuration(CONF);
     copyConf.setBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE, true);
     MyClientBackoffPolicy bp = new MyClientBackoffPolicy();
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     Mockito.when(conn.getConfiguration()).thenReturn(copyConf);
     Mockito.when(conn.getStatisticsTracker()).thenReturn(ServerStatisticTracker.create(copyConf));
     Mockito.when(conn.getBackoffPolicy()).thenReturn(bp);
@@ -979,7 +980,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testMaxTask() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     final String defaultClazz =
         conn.getConfiguration().get(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY);
     conn.getConfiguration().set(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY,
@@ -1038,8 +1039,8 @@ public class TestAsyncProcess {
     }
   }
 
-  private ClusterConnection createHConnection() throws IOException {
-    ClusterConnection hc = createHConnectionCommon();
+  private ConnectionImplementation createConnectionImpl() throws IOException {
+    ConnectionImplementation hc = createConnectionImplCommon();
     setMockLocation(hc, DUMMY_BYTES_1, new RegionLocations(loc1));
     setMockLocation(hc, DUMMY_BYTES_2, new RegionLocations(loc2));
     setMockLocation(hc, DUMMY_BYTES_3, new RegionLocations(loc3));
@@ -1049,8 +1050,8 @@ public class TestAsyncProcess {
     return hc;
   }
 
-  private ClusterConnection createHConnectionWithReplicas() throws IOException {
-    ClusterConnection hc = createHConnectionCommon();
+  private ConnectionImplementation createConnectionImplWithReplicas() throws IOException {
+    ConnectionImplementation hc = createConnectionImplCommon();
     setMockLocation(hc, DUMMY_BYTES_1, hrls1);
     setMockLocation(hc, DUMMY_BYTES_2, hrls2);
     setMockLocation(hc, DUMMY_BYTES_3, hrls3);
@@ -1069,16 +1070,16 @@ public class TestAsyncProcess {
     return hc;
   }
 
-  private static void setMockLocation(ClusterConnection hc, byte[] row,
+  private static void setMockLocation(ConnectionImplementation hc, byte[] row,
       RegionLocations result) throws IOException {
-    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row),
-        Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt())).thenReturn(result);
-    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row),
-        Mockito.anyBoolean(), Mockito.anyBoolean())).thenReturn(result);
+    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row), Mockito.anyBoolean(),
+      Mockito.anyBoolean(), Mockito.anyInt())).thenReturn(result);
+    Mockito.when(hc.locateRegion(Mockito.eq(DUMMY_TABLE), Mockito.eq(row), Mockito.anyBoolean(),
+      Mockito.anyBoolean())).thenReturn(result);
   }
 
-  private ClusterConnection createHConnectionCommon() {
-    ClusterConnection hc = Mockito.mock(ClusterConnection.class);
+  private ConnectionImplementation createConnectionImplCommon() {
+    ConnectionImplementation hc = Mockito.mock(ConnectionImplementation.class);
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(ng.getNonceGroup()).thenReturn(HConstants.NO_NONCE);
     Mockito.when(hc.getNonceGenerator()).thenReturn(ng);
@@ -1089,7 +1090,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testHTablePutSuccess() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl ht = new BufferedMutatorImpl(conn, bufferParam, ap);
@@ -1106,7 +1107,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testSettingWriteBufferPeriodicFlushParameters() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
 
     checkPeriodicFlushParameters(conn, ap,
@@ -1152,7 +1153,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testWriteBufferPeriodicFlushTimeoutMs() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
 
@@ -1219,7 +1220,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testBufferedMutatorImplWithSharedPool() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutator ht = new BufferedMutatorImpl(conn, bufferParam, ap);
@@ -1230,7 +1231,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testFailedPutAndNewPut() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE)
             .writeBufferSize(0);
@@ -1275,7 +1276,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testBatch() throws IOException, InterruptedException {
-    ClusterConnection conn = new MyConnectionImpl(CONF);
+    ConnectionImplementation conn = new MyConnectionImpl(CONF);
     HTable ht = (HTable) conn.getTable(DUMMY_TABLE);
     ht.multiAp = new MyAsyncProcess(conn, CONF);
 
@@ -1306,7 +1307,7 @@ public class TestAsyncProcess {
   @Test
   public void testErrorsServers() throws IOException {
     Configuration configuration = new Configuration(CONF);
-    ClusterConnection conn = new MyConnectionImpl(configuration);
+    ConnectionImplementation conn = new MyConnectionImpl(configuration);
     MyAsyncProcess ap = new MyAsyncProcess(conn, configuration);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
@@ -1337,7 +1338,7 @@ public class TestAsyncProcess {
     Configuration copyConf = new Configuration(CONF);
     copyConf.setLong(HConstants.HBASE_RPC_READ_TIMEOUT_KEY, readTimeout);
     copyConf.setLong(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, writeTimeout);
-    ClusterConnection conn = new MyConnectionImpl(copyConf);
+    ConnectionImplementation conn = new MyConnectionImpl(copyConf);
     MyAsyncProcess ap = new MyAsyncProcess(conn, copyConf);
     try (HTable ht = (HTable) conn.getTable(DUMMY_TABLE)) {
       ht.multiAp = ap;
@@ -1370,7 +1371,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testErrors() throws IOException {
-    ClusterConnection conn = new MyConnectionImpl(CONF);
+    ConnectionImplementation conn = new MyConnectionImpl(CONF);
     AsyncProcessWithFailure ap = new AsyncProcessWithFailure(conn, CONF, new IOException("test"));
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
@@ -1394,7 +1395,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testCallQueueTooLarge() throws IOException {
-    ClusterConnection conn = new MyConnectionImpl(CONF);
+    ConnectionImplementation conn = new MyConnectionImpl(CONF);
     AsyncProcessWithFailure ap =
         new AsyncProcessWithFailure(conn, CONF, new CallQueueTooBigException());
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
@@ -1609,7 +1610,7 @@ public class TestAsyncProcess {
     // TODO: this is kind of timing dependent... perhaps it should detect from createCaller
     //       that the replica call has happened and that way control the ordering.
     Configuration conf = new Configuration();
-    ClusterConnection conn = createHConnectionWithReplicas();
+    ConnectionImplementation conn = createConnectionImplWithReplicas();
     conf.setInt(AsyncProcess.PRIMARY_CALL_TIMEOUT_KEY, replicaAfterMs * 1000);
     if (retries >= 0) {
       conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
@@ -1707,16 +1708,15 @@ public class TestAsyncProcess {
   }
 
   static class AsyncProcessForThrowableCheck extends AsyncProcess {
-    public AsyncProcessForThrowableCheck(ClusterConnection hc, Configuration conf) {
-      super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(
-          conf));
+    public AsyncProcessForThrowableCheck(ConnectionImplementation hc, Configuration conf) {
+      super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
     }
   }
 
   @Test
   public void testUncheckedException() throws Exception {
     // Test the case pool.submit throws unchecked exception
-    ClusterConnection hc = createHConnection();
+    ConnectionImplementation hc = createConnectionImpl();
     MyThreadPoolExecutor myPool =
         new MyThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(200));
@@ -1748,7 +1748,7 @@ public class TestAsyncProcess {
     final int retries = 1;
     myConf.setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, specialPause);
     myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
-    ClusterConnection conn = new MyConnectionImpl(myConf);
+    ConnectionImplementation conn = new MyConnectionImpl(myConf);
     AsyncProcessWithFailure ap =
         new AsyncProcessWithFailure(conn, myConf, new CallQueueTooBigException());
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
@@ -1807,7 +1807,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testRetryWithExceptionClearsMetaCache() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     Configuration myConf = conn.getConfiguration();
     myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
 
@@ -1840,7 +1840,7 @@ public class TestAsyncProcess {
 
   @Test
   public void testQueueRowAccess() throws Exception {
-    ClusterConnection conn = createHConnection();
+    ConnectionImplementation conn = createConnectionImpl();
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, null, null,
       new BufferedMutatorParams(DUMMY_TABLE).writeBufferSize(100000));
     Put p0 = new Put(DUMMY_BYTES_1).addColumn(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);

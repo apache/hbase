@@ -307,8 +307,7 @@ public class BaseTestHBaseFsck {
       tbl.close();
       tbl = null;
     }
-
-    ((ClusterConnection) connection).clearRegionCache();
+    connection.clearRegionLocationCache();
     deleteTable(TEST_UTIL, tablename);
   }
 

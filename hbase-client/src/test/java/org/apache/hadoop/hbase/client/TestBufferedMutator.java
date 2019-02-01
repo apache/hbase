@@ -48,7 +48,7 @@ public class TestBufferedMutator {
    * Just to prove that I can insert a BM other than default.
    */
   public static class MyBufferedMutator extends BufferedMutatorImpl {
-    MyBufferedMutator(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
+    MyBufferedMutator(ConnectionImplementation conn, RpcRetryingCallerFactory rpcCallerFactory,
         RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
       super(conn, rpcCallerFactory, rpcFactory, params);
     }
