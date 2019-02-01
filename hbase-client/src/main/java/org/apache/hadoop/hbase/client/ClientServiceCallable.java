@@ -34,9 +34,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 public abstract class ClientServiceCallable<T> extends
     RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
 
-  public ClientServiceCallable(Connection connection, TableName tableName, byte [] row,
+  public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
       RpcController rpcController, int priority) {
-    super(connection, tableName, row, rpcController, priority);
+    super((ConnectionImplementation) connection, tableName, row, rpcController, priority);
   }
 
   @Override

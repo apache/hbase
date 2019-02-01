@@ -95,8 +95,9 @@ public class TestHBaseAdminNoCluster {
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, count);
     // Get mocked connection.   Getting the connection will register it so when HBaseAdmin is
     // constructed with same configuration, it will find this mocked connection.
-    ClusterConnection connection = HConnectionTestingUtility.getMockedConnection(configuration);
-    // Mock so we get back the master interface.  Make it so when createTable is called, we throw
+    ConnectionImplementation connection =
+      HConnectionTestingUtility.getMockedConnection(configuration);
+    // Mock so we get back the master interface. Make it so when createTable is called, we throw
     // the PleaseHoldException.
     MasterKeepAliveConnection masterAdmin = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(masterAdmin.createTable((RpcController)Mockito.any(),
@@ -292,7 +293,7 @@ public class TestHBaseAdminNoCluster {
     final int count = 10;
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, count);
 
-    ClusterConnection connection = mock(ClusterConnection.class);
+    ConnectionImplementation connection = mock(ConnectionImplementation.class);
     when(connection.getConfiguration()).thenReturn(configuration);
     MasterKeepAliveConnection masterAdmin =
         Mockito.mock(MasterKeepAliveConnection.class, new Answer() {
