@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashSet;
@@ -31,17 +29,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
-import org.apache.hadoop.hbase.util.Pair;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class has the logic for handling scanners for regions with and without replicas.
@@ -60,7 +59,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private static final Logger LOG = LoggerFactory.getLogger(ScannerCallableWithReplicas.class);
   volatile ScannerCallable currentScannerCallable;
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
-  final ClusterConnection cConnection;
+  final ConnectionImplementation cConnection;
   protected final ExecutorService pool;
   protected final int timeBeforeReplicas;
   private final Scan scan;
@@ -74,7 +73,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private boolean someRPCcancelled = false; //required for testing purposes only
   private int regionReplication = 0;
 
-  public ScannerCallableWithReplicas(TableName tableName, ClusterConnection cConnection,
+  public ScannerCallableWithReplicas(TableName tableName, ConnectionImplementation cConnection,
       ScannerCallable baseCallable, ExecutorService pool, int timeBeforeReplicas, Scan scan,
       int retries, int scannerTimeout, int caching, Configuration conf,
       RpcRetryingCaller<Result []> caller) {
@@ -151,19 +150,13 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       RegionLocations rl = null;
       try {
         rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
-            RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
-            currentScannerCallable.getRow());
+          RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
+          currentScannerCallable.getRow());
       } catch (RetriesExhaustedException | DoNotRetryIOException e) {
         // We cannot get the primary replica region location, it is possible that the region server
         // hosting meta table is down, it needs to proceed to try cached replicas directly.
-        if (cConnection instanceof ConnectionImplementation) {
-          rl = ((ConnectionImplementation) cConnection)
-              .getCachedLocation(tableName, currentScannerCallable.getRow());
-          if (rl == null) {
-            throw e;
-          }
-        } else {
-          // For completeness
+        rl = cConnection.getCachedLocation(tableName, currentScannerCallable.getRow());
+        if (rl == null) {
           throw e;
         }
       }

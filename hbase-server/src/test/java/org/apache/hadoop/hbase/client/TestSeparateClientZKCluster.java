@@ -204,7 +204,7 @@ public class TestSeparateClientZKCluster {
   public void testMetaMoveDuringClientZkClusterRestart() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    Connection conn = TEST_UTIL.getConnection();
     Admin admin = conn.getAdmin();
     HTable table = (HTable) conn.getTable(tn);
     try {
@@ -218,7 +218,7 @@ public class TestSeparateClientZKCluster {
       put.addColumn(family, qualifier, value);
       table.put(put);
       // invalid connection cache
-      conn.clearRegionCache();
+      conn.clearRegionLocationCache();
       // stop client zk cluster
       clientZkCluster.shutdown();
       // stop current meta server and confirm the server shutdown process

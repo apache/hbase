@@ -67,11 +67,11 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   private final Condition notFull = lock.newCondition();
 
   public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
-      ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
+      ConnectionImplementation connection, RpcRetryingCallerFactory rpcCallerFactory,
       RpcControllerFactory rpcControllerFactory, ExecutorService pool,
       int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-        replicaCallTimeoutMicroSecondScan);
+      replicaCallTimeoutMicroSecondScan);
   }
 
   @VisibleForTesting

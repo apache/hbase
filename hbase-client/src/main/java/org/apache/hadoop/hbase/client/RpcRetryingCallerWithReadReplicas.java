@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -27,24 +29,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -58,7 +58,7 @@ public class RpcRetryingCallerWithReadReplicas {
       LoggerFactory.getLogger(RpcRetryingCallerWithReadReplicas.class);
 
   protected final ExecutorService pool;
-  protected final ClusterConnection cConnection;
+  protected final ConnectionImplementation cConnection;
   protected final Configuration conf;
   protected final Get get;
   protected final TableName tableName;
@@ -71,7 +71,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
   public RpcRetryingCallerWithReadReplicas(
       RpcControllerFactory rpcControllerFactory, TableName tableName,
-      ClusterConnection cConnection, final Get get,
+      ConnectionImplementation cConnection, final Get get,
       ExecutorService pool, int retries, int operationTimeout, int rpcTimeout,
       int timeBeforeReplicas) {
     this.rpcControllerFactory = rpcControllerFactory;
@@ -185,19 +185,14 @@ public class RpcRetryingCallerWithReadReplicas {
       } else {
         // We cannot get the primary replica location, it is possible that the region
         // server hosting meta is down, it needs to proceed to try cached replicas.
-        if (cConnection instanceof ConnectionImplementation) {
-          rl = ((ConnectionImplementation)cConnection).getCachedLocation(tableName, get.getRow());
-          if (rl == null) {
-            // No cached locations
-            throw e;
-          }
-
-          // Primary replica location is not known, skip primary replica
-          skipPrimary = true;
-        } else {
-          // For completeness
+        rl = cConnection.getCachedLocation(tableName, get.getRow());
+        if (rl == null) {
+          // No cached locations
           throw e;
         }
+
+        // Primary replica location is not known, skip primary replica
+        skipPrimary = true;
       }
     }
 
@@ -316,9 +311,8 @@ public class RpcRetryingCallerWithReadReplicas {
   }
 
   static RegionLocations getRegionLocations(boolean useCache, int replicaId,
-                 ClusterConnection cConnection, TableName tableName, byte[] row)
+      ConnectionImplementation cConnection, TableName tableName, byte[] row)
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
-
     RegionLocations rl;
     try {
       if (useCache) {
