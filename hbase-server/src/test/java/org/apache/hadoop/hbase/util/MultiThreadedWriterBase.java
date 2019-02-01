@@ -27,10 +27,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.slf4j.Logger;
@@ -97,9 +97,9 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
 
   protected String getRegionDebugInfoSafe(Table table, byte[] rowKey) {
     HRegionLocation cached = null, real = null;
-    try {
-      cached = connection.getRegionLocation(tableName, rowKey, false);
-      real = connection.getRegionLocation(tableName, rowKey, true);
+    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+      cached = locator.getRegionLocation(rowKey, false);
+      real = locator.getRegionLocation(rowKey, true);
     } catch (Throwable t) {
       // Cannot obtain region information for another catch block - too bad!
     }

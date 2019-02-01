@@ -21,14 +21,13 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Get;
-
 import org.apache.hadoop.hbase.client.Consistency;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -377,8 +376,10 @@ public class MultiThreadedReader extends MultiThreadedAction
           numKeysVerified.incrementAndGet();
         }
       } else {
-        HRegionLocation hloc = connection.getRegionLocation(tableName,
-          get.getRow(), false);
+        HRegionLocation hloc;
+        try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+          hloc = locator.getRegionLocation(get.getRow());
+        }
         String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", Region location: " + hloc);
         if(isNullExpected) {

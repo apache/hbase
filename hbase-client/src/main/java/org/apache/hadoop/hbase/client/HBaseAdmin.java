@@ -244,7 +244,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 public class HBaseAdmin implements Admin {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseAdmin.class);
 
-  private ClusterConnection connection;
+  private ConnectionImplementation connection;
 
   private final Configuration conf;
   private final long pause;
@@ -270,7 +270,7 @@ public class HBaseAdmin implements Admin {
     return syncWaitTimeout;
   }
 
-  HBaseAdmin(ClusterConnection connection) throws IOException {
+  HBaseAdmin(ConnectionImplementation connection) throws IOException {
     this.conf = connection.getConfiguration();
     this.connection = connection;
 
@@ -643,7 +643,9 @@ public class HBaseAdmin implements Admin {
     protected Void postOperationResult(final Void result, final long deadlineTs)
         throws IOException, TimeoutException {
       // Delete cached information to prevent clients from using old locations
-      ((ClusterConnection) getAdmin().getConnection()).clearRegionCache(getTableName());
+      try (RegionLocator locator = getAdmin().getConnection().getRegionLocator(getTableName())) {
+        locator.clearRegionLocationCache();
+      }
       return super.postOperationResult(result, deadlineTs);
     }
   }

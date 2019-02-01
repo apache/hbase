@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,7 +45,7 @@ public class TestReversedScannerCallable {
       HBaseClassTestRule.forClass(TestReversedScannerCallable.class);
 
   @Mock
-  private ClusterConnection connection;
+  private ConnectionImplementation connection;
   @Mock
   private Scan scan;
   @Mock
