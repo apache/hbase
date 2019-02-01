@@ -229,7 +229,7 @@ public class TestReplicasClient {
 
   @Before
   public void before() throws IOException {
-    ((ClusterConnection) HTU.getAdmin().getConnection()).clearRegionLocationCache();
+    HTU.getConnection().clearRegionLocationCache();
     try {
       openRegion(hriPrimary);
     } catch (Exception ignored) {
@@ -250,8 +250,7 @@ public class TestReplicasClient {
       closeRegion(hriPrimary);
     } catch (Exception ignored) {
     }
-
-    ((ClusterConnection) HTU.getAdmin().getConnection()).clearRegionLocationCache();
+    HTU.getConnection().clearRegionLocationCache();
   }
 
   private HRegionServer getRS() {
@@ -329,7 +328,7 @@ public class TestReplicasClient {
   public void testLocations() throws Exception {
     byte[] b1 = Bytes.toBytes("testLocations");
     openRegion(hriSecondary);
-    ClusterConnection hc = (ClusterConnection) HTU.getAdmin().getConnection();
+    ConnectionImplementation hc = (ConnectionImplementation) HTU.getConnection();
 
     try {
       hc.clearRegionLocationCache();

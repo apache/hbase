@@ -46,25 +46,25 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
   protected final RpcControllerFactory rpcControllerFactory;
   private HBaseRpcController controller = null;
 
-  protected final ClusterConnection connection;
+  protected final ConnectionImplementation connection;
   protected HRegionLocation location;
   protected final TableName tableName;
   protected final byte[] row;
   protected final int replicaId;
 
-  public RegionAdminServiceCallable(ClusterConnection connection,
+  public RegionAdminServiceCallable(ConnectionImplementation connection,
       RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] row) {
     this(connection, rpcControllerFactory, null, tableName, row);
   }
 
-  public RegionAdminServiceCallable(ClusterConnection connection,
+  public RegionAdminServiceCallable(ConnectionImplementation connection,
       RpcControllerFactory rpcControllerFactory, HRegionLocation location,
       TableName tableName, byte[] row) {
     this(connection, rpcControllerFactory, location,
       tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
-  public RegionAdminServiceCallable(ClusterConnection connection,
+  public RegionAdminServiceCallable(ConnectionImplementation connection,
       RpcControllerFactory rpcControllerFactory, HRegionLocation location,
       TableName tableName, byte[] row, int replicaId) {
     this.connection = connection;
@@ -138,8 +138,8 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
     return ConnectionUtils.getPauseTime(pause, tries);
   }
 
-  public static RegionLocations getRegionLocations(
-      ClusterConnection connection, TableName tableName, byte[] row,
+  private static RegionLocations getRegionLocations(
+      ConnectionImplementation connection, TableName tableName, byte[] row,
       boolean useCache, int replicaId)
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
     RegionLocations rl;

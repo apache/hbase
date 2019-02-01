@@ -615,9 +615,16 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return true;
   }
 
-  @Override
-  public HRegionLocation getRegionLocation(final TableName tableName, final byte[] row,
-      boolean reload) throws IOException {
+  /**
+   * Find region location hosting passed row
+   * @param tableName table name
+   * @param row Row to find.
+   * @param reload If true do not use cache, otherwise bypass.
+   * @return Location of row.
+   * @throws IOException if a remote or network exception occurs
+   */
+  HRegionLocation getRegionLocation(final TableName tableName, final byte[] row, boolean reload)
+      throws IOException {
     return reload ? relocateRegion(tableName, row) : locateRegion(tableName, row);
   }
 
@@ -687,13 +694,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  @Override
-  public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
-    RegionLocations locations = locateRegion(RegionInfo.getTable(regionName),
-      RegionInfo.getStartKey(regionName), false, true);
-    return locations == null ? null : locations.getRegionLocation();
-  }
-
   private boolean isDeadServer(ServerName sn) {
     if (clusterStatusListener == null) {
       return false;
@@ -702,13 +702,26 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  @Override
-  public List<HRegionLocation> locateRegions(TableName tableName) throws IOException {
+  /**
+   * Gets the locations of all regions in the specified table, <i>tableName</i>.
+   * @param tableName table to get regions of
+   * @return list of region locations for all regions of table
+   * @throws IOException if IO failure occurs
+   */
+  List<HRegionLocation> locateRegions(TableName tableName) throws IOException {
     return locateRegions(tableName, false, true);
   }
 
-  @Override
-  public List<HRegionLocation> locateRegions(TableName tableName, boolean useCache,
+  /**
+   * Gets the locations of all regions in the specified table, <i>tableName</i>.
+   * @param tableName table to get regions of
+   * @param useCache Should we use the cache to retrieve the region information.
+   * @param offlined True if we are to include offlined regions, false and we'll leave out offlined
+   *          regions from returned list.
+   * @return list of region locations for all regions of table
+   * @throws IOException if IO failure occurs
+   */
+  List<HRegionLocation> locateRegions(TableName tableName, boolean useCache,
       boolean offlined) throws IOException {
     List<RegionInfo> regions;
     if (TableName.isMetaTableName(tableName)) {
@@ -733,24 +746,44 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return locations;
   }
 
-  @Override
-  public HRegionLocation locateRegion(final TableName tableName, final byte[] row)
-      throws IOException {
+  /**
+   * Find the location of the region of <i>tableName</i> that <i>row</i> lives in.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the region in question
+   * @throws IOException if a remote or network exception occurs
+   */
+  HRegionLocation locateRegion(final TableName tableName, final byte[] row) throws IOException {
     RegionLocations locations = locateRegion(tableName, row, true, true);
     return locations == null ? null : locations.getRegionLocation();
   }
 
-  @Override
-  public HRegionLocation relocateRegion(final TableName tableName, final byte[] row)
-      throws IOException {
+  /**
+   * Find the location of the region of <i>tableName</i> that <i>row</i> lives in, ignoring any
+   * value that might be in the cache.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the region in question
+   * @throws IOException if a remote or network exception occurs
+   */
+  HRegionLocation relocateRegion(final TableName tableName, final byte[] row) throws IOException {
     RegionLocations locations =
       relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
     return locations == null ? null
       : locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
-  @Override
-  public RegionLocations relocateRegion(final TableName tableName,
+  /**
+   * Find the location of the region of <i>tableName</i> that <i>row</i>
+   * lives in, ignoring any value that might be in the cache.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @param replicaId the replicaId of the region
+   * @return RegionLocations that describe where to find the region in
+   *   question
+   * @throws IOException if a remote or network exception occurs
+   */
+  RegionLocations relocateRegion(final TableName tableName,
       final byte [] row, int replicaId) throws IOException{
     // Since this is an explicit request not to use any caching, finding
     // disabled tables should not be desirable.  This will ensure that an exception is thrown when
@@ -762,14 +795,30 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return locateRegion(tableName, row, false, true, replicaId);
   }
 
-  @Override
-  public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
+  /**
+   * @param tableName table to get regions of
+   * @param row the row
+   * @param useCache Should we use the cache to retrieve the region information.
+   * @param retry do we retry
+   * @return region locations for this row.
+   * @throws IOException if IO failure occurs
+   */
+  RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
       boolean retry) throws IOException {
     return locateRegion(tableName, row, useCache, retry, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
-  @Override
-  public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
+  /**
+  *
+  * @param tableName table to get regions of
+  * @param row the row
+  * @param useCache Should we use the cache to retrieve the region information.
+  * @param retry do we retry
+  * @param replicaId the replicaId for the region
+  * @return region locations for this row.
+  * @throws IOException if IO failure occurs
+  */
+  RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
       boolean retry, int replicaId) throws IOException {
     checkClosed();
     if (tableName == null || tableName.getName().length == 0) {
@@ -973,8 +1022,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * @param tableName The table name.
    * @param location the new location
    */
-  @Override
-  public void cacheLocation(final TableName tableName, final RegionLocations location) {
+  void cacheLocation(final TableName tableName, final RegionLocations location) {
     metaCache.cacheLocation(tableName, location);
   }
 
@@ -988,15 +1036,15 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return metaCache.getCachedLocation(tableName, row);
   }
 
-  public void clearRegionCache(final TableName tableName, byte[] row) {
+  void clearRegionCache(final TableName tableName, byte[] row) {
     metaCache.clearCache(tableName, row);
   }
 
-  /*
-   * Delete all cached entries of a table that maps to a specific location.
+  /**
+   * Clear any caches that pertain to server name <code>sn</code>.
+   * @param sn A server name
    */
-  @Override
-  public void clearCaches(final ServerName serverName) {
+  void clearCaches(final ServerName serverName) {
     metaCache.clearCache(serverName);
   }
 
@@ -1005,8 +1053,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache();
   }
 
-  @Override
-  public void clearRegionCache(final TableName tableName) {
+  /**
+   * Allows flushing the region cache of all locations that pertain to <code>tableName</code>
+   * @param tableName Name of the table whose regions we are to remove from cache.
+   */
+  void clearRegionCache(final TableName tableName) {
     metaCache.clearCache(tableName);
   }
 
@@ -1869,8 +1920,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     cacheLocation(hri.getTable(), source, newHrl);
   }
 
-  @Override
-  public void deleteCachedRegionLocation(final HRegionLocation location) {
+  void deleteCachedRegionLocation(final HRegionLocation location) {
     metaCache.clearCache(location);
   }
 
@@ -1882,8 +1932,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    *   or wrapped or both RegionMovedException
    * @param source server that is the source of the location update.
    */
-  @Override
-  public void updateCachedLocations(final TableName tableName, byte[] regionName, byte[] rowkey,
+  void updateCachedLocations(final TableName tableName, byte[] regionName, byte[] rowkey,
     final Object exception, final ServerName source) {
     if (rowkey == null || tableName == null) {
       LOG.warn("Coding error, see method javadoc. row=" + (rowkey == null ? "null" : rowkey) +
