@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -1948,35 +1949,34 @@ public class HBaseFsck extends Configured implements Closeable {
    * Record the location of the hbase:meta region as found in ZooKeeper.
    */
   private boolean recordMetaRegion() throws IOException {
-    RegionLocations rl = connection.locateRegion(TableName.META_TABLE_NAME,
-        HConstants.EMPTY_START_ROW, false, false);
-    if (rl == null) {
-      errors.reportError(ERROR_CODE.NULL_META_REGION,
-          "META region was not found in ZooKeeper");
+    List<HRegionLocation> locs;
+    try (RegionLocator locator = connection.getRegionLocator(TableName.META_TABLE_NAME)) {
+      locs = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true);
+    }
+    if (locs == null || locs.isEmpty()) {
+      errors.reportError(ERROR_CODE.NULL_META_REGION, "META region was not found in ZooKeeper");
       return false;
     }
-    for (HRegionLocation metaLocation : rl.getRegionLocations()) {
+    for (HRegionLocation metaLocation : locs) {
       // Check if Meta region is valid and existing
-      if (metaLocation == null ) {
-        errors.reportError(ERROR_CODE.NULL_META_REGION,
-            "META region location is null");
+      if (metaLocation == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION, "META region location is null");
         return false;
       }
-      if (metaLocation.getRegionInfo() == null) {
-        errors.reportError(ERROR_CODE.NULL_META_REGION,
-            "META location regionInfo is null");
+      if (metaLocation.getRegion() == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION, "META location regionInfo is null");
         return false;
       }
       if (metaLocation.getHostname() == null) {
-        errors.reportError(ERROR_CODE.NULL_META_REGION,
-            "META location hostName is null");
+        errors.reportError(ERROR_CODE.NULL_META_REGION, "META location hostName is null");
         return false;
       }
       ServerName sn = metaLocation.getServerName();
-      MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, EnvironmentEdgeManager.currentTime());
-      HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegionInfo().getEncodedName());
+      MetaEntry m =
+        new MetaEntry(metaLocation.getRegion(), sn, EnvironmentEdgeManager.currentTime());
+      HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegion().getEncodedName());
       if (hbckInfo == null) {
-        regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), new HbckInfo(m));
+        regionInfoMap.put(metaLocation.getRegion().getEncodedName(), new HbckInfo(m));
       } else {
         hbckInfo.metaEntry = m;
       }

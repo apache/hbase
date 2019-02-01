@@ -31,13 +31,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestIngest;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
@@ -52,6 +51,7 @@ import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -350,10 +350,11 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
           numReadFailures.addAndGet(1); // fail the test
           for (Result r : results) {
             LOG.error("FAILED FOR " + r);
-            RegionLocations rl = ((ClusterConnection)connection).
-                locateRegion(tableName, r.getRow(), true, true);
-            HRegionLocation locations[] = rl.getRegionLocations();
-            for (HRegionLocation h : locations) {
+            List<HRegionLocation> locs;
+            try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+              locs = locator.getRegionLocations(r.getRow());
+            }
+            for (HRegionLocation h : locs) {
               LOG.error("LOCATION " + h);
             }
           }

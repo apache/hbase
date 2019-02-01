@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 // Public but should be package private only it is used by MetaTableAccessor. FIX!!
 @InterfaceAudience.Private
 public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> {
-  private final Connection connection;
+  private final ConnectionImplementation connection;
   private final TableName tableName;
   private final byte[] row;
   /**
@@ -75,12 +75,12 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
+  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte [] row,
       RpcController rpcController) {
     this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
   }
 
-  public RegionServerCallable(Connection connection, TableName tableName, byte [] row,
+  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte [] row,
       RpcController rpcController, int priority) {
     super();
     this.connection = connection;
@@ -162,8 +162,8 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   /**
    * @return {@link ClusterConnection} instance used by this Callable.
    */
-  protected ClusterConnection getConnection() {
-    return (ClusterConnection) this.connection;
+  protected ConnectionImplementation getConnection() {
+    return this.connection;
   }
 
   protected HRegionLocation getLocation() {
