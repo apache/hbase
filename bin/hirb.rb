@@ -82,7 +82,7 @@ log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
 _configuration = nil
-D_ARG = '-D'
+D_ARG = '-D'.freeze
 while (arg = ARGV.shift)
   if arg == '-h' || arg == '--help'
     puts cmdline_help
@@ -248,7 +248,7 @@ else
     # exception unwrapping in shell means we'll have to handle Java exceptions
     # as a special case in order to format them properly.
     if exception.is_a? java.lang.Exception
-      $stderr.puts 'java exception'
+      warn 'java exception'
       message = exception.get_message
     end
     # Include the 'ERROR' string to try to make transition easier for scripts that

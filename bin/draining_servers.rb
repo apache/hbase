@@ -51,28 +51,29 @@ optparse.parse!
 def getServers(admin)
   serverInfos = admin.getClusterStatus.getServers
   servers = []
-  for server in serverInfos
+  serverInfos.each do |server|
     servers << server.getServerName
   end
   servers
 end
 
+# rubocop:disable Metrics/AbcSize
 def getServerNames(hostOrServers, config)
   ret = []
   connection = ConnectionFactory.createConnection(config)
 
-  for hostOrServer in hostOrServers
+  hostOrServers.each do |host_or_server|
     # check whether it is already serverName. No need to connect to cluster
-    parts = hostOrServer.split(',')
+    parts = host_or_server.split(',')
     if parts.size == 3
-      ret << hostOrServer
+      ret << host_or_server
     else
-      admin = connection.getAdmin unless admin
+      admin ||= connection.getAdmin
       servers = getServers(admin)
 
-      hostOrServer = hostOrServer.tr(':', ',')
-      for server in servers
-        ret << server if server.start_with?(hostOrServer)
+      host_or_server = host_or_server.tr(':', ',')
+      servers.each do |server|
+        ret << server if server.start_with?(host_or_server)
       end
     end
   end
@@ -90,7 +91,7 @@ def addServers(_options, hostOrServers)
 
   begin
     parentZnode = zkw.getZNodePaths.drainingZNode
-    for server in servers
+    servers.each do |server|
       node = ZNodePaths.joinZNode(parentZnode, server)
       ZKUtil.createAndFailSilent(zkw, node)
     end
@@ -107,7 +108,7 @@ def removeServers(_options, hostOrServers)
 
   begin
     parentZnode = zkw.getZNodePaths.drainingZNode
-    for server in servers
+    servers.each do |server|
       node = ZNodePaths.joinZNode(parentZnode, server)
       ZKUtil.deleteNodeFailSilent(zkw, node)
     end
@@ -115,6 +116,7 @@ def removeServers(_options, hostOrServers)
     zkw.close
   end
 end
+# rubocop:enable Metrics/AbcSize
 
 # list servers in draining mode
 def listServers(_options)
