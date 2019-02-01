@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -93,135 +90,6 @@ public interface ClusterConnection extends Connection {
   TableState getTableState(TableName tableName)  throws IOException;
 
   /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in.
-   * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the region in
-   *   question
-   * @throws IOException if a remote or network exception occurs
-   */
-  HRegionLocation locateRegion(final TableName tableName,
-      final byte [] row) throws IOException;
-
-  /**
-   * @deprecated {@link #clearRegionLocationCache()} instead.
-   */
-  @Deprecated
-  default void clearRegionCache() {
-    clearRegionLocationCache();
-  }
-
-  void cacheLocation(final TableName tableName, final RegionLocations location);
-
-  /**
-   * Allows flushing the region cache of all locations that pertain to
-   * <code>tableName</code>
-   * @param tableName Name of the table whose regions we are to remove from
-   *   cache.
-   */
-  void clearRegionCache(final TableName tableName);
-
-  /**
-   * Deletes cached locations for the specific region.
-   * @param location The location object for the region, to be purged from cache.
-   */
-  void deleteCachedRegionLocation(final HRegionLocation location);
-
-  /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in, ignoring any value that might be in the cache.
-   * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the region in
-   *   question
-   * @throws IOException if a remote or network exception occurs
-   */
-  HRegionLocation relocateRegion(final TableName tableName,
-      final byte [] row) throws IOException;
-
-  /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in, ignoring any value that might be in the cache.
-   * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
-   * @param replicaId the replicaId of the region
-   * @return RegionLocations that describe where to find the region in
-   *   question
-   * @throws IOException if a remote or network exception occurs
-   */
-  RegionLocations relocateRegion(final TableName tableName,
-      final byte [] row, int replicaId) throws IOException;
-
-  /**
-   * Update the location cache. This is used internally by HBase, in most cases it should not be
-   *  used by the client application.
-   * @param tableName the table name
-   * @param regionName the region name
-   * @param rowkey the row
-   * @param exception the exception if any. Can be null.
-   * @param source the previous location
-   */
-  void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
-                                    Object exception, ServerName source);
-
-  /**
-   * Gets the location of the region of <i>regionName</i>.
-   * @param regionName name of the region to locate
-   * @return HRegionLocation that describes where to find the region in
-   *   question
-   * @throws IOException if a remote or network exception occurs
-   */
-  HRegionLocation locateRegion(final byte[] regionName)
-  throws IOException;
-
-  /**
-   * Gets the locations of all regions in the specified table, <i>tableName</i>.
-   * @param tableName table to get regions of
-   * @return list of region locations for all regions of table
-   * @throws IOException if IO failure occurs
-   */
-  List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
-
-  /**
-   * Gets the locations of all regions in the specified table, <i>tableName</i>.
-   * @param tableName table to get regions of
-   * @param useCache Should we use the cache to retrieve the region information.
-   * @param offlined True if we are to include offlined regions, false and we'll leave out offlined
-   *          regions from returned list.
-   * @return list of region locations for all regions of table
-   * @throws IOException if IO failure occurs
-   */
-  List<HRegionLocation> locateRegions(final TableName tableName,
-      final boolean useCache,
-      final boolean offlined) throws IOException;
-
-  /**
-   *
-   * @param tableName table to get regions of
-   * @param row the row
-   * @param useCache Should we use the cache to retrieve the region information.
-   * @param retry do we retry
-   * @return region locations for this row.
-   * @throws IOException if IO failure occurs
-   */
-  RegionLocations locateRegion(TableName tableName,
-                               byte[] row, boolean useCache, boolean retry) throws IOException;
-
- /**
-  *
-  * @param tableName table to get regions of
-  * @param row the row
-  * @param useCache Should we use the cache to retrieve the region information.
-  * @param retry do we retry
-  * @param replicaId the replicaId for the region
-  * @return region locations for this row.
-  * @throws IOException if IO failure occurs
-  */
-  RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
-     int replicaId) throws IOException;
-
-  /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
    */
   MasterKeepAliveConnection getMaster() throws IOException;
@@ -249,23 +117,6 @@ public interface ClusterConnection extends Connection {
    *
    */
   ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
-
-  /**
-   * Find region location hosting passed row
-   * @param tableName table name
-   * @param row Row to find.
-   * @param reload If true do not use cache, otherwise bypass.
-   * @return Location of row.
-   * @throws IOException if a remote or network exception occurs
-   */
-  HRegionLocation getRegionLocation(TableName tableName, byte[] row, boolean reload)
-      throws IOException;
-
-  /**
-   * Clear any caches that pertain to server name <code>sn</code>.
-   * @param sn A server name
-   */
-  void clearCaches(final ServerName sn);
 
   /**
    * @return Nonce generator for this ClusterConnection; may be null if disabled in configuration.

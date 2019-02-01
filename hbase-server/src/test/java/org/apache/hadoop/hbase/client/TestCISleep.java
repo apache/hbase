@@ -111,8 +111,8 @@ public class TestCISleep extends AbstractTestCITimeout {
     }
 
     RegionAdminServiceCallable<Object> regionAdminServiceCallable =
-      new RegionAdminServiceCallable<Object>((ClusterConnection) TEST_UTIL.getConnection(),
-          new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, FAM_NAM) {
+      new RegionAdminServiceCallable<Object>((ConnectionImplementation) TEST_UTIL.getConnection(),
+        new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, FAM_NAM) {
         @Override
         public Object call(HBaseRpcController controller) throws Exception {
           return null;

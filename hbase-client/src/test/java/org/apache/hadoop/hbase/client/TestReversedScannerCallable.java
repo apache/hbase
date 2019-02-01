@@ -45,7 +45,7 @@ public class TestReversedScannerCallable {
       HBaseClassTestRule.forClass(TestReversedScannerCallable.class);
 
   @Mock
-  private ClusterConnection connection;
+  private ConnectionImplementation connection;
   @Mock
   private Scan scan;
   @Mock
