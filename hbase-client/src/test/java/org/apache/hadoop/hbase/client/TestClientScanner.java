@@ -71,7 +71,7 @@ public class TestClientScanner {
   ExecutorService pool;
   Configuration conf;
 
-  ClusterConnection clusterConn;
+  ConnectionImplementation clusterConn;
   RpcRetryingCallerFactory rpcFactory;
   RpcControllerFactory controllerFactory;
 
@@ -80,7 +80,7 @@ public class TestClientScanner {
 
   @Before
   public void setup() throws IOException {
-    clusterConn = Mockito.mock(ClusterConnection.class);
+    clusterConn = Mockito.mock(ConnectionImplementation.class);
     rpcFactory = Mockito.mock(RpcRetryingCallerFactory.class);
     controllerFactory = Mockito.mock(RpcControllerFactory.class);
     pool = Executors.newSingleThreadExecutor();
@@ -103,11 +103,11 @@ public class TestClientScanner {
     private boolean initialized = false;
 
     public MockClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-        ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
+        ConnectionImplementation connection, RpcRetryingCallerFactory rpcFactory,
         RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
         throws IOException {
       super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
-          primaryOperationTimeout);
+        primaryOperationTimeout);
     }
 
     @Override

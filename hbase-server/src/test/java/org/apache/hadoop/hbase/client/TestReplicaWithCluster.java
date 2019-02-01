@@ -672,7 +672,7 @@ public class TestReplicaWithCluster {
   public void testGetRegionLocationFromPrimaryMetaRegion() throws IOException, InterruptedException {
     HTU.getAdmin().balancerSwitch(false, true);
 
-    ((ConnectionImplementation) HTU.getAdmin().getConnection()).setUseMetaReplicas(true);
+    ((ConnectionImplementation) HTU.getConnection()).setUseMetaReplicas(true);
 
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor("testGetRegionLocationFromPrimaryMetaRegion");
@@ -684,12 +684,12 @@ public class TestReplicaWithCluster {
       RegionServerHostingPrimayMetaRegionSlowOrStopCopro.slowDownPrimaryMetaScan = true;
 
       // Get user table location, always get it from the primary meta replica
-      RegionLocations url = ((ClusterConnection) HTU.getConnection())
-          .locateRegion(hdt.getTableName(), row, false, false);
-
+      try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
+        locator.getRegionLocations(row, true);
+      }
     } finally {
       RegionServerHostingPrimayMetaRegionSlowOrStopCopro.slowDownPrimaryMetaScan = false;
-      ((ConnectionImplementation) HTU.getAdmin().getConnection()).setUseMetaReplicas(false);
+      ((ConnectionImplementation) HTU.getConnection()).setUseMetaReplicas(false);
       HTU.getAdmin().balancerSwitch(true, true);
       HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
@@ -705,23 +705,25 @@ public class TestReplicaWithCluster {
   public void testReplicaGetWithPrimaryAndMetaDown() throws IOException, InterruptedException {
     HTU.getAdmin().balancerSwitch(false, true);
 
-    ((ConnectionImplementation)HTU.getAdmin().getConnection()).setUseMetaReplicas(true);
+    ((ConnectionImplementation)HTU.getConnection()).setUseMetaReplicas(true);
 
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithPrimaryAndMetaDown");
     hdt.setRegionReplication(2);
     try {
-
       Table table = HTU.createTable(hdt, new byte[][] { f }, null);
-
       // Get Meta location
-      RegionLocations mrl = ((ClusterConnection) HTU.getConnection())
-          .locateRegion(TableName.META_TABLE_NAME,
-              HConstants.EMPTY_START_ROW, false, false);
+      RegionLocations mrl;
+      try (
+          RegionLocator locator = HTU.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+        mrl = new RegionLocations(locator.getRegionLocations(HConstants.EMPTY_START_ROW, true));
+      }
 
       // Get user table location
-      RegionLocations url = ((ClusterConnection) HTU.getConnection())
-          .locateRegion(hdt.getTableName(), row, false, false);
+      RegionLocations url;
+      try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
+        url = new RegionLocations(locator.getRegionLocations(row, true));
+      }
 
       // Make sure that user primary region is co-hosted with the meta region
       if (!url.getDefaultRegionLocation().getServerName().equals(
@@ -740,12 +742,15 @@ public class TestReplicaWithCluster {
 
       // Wait until the meta table is updated with new location info
       while (true) {
-        mrl = ((ClusterConnection) HTU.getConnection())
-            .locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, false);
+        try (RegionLocator locator =
+          HTU.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+          mrl = new RegionLocations(locator.getRegionLocations(HConstants.EMPTY_START_ROW, true));
+        }
 
         // Get user table location
-        url = ((ClusterConnection) HTU.getConnection())
-            .locateRegion(hdt.getTableName(), row, false, true);
+        try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
+          url = new RegionLocations(locator.getRegionLocations(row, true));
+        }
 
         LOG.info("meta locations " + mrl);
         LOG.info("table locations " + url);
@@ -787,7 +792,7 @@ public class TestReplicaWithCluster {
       Assert.assertTrue(r.isStale());
 
     } finally {
-      ((ConnectionImplementation)HTU.getAdmin().getConnection()).setUseMetaReplicas(false);
+      ((ConnectionImplementation)HTU.getConnection()).setUseMetaReplicas(false);
       RegionServerHostingPrimayMetaRegionSlowOrStopCopro.throwException = false;
       HTU.getAdmin().balancerSwitch(true, true);
       HTU.getAdmin().disableTable(hdt.getTableName());
