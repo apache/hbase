@@ -22,28 +22,28 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.mapreduce.Import.CellImporter;
-import org.apache.hadoop.hbase.mapreduce.Import.Importer;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.mapreduce.Import.CellImporter;
+import org.apache.hadoop.hbase.mapreduce.Import.Importer;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tool used to copy a table to another one which can be on a different setup.
@@ -416,13 +416,12 @@ public class CopyTable extends Configured implements Tool {
     int code = 0;
     if (bulkload) {
       LOG.info("Trying to bulk load data to destination table: " + dstTableName);
-      LOG.info("command: ./bin/hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles {} {}",
+      LOG.info("command: ./bin/hbase {} {} {}", BulkLoadHFilesTool.NAME,
         this.bulkloadDir.toString(), this.dstTableName);
-      code = new LoadIncrementalHFiles(this.getConf())
-          .run(new String[] { this.bulkloadDir.toString(), this.dstTableName });
-      if (code == 0) {
-        // bulkloadDir is deleted only LoadIncrementalHFiles was successful so that one can rerun
-        // LoadIncrementalHFiles.
+      if (!BulkLoadHFiles.create(getConf()).bulkLoad(TableName.valueOf(dstTableName), bulkloadDir)
+        .isEmpty()) {
+        // bulkloadDir is deleted only BulkLoadHFiles was successful so that one can rerun
+        // BulkLoadHFiles.
         FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
         if (!fs.delete(this.bulkloadDir, true)) {
           LOG.error("Deleting folder " + bulkloadDir + " failed!");

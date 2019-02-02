@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.tool.TestLoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.TestBulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
@@ -92,7 +92,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     int NB_ROWS2 = 20;
     LOG.debug("bulk loading into " + testName);
-    int actual = TestLoadIncrementalHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
+    int actual = TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
         qualName, false, null, new byte[][][] {
           new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
           new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
@@ -105,7 +105,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     assertTrue(checkSucceeded(backupIdIncMultiple));
     // #4 bulk load again
     LOG.debug("bulk loading into " + testName);
-    int actual1 = TestLoadIncrementalHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
+    int actual1 = TestBulkLoadHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
       qualName, false, null,
       new byte[][][] { new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("qqq") },
         new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },

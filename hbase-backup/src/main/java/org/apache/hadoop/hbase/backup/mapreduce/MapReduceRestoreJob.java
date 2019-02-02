@@ -17,11 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.mapreduce;
 
-import static org.apache.hadoop.hbase.backup.util.BackupUtils.failed;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 
 import java.io.IOException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -29,7 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -42,8 +40,7 @@ import org.slf4j.LoggerFactory;
  * HFiles which are aligned with a region boundaries of a table being
  * restored.
  *
- * The resulting HFiles then are loaded using HBase bulk load tool
- * {@link LoadIncrementalHFiles}
+ * The resulting HFiles then are loaded using HBase bulk load tool {@link BulkLoadHFiles}.
  */
 @InterfaceAudience.Private
 public class MapReduceRestoreJob implements RestoreJob {
@@ -88,23 +85,20 @@ public class MapReduceRestoreJob implements RestoreJob {
       };
 
       int result;
-      int loaderResult;
       try {
 
         player.setConf(getConf());
         result = player.run(playerArgs);
         if (succeeded(result)) {
           // do bulk load
-          LoadIncrementalHFiles loader = BackupUtils.createLoader(getConf());
+          BulkLoadHFiles loader = BackupUtils.createLoader(getConf());
           if (LOG.isDebugEnabled()) {
             LOG.debug("Restoring HFiles from directory " + bulkOutputPath);
           }
-          String[] args = { bulkOutputPath.toString(), newTableNames[i].getNameAsString() };
-          loaderResult = loader.run(args);
 
-          if (failed(loaderResult)) {
-            throw new IOException("Can not restore from backup directory " + dirs
-                + " (check Hadoop and HBase logs). Bulk loader return code =" + loaderResult);
+          if (loader.bulkLoad(newTableNames[i], bulkOutputPath).isEmpty()) {
+            throw new IOException("Can not restore from backup directory " + dirs +
+              " (check Hadoop and HBase logs). Bulk loader returns null");
           }
         } else {
           throw new IOException("Can not restore from backup directory " + dirs
