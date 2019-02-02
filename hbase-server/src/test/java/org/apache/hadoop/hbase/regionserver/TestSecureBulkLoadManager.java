@@ -21,10 +21,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -32,8 +30,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -47,7 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -59,6 +57,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 
@@ -178,7 +177,7 @@ public class TestSecureBulkLoadManager {
 
   /**
    * A trick is used to make sure server-side failures( if any ) not being covered up by a client
-   * retry. Since LoadIncrementalHFiles.doBulkLoad keeps performing bulkload calls as long as the
+   * retry. Since BulkLoadHFilesTool.bulkLoad keeps performing bulkload calls as long as the
    * HFile queue is not empty, while server-side exceptions in the doAs block do not lead
    * to a client exception, a bulkload will always succeed in this case by default, thus client
    * will never be aware that failures have ever happened . To avoid this kind of retry ,
@@ -187,23 +186,23 @@ public class TestSecureBulkLoadManager {
    * once, and server-side failures, if any ,can be checked via data.
    */
   class MyExceptionToAvoidRetry extends DoNotRetryIOException {
+
+    private static final long serialVersionUID = -6802760664998771151L;
   }
 
   private void doBulkloadWithoutRetry(Path dir) throws Exception {
-    Connection connection = testUtil.getConnection();
-    LoadIncrementalHFiles h = new LoadIncrementalHFiles(conf) {
+    BulkLoadHFilesTool h = new BulkLoadHFilesTool(conf) {
+
       @Override
-      protected void bulkLoadPhase(final Table htable, final Connection conn,
-          ExecutorService pool, Deque<LoadQueueItem> queue,
-          final Multimap<ByteBuffer, LoadQueueItem> regionGroups, boolean copyFile,
-          Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
-        super.bulkLoadPhase(htable, conn, pool, queue, regionGroups, copyFile, item2RegionMap);
+      protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
+          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        super.bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, item2RegionMap);
         throw new MyExceptionToAvoidRetry(); // throw exception to avoid retry
       }
     };
     try {
-      h.doBulkLoad(dir, testUtil.getAdmin(), connection.getTable(TABLE),
-          connection.getRegionLocator(TABLE));
+      h.bulkLoad(TABLE, dir);
       Assert.fail("MyExceptionToAvoidRetry is expected");
     } catch (MyExceptionToAvoidRetry e) { //expected
     }

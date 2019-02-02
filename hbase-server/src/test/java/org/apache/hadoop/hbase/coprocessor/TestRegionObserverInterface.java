@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -567,7 +567,7 @@ public class TestRegionObserverInterface {
       createHFile(util.getConfiguration(), fs, new Path(familyDir, Bytes.toString(A)), A, A);
 
       // Bulk load
-      new LoadIncrementalHFiles(conf).doBulkLoad(dir, util.getAdmin(), table, locator);
+      BulkLoadHFiles.create(conf).bulkLoad(tableName, dir);
 
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreBulkLoadHFile", "hadPostBulkLoadHFile" }, tableName,
