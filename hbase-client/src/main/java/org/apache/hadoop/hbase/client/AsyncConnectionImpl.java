@@ -172,7 +172,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   private void makeMasterStub(CompletableFuture<MasterService.Interface> future) {
-    registry.getMasterAddress().whenComplete((sn, error) -> {
+    addListener(registry.getMasterAddress(), (sn, error) -> {
       if (sn == null) {
         String msg = "ZooKeeper available but no active master location found";
         LOG.info(msg);

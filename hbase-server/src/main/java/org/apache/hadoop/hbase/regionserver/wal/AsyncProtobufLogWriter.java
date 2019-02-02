@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
@@ -195,7 +197,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
         // should not happen
         throw new AssertionError(e);
       }
-      output.flush(false).whenComplete((len, error) -> {
+      addListener(output.flush(false), (len, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
         } else {
@@ -216,7 +218,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       }
       output.writeInt(trailer.getSerializedSize());
       output.write(magic);
-      output.flush(false).whenComplete((len, error) -> {
+      addListener(output.flush(false), (len, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
         } else {

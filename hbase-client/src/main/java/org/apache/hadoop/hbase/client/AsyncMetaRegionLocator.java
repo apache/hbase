@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegi
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceRegionLocation;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,7 +72,7 @@ class AsyncMetaRegionLocator {
       if (metaRelocateFuture.compareAndSet(null, new CompletableFuture<>())) {
         LOG.debug("Start fetching meta region location from registry.");
         CompletableFuture<RegionLocations> future = metaRelocateFuture.get();
-        registry.getMetaRegionLocation().whenComplete((locs, error) -> {
+        addListener(registry.getMetaRegionLocation(), (locs, error) -> {
           if (error != null) {
             LOG.debug("Failed to fetch meta region location from registry", error);
             metaRelocateFuture.getAndSet(null).completeExceptionally(error);

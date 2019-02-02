@@ -79,7 +79,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
       return;
     }
     resetCallTimeout();
-    callable.call(controller, loc, stub).whenComplete((result, error) -> {
+    addListener(callable.call(controller, loc, stub), (result, error) -> {
       if (error != null) {
         onError(error,
           () -> "Call to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) + "' in " +

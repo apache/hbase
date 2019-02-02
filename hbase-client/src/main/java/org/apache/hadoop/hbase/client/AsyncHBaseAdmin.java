@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -66,15 +66,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private <T> CompletableFuture<T> wrap(CompletableFuture<T> future) {
-    CompletableFuture<T> asyncFuture = new CompletableFuture<>();
-    future.whenCompleteAsync((r, e) -> {
-      if (e != null) {
-        asyncFuture.completeExceptionally(e);
-      } else {
-        asyncFuture.complete(r);
-      }
-    }, pool);
-    return asyncFuture;
+    return FutureUtils.wrapFuture(future, pool);
   }
 
   @Override

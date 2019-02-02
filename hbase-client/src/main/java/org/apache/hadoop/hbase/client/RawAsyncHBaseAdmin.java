@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
@@ -389,12 +390,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
       MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
       ProcedureBiConsumer consumer) {
-    CompletableFuture<Long> procFuture = this
-        .<Long> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall,
-            respConverter)).call();
-    return waitProcedureResult(procFuture).whenComplete(consumer);
+    CompletableFuture<Long> procFuture =
+      this.<Long> newMasterCaller().action((controller, stub) -> this
+        .<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall, respConverter)).call();
+    CompletableFuture<Void> future = waitProcedureResult(procFuture);
+    addListener(future, consumer);
+    return future;
   }
 
   @FunctionalInterface
@@ -2847,7 +2848,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 // If any region compaction state is MAJOR_AND_MINOR
                 // the table compaction state is MAJOR_AND_MINOR, too.
                 if (err2 != null) {
-                  future.completeExceptionally(err2);
+                  future.completeExceptionally(unwrapCompletionException(err2));
                 } else if (regionState == CompactionState.MAJOR_AND_MINOR) {
                   future.complete(regionState);
                 } else {
@@ -3434,7 +3435,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         futures
           .add(clearBlockCache(entry.getKey(), entry.getValue()).whenComplete((stats, err2) -> {
             if (err2 != null) {
-              future.completeExceptionally(err2);
+              future.completeExceptionally(unwrapCompletionException(err2));
             } else {
               aggregator.append(stats);
             }
@@ -3443,7 +3444,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       addListener(CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])),
         (ret, err3) -> {
           if (err3 != null) {
-            future.completeExceptionally(err3);
+            future.completeExceptionally(unwrapCompletionException(err3));
           } else {
             future.complete(aggregator.sum());
           }
