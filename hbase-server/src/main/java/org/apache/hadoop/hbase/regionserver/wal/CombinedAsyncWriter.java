@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -75,7 +77,7 @@ public final class CombinedAsyncWriter implements AsyncWriter {
   public CompletableFuture<Long> sync() {
     CompletableFuture<Long> future = new CompletableFuture<>();
     AtomicInteger remaining = new AtomicInteger(writers.size());
-    writers.forEach(w -> w.sync().whenComplete((length, error) -> {
+    writers.forEach(w -> addListener(w.sync(), (length, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;

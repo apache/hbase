@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,20 +45,20 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
       Callable<T> callable, long pauseNs, int maxRetries, long operationTimeoutNs,
       long rpcTimeoutNs, int startLogErrorsCnt) {
     super(retryTimer, conn, pauseNs, maxRetries, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+      startLogErrorsCnt);
     this.callable = callable;
   }
 
   @Override
   protected void doCall() {
-    conn.getMasterStub().whenComplete((stub, error) -> {
+    addListener(conn.getMasterStub(), (stub, error) -> {
       if (error != null) {
         onError(error, () -> "Get async master stub failed", err -> {
         });
         return;
       }
       resetCallTimeout();
-      callable.call(controller, stub).whenComplete((result, error2) -> {
+      addListener(callable.call(controller, stub), (result, error2) -> {
         if (error2 != null) {
           onError(error2, () -> "Call to master failed", err -> {
           });

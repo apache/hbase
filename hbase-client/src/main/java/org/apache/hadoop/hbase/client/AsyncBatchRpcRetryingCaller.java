@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -409,7 +410,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       .map(action -> conn.getLocator().getRegionLocation(tableName, action.getAction().getRow(),
         RegionLocateType.CURRENT, locateTimeoutNs).whenComplete((loc, error) -> {
           if (error != null) {
-            error = translateException(error);
+            error = unwrapCompletionException(translateException(error));
             if (error instanceof DoNotRetryIOException) {
               failOne(action, tries, error, EnvironmentEdgeManager.currentTime(), "");
               return;

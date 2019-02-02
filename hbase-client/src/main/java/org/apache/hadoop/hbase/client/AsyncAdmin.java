@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import com.google.protobuf.RpcChannel;
 import java.io.IOException;
 import java.util.Collection;
@@ -614,15 +616,15 @@ public interface AsyncAdmin {
    * @param peerId a short name that identifies the peer
    * @return the current cluster state wrapped by a {@link CompletableFuture}.
    */
-  default CompletableFuture<SyncReplicationState>
-      getReplicationPeerSyncReplicationState(String peerId) {
+  default CompletableFuture<SyncReplicationState> getReplicationPeerSyncReplicationState(
+      String peerId) {
     CompletableFuture<SyncReplicationState> future = new CompletableFuture<>();
-    listReplicationPeers(Pattern.compile(peerId)).whenComplete((peers, error) -> {
+    addListener(listReplicationPeers(Pattern.compile(peerId)), (peers, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
       } else if (peers.isEmpty() || !peers.get(0).getPeerId().equals(peerId)) {
-        future.completeExceptionally(
-          new IOException("Replication peer " + peerId + " does not exist"));
+        future
+          .completeExceptionally(new IOException("Replication peer " + peerId + " does not exist"));
       } else {
         future.complete(peers.get(0).getSyncReplicationState());
       }
