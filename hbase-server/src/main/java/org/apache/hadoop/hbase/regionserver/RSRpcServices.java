@@ -309,7 +309,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   final RpcServerInterface rpcServer;
   final InetSocketAddress isa;
 
-  private final HRegionServer regionServer;
+  @VisibleForTesting
+  protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
 
   // The reference to the priority extraction function
@@ -1605,15 +1606,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     try {
       checkOpen();
-      if (request.hasServerStartCode()) {
-        // check that we are the same server that this RPC is intended for.
-        long serverStartCode = request.getServerStartCode();
-        if (regionServer.serverName.getStartcode() !=  serverStartCode) {
-          throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-              "different server with startCode: " + serverStartCode + ", this server is: "
-              + regionServer.serverName));
-        }
-      }
+      throwOnWrongStartCode(request);
       final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
 
       requestCount.increment();
@@ -1922,6 +1915,44 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  private void throwOnWrongStartCode(OpenRegionRequest request) throws ServiceException {
+    if (!request.hasServerStartCode()) {
+      LOG.warn("OpenRegionRequest for {} does not have a start code", request.getOpenInfoList());
+      return;
+    }
+    throwOnWrongStartCode(request.getServerStartCode());
+  }
+
+  private void throwOnWrongStartCode(CloseRegionRequest request) throws ServiceException {
+    if (!request.hasServerStartCode()) {
+      LOG.warn("CloseRegionRequest for {} does not have a start code", request.getRegion());
+      return;
+    }
+    throwOnWrongStartCode(request.getServerStartCode());
+  }
+
+  private void throwOnWrongStartCode(long serverStartCode) throws ServiceException {
+    // check that we are the same server that this RPC is intended for.
+    if (regionServer.serverName.getStartcode() != serverStartCode) {
+      throw new ServiceException(new DoNotRetryIOException(
+        "This RPC was intended for a " + "different server with startCode: " + serverStartCode +
+          ", this server is: " + regionServer.serverName));
+    }
+  }
+
+  private void throwOnWrongStartCode(ExecuteProceduresRequest req) throws ServiceException {
+    if (req.getOpenRegionCount() > 0) {
+      for (OpenRegionRequest openReq : req.getOpenRegionList()) {
+        throwOnWrongStartCode(openReq);
+      }
+    }
+    if (req.getCloseRegionCount() > 0) {
+      for (CloseRegionRequest closeReq : req.getCloseRegionList()) {
+        throwOnWrongStartCode(closeReq);
+      }
+    }
+  }
+
   /**
    * Open asynchronously a region or a set of regions on the region server.
    *
@@ -1950,15 +1981,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
     requestCount.increment();
-    if (request.hasServerStartCode()) {
-      // check that we are the same server that this RPC is intended for.
-      long serverStartCode = request.getServerStartCode();
-      if (regionServer.serverName.getStartcode() !=  serverStartCode) {
-        throw new ServiceException(new DoNotRetryIOException("This RPC was intended for a " +
-            "different server with startCode: " + serverStartCode + ", this server is: "
-            + regionServer.serverName));
-      }
-    }
+    throwOnWrongStartCode(request);
 
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
@@ -3751,6 +3774,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       ExecuteProceduresRequest request) throws ServiceException {
     try {
       checkOpen();
+      throwOnWrongStartCode(request);
       regionServer.getRegionServerCoprocessorHost().preExecuteProcedures();
       if (request.getOpenRegionCount() > 0) {
         // Avoid reading from the TableDescritor every time(usually it will read from the file
