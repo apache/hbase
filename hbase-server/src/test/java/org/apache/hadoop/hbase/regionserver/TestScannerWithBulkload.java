@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -94,10 +93,7 @@ public class TestScannerWithBulkload {
       false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
-    final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      bulkload.doBulkLoad(hfilePath, admin, table, locator);
-    }
+    BulkLoadHFiles.create(conf).bulkLoad(tableName, hfilePath);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     result = scanAfterBulkLoad(scanner, result, "version2");
@@ -233,7 +229,7 @@ public class TestScannerWithBulkload {
         "/temp/testBulkLoadWithParallelScan/col/file", false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
-    final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
+    final BulkLoadHFiles bulkload = BulkLoadHFiles.create(conf);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     // Create a scanner and then do bulk load
@@ -246,9 +242,7 @@ public class TestScannerWithBulkload {
           put1.add(new KeyValue(Bytes.toBytes("row5"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
               Bytes.toBytes("version0")));
           table.put(put1);
-          try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-            bulkload.doBulkLoad(hfilePath, admin, table, locator);
-          }
+          bulkload.bulkLoad(tableName, hfilePath);
           latch.countDown();
         } catch (TableNotFoundException e) {
         } catch (IOException e) {
@@ -276,10 +270,7 @@ public class TestScannerWithBulkload {
       "/temp/testBulkLoadNativeHFile/col/file", true);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
-    final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      bulkload.doBulkLoad(hfilePath, admin, table, locator);
-    }
+    BulkLoadHFiles.create(conf).bulkLoad(tableName, hfilePath);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     // We had 'version0', 'version1' for 'row1,col:q' in the table.

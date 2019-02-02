@@ -21,15 +21,28 @@ import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
 /**
  * The implementation of AsyncClusterConnection.
@@ -76,5 +89,47 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload) {
     return getLocator().getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L);
+  }
+
+  @Override
+  public CompletableFuture<String> prepareBulkLoad(TableName tableName) {
+    return callerFactory.<String> single().table(tableName).row(HConstants.EMPTY_START_ROW)
+      .action((controller, loc, stub) -> ConnectionUtils
+        .<TableName, PrepareBulkLoadRequest, PrepareBulkLoadResponse, String> call(controller, loc,
+          stub, tableName, (rn, tn) -> {
+            RegionSpecifier region =
+              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
+            return PrepareBulkLoadRequest.newBuilder()
+              .setTableName(ProtobufUtil.toProtoTableName(tn)).setRegion(region).build();
+          }, (s, c, req, done) -> s.prepareBulkLoad(c, req, done),
+          (c, resp) -> resp.getBulkToken()))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> bulkLoad(TableName tableName,
+      List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
+      String bulkToken, boolean copyFiles) {
+    return callerFactory.<Boolean> single().table(tableName).row(row)
+      .action((controller, loc, stub) -> ConnectionUtils
+        .<Void, BulkLoadHFileRequest, BulkLoadHFileResponse, Boolean> call(controller, loc, stub,
+          null,
+          (rn, nil) -> RequestConverter.buildBulkLoadHFileRequest(familyPaths, rn, assignSeqNum,
+            userToken, bulkToken, copyFiles),
+          (s, c, req, done) -> s.bulkLoadHFile(c, req, done), (c, resp) -> resp.getLoaded()))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken) {
+    return callerFactory.<Void> single().table(tableName).row(HConstants.EMPTY_START_ROW)
+      .action((controller, loc, stub) -> ConnectionUtils
+        .<String, CleanupBulkLoadRequest, CleanupBulkLoadResponse, Void> call(controller, loc, stub,
+          bulkToken, (rn, bt) -> {
+            RegionSpecifier region =
+              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, rn);
+            return CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bt).build();
+          }, (s, c, req, done) -> s.cleanupBulkLoad(c, req, done), (c, resp) -> null))
+      .call();
   }
 }

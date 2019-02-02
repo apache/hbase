@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
+import org.apache.hadoop.hbase.client.ConnectionUtils.Converter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -156,51 +157,12 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return conn.getRegionLocator(tableName);
   }
 
-  @FunctionalInterface
-  private interface Converter<D, I, S> {
-    D convert(I info, S src) throws IOException;
-  }
-
-  @FunctionalInterface
-  private interface RpcCall<RESP, REQ> {
-    void call(ClientService.Interface stub, HBaseRpcController controller, REQ req,
-        RpcCallback<RESP> done);
-  }
-
-  private static <REQ, PREQ, PRESP, RESP> CompletableFuture<RESP> call(
-      HBaseRpcController controller, HRegionLocation loc, ClientService.Interface stub, REQ req,
-      Converter<PREQ, byte[], REQ> reqConvert, RpcCall<PRESP, PREQ> rpcCall,
-      Converter<RESP, HBaseRpcController, PRESP> respConverter) {
-    CompletableFuture<RESP> future = new CompletableFuture<>();
-    try {
-      rpcCall.call(stub, controller, reqConvert.convert(loc.getRegion().getRegionName(), req),
-        new RpcCallback<PRESP>() {
-
-          @Override
-          public void run(PRESP resp) {
-            if (controller.failed()) {
-              future.completeExceptionally(controller.getFailed());
-            } else {
-              try {
-                future.complete(respConverter.convert(controller, resp));
-              } catch (IOException e) {
-                future.completeExceptionally(e);
-              }
-            }
-          }
-        });
-    } catch (IOException e) {
-      future.completeExceptionally(e);
-    }
-    return future;
-  }
-
   private static <REQ, RESP> CompletableFuture<RESP> mutate(HBaseRpcController controller,
       HRegionLocation loc, ClientService.Interface stub, REQ req,
       Converter<MutateRequest, byte[], REQ> reqConvert,
       Converter<RESP, HBaseRpcController, MutateResponse> respConverter) {
-    return call(controller, loc, stub, req, reqConvert, (s, c, r, done) -> s.mutate(c, r, done),
-      respConverter);
+    return ConnectionUtils.call(controller, loc, stub, req, reqConvert,
+      (s, c, r, done) -> s.mutate(c, r, done), respConverter);
   }
 
   private static <REQ> CompletableFuture<Void> voidMutate(HBaseRpcController controller,
@@ -247,7 +209,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private CompletableFuture<Result> get(Get get, int replicaId) {
     return this.<Result, Get> newCaller(get, readRpcTimeoutNs)
-      .action((controller, loc, stub) -> RawAsyncTableImpl
+      .action((controller, loc, stub) -> ConnectionUtils
         .<Get, GetRequest, GetResponse, Result> call(controller, loc, stub, get,
           RequestConverter::buildGetRequest, (s, c, req, done) -> s.get(c, req, done),
           (c, resp) -> ProtobufUtil.toResult(resp.getResult(), c.cellScanner())))
