@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Implementations are installed on a Replication Sink called from inside
@@ -36,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * source-side.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+@InterfaceStability.Evolving
 public interface WALEntrySinkFilter {
   /**
    * Name of configuration to set with name of implementing WALEntrySinkFilter class.
@@ -46,7 +48,7 @@ public interface WALEntrySinkFilter {
    * Called after Construction.
    * Use passed Connection to keep any context the filter might need.
    */
-  void init(Connection connection);
+  void init(AsyncConnection conn);
 
   /**
    * @param table Table edit is destined for.

@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -275,7 +275,7 @@ public class TestReplicationSink {
   }
 
   @Test
-  public void testRethrowRetriesExhaustedWithDetailsException() throws Exception {
+  public void testRethrowRetriesExhaustedException() throws Exception {
     TableName notExistTable = TableName.valueOf("notExistTable");
     List<WALEntry> entries = new ArrayList<>();
     List<Cell> cells = new ArrayList<>();
@@ -300,7 +300,7 @@ public class TestReplicationSink {
           SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
             replicationClusterId, baseNamespaceDir, hfileArchiveDir);
           Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
-        } catch (RetriesExhaustedWithDetailsException e) {
+        } catch (RetriesExhaustedException e) {
         } finally {
           admin.enableTable(TABLE_NAME1);
         }

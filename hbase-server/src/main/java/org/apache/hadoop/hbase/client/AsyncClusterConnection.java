@@ -23,7 +23,9 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
@@ -66,4 +68,21 @@ public interface AsyncClusterConnection extends AsyncConnection {
    */
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload);
+
+  /**
+   * Return the token for this bulk load.
+   */
+  CompletableFuture<String> prepareBulkLoad(TableName tableName);
+
+  /**
+   * Securely bulk load a list of HFiles.
+   * @param row used to locate the region
+   */
+  CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
+      byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles);
+
+  /**
+   * Clean up after finishing bulk load, no matter success or not.
+   */
+  CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken);
 }

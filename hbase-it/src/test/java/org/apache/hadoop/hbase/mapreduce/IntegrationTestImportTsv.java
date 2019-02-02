@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.Tool;
@@ -60,7 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
+ * Validate ImportTsv + BulkLoadFiles on a distributed cluster.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestImportTsv extends Configured implements Tool {
@@ -141,8 +140,8 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
     String[] args = { hfiles.toString(), tableName.getNameAsString() };
     LOG.info(format("Running LoadIncrememntalHFiles with args: %s", Arrays.asList(args)));
-    assertEquals("Loading HFiles failed.",
-      0, ToolRunner.run(new LoadIncrementalHFiles(new Configuration(getConf())), args));
+    assertEquals("Loading HFiles failed.", 0,
+      ToolRunner.run(new BulkLoadHFilesTool(getConf()), args));
 
     Table table = null;
     Scan scan = new Scan() {{
