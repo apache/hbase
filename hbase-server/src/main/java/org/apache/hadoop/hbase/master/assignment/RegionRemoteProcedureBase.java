@@ -86,17 +86,22 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     RegionStateNode regionNode = getRegionNode(env);
     regionNode.lock();
     try {
-      ProcedureEvent<?> event = regionNode.getProcedureEvent();
-      if (event.isReady()) {
-        LOG.warn(
-          "The procedure event of procedure {} for region {} to server {} is not suspended, " +
-            "usually this should not happen, but anyway let's skip the following wake up code, ",
-          this, region, targetServer);
-        return;
-      }
       LOG.warn("The remote operation {} for region {} to server {} failed", this, region,
         targetServer, exception);
-      event.wake(env.getProcedureScheduler());
+      // This could happen as the RSProcedureDispatcher and dead server processor are executed in
+      // different threads. It is possible that we have already scheduled SCP for the targetServer
+      // and woken up this procedure, and assigned the region to another RS, and then the
+      // RSProcedureDispatcher notices that the targetServer is dead so it can not send the request
+      // out and call remoteCallFailed, which makes us arrive here, especially that if the target
+      // machine is completely down, which means you can only receive a ConnectionTimeout after a
+      // very long time(depends on the timeout settings and in HBase usually it will be at least 15
+      // seconds, or even 1 minute). So here we need to check whether we are stilling waiting on the
+      // given event, if not, this means that we have already been woken up so do not wake it up
+      // again.
+      if (!regionNode.getProcedureEvent().wakeIfSuspended(env.getProcedureScheduler(), this)) {
+        LOG.warn("{} is not waiting on the event for region {}, targer server = {}, ignore.", this,
+          region, targetServer);
+      }
     } finally {
       regionNode.unlock();
     }
@@ -176,9 +181,9 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    serializer.serialize(RegionRemoteProcedureBaseStateData.newBuilder()
-      .setRegion(ProtobufUtil.toRegionInfo(region))
-      .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+    serializer.serialize(
+      RegionRemoteProcedureBaseStateData.newBuilder().setRegion(ProtobufUtil.toRegionInfo(region))
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
   }
 
   @Override
