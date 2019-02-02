@@ -22,41 +22,38 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
@@ -378,39 +375,21 @@ public class SpaceQuotaHelperForTests {
   /**
    * Bulk-loads a number of files with a number of rows to the given table.
    */
-  ClientServiceCallable<Boolean> generateFileToLoad(
-      TableName tn, int numFiles, int numRowsPerFile) throws Exception {
-    Connection conn = testUtil.getConnection();
+  Map<byte[], List<Path>> generateFileToLoad(TableName tn, int numFiles, int numRowsPerFile)
+      throws Exception {
     FileSystem fs = testUtil.getTestFileSystem();
-    Configuration conf = testUtil.getConfiguration();
     Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
     fs.mkdirs(baseDir);
-    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
+    List<Path> hfiles = new ArrayList<>();
     for (int i = 1; i <= numFiles; i++) {
       Path hfile = new Path(baseDir, "file" + i);
-      TestHRegionServerBulkLoad.createHFile(
-          fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("my"),
-          Bytes.toBytes("file"), numRowsPerFile);
-      famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
+      TestHRegionServerBulkLoad.createHFile(fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1),
+        Bytes.toBytes("my"), Bytes.toBytes("file"), numRowsPerFile);
+      hfiles.add(hfile);
     }
-
-    // bulk load HFiles
-    Table table = conn.getTable(tn);
-    final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
-    return new ClientServiceCallable<Boolean>(
-        conn, tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(),
-        HConstants.PRIORITY_UNSET) {
-      @Override
-     public Boolean rpcCall() throws Exception {
-        SecureBulkLoadClient secureClient = null;
-        byte[] regionName = getLocation().getRegion().getRegionName();
-        try (Table table = conn.getTable(getTableName())) {
-          secureClient = new SecureBulkLoadClient(conf, table);
-          return secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-                true, null, bulkToken);
-        }
-      }
-    };
+    Map<byte[], List<Path>> family2Files = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    family2Files.put(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfiles);
+    return family2Files;
   }
 
   /**
