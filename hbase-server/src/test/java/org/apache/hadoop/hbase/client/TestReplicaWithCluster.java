@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -45,15 +47,14 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -472,40 +473,17 @@ public class TestReplicaWithCluster {
     final int numRows = 10;
     final byte[] qual = Bytes.toBytes("qual");
     final byte[] val  = Bytes.toBytes("val");
-    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
+    Map<byte[], List<Path>> family2Files = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (HColumnDescriptor col : hdt.getColumnFamilies()) {
       Path hfile = new Path(dir, col.getNameAsString());
-      TestHRegionServerBulkLoad.createHFile(HTU.getTestFileSystem(), hfile, col.getName(),
-        qual, val, numRows);
-      famPaths.add(new Pair<>(col.getName(), hfile.toString()));
+      TestHRegionServerBulkLoad.createHFile(HTU.getTestFileSystem(), hfile, col.getName(), qual,
+        val, numRows);
+      family2Files.put(col.getName(), Collections.singletonList(hfile));
     }
 
     // bulk load HFiles
     LOG.debug("Loading test data");
-    final ClusterConnection conn = (ClusterConnection) HTU.getAdmin().getConnection();
-    table = conn.getTable(hdt.getTableName());
-    final String bulkToken =
-        new SecureBulkLoadClient(HTU.getConfiguration(), table).prepareBulkLoad(conn);
-    ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
-        hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0),
-        new RpcControllerFactory(HTU.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        LOG.debug("Going to connect to server " + getLocation() + " for row "
-            + Bytes.toStringBinary(getRow()));
-        SecureBulkLoadClient secureClient = null;
-        byte[] regionName = getLocation().getRegionInfo().getRegionName();
-        try (Table table = conn.getTable(getTableName())) {
-          secureClient = new SecureBulkLoadClient(HTU.getConfiguration(), table);
-          secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-              true, null, bulkToken);
-        }
-        return null;
-      }
-    };
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(HTU.getConfiguration());
-    RpcRetryingCaller<Void> caller = factory.newCaller();
-    caller.callWithRetries(callable, 10000);
+    BulkLoadHFiles.create(HTU.getConfiguration()).bulkLoad(hdt.getTableName(), family2Files);
 
     // verify we can read them from the primary
     LOG.debug("Verifying data load");

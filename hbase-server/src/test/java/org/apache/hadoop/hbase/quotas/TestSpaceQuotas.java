@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,7 +42,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
@@ -47,8 +50,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RpcRetryingCaller;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
@@ -237,19 +239,18 @@ public class TestSpaceQuotas {
   @Test
   public void testNoBulkLoadsWithNoWrites() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     TableName tableName = writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
 
     // The table is now in violation. Try to do a bulk load
-    ClientServiceCallable<Boolean> callable = helper.generateFileToLoad(tableName, 1, 50);
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
-    RpcRetryingCaller<Boolean> caller = factory.newCaller();
+    Map<byte[], List<Path>> family2Files = helper.generateFileToLoad(tableName, 1, 50);
     try {
-      caller.callWithRetries(callable, Integer.MAX_VALUE);
+      BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(tableName, family2Files);
       fail("Expected the bulk load call to fail!");
-    } catch (SpaceLimitingException e) {
+    } catch (IOException e) {
       // Pass
+      assertThat(e.getCause(), instanceOf(SpaceLimitingException.class));
       LOG.trace("Caught expected exception", e);
     }
   }
@@ -293,7 +294,7 @@ public class TestSpaceQuotas {
         enforcement instanceof DefaultViolationPolicyEnforcement);
 
     // Should generate two files, each of which is over 25KB each
-    ClientServiceCallable<Boolean> callable = helper.generateFileToLoad(tn, 2, 525);
+    Map<byte[], List<Path>> family2Files = helper.generateFileToLoad(tn, 2, 525);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     FileStatus[] files = fs.listStatus(
         new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
@@ -305,13 +306,12 @@ public class TestSpaceQuotas {
       LOG.debug(file.getPath() + " -> " + file.getLen() +"B");
     }
 
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
-    RpcRetryingCaller<Boolean> caller = factory.newCaller();
     try {
-      caller.callWithRetries(callable, Integer.MAX_VALUE);
+      BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(tn, family2Files);
       fail("Expected the bulk load call to fail!");
-    } catch (SpaceLimitingException e) {
+    } catch (IOException e) {
       // Pass
+      assertThat(e.getCause(), instanceOf(SpaceLimitingException.class));
       LOG.trace("Caught expected exception", e);
     }
     // Verify that we have no data in the table because neither file should have been

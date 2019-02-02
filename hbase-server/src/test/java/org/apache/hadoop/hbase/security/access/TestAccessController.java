@@ -124,7 +124,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1115,14 +1115,8 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     private void bulkLoadHFile(TableName tableName) throws Exception {
-      try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin();
-          RegionLocator locator = conn.getRegionLocator(tableName);
-          Table table = conn.getTable(tableName)) {
-        TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-        LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-        loader.doBulkLoad(loadPath, admin, table, locator);
-      }
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      BulkLoadHFiles.create(conf).bulkLoad(tableName, loadPath);
     }
 
     private static void setPermission(FileSystem fs, Path dir, FsPermission perm)
