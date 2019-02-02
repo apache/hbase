@@ -31,21 +31,20 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Reruns TestSecureLoadIncrementalHFilesSplitRecovery using LoadIncrementalHFiles in secure mode.
+ * Reruns TestBulkLoadHFilesSplitRecovery using BulkLoadHFiles in secure mode.
  * This suite is unable to verify the security handoff/turnove as miniCluster is running as system
  * user thus has root privileges and delegation tokens don't seem to work on miniDFS.
- * <p>
+ * <p/>
  * Thus SecureBulkload can only be completely verified by running integration tests against a secure
  * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
 @Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFilesSplitRecovery
-    extends TestLoadIncrementalHFilesSplitRecovery {
+public class TestSecureBulkLoadHFilesSplitRecovery extends TestBulkLoadHFilesSplitRecovery {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFilesSplitRecovery.class);
+    HBaseClassTestRule.forClass(TestSecureBulkLoadHFilesSplitRecovery.class);
 
   // This "overrides" the parent static method
   // make sure they are in sync

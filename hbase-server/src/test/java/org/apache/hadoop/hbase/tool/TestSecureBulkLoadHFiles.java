@@ -31,20 +31,20 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Reruns TestLoadIncrementalHFiles using LoadIncrementalHFiles in secure mode. This suite is unable
+ * Reruns TestBulkLoadHFiles using BulkLoadHFiles in secure mode. This suite is unable
  * to verify the security handoff/turnover as miniCluster is running as system user thus has root
  * privileges and delegation tokens don't seem to work on miniDFS.
- * <p>
+ * <p/>
  * Thus SecureBulkload can only be completely verified by running integration tests against a secure
  * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
 @Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
+public class TestSecureBulkLoadHFiles extends TestBulkLoadHFiles {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles.class);
+    HBaseClassTestRule.forClass(TestSecureBulkLoadHFiles.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -53,7 +53,7 @@ public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
       HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
-    util.getConfiguration().setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
+    util.getConfiguration().setInt(BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
       MAX_FILES_PER_REGION_PER_FAMILY);
     // change default behavior so that tag values are returned with normal rpcs
     util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
@@ -66,5 +66,4 @@ public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
 
     setupNamespace();
   }
-
 }

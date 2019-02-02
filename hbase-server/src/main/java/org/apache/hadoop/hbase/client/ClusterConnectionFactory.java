@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -29,6 +31,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class ClusterConnectionFactory {
+
+  public static final String HBASE_SERVER_CLUSTER_CONNECTION_IMPL =
+    "hbase.server.cluster.connection.impl";
 
   private ClusterConnectionFactory() {
   }
@@ -46,6 +51,15 @@ public final class ClusterConnectionFactory {
       SocketAddress localAddress, User user) throws IOException {
     AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
     String clusterId = FutureUtils.get(registry.getClusterId());
-    return new AsyncClusterConnectionImpl(conf, registry, clusterId, localAddress, user);
+    Class<? extends AsyncClusterConnection> clazz =
+      conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
+        AsyncClusterConnection.class);
+    try {
+      return user
+        .runAs((PrivilegedExceptionAction<? extends AsyncClusterConnection>) () -> ReflectionUtils
+          .newInstance(clazz, conf, registry, clusterId, localAddress, user));
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 }

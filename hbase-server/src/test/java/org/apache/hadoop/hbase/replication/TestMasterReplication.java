@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -622,9 +622,7 @@ public class TestMasterReplication {
 
     Table source = tables[masterNumber];
     final TableName tableName = source.getName();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
-    String[] args = { dir.toString(), tableName.toString() };
-    loader.run(args);
+    BulkLoadHFiles.create(util.getConfiguration()).bulkLoad(tableName, dir);
 
     if (toValidate) {
       for (int slaveClusterNumber : slaveNumbers) {
