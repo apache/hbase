@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ServerName;
@@ -62,7 +64,7 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
       return;
     }
     resetCallTimeout();
-    callable.call(controller, stub).whenComplete((result, error) -> {
+    addListener(callable.call(controller, stub), (result, error) -> {
       if (error != null) {
         onError(error, () -> "Call to admin stub failed", err -> {
         });

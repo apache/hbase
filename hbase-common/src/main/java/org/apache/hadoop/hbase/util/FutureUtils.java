@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,11 +59,64 @@ public final class FutureUtils {
       BiConsumer<? super T, ? super Throwable> action) {
     future.whenComplete((resp, error) -> {
       try {
-        action.accept(resp, error);
+        // See this post on stack overflow(shorten since the url is too long),
+        // https://s.apache.org/completionexception
+        // For a chain of CompleableFuture, only the first child CompletableFuture can get the
+        // original exception, others will get a CompletionException, which wraps the original
+        // exception. So here we unwrap it before passing it to the callback action.
+        action.accept(resp, unwrapCompletionException(error));
       } catch (Throwable t) {
         LOG.error("Unexpected error caught when processing CompletableFuture", t);
       }
     });
+  }
+
+  /**
+   * Almost the same with {@link #addListener(CompletableFuture, BiConsumer)} method above, the only
+   * exception is that we will call
+   * {@link CompletableFuture#whenCompleteAsync(BiConsumer, Executor)}.
+   * @see #addListener(CompletableFuture, BiConsumer)
+   */
+  @SuppressWarnings("FutureReturnValueIgnored")
+  public static <T> void addListener(CompletableFuture<T> future,
+      BiConsumer<? super T, ? super Throwable> action, Executor executor) {
+    future.whenCompleteAsync((resp, error) -> {
+      try {
+        action.accept(resp, unwrapCompletionException(error));
+      } catch (Throwable t) {
+        LOG.error("Unexpected error caught when processing CompletableFuture", t);
+      }
+    }, executor);
+  }
+
+  /**
+   * Return a {@link CompletableFuture} which is same with the given {@code future}, but execute all
+   * the callbacks in the given {@code executor}.
+   */
+  public static <T> CompletableFuture<T> wrapFuture(CompletableFuture<T> future,
+      Executor executor) {
+    CompletableFuture<T> wrappedFuture = new CompletableFuture<>();
+    addListener(future, (r, e) -> {
+      if (e != null) {
+        wrappedFuture.completeExceptionally(e);
+      } else {
+        wrappedFuture.complete(r);
+      }
+    }, executor);
+    return wrappedFuture;
+  }
+
+  /**
+   * Get the cause of the {@link Throwable} if it is a {@link CompletionException}.
+   */
+  public static Throwable unwrapCompletionException(Throwable error) {
+    if (error instanceof CompletionException) {
+      Throwable cause = error.getCause();
+      if (cause != null) {
+        return cause;
+      }
+    }
+    return error;
   }
 
   /**

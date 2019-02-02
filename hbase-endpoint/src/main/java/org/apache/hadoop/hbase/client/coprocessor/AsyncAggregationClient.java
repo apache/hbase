@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.client.coprocessor;
 
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.validateArgAndGetPB;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -29,7 +29,6 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
@@ -455,10 +454,10 @@ public final class AsyncAggregationClient {
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message>
-          CompletableFuture<R> median(AsyncTable<AdvancedScanResultConsumer> table,
-          ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+      CompletableFuture<R> median(AsyncTable<AdvancedScanResultConsumer> table,
+      ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<R> future = new CompletableFuture<>();
-    sumByRegion(table, ci, scan).whenComplete((sumByRegion, error) -> {
+    addListener(sumByRegion(table, ci, scan), (sumByRegion, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
       } else if (sumByRegion.isEmpty()) {
