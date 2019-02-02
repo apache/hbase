@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,7 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -451,12 +450,12 @@ public class RestoreTool {
         }
       }
     }
-    return LoadIncrementalHFiles.inferBoundaries(map);
+    return BulkLoadHFilesTool.inferBoundaries(map);
   }
 
   /**
-   * Prepare the table for bulkload, most codes copied from
-   * {@link LoadIncrementalHFiles#createTable(TableName, String, Admin)}
+   * Prepare the table for bulkload, most codes copied from {@code createTable} method in
+   * {@code BulkLoadHFilesTool}.
    * @param conn connection
    * @param tableBackupPath path
    * @param tableName table name
