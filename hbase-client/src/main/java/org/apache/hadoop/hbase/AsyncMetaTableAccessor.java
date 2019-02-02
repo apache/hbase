@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,7 +83,7 @@ public class AsyncMetaTableAccessor {
     long time = EnvironmentEdgeManager.currentTime();
     try {
       get.setTimeRange(0, time);
-      metaTable.get(get).whenComplete((result, error) -> {
+      addListener(metaTable.get(get), (result, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
           return;
@@ -109,16 +111,14 @@ public class AsyncMetaTableAccessor {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
       RegionInfo parsedRegionInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
-      metaTable.get(
-        new Get(MetaTableAccessor.getMetaKeyForRegion(parsedRegionInfo))
-            .addFamily(HConstants.CATALOG_FAMILY)).whenComplete(
-        (r, err) -> {
+      addListener(metaTable.get(new Get(MetaTableAccessor.getMetaKeyForRegion(parsedRegionInfo))
+        .addFamily(HConstants.CATALOG_FAMILY)), (r, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
             return;
           }
-          future.complete(getRegionLocations(r).map(
-            locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
+          future.complete(getRegionLocations(r)
+            .map(locations -> locations.getRegionLocation(parsedRegionInfo.getReplicaId())));
         });
     } catch (IOException parseEx) {
       LOG.warn("Failed to parse the passed region name: " + Bytes.toStringBinary(regionName));
@@ -136,34 +136,29 @@ public class AsyncMetaTableAccessor {
   public static CompletableFuture<Optional<HRegionLocation>> getRegionLocationWithEncodedName(
       AsyncTable<?> metaTable, byte[] encodedRegionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
-    metaTable.scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY))
-        .whenComplete(
-          (results, err) -> {
-            if (err != null) {
-              future.completeExceptionally(err);
-              return;
-            }
-            String encodedRegionNameStr = Bytes.toString(encodedRegionName);
-            results
-                .stream()
-                .filter(result -> !result.isEmpty())
-                .filter(result -> MetaTableAccessor.getRegionInfo(result) != null)
-                .forEach(
-                  result -> {
-                    getRegionLocations(result).ifPresent(
-                      locations -> {
-                        for (HRegionLocation location : locations.getRegionLocations()) {
-                          if (location != null
-                              && encodedRegionNameStr.equals(location.getRegion()
-                                  .getEncodedName())) {
-                            future.complete(Optional.of(location));
-                            return;
-                          }
-                        }
-                      });
-                  });
-            future.complete(Optional.empty());
+    addListener(
+      metaTable
+        .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)),
+      (results, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        String encodedRegionNameStr = Bytes.toString(encodedRegionName);
+        results.stream().filter(result -> !result.isEmpty())
+          .filter(result -> MetaTableAccessor.getRegionInfo(result) != null).forEach(result -> {
+            getRegionLocations(result).ifPresent(locations -> {
+              for (HRegionLocation location : locations.getRegionLocations()) {
+                if (location != null &&
+                  encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
+                  future.complete(Optional.of(location));
+                  return;
+                }
+              }
+            });
           });
+        future.complete(Optional.empty());
+      });
     return future;
   }
 
@@ -190,19 +185,18 @@ public class AsyncMetaTableAccessor {
   public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
       AsyncTable<AdvancedScanResultConsumer> metaTable, Optional<TableName> tableName) {
     CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-    getTableRegionsAndLocations(metaTable, tableName, true).whenComplete(
-      (locations, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-        } else if (locations == null || locations.isEmpty()) {
-          future.complete(Collections.emptyList());
-        } else {
-          List<HRegionLocation> regionLocations = locations.stream()
-              .map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
-              .collect(Collectors.toList());
-          future.complete(regionLocations);
-        }
-      });
+    addListener(getTableRegionsAndLocations(metaTable, tableName, true), (locations, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+      } else if (locations == null || locations.isEmpty()) {
+        future.complete(Collections.emptyList());
+      } else {
+        List<HRegionLocation> regionLocations =
+          locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+            .collect(Collectors.toList());
+        future.complete(regionLocations);
+      }
+    });
     return future;
   }
 
@@ -254,7 +248,7 @@ public class AsyncMetaTableAccessor {
       }
     };
 
-    scanMeta(metaTable, tableName, QueryType.REGION, visitor).whenComplete((v, error) -> {
+    addListener(scanMeta(metaTable, tableName, QueryType.REGION, visitor), (v, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
