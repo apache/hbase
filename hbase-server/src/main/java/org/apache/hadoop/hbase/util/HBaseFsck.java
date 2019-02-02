@@ -126,6 +126,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -3562,14 +3563,12 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   public void dumpSidelinedRegions(Map<Path, HbckInfo> regions) {
-    for (Map.Entry<Path, HbckInfo> entry: regions.entrySet()) {
+    for (Map.Entry<Path, HbckInfo> entry : regions.entrySet()) {
       TableName tableName = entry.getValue().getTableName();
       Path path = entry.getKey();
-      errors.print("This sidelined region dir should be bulk loaded: "
-        + path.toString());
-      errors.print("Bulk load command looks like: "
-        + "hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles "
-        + path.toUri().getPath() + " "+ tableName);
+      errors.print("This sidelined region dir should be bulk loaded: " + path.toString());
+      errors.print("Bulk load command looks like: " + BulkLoadHFilesTool.NAME + " " +
+        path.toUri().getPath() + " " + tableName);
     }
   }
 
