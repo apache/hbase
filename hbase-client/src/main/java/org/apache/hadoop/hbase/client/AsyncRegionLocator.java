@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,12 +67,13 @@ class AsyncRegionLocator {
       }
       future.completeExceptionally(new TimeoutIOException(timeoutMsg.get()));
     }, timeoutNs, TimeUnit.NANOSECONDS);
-    return future.whenComplete((loc, error) -> {
+    FutureUtils.addListener(future, (loc, error) -> {
       if (error != null && error.getClass() != TimeoutIOException.class) {
         // cancel timeout task if we are not completed by it.
         timeoutTask.cancel();
       }
     });
+    return future;
   }
 
   private boolean isMeta(TableName tableName) {
