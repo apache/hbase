@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -67,15 +68,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private <T> CompletableFuture<T> wrap(CompletableFuture<T> future) {
-    CompletableFuture<T> asyncFuture = new CompletableFuture<>();
-    future.whenCompleteAsync((r, e) -> {
-      if (e != null) {
-        asyncFuture.completeExceptionally(e);
-      } else {
-        asyncFuture.complete(r);
-      }
-    }, pool);
-    return asyncFuture;
+    return FutureUtils.wrapFuture(future, pool);
   }
 
   @Override
