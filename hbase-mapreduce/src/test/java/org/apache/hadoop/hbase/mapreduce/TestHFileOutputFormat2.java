@@ -90,7 +90,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -707,18 +707,17 @@ public class TestHFileOutputFormat2  {
         }
         Table currentTable = allTables.get(tableNameStr);
         TableName currentTableName = currentTable.getName();
-        new LoadIncrementalHFiles(conf).doBulkLoad(tableDir, admin, currentTable, singleTableInfo
-                .getRegionLocator());
+        BulkLoadHFiles.create(conf).bulkLoad(currentTableName, tableDir);
 
         // Ensure data shows up
         int expectedRows = 0;
         if (putSortReducer) {
           // no rows should be extracted
-          assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
+          assertEquals("BulkLoadHFiles should put expected data in table", expectedRows,
                   util.countRows(currentTable));
         } else {
           expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-          assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
+          assertEquals("BulkLoadHFiles should put expected data in table", expectedRows,
                   util.countRows(currentTable));
           Scan scan = new Scan();
           ResultScanner results = currentTable.getScanner(scan);
@@ -1248,14 +1247,14 @@ public class TestHFileOutputFormat2  {
       for (int i = 0; i < 2; i++) {
         Path testDir = util.getDataTestDirOnTestFS("testExcludeAllFromMinorCompaction_" + i);
         runIncrementalPELoad(conf, Arrays.asList(new HFileOutputFormat2.TableInfo(table
-                .getTableDescriptor(), conn.getRegionLocator(TABLE_NAMES[0]))), testDir, false);
+                .getDescriptor(), conn.getRegionLocator(TABLE_NAMES[0]))), testDir, false);
         // Perform the actual load
-        new LoadIncrementalHFiles(conf).doBulkLoad(testDir, admin, table, locator);
+        BulkLoadHFiles.create(conf).bulkLoad(table.getName(), testDir);
       }
 
       // Ensure data shows up
       int expectedRows = 2 * NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table",
+      assertEquals("BulkLoadHFiles should put expected data in table",
           expectedRows, util.countRows(table));
 
       // should have a second StoreFile now
@@ -1340,15 +1339,16 @@ public class TestHFileOutputFormat2  {
           true);
 
       RegionLocator regionLocator = conn.getRegionLocator(TABLE_NAMES[0]);
-      runIncrementalPELoad(conf, Arrays.asList(new HFileOutputFormat2.TableInfo(table
-                      .getTableDescriptor(), regionLocator)), testDir, false);
+      runIncrementalPELoad(conf,
+        Arrays.asList(new HFileOutputFormat2.TableInfo(table.getDescriptor(), regionLocator)),
+        testDir, false);
 
       // Perform the actual load
-      new LoadIncrementalHFiles(conf).doBulkLoad(testDir, admin, table, regionLocator);
+      BulkLoadHFiles.create(conf).bulkLoad(table.getName(), testDir);
 
       // Ensure data shows up
       int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table",
+      assertEquals("BulkLoadHFiles should put expected data in table",
           expectedRows + 1, util.countRows(table));
 
       // should have a second StoreFile now

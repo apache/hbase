@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.tool;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -27,46 +28,42 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Reruns TestSecureLoadIncrementalHFilesSplitRecovery using LoadIncrementalHFiles in secure mode.
- * This suite is unable to verify the security handoff/turnove as miniCluster is running as system
- * user thus has root privileges and delegation tokens don't seem to work on miniDFS.
- * <p>
+ * Reruns TestBulkLoadHFiles using BulkLoadHFiles in secure mode. This suite is unable
+ * to verify the security handoff/turnover as miniCluster is running as system user thus has root
+ * privileges and delegation tokens don't seem to work on miniDFS.
+ * <p/>
  * Thus SecureBulkload can only be completely verified by running integration tests against a secure
  * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
 @Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFilesSplitRecovery
-    extends TestLoadIncrementalHFilesSplitRecovery {
+public class TestSecureBulkLoadHFiles extends TestBulkLoadHFiles {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFilesSplitRecovery.class);
+    HBaseClassTestRule.forClass(TestSecureBulkLoadHFiles.class);
 
-  // This "overrides" the parent static method
-  // make sure they are in sync
   @BeforeClass
-  public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtility();
+  public static void setUpBeforeClass() throws Exception {
     // set the always on security provider
     UserProvider.setUserProviderForTesting(util.getConfiguration(),
       HadoopSecurityEnabledUserProviderForTesting.class);
     // setup configuration
     SecureTestUtil.enableSecurity(util.getConfiguration());
+    util.getConfiguration().setInt(BulkLoadHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
+      MAX_FILES_PER_REGION_PER_FAMILY);
+    // change default behavior so that tag values are returned with normal rpcs
+    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
+      KeyValueCodecWithTags.class.getCanonicalName());
 
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
     util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
-  }
 
-  // Disabling this test as it does not work in secure mode
-  @Test
-  @Override
-  public void testBulkLoadPhaseFailure() {
+    setupNamespace();
   }
 }

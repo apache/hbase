@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.BeforeClass;
@@ -218,9 +218,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     }
 
     final TableName tableName = source.getName();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(utility1.getConfiguration());
-    String[] args = { dir.toString(), tableName.toString() };
-    loader.run(args);
+    BulkLoadHFiles.create(utility1.getConfiguration()).bulkLoad(tableName, dir);
   }
 
   private void wait(Table target, int expectedCount, String msg) throws IOException,
