@@ -40,7 +40,6 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -82,14 +81,15 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of {@link MobCompactor} that compacts the mob files in partitions.
@@ -675,7 +675,7 @@ public class PartitionedMobCompactor extends MobCompactor {
         cleanupTmpMobFile = false;
         cleanupCommittedMobFile = true;
         // bulkload the ref file
-        bulkloadRefFile(connection, table, bulkloadPathOfPartition, filePath.getName());
+        bulkloadRefFile(table.getName(), bulkloadPathOfPartition, filePath.getName());
         cleanupCommittedMobFile = false;
         newFiles.add(new Path(mobFamilyDir, filePath.getName()));
       }
@@ -818,21 +818,16 @@ public class PartitionedMobCompactor extends MobCompactor {
 
   /**
    * Bulkloads the current file.
-   *
-   * @param connection to use to get admin/RegionLocator
-   * @param table The current table.
+   * @param tableName The table to load into.
    * @param bulkloadDirectory The path of bulkload directory.
    * @param fileName The current file name.
    * @throws IOException if IO failure is encountered
    */
-  private void bulkloadRefFile(Connection connection, Table table, Path bulkloadDirectory,
-      String fileName)
+  private void bulkloadRefFile(TableName tableName, Path bulkloadDirectory, String fileName)
       throws IOException {
     // bulkload the ref file
     try {
-      LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-      bulkload.doBulkLoad(bulkloadDirectory, connection.getAdmin(), table,
-          connection.getRegionLocator(table.getName()));
+      BulkLoadHFiles.create(conf).bulkLoad(tableName, bulkloadDirectory);
     } catch (Exception e) {
       throw new IOException(e);
     }
