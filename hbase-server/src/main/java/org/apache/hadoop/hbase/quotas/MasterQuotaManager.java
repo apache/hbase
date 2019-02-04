@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SwitchRpcThrottleProcedure;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -269,7 +270,16 @@ public class MasterQuotaManager implements RegionStateListener {
       }
       @Override
       public void delete() throws IOException {
+        SpaceQuotaSnapshot currSnapshotOfTable =
+            QuotaTableUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), table);
         QuotaUtil.deleteTableQuota(masterServices.getConnection(), table);
+        if (currSnapshotOfTable != null) {
+          SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
+          if (SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
+              && quotaStatus.isInViolation()) {
+            QuotaUtil.enableTableIfNotEnabled(masterServices.getConnection(), table);
+          }
+        }
       }
       @Override
       public void preApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {

@@ -18,55 +18,29 @@ package org.apache.hadoop.hbase.quotas.policies;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 
 /**
- * A {@link SpaceViolationPolicyEnforcement} which disables the table. The enforcement
- * counterpart to {@link SpaceViolationPolicy#DISABLE}.
+ * A {@link SpaceViolationPolicyEnforcement} which disables the table. The enforcement counterpart
+ * to {@link SpaceViolationPolicy#DISABLE}. This violation policy is different from others as it
+ * doesn't take action (i.e. enable/disable table) local to the RegionServer, like the other
+ * ViolationPolicies do. In case of violation, the appropriate action is initiated by the master.
  */
 @InterfaceAudience.Private
 public class DisableTableViolationPolicyEnforcement extends DefaultViolationPolicyEnforcement {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DisableTableViolationPolicyEnforcement.class);
 
   @Override
   public void enable() throws IOException {
-    try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Starting disable of " + getTableName());
-      }
-      getRegionServerServices().getClusterConnection().getAdmin().disableTable(getTableName());
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Disable is complete for " + getTableName());
-      }
-    } catch (TableNotEnabledException tnee) {
-      // The state we wanted it to be in.
-    }
+    // do nothing
   }
 
   @Override
   public void disable() throws IOException {
-    try {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Starting enable of " + getTableName());
-      }
-      getRegionServerServices().getClusterConnection().getAdmin().enableTable(getTableName());
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Enable is complete for " + getTableName());
-      }
-    } catch (TableNotDisabledException | TableNotFoundException e) {
-      // The state we wanted it to be in
-      // Or, in case table is not found, nothing to do
-    }
+    // do nothing
   }
 
   @Override
