@@ -18,14 +18,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Services a Store needs from a Region.
@@ -64,12 +66,24 @@ public class RegionServicesForStores {
     return region.getWAL();
   }
 
+  private static ThreadPoolExecutor INMEMORY_COMPACTION_POOL_FOR_TEST;
+
+  private static synchronized ThreadPoolExecutor getInMemoryCompactionPoolForTest() {
+    if (INMEMORY_COMPACTION_POOL_FOR_TEST == null) {
+      INMEMORY_COMPACTION_POOL_FOR_TEST = new ThreadPoolExecutor(10, 10, 60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat("InMemoryCompactionsForTest-%d").build());
+    }
+    return INMEMORY_COMPACTION_POOL_FOR_TEST;
+  }
+
   ThreadPoolExecutor getInMemoryCompactionPool() {
     if (rsServices != null) {
       return rsServices.getExecutorService().getExecutorLazily(ExecutorType.RS_IN_MEMORY_COMPACTION,
         inMemoryPoolSize);
     } else {
-      return null;
+      // this could only happen in tests
+      return getInMemoryCompactionPoolForTest();
     }
   }
 
