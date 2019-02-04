@@ -188,7 +188,8 @@ public class QuotaObserverChore extends ScheduledChore {
 
     for (TableName tableInLimbo : tablesInLimbo) {
       final SpaceQuotaSnapshot currentSnapshot = tableSnapshotStore.getCurrentState(tableInLimbo);
-      if (currentSnapshot.getQuotaStatus().isInViolation()) {
+      SpaceQuotaStatus currentStatus = currentSnapshot.getQuotaStatus();
+      if (currentStatus.isInViolation()) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Moving " + tableInLimbo + " out of violation because fewer region sizes were"
               + " reported than required.");
@@ -199,6 +200,10 @@ public class QuotaObserverChore extends ScheduledChore {
         this.snapshotNotifier.transitionTable(tableInLimbo, targetSnapshot);
         // Update it in the Table QuotaStore so that memory is consistent with no violation.
         tableSnapshotStore.setCurrentState(tableInLimbo, targetSnapshot);
+        // In case of Disable SVP, we need to enable the table as it moves out of violation
+        if (SpaceViolationPolicy.DISABLE == currentStatus.getPolicy().orElse(null)) {
+          QuotaUtil.enableTableIfNotEnabled(conn, tableInLimbo);
+        }
       }
     }
 
@@ -324,20 +329,35 @@ public class QuotaObserverChore extends ScheduledChore {
 
     // If we're changing something, log it.
     if (!currentSnapshot.equals(targetSnapshot)) {
-      // If the target is none, we're moving out of violation. Update the hbase:quota table
-      if (!targetStatus.isInViolation()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(table + " moving into observance of table space quota.");
-        }
-      } else if (LOG.isDebugEnabled()) {
-        // We're either moving into violation or changing violation policies
-        LOG.debug(table + " moving into violation of table space quota with policy of "
-            + targetStatus.getPolicy());
-      }
-
       this.snapshotNotifier.transitionTable(table, targetSnapshot);
       // Update it in memory
       tableSnapshotStore.setCurrentState(table, targetSnapshot);
+
+      // If the target is none, we're moving out of violation. Update the hbase:quota table
+      SpaceViolationPolicy currPolicy = currentStatus.getPolicy().orElse(null);
+      SpaceViolationPolicy targetPolicy = targetStatus.getPolicy().orElse(null);
+      if (!targetStatus.isInViolation()) {
+        // In case of Disable SVP, we need to enable the table as it moves out of violation
+        if (isDisableSpaceViolationPolicy(currPolicy, targetPolicy)) {
+          QuotaUtil.enableTableIfNotEnabled(conn, table);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(table + " moved into observance of table space quota.");
+        }
+      } else {
+        // We're either moving into violation or changing violation policies
+        if (currPolicy != targetPolicy && SpaceViolationPolicy.DISABLE == currPolicy) {
+          // In case of policy switch, we need to enable the table if current policy is Disable SVP
+          QuotaUtil.enableTableIfNotEnabled(conn, table);
+        } else if (SpaceViolationPolicy.DISABLE == targetPolicy) {
+          // In case of Disable SVP, we need to disable the table as it moves into violation
+          QuotaUtil.disableTableIfNotDisabled(conn, table);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+            table + " moved into violation of table space quota with policy of " + targetPolicy);
+        }
+      }
     } else if (LOG.isTraceEnabled()) {
       // Policies are the same, so we have nothing to do except log this. Don't need to re-update
       // the quota table
@@ -347,6 +367,19 @@ public class QuotaObserverChore extends ScheduledChore {
         LOG.trace(table + " remains in violation of quota.");
       }
     }
+  }
+
+  /**
+   * Method to check whether we are dealing with DISABLE {@link SpaceViolationPolicy}. In such a
+   * case, currPolicy or/and targetPolicy will be having DISABLE policy.
+   * @param currPolicy currently set space violation policy
+   * @param targetPolicy new space violation policy
+   * @return true if is DISABLE space violation policy; otherwise false
+   */
+  private boolean isDisableSpaceViolationPolicy(final SpaceViolationPolicy currPolicy,
+      final SpaceViolationPolicy targetPolicy) {
+    return SpaceViolationPolicy.DISABLE == currPolicy
+        || SpaceViolationPolicy.DISABLE == targetPolicy;
   }
 
   /**
@@ -363,7 +396,7 @@ public class QuotaObserverChore extends ScheduledChore {
       final Multimap<String,TableName> tablesByNamespace) throws IOException {
     final SpaceQuotaStatus targetStatus = targetSnapshot.getQuotaStatus();
 
-    // When the policies differ, we need to move into or out of violatino
+    // When the policies differ, we need to move into or out of violation
     if (!currentSnapshot.equals(targetSnapshot)) {
       // We want to have a policy of "NONE", moving out of violation
       if (!targetStatus.isInViolation()) {

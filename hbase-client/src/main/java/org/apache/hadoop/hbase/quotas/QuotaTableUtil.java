@@ -291,6 +291,18 @@ public class QuotaTableUtil {
   }
 
   /**
+   * Creates a {@link Get} which returns only {@link SpaceQuotaSnapshot} from the quota table for a
+   * specific table.
+   * @param tn table name to get from. Can't be null.
+   */
+  public static Get makeQuotaSnapshotGetForTable(TableName tn) {
+    Get g = new Get(getTableRowKey(tn));
+    // Limit to "u:v" column
+    g.addColumn(QUOTA_FAMILY_USAGE, QUOTA_QUALIFIER_POLICY);
+    return g;
+  }
+
+  /**
    * Extracts the {@link SpaceViolationPolicy} and {@link TableName} from the provided
    * {@link Result} and adds them to the given {@link Map}. If the result does not contain
    * the expected information or the serialized policy in the value is invalid, this method
@@ -302,7 +314,7 @@ public class QuotaTableUtil {
   public static void extractQuotaSnapshot(
       Result result, Map<TableName,SpaceQuotaSnapshot> snapshots) {
     byte[] row = Objects.requireNonNull(result).getRow();
-    if (row == null) {
+    if (row == null || row.length == 0) {
       throw new IllegalArgumentException("Provided result had a null row");
     }
     final TableName targetTableName = getTableFromRowKey(row);
@@ -606,6 +618,28 @@ public class QuotaTableUtil {
         }
       }
       return snapshotSizes;
+    }
+  }
+
+  /**
+   * Returns the current space quota snapshot of the given {@code tableName} from
+   * {@code QuotaTableUtil.QUOTA_TABLE_NAME} or null if the no quota information is available for
+   * that tableName.
+   * @param conn connection to re-use
+   * @param tableName name of the table whose current snapshot is to be retreived
+   */
+  public static SpaceQuotaSnapshot getCurrentSnapshotFromQuotaTable(Connection conn,
+      TableName tableName) throws IOException {
+    try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Map<TableName, SpaceQuotaSnapshot> snapshots = new HashMap<>(1);
+      Result result = quotaTable.get(makeQuotaSnapshotGetForTable(tableName));
+      // if we don't have any row corresponding to this get, return null
+      if (result.isEmpty()) {
+        return null;
+      }
+      // otherwise, extract quota snapshot in snapshots object
+      extractQuotaSnapshot(result, snapshots);
+      return snapshots.get(tableName);
     }
   }
 
