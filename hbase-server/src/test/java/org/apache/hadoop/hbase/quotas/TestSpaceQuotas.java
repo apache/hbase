@@ -388,7 +388,7 @@ public class TestSpaceQuotas {
   }
 
   @Test
-  public void testSetQuotaAndThenDropTableeWithNoWritesCompactions() throws Exception {
+  public void testSetQuotaAndThenDropTableWithNoWritesCompactions() throws Exception {
     setQuotaAndThenDropTable(SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
   }
 
@@ -413,6 +413,16 @@ public class TestSpaceQuotas {
   }
 
   @Test
+  public void testSetQuotaAndThenIncreaseQuotaWithDisable() throws Exception {
+    setQuotaAndThenIncreaseQuota(SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
+  public void testSetQuotaAndThenDisableIncrEnableWithDisable() throws Exception {
+    setQuotaNextDisableThenIncreaseFinallyEnable(SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
   public void testSetQuotaAndThenRemoveInOneWithNoInserts() throws Exception {
     setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy.NO_INSERTS);
   }
@@ -433,6 +443,36 @@ public class TestSpaceQuotas {
   }
 
   @Test
+  public void testSetQuotaFirstWithDisableNextNoWrites() throws Exception {
+    setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
+      SpaceViolationPolicy.NO_WRITES);
+  }
+
+  @Test
+  public void testSetQuotaFirstWithDisableNextAgainDisable() throws Exception {
+    setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
+      SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
+  public void testSetQuotaFirstWithDisableNextNoInserts() throws Exception {
+    setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
+      SpaceViolationPolicy.NO_INSERTS);
+  }
+
+  @Test
+  public void testSetQuotaFirstWithDisableNextNoWritesCompaction() throws Exception {
+    setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.DISABLE,
+      SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
+  }
+
+  @Test
+  public void testSetQuotaFirstWithNoWritesNextWithDisable() throws Exception {
+    setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy.NO_WRITES,
+      SpaceViolationPolicy.DISABLE);
+  }
+
+  @Test
   public void testSetQuotaOnNonExistingTableWithNoInserts() throws Exception {
     setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.NO_INSERTS, 2L);
   }
@@ -450,6 +490,26 @@ public class TestSpaceQuotas {
   @Test
   public void testSetQuotaOnNonExistingTableWithDisable() throws Exception {
     setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.DISABLE, 2L);
+  }
+
+  public void setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy policy1,
+      SpaceViolationPolicy policy2) throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space violation policy1
+    final TableName tn = writeUntilViolationAndVerifyViolation(policy1, put);
+
+    // Now, change violation policy to policy2
+    setQuotaLimit(tn, policy2, 2L);
+
+    // The table should be in enabled state on changing violation policy
+    if (policy1.equals(SpaceViolationPolicy.DISABLE) && !policy1.equals(policy2)) {
+      TEST_UTIL.waitTableEnabled(tn, 20000);
+    }
+    // Put some row now: should still violate as quota limit still violated
+    verifyViolation(policy2, tn, put);
   }
 
   private void setQuotaAndThenRemove(SpaceViolationPolicy policy) throws Exception {
@@ -497,6 +557,34 @@ public class TestSpaceQuotas {
 
     // Now, increase limit and perform put
     setQuotaLimit(tn, policy, 4L);
+
+    // Put some row now: should not violate as quota limit increased
+    verifyNoViolation(policy, tn, put);
+  }
+
+  private void setQuotaNextDisableThenIncreaseFinallyEnable(SpaceViolationPolicy policy)
+      throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    // Do puts until we violate space policy
+    final TableName tn = writeUntilViolationAndVerifyViolation(policy, put);
+
+    // Disable the table; in case of SpaceViolationPolicy.DISABLE already disabled
+    if (!policy.equals(SpaceViolationPolicy.DISABLE)) {
+      TEST_UTIL.getAdmin().disableTable(tn);
+      TEST_UTIL.waitTableDisabled(tn, 10000);
+    }
+
+    // Now, increase limit and perform put
+    setQuotaLimit(tn, policy, 4L);
+
+    // in case of disable policy quota manager will enable it
+    if (!policy.equals(SpaceViolationPolicy.DISABLE)) {
+      TEST_UTIL.getAdmin().enableTable(tn);
+    }
+    TEST_UTIL.waitTableEnabled(tn, 10000);
 
     // Put some row now: should not violate as quota limit increased
     verifyNoViolation(policy, tn, put);
@@ -572,6 +660,7 @@ public class TestSpaceQuotas {
 			SpaceViolationPolicy policyToViolate, TableName tn, Mutation m) throws Exception {
     // But let's try a few times to get the exception before failing
     boolean sawError = false;
+    String msg = "";
     for (int i = 0; i < NUM_RETRIES && !sawError; i++) {
       try (Table table = TEST_UTIL.getConnection().getTable(tn)) {
         if (m instanceof Put) {
@@ -590,15 +679,16 @@ public class TestSpaceQuotas {
         LOG.info("Did not reject the " + m.getClass().getSimpleName() + ", will sleep and retry");
         Thread.sleep(2000);
       } catch (Exception e) {
-        String msg = StringUtils.stringifyException(e);
-        if (policyToViolate.equals(SpaceViolationPolicy.DISABLE)) {
-          assertTrue(e instanceof TableNotEnabledException);
+        msg = StringUtils.stringifyException(e);
+        if ((policyToViolate.equals(SpaceViolationPolicy.DISABLE)
+            && e instanceof TableNotEnabledException) || msg.contains(policyToViolate.name())) {
+          LOG.info("Got the expected exception={}", msg);
+          sawError = true;
+          break;
         } else {
-          assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
-              + "', but was " + msg,
-            msg.contains(policyToViolate.name()));
+          LOG.warn("Did not get the expected exception, will sleep and retry", e);
+          Thread.sleep(2000);
         }
-        sawError = true;
       }
     }
     if (!sawError) {
@@ -610,6 +700,15 @@ public class TestSpaceQuotas {
           LOG.info(Bytes.toString(result.getRow()) + " => " + result.toString());
         }
         scanner.close();
+      }
+    } else {
+      if (policyToViolate.equals(SpaceViolationPolicy.DISABLE)) {
+        assertTrue(
+          msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
+      } else {
+        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
+            + "', but was " + msg,
+          msg.contains(policyToViolate.name()));
       }
     }
     assertTrue(
