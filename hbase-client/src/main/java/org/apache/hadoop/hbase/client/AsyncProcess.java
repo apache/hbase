@@ -1215,7 +1215,7 @@ class AsyncProcess {
       Retry canRetry = errorsByServer.canRetryMore(numAttempt)
           ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED;
 
-      if (ClientExceptionsUtil.isMetaClearingException(t)) {
+      if (tableName == null && ClientExceptionsUtil.isMetaClearingException(t)) {
         // tableName is null when we made a cross-table RPC call.
         connection.clearCaches(server);
       }
@@ -1345,7 +1345,8 @@ class AsyncProcess {
       for (Map.Entry<byte[], List<Action<Row>>> regionEntry : multiAction.actions.entrySet()) {
         byte[] regionName = regionEntry.getKey();
         Throwable regionException = responses.getExceptions().get(regionName);
-        if (ClientExceptionsUtil.isMetaClearingException(regionException)) {
+        if (tableName == null && regionException != null &&
+              ClientExceptionsUtil.isMetaClearingException(regionException)) {
           // For multi-actions, we don't have a table name, but we want to make sure to clear the
           // cache in case there were location-related exceptions. We don't to clear the cache
           // for every possible exception that comes through, however.
