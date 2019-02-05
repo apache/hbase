@@ -582,6 +582,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>xucang</id>
+      <name>Xu Cang</name>
+      <email>xucang@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>yangzhe1991</id>
       <name>Phil Yang</name>
       <email>yangzhe1991@apache.org</email>
