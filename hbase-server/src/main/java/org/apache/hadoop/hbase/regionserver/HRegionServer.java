@@ -2889,7 +2889,7 @@ public class HRegionServer extends HasThread implements
   /**
    * @return Return the walFs.
    */
-  protected FileSystem getWALFileSystem() {
+  public FileSystem getWALFileSystem() {
     return walFs;
   }
 
