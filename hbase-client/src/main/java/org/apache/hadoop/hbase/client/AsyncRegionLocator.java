@@ -159,4 +159,9 @@ class AsyncRegionLocator {
       nonMetaRegionLocator.clearCache(tableName);
     }
   }
+
+  void clearCache() {
+    metaRegionLocator.clearCache();
+    nonMetaRegionLocator.clearCache();
+  }
 }
