@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -107,6 +108,11 @@ public class TestAsyncRegionLocator {
   public static void tearDown() throws Exception {
     IOUtils.closeQuietly(CONN);
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @After
+  public void tearDownAfterTest() {
+    LOCATOR.clearCache();
   }
 
   @Test

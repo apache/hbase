@@ -569,6 +569,10 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
+  void clearCache() {
+    cache.clear();
+  }
+
   // only used for testing whether we have cached the location for a region.
   @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {

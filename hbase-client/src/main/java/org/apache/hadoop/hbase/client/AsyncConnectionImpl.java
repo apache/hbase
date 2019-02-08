@@ -353,4 +353,9 @@ class AsyncConnectionImpl implements AsyncConnection {
     return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
       rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
   }
+
+  @Override
+  public void clearRegionLocationCache() {
+    locator.clearCache();
+  }
 }
