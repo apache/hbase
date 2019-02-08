@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -242,7 +244,27 @@ public class ReplicationPeerManager {
   }
 
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
-    checkClusterKey(peerConfig.getClusterKey());
+    String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
+    boolean checkClusterKey = true;
+    if (!StringUtils.isBlank(replicationEndpointImpl)) {
+      // try creating a instance
+      ReplicationEndpoint endpoint;
+      try {
+        endpoint = Class.forName(replicationEndpointImpl)
+          .asSubclass(ReplicationEndpoint.class).getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
+        throw new DoNotRetryIOException(
+          "Can not instantiate configured replication endpoint class=" + replicationEndpointImpl,
+          e);
+      }
+      // do not check cluster key if we are not HBaseInterClusterReplicationEndpoint
+      if (!(endpoint instanceof HBaseInterClusterReplicationEndpoint)) {
+        checkClusterKey = false;
+      }
+    }
+    if (checkClusterKey) {
+      checkClusterKey(peerConfig.getClusterKey());
+    }
 
     if (peerConfig.replicateAllUserTables()) {
       // If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
