@@ -60,9 +60,10 @@ public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurati
             }
           }
 
-          LOG.info("Loading source cluster " + replicationClusterId
-              + " file system configurations from xml files under directory " + replicationConfDir);
           File confDir = new File(replicationConfDir, replicationClusterId);
+          LOG.info("Loading source cluster " + replicationClusterId
+                  + " file system configurations from xml "
+                  + "files under directory " + confDir);
           String[] listofConfFiles = FileUtil.list(confDir);
           for (String confFile : listofConfFiles) {
             if (new File(confDir, confFile).isFile() && confFile.endsWith(XML)) {
