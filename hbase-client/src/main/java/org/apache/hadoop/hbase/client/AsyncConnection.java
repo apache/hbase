@@ -53,6 +53,16 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
+   * Clear all the entries in the region location cache, for all the tables.
+   * <p/>
+   * If you only want to clear the cache for a specific table, use
+   * {@link AsyncTableRegionLocator#clearRegionLocationCache()}.
+   * <p/>
+   * This may cause performance issue so use it with caution.
+   */
+  void clearRegionLocationCache();
+
+  /**
    * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
    * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
