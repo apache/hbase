@@ -329,9 +329,9 @@ public final class ReplicationPeerConfigUtil {
   public static ReplicationProtos.ReplicationPeer convert(ReplicationPeerConfig peerConfig) {
     ReplicationProtos.ReplicationPeer.Builder builder =
         ReplicationProtos.ReplicationPeer.newBuilder();
-    if (peerConfig.getClusterKey() != null) {
-      builder.setClusterkey(peerConfig.getClusterKey());
-    }
+    // we used to set cluster key as required so here we must always set it, until we can make sure
+    // that no one uses the old proto file.
+    builder.setClusterkey(peerConfig.getClusterKey() != null ? peerConfig.getClusterKey() : "");
     if (peerConfig.getReplicationEndpointImpl() != null) {
       builder.setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl());
     }
