@@ -18,22 +18,30 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +54,9 @@ public class TestMasterFileSystem {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterFileSystem.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFileSystem.class);
 
@@ -72,5 +83,57 @@ public class TestMasterFileSystem {
     LOG.debug("from configuration uri:" + FileSystem.getDefaultUri(fs.getConfiguration()));
     // make sure the set uri matches by forcing it.
     assertEquals(masterRoot, rootDir);
+  }
+
+  @Test
+  public void testCheckTempDir() throws Exception {
+    final MasterFileSystem masterFileSystem =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final byte[] FAM = Bytes.toBytes("fam");
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
+    };
+
+    UTIL.createTable(tableName, FAM, splitKeys);
+
+    // get the current store files for the regions
+    List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
+    // make sure we have 4 regions serving this table
+    assertEquals(4, regions.size());
+
+    // load the table
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      UTIL.loadTable(table, FAM);
+    }
+
+    // disable the table so that we can manipulate the files
+    UTIL.getAdmin().disableTable(tableName);
+
+    final Path tableDir = FSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
+    final Path tempDir = masterFileSystem.getTempDir();
+    final Path tempTableDir = FSUtils.getTableDir(tempDir, tableName);
+    final FileSystem fs = masterFileSystem.getFileSystem();
+
+    // move the table to the temporary directory
+    if (!fs.rename(tableDir, tempTableDir)) {
+      fail();
+    }
+
+    masterFileSystem.checkTempDir(tempDir, UTIL.getConfiguration(), fs);
+
+    // check if the temporary directory exists and is empty
+    assertTrue(fs.exists(tempDir));
+    assertEquals(0, fs.listStatus(tempDir).length);
+
+    // check for the existence of the archive directory
+    for (HRegion region : regions) {
+      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
+        region);
+      assertTrue(fs.exists(archiveDir));
+    }
+
+    UTIL.deleteTable(tableName);
   }
 }

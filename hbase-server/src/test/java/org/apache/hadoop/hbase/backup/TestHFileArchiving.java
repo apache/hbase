@@ -22,9 +22,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,12 +36,11 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -121,7 +124,7 @@ public class TestHFileArchiving {
   }
 
   @Test
-  public void testRemovesRegionDirOnArchive() throws Exception {
+  public void testRemoveRegionDirOnArchive() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, TEST_FAM);
 
@@ -151,7 +154,6 @@ public class TestHFileArchiving {
     Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
     assertTrue(fs.exists(archiveDir));
 
-    // check to make sure the store directory was copied
     // check to make sure the store directory was copied
     FileStatus[] stores = fs.listStatus(archiveDir, new PathFilter() {
       @Override
@@ -225,6 +227,100 @@ public class TestHFileArchiving {
     assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
 
     UTIL.deleteTable(tableName);
+  }
+
+  private List<HRegion> initTableForArchivingRegions(TableName tableName) throws IOException {
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
+    };
+
+    UTIL.createTable(tableName, TEST_FAM, splitKeys);
+
+    // get the current store files for the regions
+    List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
+    // make sure we have 4 regions serving this table
+    assertEquals(4, regions.size());
+
+    // and load the table
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      UTIL.loadTable(table, TEST_FAM);
+    }
+
+    // disable the table so that we can manipulate the files
+    UTIL.getAdmin().disableTable(tableName);
+
+    return regions;
+  }
+
+  @Test
+  public void testArchiveRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    List<HRegion> regions = initTableForArchivingRegions(tableName);
+
+    FileSystem fs = UTIL.getTestFileSystem();
+
+    // now attempt to depose the regions
+    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    List<Path> regionDirList = regions.stream()
+      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .collect(Collectors.toList());
+
+    HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
+
+    // check for the existence of the archive directory and some files in it
+    for (HRegion region : regions) {
+      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
+        region);
+      assertTrue(fs.exists(archiveDir));
+
+      // check to make sure the store directory was copied
+      FileStatus[] stores = fs.listStatus(archiveDir,
+        p -> !p.getName().contains(HConstants.RECOVERED_EDITS_DIR));
+      assertTrue(stores.length == 1);
+
+      // make sure we archived the store files
+      FileStatus[] storeFiles = fs.listStatus(stores[0].getPath());
+      assertTrue(storeFiles.length > 0);
+    }
+
+    // then ensure the region's directories aren't present
+    for (Path regionDir: regionDirList) {
+      assertFalse(fs.exists(regionDir));
+    }
+
+    UTIL.deleteTable(tableName);
+  }
+
+  @Test(expected=IOException.class)
+  public void testArchiveRegionsWhenPermissionDenied() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    List<HRegion> regions = initTableForArchivingRegions(tableName);
+
+    // now attempt to depose the regions
+    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    List<Path> regionDirList = regions.stream()
+      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .collect(Collectors.toList());
+
+    // To create a permission denied error, we do archive regions as a non-current user
+    UserGroupInformation
+      ugi = UserGroupInformation.createUserForTesting("foo1234", new String[]{"group1"});
+
+    try {
+      ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+        FileSystem fs = UTIL.getTestFileSystem();
+        HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir,
+          regionDirList);
+        return null;
+      });
+    } catch (IOException e) {
+      assertTrue(e.getCause().getMessage().contains("Permission denied"));
+      throw e;
+    } finally {
+      UTIL.deleteTable(tableName);
+    }
   }
 
   @Test
