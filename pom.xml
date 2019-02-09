@@ -2665,7 +2665,7 @@
         <configuration>
           <aggregate>true</aggregate>
           <linkJavadoc>true</linkJavadoc>
-          <javadocDir>${basedir}/target/site/apidocs</javadocDir>
+          <javadocDir>${basedir}/target/site/devapidocs</javadocDir>
           <reportOutputDirectory>${basedir}/target/site/xref</reportOutputDirectory>
           <destDir>${basedir}/target/site/xref</destDir>
           <excludes>
@@ -2706,6 +2706,16 @@
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
+              <name>Developer API</name>
+              <description>The full HBase API, including private and unstable APIs</description>
+              <sourceFileExcludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/protobuf/*</exclude>
+              </sourceFileExcludes>
+              <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
+              <show>private</show> <!-- (shows all classes and members) -->
+              <quiet>true</quiet>
+              <notimestamp>true</notimestamp>
             </configuration>
           </reportSet>
 
