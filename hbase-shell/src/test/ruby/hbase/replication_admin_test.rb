@@ -655,7 +655,7 @@ module Hbase
 
     define_test "get_peer_config: works with replicationendpointimpl peer and config params" do
       cluster_key = 'localhost:2181:/hbase-test'
-      repl_impl = 'org.apache.hadoop.hbase.replication.ReplicationEndpointForTest'
+      repl_impl = 'org.apache.hadoop.hbase.replication.DummyReplicationEndpoint'
       config_params = { "config1" => "value1", "config2" => "value2" }
       args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => repl_impl,
                CONFIG => config_params }
@@ -675,7 +675,7 @@ module Hbase
       peer_id_second = '2'
       command(:add_peer, @peer_id, args)
 
-      repl_impl = "org.apache.hadoop.hbase.replication.ReplicationEndpointForTest"
+      repl_impl = "org.apache.hadoop.hbase.replication.DummyReplicationEndpoint"
       config_params = { "config1" => "value1", "config2" => "value2" }
       args2 = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params}
       command(:add_peer, peer_id_second, args2)
@@ -690,7 +690,7 @@ module Hbase
     end
 
     define_test "update_peer_config: can update peer config and data" do
-      repl_impl = "org.apache.hadoop.hbase.replication.ReplicationEndpointForTest"
+      repl_impl = "org.apache.hadoop.hbase.replication.DummyReplicationEndpoint"
       config_params = { "config1" => "value1", "config2" => "value2" }
       data_params = {"data1" => "value1", "data2" => "value2"}
       args = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params, DATA => data_params}

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.replication.DummyReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.TestReplicationEndpoint.InterClusterReplicationEndpointForTest;
-import org.apache.hadoop.hbase.replication.regionserver.TestReplicator.ReplicationEndpointForTest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -937,7 +937,7 @@ public class TestReplicationAdmin {
   public void testPeerReplicationEndpointImpl() throws Exception {
     ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
     builder.setClusterKey(KEY_ONE);
-    builder.setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName());
+    builder.setReplicationEndpointImpl(DummyReplicationEndpoint.class.getName());
     hbaseAdmin.addReplicationPeer(ID_ONE, builder.build());
 
     try {
@@ -962,7 +962,7 @@ public class TestReplicationAdmin {
     hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
 
     try {
-      builder.setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName());
+      builder.setReplicationEndpointImpl(DummyReplicationEndpoint.class.getName());
       hbaseAdmin.updateReplicationPeerConfig(ID_SECOND, builder.build());
       fail("Change replication endpoint implementation class on an existing peer is not allowed");
     } catch (Exception e) {
