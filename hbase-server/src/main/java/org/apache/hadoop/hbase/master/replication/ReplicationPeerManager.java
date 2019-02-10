@@ -252,7 +252,7 @@ public class ReplicationPeerManager {
       try {
         endpoint = Class.forName(replicationEndpointImpl)
           .asSubclass(ReplicationEndpoint.class).getDeclaredConstructor().newInstance();
-      } catch (Exception e) {
+      } catch (Throwable e) {
         throw new DoNotRetryIOException(
           "Can not instantiate configured replication endpoint class=" + replicationEndpointImpl,
           e);
