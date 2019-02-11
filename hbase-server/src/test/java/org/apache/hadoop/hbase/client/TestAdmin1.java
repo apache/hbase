@@ -634,8 +634,8 @@ public class TestAdmin1 {
     assertFalse(ADMIN.tableExists(tableName));
   }
 
-  protected void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator, int
-      expectedRegions) throws IOException {
+  private void verifyRoundRobinDistribution(ConnectionImplementation c,
+      RegionLocator regionLocator, int expectedRegions) throws IOException {
     int numRS = c.getCurrentNrHRS();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
@@ -654,13 +654,14 @@ public class TestAdmin1 {
       // which contains less regions by intention.
       numRS--;
     }
-    float average = (float) expectedRegions/numRS;
-    int min = (int)Math.floor(average);
-    int max = (int)Math.ceil(average);
+    float average = (float) expectedRegions / numRS;
+    int min = (int) Math.floor(average);
+    int max = (int) Math.ceil(average);
     for (List<RegionInfo> regionList : server2Regions.values()) {
-      assertTrue("numRS=" + numRS + ", min=" + min + ", max=" + max +
-        ", size=" + regionList.size() + ", tablesOnMaster=" + tablesOnMaster,
-      regionList.size() == min || regionList.size() == max);
+      assertTrue(
+        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size() +
+          ", tablesOnMaster=" + tablesOnMaster,
+        regionList.size() == min || regionList.size() == max);
     }
   }
 
@@ -740,7 +741,7 @@ public class TestAdmin1 {
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
     RegionInfo hri;
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       regions = l.getAllRegionLocations();
 
@@ -1241,13 +1242,9 @@ public class TestAdmin1 {
       byte[][] nameofRegionsToMerge = new byte[2][];
       nameofRegionsToMerge[0] =  regions.get(1).getFirst().getEncodedNameAsBytes();
       nameofRegionsToMerge[1] = regions.get(2).getFirst().getEncodedNameAsBytes();
-      MergeTableRegionsRequest request = RequestConverter
-          .buildMergeTableRegionsRequest(
-            nameofRegionsToMerge,
-            true,
-            HConstants.NO_NONCE,
-            HConstants.NO_NONCE);
-      ((ClusterConnection) TEST_UTIL.getAdmin().getConnection()).getMaster()
+      MergeTableRegionsRequest request = RequestConverter.buildMergeTableRegionsRequest(
+        nameofRegionsToMerge, true, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      ((ConnectionImplementation) TEST_UTIL.getAdmin().getConnection()).getMaster()
         .mergeTableRegions(null, request);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException m) {
       Throwable t = m.getCause();

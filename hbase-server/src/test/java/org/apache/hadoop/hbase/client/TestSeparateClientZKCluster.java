@@ -206,7 +206,7 @@ public class TestSeparateClientZKCluster {
     // create table
     Connection conn = TEST_UTIL.getConnection();
     Admin admin = conn.getAdmin();
-    HTable table = (HTable) conn.getTable(tn);
+    Table table = conn.getTable(tn);
     try {
       ColumnFamilyDescriptorBuilder cfDescBuilder =
           ColumnFamilyDescriptorBuilder.newBuilder(family);

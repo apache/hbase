@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -550,7 +550,7 @@ public class RegionSplitter {
                   }
 
                   // make sure this region wasn't already split
-                  byte[] sk = regionLoc.getRegionInfo().getStartKey();
+                  byte[] sk = regionLoc.getRegion().getStartKey();
                   if (sk.length != 0) {
                     if (Bytes.equals(split, sk)) {
                       LOG.debug("Region already split on "
@@ -712,7 +712,6 @@ public class RegionSplitter {
       htd = table.getDescriptor();
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-
       // for every region that hasn't been verified as a finished split
       for (Pair<byte[], byte[]> region : regionList) {
         byte[] start = region.getFirst();
@@ -720,7 +719,7 @@ public class RegionSplitter {
 
         // see if the new split daughter region has come online
         try {
-          HRegionInfo dri = regionLocator.getRegionLocation(split).getRegionInfo();
+          RegionInfo dri = regionLocator.getRegionLocation(split, true).getRegion();
           if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
             logicalSplitting.add(region);
             continue;
@@ -735,10 +734,10 @@ public class RegionSplitter {
         try {
           // when a daughter region is opened, a compaction is triggered
           // wait until compaction completes for both daughter regions
-          LinkedList<HRegionInfo> check = Lists.newLinkedList();
-          check.add(regionLocator.getRegionLocation(start).getRegionInfo());
-          check.add(regionLocator.getRegionLocation(split).getRegionInfo());
-          for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
+          LinkedList<RegionInfo> check = Lists.newLinkedList();
+          check.add(regionLocator.getRegionLocation(start).getRegion());
+          check.add(regionLocator.getRegionLocation(split).getRegion());
+          for (RegionInfo hri : check.toArray(new RegionInfo[check.size()])) {
             byte[] sk = hri.getStartKey();
             if (sk.length == 0)
               sk = splitAlgo.firstRow();
