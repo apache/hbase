@@ -274,7 +274,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   private void verifyRoundRobinDistribution(List<HRegionLocation> regions, int expectedRegions)
       throws IOException {
-    int numRS = ((ClusterConnection) TEST_UTIL.getConnection()).getCurrentNrHRS();
+    int numRS = ((ConnectionImplementation) TEST_UTIL.getConnection()).getCurrentNrHRS();
 
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     regions.stream().forEach((loc) -> {

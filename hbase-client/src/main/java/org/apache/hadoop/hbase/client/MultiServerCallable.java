@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -31,15 +30,16 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Callable that handles the <code>multi</code> method call going against a single
@@ -52,7 +52,7 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
   private MultiAction multiAction;
   private boolean cellBlock;
 
-  MultiServerCallable(final ClusterConnection connection, final TableName tableName,
+  MultiServerCallable(final ConnectionImplementation connection, final TableName tableName,
       final ServerName location, final MultiAction multi, RpcController rpcController,
       int rpcTimeout, RetryingTimeTracker tracker, int priority) {
     super(connection, tableName, null, rpcController, rpcTimeout, tracker, priority);
@@ -141,7 +141,7 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
   private boolean isCellBlock() {
     // This is not exact -- the configuration could have changed on us after connection was set up
     // but it will do for now.
-    ClusterConnection conn = getConnection();
+    ConnectionImplementation conn = getConnection();
     return conn.hasCellBlockSupport();
   }
 

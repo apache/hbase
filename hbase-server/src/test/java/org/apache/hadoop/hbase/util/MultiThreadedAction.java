@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -56,7 +56,7 @@ public abstract class MultiThreadedAction {
 
   protected final TableName tableName;
   protected final Configuration conf;
-  protected final ClusterConnection connection; // all reader / writer threads will share this connection
+  protected final Connection connection; // all reader / writer threads will share this connection
 
   protected int numThreads = 1;
 
@@ -151,7 +151,7 @@ public abstract class MultiThreadedAction {
     this.dataGenerator = dataGen;
     this.tableName = tableName;
     this.actionLetter = actionLetter;
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    this.connection = ConnectionFactory.createConnection(conf);
   }
 
   public void start(long startKey, long endKey, int numThreads) throws IOException {
