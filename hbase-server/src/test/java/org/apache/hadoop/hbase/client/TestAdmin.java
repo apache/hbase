@@ -175,7 +175,7 @@ public class TestAdmin extends TestAdminBase {
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
     RegionInfo hri;
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table)) {
       regions = l.getAllRegionLocations();
 
@@ -343,7 +343,7 @@ public class TestAdmin extends TestAdminBase {
     }
   }
 
-  private void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator,
+  private void verifyRoundRobinDistribution(ConnectionImplementation c, RegionLocator regionLocator,
       int expectedRegions) throws IOException {
     int numRS = c.getCurrentNrHRS();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();

@@ -435,8 +435,8 @@ public class TestAdmin1 extends TestAdminBase {
       nameofRegionsToMerge[1] = regions.get(2).getFirst().getEncodedNameAsBytes();
       MergeTableRegionsRequest request = RequestConverter.buildMergeTableRegionsRequest(
         nameofRegionsToMerge, true, HConstants.NO_NONCE, HConstants.NO_NONCE);
-      ((ClusterConnection) TEST_UTIL.getAdmin().getConnection()).getMaster().mergeTableRegions(null,
-        request);
+      ((ConnectionImplementation) TEST_UTIL.getAdmin().getConnection()).getMaster()
+        .mergeTableRegions(null, request);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException m) {
       Throwable t = m.getCause();
       do {
