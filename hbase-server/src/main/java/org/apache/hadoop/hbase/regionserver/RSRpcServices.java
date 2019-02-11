@@ -2382,7 +2382,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
-      Map<byte[], List<Path>> map = null;
       final boolean spaceQuotaEnabled = QuotaUtil.isQuotaEnabled(getConfiguration());
       long sizeToBeLoaded = -1;
 
@@ -2401,27 +2400,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           sizeToBeLoaded = enforcement.computeBulkLoadSize(regionServer.getFileSystem(), filePaths);
         }
       }
-
-      List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
-      for (FamilyPath familyPath : request.getFamilyPathList()) {
-        familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
-      }
-      if (!request.hasBulkToken()) {
-        if (region.getCoprocessorHost() != null) {
-          region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
-        }
-        try {
-          map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-              request.getCopyFile());
-        } finally {
-          if (region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
-          }
-        }
-      } else {
-        // secure bulk load
-        map = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
-      }
+      // secure bulk load
+      Map<byte[], List<Path>> map =
+        regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
       builder.setLoaded(map != null);
       if (map != null) {

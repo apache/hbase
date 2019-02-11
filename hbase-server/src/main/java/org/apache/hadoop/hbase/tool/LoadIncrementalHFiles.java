@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
@@ -393,11 +392,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       RegionLocator regionLocator, Deque<LoadQueueItem> queue, ExecutorService pool,
       SecureBulkLoadClient secureClient, boolean copyFile) throws IOException {
     int count = 0;
-
-    if (isSecureBulkLoadEndpointAvailable()) {
-      LOG.warn("SecureBulkLoadEndpoint is deprecated. It will be removed in future releases.");
-      LOG.warn("Secure bulk load has been integrated into HBase core.");
-    }
 
     fsDelegationToken.acquireDelegationToken(queue.peek().getFilePath().getFileSystem(getConf()));
     bulkToken = secureClient.prepareBulkLoad(admin.getConnection());
@@ -1053,11 +1047,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     });
     sb.append(']');
     return sb.toString();
-  }
-
-  private boolean isSecureBulkLoadEndpointAvailable() {
-    String classes = getConf().get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    return classes.contains("org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint");
   }
 
   /**
