@@ -149,7 +149,7 @@ public class TestEncodedSeekers {
   private void doPuts(HRegion region) throws IOException{
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
      for (int i = 0; i < NUM_ROWS; ++i) {
-      byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
+      byte[] key = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
         put.setDurability(Durability.ASYNC_WAL);
@@ -177,7 +177,7 @@ public class TestEncodedSeekers {
 
   private void doGets(Region region) throws IOException{
     for (int i = 0; i < NUM_ROWS; ++i) {
-      final byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
+      final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         final String qualStr = String.valueOf(j);
         if (VERBOSE) {

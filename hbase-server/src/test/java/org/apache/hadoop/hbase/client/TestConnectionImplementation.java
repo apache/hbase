@@ -218,8 +218,8 @@ public class TestConnectionImplementation {
   // dead servers is broke"
   public void testClusterStatus() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    byte[] cf = "cf".getBytes();
-    byte[] rk = "rk1".getBytes();
+    byte[] cf = Bytes.toBytes("cf");
+    byte[] rk = Bytes.toBytes("rk1");
 
     JVMClusterUtil.RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     rs.waitForServerOnline();
@@ -242,7 +242,7 @@ public class TestConnectionImplementation {
     }
 
     Put p1 = new Put(rk);
-    p1.addColumn(cf, "qual".getBytes(), "val".getBytes());
+    p1.addColumn(cf, Bytes.toBytes("qual"), Bytes.toBytes("val"));
     t.put(p1);
 
     rs.getRegionServer().abort("I'm dead");
@@ -606,7 +606,7 @@ public class TestConnectionImplementation {
     LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
     TEST_UTIL.getAdmin().move(
       toMove.getRegionInfo().getEncodedNameAsBytes(),
-      destServerName.getServerName().getBytes()
+      Bytes.toBytes(destServerName.getServerName())
     );
 
     while (destServer.getOnlineRegion(regionName) == null ||
@@ -672,7 +672,7 @@ public class TestConnectionImplementation {
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
     TEST_UTIL.getAdmin().move(
       toMove.getRegionInfo().getEncodedNameAsBytes(),
-      curServer.getServerName().getServerName().getBytes()
+      Bytes.toBytes(curServer.getServerName().getServerName())
     );
 
     while (curServer.getOnlineRegion(regionName) == null ||
@@ -930,7 +930,7 @@ public class TestConnectionImplementation {
       LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
       TEST_UTIL.getAdmin().move(
           toMove.getRegionInfo().getEncodedNameAsBytes(),
-          destServerName.getServerName().getBytes()
+          Bytes.toBytes(destServerName.getServerName())
       );
 
       while (destServer.getOnlineRegion(regionName) == null ||

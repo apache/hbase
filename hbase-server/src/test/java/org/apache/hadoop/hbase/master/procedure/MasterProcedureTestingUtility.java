@@ -289,7 +289,7 @@ public class MasterProcedureTestingUtility {
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    assertTrue(htd.hasColumnFamily(family.getBytes()));
+    assertTrue(htd.hasColumnFamily(Bytes.toBytes(family)));
   }
 
   public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
@@ -297,7 +297,7 @@ public class MasterProcedureTestingUtility {
     // verify htd
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
-    assertFalse(htd.hasColumnFamily(family.getBytes()));
+    assertFalse(htd.hasColumnFamily(Bytes.toBytes(family)));
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -314,7 +314,7 @@ public class MasterProcedureTestingUtility {
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    ColumnFamilyDescriptor hcfd = htd.getColumnFamily(family.getBytes());
+    ColumnFamilyDescriptor hcfd = htd.getColumnFamily(Bytes.toBytes(family));
     assertEquals(0, ColumnFamilyDescriptor.COMPARATOR.compare(hcfd, columnDescriptor));
   }
 

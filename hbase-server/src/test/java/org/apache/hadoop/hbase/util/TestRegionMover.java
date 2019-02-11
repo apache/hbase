@@ -85,7 +85,7 @@ public class TestRegionMover {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     String startKey = "a";
     String endKey = "z";
-    admin.createTable(tableDesc, startKey.getBytes(), endKey.getBytes(), 9);
+    admin.createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
   @Test

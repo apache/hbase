@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -47,11 +48,11 @@ public class TestTableSplit {
   @Test
   public void testHashCode() {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-        "row-start".getBytes(),
-        "row-end".getBytes(), "location");
+        Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location");
     TableSplit split2 = new TableSplit(TableName.valueOf(name.getMethodName()),
-        "row-start".getBytes(),
-        "row-end".getBytes(), "location");
+        Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location");
     assertEquals (split1, split2);
     assertTrue   (split1.hashCode() == split2.hashCode());
     HashSet<TableSplit> set = new HashSet<>(2);
@@ -66,11 +67,11 @@ public class TestTableSplit {
   @Test
   public void testHashCode_length() {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 1984);
+        Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location", 1984);
     TableSplit split2 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 1982);
+        Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location", 1982);
 
     assertEquals (split1, split2);
     assertTrue   (split1.hashCode() == split2.hashCode());
@@ -86,12 +87,12 @@ public class TestTableSplit {
   @Test
   public void testLengthIsSerialized() throws Exception {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 666);
+        Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location", 666);
 
     TableSplit deserialized = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start2".getBytes(),
-            "row-end2".getBytes(), "location1");
+        Bytes.toBytes("row-start2"),
+            Bytes.toBytes("row-end2"), "location1");
     ReflectionUtils.copy(new Configuration(), split1, deserialized);
 
     Assert.assertEquals(666, deserialized.getLength());
@@ -100,8 +101,8 @@ public class TestTableSplit {
   @Test
   public void testToString() {
     TableSplit split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), "row-start".getBytes(), "row-end".getBytes(),
-            "location");
+        new TableSplit(TableName.valueOf(name.getMethodName()), Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location");
     String str =
         "HBase table split(table name: " + name.getMethodName() + ", scan: , start row: row-start, "
             + "end row: row-end, region location: location, "
@@ -109,8 +110,8 @@ public class TestTableSplit {
     Assert.assertEquals(str, split.toString());
 
     split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), null, "row-start".getBytes(),
-            "row-end".getBytes(), "location", "encoded-region-name", 1000L);
+        new TableSplit(TableName.valueOf(name.getMethodName()), null, Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location", "encoded-region-name", 1000L);
     str =
         "HBase table split(table name: " + name.getMethodName() + ", scan: , start row: row-start, "
             + "end row: row-end, region location: location, "

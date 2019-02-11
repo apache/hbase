@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -84,7 +85,7 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     for (byte[] rowId: rowIds) {
       Put p = new Put(rowId);
       // Use the rowId as the column qualifier
-      p.addColumn("F".getBytes(), rowId, "Dummy value".getBytes());
+      p.addColumn(Bytes.toBytes("F"), rowId, Bytes.toBytes("Dummy value"));
       table.put(p);
     }
 

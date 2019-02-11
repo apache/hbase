@@ -87,12 +87,12 @@ public class RESTDemoClient {
     try (RemoteHTable remoteTable = new RemoteHTable(restClient, conf, "example")) {
       // Write data to the table
       String rowKey = "row1";
-      Put p = new Put(rowKey.getBytes());
-      p.addColumn("family1".getBytes(), "qualifier1".getBytes(), "value1".getBytes());
+      Put p = new Put(Bytes.toBytes(rowKey));
+      p.addColumn(Bytes.toBytes("family1"), Bytes.toBytes("qualifier1"), Bytes.toBytes("value1"));
       remoteTable.put(p);
 
       // Get the data from the table
-      Get g = new Get(rowKey.getBytes());
+      Get g = new Get(Bytes.toBytes(rowKey));
       Result result = remoteTable.get(g);
 
       Preconditions.checkArgument(result != null,

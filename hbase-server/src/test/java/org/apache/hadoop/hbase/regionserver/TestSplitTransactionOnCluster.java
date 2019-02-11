@@ -455,12 +455,12 @@ public class TestSplitTransactionOnCluster {
     try {
       for (int i = 0; i <= 5; i++) {
         String row = "row" + i;
-        Put p = new Put(row.getBytes());
+        Put p = new Put(Bytes.toBytes(row));
         String val = "Val" + i;
-        p.addColumn("col".getBytes(), "ql".getBytes(), val.getBytes());
+        p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes(val));
         table.put(p);
         admin.flush(userTableName);
-        Delete d = new Delete(row.getBytes());
+        Delete d = new Delete(Bytes.toBytes(row));
         // Do a normal delete
         table.delete(d);
         admin.flush(userTableName);
@@ -471,17 +471,17 @@ public class TestSplitTransactionOnCluster {
           .getRegionsOfTable(userTableName);
       assertEquals(1, regionsOfTable.size());
       RegionInfo hRegionInfo = regionsOfTable.get(0);
-      Put p = new Put("row6".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      Put p = new Put(Bytes.toBytes("row6"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
-      p = new Put("row7".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p = new Put(Bytes.toBytes("row7"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
-      p = new Put("row8".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p = new Put(Bytes.toBytes("row8"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
       admin.flush(userTableName);
-      admin.splitRegionAsync(hRegionInfo.getRegionName(), "row7".getBytes());
+      admin.splitRegionAsync(hRegionInfo.getRegionName(), Bytes.toBytes("row7"));
       regionsOfTable = cluster.getMaster()
           .getAssignmentManager().getRegionStates()
           .getRegionsOfTable(userTableName);
@@ -630,7 +630,7 @@ public class TestSplitTransactionOnCluster {
           tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       // exists works on stale and we see the put after the flush
-      byte[] b1 = "row1".getBytes();
+      byte[] b1 = Bytes.toBytes("row1");
       Get g = new Get(b1);
       g.setConsistency(Consistency.STRONG);
       // The following GET will make a trip to the meta to get the new location of the 1st daughter

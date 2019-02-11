@@ -415,7 +415,7 @@ public class TestImportExport {
 
     //Add second version of QUAL
     p = new Put(ROW1);
-    p.addColumn(FAMILYA, QUAL, now + 5, "s".getBytes());
+    p.addColumn(FAMILYA, QUAL, now + 5, Bytes.toBytes("s"));
     exportT.put(p);
 
     //Add second Delete family marker

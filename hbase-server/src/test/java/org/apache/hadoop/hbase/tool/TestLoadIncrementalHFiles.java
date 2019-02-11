@@ -648,45 +648,45 @@ public class TestLoadIncrementalHFiles {
 
     first = "a";
     last = "e";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "r";
     last = "s";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "o";
     last = "p";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "g";
     last = "k";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "v";
     last = "x";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "c";
     last = "i";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "m";
     last = "q";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "s";
     last = "t";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     first = "u";
     last = "w";
-    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    addStartEndKeysForTest(map, Bytes.toBytes(first), Bytes.toBytes(last));
 
     byte[][] keysArray = LoadIncrementalHFiles.inferBoundaries(map);
     byte[][] compare = new byte[3][];
-    compare[0] = "m".getBytes();
-    compare[1] = "r".getBytes();
-    compare[2] = "u".getBytes();
+    compare[0] = Bytes.toBytes("m");
+    compare[1] = Bytes.toBytes("r");
+    compare[2] = Bytes.toBytes("u");
 
     assertEquals(3, keysArray.length);
 

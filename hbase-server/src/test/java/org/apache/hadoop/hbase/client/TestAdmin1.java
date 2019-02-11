@@ -686,7 +686,7 @@ public class TestAdmin1 {
     TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3);
+    admin.createTable(desc, Bytes.toBytes("a"), Bytes.toBytes("z"), 3);
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_3)) {
       regions = l.getAllRegionLocations();
       assertEquals("Table should have only 3 region", 3, regions.size());
@@ -696,7 +696,7 @@ public class TestAdmin1 {
     desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try {
-      admin.createTable(desc, "a".getBytes(), "z".getBytes(), 2);
+      admin.createTable(desc, Bytes.toBytes("a"), Bytes.toBytes("z"), 2);
       fail("Should not be able to create a table with only 2 regions using this API.");
     } catch (IllegalArgumentException eae) {
     // Expected
@@ -921,9 +921,9 @@ public class TestAdmin1 {
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException{
     final byte[] tableName = Bytes.toBytes(name.getMethodName());
     byte[][] splitKeys = new byte[3][];
-    splitKeys[0] = "region1".getBytes();
+    splitKeys[0] = Bytes.toBytes("region1");
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
-    splitKeys[2] = "region2".getBytes();
+    splitKeys[2] = Bytes.toBytes("region2");
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor("col"));
     try {
@@ -1181,7 +1181,7 @@ public class TestAdmin1 {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.setRegionReplication(3);
-    byte[] cf = "f".getBytes();
+    byte[] cf = Bytes.toBytes("f");
     HColumnDescriptor hcd = new HColumnDescriptor(cf);
     desc.addFamily(hcd);
     byte[][] splitRows = new byte[2][];
@@ -1196,15 +1196,15 @@ public class TestAdmin1 {
     // write some data to the table
     Table ht = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
-    byte[] qualifier = "c".getBytes();
+    byte[] qualifier = Bytes.toBytes("c");
     Put put = new Put(new byte[]{(byte)'1'});
-    put.addColumn(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, Bytes.toBytes("100"));
     puts.add(put);
     put = new Put(new byte[]{(byte)'6'});
-    put.addColumn(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, Bytes.toBytes("100"));
     puts.add(put);
     put = new Put(new byte[]{(byte)'8'});
-    put.addColumn(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, Bytes.toBytes("100"));
     puts.add(put);
     ht.put(puts);
     ht.close();

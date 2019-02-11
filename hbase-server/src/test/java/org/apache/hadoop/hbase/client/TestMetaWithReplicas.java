@@ -258,10 +258,10 @@ public class TestMetaWithReplicas {
       LOG.info("Running GETs");
       Get get = null;
       Result r = null;
-      byte[] row = "test".getBytes();
+      byte[] row = Bytes.toBytes("test");
       try (Table htable = c.getTable(TABLE)) {
         Put put = new Put(row);
-        put.addColumn("foo".getBytes(), row, row);
+        put.addColumn(Bytes.toBytes("foo"), row, row);
         BufferedMutator m = c.getBufferedMutator(TABLE);
         m.mutate(put);
         m.flush();
@@ -296,7 +296,7 @@ public class TestMetaWithReplicas {
       TEST_UTIL.getAdmin().deleteTable(tableName);
     }
     try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES)) {
-      byte[] row = "test".getBytes();
+      byte[] row = Bytes.toBytes("test");
       ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
       // check that metalookup pool would get created
       c.relocateRegion(tableName, row);

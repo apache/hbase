@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -66,7 +67,7 @@ public class TestStoreHotnessProtector {
 
     Store mockStore1 = mock(Store.class);
     RegionInfo mockRegionInfo = mock(RegionInfo.class);
-    byte[] family = "testF1".getBytes();
+    byte[] family = Bytes.toBytes("testF1");
 
     when(mockRegion.getStore(family)).thenReturn(mockStore1);
     when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
