@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
@@ -207,7 +207,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     Configuration conf = getConf();
     HBaseAdmin.available(conf);
-    ClusterConnection connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 
     ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),

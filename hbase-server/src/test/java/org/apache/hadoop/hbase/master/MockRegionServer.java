@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -303,7 +302,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public ClusterConnection getConnection() {
+  public Connection getConnection() {
     return null;
   }
 
@@ -616,11 +615,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public double getCompactionPressure() {
     return 0;
-  }
-
-  @Override
-  public ClusterConnection getClusterConnection() {
-    return null;
   }
 
   @Override

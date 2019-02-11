@@ -26,19 +26,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides ability to create multiple Connection instances and allows to process a batch of
@@ -112,14 +110,11 @@ public class MultiHConnection {
    * @param callback to run when results are in
    * @throws IOException If IO failure occurs
    */
-  @SuppressWarnings("deprecation")
   public <R> void processBatchCallback(List<? extends Row> actions, TableName tableName,
       Object[] results, Batch.Callback<R> callback) throws IOException {
     // Currently used by RegionStateStore
-    ClusterConnection conn =
-      (ClusterConnection) connections[ThreadLocalRandom.current().nextInt(noOfConnections)];
-
-    HTable.doBatchWithCallback(actions, results, callback, conn, batchPool, tableName);
+    HTable.doBatchWithCallback(actions, results, callback,
+      connections[ThreadLocalRandom.current().nextInt(noOfConnections)], batchPool, tableName);
   }
 
   // Copied from ConnectionImplementation.getBatchPool()

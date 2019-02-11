@@ -63,7 +63,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BufferedMutatorImpl implements BufferedMutator {
+class BufferedMutatorImpl implements BufferedMutator {
 
   private static final Logger LOG = LoggerFactory.getLogger(BufferedMutatorImpl.class);
 
@@ -95,7 +95,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private final AsyncProcess ap;
 
   @VisibleForTesting
-  BufferedMutatorImpl(ClusterConnection conn, BufferedMutatorParams params, AsyncProcess ap) {
+  BufferedMutatorImpl(ConnectionImplementation conn, BufferedMutatorParams params,
+      AsyncProcess ap) {
     if (conn == null || conn.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }

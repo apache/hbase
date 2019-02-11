@@ -832,7 +832,7 @@ public class TestConnectionImplementation {
    *  from ZK by the client.
    */
   @Test
-  public void testConnection() throws Exception{
+  public void testConnection() throws Exception {
     // We create an empty config and add the ZK address.
     Configuration c = new Configuration();
     c.set(HConstants.ZOOKEEPER_QUORUM,
@@ -841,7 +841,8 @@ public class TestConnectionImplementation {
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
 
     // This should be enough to connect
-    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(c);
+    ConnectionImplementation conn =
+      (ConnectionImplementation) ConnectionFactory.createConnection(c);
     assertTrue(conn.isMasterRunning());
     conn.close();
   }

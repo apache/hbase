@@ -94,7 +94,8 @@ public class TestClientPushback {
   public void testClientTracksServerPushback() throws Exception{
     Configuration conf = UTIL.getConfiguration();
 
-    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    ConnectionImplementation conn =
+      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
     BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
@@ -182,7 +183,8 @@ public class TestClientPushback {
   @Test
   public void testMutateRowStats() throws IOException {
     Configuration conf = UTIL.getConfiguration();
-    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    ConnectionImplementation conn =
+      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
     Table table = conn.getTable(tableName);
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     Region region = rs.getRegions(tableName).get(0);

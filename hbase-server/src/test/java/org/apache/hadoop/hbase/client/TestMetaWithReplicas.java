@@ -390,11 +390,9 @@ public class TestMetaWithReplicas {
 
   @Ignore @Test // Disabled. Relies on FSCK which needs work for AMv2.
   public void testHBaseFsckWithFewerMetaReplicas() throws Exception {
-    ClusterConnection c = (ClusterConnection)ConnectionFactory.createConnection(
-        TEST_UTIL.getConfiguration());
     RegionLocations rl = new RegionLocations(getMetaRegionLocations());
-    HBaseFsckRepair.closeRegionSilentlyAndWait(c,
-        rl.getRegionLocation(1).getServerName(), rl.getRegionLocation(1).getRegionInfo());
+    HBaseFsckRepair.closeRegionSilentlyAndWait(TEST_UTIL.getConnection(),
+      rl.getRegionLocation(1).getServerName(), rl.getRegionLocation(1).getRegionInfo());
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
     assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.UNKNOWN,ERROR_CODE.NO_META_REGION});
@@ -407,11 +405,9 @@ public class TestMetaWithReplicas {
 
   @Ignore @Test // The close silently doesn't work any more since HBASE-14614. Fix.
   public void testHBaseFsckWithFewerMetaReplicaZnodes() throws Exception {
-    ClusterConnection c = (ClusterConnection)ConnectionFactory.createConnection(
-        TEST_UTIL.getConfiguration());
     RegionLocations rl = new RegionLocations(getMetaRegionLocations());
-    HBaseFsckRepair.closeRegionSilentlyAndWait(c,
-        rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
+    HBaseFsckRepair.closeRegionSilentlyAndWait(TEST_UTIL.getConnection(),
+      rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     ZKUtil.deleteNode(zkw, zkw.getZNodePaths().getZNodeForReplica(2));
     // check that problem exists
@@ -485,20 +481,17 @@ public class TestMetaWithReplicas {
   public void testShutdownOfReplicaHolder() throws Exception {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
-    try (ClusterConnection conn = (ClusterConnection)
-        ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      HRegionLocation hrl = getMetaRegionLocations().get(1);
-      ServerName oldServer = hrl.getServerName();
-      TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);
-      int i = 0;
-      do {
-        LOG.debug("Waiting for the replica " + hrl.getRegionInfo() + " to come up");
-        Thread.sleep(10000); //wait for the detection/recovery
-        hrl = getMetaRegionLocations().get(1);
-        i++;
-      } while ((hrl == null || hrl.getServerName().equals(oldServer)) && i < 3);
-      assertTrue(i != 3);
-    }
+    HRegionLocation hrl = getMetaRegionLocations().get(1);
+    ServerName oldServer = hrl.getServerName();
+    TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);
+    int i = 0;
+    do {
+      LOG.debug("Waiting for the replica " + hrl.getRegionInfo() + " to come up");
+      Thread.sleep(10000); // wait for the detection/recovery
+      hrl = getMetaRegionLocations().get(1);
+      i++;
+    } while ((hrl == null || hrl.getServerName().equals(oldServer)) && i < 3);
+    assertTrue(i != 3);
   }
 
   @Ignore @Test // Disabled because fsck and this needs work for AMv2

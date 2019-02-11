@@ -76,7 +76,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   public ScannerCallableWithReplicas(TableName tableName, ConnectionImplementation cConnection,
       ScannerCallable baseCallable, ExecutorService pool, int timeBeforeReplicas, Scan scan,
       int retries, int scannerTimeout, int caching, Configuration conf,
-      RpcRetryingCaller<Result []> caller) {
+      RpcRetryingCaller<Result[]> caller) {
     this.currentScannerCallable = baseCallable;
     this.cConnection = cConnection;
     this.pool = pool;

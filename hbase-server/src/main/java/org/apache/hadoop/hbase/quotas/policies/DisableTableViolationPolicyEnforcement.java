@@ -17,12 +17,11 @@
 package org.apache.hadoop.hbase.quotas.policies;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link SpaceViolationPolicyEnforcement} which disables the table. The enforcement counterpart

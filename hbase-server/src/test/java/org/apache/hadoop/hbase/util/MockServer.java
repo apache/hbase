@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -104,7 +103,7 @@ public class MockServer implements Server {
   }
 
   @Override
-  public ClusterConnection getConnection() {
+  public Connection getConnection() {
     return null;
   }
 
@@ -115,18 +114,11 @@ public class MockServer implements Server {
 
   @Override
   public boolean isAborted() {
-    // TODO Auto-generated method stub
     return this.aborted;
   }
 
   @Override
   public ChoreService getChoreService() {
-    return null;
-  }
-
-  @Override
-  public ClusterConnection getClusterConnection() {
-    // TODO Auto-generated method stub
     return null;
   }
 

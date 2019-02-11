@@ -31,12 +31,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
  * @param <T>
  */
 @InterfaceAudience.Private
-public abstract class ClientServiceCallable<T> extends
-    RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
+public abstract class ClientServiceCallable<T>
+    extends RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
 
-  public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
+  public ClientServiceCallable(ConnectionImplementation connection, TableName tableName, byte[] row,
       RpcController rpcController, int priority) {
-    super((ConnectionImplementation) connection, tableName, row, rpcController, priority);
+    super(connection, tableName, row, rpcController, priority);
   }
 
   @Override
@@ -46,12 +46,12 @@ public abstract class ClientServiceCallable<T> extends
 
   // Below here are simple methods that contain the stub and the rpcController.
   protected ClientProtos.GetResponse doGet(ClientProtos.GetRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+      throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().get(getRpcController(), request);
   }
 
   protected ClientProtos.MutateResponse doMutate(ClientProtos.MutateRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+      throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().mutate(getRpcController(), request);
   }
 }

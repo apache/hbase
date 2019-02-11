@@ -43,12 +43,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  */
 @InterfaceAudience.Private
 abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
-  protected final ClusterConnection connection;
+  protected final ConnectionImplementation connection;
   protected MasterKeepAliveConnection master;
   private final HBaseRpcController rpcController;
 
-  MasterCallable(final Connection connection, final RpcControllerFactory rpcConnectionFactory) {
-    this.connection = (ClusterConnection) connection;
+  MasterCallable(ConnectionImplementation connection,
+      final RpcControllerFactory rpcConnectionFactory) {
+    this.connection = connection;
     this.rpcController = rpcConnectionFactory.newController();
   }
 

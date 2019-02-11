@@ -152,7 +152,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
     value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
     justification="Access to the conncurrent hash map is under a lock so should be fine.")
 @InterfaceAudience.Private
-class ConnectionImplementation implements ClusterConnection, Closeable {
+class ConnectionImplementation implements Connection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
@@ -354,9 +354,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   @VisibleForTesting
   static NonceGenerator injectNonceGeneratorForTesting(
-      ClusterConnection conn, NonceGenerator cnm) {
-    ConnectionImplementation connImpl = (ConnectionImplementation)conn;
-    NonceGenerator ng = connImpl.getNonceGenerator();
+      ConnectionImplementation conn, NonceGenerator cnm) {
+    NonceGenerator ng = conn.getNonceGenerator();
     LOG.warn("Nonce generator is being replaced by test code for "
       + cnm.getClass().getName());
     nonceGenerator = cnm;
@@ -456,7 +455,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }), rpcControllerFactory);
   }
 
-  @Override
+  /**
+   * @return the MetricsConnection instance associated with this connection.
+   */
   public MetricsConnection getConnectionMetrics() {
     return this.metrics;
   }
@@ -600,7 +601,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * @deprecated this has been deprecated without a replacement
    */
   @Deprecated
-  @Override
   public boolean isMasterRunning() throws MasterNotRunningException, ZooKeeperConnectionException {
     // When getting the master connection, we check it's running,
     // so if there is no exception, it means we've been able to get a
@@ -628,18 +628,39 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return reload ? relocateRegion(tableName, row) : locateRegion(tableName, row);
   }
 
-
-  @Override
+  /**
+   * A table that isTableEnabled == false and isTableDisabled == false
+   * is possible. This happens when a table has a lot of regions
+   * that must be processed.
+   * @param tableName table name
+   * @return true if the table is enabled, false otherwise
+   * @throws IOException if a remote or network exception occurs
+   */
   public boolean isTableEnabled(TableName tableName) throws IOException {
     return getTableState(tableName).inStates(TableState.State.ENABLED);
   }
 
-  @Override
+  /**
+   * @param tableName table name
+   * @return true if the table is disabled, false otherwise
+   * @throws IOException if a remote or network exception occurs
+   */
   public boolean isTableDisabled(TableName tableName) throws IOException {
     return getTableState(tableName).inStates(TableState.State.DISABLED);
   }
 
-  @Override
+  /**
+   * Use this api to check if the table has been created with the specified number of
+   * splitkeys which was used while creating the given table.
+   * Note : If this api is used after a table's region gets splitted, the api may return
+   * false.
+   * @param tableName
+   *          tableName
+   * @param splitKeys
+   *          splitKeys used while creating table
+   * @throws IOException
+   *           if a remote or network exception occurs
+   */
   public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
       throws IOException {
     checkClosed();
@@ -809,15 +830,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   /**
-  *
-  * @param tableName table to get regions of
-  * @param row the row
-  * @param useCache Should we use the cache to retrieve the region information.
-  * @param retry do we retry
-  * @param replicaId the replicaId for the region
-  * @return region locations for this row.
-  * @throws IOException if IO failure occurs
-  */
+   * @param tableName table to get regions of
+   * @param row the row
+   * @param useCache Should we use the cache to retrieve the region information.
+   * @param retry do we retry
+   * @param replicaId the replicaId for the region
+   * @return region locations for this row.
+   * @throws IOException if IO failure occurs
+   */
   RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
       boolean retry, int replicaId) throws IOException {
     checkClosed();
@@ -1048,6 +1068,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache(serverName);
   }
 
+
+  /**
+   * Allows flushing the region cache.
+   */
   @Override
   public void clearRegionLocationCache() {
     metaCache.clearCache();
@@ -1258,12 +1282,19 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  @Override
+  /**
+   * Get the admin service for master.
+   */
   public AdminProtos.AdminService.BlockingInterface getAdminForMaster() throws IOException {
     return getAdmin(get(registry.getMasterAddress()));
   }
 
-  @Override
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param serverName the region server to connect to
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
   public AdminProtos.AdminService.BlockingInterface getAdmin(ServerName serverName)
       throws IOException {
     checkClosed();
@@ -1279,7 +1310,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     });
   }
 
-  @Override
+  /**
+   * Establishes a connection to the region server at the specified address, and returns a region
+   * client protocol.
+   * @param serverName the region server to connect to
+   * @return ClientProtocol proxy for RegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
   public BlockingInterface getClient(ServerName serverName) throws IOException {
     checkClosed();
     if (isDeadServer(serverName)) {
@@ -1289,14 +1326,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       serverName, this.hostnamesCanChange);
     return (ClientProtos.ClientService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
-          this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
+        this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
       return ClientProtos.ClientService.newBlockingStub(channel);
     });
   }
 
   final MasterServiceState masterServiceState = new MasterServiceState(this);
 
-  @Override
   public MasterKeepAliveConnection getMaster() throws IOException {
     return getKeepAliveMasterService();
   }
@@ -1920,6 +1956,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     cacheLocation(hri.getTable(), source, newHrl);
   }
 
+  /**
+   * Deletes cached locations for the specific region.
+   * @param location The location object for the region, to be purged from cache.
+   */
   void deleteCachedRegionLocation(final HRegionLocation location) {
     metaCache.clearCache(location);
   }
@@ -1998,17 +2038,23 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     metaCache.clearCache(regionInfo);
   }
 
-  @Override
+  /**
+   * @return Default AsyncProcess associated with this connection.
+   */
   public AsyncProcess getAsyncProcess() {
     return asyncProcess;
   }
 
-  @Override
+  /**
+   * @return the current statistics tracker associated with this connection
+   */
   public ServerStatisticTracker getStatisticsTracker() {
     return this.stats;
   }
 
-  @Override
+  /**
+   * @return the configured client backoff policy
+   */
   public ClientBackoffPolicy getBackoffPolicy() {
     return this.backoffPolicy;
   }
@@ -2044,7 +2090,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.aborted;
   }
 
-  @Override
+  /**
+   * @return the number of region servers that are currently running
+   * @throws IOException if a remote or network exception occurs
+   */
   public int getCurrentNrHRS() throws IOException {
     return get(this.registry.getCurrentNrHRS());
   }
@@ -2087,12 +2136,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     close();
   }
 
-  @Override
+  /**
+   * @return Nonce generator for this ClusterConnection; may be null if disabled in configuration.
+   */
   public NonceGenerator getNonceGenerator() {
     return nonceGenerator;
   }
 
-  @Override
+  /**
+   * Retrieve TableState, represent current table state.
+   * @param tableName table state for
+   * @return state of the table
+   */
   public TableState getTableState(TableName tableName) throws IOException {
     checkClosed();
     TableState tableState = MetaTableAccessor.getTableState(this, tableName);
@@ -2102,28 +2157,43 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return tableState;
   }
 
-  @Override
+  /**
+   * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}.
+   * This RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
+   * intercepted with the configured {@link RetryingCallerInterceptor}
+   * @param conf configuration
+   * @return RpcRetryingCallerFactory
+   */
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
     return RpcRetryingCallerFactory
         .instantiate(conf, this.interceptor, this.getStatisticsTracker());
   }
 
-  @Override
+  /**
+   * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   *         supports cell blocks.
+   */
   public boolean hasCellBlockSupport() {
     return this.rpcClient.hasCellBlockSupport();
   }
 
-  @Override
+  /**
+   * @return a ConnectionConfiguration object holding parsed configuration values
+   */
   public ConnectionConfiguration getConnectionConfiguration() {
     return this.connectionConfig;
   }
 
-  @Override
+  /**
+   * @return Connection's RpcRetryingCallerFactory instance
+   */
   public RpcRetryingCallerFactory getRpcRetryingCallerFactory() {
     return this.rpcCallerFactory;
   }
 
-  @Override
+  /**
+   * @return Connection's RpcControllerFactory instance
+   */
   public RpcControllerFactory getRpcControllerFactory() {
     return this.rpcControllerFactory;
   }

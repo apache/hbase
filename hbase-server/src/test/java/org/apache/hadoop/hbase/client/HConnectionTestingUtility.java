@@ -57,11 +57,11 @@ public class HConnectionTestingUtility {
    * @throws ZooKeeperConnectionException
    */
   public static ConnectionImplementation getMockedConnection(final Configuration conf)
-  throws ZooKeeperConnectionException {
+      throws ZooKeeperConnectionException {
     ConnectionImplementation connection = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
-    Mockito.when(connection.getRpcControllerFactory()).thenReturn(
-      Mockito.mock(RpcControllerFactory.class));
+    Mockito.when(connection.getRpcControllerFactory())
+      .thenReturn(Mockito.mock(RpcControllerFactory.class));
     // we need a real retrying caller
     RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
     Mockito.when(connection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
@@ -81,11 +81,10 @@ public class HConnectionTestingUtility {
    *          the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
    *         {@link ConnectionImplementation#getConfiguration()} is called, a 'location' when
-   *         {@link ConnectionImplementation#getRegionLocation(TableName,byte[], boolean)}
-   *         is called, and that returns the passed
-   *         {@link AdminProtos.AdminService.BlockingInterface} instance when
-   *         {@link ConnectionImplementation#getAdmin(ServerName)} is called, returns the passed
-   *         {@link ClientProtos.ClientService.BlockingInterface} instance when
+   *         {@link ConnectionImplementation#getRegionLocation(TableName, byte[], boolean)} is
+   *         called, and that returns the passed {@link AdminProtos.AdminService.BlockingInterface}
+   *         instance when {@link ConnectionImplementation#getAdmin(ServerName)} is called, returns
+   *         the passed {@link ClientProtos.ClientService.BlockingInterface} instance when
    *         {@link ConnectionImplementation#getClient(ServerName)} is called (Be sure to call
    *         {@link Connection#close()} when done with this mocked Connection.
    */
@@ -138,9 +137,14 @@ public class HConnectionTestingUtility {
    * calling {@link Connection#close()} else it will stick around; this is probably not what you
    * want.
    * @param conf configuration
+<<<<<<< HEAD
    * @return ConnectionImplementation object for <code>conf</code>
    * @throws ZooKeeperConnectionException [Dead link]: See also
    *           {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
+=======
+   * @return ClusterConnection object for <code>conf</code> [Dead link]: See also
+   *         {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
+>>>>>>> 7e889e40e8... tmp
    */
   public static ConnectionImplementation getSpiedConnection(final Configuration conf)
       throws IOException {
