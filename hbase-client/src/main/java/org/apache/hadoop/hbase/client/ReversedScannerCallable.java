@@ -52,8 +52,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param rpcFactory to create an {@link com.google.protobuf.RpcController} to talk to the
    *          regionserver
    */
-  public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcFactory) {
+  public ReversedScannerCallable(ConnectionImplementation connection, TableName tableName,
+      Scan scan, ScanMetrics scanMetrics, RpcControllerFactory rpcFactory) {
     super(connection, tableName, scan, scanMetrics, rpcFactory);
   }
 
@@ -66,8 +66,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    *          regionserver
    * @param replicaId the replica id
    */
-  public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
+  public ReversedScannerCallable(ConnectionImplementation connection, TableName tableName,
+      Scan scan, ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
   }
 

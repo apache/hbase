@@ -571,7 +571,7 @@ public class TestReplicasClient {
       LOG.info("get works and is not stale done");
 
       //reset
-      ClusterConnection connection = (ClusterConnection) HTU.getConnection();
+      ConnectionImplementation connection = (ConnectionImplementation) HTU.getConnection();
       Counter hedgedReadOps = connection.getConnectionMetrics().hedgedReadOps;
       Counter hedgedReadWin = connection.getConnectionMetrics().hedgedReadWin;
       hedgedReadOps.dec(hedgedReadOps.getCount());
@@ -638,7 +638,7 @@ public class TestReplicasClient {
 
       Thread.sleep(1000 + REFRESH_PERIOD * 2);
 
-      AsyncProcess ap = ((ClusterConnection) HTU.getConnection()).getAsyncProcess();
+      AsyncProcess ap = ((ConnectionImplementation) HTU.getConnection()).getAsyncProcess();
 
       // Make primary slowdown
       SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
@@ -654,16 +654,14 @@ public class TestReplicasClient {
       gets.add(g);
       Object[] results = new Object[2];
 
-      int operationTimeout = ((ClusterConnection) HTU.getConnection()).getConnectionConfiguration().getOperationTimeout();
-      int readTimeout = ((ClusterConnection) HTU.getConnection()).getConnectionConfiguration().getReadRpcTimeout();
-      AsyncProcessTask task = AsyncProcessTask.newBuilder()
-              .setPool(HTable.getDefaultExecutor(HTU.getConfiguration()))
-              .setTableName(table.getName())
-              .setRowAccess(gets)
-              .setResults(results)
-              .setOperationTimeout(operationTimeout)
-              .setRpcTimeout(readTimeout)
-              .build();
+      int operationTimeout = ((ConnectionImplementation) HTU.getConnection())
+        .getConnectionConfiguration().getOperationTimeout();
+      int readTimeout = ((ConnectionImplementation) HTU.getConnection())
+        .getConnectionConfiguration().getReadRpcTimeout();
+      AsyncProcessTask task =
+        AsyncProcessTask.newBuilder().setPool(HTable.getDefaultExecutor(HTU.getConfiguration()))
+          .setTableName(table.getName()).setRowAccess(gets).setResults(results)
+          .setOperationTimeout(operationTimeout).setRpcTimeout(readTimeout).build();
       AsyncRequestFuture reqs = ap.submit(task);
       reqs.waitUntilDone();
       // verify we got the right results back

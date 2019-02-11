@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -713,7 +712,6 @@ public class RegionSplitter {
       htd = table.getDescriptor();
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-
       // for every region that hasn't been verified as a finished split
       for (Pair<byte[], byte[]> region : regionList) {
         byte[] start = region.getFirst();
@@ -721,7 +719,7 @@ public class RegionSplitter {
 
         // see if the new split daughter region has come online
         try {
-          RegionInfo dri = regionLocator.getRegionLocation(split).getRegion();
+          RegionInfo dri = regionLocator.getRegionLocation(split, true).getRegion();
           if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
             logicalSplitting.add(region);
             continue;
@@ -739,7 +737,7 @@ public class RegionSplitter {
           LinkedList<RegionInfo> check = Lists.newLinkedList();
           check.add(regionLocator.getRegionLocation(start).getRegion());
           check.add(regionLocator.getRegionLocation(split).getRegion());
-          for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
+          for (RegionInfo hri : check.toArray(new RegionInfo[check.size()])) {
             byte[] sk = hri.getStartKey();
             if (sk.length == 0)
               sk = splitAlgo.firstRow();

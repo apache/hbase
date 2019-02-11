@@ -212,7 +212,7 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
     final User user) throws IOException {
-    String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
+    String className = conf.get(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionImplementation.class.getName());
     Class<?> clazz;
     try {

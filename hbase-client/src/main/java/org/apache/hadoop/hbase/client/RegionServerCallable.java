@@ -19,18 +19,18 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * Implementations make a RPC call against a RegionService via a protobuf Service.
@@ -74,12 +74,12 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte [] row,
+  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte[] row,
       RpcController rpcController) {
     this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
   }
 
-  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte [] row,
+  public RegionServerCallable(ConnectionImplementation connection, TableName tableName, byte[] row,
       RpcController rpcController, int priority) {
     super();
     this.connection = connection;
@@ -159,7 +159,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   }
 
   /**
-   * @return {@link ClusterConnection} instance used by this Callable.
+   * @return {@link ConnectionImplementation} instance used by this Callable.
    */
   protected ConnectionImplementation getConnection() {
     return this.connection;

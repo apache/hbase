@@ -46,7 +46,7 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private static final Logger LOG = LoggerFactory.getLogger(RegionCoprocessorRpcChannel.class);
   private final TableName table;
   private final byte [] row;
-  private final ClusterConnection conn;
+  private final ConnectionImplementation conn;
   private byte[] lastRegion;
   private final int operationTimeout;
   private final RpcRetryingCallerFactory rpcCallerFactory;
@@ -57,7 +57,7 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
    * @param table to connect to
    * @param row to locate region with
    */
-  RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row) {
+  RegionCoprocessorRpcChannel(ConnectionImplementation conn, TableName table, byte[] row) {
     this.table = table;
     this.row = row;
     this.conn = conn;

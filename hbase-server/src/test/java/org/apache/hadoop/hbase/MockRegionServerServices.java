@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
@@ -162,7 +161,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public ClusterConnection getConnection() {
+  public Connection getConnection() {
     return null;
   }
 
@@ -266,7 +265,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ServerNonceManager getNonceManager() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -277,7 +275,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public boolean registerService(Service service) {
-    // TODO Auto-generated method stub
     return false;
   }
 
@@ -289,11 +286,6 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public double getCompactionPressure() {
     return 0;
-  }
-
-  @Override
-  public ClusterConnection getClusterConnection() {
-    return null;
   }
 
   @Override

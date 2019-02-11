@@ -154,7 +154,7 @@ public class TestFromClientSide3 {
       // connection needed for poll-wait
       HRegionLocation loc = locator.getRegionLocation(row, true);
       AdminProtos.AdminService.BlockingInterface server =
-        ((ClusterConnection) admin.getConnection()).getAdmin(loc.getServerName());
+        ((ConnectionImplementation) admin.getConnection()).getAdmin(loc.getServerName());
       byte[] regName = loc.getRegion().getRegionName();
 
       for (int i = 0; i < nFlushes; i++) {
@@ -276,7 +276,7 @@ public class TestFromClientSide3 {
     try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       try (Admin admin = TEST_UTIL.getAdmin()) {
-        ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
+        ConnectionImplementation connection = (ConnectionImplementation) TEST_UTIL.getConnection();
 
         // Create 3 store files.
         byte[] row = Bytes.toBytes(random.nextInt());
@@ -655,7 +655,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testConnectionDefaultUsesCodec() throws Exception {
-    ClusterConnection con = (ClusterConnection) TEST_UTIL.getConnection();
+    ConnectionImplementation con = (ConnectionImplementation) TEST_UTIL.getConnection();
     assertTrue(con.hasCellBlockSupport());
   }
 

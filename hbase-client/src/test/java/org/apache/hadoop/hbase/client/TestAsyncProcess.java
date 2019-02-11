@@ -1124,11 +1124,8 @@ public class TestAsyncProcess {
                1,    BufferedMutator.MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
   }
 
-  private void checkPeriodicFlushParameters(ClusterConnection conn,
-                                            MyAsyncProcess ap,
-                                            long setTO, long expectTO,
-                                            long setTT, long expectTT
-                                            ) {
+  private void checkPeriodicFlushParameters(ConnectionImplementation conn, MyAsyncProcess ap,
+      long setTO, long expectTO, long setTT, long expectTT) {
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
 
     // The BufferedMutatorParams does nothing with the value
