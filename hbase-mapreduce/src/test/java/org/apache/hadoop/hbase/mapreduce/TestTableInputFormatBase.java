@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -90,7 +90,7 @@ public class TestTableInputFormatBase {
   public void testNonSuccessiveSplitsAreNotMerged() throws IOException {
     JobContext context = mock(JobContext.class);
     Configuration conf = HBaseConfiguration.create();
-    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
+    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
         ConnectionForMergeTesting.class.getName());
     conf.set(TableInputFormat.INPUT_TABLE, "testTable");
     conf.setBoolean(TableInputFormatBase.MAPREDUCE_INPUT_AUTOBALANCE, true);

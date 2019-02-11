@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -184,7 +184,7 @@ public class TestMasterNoCluster {
     // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
     // the conf from the master; the conf will already have an ClusterConnection
     // associate so the below mocking of a connection will fail.
-    final ClusterConnection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
+    final Connection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
         TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
         HRegionInfo.FIRST_META_REGIONINFO);
     HMaster master = new HMaster(conf) {
@@ -212,12 +212,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public ClusterConnection getConnection() {
-        return mockedConnection;
-      }
-
-      @Override
-      public ClusterConnection getClusterConnection() {
+      public Connection getConnection() {
         return mockedConnection;
       }
     };
@@ -281,7 +276,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public ClusterConnection getConnection() {
+      public Connection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have a Connection
         // associate so the below mocking of a connection will fail.

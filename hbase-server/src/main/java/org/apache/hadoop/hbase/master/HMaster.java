@@ -1169,7 +1169,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (QuotaUtil.isQuotaEnabled(conf)) {
       // Create the quota snapshot notifier
       spaceQuotaSnapshotNotifier = createQuotaSnapshotNotifier();
-      spaceQuotaSnapshotNotifier.initialize(getClusterConnection());
+      spaceQuotaSnapshotNotifier.initialize(getConnection());
       this.quotaObserverChore = new QuotaObserverChore(this, getMasterMetrics());
       // Start the chore to read the region FS space reports and act on them
       getChoreService().scheduleChore(quotaObserverChore);
@@ -1266,7 +1266,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private boolean waitForNamespaceOnline() throws InterruptedException, IOException {
     TableState nsTableState =
-      MetaTableAccessor.getTableState(getClusterConnection(), TableName.NAMESPACE_TABLE_NAME);
+      MetaTableAccessor.getTableState(getConnection(), TableName.NAMESPACE_TABLE_NAME);
     if (nsTableState == null || nsTableState.isDisabled()) {
       // this means we have already migrated the data and disabled or deleted the namespace table,
       // or this is a new depliy which does not have a namespace table from the beginning.
@@ -1856,7 +1856,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
         if (plans != null) {
           for (NormalizationPlan plan : plans) {
-            plan.execute(clusterConnection.getAdmin());
+            plan.execute(connection.getAdmin());
             if (plan.getType() == PlanType.SPLIT) {
               splitPlanCount++;
             } else if (plan.getType() == PlanType.MERGE) {
@@ -3057,8 +3057,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     // this is what we want especially if the Master is in startup phase doing call outs to
     // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
     // the rpc to timeout.
-    if (this.clusterConnection != null) {
-      this.clusterConnection.close();
+    if (this.connection != null) {
+      this.connection.close();
     }
     if (this.asyncClusterConnection != null) {
       this.asyncClusterConnection.close();

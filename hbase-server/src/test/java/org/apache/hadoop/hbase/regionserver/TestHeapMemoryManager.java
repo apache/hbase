@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -829,7 +828,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public ClusterConnection getConnection() {
+    public Connection getConnection() {
       return null;
     }
 
@@ -840,12 +839,6 @@ public class TestHeapMemoryManager {
 
     @Override
     public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
       return null;
     }
 

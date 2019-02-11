@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -27,10 +26,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * This class defines methods that can help with managing HBase clusters
@@ -96,24 +91,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   public ClusterMetrics getInitialClusterMetrics() throws IOException {
     return initialClusterStatus;
   }
-
-  /**
-   * Returns an {@link MasterService.BlockingInterface} to the active master
-   */
-  public abstract MasterService.BlockingInterface getMasterAdminService()
-  throws IOException;
-
-  /**
-   * Returns an AdminProtocol interface to the regionserver
-   */
-  public abstract AdminService.BlockingInterface getAdminProtocol(ServerName serverName)
-  throws IOException;
-
-  /**
-   * Returns a ClientProtocol interface to the regionserver
-   */
-  public abstract ClientService.BlockingInterface getClientProtocol(ServerName serverName)
-  throws IOException;
 
   /**
    * Starts a new region server on the given hostname or if this is a mini/local cluster,
