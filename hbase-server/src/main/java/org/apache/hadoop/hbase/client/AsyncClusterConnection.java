@@ -64,7 +64,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
       List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs);
 
   /**
-   * Return all the replicas for a region. Used for regiong replica replication.
+   * Return all the replicas for a region. Used for region replica replication.
    */
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload);

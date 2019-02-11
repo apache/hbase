@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -36,9 +35,9 @@ public class ZKTableArchiveClient extends Configured {
 
   /** Configuration key for the archive node. */
   private static final String ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY = "zookeeper.znode.hfile.archive";
-  private ClusterConnection connection;
+  private Connection connection;
 
-  public ZKTableArchiveClient(Configuration conf, ClusterConnection connection) {
+  public ZKTableArchiveClient(Configuration conf, Connection connection) {
     super(conf);
     this.connection = connection;
   }

@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -98,7 +98,7 @@ public class TestMultiTableInputFormatBase {
     // canned responses.
     JobContext mockedJobContext = Mockito.mock(JobContext.class);
     Configuration c = HBaseConfiguration.create();
-    c.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, MRSplitsConnection.class.getName());
+    c.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL, MRSplitsConnection.class.getName());
     Mockito.when(mockedJobContext.getConfiguration()).thenReturn(c);
     // Invent a bunch of scans. Have each Scan go against a different table so a good spread.
     List<Scan> scans = new ArrayList<>();

@@ -553,7 +553,7 @@ public class TestMultiParallel {
     };
 
     NonceGenerator oldCnm =
-      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)connection, cnm);
+      ConnectionUtils.injectNonceGeneratorForTesting((ConnectionImplementation) connection, cnm);
 
     // First test sequential requests.
     try {
@@ -615,7 +615,8 @@ public class TestMultiParallel {
       validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
       table.close();
     } finally {
-      ConnectionImplementation.injectNonceGeneratorForTesting((ClusterConnection) connection, oldCnm);
+      ConnectionImplementation.injectNonceGeneratorForTesting((ConnectionImplementation) connection,
+        oldCnm);
     }
   }
 

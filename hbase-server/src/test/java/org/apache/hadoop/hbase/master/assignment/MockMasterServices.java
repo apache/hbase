@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -87,7 +87,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   private MasterProcedureEnv procedureEnv;
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
-  private final ClusterConnection connection;
+  private final Connection connection;
   private final LoadBalancer balancer;
   private final ServerManager serverManager;
 
@@ -284,7 +284,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   @Override
-  public ClusterConnection getConnection() {
+  public Connection getConnection() {
     return this.connection;
   }
 

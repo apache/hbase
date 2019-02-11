@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -42,9 +41,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
@@ -521,15 +517,6 @@ public class MiniHBaseCluster extends HBaseCluster {
    * Returns the current active master, if available.
    * @return the active HMaster, null if none is active.
    */
-  @Override
-  public MasterService.BlockingInterface getMasterAdminService() {
-    return this.hbaseCluster.getActiveMaster().getMasterRpcServices();
-  }
-
-  /**
-   * Returns the current active master, if available.
-   * @return the active HMaster, null if none is active.
-   */
   public HMaster getMaster() {
     return this.hbaseCluster.getActiveMaster();
   }
@@ -920,16 +907,5 @@ public class MiniHBaseCluster extends HBaseCluster {
       }
     }
     return -1;
-  }
-
-  @Override
-  public AdminService.BlockingInterface getAdminProtocol(ServerName serverName) throws IOException {
-    return getRegionServer(getRegionServerIndex(serverName)).getRSRpcServices();
-  }
-
-  @Override
-  public ClientService.BlockingInterface getClientProtocol(ServerName serverName)
-  throws IOException {
-    return getRegionServer(getRegionServerIndex(serverName)).getRSRpcServices();
   }
 }
