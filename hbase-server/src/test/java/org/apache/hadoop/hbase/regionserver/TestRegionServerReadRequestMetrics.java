@@ -82,17 +82,17 @@ public class TestRegionServerReadRequestMetrics {
       LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test");
-  private static final byte[] CF1 = "c1".getBytes();
-  private static final byte[] CF2 = "c2".getBytes();
+  private static final byte[] CF1 = Bytes.toBytes("c1");
+  private static final byte[] CF2 = Bytes.toBytes("c2");
 
-  private static final byte[] ROW1 = "a".getBytes();
-  private static final byte[] ROW2 = "b".getBytes();
-  private static final byte[] ROW3 = "c".getBytes();
-  private static final byte[] COL1 = "q1".getBytes();
-  private static final byte[] COL2 = "q2".getBytes();
-  private static final byte[] COL3 = "q3".getBytes();
-  private static final byte[] VAL1 = "v1".getBytes();
-  private static final byte[] VAL2 = "v2".getBytes();
+  private static final byte[] ROW1 = Bytes.toBytes("a");
+  private static final byte[] ROW2 = Bytes.toBytes("b");
+  private static final byte[] ROW3 = Bytes.toBytes("c");
+  private static final byte[] COL1 = Bytes.toBytes("q1");
+  private static final byte[] COL2 = Bytes.toBytes("q2");
+  private static final byte[] COL3 = Bytes.toBytes("q3");
+  private static final byte[] VAL1 = Bytes.toBytes("v1");
+  private static final byte[] VAL2 = Bytes.toBytes("v2");
   private static final byte[] VAL3 = Bytes.toBytes(0L);
 
   private static final int MAX_TRY = 20;

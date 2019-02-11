@@ -301,7 +301,7 @@ public class TestCopyTable {
     assertNotNull(t2.get(new Get(ROW1)).getRow());
     Result res = t2.get(new Get(ROW1));
     byte[] b1 = res.getValue(FAMILY_B, QUALIFIER);
-    assertEquals("Data13", new String(b1));
+    assertEquals("Data13", Bytes.toString(b1));
     assertNotNull(t2.get(new Get(ROW2)).getRow());
     res = t2.get(new Get(ROW2));
     b1 = res.getValue(FAMILY_A, QUALIFIER);

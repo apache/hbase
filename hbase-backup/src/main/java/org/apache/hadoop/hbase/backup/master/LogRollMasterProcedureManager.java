@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinationManager;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,7 +131,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
     byte[] data = new byte[0];
     if (conf.size() > 0) {
       // Get backup root path
-      data = conf.get(0).getValue().getBytes();
+      data = Bytes.toBytes(conf.get(0).getValue());
     }
     Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(), data, servers);
     if (proc == null) {

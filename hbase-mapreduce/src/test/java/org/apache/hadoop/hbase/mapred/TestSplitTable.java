@@ -106,8 +106,8 @@ public class TestSplitTable {
   @SuppressWarnings("deprecation")
   public void testToString() {
     TableSplit split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), "row-start".getBytes(), "row-end".getBytes(),
-            "location");
+        new TableSplit(TableName.valueOf(name.getMethodName()), Bytes.toBytes("row-start"),
+            Bytes.toBytes("row-end"), "location");
     String str =
         "HBase table split(table name: " + name.getMethodName() + ", start row: row-start, "
             + "end row: row-end, region location: location)";

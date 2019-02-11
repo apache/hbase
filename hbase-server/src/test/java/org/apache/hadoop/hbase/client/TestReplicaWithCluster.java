@@ -74,7 +74,7 @@ public class TestReplicaWithCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicaWithCluster.class);
 
   private static final int NB_SERVERS = 3;
-  private static final byte[] row = TestReplicaWithCluster.class.getName().getBytes();
+  private static final byte[] row = Bytes.toBytes(TestReplicaWithCluster.class.getName());
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
   // second minicluster used in testing of replication

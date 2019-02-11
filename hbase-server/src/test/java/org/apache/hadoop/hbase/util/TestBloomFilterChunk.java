@@ -58,7 +58,7 @@ public class TestBloomFilterChunk extends TestCase {
         (int) bf2.byteSize, bf2.hash, bf2.hashCount));
 
     byte [] bkey = {1,2,3,4};
-    byte [] bval = "this is a much larger byte array".getBytes();
+    byte [] bval = Bytes.toBytes("this is a much larger byte array");
 
     bf1.add(bkey, 0, bkey.length);
     bf1.add(bval, 1, bval.length-1);

@@ -100,7 +100,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName3);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
-    admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 3).join();
+    admin.createTable(builder.build(), Bytes.toBytes("a"), Bytes.toBytes("z"), 3).join();
     regionLocations =
       AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
     assertEquals("Table should have only 3 region", 3, regionLocations.size());
@@ -109,7 +109,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     builder = TableDescriptorBuilder.newBuilder(tableName4);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     try {
-      admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 2).join();
+      admin.createTable(builder.build(), Bytes.toBytes("a"), Bytes.toBytes("z"), 2).join();
       fail("Should not be able to create a table with only 2 regions using this API.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
@@ -309,9 +309,9 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   @Test
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws Exception {
     byte[][] splitKeys = new byte[3][];
-    splitKeys[0] = "region1".getBytes();
+    splitKeys[0] = Bytes.toBytes("region1");
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
-    splitKeys[2] = "region2".getBytes();
+    splitKeys[2] = Bytes.toBytes("region2");
     try {
       createTableWithDefaultConf(tableName, splitKeys);
       fail("Test case should fail as empty split key is passed.");

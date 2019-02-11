@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -66,8 +67,8 @@ public class TestHFileSeek extends TestCase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileSeek.class);
 
-  private static final byte[] CF = "f1".getBytes();
-  private static final byte[] QUAL = "q1".getBytes();
+  private static final byte[] CF = Bytes.toBytes("f1");
+  private static final byte[] QUAL = Bytes.toBytes("q1");
   private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;

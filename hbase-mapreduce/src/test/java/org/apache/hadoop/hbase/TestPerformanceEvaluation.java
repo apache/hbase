@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -104,7 +105,8 @@ public class TestPerformanceEvaluation {
     try {
       dis.readFully(content);
       BufferedReader br =
-        new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content)));
+        new BufferedReader(new InputStreamReader(
+              new ByteArrayInputStream(content), StandardCharsets.UTF_8));
       int count = 0;
       while (br.readLine() != null) {
         count++;

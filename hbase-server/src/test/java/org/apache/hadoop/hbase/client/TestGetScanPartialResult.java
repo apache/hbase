@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -77,7 +78,7 @@ public class TestGetScanPartialResult {
       byte[] val = makeLargeValue(VALUE_SIZE);
       Put p = new Put(ROW);
       for (int i = 0; i < NUM_COLUMNS; i++) {
-        p.addColumn(CF, Integer.toString(i).getBytes(), val);
+        p.addColumn(CF, Bytes.toBytes(Integer.toString(i)), val);
       }
       t.put(p);
 

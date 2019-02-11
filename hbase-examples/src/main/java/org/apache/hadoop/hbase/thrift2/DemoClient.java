@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
@@ -116,15 +117,15 @@ public class DemoClient {
     // open the transport
     transport.open();
 
-    ByteBuffer table = ByteBuffer.wrap("example".getBytes());
+    ByteBuffer table = ByteBuffer.wrap(Bytes.toBytes("example"));
 
     TPut put = new TPut();
-    put.setRow("row1".getBytes());
+    put.setRow(Bytes.toBytes("row1"));
 
     TColumnValue columnValue = new TColumnValue();
-    columnValue.setFamily("family1".getBytes());
-    columnValue.setQualifier("qualifier1".getBytes());
-    columnValue.setValue("value1".getBytes());
+    columnValue.setFamily(Bytes.toBytes("family1"));
+    columnValue.setQualifier(Bytes.toBytes("qualifier1"));
+    columnValue.setValue(Bytes.toBytes("value1"));
     List<TColumnValue> columnValues = new ArrayList<>(1);
     columnValues.add(columnValue);
     put.setColumnValues(columnValues);
@@ -132,7 +133,7 @@ public class DemoClient {
     client.put(table, put);
 
     TGet get = new TGet();
-    get.setRow("row1".getBytes());
+    get.setRow(Bytes.toBytes("row1"));
 
     TResult result = client.get(table, get);
 
