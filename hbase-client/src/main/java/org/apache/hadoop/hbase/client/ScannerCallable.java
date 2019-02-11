@@ -101,23 +101,24 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
    *          metrics
    * @param rpcControllerFactory factory to use when creating
-   *        {@link com.google.protobuf.RpcController}
+   *          {@link com.google.protobuf.RpcController}
    */
-  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ConnectionImplementation connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
     this(connection, tableName, scan, scanMetrics, rpcControllerFactory, 0);
   }
+
   /**
-   *
    * @param connection
    * @param tableName
    * @param scan
    * @param scanMetrics
    * @param id the replicaId
    */
-  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ConnectionImplementation connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(), scan.getPriority());
+    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(),
+      scan.getPriority());
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;

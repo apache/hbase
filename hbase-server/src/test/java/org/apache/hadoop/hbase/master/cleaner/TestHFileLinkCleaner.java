@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -164,7 +163,7 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public ClusterConnection getConnection() {
+    public Connection getConnection() {
       return null;
     }
 
@@ -193,13 +192,6 @@ public class TestHFileLinkCleaner {
     public ChoreService getChoreService() {
       return null;
     }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
     @Override
     public FileSystem getFileSystem() {
       return null;

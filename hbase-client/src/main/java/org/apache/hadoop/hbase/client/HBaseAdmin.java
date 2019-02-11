@@ -445,7 +445,7 @@ public class HBaseAdmin implements Admin {
 
   /** @return Connection used by this object. */
   @Override
-  public Connection getConnection() {
+  public ConnectionImplementation getConnection() {
     return connection;
   }
 
@@ -484,23 +484,24 @@ public class HBaseAdmin implements Admin {
     });
   }
 
-  static TableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
-      RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
-      int operationTimeout, int rpcTimeout) throws IOException {
+  static TableDescriptor getTableDescriptor(final TableName tableName,
+      ConnectionImplementation connection, RpcRetryingCallerFactory rpcCallerFactory,
+      final RpcControllerFactory rpcControllerFactory, int operationTimeout, int rpcTimeout)
+      throws IOException {
     if (tableName == null) return null;
     TableDescriptor td =
-        executeCallable(new MasterCallable<TableDescriptor>(connection, rpcControllerFactory) {
-      @Override
-      protected TableDescriptor rpcCall() throws Exception {
-        GetTableDescriptorsRequest req =
+      executeCallable(new MasterCallable<TableDescriptor>(connection, rpcControllerFactory) {
+        @Override
+        protected TableDescriptor rpcCall() throws Exception {
+          GetTableDescriptorsRequest req =
             RequestConverter.buildGetTableDescriptorsRequest(tableName);
-        GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
-        if (!htds.getTableSchemaList().isEmpty()) {
-          return ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0));
+          GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
+          if (!htds.getTableSchemaList().isEmpty()) {
+            return ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0));
+          }
+          return null;
         }
-        return null;
-      }
-    }, rpcCallerFactory, operationTimeout, rpcTimeout);
+      }, rpcCallerFactory, operationTimeout, rpcTimeout);
     if (td != null) {
       return td;
     }
@@ -2003,8 +2004,8 @@ public class HBaseAdmin implements Admin {
 
     // Check ZK first.
     // If the connection exists, we may have a connection to ZK that does not work anymore
-    try (ClusterConnection connection =
-      (ClusterConnection) ConnectionFactory.createConnection(copyOfConf)) {
+    try (ConnectionImplementation connection =
+      (ConnectionImplementation) ConnectionFactory.createConnection(copyOfConf)) {
       // can throw MasterNotRunningException
       connection.isMasterRunning();
     }

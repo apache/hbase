@@ -80,6 +80,12 @@ public final class ConnectionUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionUtils.class);
 
+  /**
+   * Key for configuration in Configuration whose value is the class we implement making a new
+   * Connection instance.
+   */
+  public static final String HBASE_CLIENT_CONNECTION_IMPL = "hbase.client.connection.impl";
+
   private ConnectionUtils() {
   }
 
@@ -109,7 +115,7 @@ public final class ConnectionUtils {
    * @param cnm Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
-  public static NonceGenerator injectNonceGeneratorForTesting(ClusterConnection conn,
+  public static NonceGenerator injectNonceGeneratorForTesting(ConnectionImplementation conn,
       NonceGenerator cnm) {
     return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
   }
@@ -186,7 +192,7 @@ public final class ConnectionUtils {
    * @return an short-circuit connection.
    * @throws IOException if IO failure occurred
    */
-  public static ClusterConnection createShortCircuitConnection(final Configuration conf,
+  public static ConnectionImplementation createShortCircuitConnection(final Configuration conf,
       ExecutorService pool, User user, final ServerName serverName,
       final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
       throws IOException {
@@ -202,7 +208,7 @@ public final class ConnectionUtils {
    */
   @VisibleForTesting
   public static void setupMasterlessConnection(Configuration conf) {
-    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, MasterlessConnection.class.getName());
+    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL, MasterlessConnection.class.getName());
   }
 
   /**

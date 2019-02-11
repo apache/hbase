@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,14 +52,6 @@ public interface Server extends Abortable, Stoppable {
   Connection getConnection();
 
   Connection createConnection(Configuration conf) throws IOException;
-
-  /**
-   * Returns a reference to the servers' cluster connection. Prefer {@link #getConnection()}.
-   *
-   * Important note: this method returns a reference to Connection which is managed
-   * by Server itself, so callers must NOT attempt to close connection obtained.
-   */
-  ClusterConnection getClusterConnection();
 
   /**
    * Returns a reference to the servers' async connection.

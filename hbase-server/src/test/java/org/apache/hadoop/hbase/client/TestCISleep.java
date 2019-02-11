@@ -94,9 +94,9 @@ public class TestCISleep extends AbstractTestCITimeout {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM);
     ClientServiceCallable<Object> regionServerCallable =
-      new ClientServiceCallable<Object>(TEST_UTIL.getConnection(), tableName, FAM_NAM,
-          new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
-          HConstants.PRIORITY_UNSET) {
+      new ClientServiceCallable<Object>((ConnectionImplementation) TEST_UTIL.getConnection(),
+        tableName, FAM_NAM, new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
+        HConstants.PRIORITY_UNSET) {
         @Override
         protected Object rpcCall() throws Exception {
           return null;
@@ -126,9 +126,9 @@ public class TestCISleep extends AbstractTestCITimeout {
       assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
     }
 
-    try (
-      MasterCallable<Object> masterCallable = new MasterCallable<Object>(TEST_UTIL.getConnection(),
-          new RpcControllerFactory(TEST_UTIL.getConfiguration())) {
+    try (MasterCallable<Object> masterCallable =
+      new MasterCallable<Object>((ConnectionImplementation) TEST_UTIL.getConnection(),
+        new RpcControllerFactory(TEST_UTIL.getConfiguration())) {
         @Override
         protected Object rpcCall() throws Exception {
           return null;
