@@ -89,7 +89,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -160,9 +159,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.collect.TreeMultimap;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -245,7 +241,7 @@ public class HBaseFsck extends Configured implements Closeable {
    **********************/
   private static final Logger LOG = LoggerFactory.getLogger(HBaseFsck.class.getName());
   private ClusterMetrics status;
-  private ClusterConnection connection;
+  private Connection connection;
   private Admin admin;
   private Table meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
@@ -585,7 +581,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     LOG.info("Launching hbck");
 
-    connection = (ClusterConnection)ConnectionFactory.createConnection(getConf());
+    connection = ConnectionFactory.createConnection(getConf());
     admin = connection.getAdmin();
     meta = connection.getTable(TableName.META_TABLE_NAME);
     status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS,
@@ -4332,10 +4328,10 @@ public class HBaseFsck extends Configured implements Closeable {
     private final HBaseFsck hbck;
     private final ServerName rsinfo;
     private final ErrorReporter errors;
-    private final ClusterConnection connection;
+    private final Connection connection;
 
     WorkItemRegion(HBaseFsck hbck, ServerName info,
-                   ErrorReporter errors, ClusterConnection connection) {
+                   ErrorReporter errors, Connection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
       this.errors = errors;
@@ -4346,32 +4342,29 @@ public class HBaseFsck extends Configured implements Closeable {
     public synchronized Void call() throws IOException {
       errors.progress();
       try {
-        BlockingInterface server = connection.getAdmin(rsinfo);
-
         // list all online regions from this region server
-        List<RegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
+        List<RegionInfo> regions = connection.getAdmin().getRegions(rsinfo);
         regions = filterRegions(regions);
 
         if (details) {
-          errors.detail("RegionServer: " + rsinfo.getServerName() +
-                           " number of regions: " + regions.size());
-          for (RegionInfo rinfo: regions) {
-            errors.detail("  " + rinfo.getRegionNameAsString() +
-                             " id: " + rinfo.getRegionId() +
-                             " encoded_name: " + rinfo.getEncodedName() +
-                             " start: " + Bytes.toStringBinary(rinfo.getStartKey()) +
-                             " end: " + Bytes.toStringBinary(rinfo.getEndKey()));
+          errors.detail(
+            "RegionServer: " + rsinfo.getServerName() + " number of regions: " + regions.size());
+          for (RegionInfo rinfo : regions) {
+            errors.detail("  " + rinfo.getRegionNameAsString() + " id: " + rinfo.getRegionId() +
+              " encoded_name: " + rinfo.getEncodedName() + " start: " +
+              Bytes.toStringBinary(rinfo.getStartKey()) + " end: " +
+              Bytes.toStringBinary(rinfo.getEndKey()));
           }
         }
 
         // check to see if the existence of this region matches the region in META
-        for (RegionInfo r:regions) {
+        for (RegionInfo r : regions) {
           HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
           hbi.addServer(r, rsinfo);
         }
-      } catch (IOException e) {          // unable to connect to the region server.
-        errors.reportError(ERROR_CODE.RS_CONNECT_FAILURE, "RegionServer: " + rsinfo.getServerName() +
-          " Unable to fetch region information. " + e);
+      } catch (IOException e) { // unable to connect to the region server.
+        errors.reportError(ERROR_CODE.RS_CONNECT_FAILURE,
+          "RegionServer: " + rsinfo.getServerName() + " Unable to fetch region information. " + e);
         throw e;
       }
       return null;

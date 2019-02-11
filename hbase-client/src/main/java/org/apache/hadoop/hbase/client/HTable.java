@@ -153,7 +153,6 @@ public class HTable implements Table {
    * @param rpcControllerFactory The RPC controller factory
    * @param pool ExecutorService to be used.
    */
-  @InterfaceAudience.Private
   protected HTable(final ConnectionImplementation connection,
       final TableBuilderBase builder,
       final RpcRetryingCallerFactory rpcCallerFactory,
@@ -449,22 +448,18 @@ public class HTable implements Table {
   }
 
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
-    Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
-    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
+      Callback<R> callback, Connection connection, ExecutorService pool, TableName tableName)
+      throws InterruptedIOException, RetriesExhaustedWithDetailsException {
+    ConnectionImplementation connImpl = (ConnectionImplementation) connection;
+    int operationTimeout = connImpl.getConnectionConfiguration().getOperationTimeout();
     int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-        connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    AsyncProcessTask<R> task = AsyncProcessTask.newBuilder(callback)
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(actions)
-            .setResults(results)
-            .setOperationTimeout(operationTimeout)
-            .setRpcTimeout(writeTimeout)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .build();
-    AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
+      connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    AsyncProcessTask<R> task =
+      AsyncProcessTask.newBuilder(callback).setPool(pool).setTableName(tableName)
+        .setRowAccess(actions).setResults(results).setOperationTimeout(operationTimeout)
+        .setRpcTimeout(writeTimeout).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+    AsyncRequestFuture ars = connImpl.getAsyncProcess().submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();

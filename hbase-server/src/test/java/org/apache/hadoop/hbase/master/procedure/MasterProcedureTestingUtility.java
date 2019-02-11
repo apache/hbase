@@ -359,11 +359,11 @@ public class MasterProcedureTestingUtility {
   //  Procedure Helpers
   // ==========================================================================
   public static long generateNonceGroup(final HMaster master) {
-    return master.getClusterConnection().getNonceGenerator().getNonceGroup();
+    return master.getAsyncClusterConnection().getNonceGenerator().getNonceGroup();
   }
 
   public static long generateNonce(final HMaster master) {
-    return master.getClusterConnection().getNonceGenerator().newNonce();
+    return master.getAsyncClusterConnection().getNonceGenerator().newNonce();
   }
 
   /**
