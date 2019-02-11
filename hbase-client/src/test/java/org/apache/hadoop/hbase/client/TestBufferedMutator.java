@@ -44,8 +44,7 @@ public class TestBufferedMutator {
   public TestName name = new TestName();
 
   /**
-   * My BufferedMutator.
-   * Just to prove that I can insert a BM other than default.
+   * My BufferedMutator. Just to prove that I can insert a BM other than default.
    */
   public static class MyBufferedMutator extends BufferedMutatorImpl {
     MyBufferedMutator(ConnectionImplementation conn, RpcRetryingCallerFactory rpcCallerFactory,

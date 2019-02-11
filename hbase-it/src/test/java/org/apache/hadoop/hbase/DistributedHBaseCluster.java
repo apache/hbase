@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -28,7 +29,6 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,10 +36,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * Manages the interactions with an already deployed distributed cluster (as opposed to
@@ -97,18 +93,6 @@ public class DistributedHBaseCluster extends HBaseCluster {
     if (this.connection != null && !this.connection.isClosed()) {
       this.connection.close();
     }
-  }
-
-  @Override
-  public AdminProtos.AdminService.BlockingInterface getAdminProtocol(ServerName serverName)
-  throws IOException {
-    return ((ClusterConnection)this.connection).getAdmin(serverName);
-  }
-
-  @Override
-  public ClientProtos.ClientService.BlockingInterface getClientProtocol(ServerName serverName)
-  throws IOException {
-    return ((ClusterConnection)this.connection).getClient(serverName);
   }
 
   @Override
@@ -262,13 +246,6 @@ public class DistributedHBaseCluster extends HBaseCluster {
     throw new IOException("did timeout waiting for service to start:" + serverName);
   }
 
-
-  @Override
-  public MasterService.BlockingInterface getMasterAdminService()
-  throws IOException {
-    return ((ClusterConnection)this.connection).getMaster();
-  }
-
   @Override
   public void startMaster(String hostname, int port) throws IOException {
     LOG.info("Starting Master on: " + hostname + ":" + port);
@@ -297,7 +274,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
       try {
-        getMasterAdminService();
+        connection.getAdmin().getClusterMetrics(EnumSet.of(ClusterMetrics.Option.HBASE_VERSION));
         return true;
       } catch (MasterNotRunningException m) {
         LOG.warn("Master not started yet " + m);
