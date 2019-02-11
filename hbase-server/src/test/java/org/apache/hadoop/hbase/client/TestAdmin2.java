@@ -733,7 +733,7 @@ public class TestAdmin2 extends TestAdminBase {
     Assert.assertNotNull(store);
     Assert.assertEquals(expectedStoreFilesSize, store.getSize());
 
-    ClusterConnection conn = ((ClusterConnection) ADMIN.getConnection());
+    ConnectionImplementation conn = (ConnectionImplementation) ADMIN.getConnection();
     HBaseRpcController controller = conn.getRpcControllerFactory().newController();
     for (int i = 0; i < 10; i++) {
       RegionInfo ri =

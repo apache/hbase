@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -74,9 +73,6 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-
 /**
  * This is the base class for  HBaseFsck's ability to detect reasons for inconsistent tables.
  *
@@ -98,7 +94,7 @@ public class BaseTestHBaseFsck {
   protected static RegionStates regionStates;
   protected static ExecutorService tableExecutorService;
   protected static ScheduledThreadPoolExecutor hbfsckExecutorService;
-  protected static ClusterConnection connection;
+  protected static Connection connection;
   protected static Admin admin;
 
   // for the instance, reset every test run
@@ -298,9 +294,6 @@ public class BaseTestHBaseFsck {
 
   /**
    * delete table in preparation for next test
-   *
-   * @param tablename
-   * @throws IOException
    */
   void cleanupTable(TableName tablename) throws Exception {
     if (tbl != null) {
@@ -319,10 +312,8 @@ public class BaseTestHBaseFsck {
     Collection<ServerName> regionServers = status.getLiveServerMetrics().keySet();
     Map<ServerName, List<String>> mm = new HashMap<>();
     for (ServerName hsi : regionServers) {
-      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(hsi);
-
       // list all online regions from this region server
-      List<RegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
+      List<RegionInfo> regions = admin.getRegions(hsi);
       List<String> regionNames = new ArrayList<>(regions.size());
       for (RegionInfo hri : regions) {
         regionNames.add(hri.getRegionNameAsString());

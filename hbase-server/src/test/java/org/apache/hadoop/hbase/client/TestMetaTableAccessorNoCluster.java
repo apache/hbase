@@ -107,15 +107,13 @@ public class TestMetaTableAccessorNoCluster {
     Result r = Result.create(kvs);
     assertNull(MetaTableAccessor.getRegionInfo(r));
 
-    byte [] f = HConstants.CATALOG_FAMILY;
+    byte[] f = HConstants.CATALOG_FAMILY;
     // Make a key value that doesn't have the expected qualifier.
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.SERVER_QUALIFIER, f));
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.SERVER_QUALIFIER, f));
     r = Result.create(kvs);
     assertNull(MetaTableAccessor.getRegionInfo(r));
     // Make a key that does not have a regioninfo value.
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.REGIONINFO_QUALIFIER, f));
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER, f));
     RegionInfo hri = MetaTableAccessor.getRegionInfo(Result.create(kvs));
     assertTrue(hri == null);
     // OK, give it what it expects
@@ -161,7 +159,7 @@ public class TestMetaTableAccessorNoCluster {
           RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        Bytes.toBytes(sn.getHostAndPort())));
+        Bytes.toBytes(sn.getAddress().toString())));
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
