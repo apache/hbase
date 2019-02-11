@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -209,7 +208,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public ClusterConnection getConnection() {
+    public Connection getConnection() {
       return null;
     }
 
@@ -241,12 +240,6 @@ public class TestReplicationTrackerZKImpl {
 
     @Override
     public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
       return null;
     }
 

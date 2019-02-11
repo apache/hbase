@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
- * Hbck fixup tool APIs. Obtain an instance from {@link ClusterConnection#getHbck()} and call
+ * Hbck fixup tool APIs. Obtain an instance from {@link Connection#getHbck()} and call
  * {@link #close()} when done.
  * <p>WARNING: the below methods can damage the cluster. It may leave the cluster in an
  * indeterminate state, e.g. region not assigned, or some hdfs files left behind. After running
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * procedures to get regions back online. DO AT YOUR OWN RISK. For experienced users only.
  *
  * @see ConnectionFactory
- * @see ClusterConnection
  * @since 2.0.2, 2.1.1
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)

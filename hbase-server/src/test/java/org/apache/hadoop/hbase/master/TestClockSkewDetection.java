@@ -18,16 +18,12 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -51,14 +47,7 @@ public class TestClockSkewDetection {
   @Test
   public void testClockSkewDetection() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    ServerManager sm = new ServerManager(new MockNoopMasterServices(conf) {
-      @Override
-      public ClusterConnection getClusterConnection() {
-        ClusterConnection conn = mock(ClusterConnection.class);
-        when(conn.getRpcControllerFactory()).thenReturn(mock(RpcControllerFactory.class));
-        return conn;
-      }
-    });
+    ServerManager sm = new ServerManager(new MockNoopMasterServices(conf));
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

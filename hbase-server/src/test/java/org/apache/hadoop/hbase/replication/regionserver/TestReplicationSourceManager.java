@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -852,8 +851,9 @@ public abstract class TestReplicationSourceManager {
     public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
+
     @Override
-    public ClusterConnection getConnection() {
+    public Connection getConnection() {
       return null;
     }
 
@@ -884,12 +884,6 @@ public abstract class TestReplicationSourceManager {
 
     @Override
     public ChoreService getChoreService() {
-      return null;
-    }
-
-    @Override
-    public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
       return null;
     }
 

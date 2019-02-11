@@ -41,11 +41,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -144,7 +144,7 @@ public class TestThriftConnection {
 
   private static Connection createConnection(int port, boolean useHttp) throws IOException {
     Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
+    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
         ThriftConnection.class.getName());
     if (useHttp) {
       conf.set(Constants.HBASE_THRIFT_CLIENT_BUIDLER_CLASS,

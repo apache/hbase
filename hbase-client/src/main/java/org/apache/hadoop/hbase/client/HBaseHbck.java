@@ -21,9 +21,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -31,16 +36,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
- * Use {@link ClusterConnection#getHbck()} to obtain an instance of {@link Hbck} instead of
+ * Use {@link Connection#getHbck()} to obtain an instance of {@link Hbck} instead of
  * constructing an HBaseHbck directly.
  *
  * <p>Connection should be an <i>unmanaged</i> connection obtained via
@@ -55,7 +53,6 @@ import org.slf4j.LoggerFactory;
  * by each thread. Pooling or caching of the instance is not recommended.</p>
  *
  * @see ConnectionFactory
- * @see ClusterConnection
  * @see Hbck
  */
 @InterfaceAudience.Private
