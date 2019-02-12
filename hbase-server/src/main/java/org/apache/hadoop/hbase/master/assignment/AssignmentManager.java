@@ -1195,7 +1195,13 @@ public class AssignmentManager {
     private void update(final Collection<RegionState> regions, final long currentTime) {
       for (RegionState state: regions) {
         totalRITs++;
-        final long ritTime = currentTime - state.getStamp();
+        final long ritStartedMs = state.getStamp();
+        if (ritStartedMs == 0) {
+          // Don't output bogus values to metrics if they accidentally make it here.
+          LOG.warn("The RIT {} has no start time", state.getRegion());
+          continue;
+        }
+        final long ritTime = currentTime - ritStartedMs;
         if (ritTime > ritThreshold) {
           if (ritsOverThreshold == null) {
             ritsOverThreshold = new HashMap<String, RegionState>();
