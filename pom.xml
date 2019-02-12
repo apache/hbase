@@ -3617,7 +3617,6 @@
               <report>aggregate</report>
             </reports>
             <configuration>
-              <!-- Breaks build on branch-2. See HBASE-19663
               <doclet>
                 org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
@@ -3627,7 +3626,6 @@
                 <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
-              -->
               <destDir>apidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
@@ -3672,7 +3670,6 @@
               <report>test-aggregate</report>
             </reports>
             <configuration>
-              <!-- Breaks build on branch-2. See HBASE-19663
               <doclet>
                 org.apache.yetus.audience.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
@@ -3682,7 +3679,6 @@
                 <version>${audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
-              -->
               <destDir>testapidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
