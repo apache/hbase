@@ -169,7 +169,11 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   public long getLastUpdate() {
     TransitRegionStateProcedure proc = this.procedure;
-    return proc != null ? proc.getLastUpdate() : lastUpdate;
+    if (proc != null) {
+      long lastUpdate = proc.getLastUpdate();
+      return lastUpdate != 0 ? lastUpdate : proc.getSubmittedTime();
+    }
+    return lastUpdate;
   }
 
   public void setLastHost(final ServerName serverName) {
