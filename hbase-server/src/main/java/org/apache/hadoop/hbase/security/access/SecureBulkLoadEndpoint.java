@@ -24,6 +24,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -139,7 +140,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   private Connection conn;
 
   private UserProvider userProvider;
-  private static HashMap<UserGroupInformation, Integer> ugiReferenceCounter = new HashMap<>();
+  private static HashMap<UserGroupInformation, MutableInt> ugiReferenceCounter = new HashMap<>();
 
   @Override
   public void start(CoprocessorEnvironment env) {
@@ -276,26 +277,30 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
   private void incrementUgiReference(UserGroupInformation ugi) {
     synchronized (ugiReferenceCounter) {
-      Integer counter = ugiReferenceCounter.get(ugi);
-      ugiReferenceCounter.put(ugi, counter == null ? 1 : ++counter);
+      final MutableInt counter = ugiReferenceCounter.get(ugi);
+      if (counter == null) {
+        ugiReferenceCounter.put(ugi, new MutableInt(1));
+      } else {
+        counter.increment();
+      }
     }
   }
 
   private void decrementUgiReference(UserGroupInformation ugi) {
     synchronized (ugiReferenceCounter) {
-      Integer counter = ugiReferenceCounter.get(ugi);
-      if(counter == null || counter <= 1) {
+      final MutableInt counter = ugiReferenceCounter.get(ugi);
+      if(counter == null || counter.intValue() <= 1) {
         ugiReferenceCounter.remove(ugi);
       } else {
-        ugiReferenceCounter.put(ugi,--counter);
+        counter.decrement();
       }
     }
   }
 
   private boolean isUserReferenced(UserGroupInformation ugi) {
     synchronized (ugiReferenceCounter) {
-      Integer count = ugiReferenceCounter.get(ugi);
-      return count != null && count > 0;
+      final MutableInt counter = ugiReferenceCounter.get(ugi);
+      return counter != null && counter.intValue() > 0;
     }
   }
 
