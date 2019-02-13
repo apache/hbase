@@ -26,9 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -110,7 +110,7 @@ public class SecureBulkLoadManager {
   private Path baseStagingDir;
 
   private UserProvider userProvider;
-  private ConcurrentHashMap<UserGroupInformation, Integer> ugiReferenceCounter;
+  private ConcurrentHashMap<UserGroupInformation, MutableInt> ugiReferenceCounter;
   private Connection conn;
 
   SecureBulkLoadManager(Configuration conf, Connection conn) {
@@ -182,27 +182,33 @@ public class SecureBulkLoadManager {
 
 
   private void incrementUgiReference(UserGroupInformation ugi) {
-    ugiReferenceCounter.merge(ugi, 1, new BiFunction<Integer, Integer, Integer>() {
-      @Override
-      public Integer apply(Integer oldvalue, Integer value) {
-        return ++oldvalue;
+    // if we haven't seen this ugi before, make a new counter
+    ugiReferenceCounter.compute(ugi, (key, value) -> {
+      if (value == null) {
+        value = new MutableInt(1);
+      } else {
+        value.increment();
       }
+      return value;
     });
   }
 
   private void decrementUgiReference(UserGroupInformation ugi) {
-    ugiReferenceCounter.computeIfPresent(ugi,
-        new BiFunction<UserGroupInformation, Integer, Integer>() {
-          @Override
-          public Integer apply(UserGroupInformation key, Integer value) {
-            return value > 1 ? --value : null;
-          }
-      });
+    // if the count drops below 1 we remove the entry by returning null
+    ugiReferenceCounter.computeIfPresent(ugi, (key, value) -> {
+      if (value.intValue() > 1) {
+        value.decrement();
+      } else {
+        value = null;
+      }
+      return value;
+    });
   }
 
   private boolean isUserReferenced(UserGroupInformation ugi) {
-    Integer count = ugiReferenceCounter.get(ugi);
-    return count != null && count > 0;
+    // if the ugi is in the map, based on invariants above
+    // the count must be above zero
+    return ugiReferenceCounter.containsKey(ugi);
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
