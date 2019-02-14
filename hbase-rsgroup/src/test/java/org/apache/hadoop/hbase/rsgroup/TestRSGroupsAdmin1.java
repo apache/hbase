@@ -28,10 +28,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
@@ -480,6 +483,39 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     admin.deleteNamespace(nspDesc.getName());
     toggleQuotaCheckAndRestartMiniCluster(false);
 
+  }
+
+  @Test
+  public void testNotMoveTableToNullRSGroupWhenCreatingExistingTable()
+      throws Exception {
+    // Trigger
+    TableName tn1 = TableName.valueOf("t1");
+    TEST_UTIL.createTable(tn1, "cf1");
+    try {
+      // Create an existing table to trigger HBASE-21866
+      TEST_UTIL.createTable(tn1, "cf1");
+    } catch (TableExistsException teex) {
+      // Ignore
+    }
+
+    // Wait then verify
+    //   Could not verify until the rollback of CreateTableProcedure is done
+    //   (that is, the coprocessor finishes its work),
+    //   or the table is still in the "default" rsgroup even though HBASE-21866
+    //   is not fixed.
+    TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return
+            (master.getMasterProcedureExecutor().getActiveExecutorCount() == 0);
+      }
+    });
+    SortedSet<TableName> tables
+        = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    assertTrue("Table 't1' must be in 'default' rsgroup", tables.contains(tn1));
+
+    // Cleanup
+    TEST_UTIL.deleteTable(tn1);
   }
 
   private void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
