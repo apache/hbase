@@ -21,7 +21,6 @@ Release Notes - HBase - Version 1.5.0 2/28/2019
     * [HBASE-21734] - Some optimization in FilterListWithOR
     * [HBASE-21735] - Port HBASE-18784 (Use of filesystem that requires hflush / hsync / append / etc should query outputstream capabilities) to branch-1
     * [HBASE-21748] - Port HBASE-21738 (Remove all the CLSM#size operation in our memstore because it's an quite time consuming.) to branch-1
-    * [HBASE-21838] - Create a special ReplicationEndpoint just for verifying the WAL entries are fine
 
 ** Bug
     * [HBASE-14223] - Meta WALs are not cleared if meta region was closed and RS aborts
@@ -51,6 +50,7 @@ Release Notes - HBase - Version 1.5.0 2/28/2019
     * [HBASE-21618] - Scan with the same startRow(inclusive=true) and stopRow(inclusive=false) returns one result
     * [HBASE-21749] - RS UI may throw NPE and make rs-status page inaccessible with multiwal and replication
     * [HBASE-21766] - TestSimpleRpcScheduler is flaky (branch-1)
+    * [HBASE-21775] - The BufferedMutator doesn't ever refresh region location cache
 
 ** New Feature
     * [HBASE-19528] - Major Compaction Tool 
@@ -101,7 +101,6 @@ Release Notes - HBase - Version 1.5.0 2/28/2019
     * [HBASE-21687] - Update Findbugs Maven Plugin to 3.0.4 to work with Maven 3.6.0+ [branches-1]
     * [HBASE-21791] - Upgrade thrift dependency to 0.12.0
     * [HBASE-21826] - Rebase 1.5.0 CHANGES on branch-1.4 at release 1.4.9
-    * [HBASE-21853] - update copyright notices for contributions in 2019
 
 
 Release Notes - HBase - Version 1.4.9 12/7/2018
