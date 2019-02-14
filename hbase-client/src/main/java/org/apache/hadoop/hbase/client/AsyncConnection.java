@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
@@ -195,6 +194,12 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    */
   AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
+
+  /**
+   * Returns whether the connection is closed or not.
+   * @return true if this connection is closed
+   */
+  boolean isClosed();
 
   /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to

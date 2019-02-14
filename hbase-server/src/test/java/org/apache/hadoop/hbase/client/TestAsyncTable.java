@@ -111,11 +111,13 @@ public class TestAsyncTable {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    assertFalse(ASYNC_CONN.isClosed());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     IOUtils.closeQuietly(ASYNC_CONN);
+    assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }
 
