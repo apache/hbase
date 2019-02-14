@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 @InterfaceAudience.Private
 public final class VersionInfoUtil {
+  private static final ThreadLocal<HBaseProtos.VersionInfo> NonCallVersion = new ThreadLocal<>();
 
   private VersionInfoUtil() {
     /* UTIL CLASS ONLY */
@@ -68,10 +70,30 @@ public final class VersionInfoUtil {
   }
 
   /**
+   *  We intend to use the local version for service call shortcut(s), so we use an interface
+   *  compatible with a typical service call, with 2 args, return type, and an exception type.
+   */
+  public interface ServiceCallFunction<T1, T2, R, E extends Throwable> {
+    R apply(T1 t1, T2 t2) throws E;
+  }
+
+  public static <T1, T2, R, E extends  Throwable> R callWithVersion(
+      ServiceCallFunction<T1, T2, R, E> f, T1 t1, T2 t2) throws E {
+    // Note: just as RpcServer.CurCall, this will only apply on the current thread.
+    NonCallVersion.set(ProtobufUtil.getVersionInfo());
+    try {
+      return f.apply(t1, t2);
+    } finally {
+      NonCallVersion.remove();
+    }
+  }
+
+  /**
    * @return the versionInfo extracted from the current RpcCallContext
    */
   public static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
-    return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
+    return RpcServer.getCurrentCall().map(
+        RpcCallContext::getClientVersionInfo).orElse(NonCallVersion.get());
   }
 
 
