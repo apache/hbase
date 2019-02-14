@@ -23,25 +23,21 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedContainerWithTimestamp;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 
@@ -52,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
  * <li>Each server queue has a dispatch buffer</li>
  * <li>Once the dispatch buffer reaches a threshold-size/time we send<li>
  * </ul>
- * <p>Call {@link #start()} and then {@link #submitTask(Callable)}. When done,
+ * <p>Call {@link #start()} and then {@link #submitTask(Runnable)}. When done,
  * call {@link #stop()}.
  */
 @InterfaceAudience.Private
@@ -139,14 +135,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     }
   }
 
-  protected UncaughtExceptionHandler getUncaughtExceptionHandler() {
-    return new UncaughtExceptionHandler() {
-      @Override
-      public void uncaughtException(Thread t, Throwable e) {
-        LOG.warn("Failed to execute remote procedures " + t.getName(), e);
-      }
-    };
-  }
+  protected abstract UncaughtExceptionHandler getUncaughtExceptionHandler();
 
   // ============================================================================================
   //  Node Helpers
@@ -197,14 +186,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   // ============================================================================================
   //  Task Helpers
   // ============================================================================================
-  protected Future<Void> submitTask(Callable<Void> task) {
-    return threadPool.submit(task);
+  protected final void submitTask(Runnable task) {
+    threadPool.execute(task);
   }
 
-  protected Future<Void> submitTask(Callable<Void> task, long delay, TimeUnit unit) {
-    final FutureTask<Void> futureTask = new FutureTask(task);
-    timeoutExecutor.add(new DelayedTask(futureTask, delay, unit));
-    return futureTask;
+  protected final void submitTask(Runnable task, long delay, TimeUnit unit) {
+    timeoutExecutor.add(new DelayedTask(task, delay, unit));
   }
 
   protected abstract void remoteDispatch(TRemote key, Set<RemoteProcedure> operations);
@@ -254,19 +241,19 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
   /**
    * Account of what procedures are running on remote node.
-   * @param <TEnv>
-   * @param <TRemote>
    */
   public interface RemoteNode<TEnv, TRemote> {
     TRemote getKey();
+
     void add(RemoteProcedure<TEnv, TRemote> operation);
+
     void dispatch();
   }
 
   protected ArrayListMultimap<Class<?>, RemoteOperation> buildAndGroupRequestByType(final TEnv env,
       final TRemote remote, final Set<RemoteProcedure> remoteProcedures) {
     final ArrayListMultimap<Class<?>, RemoteOperation> requestByType = ArrayListMultimap.create();
-    for (RemoteProcedure proc: remoteProcedures) {
+    for (RemoteProcedure proc : remoteProcedures) {
       RemoteOperation operation = proc.remoteCallBuild(env, remote);
       requestByType.put(operation.getClass(), operation);
     }
@@ -297,9 +284,9 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
           continue;
         }
         if (task instanceof DelayedTask) {
-          threadPool.execute(((DelayedTask)task).getObject());
+          threadPool.execute(((DelayedTask) task).getObject());
         } else {
-          ((BufferNode)task).dispatch();
+          ((BufferNode) task).dispatch();
         }
       }
     }
@@ -390,10 +377,11 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
   /**
    * Delayed object that holds a FutureTask.
+   * <p/>
    * used to submit something later to the thread-pool.
    */
-  private static final class DelayedTask extends DelayedContainerWithTimestamp<FutureTask<Void>> {
-    public DelayedTask(final FutureTask<Void> task, final long delay, final TimeUnit unit) {
+  private static final class DelayedTask extends DelayedContainerWithTimestamp<Runnable> {
+    public DelayedTask(Runnable task, long delay, TimeUnit unit) {
       super(task, EnvironmentEdgeManager.currentTime() + unit.toMillis(delay));
     }
   };
