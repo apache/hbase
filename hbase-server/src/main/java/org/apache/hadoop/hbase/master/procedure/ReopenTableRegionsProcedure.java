@@ -89,7 +89,7 @@ public class ReopenTableRegionsProcedure
     switch (state) {
       case REOPEN_TABLE_REGIONS_GET_REGIONS:
         if (!env.getAssignmentManager().isTableEnabled(tableName)) {
-          LOG.info("Table {} is disabled, give up reopening its regions");
+          LOG.info("Table {} is disabled, give up reopening its regions", tableName);
           return Flow.NO_MORE_STATE;
         }
         regions =
