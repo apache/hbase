@@ -1619,7 +1619,7 @@ If you submit a patch for one thing, don't do auto-reformatting or unrelated ref
 Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
 
 [[common.patch.feedback.tests]]
-===== Ambigious Unit Tests
+===== Ambiguous Unit Tests
 
 Make sure that you're clear about what you are testing in your unit tests and why.
 
