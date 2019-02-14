@@ -134,4 +134,13 @@ public final class FutureUtils {
       throw new IOException(cause);
     }
   }
+
+  /**
+   * Returns a CompletableFuture that is already completed exceptionally with the given exception.
+   */
+  public static <T> CompletableFuture<T> failedFuture(Throwable e) {
+    CompletableFuture<T> future = new CompletableFuture<>();
+    future.completeExceptionally(e);
+    return future;
+  }
 }
