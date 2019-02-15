@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -82,27 +81,53 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     }
   }
 
-  // Disabled for now. Since HBASE-18551, this mock is insufficient.
-  @Ignore
   @Test
-  public void testSocketTimeout() throws Exception {
+  public void testAssignSocketTimeout() throws Exception {
     TableName tableName = TableName.valueOf(this.name.getMethodName());
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
 
-    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 3));
+    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20));
     waitOnFuture(submitProcedure(createAssignProcedure(hri)));
 
-    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 1));
-    // exception.expect(ServerCrashException.class);
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testAssignQueueFullOnce() throws Exception {
+    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    rsDispatcher.setMockRsExecutor(new CallQueueTooBigOnceRsExecutor());
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testTimeoutThenQueueFull() throws Exception {
+    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    rsDispatcher.setMockRsExecutor(new TimeoutThenCallQueueTooBigRsExecutor(10));
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+    rsDispatcher.setMockRsExecutor(new TimeoutThenCallQueueTooBigRsExecutor(15));
     waitOnFuture(submitProcedure(createUnassignProcedure(hri)));
 
     assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
     assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
-    assertEquals(unassignFailedCount + 1, unassignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
   private void testAssign(final MockRSExecutor executor) throws Exception {
