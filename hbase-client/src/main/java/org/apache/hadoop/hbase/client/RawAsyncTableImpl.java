@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePut;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.google.protobuf.RpcChannel;
@@ -235,6 +236,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> put(Put put) {
+    validatePut(put, conn.connConf.getMaxKeyValueSize());
     return this.<Void> newCaller(put, writeRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl.<Put> voidMutate(controller, loc, stub,
         put, RequestConverter::buildMutateRequest))
@@ -326,6 +328,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
+      validatePut(put, conn.connConf.getMaxKeyValueSize());
       preCheck();
       return RawAsyncTableImpl.this.<Boolean> newCaller(row, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller, loc,
@@ -478,6 +481,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<Void>> put(List<Put> puts) {
+    for (Put put : puts) {
+      validatePut(put, conn.connConf.getMaxKeyValueSize());
+    }
     return voidMutate(puts);
   }
 

@@ -40,6 +40,8 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT;
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.MAX_KEYVALUE_SIZE_DEFAULT;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.PRIMARY_SCAN_TIMEOUT_MICROSECOND;
@@ -106,6 +108,8 @@ class AsyncConnectionConfiguration {
 
   private final long primaryMetaScanTimeoutNs;
 
+  private final int maxKeyValueSize;
+
   AsyncConnectionConfiguration(Configuration conf) {
     this.metaOperationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
       conf.getLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
@@ -142,6 +146,7 @@ class AsyncConnectionConfiguration {
     this.primaryMetaScanTimeoutNs =
       TimeUnit.MICROSECONDS.toNanos(conf.getLong(HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
         HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT));
+    this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
   }
 
   long getMetaOperationTimeoutNs() {
@@ -210,5 +215,9 @@ class AsyncConnectionConfiguration {
 
   long getPrimaryMetaScanTimeoutNs() {
     return primaryMetaScanTimeoutNs;
+  }
+
+  int getMaxKeyValueSize() {
+    return maxKeyValueSize;
   }
 }
