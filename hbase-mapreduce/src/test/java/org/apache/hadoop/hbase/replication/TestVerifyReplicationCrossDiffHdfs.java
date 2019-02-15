@@ -168,15 +168,15 @@ public class TestVerifyReplicationCrossDiffHdfs {
     Path rootDir = FSUtils.getRootDir(conf1);
     FileSystem fs = rootDir.getFileSystem(conf1);
     String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
-    SnapshotTestingUtils.createSnapshotAndValidate(util1.getAdmin(), TABLE_NAME,
-        Bytes.toString(FAMILY), sourceSnapshotName, rootDir, fs, true);
+    SnapshotTestingUtils.createSnapshotAndValidate(util1.getAdmin(), TABLE_NAME, new String(FAMILY),
+      sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = FSUtils.getRootDir(conf2);
     FileSystem peerFs = peerRootDir.getFileSystem(conf2);
     String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
-    SnapshotTestingUtils.createSnapshotAndValidate(util2.getAdmin(), TABLE_NAME,
-        Bytes.toString(FAMILY), peerSnapshotName, peerRootDir, peerFs, true);
+    SnapshotTestingUtils.createSnapshotAndValidate(util2.getAdmin(), TABLE_NAME, new String(FAMILY),
+      peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String temPath1 = new Path(fs.getUri().toString(), "/tmp1").toString();

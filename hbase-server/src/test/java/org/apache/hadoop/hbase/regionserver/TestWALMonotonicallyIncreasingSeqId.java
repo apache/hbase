@@ -143,7 +143,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
         for (int i = 0; i < 100; i++) {
           byte[] row = Bytes.toBytes("putRow" + i);
           Put put = new Put(row);
-          put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(0), new byte[0]);
+          put.addColumn("cf".getBytes(), Bytes.toBytes(0), Bytes.toBytes(""));
           latch.await();
           region.batchMutate(new Mutation[] { put });
           Thread.sleep(10);
@@ -168,7 +168,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
         for (int i = 0; i < 100; i++) {
           byte[] row = Bytes.toBytes("incrementRow" + i);
           Increment inc = new Increment(row);
-          inc.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(0), 1);
+          inc.addColumn("cf".getBytes(), Bytes.toBytes(0), 1);
           // inc.setDurability(Durability.ASYNC_WAL);
           region.increment(inc);
           latch.countDown();

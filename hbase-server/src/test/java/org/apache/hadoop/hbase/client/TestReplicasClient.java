@@ -87,7 +87,7 @@ public class TestReplicasClient {
 
   private static final int NB_SERVERS = 1;
   private static Table table = null;
-  private static final byte[] row = Bytes.toBytes(TestReplicasClient.class.getName());
+  private static final byte[] row = TestReplicasClient.class.getName().getBytes();
 
   private static HRegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;
@@ -313,7 +313,7 @@ public class TestReplicasClient {
 
   @Test
   public void testUseRegionWithoutReplica() throws Exception {
-    byte[] b1 = Bytes.toBytes("testUseRegionWithoutReplica");
+    byte[] b1 = "testUseRegionWithoutReplica".getBytes();
     openRegion(hriSecondary);
     SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(0));
     try {
@@ -327,7 +327,7 @@ public class TestReplicasClient {
 
   @Test
   public void testLocations() throws Exception {
-    byte[] b1 = Bytes.toBytes("testLocations");
+    byte[] b1 = "testLocations".getBytes();
     openRegion(hriSecondary);
     ClusterConnection hc = (ClusterConnection) HTU.getAdmin().getConnection();
 
@@ -352,7 +352,7 @@ public class TestReplicasClient {
 
   @Test
   public void testGetNoResultNoStaleRegionWithReplica() throws Exception {
-    byte[] b1 = Bytes.toBytes("testGetNoResultNoStaleRegionWithReplica");
+    byte[] b1 = "testGetNoResultNoStaleRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
     try {
@@ -368,7 +368,7 @@ public class TestReplicasClient {
 
   @Test
   public void testGetNoResultStaleRegionWithReplica() throws Exception {
-    byte[] b1 = Bytes.toBytes("testGetNoResultStaleRegionWithReplica");
+    byte[] b1 = "testGetNoResultStaleRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
     SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
@@ -385,7 +385,7 @@ public class TestReplicasClient {
 
   @Test
   public void testGetNoResultNotStaleSleepRegionWithReplica() throws Exception {
-    byte[] b1 = Bytes.toBytes("testGetNoResultNotStaleSleepRegionWithReplica");
+    byte[] b1 = "testGetNoResultNotStaleSleepRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
     try {
@@ -461,7 +461,7 @@ public class TestReplicasClient {
 
   @Test
   public void testUseRegionWithReplica() throws Exception {
-    byte[] b1 = Bytes.toBytes("testUseRegionWithReplica");
+    byte[] b1 = "testUseRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
     try {
@@ -554,7 +554,7 @@ public class TestReplicasClient {
 
   @Test
   public void testHedgedRead() throws Exception {
-    byte[] b1 = Bytes.toBytes("testHedgedRead");
+    byte[] b1 = "testHedgedRead".getBytes();
     openRegion(hriSecondary);
 
     try {
@@ -769,7 +769,7 @@ public class TestReplicasClient {
         for (int col = 0; col < NUMCOLS; col++) {
           Put p = new Put(b1);
           String qualifier = "qualifer" + col;
-          KeyValue kv = new KeyValue(b1, f, Bytes.toBytes(qualifier));
+          KeyValue kv = new KeyValue(b1, f, qualifier.getBytes());
           p.add(kv);
           table.put(p);
         }

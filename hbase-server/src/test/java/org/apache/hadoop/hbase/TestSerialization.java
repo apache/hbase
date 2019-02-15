@@ -61,11 +61,11 @@ public class TestSerialization {
 
   @Test public void testKeyValue() throws Exception {
     final String name = "testKeyValue2";
-    byte[] row = Bytes.toBytes(name);
-    byte[] fam = Bytes.toBytes("fam");
-    byte[] qf = Bytes.toBytes("qf");
+    byte[] row = name.getBytes();
+    byte[] fam = "fam".getBytes();
+    byte[] qf = "qf".getBytes();
     long ts = System.currentTimeMillis();
-    byte[] val = Bytes.toBytes("val");
+    byte[] val = "val".getBytes();
     KeyValue kv = new KeyValue(row, fam, qf, ts, val);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -290,9 +290,9 @@ public class TestSerialization {
   */
 
   @Test public void testGet() throws Exception{
-    byte[] row = Bytes.toBytes("row");
-    byte[] fam = Bytes.toBytes("fam");
-    byte[] qf1 = Bytes.toBytes("qf1");
+    byte[] row = "row".getBytes();
+    byte[] fam = "fam".getBytes();
+    byte[] qf1 = "qf1".getBytes();
 
     long ts = System.currentTimeMillis();
     int maxVersions = 2;
@@ -329,10 +329,10 @@ public class TestSerialization {
 
   @Test public void testScan() throws Exception {
 
-    byte[] startRow = Bytes.toBytes("startRow");
-    byte[] stopRow  = Bytes.toBytes("stopRow");
-    byte[] fam = Bytes.toBytes("fam");
-    byte[] qf1 = Bytes.toBytes("qf1");
+    byte[] startRow = "startRow".getBytes();
+    byte[] stopRow  = "stopRow".getBytes();
+    byte[] fam = "fam".getBytes();
+    byte[] qf1 = "qf1".getBytes();
 
     long ts = System.currentTimeMillis();
     int maxVersions = 2;

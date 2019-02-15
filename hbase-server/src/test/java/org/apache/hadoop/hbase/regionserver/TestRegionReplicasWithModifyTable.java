@@ -49,6 +49,7 @@ public class TestRegionReplicasWithModifyTable {
 
   private static final int NB_SERVERS = 3;
   private static Table table;
+  private static final byte[] row = "TestRegionReplicasWithModifyTable".getBytes();
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;

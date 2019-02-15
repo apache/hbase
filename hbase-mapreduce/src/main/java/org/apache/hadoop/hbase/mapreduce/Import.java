@@ -545,7 +545,7 @@ public class Import extends Configured implements Tool {
         if(srcAndDest.length != 2) {
             continue;
         }
-        cfRenameMap.put(Bytes.toBytes(srcAndDest[0]), Bytes.toBytes(srcAndDest[1]));
+        cfRenameMap.put(srcAndDest[0].getBytes(), srcAndDest[1].getBytes());
       }
     }
     return cfRenameMap;

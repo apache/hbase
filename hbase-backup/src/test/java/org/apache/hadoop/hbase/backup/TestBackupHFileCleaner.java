@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -133,7 +132,7 @@ public class TestBackupHFileCleaner {
       sTableList.add(tableName);
       Map<byte[], List<Path>>[] maps = new Map[1];
       maps[0] = new HashMap<>();
-      maps[0].put(Bytes.toBytes(famName), list);
+      maps[0].put(famName.getBytes(), list);
       sysTbl.writeBulkLoadedFiles(sTableList, maps, "1");
     }
 

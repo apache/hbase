@@ -106,7 +106,7 @@ public class TestMultiLogThreshold {
       RegionAction.Builder rab = RegionAction.newBuilder();
       rab.setRegion(RequestConverter.buildRegionSpecifier(
         HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME,
-        Bytes.toBytes("someStuff" + i)));
+        new String("someStuff" + i).getBytes()));
       for (int j = 0; j < numAs; j++) {
         Action.Builder ab = Action.newBuilder();
         rab.addAction(ab.build());

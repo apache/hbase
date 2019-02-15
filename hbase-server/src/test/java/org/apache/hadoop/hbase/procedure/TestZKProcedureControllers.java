@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -68,7 +67,7 @@ public class TestZKProcedureControllers {
   private static final String CONTROLLER_NODE_NAME = "controller";
   private static final VerificationMode once = Mockito.times(1);
 
-  private final byte[] memberData = Bytes.toBytes("data from member");
+  private final byte[] memberData = new String("data from member").getBytes();
 
   @BeforeClass
   public static void setupTest() throws Exception {

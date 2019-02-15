@@ -876,7 +876,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCheckAndPut(ObserverContextImpl.createAndPrepare(RCP_ENV),
           TEST_ROW, TEST_FAMILY, TEST_Q1, CompareOperator.EQUAL,
-          new BinaryComparator(Bytes.toBytes("foo")), new Put(TEST_ROW), true);
+          new BinaryComparator("foo".getBytes()), new Put(TEST_ROW), true);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -887,7 +887,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCheckAndDelete(ObserverContextImpl.createAndPrepare(RCP_ENV),
           TEST_ROW, TEST_FAMILY, TEST_Q1, CompareOperator.EQUAL,
-          new BinaryComparator(Bytes.toBytes("foo")), new Delete(TEST_ROW), true);
+          new BinaryComparator("foo".getBytes()), new Delete(TEST_ROW), true);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);

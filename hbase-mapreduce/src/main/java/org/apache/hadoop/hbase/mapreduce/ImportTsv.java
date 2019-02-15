@@ -194,11 +194,11 @@ public class ImportTsv extends Configured implements Tool {
         }
         String[] parts = str.split(":", 2);
         if (parts.length == 1) {
-          families[i] = Bytes.toBytes(str);
+          families[i] = str.getBytes();
           qualifiers[i] = HConstants.EMPTY_BYTE_ARRAY;
         } else {
-          families[i] = Bytes.toBytes(parts[0]);
-          qualifiers[i] = Bytes.toBytes(parts[1]);
+          families[i] = parts[0].getBytes();
+          qualifiers[i] = parts[1].getBytes();
         }
       }
     }
@@ -471,7 +471,7 @@ public class ImportTsv extends Configured implements Tool {
         String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
         if (actualSeparator != null) {
           conf.set(SEPARATOR_CONF_KEY,
-              Bytes.toString(Base64.getEncoder().encode(Bytes.toBytes(actualSeparator))));
+              Bytes.toString(Base64.getEncoder().encode(actualSeparator.getBytes())));
         }
 
         // See if a non-default Mapper was set

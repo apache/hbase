@@ -276,7 +276,7 @@ public class TestHFileBlockIndex {
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
 
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
-      hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(rand.nextInt(1000))));
+      hbw.startWriting(BlockType.DATA).write(String.valueOf(rand.nextInt(1000)).getBytes());
       long blockOffset = outputStream.getPos();
       hbw.writeHeaderAndData(outputStream);
 

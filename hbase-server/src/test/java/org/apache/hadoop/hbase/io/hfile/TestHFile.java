@@ -289,7 +289,7 @@ public class TestHFile  {
   }
 
   private byte[] getSomeKey(int rowId) {
-    KeyValue kv = new KeyValue(Bytes.toBytes(String.format(localFormatter, Integer.valueOf(rowId))),
+    KeyValue kv = new KeyValue(String.format(localFormatter, Integer.valueOf(rowId)).getBytes(),
         Bytes.toBytes("family"), Bytes.toBytes("qual"), HConstants.LATEST_TIMESTAMP, Type.Put);
     return kv.getKey();
   }
@@ -377,7 +377,7 @@ public class TestHFile  {
 
         @Override
         public void write(DataOutput out) throws IOException {
-          out.write(Bytes.toBytes("something to test" + val));
+          out.write(("something to test" + val).getBytes());
         }
 
         @Override
@@ -394,7 +394,7 @@ public class TestHFile  {
     for (int i = 0; i < n; i++) {
       ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false).getBufferWithoutHeader();
       ByteBuffer expected =
-        ByteBuffer.wrap(Bytes.toBytes("something to test" + i));
+        ByteBuffer.wrap(("something to test" + i).getBytes());
       assertEquals(
           "failed to match metadata",
           Bytes.toStringBinary(expected),
@@ -451,8 +451,7 @@ public class TestHFile  {
           .withOutputStream(fout)
           .withFileContext(meta)
           .create();
-      KeyValue kv = new KeyValue(Bytes.toBytes("foo"), Bytes.toBytes("f1"), null,
-          Bytes.toBytes("value"));
+      KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
       writer.append(kv);
       writer.close();
       fout.close();

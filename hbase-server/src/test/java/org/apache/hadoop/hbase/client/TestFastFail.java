@@ -367,7 +367,7 @@ public class TestFastFail {
   }
 
   private byte[] longToByteArrayKey(long rowKey) {
-    return Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(rowKey));
+    return LoadTestKVGenerator.md5PrefixedKey(rowKey).getBytes();
   }
 
   public static class CallQueueTooBigPffeInterceptor extends

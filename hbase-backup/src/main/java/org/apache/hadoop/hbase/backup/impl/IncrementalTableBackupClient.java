@@ -155,11 +155,11 @@ public class IncrementalTableBackupClient extends TableBackupClient {
           String fam = famEntry.getKey();
           Path famDir = new Path(regionDir, fam);
           List<Path> files;
-          if (!mapForSrc[srcIdx].containsKey(Bytes.toBytes(fam))) {
+          if (!mapForSrc[srcIdx].containsKey(fam.getBytes())) {
             files = new ArrayList<>();
-            mapForSrc[srcIdx].put(Bytes.toBytes(fam), files);
+            mapForSrc[srcIdx].put(fam.getBytes(), files);
           } else {
-            files = mapForSrc[srcIdx].get(Bytes.toBytes(fam));
+            files = mapForSrc[srcIdx].get(fam.getBytes());
           }
           Path archiveDir = HFileArchiveUtil.getStoreArchivePath(conf, srcTable, regionName, fam);
           String tblName = srcTable.getQualifierAsString();

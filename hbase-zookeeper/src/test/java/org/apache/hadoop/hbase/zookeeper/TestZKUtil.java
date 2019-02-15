@@ -157,7 +157,7 @@ public class TestZKUtil {
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
     ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
-    zk.addAuthInfo("digest", Bytes.toBytes("hbase:rox"));
+    zk.addAuthInfo("digest", "hbase:rox".getBytes());
 
     // Save the previous ACL
     Stat s = null;
@@ -223,7 +223,7 @@ public class TestZKUtil {
 
     // Restore the ACL
     ZooKeeper zk3 = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
-    zk3.addAuthInfo("digest", Bytes.toBytes("hbase:rox"));
+    zk3.addAuthInfo("digest", "hbase:rox".getBytes());
     try {
       zk3.setACL("/", oldACL, -1);
     } finally {

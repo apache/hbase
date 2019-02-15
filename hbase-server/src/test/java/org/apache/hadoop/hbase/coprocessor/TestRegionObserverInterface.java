@@ -589,7 +589,7 @@ public class TestRegionObserverInterface {
       ServerName sn2 = rs1.getRegionServer().getServerName();
       String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      util.getAdmin().move(Bytes.toBytes(regEN), Bytes.toBytes(sn2.getServerName()));
+      util.getAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
         Thread.sleep(100);
       }
@@ -639,7 +639,7 @@ public class TestRegionObserverInterface {
       ServerName sn2 = rs1.getRegionServer().getServerName();
       String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      util.getAdmin().move(Bytes.toBytes(regEN), Bytes.toBytes(sn2.getServerName()));
+      util.getAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
         Thread.sleep(100);
       }

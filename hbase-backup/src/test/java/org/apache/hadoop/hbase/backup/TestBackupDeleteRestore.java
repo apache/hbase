@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,7 +63,7 @@ public class TestBackupDeleteRestore extends TestBackupBase {
     HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
     // delete row
     try (Table table = TEST_UTIL.getConnection().getTable(table1)) {
-      Delete delete = new Delete(Bytes.toBytes("row0"));
+      Delete delete = new Delete("row0".getBytes());
       table.delete(delete);
       hba.flush(table1);
     }

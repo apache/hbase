@@ -112,7 +112,7 @@ public class IntegrationTestLazyCfLoading {
 
     @Override
     public byte[] getDeterministicUniqueKey(long keyBase) {
-      return Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(keyBase));
+      return LoadTestKVGenerator.md5PrefixedKey(keyBase).getBytes();
     }
 
     @Override

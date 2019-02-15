@@ -99,7 +99,7 @@ public class TestFilterWrapper {
         for (Cell kv : result.listCells()) {
           LOG.debug(kv_number + ". kv: " + kv);
           kv_number++;
-          assertEquals("Returned row is not correct", Bytes.toString(CellUtil.cloneRow(kv)),
+          assertEquals("Returned row is not correct", new String(CellUtil.cloneRow(kv)),
               "row" + ( row_number + 1 ));
         }
       }

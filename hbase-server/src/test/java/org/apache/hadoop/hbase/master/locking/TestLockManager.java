@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -81,8 +80,7 @@ public class TestLockManager {
     UTIL.startMiniCluster(1);
     masterServices = UTIL.getMiniHBaseCluster().getMaster();
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    UTIL.createTable(tableName, new byte[][]{Bytes.toBytes("fam")},
-        new byte[][] {Bytes.toBytes("1")});
+    UTIL.createTable(tableName, new byte[][]{"fam".getBytes()}, new byte[][] {"1".getBytes()});
     List<HRegionInfo> regions = UTIL.getAdmin().getTableRegions(tableName);
     assert regions.size() > 0;
     tableRegions = new HRegionInfo[regions.size()];

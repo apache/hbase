@@ -179,8 +179,7 @@ public class TestHFileEncryption {
         .withFileContext(fileContext)
         .create();
     try {
-      KeyValue kv = new KeyValue(Bytes.toBytes("foo"), Bytes.toBytes("f1"), null,
-          Bytes.toBytes("value"));
+      KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
       writer.append(kv);
     } finally {
       writer.close();

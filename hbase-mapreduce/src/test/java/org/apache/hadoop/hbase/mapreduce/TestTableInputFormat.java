@@ -121,14 +121,14 @@ public class TestTableInputFormat {
    */
   public static Table createTable(byte[] tableName, byte[][] families) throws IOException {
     Table table = UTIL.createTable(TableName.valueOf(tableName), families);
-    Put p = new Put(Bytes.toBytes("aaa"));
+    Put p = new Put("aaa".getBytes());
     for (byte[] family : families) {
-      p.addColumn(family, null, Bytes.toBytes("value aaa"));
+      p.addColumn(family, null, "value aaa".getBytes());
     }
     table.put(p);
-    p = new Put(Bytes.toBytes("bbb"));
+    p = new Put("bbb".getBytes());
     for (byte[] family : families) {
-      p.addColumn(family, null, Bytes.toBytes("value bbb"));
+      p.addColumn(family, null, "value bbb".getBytes());
     }
     table.put(p);
     return table;
@@ -165,8 +165,8 @@ public class TestTableInputFormat {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
         new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
     Scan s = new Scan();
-    s.setStartRow(Bytes.toBytes("aaa"));
-    s.setStopRow(Bytes.toBytes("zzz"));
+    s.setStartRow("aaa".getBytes());
+    s.setStopRow("zzz".getBytes());
     s.addFamily(FAMILY);
     trr.setScan(s);
     trr.setHTable(table);
@@ -179,13 +179,13 @@ public class TestTableInputFormat {
     assertTrue(more);
     key = trr.getCurrentKey();
     r = trr.getCurrentValue();
-    checkResult(r, key, Bytes.toBytes("aaa"), Bytes.toBytes("value aaa"));
+    checkResult(r, key, "aaa".getBytes(), "value aaa".getBytes());
 
     more = trr.nextKeyValue();
     assertTrue(more);
     key = trr.getCurrentKey();
     r = trr.getCurrentValue();
-    checkResult(r, key, Bytes.toBytes("bbb"), Bytes.toBytes("value bbb"));
+    checkResult(r, key, "bbb".getBytes(), "value bbb".getBytes());
 
     // no more data
     more = trr.nextKeyValue();
@@ -209,7 +209,7 @@ public class TestTableInputFormat {
         if (cnt++ < failCnt) {
           // create mock ResultScanner that always fails.
           Scan scan = mock(Scan.class);
-          doReturn(Bytes.toBytes("bogus")).when(scan).getStartRow(); // avoid npe
+          doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
           ResultScanner scanner = mock(ResultScanner.class);
           // simulate TimeoutException / IOException
           doThrow(new IOException("Injected exception")).when(scanner).next();
@@ -244,7 +244,7 @@ public class TestTableInputFormat {
         if (cnt++ < failCnt) {
           // create mock ResultScanner that always fails.
           Scan scan = mock(Scan.class);
-          doReturn(Bytes.toBytes("bogus")).when(scan).getStartRow(); // avoid npe
+          doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
           ResultScanner scanner = mock(ResultScanner.class);
 
           invocation.callRealMethod(); // simulate NotServingRegionException
@@ -273,7 +273,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderMapreduce() throws IOException,
       InterruptedException {
-    Table table = createTable(Bytes.toBytes("table1-mr"));
+    Table table = createTable("table1-mr".getBytes());
     runTestMapreduce(table);
   }
 
@@ -286,7 +286,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderScannerFailMapreduce() throws IOException,
       InterruptedException {
-    Table htable = createIOEScannerTable(Bytes.toBytes("table2-mr"), 1);
+    Table htable = createIOEScannerTable("table2-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
@@ -299,7 +299,7 @@ public class TestTableInputFormat {
   @Test(expected = IOException.class)
   public void testTableRecordReaderScannerFailMapreduceTwice() throws IOException,
       InterruptedException {
-    Table htable = createIOEScannerTable(Bytes.toBytes("table3-mr"), 2);
+    Table htable = createIOEScannerTable("table3-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 
@@ -312,7 +312,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderScannerTimeoutMapreduce()
       throws IOException, InterruptedException {
-    Table htable = createDNRIOEScannerTable(Bytes.toBytes("table4-mr"), 1);
+    Table htable = createDNRIOEScannerTable("table4-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
@@ -325,7 +325,7 @@ public class TestTableInputFormat {
   @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()
       throws IOException, InterruptedException {
-    Table htable = createDNRIOEScannerTable(Bytes.toBytes("table5-mr"), 2);
+    Table htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 

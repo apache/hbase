@@ -22,10 +22,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -67,19 +65,19 @@ public class TestZooKeeperACL {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     File saslConfFile = File.createTempFile("tmp", "jaas.conf");
-    try (OutputStreamWriter fwriter = new OutputStreamWriter(
-          new FileOutputStream(saslConfFile), StandardCharsets.UTF_8)) {
-      fwriter.write(
-        "Server {\n" +
-          "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
-          "user_hbase=\"secret\";\n" +
-        "};\n" +
-        "Client {\n" +
-          "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
-          "username=\"hbase\"\n" +
-          "password=\"secret\";\n" +
-        "};" + "\n");
-    }
+    FileWriter fwriter = new FileWriter(saslConfFile);
+
+    fwriter.write("" +
+      "Server {\n" +
+        "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+        "user_hbase=\"secret\";\n" +
+      "};\n" +
+      "Client {\n" +
+        "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+        "username=\"hbase\"\n" +
+        "password=\"secret\";\n" +
+      "};" + "\n");
+    fwriter.close();
     System.setProperty("java.security.auth.login.config",
         saslConfFile.getAbsolutePath());
     System.setProperty("zookeeper.authProvider.1",
@@ -281,11 +279,10 @@ public class TestZooKeeperACL {
     assertEquals(testJaasConfig, secureZKAvailable);
     // Define Jaas configuration without ZooKeeper Jaas config
     File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");
-    try (OutputStreamWriter fwriter = new OutputStreamWriter(
-          new FileOutputStream(saslConfFile), StandardCharsets.UTF_8)) {
-      fwriter.write("");
-    }
+    FileWriter fwriter = new FileWriter(saslConfFile);
 
+    fwriter.write("");
+    fwriter.close();
     System.setProperty("java.security.auth.login.config",
         saslConfFile.getAbsolutePath());
 

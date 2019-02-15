@@ -357,8 +357,8 @@ public class TestCompoundBloomFilter {
 
   @Test
   public void testCreateKey() {
-    byte[] row = Bytes.toBytes("myRow");
-    byte[] qualifier = Bytes.toBytes("myQualifier");
+    byte[] row = "myRow".getBytes();
+    byte[] qualifier = "myQualifier".getBytes();
     // Mimic what Storefile.createBloomKeyValue() does
     byte[] rowKey = KeyValueUtil.createFirstOnRow(row, 0, row.length, new byte[0], 0, 0, row, 0, 0).getKey();
     byte[] rowColKey = KeyValueUtil.createFirstOnRow(row, 0, row.length,

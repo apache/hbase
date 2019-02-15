@@ -136,7 +136,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
     for (int i = 0; i < rows.length; i++) {
       Put p = new Put(Bytes.toBytesBinary(rows[i]));
-      p.addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq), Bytes.toBytes("value"));
+      p.addColumn(cf.getBytes(), cq.getBytes(), "value".getBytes());
       ht.put(p);
     }
 
@@ -191,12 +191,12 @@ public class TestFuzzyRowFilterEndToEnd {
 
     for(int i=0; i < rows.length; i++){
       Put p = new Put(Bytes.toBytesBinary(rows[i]));
-      p.addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq), Bytes.toBytes("value"));
+      p.addColumn(cf.getBytes(), cq.getBytes(), "value".getBytes());
       ht.put(p);
     }
 
     Put p = new Put(Bytes.toBytesBinary(badRow));
-    p.addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq), Bytes.toBytes("value"));
+    p.addColumn(cf.getBytes(), cq.getBytes(), "value".getBytes());
     ht.put(p);
 
     TEST_UTIL.flush();
@@ -248,7 +248,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
             Put p = new Put(rk);
             p.setDurability(Durability.SKIP_WAL);
-            p.addColumn(Bytes.toBytes(cf), cq, Bytes.toBytes(c));
+            p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
             ht.put(p);
           }
         }
@@ -333,9 +333,9 @@ public class TestFuzzyRowFilterEndToEnd {
 
     String cf = "f";
     Scan scan = new Scan();
-    scan.addFamily(Bytes.toBytes(cf));
+    scan.addFamily(cf.getBytes());
     scan.setFilter(filter);
-    List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(TableName.valueOf(table));
+    List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table.getBytes());
     HRegion first = regions.get(0);
     first.getScanner(scan);
     RegionScanner scanner = first.getScanner(scan);
@@ -385,7 +385,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
           Put p = new Put(rk);
           p.setDurability(Durability.SKIP_WAL);
-          p.addColumn(Bytes.toBytes(cf), cq, Bytes.toBytes(c));
+          p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
           ht.put(p);
           LOG.info("Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: "
               + Bytes.toStringBinary(cq));
@@ -435,7 +435,7 @@ public class TestFuzzyRowFilterEndToEnd {
       throws IOException {
     String cf = "f";
     Scan scan = new Scan();
-    scan.addFamily(Bytes.toBytes(cf));
+    scan.addFamily(cf.getBytes());
     FilterList filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2);
     scan.setFilter(filterList);
 

@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -250,7 +249,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     @Override
     public byte[] insideBarrier() throws ForeignException {
       execute();
-      return Bytes.toBytes(SimpleMasterProcedureManager.SIMPLE_DATA);
+      return SimpleMasterProcedureManager.SIMPLE_DATA.getBytes();
     }
 
     /**

@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.http;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -29,11 +27,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class HtmlQuoting {
-  private static final byte[] ampBytes = Bytes.toBytes("&amp;");
-  private static final byte[] aposBytes = Bytes.toBytes("&apos;");
-  private static final byte[] gtBytes = Bytes.toBytes("&gt;");
-  private static final byte[] ltBytes = Bytes.toBytes("&lt;");
-  private static final byte[] quotBytes = Bytes.toBytes("&quot;");
+  private static final byte[] ampBytes = "&amp;".getBytes();
+  private static final byte[] aposBytes = "&apos;".getBytes();
+  private static final byte[] gtBytes = "&gt;".getBytes();
+  private static final byte[] ltBytes = "&lt;".getBytes();
+  private static final byte[] quotBytes = "&quot;".getBytes();
 
   /**
    * Does the given string need to be quoted?
@@ -71,7 +69,7 @@ public final class HtmlQuoting {
     if (str == null) {
       return false;
     }
-    byte[] bytes = Bytes.toBytes(str);
+    byte[] bytes = str.getBytes();
     return needsQuoting(bytes, 0 , bytes.length);
   }
 
@@ -106,7 +104,7 @@ public final class HtmlQuoting {
     if (item == null) {
       return null;
     }
-    byte[] bytes = Bytes.toBytes(item);
+    byte[] bytes = item.getBytes();
     if (needsQuoting(bytes, 0, bytes.length)) {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       try {
