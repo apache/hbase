@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -75,32 +75,6 @@ public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
     // Assign the region (without problems)
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     waitOnFuture(submitProcedure(createAssignProcedure(hri)));
-
-    // TODO: Currently unassign just keeps trying until it sees a server crash.
-    // There is no count on unassign.
-    /*
-     * // Test Unassign operation failure rsDispatcher.setMockRsExecutor(executor);
-     * waitOnFuture(submitProcedure(createUnassignProcedure(hri)));
-     * assertEquals(assignSubmittedCount + 2, assignProcMetrics.getSubmittedCounter().getCount());
-     * assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
-     * assertEquals(unassignSubmittedCount + 1,
-     * unassignProcMetrics.getSubmittedCounter().getCount()); // TODO: We supposed to have 1 failed
-     * assign, 1 successful assign and a failed unassign // operation. But ProcV2 framework marks
-     * aborted unassign operation as success. Fix it! assertEquals(unassignFailedCount,
-     * unassignProcMetrics.getFailedCounter().getCount());
-     */
-  }
-
-  @Test
-  public void testIOExceptionOnAssignment() throws Exception {
-    // collect AM metrics before test
-    collectAssignmentManagerMetrics();
-
-    testFailedOpen(TableName.valueOf("testExceptionOnAssignment"),
-      new FaultyRsExecutor(new IOException("test fault")));
-
-    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
-    assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
   }
 
   @Test
@@ -130,5 +104,17 @@ public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
       LOG.info("expected exception from assign operation: " + e.getMessage(), e);
       assertEquals(true, am.getRegionStates().getRegionState(hri).isFailedOpen());
     }
+  }
+
+  @Test
+  public void testCallQueueTooBigExceptionOnAssignment() throws Exception {
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    testFailedOpen(TableName.valueOf("testCallQueueTooBigExceptionOnAssignment"),
+      new FaultyRsExecutor(new CallQueueTooBigException("test do not retry fault")));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount + 1, assignProcMetrics.getFailedCounter().getCount());
   }
 }
