@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 
@@ -37,6 +38,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
@@ -356,16 +359,13 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected class SocketTimeoutRsExecutor extends GoodRsExecutor {
-    private final int maxSocketTimeoutRetries;
-    private final int maxServerRetries;
+    private final int timeoutTimes;
 
     private ServerName lastServer;
-    private int sockTimeoutRetries;
-    private int serverRetries;
+    private int retries;
 
-    public SocketTimeoutRsExecutor(int maxSocketTimeoutRetries, int maxServerRetries) {
-      this.maxServerRetries = maxServerRetries;
-      this.maxSocketTimeoutRetries = maxSocketTimeoutRetries;
+    public SocketTimeoutRsExecutor(int timeoutTimes) {
+      this.timeoutTimes = timeoutTimes;
     }
 
     @Override
@@ -373,21 +373,76 @@ public abstract class TestAssignmentManagerBase {
         throws IOException {
       // SocketTimeoutException should be a temporary problem
       // unless the server will be declared dead.
-      if (sockTimeoutRetries++ < maxSocketTimeoutRetries) {
-        if (sockTimeoutRetries == 1) {
-          assertNotEquals(lastServer, server);
-        }
+      retries++;
+      if (retries == 1) {
         lastServer = server;
-        LOG.debug("Socket timeout for server=" + server + " retries=" + sockTimeoutRetries);
-        throw new SocketTimeoutException("simulate socket timeout");
-      } else if (serverRetries++ < maxServerRetries) {
-        LOG.info("Mark server=" + server + " as dead. serverRetries=" + serverRetries);
-        master.getServerManager().moveFromOnlineToDeadServers(server);
-        sockTimeoutRetries = 0;
+      }
+      if (retries <= timeoutTimes) {
+        LOG.debug("Socket timeout for server=" + server + " retries=" + retries);
+        // should not change the server if the server is not dead yet.
+        assertEquals(lastServer, server);
+        if (retries == timeoutTimes) {
+          LOG.info("Mark server=" + server + " as dead. retries=" + retries);
+          master.getServerManager().moveFromOnlineToDeadServers(server);
+        }
         throw new SocketTimeoutException("simulate socket timeout");
       } else {
+        // should select another server
+        assertNotEquals(lastServer, server);
         return super.sendRequest(server, req);
       }
+    }
+  }
+
+  protected class CallQueueTooBigOnceRsExecutor extends GoodRsExecutor {
+
+    private boolean invoked = false;
+
+    private ServerName lastServer;
+
+    @Override
+    public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
+        throws IOException {
+      if (!invoked) {
+        lastServer = server;
+        invoked = true;
+        throw new CallQueueTooBigException("simulate queue full");
+      }
+      // better select another server since the server is over loaded, but anyway, it is fine to
+      // still select the same server since it is not dead yet...
+      if (lastServer.equals(server)) {
+        LOG.warn("We still select the same server, which is not good.");
+      }
+      return super.sendRequest(server, req);
+    }
+  }
+
+  protected class TimeoutThenCallQueueTooBigRsExecutor extends GoodRsExecutor {
+
+    private final int queueFullTimes;
+
+    private int retries;
+
+    private ServerName lastServer;
+
+    public TimeoutThenCallQueueTooBigRsExecutor(int queueFullTimes) {
+      this.queueFullTimes = queueFullTimes;
+    }
+
+    @Override
+    public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
+        throws IOException {
+      retries++;
+      if (retries == 1) {
+        lastServer = server;
+        throw new CallTimeoutException("simulate call timeout");
+      }
+      // should always retry on the same server
+      assertEquals(lastServer, server);
+      if (retries < queueFullTimes) {
+        throw new CallQueueTooBigException("simulate queue full");
+      }
+      return super.sendRequest(server, req);
     }
   }
 
