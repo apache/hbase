@@ -27,7 +27,6 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -920,24 +919,8 @@ public class HTable implements Table {
   }
 
   // validate for well-formedness
-  public void validatePut(final Put put) throws IllegalArgumentException {
-    validatePut(put, connConfiguration.getMaxKeyValueSize());
-  }
-
-  // validate for well-formedness
-  public static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
-    if (put.isEmpty()) {
-      throw new IllegalArgumentException("No columns to insert");
-    }
-    if (maxKeyValueSize > 0) {
-      for (List<Cell> list : put.getFamilyCellMap().values()) {
-        for (Cell cell : list) {
-          if (cell.getSerializedSize() > maxKeyValueSize) {
-            throw new IllegalArgumentException("KeyValue size too large");
-          }
-        }
-      }
-    }
+  private void validatePut(final Put put) throws IllegalArgumentException {
+    ConnectionUtils.validatePut(put, connConfiguration.getMaxKeyValueSize());
   }
 
   /**
@@ -1261,6 +1244,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
+      validatePut(put);
       preCheck();
       return doCheckAndPut(row, family, qualifier, op.name(), value, timeRange, put);
     }

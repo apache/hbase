@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.validatePut;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
@@ -49,6 +50,8 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private final long periodicFlushTimeoutNs;
 
+  private final int maxKeyValueSize;
+
   private List<Mutation> mutations = new ArrayList<>();
 
   private List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -61,11 +64,12 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   Timeout periodicFlushTask;
 
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-      long writeBufferSize, long periodicFlushTimeoutNs) {
+      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
     this.periodicalFlushTimer = periodicalFlushTimer;
     this.table = table;
     this.writeBufferSize = writeBufferSize;
     this.periodicFlushTimeoutNs = periodicFlushTimeoutNs;
+    this.maxKeyValueSize = maxKeyValueSize;
   }
 
   @Override
@@ -112,7 +116,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     List<CompletableFuture<Void>> futures =
       Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
         .collect(Collectors.toList());
-    long heapSize = mutations.stream().mapToLong(m -> m.heapSize()).sum();
+    long heapSize = 0;
+    for (Mutation mutation : mutations) {
+      heapSize += mutation.heapSize();
+      if (mutation instanceof Put) {
+        validatePut((Put)mutation, maxKeyValueSize);
+      }
+    }
     synchronized (this) {
       if (closed) {
         IOException ioe = new IOException("Already closed");

@@ -572,4 +572,20 @@ public final class ConnectionUtils {
       });
     return future;
   }
+
+  // validate for well-formedness
+  static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
+    if (put.isEmpty()) {
+      throw new IllegalArgumentException("No columns to insert");
+    }
+    if (maxKeyValueSize > 0) {
+      for (List<Cell> list : put.getFamilyCellMap().values()) {
+        for (Cell cell : list) {
+          if (cell.getSerializedSize() > maxKeyValueSize) {
+            throw new IllegalArgumentException("KeyValue size too large");
+          }
+        }
+      }
+    }
+  }
 }

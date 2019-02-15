@@ -34,7 +34,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -195,7 +195,7 @@ public class HTableMultiplexer {
     }
 
     try {
-      HTable.validatePut(put, maxKeyValueSize);
+      ConnectionUtils.validatePut(put, maxKeyValueSize);
       // Allow mocking to get at the connection, but don't expose the connection to users.
       ClusterConnection conn = (ClusterConnection) getConnection();
       // AsyncProcess in the FlushWorker should take care of refreshing the location cache

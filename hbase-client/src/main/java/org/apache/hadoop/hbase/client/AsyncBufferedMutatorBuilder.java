@@ -98,6 +98,13 @@ public interface AsyncBufferedMutatorBuilder {
   AsyncBufferedMutatorBuilder setWriteBufferSize(long writeBufferSize);
 
   /**
+   * Override the maximum key-value size specified by the provided {@link AsyncConnection}'s
+   * {@link org.apache.hadoop.conf.Configuration} instance, via the configuration key
+   * {@code hbase.client.keyvalue.maxsize}.
+   */
+  AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize);
+
+  /**
    * Create the {@link AsyncBufferedMutator} instance.
    */
   AsyncBufferedMutator build();
