@@ -1,6 +1,25 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.11
+
+** Sub-task
+    * [HBASE-21374] - Backport HBASE-21342 to branch-1
+    * [HBASE-21711] - Remove references to git.apache.org/hbase.git
+    * [HBASE-21861] - Handle the missing file issues from the Linkchecker job
+
+** Bug
+    * [HBASE-21196] - HTableMultiplexer clears the meta cache after every put operation
+
+** Task
+    * [HBASE-21685] - Change repository urls to Gitbox
+    * [HBASE-21687] - Update Findbugs Maven Plugin to 3.0.4 to work with Maven 3.6.0+ [branches-1]
+    * [HBASE-21853] - update copyright notices to 2019
+    * [HBASE-21884] - Fix box/unbox findbugs warning in secure bulk load
+    * [HBASE-21898] - Release 1.2.11
+    * [HBASE-21901] - update branch-1.2 ref guide for 1.2.11 release
+
+
 Release Notes - HBase - Version 1.2.10 2019/01/17
 
 ** Bug
