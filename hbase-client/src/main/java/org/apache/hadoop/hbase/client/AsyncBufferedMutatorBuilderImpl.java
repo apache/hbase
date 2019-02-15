@@ -37,11 +37,14 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
 
   private long periodicFlushTimeoutNs;
 
+  private int maxKeyValueSize;
+
   public AsyncBufferedMutatorBuilderImpl(AsyncConnectionConfiguration connConf,
       AsyncTableBuilder<?> tableBuilder, HashedWheelTimer periodicalFlushTimer) {
     this.tableBuilder = tableBuilder;
     this.writeBufferSize = connConf.getWriteBufferSize();
     this.periodicFlushTimeoutNs = connConf.getWriteBufferPeriodicFlushTimeoutNs();
+    this.maxKeyValueSize = connConf.getMaxKeyValueSize();
     this.periodicalFlushTimer = periodicalFlushTimer;
   }
 
@@ -77,7 +80,7 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
 
   @Override
   public AsyncBufferedMutatorBuilder setWriteBufferSize(long writeBufferSize) {
-    Preconditions.checkArgument(writeBufferSize > 0, "writeBufferSize %d must be >= 0",
+    Preconditions.checkArgument(writeBufferSize > 0, "writeBufferSize %d must be > 0",
       writeBufferSize);
     this.writeBufferSize = writeBufferSize;
     return this;
@@ -90,8 +93,16 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
   }
 
   @Override
+  public AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize) {
+    Preconditions.checkArgument(maxKeyValueSize > 0, "maxKeyValueSize %d must be > 0",
+      maxKeyValueSize);
+    this.maxKeyValueSize = maxKeyValueSize;
+    return this;
+  }
+
+  @Override
   public AsyncBufferedMutator build() {
     return new AsyncBufferedMutatorImpl(periodicalFlushTimer, tableBuilder.build(), writeBufferSize,
-      periodicFlushTimeoutNs);
+      periodicFlushTimeoutNs, maxKeyValueSize);
   }
 }
