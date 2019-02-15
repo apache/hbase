@@ -16,7 +16,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>1.2.11-SNAPSHOT</version>
+    <version>1.2.11</version>
     <relativePath>../..</relativePath>
   </parent>
   <artifactId>hbase-shaded-check-invariants</artifactId>
