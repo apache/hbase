@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -102,7 +103,7 @@ public class FileLink {
    * and the alternative locations, when the file is moved.
    */
   private static class FileLinkInputStream extends InputStream
-      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead {
+      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead, CanUnbuffer {
     private FSDataInputStream in = null;
     private Path currentPath = null;
     private long pos = 0;
@@ -279,6 +280,14 @@ public class FileLink {
     @Override
     public boolean markSupported() {
       return false;
+    }
+
+    @Override
+    public void unbuffer() {
+      if (in == null) {
+        return;
+      }
+      in.unbuffer();
     }
 
     /**
