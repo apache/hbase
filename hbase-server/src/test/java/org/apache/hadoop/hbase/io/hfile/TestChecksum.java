@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -97,8 +98,8 @@ public class TestChecksum {
 
     FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
     meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
-        is, totalSize, (HFileSystem) fs, path, meta);
+    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
+        meta, ByteBuffAllocator.HEAP);
     HFileBlock b = hbr.readBlockData(0, -1, false, false);
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
   }
@@ -143,8 +144,8 @@ public class TestChecksum {
 
       FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
       meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
-            is, totalSize, (HFileSystem) fs, path, meta);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
+          meta, ByteBuffAllocator.HEAP);
       HFileBlock b = hbr.readBlockData(0, -1, false, false);
 
       // verify SingleByteBuff checksum.
@@ -339,8 +340,9 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(
-            is, nochecksum), totalSize, hfs, path, meta);
+        HFileBlock.FSReader hbr =
+            new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is, nochecksum), totalSize,
+                hfs, path, meta, ByteBuffAllocator.HEAP);
         HFileBlock b = hbr.readBlockData(0, -1, pread, false);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
@@ -382,7 +384,7 @@ public class TestChecksum {
 
     public CorruptedFSReaderImpl(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
         Path path, HFileContext meta) throws IOException {
-      super(istream, fileSize, (HFileSystem) fs, path, meta);
+      super(istream, fileSize, (HFileSystem) fs, path, meta, ByteBuffAllocator.HEAP);
     }
 
     @Override

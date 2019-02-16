@@ -24,6 +24,7 @@ import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configurable;
@@ -138,6 +139,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private IdLock offsetLock = new IdLock();
 
   /**
+   * The iterator will track all blocks in load-on-open section, since we use the
+   * {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} to manage the ByteBuffers in block now, so
+   * we must ensure that deallocate all ByteBuffers in the end.
+   */
+  private final HFileBlock.BlockIterator blockIter;
+
+  /**
    * Blocks read from the load-on-open section, excluding data root index, meta
    * index, and file info.
    */
@@ -199,7 +207,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     this.primaryReplicaReader = primaryReplicaReader;
     checkFileVersion();
     this.hfileContext = createHFileContext(fsdis, fileSize, hfs, path, trailer);
-    this.fsBlockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, hfs, path, hfileContext);
+    this.fsBlockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, hfs, path, hfileContext,
+        cacheConf.getByteBuffAllocator());
 
     // Comparator class name is stored in the trailer in version 2.
     comparator = trailer.createComparator();
@@ -207,11 +216,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         trailer.getNumDataIndexLevels(), this);
     metaBlockIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
 
-    // Parse load-on-open data.
-
-    HFileBlock.BlockIterator blockIter = fsBlockReader.blockRange(
-        trailer.getLoadOnOpenDataOffset(),
-        fileSize - trailer.getTrailerSize());
+    // Initialize an block iterator, and parse load-on-open blocks in the following.
+    blockIter = fsBlockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
+      fileSize - trailer.getTrailerSize());
 
     // Data index. We also read statistics about the block index written after
     // the root level.
@@ -372,12 +379,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void returnBlock(HFileBlock block) {
     if (block != null) {
-      this.cacheConf.getBlockCache().ifPresent(blockCache -> {
-        BlockCacheKey cacheKey =
-            new BlockCacheKey(this.getFileContext().getHFileName(), block.getOffset(),
-                this.isPrimaryReplicaReader(), block.getBlockType());
-        blockCache.returnBlock(cacheKey, block);
-      });
+      if (this.cacheConf.getBlockCache().isPresent()) {
+        BlockCacheKey cacheKey = new BlockCacheKey(this.getFileContext().getHFileName(),
+            block.getOffset(), this.isPrimaryReplicaReader(), block.getBlockType());
+        cacheConf.getBlockCache().get().returnBlock(cacheKey, block);
+      } else {
+        // Release the block here, it means the RPC path didn't ref to this block any more.
+        block.release();
+      }
     }
   }
 
@@ -543,7 +552,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       this.curBlock = null;
     }
 
-    private void returnBlockToCache(HFileBlock block) {
+    private void returnBlock(HFileBlock block) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Returning the block : " + block);
       }
@@ -552,11 +561,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     private void returnBlocks(boolean returnAll) {
       for (int i = 0; i < this.prevBlocks.size(); i++) {
-        returnBlockToCache(this.prevBlocks.get(i));
+        returnBlock(this.prevBlocks.get(i));
       }
       this.prevBlocks.clear();
       if (returnAll && this.curBlock != null) {
-        returnBlockToCache(this.curBlock);
+        returnBlock(this.curBlock);
         this.curBlock = null;
       }
     }
@@ -1131,10 +1140,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return true;
     }
 
-    protected void readAndUpdateNewBlock(long firstDataBlockOffset) throws IOException,
-        CorruptHFileException {
+    protected void readAndUpdateNewBlock(long firstDataBlockOffset) throws IOException {
       HFileBlock newBlock = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
+        isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (newBlock.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + newBlock.getOffset());
       }
@@ -1386,12 +1394,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // Per meta key from any given file, synchronize reads for said block. This
     // is OK to do for meta blocks because the meta block index is always
     // single-level.
-    synchronized (metaBlockIndexReader
-        .getRootBlockKey(block)) {
+    synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
-        this.isPrimaryReplicaReader(), BlockType.META);
+      BlockCacheKey cacheKey =
+          new BlockCacheKey(name, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
 
       cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
       HFileBlock cachedBlock =
@@ -1404,15 +1411,19 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
       // Cache Miss, please load.
 
-      HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false).
-          unpack(hfileContext, fsBlockReader);
+      HFileBlock compressedBlock =
+          fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false);
+      HFileBlock uncompressedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
+      if (compressedBlock != uncompressedBlock) {
+        compressedBlock.release();
+      }
 
       // Cache the block
       if (cacheBlock) {
-        cacheConf.getBlockCache()
-            .ifPresent(cache -> cache.cacheBlock(cacheKey, metaBlock, cacheConf.isInMemory()));
+        cacheConf.getBlockCache().ifPresent(
+          cache -> cache.cacheBlock(cacheKey, uncompressedBlock, cacheConf.isInMemory()));
       }
-      return metaBlock;
+      return uncompressedBlock;
     }
   }
 
@@ -1492,14 +1503,18 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
 
         // Cache the block if necessary
+        AtomicBoolean cachedRaw = new AtomicBoolean(false);
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
-            cache.cacheBlock(cacheKey,
-                cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
-                cacheConf.isInMemory());
+            cachedRaw.set(cacheConf.shouldCacheCompressed(category));
+            cache.cacheBlock(cacheKey, cachedRaw.get() ? hfileBlock : unpacked,
+              cacheConf.isInMemory());
           }
         });
-
+        if (unpacked != hfileBlock && !cachedRaw.get()) {
+          // End of life here if hfileBlock is an independent block.
+          hfileBlock.release();
+        }
         if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
           HFile.DATABLOCK_READ_COUNT.increment();
         }
@@ -1572,6 +1587,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void close(boolean evictOnClose) throws IOException {
     PrefetchExecutor.cancel(path);
+    // Deallocate blocks in load-on-open section
+    blockIter.freeBlocks();
+    // Deallocate data blocks
     cacheConf.getBlockCache().ifPresent(cache -> {
       if (evictOnClose) {
         int numEvicted = cache.evictBlocksByHfileName(name);
