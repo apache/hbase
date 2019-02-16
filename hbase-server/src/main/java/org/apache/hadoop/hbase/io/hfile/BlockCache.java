@@ -135,14 +135,25 @@ public interface BlockCache extends Iterable<CachedBlock> {
   BlockCache [] getBlockCaches();
 
   /**
-   * Called when the scanner using the block decides to return the block once its usage
-   * is over.
-   * This API should be called after the block is used, failing to do so may have adverse effects
-   * by preventing the blocks from being evicted because of which it will prevent new hot blocks
-   * from getting added to the block cache.  The implementation of the BlockCache will decide
-   * on what to be done with the block based on the memory type of the block's {@link MemoryType}.
+   * Called when the scanner using the block decides to decrease refCnt of block and return the
+   * block once its usage is over. This API should be called after the block is used, failing to do
+   * so may have adverse effects by preventing the blocks from being evicted because of which it
+   * will prevent new hot blocks from getting added to the block cache. The implementation of the
+   * BlockCache will decide on what to be done with the block based on the memory type of the
+   * block's {@link MemoryType}. <br>
+   * <br>
+   * Note that if two handlers read from backingMap in off-heap BucketCache at the same time, BC
+   * will return two ByteBuff, which reference to the same memory area in buckets, but wrapped by
+   * two different ByteBuff, and each of them has its own independent refCnt(=1). so here, if
+   * returnBlock with different blocks in two handlers, it has no problem. but if both the two
+   * handlers returnBlock with the same block, then the refCnt exception will happen here. <br>
+   * TODO let's unify the ByteBuff's refCnt and BucketEntry's refCnt in HBASE-21957, after that
+   * we'll just call the Cacheable#release instead of calling release in some path and calling
+   * returnBlock in other paths in current version.
    * @param cacheKey the cache key of the block
    * @param block the hfileblock to be returned
    */
-  default void returnBlock(BlockCacheKey cacheKey, Cacheable block){}
+  default void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
+    block.release();
+  }
 }

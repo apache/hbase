@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MAX_BUFFER_COUNT_KEY;
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -27,7 +29,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +46,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,6 +54,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -58,6 +64,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -99,24 +106,45 @@ public class TestHFile  {
 
   @Test
   public void testReaderWithoutBlockCache() throws Exception {
-     Path path = writeStoreFile();
-     try{
-       readStoreFile(path);
-     } catch (Exception e) {
-       // fail test
-       assertTrue(false);
-     }
+    int bufCount = 32;
+    Configuration that = HBaseConfiguration.create(conf);
+    that.setInt(MAX_BUFFER_COUNT_KEY, bufCount);
+    // AllByteBuffers will be allocated from the buffers.
+    that.setInt(MIN_ALLOCATE_SIZE_KEY, 0);
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(that, true);
+    List<ByteBuff> buffs = new ArrayList<>();
+    // Fill the allocator with bufCount ByteBuffer
+    for (int i = 0; i < bufCount; i++) {
+      buffs.add(alloc.allocateOneBuffer());
+    }
+    Assert.assertEquals(alloc.getQueueSize(), 0);
+    for (ByteBuff buf : buffs) {
+      buf.release();
+    }
+    Assert.assertEquals(alloc.getQueueSize(), bufCount);
+    // start write to store file.
+    Path path = writeStoreFile();
+    try {
+      readStoreFile(path, that, alloc);
+    } catch (Exception e) {
+      // fail test
+      assertTrue(false);
+    }
+    Assert.assertEquals(bufCount, alloc.getQueueSize());
   }
 
-
-  private void readStoreFile(Path storeFilePath) throws Exception {
+  private void readStoreFile(Path storeFilePath, Configuration conf, ByteBuffAllocator alloc)
+      throws Exception {
     // Open the file reader with block cache disabled.
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, conf);
+    CacheConfig cache = new CacheConfig(conf, null, null, alloc);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cache, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
       offset += block.getOnDiskSizeWithHeader();
+      block.release(); // return back the ByteBuffer back to allocator.
     }
+    reader.close();
   }
 
   private Path writeStoreFile() throws IOException {

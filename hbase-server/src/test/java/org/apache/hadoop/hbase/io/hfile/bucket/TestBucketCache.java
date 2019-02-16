@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
@@ -50,8 +51,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -114,8 +116,7 @@ public class TestBucketCache {
   private static class MockedBucketCache extends BucketCache {
 
     public MockedBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-        int writerThreads, int writerQLen, String persistencePath) throws FileNotFoundException,
-        IOException {
+        int writerThreads, int writerQLen, String persistencePath) throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreads, writerQLen,
           persistencePath);
       super.wait_when_cache = true;
@@ -133,10 +134,9 @@ public class TestBucketCache {
   }
 
   @Before
-  public void setup() throws FileNotFoundException, IOException {
-    cache =
-        new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
-            constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+  public void setup() throws IOException {
+    cache = new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
   }
 
   @After
@@ -430,10 +430,11 @@ public class TestBucketCache {
     byte[] byteArr = new byte[length];
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
+    ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
     HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta, allocator);
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -447,22 +448,74 @@ public class TestBucketCache {
       block1Buffer);
 
     waitUntilFlushedToBucket(cache, key);
+    assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
 
     // Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
       block1Buffer);
+    assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
 
     // Clear and add blockWithoutNextBlockMetadata
     cache.evictBlock(key);
+    assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
+
     assertNull(cache.getBlock(key, false, false, false));
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
       block2Buffer);
 
     waitUntilFlushedToBucket(cache, key);
+    assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
 
     // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
       block1Buffer);
+
+    waitUntilFlushedToBucket(cache, key);
+    assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
+  }
+
+  @Test
+  public void testRAMCache() {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    HFileContext meta = new HFileContextBuilder().build();
+
+    RAMCache cache = new RAMCache();
+    BlockCacheKey key1 = new BlockCacheKey("file-1", 1);
+    BlockCacheKey key2 = new BlockCacheKey("file-2", 2);
+    HFileBlock blk1 = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
+        -1, 52, -1, meta, ByteBuffAllocator.HEAP);
+    HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
+        -1, -1, -1, meta, ByteBuffAllocator.HEAP);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false);
+
+    assertFalse(cache.containsKey(key1));
+    assertNull(cache.putIfAbsent(key1, re1));
+    assertEquals(2, ((HFileBlock) re1.getData()).getBufferReadOnly().refCnt());
+
+    assertNotNull(cache.putIfAbsent(key1, re2));
+    assertEquals(2, ((HFileBlock) re1.getData()).getBufferReadOnly().refCnt());
+    assertEquals(1, ((HFileBlock) re2.getData()).getBufferReadOnly().refCnt());
+
+    assertNull(cache.putIfAbsent(key2, re2));
+    assertEquals(2, ((HFileBlock) re1.getData()).getBufferReadOnly().refCnt());
+    assertEquals(2, ((HFileBlock) re2.getData()).getBufferReadOnly().refCnt());
+
+    cache.remove(key1);
+    assertEquals(1, ((HFileBlock) re1.getData()).getBufferReadOnly().refCnt());
+    assertEquals(2, ((HFileBlock) re2.getData()).getBufferReadOnly().refCnt());
+
+    cache.clear();
+    assertEquals(1, ((HFileBlock) re1.getData()).getBufferReadOnly().refCnt());
+    assertEquals(1, ((HFileBlock) re2.getData()).getBufferReadOnly().refCnt());
   }
 
   @Test
@@ -473,7 +526,7 @@ public class TestBucketCache {
     ByteBuffer buf = ByteBuffer.allocate(length);
     HFileContext meta = new HFileContextBuilder().build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-        offset, 52, -1, meta);
+        offset, 52, -1, meta, ByteBuffAllocator.HEAP);
 
     // initialize an mocked ioengine.
     IOEngine ioEngine = Mockito.mock(IOEngine.class);
