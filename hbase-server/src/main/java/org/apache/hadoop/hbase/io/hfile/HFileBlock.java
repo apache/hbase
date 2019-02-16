@@ -22,6 +22,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -201,6 +204,8 @@ public class HFileBlock implements Cacheable {
    */
   private int nextBlockOnDiskSize = UNSET;
 
+  private ByteBuffAllocator allocator;
+
   /**
    * On a checksum failure, do these many succeeding read requests using hdfs checksums before
    * auto-reenabling hbase checksum verification.
@@ -274,7 +279,10 @@ public class HFileBlock implements Cacheable {
       boolean usesChecksum = buf.get() == (byte) 1;
       long offset = buf.getLong();
       int nextBlockOnDiskSize = buf.getInt();
-      return new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null);
+      // TODO make the newly created HFileBlock use the off-heap allocator, Need change the
+      // deserializer or change the deserialize interface.
+      return new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null,
+          ByteBuffAllocator.HEAP);
     }
 
     @Override
@@ -309,7 +317,7 @@ public class HFileBlock implements Cacheable {
   private HFileBlock(HFileBlock that, boolean bufCopy) {
     init(that.blockType, that.onDiskSizeWithoutHeader, that.uncompressedSizeWithoutHeader,
       that.prevBlockOffset, that.offset, that.onDiskDataSizeWithHeader, that.nextBlockOnDiskSize,
-      that.fileContext);
+      that.fileContext, that.allocator);
     if (bufCopy) {
       this.buf = new SingleByteBuff(ByteBuffer.wrap(that.buf.toBytes(0, that.buf.limit())));
     } else {
@@ -342,9 +350,9 @@ public class HFileBlock implements Cacheable {
   public HFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
       int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
       long offset, final int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
-      HFileContext fileContext) {
+      HFileContext fileContext, ByteBuffAllocator allocator) {
     init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, offset,
-      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
+      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext, allocator);
     this.buf = new SingleByteBuff(b);
     if (fillHeader) {
       overwriteHeader();
@@ -360,7 +368,7 @@ public class HFileBlock implements Cacheable {
    * @param buf Has header, content, and trailing checksums if present.
    */
   HFileBlock(ByteBuff buf, boolean usesHBaseChecksum, MemoryType memType, final long offset,
-      final int nextBlockOnDiskSize, HFileContext fileContext)
+      final int nextBlockOnDiskSize, HFileContext fileContext, ByteBuffAllocator allocator)
       throws IOException {
     buf.rewind();
     final BlockType blockType = BlockType.read(buf);
@@ -390,7 +398,7 @@ public class HFileBlock implements Cacheable {
     fileContext = fileContextBuilder.build();
     assert usesHBaseChecksum == fileContext.isUseHBaseChecksum();
     init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, offset,
-      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
+      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext, allocator);
     this.memType = memType;
     this.offset = offset;
     this.buf = buf;
@@ -402,7 +410,8 @@ public class HFileBlock implements Cacheable {
    */
   private void init(BlockType blockType, int onDiskSizeWithoutHeader,
       int uncompressedSizeWithoutHeader, long prevBlockOffset, long offset,
-      int onDiskDataSizeWithHeader, final int nextBlockOnDiskSize, HFileContext fileContext) {
+      int onDiskDataSizeWithHeader, final int nextBlockOnDiskSize, HFileContext fileContext,
+      ByteBuffAllocator allocator) {
     this.blockType = blockType;
     this.onDiskSizeWithoutHeader = onDiskSizeWithoutHeader;
     this.uncompressedSizeWithoutHeader = uncompressedSizeWithoutHeader;
@@ -411,6 +420,7 @@ public class HFileBlock implements Cacheable {
     this.onDiskDataSizeWithHeader = onDiskDataSizeWithHeader;
     this.nextBlockOnDiskSize = nextBlockOnDiskSize;
     this.fileContext = fileContext;
+    this.allocator = allocator;
   }
 
   /**
@@ -436,6 +446,26 @@ public class HFileBlock implements Cacheable {
   @Override
   public BlockType getBlockType() {
     return blockType;
+  }
+
+  @Override
+  public int refCnt() {
+    return buf.refCnt();
+  }
+
+  @Override
+  public HFileBlock retain() {
+    buf.retain();
+    return this;
+  }
+
+  /**
+   * Call {@link ByteBuff#release()} to decrease the reference count, if no other reference, it will
+   * return back the {@link ByteBuffer} to {@link org.apache.hadoop.hbase.io.ByteBuffAllocator}
+   */
+  @Override
+  public boolean release() {
+    return buf.release();
   }
 
   /** @return get data block encoding id that was used to encode this block */
@@ -661,7 +691,7 @@ public class HFileBlock implements Cacheable {
     int headerSize = headerSize();
     int capacityNeeded = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
 
-    ByteBuff newBuf = new SingleByteBuff(ByteBuffer.allocate(capacityNeeded));
+    ByteBuff newBuf = allocator.allocate(capacityNeeded);
 
     // Copy header bytes into newBuf.
     // newBuf is HBB so no issue in calling array()
@@ -681,7 +711,7 @@ public class HFileBlock implements Cacheable {
     final int cksumBytes = totalChecksumBytes();
     final int headerSize = headerSize();
     final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
-    final int bufCapacity = buf.capacity();
+    final int bufCapacity = buf.remaining();
     return bufCapacity == expectedCapacity || bufCapacity == expectedCapacity + headerSize;
   }
 
@@ -1218,7 +1248,8 @@ public class HFileBlock implements Cacheable {
           cacheConf.shouldCacheCompressed(blockType.getCategory()) ? cloneOnDiskBufferWithHeader()
               : cloneUncompressedBufferWithHeader(),
           FILL_HEADER, startOffset, UNSET,
-          onDiskBlockBytesWithHeader.size() + onDiskChecksum.length, newContext);
+          onDiskBlockBytesWithHeader.size() + onDiskChecksum.length, newContext,
+          cacheConf.getByteBuffAllocator());
     }
   }
 
@@ -1236,7 +1267,10 @@ public class HFileBlock implements Cacheable {
     void writeToBlock(DataOutput out) throws IOException;
   }
 
-  /** Iterator for {@link HFileBlock}s. */
+  /**
+   * Iterator for reading {@link HFileBlock}s in load-on-open-section, such as root data index
+   * block, meta index block, file info block etc.
+   */
   interface BlockIterator {
     /**
      * Get the next block, or null if there are no more blocks to iterate.
@@ -1244,10 +1278,20 @@ public class HFileBlock implements Cacheable {
     HFileBlock nextBlock() throws IOException;
 
     /**
-     * Similar to {@link #nextBlock()} but checks block type, throws an
-     * exception if incorrect, and returns the HFile block
+     * Similar to {@link #nextBlock()} but checks block type, throws an exception if incorrect, and
+     * returns the HFile block
      */
     HFileBlock nextBlockWithBlockType(BlockType blockType) throws IOException;
+
+    /**
+     * Now we use the {@link ByteBuffAllocator} to manage the nio ByteBuffers for HFileBlocks, so we
+     * must deallocate all of the ByteBuffers in the end life. the BlockIterator's life cycle is
+     * starting from opening an HFileReader and stopped when the HFileReader#close, so we will keep
+     * track all the read blocks until we call {@link BlockIterator#freeBlocks()} when closing the
+     * HFileReader. Sum bytes of those blocks in load-on-open section should be quite small, so
+     * tracking them should be OK.
+     */
+    void freeBlocks();
   }
 
   /** An HFile block reader with iteration ability. */
@@ -1350,10 +1394,12 @@ public class HFileBlock implements Cacheable {
     // Cache the fileName
     private String pathName;
 
+    private final ByteBuffAllocator allocator;
+
     private final Lock streamLock = new ReentrantLock();
 
     FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
-        HFileContext fileContext) throws IOException {
+        HFileContext fileContext, ByteBuffAllocator allocator) throws IOException {
       this.fileSize = fileSize;
       this.hfs = hfs;
       if (path != null) {
@@ -1361,6 +1407,7 @@ public class HFileBlock implements Cacheable {
       }
       this.fileContext = fileContext;
       this.hdrSize = headerSize(fileContext.isUseHBaseChecksum());
+      this.allocator = allocator;
 
       this.streamWrapper = stream;
       // Older versions of HBase didn't support checksum.
@@ -1373,15 +1420,18 @@ public class HFileBlock implements Cacheable {
      * A constructor that reads files with the latest minor version. This is used by unit tests
      * only.
      */
-    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext)
-        throws IOException {
-      this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext);
+    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext,
+        ByteBuffAllocator allocator) throws IOException {
+      this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext, allocator);
     }
 
     @Override
     public BlockIterator blockRange(final long startOffset, final long endOffset) {
       final FSReader owner = this; // handle for inner class
       return new BlockIterator() {
+        private volatile boolean freed = false;
+        // Tracking all read blocks until we call freeBlocks.
+        private List<HFileBlock> blockTracker = new ArrayList<>();
         private long offset = startOffset;
         // Cache length of next block. Current block has the length of next block in it.
         private long length = -1;
@@ -1394,18 +1444,32 @@ public class HFileBlock implements Cacheable {
           HFileBlock b = readBlockData(offset, length, false, false);
           offset += b.getOnDiskSizeWithHeader();
           length = b.getNextBlockOnDiskSize();
-          return b.unpack(fileContext, owner);
+          HFileBlock uncompressed = b.unpack(fileContext, owner);
+          if (uncompressed != b) {
+            b.release(); // Need to release the compressed Block now.
+          }
+          blockTracker.add(uncompressed);
+          return uncompressed;
         }
 
         @Override
-        public HFileBlock nextBlockWithBlockType(BlockType blockType)
-            throws IOException {
+        public HFileBlock nextBlockWithBlockType(BlockType blockType) throws IOException {
           HFileBlock blk = nextBlock();
           if (blk.getBlockType() != blockType) {
-            throw new IOException("Expected block of type " + blockType
-                + " but found " + blk.getBlockType());
+            throw new IOException(
+                "Expected block of type " + blockType + " but found " + blk.getBlockType());
           }
           return blk;
+        }
+
+        @Override
+        public void freeBlocks() {
+          if (freed) {
+            return;
+          }
+          blockTracker.forEach(HFileBlock::release);
+          blockTracker = null;
+          freed = true;
         }
       };
     }
@@ -1661,8 +1725,7 @@ public class HFileBlock implements Cacheable {
       // says where to start reading. If we have the header cached, then we don't need to read
       // it again and we can likely read from last place we left off w/o need to backup and reread
       // the header we read last time through here.
-      ByteBuff onDiskBlock =
-          new SingleByteBuff(ByteBuffer.allocate(onDiskSizeWithHeader + hdrSize));
+      ByteBuff onDiskBlock = allocator.allocate(onDiskSizeWithHeader + hdrSize);
       boolean initHFileBlockSuccess = false;
       try {
         if (headerBuf != null) {
@@ -1679,7 +1742,7 @@ public class HFileBlock implements Cacheable {
         // Do a few checks before we go instantiate HFileBlock.
         assert onDiskSizeWithHeader > this.hdrSize;
         verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset, checksumSupport);
-        ByteBuff curBlock = onDiskBlock.duplicate().limit(onDiskSizeWithHeader);
+        ByteBuff curBlock = onDiskBlock.duplicate().position(0).limit(onDiskSizeWithHeader);
         // Verify checksum of the data before using it for building HFileBlock.
         if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
           return null;
@@ -1692,7 +1755,7 @@ public class HFileBlock implements Cacheable {
         // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
         // contains the header of next block, so no need to set next block's header in it.
         HFileBlock hFileBlock = new HFileBlock(curBlock, checksumSupport, MemoryType.EXCLUSIVE,
-            offset, nextBlockOnDiskSize, fileContext);
+            offset, nextBlockOnDiskSize, fileContext, allocator);
         // Run check on uncompressed sizings.
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();

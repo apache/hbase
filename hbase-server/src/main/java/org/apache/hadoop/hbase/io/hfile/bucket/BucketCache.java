@@ -135,7 +135,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   // Store the block in this map before writing it to cache
   @VisibleForTesting
-  transient final ConcurrentMap<BlockCacheKey, RAMQueueEntry> ramCache;
+  transient final RAMCache ramCache;
   // In this map, store the block's meta data like offset, length
   @VisibleForTesting
   transient ConcurrentMap<BlockCacheKey, BucketEntry> backingMap;
@@ -291,7 +291,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     assert writerQueues.size() == writerThreads.length;
-    this.ramCache = new ConcurrentHashMap<>();
+    this.ramCache = new RAMCache();
 
     this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
@@ -965,8 +965,8 @@ public class BucketCache implements BlockCache, HeapSize {
             continue;
           }
           BucketEntry bucketEntry =
-            re.writeToCache(ioEngine, bucketAllocator, deserialiserMap, realCacheSize);
-          // Successfully added.  Up index and add bucketEntry. Clear io exceptions.
+              re.writeToCache(ioEngine, bucketAllocator, deserialiserMap, realCacheSize);
+          // Successfully added. Up index and add bucketEntry. Clear io exceptions.
           bucketEntries[index] = bucketEntry;
           if (ioErrorStartTime > 0) {
             ioErrorStartTime = -1;
@@ -1520,6 +1520,7 @@ public class BucketCache implements BlockCache, HeapSize {
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
+          // Only used for testing.
           ByteBuffer bb = ByteBuffer.allocate(len);
           data.serialize(bb, true);
           ioEngine.write(bb, offset);
@@ -1645,6 +1646,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
+    block.release();
     if (block.getMemoryType() == MemoryType.SHARED) {
       BucketEntry bucketEntry = backingMap.get(cacheKey);
       if (bucketEntry != null) {
@@ -1687,5 +1689,54 @@ public class BucketCache implements BlockCache, HeapSize {
 
   float getMemoryFactor() {
     return memoryFactor;
+  }
+
+  /**
+   * Wrapped the delegate ConcurrentMap with maintaining its block's reference count.
+   */
+  static class RAMCache {
+    final ConcurrentMap<BlockCacheKey, RAMQueueEntry> delegate = new ConcurrentHashMap<>();
+
+    public boolean containsKey(BlockCacheKey key) {
+      return delegate.containsKey(key);
+    }
+
+    public RAMQueueEntry get(BlockCacheKey key) {
+      RAMQueueEntry re = delegate.get(key);
+      if (re != null) {
+        // It'll be referenced by RPC, so retain here.
+        re.getData().retain();
+      }
+      return re;
+    }
+
+    public RAMQueueEntry putIfAbsent(BlockCacheKey key, RAMQueueEntry entry) {
+      RAMQueueEntry previous = delegate.putIfAbsent(key, entry);
+      if (previous == null) {
+        // The RAMCache reference to this entry, so reference count should be increment.
+        entry.getData().retain();
+      }
+      return previous;
+    }
+
+    public RAMQueueEntry remove(BlockCacheKey key) {
+      RAMQueueEntry previous = delegate.remove(key);
+      if (previous != null) {
+        previous.getData().release();
+      }
+      return previous;
+    }
+
+    public boolean isEmpty() {
+      return delegate.isEmpty();
+    }
+
+    public void clear() {
+      Iterator<Map.Entry<BlockCacheKey, RAMQueueEntry>> it = delegate.entrySet().iterator();
+      while (it.hasNext()) {
+        it.next().getValue().getData().release();
+        it.remove();
+      }
+    }
   }
 }

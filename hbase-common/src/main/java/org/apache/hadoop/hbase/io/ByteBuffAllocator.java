@@ -62,6 +62,11 @@ public class ByteBuffAllocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(ByteBuffAllocator.class);
 
+  // The on-heap allocator is mostly used for testing, but also some non-test usage, such as
+  // scanning snapshot, we won't have an RpcServer to initialize the allocator, so just use the
+  // default heap allocator, it will just allocate ByteBuffers from heap but wrapped by an ByteBuff.
+  public static final ByteBuffAllocator HEAP = ByteBuffAllocator.createOnHeap();
+
   public static final String MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.allocator.max.buffer.count";
 
   public static final String BUFFER_SIZE_KEY = "hbase.ipc.server.allocator.buffer.size";
@@ -131,7 +136,7 @@ public class ByteBuffAllocator {
    * designed for testing purpose or disabled reservoir case.
    * @return allocator to allocate on-heap ByteBuffer.
    */
-  public static ByteBuffAllocator createOnHeap() {
+  private static ByteBuffAllocator createOnHeap() {
     return new ByteBuffAllocator(false, 0, DEFAULT_BUFFER_SIZE, Integer.MAX_VALUE);
   }
 
@@ -167,7 +172,11 @@ public class ByteBuffAllocator {
       }
     }
     // Allocated from heap, let the JVM free its memory.
-    return new SingleByteBuff(NONE, ByteBuffer.allocate(this.bufSize));
+    return allocateOnHeap(this.bufSize);
+  }
+
+  private SingleByteBuff allocateOnHeap(int size) {
+    return new SingleByteBuff(NONE, ByteBuffer.allocate(size));
   }
 
   /**
