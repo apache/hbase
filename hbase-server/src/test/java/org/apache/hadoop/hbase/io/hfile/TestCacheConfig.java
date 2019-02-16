@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -250,7 +251,7 @@ public class TestCacheConfig {
     HColumnDescriptor family = new HColumnDescriptor("testDisableCacheDataBlock");
     family.setBlockCacheEnabled(false);
 
-    cacheConfig = new CacheConfig(conf, family, null);
+    cacheConfig = new CacheConfig(conf, family, null, ByteBuffAllocator.HEAP);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());

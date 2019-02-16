@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -366,11 +367,10 @@ public class CacheTestUtils {
                           .withBytesPerCheckSum(0)
                           .withChecksumType(ChecksumType.NULL)
                           .build();
-      HFileBlock generated = new HFileBlock(BlockType.DATA,
-          onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-          prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize,
-          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta);
+      HFileBlock generated = new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader,
+          uncompressedSizeWithoutHeader, prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
+          blockSize, onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
+          ByteBuffAllocator.HEAP);
 
       String strKey;
       /* No conflicting keys */
@@ -401,8 +401,7 @@ public class CacheTestUtils {
   }
 
   public static void getBlockAndAssertEquals(BlockCache cache, BlockCacheKey key,
-                                             Cacheable blockToCache, ByteBuffer destBuffer,
-                                             ByteBuffer expectedBuffer) {
+      Cacheable blockToCache, ByteBuffer destBuffer, ByteBuffer expectedBuffer) {
     destBuffer.clear();
     cache.cacheBlock(key, blockToCache);
     Cacheable actualBlock = cache.getBlock(key, false, false, false);
