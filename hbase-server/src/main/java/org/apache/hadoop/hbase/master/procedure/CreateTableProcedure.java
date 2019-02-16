@@ -167,11 +167,14 @@ public class CreateTableProcedure
           DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, false);
           break;
         case CREATE_TABLE_PRE_OPERATION:
-          DeleteTableProcedure.deleteTableStates(env, getTableName());
-          // TODO-MAYBE: call the deleteTable coprocessor event?
-          final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-          if (cpHost != null) {
-            cpHost.postDeleteTable(getTableName());
+          if (hasException() /* avoid NPE */ &&
+              getException().getCause().getClass() != TableExistsException.class) {
+            DeleteTableProcedure.deleteTableStates(env, getTableName());
+            // TODO-MAYBE: call the deleteTable coprocessor event?
+            final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+            if (cpHost != null) {
+              cpHost.postDeleteTable(getTableName());
+            }
           }
           ProcedurePrepareLatch.releaseLatch(syncLatch, this);
           break;
