@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -42,11 +42,12 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
       justification = "Can't figure why this complaint is happening... see below")
   SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md,
       RequestHeader header, Message param, CellScanner cellScanner,
-      SimpleServerRpcConnection connection, long size,
-      final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
-      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerResponder responder) {
-    super(id, service, md, header, param, cellScanner, connection, size, remoteAddress,
-        receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
+      SimpleServerRpcConnection connection, long size, final InetAddress remoteAddress,
+      long receiveTime, int timeout, ByteBuffAllocator bbAllocator,
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup,
+      SimpleRpcServerResponder responder) {
+    super(id, service, md, header, param, cellScanner, connection, size, remoteAddress, receiveTime,
+        timeout, bbAllocator, cellBlockBuilder, reqCleanup);
     this.responder = responder;
   }
 
