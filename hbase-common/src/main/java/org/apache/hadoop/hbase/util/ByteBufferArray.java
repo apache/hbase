@@ -27,9 +27,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -311,10 +311,6 @@ public class ByteBufferArray {
       srcIndex += cnt;
     }
     assert srcIndex == len;
-    if (mbb.length > 1) {
-      return new MultiByteBuff(mbb);
-    } else {
-      return new SingleByteBuff(mbb[0]);
-    }
+    return ByteBuffAllocator.wrap(mbb);
   }
 }

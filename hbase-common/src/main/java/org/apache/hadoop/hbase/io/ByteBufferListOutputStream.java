@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -39,18 +41,17 @@ import org.slf4j.LoggerFactory;
 public class ByteBufferListOutputStream extends ByteBufferOutputStream {
   private static final Logger LOG = LoggerFactory.getLogger(ByteBufferListOutputStream.class);
 
-  private ByteBufferPool pool;
+  private ByteBuffAllocator allocator;
   // Keep track of the BBs where bytes written to. We will first try to get a BB from the pool. If
   // it is not available will make a new one our own and keep writing to that. We keep track of all
   // the BBs that we got from pool, separately so that on closeAndPutbackBuffers, we can make sure
   // to return back all of them to pool
-  protected List<ByteBuffer> allBufs = new ArrayList<>();
-  protected List<ByteBuffer> bufsFromPool = new ArrayList<>();
+  protected List<SingleByteBuff> allBufs = new ArrayList<>();
 
   private boolean lastBufFlipped = false;// Indicate whether the curBuf/lastBuf is flipped already
 
-  public ByteBufferListOutputStream(ByteBufferPool pool) {
-    this.pool = pool;
+  public ByteBufferListOutputStream(ByteBuffAllocator allocator) {
+    this.allocator = allocator;
     allocateNewBuffer();
   }
 
@@ -58,18 +59,10 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
     if (this.curBuf != null) {
       this.curBuf.flip();// On the current buf set limit = pos and pos = 0.
     }
-    // Get an initial BB to work with from the pool
-    this.curBuf = this.pool.getBuffer();
-    if (this.curBuf == null) {
-      // No free BB at this moment. Make a new one. The pool returns off heap BBs. Don't make off
-      // heap BB on demand. It is difficult to account for all such and so proper sizing of Max
-      // direct heap size. See HBASE-15525 also for more details.
-      // Make BB with same size of pool's buffer size.
-      this.curBuf = ByteBuffer.allocate(this.pool.getBufferSize());
-    } else {
-      this.bufsFromPool.add(this.curBuf);
-    }
-    this.allBufs.add(this.curBuf);
+    // Get an initial ByteBuffer from the allocator.
+    SingleByteBuff sbb = allocator.allocateOneBuffer();
+    this.curBuf = sbb.nioByteBuffers()[0];
+    this.allBufs.add(sbb);
   }
 
   @Override
@@ -118,11 +111,8 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
       LOG.debug(e.toString(), e);
     }
     // Return back all the BBs to pool
-    if (this.bufsFromPool != null) {
-      for (int i = 0; i < this.bufsFromPool.size(); i++) {
-        this.pool.putbackBuffer(this.bufsFromPool.get(i));
-      }
-      this.bufsFromPool = null;
+    for (ByteBuff buf : this.allBufs) {
+      buf.release();
     }
     this.allBufs = null;
     this.curBuf = null;
@@ -144,7 +134,11 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
       // All the other BBs are already flipped while moving to the new BB.
       curBuf.flip();
     }
-    return this.allBufs;
+    List<ByteBuffer> bbs = new ArrayList<>(this.allBufs.size());
+    for (SingleByteBuff bb : this.allBufs) {
+      bbs.add(bb.nioByteBuffers()[0]);
+    }
+    return bbs;
   }
 
   @Override
