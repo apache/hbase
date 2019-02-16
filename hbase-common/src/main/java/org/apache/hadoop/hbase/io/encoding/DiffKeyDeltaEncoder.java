@@ -477,7 +477,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
           decodeTags();
         }
         if (includesMvcc()) {
-          current.memstoreTS = ByteBuff.readVLong(currentBuffer);
+          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;
         }

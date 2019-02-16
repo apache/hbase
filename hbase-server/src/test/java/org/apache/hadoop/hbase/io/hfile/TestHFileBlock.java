@@ -832,7 +832,7 @@ public class TestHFileBlock {
     if (ClassSize.is32BitJVM()) {
       assertEquals(64, HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE);
     } else {
-      assertEquals(72, HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE);
+      assertEquals(80, HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE);
     }
 
     for (int size : new int[] { 100, 256, 12345 }) {

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
@@ -71,9 +72,8 @@ public class TestServerLoadDurability {
 
   private static Configuration createConfigurationForSimpleRpcServer() {
     Configuration conf = HBaseConfiguration.create();
-    conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        SimpleRpcServer.class.getName());
-    conf.setInt(ByteBufferPool.BUFFER_SIZE_KEY, 20);
+    conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, SimpleRpcServer.class.getName());
+    conf.setInt(BUFFER_SIZE_KEY, 20);
     return conf;
   }
 
