@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
+
 /**
  * Cacheable is an interface that allows for an object to be cached. If using an
  * on heap cache, just use heapsize. If using an off heap cache, Cacheable
@@ -34,7 +36,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
  *
  */
 @InterfaceAudience.Private
-public interface Cacheable extends HeapSize {
+public interface Cacheable extends HeapSize, ReferenceCounted {
   /**
    * Returns the length of the ByteBuffer required to serialized the object. If the
    * object cannot be serialized, it should return 0.
@@ -74,5 +76,46 @@ public interface Cacheable extends HeapSize {
    */
   enum MemoryType {
     SHARED, EXCLUSIVE
+  }
+
+  /******************************* ReferenceCounted Interfaces ***********************************/
+
+  /**
+   * Increase its reference count, and only when no reference we can free the object's memory.
+   */
+  default Cacheable retain() {
+    return this;
+  }
+
+  default Cacheable retain(int increment) {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Reference count of this Cacheable.
+   */
+  default int refCnt() {
+    return 0;
+  }
+
+  /**
+   * Decrease its reference count, and if no reference then free the memory of this object, its
+   * backend is usually a {@link org.apache.hadoop.hbase.nio.ByteBuff}, and we will put its NIO
+   * ByteBuffers back to {@link org.apache.hadoop.hbase.io.ByteBuffAllocator}
+   */
+  default boolean release() {
+    return false;
+  }
+
+  default boolean release(int increment) {
+    throw new UnsupportedOperationException();
+  }
+
+  default ReferenceCounted touch() {
+    throw new UnsupportedOperationException();
+  }
+
+  default ReferenceCounted touch(Object hint) {
+    throw new UnsupportedOperationException();
   }
 }
