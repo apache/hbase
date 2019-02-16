@@ -286,12 +286,12 @@ public class TestMultiByteBuff {
     multi.putInt(45);
     multi.position(1);
     multi.limit(multi.position() + (2 * Bytes.SIZEOF_LONG));
-    MultiByteBuff sliced = multi.slice();
+    ByteBuff sliced = multi.slice();
     assertEquals(0, sliced.position());
     assertEquals((2 * Bytes.SIZEOF_LONG), sliced.limit());
     assertEquals(l1, sliced.getLong());
     assertEquals(l2, sliced.getLong());
-    MultiByteBuff dup = multi.duplicate();
+    ByteBuff dup = multi.duplicate();
     assertEquals(1, dup.position());
     assertEquals(dup.position() + (2 * Bytes.SIZEOF_LONG), dup.limit());
     assertEquals(l1, dup.getLong());

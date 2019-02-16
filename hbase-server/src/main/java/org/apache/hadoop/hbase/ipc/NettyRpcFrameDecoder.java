@@ -127,7 +127,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     NettyServerCall reqTooBig =
       new NettyServerCall(header.getCallId(), connection.service, null, null, null, null,
         connection, 0, connection.addr, System.currentTimeMillis(), 0,
-        connection.rpcServer.reservoir, connection.rpcServer.cellBlockBuilder, null);
+        connection.rpcServer.bbAllocator, connection.rpcServer.cellBlockBuilder, null);
 
     connection.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
 

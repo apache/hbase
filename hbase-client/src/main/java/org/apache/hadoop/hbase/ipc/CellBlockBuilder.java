@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -208,7 +208,7 @@ class CellBlockBuilder {
    * @param codec to use for encoding
    * @param compressor to use for encoding
    * @param cellScanner to encode
-   * @param pool Pool of ByteBuffers to make use of.
+   * @param allocator to allocate the {@link ByteBuff}.
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
    *         passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has
    *         been flipped and is ready for reading. Use limit to find total size. If
@@ -217,15 +217,14 @@ class CellBlockBuilder {
    * @throws IOException if encoding the cells fail
    */
   public ByteBufferListOutputStream buildCellBlockStream(Codec codec, CompressionCodec compressor,
-      CellScanner cellScanner, ByteBufferPool pool) throws IOException {
+      CellScanner cellScanner, ByteBuffAllocator allocator) throws IOException {
     if (cellScanner == null) {
       return null;
     }
     if (codec == null) {
       throw new CellScannerButNoCodecException();
     }
-    assert pool != null;
-    ByteBufferListOutputStream bbos = new ByteBufferListOutputStream(pool);
+    ByteBufferListOutputStream bbos = new ByteBufferListOutputStream(allocator);
     encodeCellsTo(bbos, cellScanner, codec, compressor);
     if (bbos.size() == 0) {
       bbos.releaseResources();

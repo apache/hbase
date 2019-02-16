@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,16 +37,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -210,11 +205,7 @@ public abstract class RpcServer implements RpcServerInterface,
 
   protected UserProvider userProvider;
 
-  protected final ByteBufferPool reservoir;
-  // The requests and response will use buffers from ByteBufferPool, when the size of the
-  // request/response is at least this size.
-  // We make this to be 1/6th of the pool buffer size.
-  protected final int minSizeForReservoirUse;
+  protected final ByteBuffAllocator bbAllocator;
 
   protected volatile boolean allowFallbackToSimpleAuth;
 
@@ -225,7 +216,7 @@ public abstract class RpcServer implements RpcServerInterface,
   private RSRpcServices rsRpcServices;
 
   @FunctionalInterface
-  protected static interface CallCleanup {
+  protected interface CallCleanup {
     void run();
   }
 
@@ -266,32 +257,7 @@ public abstract class RpcServer implements RpcServerInterface,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
-    if (reservoirEnabled) {
-      int poolBufSize = conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY,
-          ByteBufferPool.DEFAULT_BUFFER_SIZE);
-      // The max number of buffers to be pooled in the ByteBufferPool. The default value been
-      // selected based on the #handlers configured. When it is read request, 2 MB is the max size
-      // at which we will send back one RPC request. Means max we need 2 MB for creating the
-      // response cell block. (Well it might be much lesser than this because in 2 MB size calc, we
-      // include the heap size overhead of each cells also.) Considering 2 MB, we will need
-      // (2 * 1024 * 1024) / poolBufSize buffers to make the response cell block. Pool buffer size
-      // is by default 64 KB.
-      // In case of read request, at the end of the handler process, we will make the response
-      // cellblock and add the Call to connection's response Q and a single Responder thread takes
-      // connections and responses from that one by one and do the socket write. So there is chances
-      // that by the time a handler originated response is actually done writing to socket and so
-      // released the BBs it used, the handler might have processed one more read req. On an avg 2x
-      // we consider and consider that also for the max buffers to pool
-      int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
-      int maxPoolSize = conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
-          conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-              HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
-      this.reservoir = new ByteBufferPool(poolBufSize, maxPoolSize);
-      this.minSizeForReservoirUse = getMinSizeForReservoirUse(this.reservoir);
-    } else {
-      reservoir = null;
-      this.minSizeForReservoirUse = Integer.MAX_VALUE;// reservoir itself not in place.
-    }
+    this.bbAllocator = ByteBuffAllocator.create(conf, reservoirEnabled);
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;
@@ -323,11 +289,6 @@ public abstract class RpcServer implements RpcServerInterface,
     }
 
     this.scheduler = scheduler;
-  }
-
-  @VisibleForTesting
-  static int getMinSizeForReservoirUse(ByteBufferPool pool) {
-    return pool.getBufferSize() / 6;
   }
 
   @Override
@@ -649,55 +610,6 @@ public abstract class RpcServer implements RpcServerInterface,
 
     int nBytes = initialRemaining - buf.remaining();
     return (nBytes > 0) ? nBytes : ret;
-  }
-
-  /**
-   * This is extracted to a static method for better unit testing. We try to get buffer(s) from pool
-   * as much as possible.
-   *
-   * @param pool The ByteBufferPool to use
-   * @param minSizeForPoolUse Only for buffer size above this, we will try to use pool. Any buffer
-   *           need of size below this, create on heap ByteBuffer.
-   * @param reqLen Bytes count in request
-   */
-  @VisibleForTesting
-  static Pair<ByteBuff, CallCleanup> allocateByteBuffToReadInto(ByteBufferPool pool,
-      int minSizeForPoolUse, int reqLen) {
-    ByteBuff resultBuf;
-    List<ByteBuffer> bbs = new ArrayList<>((reqLen / pool.getBufferSize()) + 1);
-    int remain = reqLen;
-    ByteBuffer buf = null;
-    while (remain >= minSizeForPoolUse && (buf = pool.getBuffer()) != null) {
-      bbs.add(buf);
-      remain -= pool.getBufferSize();
-    }
-    ByteBuffer[] bufsFromPool = null;
-    if (bbs.size() > 0) {
-      bufsFromPool = new ByteBuffer[bbs.size()];
-      bbs.toArray(bufsFromPool);
-    }
-    if (remain > 0) {
-      bbs.add(ByteBuffer.allocate(remain));
-    }
-    if (bbs.size() > 1) {
-      ByteBuffer[] items = new ByteBuffer[bbs.size()];
-      bbs.toArray(items);
-      resultBuf = new MultiByteBuff(items);
-    } else {
-      // We are backed by single BB
-      resultBuf = new SingleByteBuff(bbs.get(0));
-    }
-    resultBuf.limit(reqLen);
-    if (bufsFromPool != null) {
-      final ByteBuffer[] bufsFromPoolFinal = bufsFromPool;
-      return new Pair<>(resultBuf, () -> {
-        // Return back all the BBs to pool
-        for (int i = 0; i < bufsFromPoolFinal.length; i++) {
-          pool.putbackBuffer(bufsFromPoolFinal[i]);
-        }
-      });
-    }
-    return new Pair<>(resultBuf, null);
   }
 
   /**
