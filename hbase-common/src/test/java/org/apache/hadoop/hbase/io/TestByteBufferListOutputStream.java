@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -40,29 +41,30 @@ public class TestByteBufferListOutputStream {
 
   @Test
   public void testWrites() throws Exception {
-    ByteBufferPool pool = new ByteBufferPool(10, 3);
-    ByteBufferListOutputStream bbos = new ByteBufferListOutputStream(pool);
+    ByteBuffAllocator alloc = new ByteBuffAllocator(true, 3, 10, 10 / 6);
+    ByteBufferListOutputStream bbos = new ByteBufferListOutputStream(alloc);
     bbos.write(2);// Write a byte
     bbos.writeInt(100);// Write an int
     byte[] b = Bytes.toBytes("row123");// 6 bytes
     bbos.write(b);
+    assertEquals(2, bbos.allBufs.size());
     // Just use the 3rd BB from pool so that pabos, on request, wont get one
-    ByteBuffer bb1 = pool.getBuffer();
+    ByteBuff bb1 = alloc.allocateOneBuffer();
     ByteBuffer bb = ByteBuffer.wrap(Bytes.toBytes("row123_cf1_q1"));// 13 bytes
     bbos.write(bb, 0, bb.capacity());
-    pool.putbackBuffer(bb1);
+    bb1.release();
     bbos.writeInt(123);
     bbos.writeInt(124);
-    assertEquals(0, pool.getQueueSize());
+    assertEquals(0, alloc.getQueueSize());
     List<ByteBuffer> allBufs = bbos.getByteBuffers();
     assertEquals(4, allBufs.size());
-    assertEquals(3, bbos.bufsFromPool.size());
+    assertEquals(4, bbos.allBufs.size());
     ByteBuffer b1 = allBufs.get(0);
     assertEquals(10, b1.remaining());
     assertEquals(2, b1.get());
     assertEquals(100, b1.getInt());
     byte[] bActual = new byte[b.length];
-    b1.get(bActual, 0, 5);//5 bytes in 1st BB
+    b1.get(bActual, 0, 5);// 5 bytes in 1st BB
     ByteBuffer b2 = allBufs.get(1);
     assertEquals(10, b2.remaining());
     b2.get(bActual, 5, 1);// Remaining 1 byte in 2nd BB
@@ -78,6 +80,6 @@ public class TestByteBufferListOutputStream {
     assertEquals(4, b4.remaining());
     assertEquals(124, b4.getInt());
     bbos.releaseResources();
-    assertEquals(3, pool.getQueueSize());
+    assertEquals(3, alloc.getQueueSize());
   }
 }
