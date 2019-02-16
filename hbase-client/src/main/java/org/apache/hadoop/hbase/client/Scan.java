@@ -28,19 +28,17 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to perform Scan operations.
@@ -114,19 +112,7 @@ public class Scan extends Query {
   private int storeLimit = -1;
   private int storeOffset = 0;
 
-  /**
-   * @deprecated since 1.0.0. Use {@link #setScanMetricsEnabled(boolean)}
-   */
-  // Make private or remove.
-  @Deprecated
-  static public final String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
-
-  /**
-   * Use {@link #getScanMetrics()}
-   */
-  // Make this private or remove.
-  @Deprecated
-  static public final String SCAN_ATTRIBUTES_METRICS_DATA = "scan.attributes.metrics.data";
+  private static final String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
 
   // If an application wants to use multiple scans over different tables each scan must
   // define this attribute with the appropriate table name by calling
@@ -1121,20 +1107,6 @@ public class Scan extends Query {
   public boolean isScanMetricsEnabled() {
     byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
     return attr == null ? false : Bytes.toBoolean(attr);
-  }
-
-  /**
-   * @return Metrics on this Scan, if metrics were enabled.
-   * @see #setScanMetricsEnabled(boolean)
-   * @deprecated Use {@link ResultScanner#getScanMetrics()} instead. And notice that, please do not
-   *             use this method and {@link ResultScanner#getScanMetrics()} together, the metrics
-   *             will be messed up.
-   */
-  @Deprecated
-  public ScanMetrics getScanMetrics() {
-    byte[] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
-    if (bytes == null) return null;
-    return ProtobufUtil.toScanMetrics(bytes);
   }
 
   public Boolean isAsyncPrefetch() {

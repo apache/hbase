@@ -5115,7 +5115,7 @@ public class TestFromClientSide {
     LOG.info("test data has " + numRecords + " records.");
 
     // by default, scan metrics collection is turned off
-    assertEquals(null, scan1.getScanMetrics());
+    assertEquals(null, scanner.getScanMetrics());
 
     // turn on scan metrics
     Scan scan2 = new Scan();
@@ -5126,7 +5126,7 @@ public class TestFromClientSide {
     }
     scanner.close();
     // closing the scanner will set the metrics.
-    assertNotNull(scan2.getScanMetrics());
+    assertNotNull(scanner.getScanMetrics());
 
     // set caching to 1, because metrics are collected in each roundtrip only
     scan2 = new Scan();
@@ -5139,7 +5139,7 @@ public class TestFromClientSide {
     }
     scanner.close();
 
-    ScanMetrics scanMetrics = scan2.getScanMetrics();
+    ScanMetrics scanMetrics = scanner.getScanMetrics();
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.get());
 
@@ -5155,7 +5155,7 @@ public class TestFromClientSide {
       }
     }
     scanner.close();
-    scanMetrics = scan2.getScanMetrics();
+    scanMetrics = scanner.getScanMetrics();
     assertEquals("Did not count the result bytes", numBytes,
       scanMetrics.countOfBytesInResults.get());
 
@@ -5172,7 +5172,7 @@ public class TestFromClientSide {
       }
     }
     scanner.close();
-    scanMetrics = scan2.getScanMetrics();
+    scanMetrics = scanner.getScanMetrics();
     assertEquals("Did not count the result bytes", numBytes,
       scanMetrics.countOfBytesInResults.get());
 
@@ -5200,18 +5200,9 @@ public class TestFromClientSide {
     for (Result result : scannerWithClose.next(numRecords + 1)) {
     }
     scannerWithClose.close();
-    ScanMetrics scanMetricsWithClose = getScanMetrics(scanWithClose);
+    ScanMetrics scanMetricsWithClose = scannerWithClose.getScanMetrics();
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetricsWithClose.countOfRegions.get());
-  }
-
-  private ScanMetrics getScanMetrics(Scan scan) throws Exception {
-    byte[] serializedMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
-    assertTrue("Serialized metrics were not found.", serializedMetrics != null);
-
-    ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
-
-    return scanMetrics;
   }
 
   /**
