@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -391,8 +392,12 @@ public class HMobStore extends HStore {
       Path path = new Path(location, fileName);
       try {
         file = mobFileCache.openFile(fs, path, cacheConf);
-        return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt) : file.readCell(search,
-          cacheMobBlocks);
+        Cell cell = readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt)
+            : file.readCell(search, cacheMobBlocks);
+        // Now we will return blocks to allocator for mob cells before shipping to rpc client.
+        // it will be memory leak. so just copy cell as an on-heap KV here. will remove this in
+        // HBASE-22122 (TODO)
+        return KeyValueUtil.copyToNewKeyValue(cell);
       } catch (IOException e) {
         mobFileCache.evictFile(fileName);
         throwable = e;

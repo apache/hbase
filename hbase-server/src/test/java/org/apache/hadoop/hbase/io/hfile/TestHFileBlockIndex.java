@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -211,8 +212,8 @@ public class TestHFileBlockIndex {
                         .withIncludesTags(useTags)
                         .withCompression(compr)
                         .build();
-    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(istream, fs.getFileStatus(path)
-        .getLen(), meta);
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(istream,
+        fs.getFileStatus(path).getLen(), meta, ByteBuffAllocator.HEAP);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =

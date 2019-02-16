@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -181,7 +182,7 @@ public class TestHFileWriterV3 {
                         .withIncludesTags(useTags)
                         .withHBaseCheckSum(true).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
+        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta, ByteBuffAllocator.HEAP);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

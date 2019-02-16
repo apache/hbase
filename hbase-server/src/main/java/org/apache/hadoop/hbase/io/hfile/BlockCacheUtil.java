@@ -229,6 +229,7 @@ public class BlockCacheUtil {
   public static boolean shouldReplaceExistingCacheBlock(BlockCache blockCache,
       BlockCacheKey cacheKey, Cacheable newBlock) {
     Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    existingBlock.retain();
     try {
       int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
       if (comparison < 0) {

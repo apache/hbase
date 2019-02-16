@@ -128,7 +128,7 @@ public class TestByteBuffAllocator {
   @Test
   public void testAllocateOneBuffer() {
     // Allocate from on-heap
-    ByteBuffAllocator allocator = ByteBuffAllocator.createOnHeap();
+    ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
     ByteBuff buf = allocator.allocateOneBuffer();
     assertTrue(buf.hasArray());
     assertEquals(ByteBuffAllocator.DEFAULT_BUFFER_SIZE, buf.remaining());

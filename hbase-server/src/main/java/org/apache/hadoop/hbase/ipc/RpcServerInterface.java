@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -87,6 +88,12 @@ public interface RpcServerInterface {
   void refreshAuthManager(PolicyProvider pp);
 
   RpcScheduler getScheduler();
+
+  /**
+   * Allocator to allocate/free the ByteBuffers, those ByteBuffers can be on-heap or off-heap.
+   * @return byte buffer allocator
+   */
+  ByteBuffAllocator getByteBuffAllocator();
 
   void setRsRpcServices(RSRpcServices rsRpcServices);
 }

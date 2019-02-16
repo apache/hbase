@@ -728,6 +728,11 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
+  public ByteBuffAllocator getByteBuffAllocator() {
+    return this.bbAllocator;
+  }
+
+  @Override
   public void setRsRpcServices(RSRpcServices rsRpcServices) {
     this.rsRpcServices = rsRpcServices;
   }

@@ -394,6 +394,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       }
       return;
     }
+    // The block will be referenced by the LRUBlockCache, so should increase the refCnt here.
+    buf.retain();
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
@@ -432,9 +434,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /**
    * Cache the block with the specified name and buffer.
    * <p>
-   *
+   * TODO after HBASE-22005, we may cache an block which allocated from off-heap, but our LRU cache
+   * sizing is based on heap size, so we should handle this in HBASE-22127. It will introduce an
+   * switch whether make the LRU on-heap or not, if so we may need copy the memory to on-heap,
+   * otherwise the caching size is based on off-heap.
    * @param cacheKey block's cache key
-   * @param buf      block buffer
+   * @param buf block buffer
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
@@ -482,14 +487,20 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       // However if this is a retry ( second time in double checked locking )
       // And it's already a miss then the l2 will also be a miss.
       if (victimHandler != null && !repeat) {
+        // The handler will increase result's refCnt for RPC, so need no extra retain.
         Cacheable result = victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
 
         // Promote this to L1.
-        if (result != null && caching) {
-          if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
-            result = ((HFileBlock) result).deepClone();
+        if (result != null) {
+          if (caching) {
+            if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
+              Cacheable original = result;
+              result = ((HFileBlock) original).deepClone();
+              // deepClone an new one, so need to put the original one back to free it.
+              victimHandler.returnBlock(cacheKey, original);
+            }
+            cacheBlock(cacheKey, result, /* inMemory = */ false);
           }
-          cacheBlock(cacheKey, result, /* inMemory = */ false);
         }
         return result;
       }
@@ -497,6 +508,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
     if (updateCacheMetrics) stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
     cb.access(count.incrementAndGet());
+    // It will be referenced by RPC path, so increase here.
+    cb.getBuffer().retain();
     return cb.getBuffer();
   }
 
@@ -549,10 +562,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    boolean found = map.remove(block.getCacheKey()) != null;
-    if (!found) {
+    LruCachedBlock previous = map.remove(block.getCacheKey());
+    if (previous == null) {
       return 0;
     }
+    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate.
+    previous.getBuffer().release();
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
@@ -1131,17 +1146,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       fileNames.add(cacheKey.getHfileName());
     }
     return fileNames;
-  }
-
-  @VisibleForTesting
-  Map<BlockType, Integer> getBlockTypeCountsForTest() {
-    Map<BlockType, Integer> counts = new EnumMap<>(BlockType.class);
-    for (LruCachedBlock cb : map.values()) {
-      BlockType blockType = cb.getBuffer().getBlockType();
-      Integer count = counts.get(blockType);
-      counts.put(blockType, (count == null ? 0 : count) + 1);
-    }
-    return counts;
   }
 
   @VisibleForTesting

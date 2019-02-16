@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -813,10 +814,11 @@ public class TestLruBlockCache {
     byte[] byteArr = new byte[length];
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
+    ByteBuffAllocator alloc = ByteBuffAllocator.HEAP;
     HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta, alloc);
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta, alloc);
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
         (int)Math.ceil(1.2*maxSize/blockSize),
