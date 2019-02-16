@@ -30,6 +30,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -348,25 +349,39 @@ public final class ByteBufferUtils {
     }
   }
 
-  /**
-   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a
-   * {@link ByteBuffer}.
-   */
-  public static long readVLong(ByteBuffer in) {
-    byte firstByte = in.get();
+  private interface ByteVisitor {
+    byte get();
+  }
+
+  private static long readVLong(ByteVisitor visitor) {
+    byte firstByte = visitor.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
     }
     long i = 0;
-    for (int idx = 0; idx < len-1; idx++) {
-      byte b = in.get();
+    for (int idx = 0; idx < len - 1; idx++) {
+      byte b = visitor.get();
       i = i << 8;
       i = i | (b & 0xFF);
     }
     return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
   }
 
+  /**
+   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
+   */
+  public static long readVLong(ByteBuffer in) {
+    return readVLong(in::get);
+  }
+
+  /**
+   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
+   * {@link ByteBuff}.
+   */
+  public static long readVLong(ByteBuff in) {
+    return readVLong(in::get);
+  }
 
   /**
    * Put in buffer integer using 7 bit encoding. For each written byte:
