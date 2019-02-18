@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -129,6 +131,11 @@ class AsyncBatchRpcRetryingCaller<T> {
       computeIfAbsent(actionsByRegion, loc.getRegion().getRegionName(),
         () -> new RegionRequest(loc)).actions.add(action);
     }
+
+    public int getPriority() {
+      return actionsByRegion.values().stream().flatMap(rr -> rr.actions.stream())
+        .mapToInt(Action::getPriority).max().orElse(HConstants.PRIORITY_UNSET);
+    }
   }
 
   public AsyncBatchRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
@@ -148,7 +155,12 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.action2Future = new IdentityHashMap<>(actions.size());
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
-      Action action = new Action(rawAction, i);
+      Action action;
+      if (rawAction instanceof OperationWithAttributes) {
+        action = new Action(rawAction, i, ((OperationWithAttributes) rawAction).getPriority());
+      } else {
+        action = new Action(rawAction, i);
+      }
       if (rawAction instanceof Append || rawAction instanceof Increment) {
         action.setNonce(conn.getNonceGenerator().newNonce());
       }
@@ -341,7 +353,8 @@ class AsyncBatchRpcRetryingCaller<T> {
         return;
       }
       HBaseRpcController controller = conn.rpcControllerFactory.newController();
-      resetController(controller, Math.min(rpcTimeoutNs, remainingNs));
+      resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
+        calcPriority(serverReq.getPriority(), tableName));
       if (!cells.isEmpty()) {
         controller.setCellScanner(createCellScanner(cells));
       }

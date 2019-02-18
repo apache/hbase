@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
@@ -38,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -393,7 +395,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private <PREQ, PRESP, RESP> CompletableFuture<RESP> adminCall(HBaseRpcController controller,
       AdminService.Interface stub, PREQ preq, AdminRpcCall<PRESP, PREQ> rpcCall,
       Converter<RESP, PRESP> respConverter) {
-
     CompletableFuture<RESP> future = new CompletableFuture<>();
     rpcCall.call(stub, controller, preq, new RpcCallback<PRESP>() {
 
@@ -416,9 +417,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
       MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
       ProcedureBiConsumer consumer) {
-    CompletableFuture<Long> procFuture =
-      this.<Long> newMasterCaller().action((controller, stub) -> this
-        .<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall, respConverter)).call();
+    return procedureCall(b -> {
+    }, preq, rpcCall, respConverter, consumer);
+  }
+
+  private <PREQ, PRESP> CompletableFuture<Void> procedureCall(TableName tableName, PREQ preq,
+      MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+      ProcedureBiConsumer consumer) {
+    return procedureCall(b -> b.priority(tableName), preq, rpcCall, respConverter, consumer);
+  }
+
+  private <PREQ, PRESP> CompletableFuture<Void> procedureCall(
+      Consumer<MasterRequestCallerBuilder<?>> prioritySetter, PREQ preq,
+      MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+      ProcedureBiConsumer consumer) {
+    MasterRequestCallerBuilder<Long> builder = this.<Long> newMasterCaller().action((controller,
+        stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall, respConverter));
+    prioritySetter.accept(builder);
+    CompletableFuture<Long> procFuture = builder.call();
     CompletableFuture<Void> future = waitProcedureResult(procFuture);
     addListener(future, consumer);
     return future;
@@ -515,7 +531,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
     CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
-    addListener(this.<List<TableSchema>> newMasterCaller()
+    addListener(this.<List<TableSchema>> newMasterCaller().priority(tableName)
       .action((controller, stub) -> this
         .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, List<TableSchema>> call(
           controller, stub, RequestConverter.buildGetTableDescriptorsRequest(tableName),
@@ -566,14 +582,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Void> createTable(TableName tableName, CreateTableRequest request) {
     Preconditions.checkNotNull(tableName, "table name is null");
-    return this.<CreateTableRequest, CreateTableResponse> procedureCall(request,
+    return this.<CreateTableRequest, CreateTableResponse> procedureCall(tableName, request,
       (s, c, req, done) -> s.createTable(c, req, done), (resp) -> resp.getProcId(),
       new CreateTableProcedureBiConsumer(tableName));
   }
 
   @Override
   public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
-    return this.<ModifyTableRequest, ModifyTableResponse> procedureCall(
+    return this.<ModifyTableRequest, ModifyTableResponse> procedureCall(desc.getTableName(),
       RequestConverter.buildModifyTableRequest(desc.getTableName(), desc, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.modifyTable(c, req, done),
       (resp) -> resp.getProcId(), new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
@@ -581,15 +597,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
-    return this.<DeleteTableRequest, DeleteTableResponse> procedureCall(RequestConverter
-        .buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+    return this.<DeleteTableRequest, DeleteTableResponse> procedureCall(tableName,
+      RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
       (s, c, req, done) -> s.deleteTable(c, req, done), (resp) -> resp.getProcId(),
       new DeleteTableProcedureBiConsumer(tableName));
   }
 
   @Override
   public CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits) {
-    return this.<TruncateTableRequest, TruncateTableResponse> procedureCall(
+    return this.<TruncateTableRequest, TruncateTableResponse> procedureCall(tableName,
       RequestConverter.buildTruncateTableRequest(tableName, preserveSplits, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.truncateTable(c, req, done),
       (resp) -> resp.getProcId(), new TruncateTableProcedureBiConsumer(tableName));
@@ -597,16 +613,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> enableTable(TableName tableName) {
-    return this.<EnableTableRequest, EnableTableResponse> procedureCall(RequestConverter
-        .buildEnableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+    return this.<EnableTableRequest, EnableTableResponse> procedureCall(tableName,
+      RequestConverter.buildEnableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
       (s, c, req, done) -> s.enableTable(c, req, done), (resp) -> resp.getProcId(),
       new EnableTableProcedureBiConsumer(tableName));
   }
 
   @Override
   public CompletableFuture<Void> disableTable(TableName tableName) {
-    return this.<DisableTableRequest, DisableTableResponse> procedureCall(RequestConverter
-        .buildDisableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+    return this.<DisableTableRequest, DisableTableResponse> procedureCall(tableName,
+      RequestConverter.buildDisableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
       (s, c, req, done) -> s.disableTable(c, req, done), (resp) -> resp.getProcId(),
       new DisableTableProcedureBiConsumer(tableName));
   }
@@ -725,7 +741,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily) {
-    return this.<AddColumnRequest, AddColumnResponse> procedureCall(
+    return this.<AddColumnRequest, AddColumnResponse> procedureCall(tableName,
       RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.addColumn(c, req, done), (resp) -> resp.getProcId(),
       new AddColumnFamilyProcedureBiConsumer(tableName));
@@ -733,7 +749,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> deleteColumnFamily(TableName tableName, byte[] columnFamily) {
-    return this.<DeleteColumnRequest, DeleteColumnResponse> procedureCall(
+    return this.<DeleteColumnRequest, DeleteColumnResponse> procedureCall(tableName,
       RequestConverter.buildDeleteColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.deleteColumn(c, req, done),
       (resp) -> resp.getProcId(), new DeleteColumnFamilyProcedureBiConsumer(tableName));
@@ -742,7 +758,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> modifyColumnFamily(TableName tableName,
       ColumnFamilyDescriptor columnFamily) {
-    return this.<ModifyColumnRequest, ModifyColumnResponse> procedureCall(
+    return this.<ModifyColumnRequest, ModifyColumnResponse> procedureCall(tableName,
       RequestConverter.buildModifyColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.modifyColumn(c, req, done),
       (resp) -> resp.getProcId(), new ModifyColumnFamilyProcedureBiConsumer(tableName));
@@ -1226,9 +1242,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
 
         addListener(
-          this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(request,
-            (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
-            new MergeTableRegionProcedureBiConsumer(tableName)),
+          this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(tableName,
+            request, (s, c, req, done) -> s.mergeTableRegions(c, req, done),
+            (resp) -> resp.getProcId(), new MergeTableRegionProcedureBiConsumer(tableName)),
           (ret, err2) -> {
             if (err2 != null) {
               future.completeExceptionally(err2);
@@ -1403,9 +1419,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     }
 
-    addListener(this.<SplitTableRegionRequest, SplitTableRegionResponse> procedureCall(request,
-      (s, c, req, done) -> s.splitRegion(c, req, done), (resp) -> resp.getProcId(),
-      new SplitTableRegionProcedureBiConsumer(tableName)), (ret, err2) -> {
+    addListener(
+      this.<SplitTableRegionRequest, SplitTableRegionResponse> procedureCall(tableName,
+        request, (s, c, req, done) -> s.splitRegion(c, req, done), (resp) -> resp.getProcId(),
+        new SplitTableRegionProcedureBiConsumer(tableName)),
+      (ret, err2) -> {
         if (err2 != null) {
           future.completeExceptionally(err2);
         } else {
@@ -1423,7 +1441,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller()
+      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
         .action(((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
           controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
           (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null)))
@@ -1447,7 +1465,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller()
+        this.<Void> newMasterCaller().priority(regionInfo.getTable())
           .action(((controller, stub) -> this
             .<UnassignRegionRequest, UnassignRegionResponse, Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName(), forcible),
@@ -1473,7 +1491,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller()
+        this.<Void> newMasterCaller().priority(regionInfo.getTable())
           .action(((controller, stub) -> this
             .<OfflineRegionRequest, OfflineRegionResponse, Void> call(controller, stub,
               RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
@@ -1499,7 +1517,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        moveRegion(
+        moveRegion(regionInfo,
           RequestConverter.buildMoveRegionRequest(regionInfo.getEncodedNameAsBytes(), null)),
         (ret, err2) -> {
           if (err2 != null) {
@@ -1522,8 +1540,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(moveRegion(RequestConverter
-        .buildMoveRegionRequest(regionInfo.getEncodedNameAsBytes(), destServerName)),
+      addListener(
+        moveRegion(regionInfo, RequestConverter
+          .buildMoveRegionRequest(regionInfo.getEncodedNameAsBytes(), destServerName)),
         (ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
@@ -1535,12 +1554,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> moveRegion(MoveRegionRequest request) {
-    return this
-        .<Void> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
-            stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null)).call();
+  private CompletableFuture<Void> moveRegion(RegionInfo regionInfo, MoveRegionRequest request) {
+    return this.<Void> newMasterCaller().priority(regionInfo.getTable())
+      .action(
+        (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
+          stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null))
+      .call();
   }
 
   @Override
@@ -2704,35 +2723,31 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> shutdown() {
-    return this
-        .<Void> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<ShutdownRequest, ShutdownResponse, Void> call(controller,
-            stub, ShutdownRequest.newBuilder().build(),
-            (s, c, req, done) -> s.shutdown(c, req, done), resp -> null)).call();
+    return this.<Void> newMasterCaller().priority(HIGH_QOS)
+      .action((controller, stub) -> this.<ShutdownRequest, ShutdownResponse, Void> call(controller,
+        stub, ShutdownRequest.newBuilder().build(), (s, c, req, done) -> s.shutdown(c, req, done),
+        resp -> null))
+      .call();
   }
 
   @Override
   public CompletableFuture<Void> stopMaster() {
-    return this
-        .<Void> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<StopMasterRequest, StopMasterResponse, Void> call(controller,
-            stub, StopMasterRequest.newBuilder().build(),
-            (s, c, req, done) -> s.stopMaster(c, req, done), resp -> null)).call();
+    return this.<Void> newMasterCaller().priority(HIGH_QOS)
+      .action((controller, stub) -> this.<StopMasterRequest, StopMasterResponse, Void> call(
+        controller, stub, StopMasterRequest.newBuilder().build(),
+        (s, c, req, done) -> s.stopMaster(c, req, done), resp -> null))
+      .call();
   }
 
   @Override
   public CompletableFuture<Void> stopRegionServer(ServerName serverName) {
-    StopServerRequest request =
-        RequestConverter.buildStopServerRequest("Called by admin client "
-            + this.connection.toString());
-    return this
-        .<Void> newAdminCaller()
-        .action(
-          (controller, stub) -> this.<StopServerRequest, StopServerResponse, Void> adminCall(
-            controller, stub, request, (s, c, req, done) -> s.stopServer(controller, req, done),
-            resp -> null)).serverName(serverName).call();
+    StopServerRequest request = RequestConverter
+      .buildStopServerRequest("Called by admin client " + this.connection.toString());
+    return this.<Void> newAdminCaller().priority(HIGH_QOS)
+      .action((controller, stub) -> this.<StopServerRequest, StopServerResponse, Void> adminCall(
+        controller, stub, request, (s, c, req, done) -> s.stopServer(controller, req, done),
+        resp -> null))
+      .serverName(serverName).call();
   }
 
   @Override
