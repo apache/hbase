@@ -206,20 +206,21 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       (info, src) -> reqConvert.convert(info, src, nonceGroup, nonce), respConverter);
   }
 
-  private <T> SingleRequestCallerBuilder<T> newCaller(byte[] row, long rpcTimeoutNs) {
-    return conn.callerFactory.<T> single().table(tableName).row(row)
+  private <T> SingleRequestCallerBuilder<T> newCaller(byte[] row, int priority, long rpcTimeoutNs) {
+    return conn.callerFactory.<T> single().table(tableName).row(row).priority(priority)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .pause(pauseNs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
       .startLogErrorsCnt(startLogErrorsCnt);
   }
 
-  private <T> SingleRequestCallerBuilder<T> newCaller(Row row, long rpcTimeoutNs) {
-    return newCaller(row.getRow(), rpcTimeoutNs);
+  private <T, R extends OperationWithAttributes & Row> SingleRequestCallerBuilder<T> newCaller(
+      R row, long rpcTimeoutNs) {
+    return newCaller(row.getRow(), row.getPriority(), rpcTimeoutNs);
   }
 
   private CompletableFuture<Result> get(Get get, int replicaId) {
-    return this.<Result> newCaller(get, readRpcTimeoutNs)
+    return this.<Result, Get> newCaller(get, readRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl
         .<Get, GetRequest, GetResponse, Result> call(controller, loc, stub, get,
           RequestConverter::buildGetRequest, (s, c, req, done) -> s.get(c, req, done),
@@ -237,7 +238,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Void> put(Put put) {
     validatePut(put, conn.connConf.getMaxKeyValueSize());
-    return this.<Void> newCaller(put, writeRpcTimeoutNs)
+    return this.<Void, Put> newCaller(put, writeRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl.<Put> voidMutate(controller, loc, stub,
         put, RequestConverter::buildMutateRequest))
       .call();
@@ -245,7 +246,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> delete(Delete delete) {
-    return this.<Void> newCaller(delete, writeRpcTimeoutNs)
+    return this.<Void, Delete> newCaller(delete, writeRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete> voidMutate(controller, loc,
         stub, delete, RequestConverter::buildMutateRequest))
       .call();
@@ -256,7 +257,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     checkHasFamilies(append);
     long nonceGroup = conn.getNonceGenerator().getNonceGroup();
     long nonce = conn.getNonceGenerator().newNonce();
-    return this.<Result> newCaller(append, rpcTimeoutNs)
+    return this.<Result, Append> newCaller(append, rpcTimeoutNs)
       .action(
         (controller, loc, stub) -> this.<Append, Result> noncedMutate(nonceGroup, nonce, controller,
           loc, stub, append, RequestConverter::buildMutateRequest, RawAsyncTableImpl::toResult))
@@ -268,7 +269,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     checkHasFamilies(increment);
     long nonceGroup = conn.getNonceGenerator().getNonceGroup();
     long nonce = conn.getNonceGenerator().newNonce();
-    return this.<Result> newCaller(increment, rpcTimeoutNs)
+    return this.<Result, Increment> newCaller(increment, rpcTimeoutNs)
       .action((controller, loc, stub) -> this.<Increment, Result> noncedMutate(nonceGroup, nonce,
         controller, loc, stub, increment, RequestConverter::buildMutateRequest,
         RawAsyncTableImpl::toResult))
@@ -330,7 +331,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenPut(Put put) {
       validatePut(put, conn.connConf.getMaxKeyValueSize());
       preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, rpcTimeoutNs)
+      return RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller, loc,
           stub, put,
           (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
@@ -342,7 +343,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
       preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(row, rpcTimeoutNs)
+      return RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
           loc, stub, delete,
           (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
@@ -354,7 +355,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
       preCheck();
-      return RawAsyncTableImpl.this.<Boolean> newCaller(mutation, rpcTimeoutNs)
+      return RawAsyncTableImpl.this
+        .<Boolean> newCaller(row, mutation.getMaxPriority(), rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
           stub, mutation,
           (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
@@ -412,8 +414,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> mutateRow(RowMutations mutation) {
-    return this.<Void> newCaller(mutation, writeRpcTimeoutNs).action((controller, loc,
-        stub) -> RawAsyncTableImpl.<Void> mutateRow(controller, loc, stub, mutation, (rn, rm) -> {
+    return this.<Void> newCaller(mutation.getRow(), mutation.getMaxPriority(), writeRpcTimeoutNs)
+      .action((controller, loc, stub) -> RawAsyncTableImpl.<Void> mutateRow(controller, loc, stub,
+        mutation, (rn, rm) -> {
           RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(rn, rm);
           regionMutationBuilder.setAtomic(true);
           return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
