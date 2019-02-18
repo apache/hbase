@@ -1784,10 +1784,10 @@ public class HFileBlock implements Cacheable {
       // Do a few checks before we go instantiate HFileBlock.
       assert onDiskSizeWithHeader > this.hdrSize;
       verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset, checksumSupport);
-      ByteBuffer onDiskBlockByteBuffer = ByteBuffer.wrap(onDiskBlock, 0, onDiskSizeWithHeader);
+      ByteBuff onDiskBlockByteBuff =
+          new SingleByteBuff(ByteBuffer.wrap(onDiskBlock, 0, onDiskSizeWithHeader));
       // Verify checksum of the data before using it for building HFileBlock.
-      if (verifyChecksum &&
-          !validateChecksum(offset, onDiskBlockByteBuffer, hdrSize)) {
+      if (verifyChecksum && !validateChecksum(offset, onDiskBlockByteBuff, hdrSize)) {
         return null;
       }
       long duration = System.currentTimeMillis() - startTime;
@@ -1797,9 +1797,8 @@ public class HFileBlock implements Cacheable {
       // The onDiskBlock will become the headerAndDataBuffer for this block.
       // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
       // contains the header of next block, so no need to set next block's header in it.
-      HFileBlock hFileBlock =
-          new HFileBlock(new SingleByteBuff(onDiskBlockByteBuffer), checksumSupport,
-              MemoryType.EXCLUSIVE, offset, nextBlockOnDiskSize, fileContext);
+      HFileBlock hFileBlock = new HFileBlock(onDiskBlockByteBuff, checksumSupport,
+          MemoryType.EXCLUSIVE, offset, nextBlockOnDiskSize, fileContext);
       // Run check on uncompressed sizings.
       if (!fileContext.isCompressedOrEncrypted()) {
         hFileBlock.sanityCheckUncompressed();
@@ -1838,8 +1837,7 @@ public class HFileBlock implements Cacheable {
      * If the block doesn't uses checksum, returns false.
      * @return True if checksum matches, else false.
      */
-    private boolean validateChecksum(long offset, ByteBuffer data, int hdrSize)
-        throws IOException {
+    private boolean validateChecksum(long offset, ByteBuff data, int hdrSize) {
       // If this is an older version of the block that does not have checksums, then return false
       // indicating that checksum verification did not succeed. Actually, this method should never
       // be called when the minorVersion is 0, thus this is a defensive check for a cannot-happen
