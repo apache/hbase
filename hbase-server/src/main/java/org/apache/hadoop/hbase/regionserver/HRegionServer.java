@@ -1844,7 +1844,9 @@ public class HRegionServer extends HasThread implements
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
         uncaughtExceptionHandler);
-    this.cacheFlusher.start(uncaughtExceptionHandler);
+    if (this.cacheFlusher != null) {
+      this.cacheFlusher.start(uncaughtExceptionHandler);
+    }
 
     if (this.compactionChecker != null) choreService.scheduleChore(compactionChecker);
     if (this.periodicFlusher != null) choreService.scheduleChore(periodicFlusher);
