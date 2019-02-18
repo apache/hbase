@@ -298,12 +298,13 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
-  static void resetController(HBaseRpcController controller, long timeoutNs) {
+  static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
     controller.reset();
     if (timeoutNs >= 0) {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
+    controller.setPriority(priority);
   }
 
   static Throwable translateException(Throwable t) {
@@ -586,6 +587,37 @@ public final class ConnectionUtils {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Select the priority for the rpc call.
+   * <p/>
+   * The rules are:
+   * <ol>
+   * <li>If user set a priority explicitly, then just use it.</li>
+   * <li>For meta table, use {@link HConstants#META_QOS}.</li>
+   * <li>For other system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
+   * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
+   * </ol>
+   * @param priority the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
+   * @param tableName the table we operate on
+   */
+  static int calcPriority(int priority, TableName tableName) {
+    if (priority != HConstants.PRIORITY_UNSET) {
+      return priority;
+    } else {
+      return getPriority(tableName);
+    }
+  }
+
+  static int getPriority(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return HConstants.META_QOS;
+    } else if (tableName.isSystemTable()) {
+      return HConstants.SYSTEMTABLE_QOS;
+    } else {
+      return HConstants.NORMAL_QOS;
     }
   }
 }

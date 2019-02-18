@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
@@ -77,6 +79,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
 
+    private int priority = PRIORITY_UNSET;
+
     public SingleRequestCallerBuilder<T> table(TableName tableName) {
       this.tableName = tableName;
       return this;
@@ -128,12 +132,25 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public AsyncSingleRequestRpcRetryingCaller<T> build() {
+    public SingleRequestCallerBuilder<T> priority(int priority) {
+      this.priority = priority;
+      return this;
+    }
+
+    private void preCheck() {
       checkArgument(replicaId >= 0, "invalid replica id %s", replicaId);
-      return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn,
-        checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"), replicaId,
-        checkNotNull(locateType, "locateType is null"), checkNotNull(callable, "action is null"),
-        pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+      checkNotNull(tableName, "tableName is null");
+      checkNotNull(row, "row is null");
+      checkNotNull(locateType, "locateType is null");
+      checkNotNull(callable, "action is null");
+      this.priority = calcPriority(priority, tableName);
+    }
+
+    public AsyncSingleRequestRpcRetryingCaller<T> build() {
+      preCheck();
+      return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn, tableName, row, replicaId,
+        locateType, callable, priority, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+        startLogErrorsCnt);
     }
 
     /**
@@ -175,6 +192,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs;
 
+    private int priority = PRIORITY_UNSET;
+
     public ScanSingleRegionCallerBuilder id(long scannerId) {
       this.scannerId = scannerId;
       return this;
@@ -182,6 +201,7 @@ class AsyncRpcRetryingCallerFactory {
 
     public ScanSingleRegionCallerBuilder setScan(Scan scan) {
       this.scan = scan;
+      this.priority = scan.getPriority();
       return this;
     }
 
@@ -246,14 +266,22 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public AsyncScanSingleRegionRpcRetryingCaller build() {
+    private void preCheck() {
       checkArgument(scannerId != null, "invalid scannerId %d", scannerId);
-      return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn,
-        checkNotNull(scan, "scan is null"), scanMetrics, scannerId,
-        checkNotNull(resultCache, "resultCache is null"),
-        checkNotNull(consumer, "consumer is null"), checkNotNull(stub, "stub is null"),
-        checkNotNull(loc, "location is null"), isRegionServerRemote, scannerLeaseTimeoutPeriodNs,
-        pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+      checkNotNull(scan, "scan is null");
+      checkNotNull(resultCache, "resultCache is null");
+      checkNotNull(consumer, "consumer is null");
+      checkNotNull(stub, "stub is null");
+      checkNotNull(loc, "location is null");
+      this.priority = calcPriority(priority, loc.getRegion().getTable());
+    }
+
+    public AsyncScanSingleRegionRpcRetryingCaller build() {
+      preCheck();
+      return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn, scan, scanMetrics,
+        scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
+        scannerLeaseTimeoutPeriodNs, pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs,
+        startLogErrorsCnt);
     }
 
     /**
@@ -338,6 +366,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs = -1L;
 
+    private int priority = PRIORITY_UNSET;
+
     public MasterRequestCallerBuilder<T> action(
         AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
@@ -369,10 +399,24 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public MasterRequestCallerBuilder<T> priority(TableName tableName) {
+      this.priority = Math.max(priority, ConnectionUtils.getPriority(tableName));
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> priority(int priority) {
+      this.priority = Math.max(this.priority, priority);
+      return this;
+    }
+
+    private void preCheck() {
+      checkNotNull(callable, "action is null");
+    }
+
     public AsyncMasterRequestRpcRetryingCaller<T> build() {
-      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn,
-        checkNotNull(callable, "action is null"), pauseNs, maxAttempts, operationTimeoutNs,
-        rpcTimeoutNs, startLogErrorsCnt);
+      preCheck();
+      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, callable, priority,
+        pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -397,6 +441,8 @@ class AsyncRpcRetryingCallerFactory {
     private long rpcTimeoutNs = -1L;
 
     private ServerName serverName;
+
+    private int priority;
 
     public AdminRequestCallerBuilder<T> action(
         AsyncAdminRequestRetryingCaller.Callable<T> callable) {
@@ -434,9 +480,14 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public AdminRequestCallerBuilder<T> priority(int priority) {
+      this.priority = priority;
+      return this;
+    }
+
     public AsyncAdminRequestRetryingCaller<T> build() {
-      return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
-        operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
+      return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, priority, pauseNs,
+        maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
         checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
     }
 

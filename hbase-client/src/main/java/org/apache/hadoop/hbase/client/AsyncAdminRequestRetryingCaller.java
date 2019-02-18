@@ -43,11 +43,11 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
   private final Callable<T> callable;
   private ServerName serverName;
 
-  public AsyncAdminRequestRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
+  public AsyncAdminRequestRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
       long pauseNs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
       int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
-    super(retryTimer, conn, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+    super(retryTimer, conn, priority, pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+      startLogErrorsCnt);
     this.serverName = serverName;
     this.callable = callable;
   }
