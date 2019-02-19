@@ -22,19 +22,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -150,61 +146,5 @@ public class TestCleanupCompactedFileOnRegionClose {
     assertEquals(0,
         ((HStore)region.getStore(familyNameBytes)).getStoreEngine().getStoreFileManager()
             .getCompactedfiles().size());
-  }
-
-  @Test
-  public void testIOExceptionThrownOnClose() throws Exception {
-    byte[] filler = new byte[128000];
-    TableName tableName = TableName.valueOf("testIOExceptionThrownOnClose");
-    String familyName = "f";
-    byte[] familyNameBytes = Bytes.toBytes(familyName);
-    util.createTable(tableName, familyName);
-
-    Table table = util.getConnection().getTable(tableName);
-
-    HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
-    Region region = rs.getRegions(tableName).get(0);
-
-    int refSFCount = 4;
-    for (int i = 0; i < refSFCount; i++) {
-      for (int j = 0; j < refSFCount; j++) {
-        Put put = new Put(Bytes.toBytes(j));
-        put.addColumn(familyNameBytes, Bytes.toBytes(i), filler);
-        table.put(put);
-      }
-      util.flush(tableName);
-    }
-    assertEquals(refSFCount, region.getStoreFileList(new byte[][]{familyNameBytes}).size());
-
-    HStore store = ((HRegion) region).getStore(familyNameBytes);
-    HStoreFile hsf = ((Collection<HStoreFile>)region.getStore(familyNameBytes).getStorefiles())
-        .iterator().next();
-    long readPt = ((HRegion)region).getReadPoint(IsolationLevel.READ_COMMITTED);
-    StoreFileScanner preadScanner = hsf.getPreadScanner(false, readPt, 0, false);
-    StoreFileScanner streamScanner =
-        hsf.getStreamScanner(false, false, false, readPt, 0,  false);
-    preadScanner.seek(KeyValue.LOWESTKEY);
-    streamScanner.seek(KeyValue.LOWESTKEY);
-
-    //Major compact to produce compacted storefiles that need to be cleaned up
-    util.compact(tableName, true);
-    assertNotNull(preadScanner.next());
-    assertNotNull(streamScanner.next());
-    store.closeAndArchiveCompactedFiles(true);
-
-    try {
-      assertNotNull(preadScanner.next());
-      fail("Expected IOException");
-    }catch (IOException ex) {
-      ex.printStackTrace();
-    }
-
-    //Wait a bit for file to be remove from
-    try {
-      assertNotNull(streamScanner.next());
-      fail("Expected IOException");
-    } catch (IOException ex) {
-      ex.printStackTrace();
-    }
   }
 }
