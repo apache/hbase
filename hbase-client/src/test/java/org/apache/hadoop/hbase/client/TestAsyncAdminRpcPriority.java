@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
-import static org.apache.hadoop.hbase.HConstants.META_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
@@ -197,7 +196,7 @@ public class TestAsyncAdminRpcPriority {
   public void testCreateMetaTable() {
     conn.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).build()).join();
-    verify(masterStub, times(1)).createTable(assertPriority(META_QOS),
+    verify(masterStub, times(1)).createTable(assertPriority(SYSTEMTABLE_QOS),
       any(CreateTableRequest.class), any());
   }
 

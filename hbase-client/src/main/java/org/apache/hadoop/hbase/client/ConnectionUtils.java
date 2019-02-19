@@ -612,9 +612,7 @@ public final class ConnectionUtils {
   }
 
   static int getPriority(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
-      return HConstants.META_QOS;
-    } else if (tableName.isSystemTable()) {
+    if (tableName.isSystemTable()) {
       return HConstants.SYSTEMTABLE_QOS;
     } else {
       return HConstants.NORMAL_QOS;
