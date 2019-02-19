@@ -452,8 +452,8 @@ scan.setFilter(f);
 scan.setBatch(10); // set this if there could be many columns returned
 ResultScanner rs = t.getScanner(scan);
 for (Result r = rs.next(); r != null; r = rs.next()) {
-  for (KeyValue kv : r.raw()) {
-    // each kv represents a column
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
   }
 }
 rs.close();
@@ -482,8 +482,8 @@ scan.setFilter(f);
 scan.setBatch(10); // set this if there could be many columns returned
 ResultScanner rs = t.getScanner(scan);
 for (Result r = rs.next(); r != null; r = rs.next()) {
-  for (KeyValue kv : r.raw()) {
-    // each kv represents a column
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
   }
 }
 rs.close();
@@ -518,8 +518,8 @@ scan.setFilter(f);
 scan.setBatch(10); // set this if there could be many columns returned
 ResultScanner rs = t.getScanner(scan);
 for (Result r = rs.next(); r != null; r = rs.next()) {
-  for (KeyValue kv : r.raw()) {
-    // each kv represents a column
+  for (Cell cell : result.listCells()) {
+    // each cell represents a column
   }
 }
 rs.close();
