@@ -785,37 +785,30 @@ module Hbase
           puts(format('    %s', server))
         end
       elsif format == 'replication'
-        puts(format('version %s', status.getHBaseVersion))
-        puts(format('%d live servers', status.getServersSize))
-        for server in status.getServers
-          sl = status.getLoad(server)
-          rSinkString   = '       SINK  :'
-          rSourceString = '       SOURCE:'
-          rLoadSink = sl.getReplicationLoadSink
-          next if rLoadSink.nil?
-          rSinkString << ' AgeOfLastAppliedOp=' + rLoadSink.getAgeOfLastAppliedOp.to_s
-          rSinkString << ', TimeStampsOfLastAppliedOp=' +
-                         java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp).toString
-          rLoadSourceList = sl.getReplicationLoadSourceList
-          index = 0
-          while index < rLoadSourceList.size
-            rLoadSource = rLoadSourceList.get(index)
-            rSourceString << ' PeerID=' + rLoadSource.getPeerID
-            rSourceString << ', AgeOfLastShippedOp=' + rLoadSource.getAgeOfLastShippedOp.to_s
-            rSourceString << ', SizeOfLogQueue=' + rLoadSource.getSizeOfLogQueue.to_s
-            rSourceString << ', TimeStampsOfLastShippedOp=' +
-                             java.util.Date.new(rLoadSource.getTimeStampOfLastShippedOp).toString
-            rSourceString << ', Replication Lag=' + rLoadSource.getReplicationLag.to_s
-            index += 1
-          end
-          puts(format('    %s:', server.getHostname))
-          if type.casecmp('SOURCE') == 0
-            puts(format('%s', rSourceString))
-          elsif type.casecmp('SINK') == 0
-            puts(format('%s', rSinkString))
+        puts(format('version %<version>s', version: status.getHBaseVersion))
+        puts(format('%<servers>d live servers', servers: status.getServersSize))
+        status.getServers.each do |server_status|
+          sl = status.getLoad(server_status)
+          r_sink_string   = '      SINK:'
+          r_source_string = '       SOURCE:'
+          r_load_sink = sl.getReplicationLoadSink
+          next if r_load_sink.nil?
+
+          r_sink_string << ' AgeOfLastAppliedOp=' +
+                           r_load_sink.getAgeOfLastAppliedOp.to_s
+          r_sink_string << ', TimeStampsOfLastAppliedOp=' +
+                           java.util.Date.new(r_load_sink
+                             .getTimeStampsOfLastAppliedOp).toString
+          r_load_source_map = sl.getReplicationLoadSourceMap
+          build_source_string(r_load_source_map, r_source_string)
+          puts(format('    %<host>s:', host: server_status.getHostname))
+          if type.casecmp('SOURCE').zero?
+            puts(format('%<source>s', source: r_source_string))
+          elsif type.casecmp('SINK').zero?
+            puts(format('%<sink>s', sink: r_sink_string))
           else
-            puts(format('%s', rSourceString))
-            puts(format('%s', rSinkString))
+            puts(format('%<source>s', source: r_source_string))
+            puts(format('%<sink>s', sink: r_sink_string))
           end
         end
       elsif format == 'simple'
@@ -841,6 +834,71 @@ module Hbase
         puts(format('Aggregate load: %d, regions: %d', load, regions))
       else
         puts "1 active master, #{status.getBackupMastersSize} backup masters, #{status.getServersSize} servers, #{status.getDeadServers} dead, #{format('%.4f', status.getAverageLoad)} average load"
+      end
+    end
+
+    def build_source_string(r_load_source_map, r_source_string)
+      r_load_source_map.each do |peer, sources|
+        r_source_string << ' PeerID=' + peer
+        sources.each do |source_load|
+          build_queue_title(source_load, r_source_string)
+          build_running_source_stats(source_load, r_source_string)
+        end
+      end
+    end
+
+    def build_queue_title(source_load, r_source_string)
+      r_source_string << if source_load.isRecovered
+                           "\n         Recovered Queue: "
+                         else
+                           "\n         Normal Queue: "
+                         end
+      r_source_string << source_load.getQueueId
+    end
+
+    def build_running_source_stats(source_load, r_source_string)
+      if source_load.isRunning
+        build_shipped_stats(source_load, r_source_string)
+        build_load_general_stats(source_load, r_source_string)
+        r_source_string << ', Replication Lag=' +
+                           source_load.getReplicationLag.to_s
+      else
+        r_source_string << "\n           "
+        r_source_string << 'No Reader/Shipper threads runnning yet.'
+      end
+    end
+
+    def build_shipped_stats(source_load, r_source_string)
+      r_source_string << if source_load.getTimeStampOfLastShippedOp.zero?
+                           "\n           " \
+                           'No Ops shipped since last restart'
+                         else
+                           "\n           AgeOfLastShippedOp=" +
+                           source_load.getAgeOfLastShippedOp.to_s +
+                           ', TimeStampOfLastShippedOp=' +
+                           java.util.Date.new(source_load
+                             .getTimeStampOfLastShippedOp).toString
+                         end
+    end
+
+    def build_load_general_stats(source_load, r_source_string)
+      r_source_string << ', SizeOfLogQueue=' +
+                         source_load.getSizeOfLogQueue.to_s
+      r_source_string << ', EditsReadFromLogQueue=' +
+                         source_load.getEditsRead.to_s
+      r_source_string << ', OpsShippedToTarget=' +
+                         source_load.getOPsShipped.to_s
+      build_edits_for_source(source_load, r_source_string)
+    end
+
+    def build_edits_for_source(source_load, r_source_string)
+      if source_load.hasEditsSinceRestart
+        r_source_string << ', TimeStampOfNextToReplicate=' +
+                           java.util.Date.new(source_load
+                             .getTimeStampOfNextToReplicate).toString
+      else
+        r_source_string << ', No edits for this source'
+        r_source_string << ' since it started'
       end
     end
 

@@ -391,6 +391,15 @@ public class ServerLoad implements ServerMetrics {
 
   /**
    * Call directly from client such as hbase shell
+   * @return a map of ReplicationLoadSource list per peer id
+   */
+  @Override
+  public Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap() {
+    return metrics.getReplicationLoadSourceMap();
+  }
+
+  /**
+   * Call directly from client such as hbase shell
    * @return ReplicationLoadSink
    */
   @Override

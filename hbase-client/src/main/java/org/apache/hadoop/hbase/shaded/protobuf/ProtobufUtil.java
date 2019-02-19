@@ -2717,8 +2717,20 @@ public final class ProtobufUtil {
 
   public static ReplicationLoadSource toReplicationLoadSource(
       ClusterStatusProtos.ReplicationLoadSource rls) {
-    return new ReplicationLoadSource(rls.getPeerID(), rls.getAgeOfLastShippedOp(),
-      rls.getSizeOfLogQueue(), rls.getTimeStampOfLastShippedOp(), rls.getReplicationLag());
+    ReplicationLoadSource.ReplicationLoadSourceBuilder builder = ReplicationLoadSource.newBuilder();
+    builder.setPeerID(rls.getPeerID()).
+        setAgeOfLastShippedOp(rls.getAgeOfLastShippedOp()).
+        setSizeOfLogQueue(rls.getSizeOfLogQueue()).
+        setTimestampOfLastShippedOp(rls.getTimeStampOfLastShippedOp()).
+        setTimeStampOfNextToReplicate(rls.getTimeStampOfNextToReplicate()).
+        setReplicationLag(rls.getReplicationLag()).
+        setQueueId(rls.getQueueId()).
+        setRecovered(rls.getRecovered()).
+        setRunning(rls.getRunning()).
+        setEditsSinceRestart(rls.getEditsSinceRestart()).
+        setEditsRead(rls.getEditsRead()).
+        setoPsShipped(rls.getOPsShipped());
+    return builder.build();
   }
 
   /**
@@ -3227,6 +3239,13 @@ public final class ProtobufUtil {
         .setSizeOfLogQueue((int) rls.getSizeOfLogQueue())
         .setTimeStampOfLastShippedOp(rls.getTimestampOfLastShippedOp())
         .setReplicationLag(rls.getReplicationLag())
+        .setQueueId(rls.getQueueId())
+        .setRecovered(rls.isRecovered())
+        .setRunning(rls.isRunning())
+        .setEditsSinceRestart(rls.hasEditsSinceRestart())
+        .setTimeStampOfNextToReplicate(rls.getTimeStampOfNextToReplicate())
+        .setOPsShipped(rls.getOPsShipped())
+        .setEditsRead(rls.getEditsRead())
         .build();
   }
 
