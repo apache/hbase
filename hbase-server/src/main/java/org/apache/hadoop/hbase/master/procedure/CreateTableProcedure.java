@@ -139,11 +139,14 @@ public class CreateTableProcedure
       // nothing to rollback, pre-create is just table-state checks.
       // We can fail if the table does exist or the descriptor is malformed.
       // TODO: coprocessor rollback semantic is still undefined.
-      DeleteTableProcedure.deleteTableStates(env, getTableName());
+      if (hasException() /* avoid NPE */ &&
+          getException().getCause().getClass() != TableExistsException.class) {
+        DeleteTableProcedure.deleteTableStates(env, getTableName());
 
-      final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
-      if (cpHost != null) {
-        cpHost.postDeleteTable(getTableName());
+        final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+        if (cpHost != null) {
+          cpHost.postDeleteTable(getTableName());
+        }
       }
 
       releaseSyncLatch();
