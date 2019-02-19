@@ -393,11 +393,12 @@ class AsyncScanSingleRegionRpcRetryingCaller {
           " ms",
         error);
     }
-    boolean scannerClosed = error instanceof UnknownScannerException ||
-        error instanceof NotServingRegionException || error instanceof RegionServerStoppedException;
+    boolean scannerClosed =
+      error instanceof UnknownScannerException || error instanceof NotServingRegionException ||
+        error instanceof RegionServerStoppedException || error instanceof ScannerResetException;
     RetriesExhaustedException.ThrowableWithExtraContext qt =
-        new RetriesExhaustedException.ThrowableWithExtraContext(error,
-            EnvironmentEdgeManager.currentTime(), "");
+      new RetriesExhaustedException.ThrowableWithExtraContext(error,
+        EnvironmentEdgeManager.currentTime(), "");
     exceptions.add(qt);
     if (tries >= maxAttempts) {
       completeExceptionally(!scannerClosed);
@@ -418,7 +419,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       completeWhenError(false);
       return;
     }
-    if (error instanceof OutOfOrderScannerNextException || error instanceof ScannerResetException) {
+    if (error instanceof OutOfOrderScannerNextException) {
       completeWhenError(true);
       return;
     }
