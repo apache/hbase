@@ -405,10 +405,11 @@ public class TestSpaceQuotasWithSnapshots {
     // Compact the cloned table to force it to own its own files.
     TEST_UTIL.compact(tn2, true);
     // After the table is compacted, it should have its own files and be the same size as originally
+    // But The compaction result file has an additional compaction event tracker
     TEST_UTIL.waitFor(30_000, 1_000, new SpaceQuotaSnapshotPredicate(conn, tn2) {
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        return snapshot.getUsage() == actualInitialSize;
+        return snapshot.getUsage() >= actualInitialSize;
       }
     });
   }

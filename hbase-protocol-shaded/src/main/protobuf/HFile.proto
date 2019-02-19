@@ -27,6 +27,10 @@ option optimize_for = SPEED;
 
 import "HBase.proto";
 
+message CompactionEventTracker {
+  repeated bytes compacted_store_file = 1;
+}
+
 // Map of name/values
 message FileInfoProto {
   repeated BytesBytesPair map_entry = 1;
