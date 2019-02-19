@@ -417,8 +417,8 @@ public static class MyMapper extends TableMapper<ImmutableBytesWritable, Put>  {
 
     private static Put resultToPut(ImmutableBytesWritable key, Result result) throws IOException {
       Put put = new Put(key.get());
-      for (KeyValue kv : result.raw()) {
-        put.add(kv);
+      for (Cell cell : result.listCells()) {
+        put.add(cell);
       }
       return put;
     }

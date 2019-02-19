@@ -425,7 +425,7 @@ Get get = new Get(Bytes.toBytes("row1"));
 get.setMaxVersions(3);  // will return last 3 versions of row
 Result r = table.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
-List<KeyValue> kv = r.getColumn(CF, ATTR);  // returns all versions of this column
+List<Cell> cells = r.getColumnCells(CF, ATTR);  // returns all versions of this column
 ----
 
 ==== Put
