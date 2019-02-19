@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -151,7 +152,13 @@ public abstract class AsyncRpcRetryingCaller<T> {
       return;
     }
     Throwable error = translateException(t);
-    if (error instanceof DoNotRetryIOException) {
+    // We use this retrying caller to open a scanner, as it is idempotent, but we may throw
+    // ScannerResetException, which is a DoNotRetryIOException when opening a scanner as now we will
+    // also fetch data when opening a scanner. The intention here is that if we hit a
+    // ScannerResetException when scanning then we should try to open a new scanner, instead of
+    // retrying on the old one, so it is declared as a DoNotRetryIOException. But here we are
+    // exactly trying to open a new scanner, so we should retry on ScannerResetException.
+    if (error instanceof DoNotRetryIOException && !(error instanceof ScannerResetException)) {
       future.completeExceptionally(error);
       return;
     }
