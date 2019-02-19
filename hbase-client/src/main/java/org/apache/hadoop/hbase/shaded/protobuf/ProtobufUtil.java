@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -163,6 +164,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -3264,5 +3266,28 @@ public final class ProtobufUtil {
     return HBaseProtos.TimeRange.newBuilder().setFrom(timeRange.getMin())
       .setTo(timeRange.getMax())
       .build();
+  }
+
+  public static byte[] toCompactionEventTrackerBytes(Set<String> storeFiles) {
+    HFileProtos.CompactionEventTracker.Builder builder =
+        HFileProtos.CompactionEventTracker.newBuilder();
+    storeFiles.forEach(sf -> builder.addCompactedStoreFile(ByteString.copyFromUtf8(sf)));
+    return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
+  }
+
+  public static Set<String> toCompactedStoreFiles(byte[] bytes) throws IOException {
+    if (bytes != null && ProtobufUtil.isPBMagicPrefix(bytes)) {
+      int pbLen = ProtobufUtil.lengthOfPBMagic();
+      HFileProtos.CompactionEventTracker.Builder builder =
+          HFileProtos.CompactionEventTracker.newBuilder();
+      ProtobufUtil.mergeFrom(builder, bytes, pbLen, bytes.length - pbLen);
+      HFileProtos.CompactionEventTracker compactionEventTracker = builder.build();
+      List<ByteString> compactedStoreFiles = compactionEventTracker.getCompactedStoreFileList();
+      if (compactedStoreFiles != null && compactedStoreFiles.size() != 0) {
+        return compactedStoreFiles.stream().map(ByteString::toStringUtf8)
+            .collect(Collectors.toSet());
+      }
+    }
+    return Collections.emptySet();
   }
 }

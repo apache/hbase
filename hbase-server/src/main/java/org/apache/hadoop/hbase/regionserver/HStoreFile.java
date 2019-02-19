@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,14 +40,13 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -63,7 +62,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * writer and a reader is that we write once but read a lot more.
  */
 @InterfaceAudience.Private
-public class HStoreFile implements StoreFile, StoreFileReader.Listener {
+public class HStoreFile implements StoreFile {
 
   private static final Logger LOG = LoggerFactory.getLogger(HStoreFile.class.getName());
 
@@ -82,6 +81,11 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   /** Minor compaction flag in FileInfo */
   public static final byte[] EXCLUDE_FROM_MINOR_COMPACTION_KEY =
       Bytes.toBytes("EXCLUDE_FROM_MINOR_COMPACTION");
+
+  /**
+   * Key for compaction event which contains the compacted storefiles in FileInfo
+   */
+  public static final byte[] COMPACTION_EVENT_KEY = Bytes.toBytes("COMPACTION_EVENT_KEY");
 
   /** Bloom filter Type in FileInfo */
   public static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
@@ -124,10 +128,6 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   // store file. It is decremented when the scan on the store file is
   // done.
   private final AtomicInteger refCount = new AtomicInteger(0);
-
-  // Set implementation must be of concurrent type
-  @VisibleForTesting
-  final Set<StoreFileReader> streamReaders;
 
   private final boolean noReadahead;
 
@@ -183,6 +183,9 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   // It's set whenever you get a Reader.
   private boolean excludeFromMinorCompaction = false;
 
+  // This file was product of these compacted store files
+  private final Set<String> compactedStoreFiles = new HashSet<>();
+
   /**
    * Map of the metadata entries in the corresponding HFile. Populated when Reader is opened
    * after which it is not modified again.
@@ -232,7 +235,6 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
    */
   public HStoreFile(FileSystem fs, StoreFileInfo fileInfo, Configuration conf, CacheConfig cacheConf,
       BloomType cfBloomType, boolean primaryReplica) {
-    this.streamReaders = ConcurrentHashMap.newKeySet();
     this.fs = fs;
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
@@ -359,7 +361,6 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
 
   /**
    * Opens reader on this store file. Called by Constructor.
-   * @throws IOException
    * @see #closeStoreFile(boolean)
    */
   private void open() throws IOException {
@@ -464,6 +465,14 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
           "proceeding without", e);
       this.reader.timeRange = null;
     }
+
+    try {
+      byte[] data = metadataMap.get(COMPACTION_EVENT_KEY);
+      this.compactedStoreFiles.addAll(ProtobufUtil.toCompactedStoreFiles(data));
+    } catch (IOException e) {
+      LOG.error("Error reading compacted storefiles from meta data", e);
+    }
+
     // initialize so we can reuse them after reader closed.
     firstKey = reader.getFirstKey();
     lastKey = reader.getLastKey();
@@ -516,13 +525,9 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
       boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
       throws IOException {
-    StoreFileReader reader = createStreamReader(canUseDropBehind);
-    reader.setListener(this);
-    StoreFileScanner sfScanner = reader.getStoreFileScanner(cacheBlocks, false,
-      isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
-    //Add reader once the scanner is created
-    streamReaders.add(reader);
-    return sfScanner;
+    return createStreamReader(canUseDropBehind)
+        .getStoreFileScanner(cacheBlocks, false, isCompaction, readPt, scannerOrder,
+            canOptimizeForNonNullColumn);
   }
 
   /**
@@ -541,19 +546,6 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
     if (this.reader != null) {
       this.reader.close(evictOnClose);
       this.reader = null;
-    }
-    closeStreamReaders(evictOnClose);
-  }
-
-  public void closeStreamReaders(boolean evictOnClose) throws IOException {
-    synchronized (this) {
-      for (StoreFileReader entry : streamReaders) {
-        //closing the reader will remove itself from streamReaders thanks to the Listener
-        entry.close(evictOnClose);
-      }
-      int size = streamReaders.size();
-      Preconditions.checkState(size == 0,
-          "There are still streamReaders post close: " + size);
     }
   }
 
@@ -622,8 +614,7 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
     return tr != null ? OptionalLong.of(tr.getMax()) : OptionalLong.empty();
   }
 
-  @Override
-  public void storeFileReaderClosed(StoreFileReader reader) {
-    streamReaders.remove(reader);
+  Set<String> getCompactedStoreFiles() {
+    return Collections.unmodifiableSet(this.compactedStoreFiles);
   }
 }
