@@ -1119,8 +1119,12 @@ public final class HConstants {
   public static final int ADMIN_QOS = 100;
   public static final int HIGH_QOS = 200;
   public static final int SYSTEMTABLE_QOS = HIGH_QOS;
+  /**
+   * @deprecated the name "META_QOS" is a bit ambiguous, actually only meta region transition can
+   *             use this priority, and you should not use this directly. Will be removed in 3.0.0.
+   */
+  @Deprecated
   public static final int META_QOS = 300;
-
 
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = "archive";

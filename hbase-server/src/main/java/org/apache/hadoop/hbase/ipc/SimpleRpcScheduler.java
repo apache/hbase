@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.master.MasterAnnotationReadingPriorityFunction;
 
 /**
  * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
@@ -189,7 +190,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (level == HConstants.PRIORITY_UNSET) {
       level = HConstants.NORMAL_QOS;
     }
-    if (metaTransitionExecutor != null && level == HConstants.META_QOS) {
+    if (metaTransitionExecutor != null &&
+      level == MasterAnnotationReadingPriorityFunction.META_TRANSITION_QOS) {
       return metaTransitionExecutor.dispatch(callTask);
     } else if (priorityExecutor != null && level > highPriorityLevel) {
       return priorityExecutor.dispatch(callTask);

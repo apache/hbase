@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.META_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
@@ -242,7 +241,7 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testGetMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
-    verify(stub, times(1)).get(assertPriority(META_QOS), any(GetRequest.class), any());
+    verify(stub, times(1)).get(assertPriority(SYSTEMTABLE_QOS), any(GetRequest.class), any());
   }
 
   @Test
@@ -274,7 +273,7 @@ public class TestAsyncTableRpcPriority {
   public void testPutMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME).put(new Put(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -301,7 +300,7 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testDeleteMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME).delete(new Delete(Bytes.toBytes(0))).join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -333,7 +332,7 @@ public class TestAsyncTableRpcPriority {
   public void testAppendMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME).append(new Append(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -361,7 +360,7 @@ public class TestAsyncTableRpcPriority {
   public void testIncrementMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME)
       .incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1).join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -401,7 +400,7 @@ public class TestAsyncTableRpcPriority {
       .qualifier(Bytes.toBytes("cq")).ifNotExists().thenPut(new Put(Bytes.toBytes(0))
         .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
       .join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -434,7 +433,7 @@ public class TestAsyncTableRpcPriority {
       .qualifier(Bytes.toBytes("cq")).ifNotExists().thenPut(new Put(Bytes.toBytes(0))
         .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
       .join();
-    verify(stub, times(1)).mutate(assertPriority(META_QOS), any(MutateRequest.class), any());
+    verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
   @Test
@@ -475,8 +474,8 @@ public class TestAsyncTableRpcPriority {
       .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
       .thenMutate(new RowMutations(Bytes.toBytes(0)).add((Mutation) new Delete(Bytes.toBytes(0))))
       .join();
-    verify(stub, times(1)).multi(assertPriority(META_QOS), any(ClientProtos.MultiRequest.class),
-      any());
+    verify(stub, times(1)).multi(assertPriority(SYSTEMTABLE_QOS),
+      any(ClientProtos.MultiRequest.class), any());
   }
 
   @Test
@@ -525,7 +524,7 @@ public class TestAsyncTableRpcPriority {
     }
     Thread.sleep(1000);
     // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(META_QOS), any(ScanRequest.class), any());
+    verify(stub, atLeast(4)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
   }
 
   @Test
@@ -548,7 +547,7 @@ public class TestAsyncTableRpcPriority {
   public void testBatchMetaTable() {
     conn.getTable(TableName.META_TABLE_NAME).batchAll(Arrays.asList(new Delete(Bytes.toBytes(0))))
       .join();
-    verify(stub, times(1)).multi(assertPriority(META_QOS), any(ClientProtos.MultiRequest.class),
-      any());
+    verify(stub, times(1)).multi(assertPriority(SYSTEMTABLE_QOS),
+      any(ClientProtos.MultiRequest.class), any());
   }
 }
