@@ -3691,9 +3691,11 @@ public class HRegionServer extends HasThread implements
   private static class SystemExitWhenAbortTimeout extends TimerTask {
     @Override
     public void run() {
-      LOG.warn("Aborting region server timed out, terminating forcibly. Thread dump to stdout.");
+      LOG.warn("Aborting region server timed out, terminating forcibly" +
+          " and does not wait for any running shutdown hooks or finalizers to finish their work." +
+          " Thread dump to stdout.");
       Threads.printThreadInfo(System.out, "Zombie HRegionServer");
-      System.exit(1);
+      Runtime.getRuntime().halt(1);
     }
   }
 }
