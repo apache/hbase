@@ -19,7 +19,6 @@
  * limitations under the License.
  */
 -->
-<!-- for testing -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
