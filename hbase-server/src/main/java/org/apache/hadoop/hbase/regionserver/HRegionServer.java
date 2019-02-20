@@ -182,8 +182,6 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JSONBean;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.MBeanUtil;
-import org.apache.hadoop.hbase.util.RetryCounter;
-import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -974,18 +972,13 @@ public class HRegionServer extends HasThread implements
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
       }
 
-      // Try and register with the Master; tell it we are here.  Break if server is stopped or the
-      // clusterup flag is down or hdfs went wacky. Once registered successfully, go ahead and start
-      // up all Services. Use RetryCounter to get backoff in case Master is struggling to come up.
-      RetryCounterFactory rcf = new RetryCounterFactory(Integer.MAX_VALUE,
-          this.sleeper.getPeriod(), 1000 * 60 * 5);
-      RetryCounter rc = rcf.create();
+      // Try and register with the Master; tell it we are here.  Break if
+      // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
         RegionServerStartupResponse w = reportForDuty();
         if (w == null) {
-          long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
-          LOG.warn("reportForDuty failed; sleeping " + sleepTime + " ms and then retrying");
-          this.sleeper.sleep(sleepTime);
+          LOG.warn("reportForDuty failed; sleeping and then retrying.");
+          this.sleeper.sleep();
         } else {
           handleReportForDutyResponse(w);
           break;

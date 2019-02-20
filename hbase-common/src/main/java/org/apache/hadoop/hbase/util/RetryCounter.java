@@ -174,14 +174,4 @@ public class RetryCounter {
   public int getAttemptTimes() {
     return attempts;
   }
-
-  public long getBackoffTime() {
-    return this.retryConfig.backoffPolicy.getBackoffTime(this.retryConfig, getAttemptTimes());
-  }
-
-  public long getBackoffTimeAndIncrementAttempts() {
-    long backoffTime = getBackoffTime();
-    useRetry();
-    return backoffTime;
-  }
 }

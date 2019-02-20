@@ -50,6 +50,13 @@ public class Sleeper {
   }
 
   /**
+   * Sleep for period.
+   */
+  public void sleep() {
+    sleep(System.currentTimeMillis());
+  }
+
+  /**
    * If currently asleep, stops sleeping; if not asleep, will skip the next
    * sleep cycle.
    */
@@ -61,24 +68,28 @@ public class Sleeper {
   }
 
   /**
-   * Sleep for period.
+   * Sleep for period adjusted by passed <code>startTime</code>
+   * @param startTime Time some task started previous to now.  Time to sleep
+   * will be docked current time minus passed <code>startTime</code>.
    */
-  public void sleep() {
-    sleep(this.period);
-  }
-
-  public void sleep(long sleepTime) {
+  public void sleep(final long startTime) {
     if (this.stopper.isStopped()) {
       return;
     }
     long now = System.currentTimeMillis();
-    long currentSleepTime = sleepTime;
-    while (currentSleepTime > 0) {
+    long waitTime = this.period - (now - startTime);
+    if (waitTime > this.period) {
+      LOG.warn("Calculated wait time > " + this.period +
+        "; setting to this.period: " + System.currentTimeMillis() + ", " +
+        startTime);
+      waitTime = this.period;
+    }
+    while (waitTime > 0) {
       long woke = -1;
       try {
         synchronized (sleepLock) {
           if (triggerWake) break;
-          sleepLock.wait(currentSleepTime);
+          sleepLock.wait(waitTime);
         }
         woke = System.currentTimeMillis();
         long slept = woke - now;
@@ -97,7 +108,7 @@ public class Sleeper {
       }
       // Recalculate waitTime.
       woke = (woke == -1)? System.currentTimeMillis(): woke;
-      currentSleepTime = this.period - (woke - now);
+      waitTime = this.period - (woke - startTime);
     }
     synchronized(sleepLock) {
       triggerWake = false;
