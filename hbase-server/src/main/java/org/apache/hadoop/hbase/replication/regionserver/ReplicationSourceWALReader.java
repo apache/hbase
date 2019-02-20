@@ -124,7 +124,7 @@ class ReplicationSourceWALReader extends Thread {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       try (WALEntryStream entryStream =
-          new WALEntryStream(logQueue, fs, conf, currentPosition,
+          new WALEntryStream(logQueue, conf, currentPosition,
               source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
               source.getSourceMetrics())) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
