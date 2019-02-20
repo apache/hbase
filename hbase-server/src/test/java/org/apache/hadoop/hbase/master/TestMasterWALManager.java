@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -60,14 +60,27 @@ public class TestMasterWALManager {
   public void before() throws IOException {
     MasterFileSystem mfs = Mockito.mock(MasterFileSystem.class);
     Mockito.when(mfs.getWALFileSystem()).thenReturn(HTU.getTestFileSystem());
-    Path walRootDir = HTU.createWALRootDir();
+    final Path walRootDir = HTU.getDataTestDir();;
+
     Mockito.when(mfs.getWALRootDir()).thenReturn(walRootDir);
     this.masterServices = Mockito.mock(MasterServices.class);
     Mockito.when(this.masterServices.getConfiguration()).thenReturn(HTU.getConfiguration());
     Mockito.when(this.masterServices.getMasterFileSystem()).thenReturn(mfs);
-    Mockito.when(this.masterServices.getServerName()).
-        thenReturn(ServerName.parseServerName("master.example.org,0123,456"));
-    this.mwm = new MasterWalManager(this.masterServices);
+    Mockito.when(this.masterServices.getServerName())
+        .thenReturn(ServerName.parseServerName("master.example.org,0123,456"));
+    this.mwm = new MasterWalManager(this.masterServices) {
+
+      @Override
+      Path getWALDirPath() throws IOException {
+        return walRootDir;
+      }
+
+      @Override
+      Path getWALDirectoryName(ServerName serverName) {
+        return new Path(walRootDir,
+            AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
+      }
+    };
   }
 
   @Test

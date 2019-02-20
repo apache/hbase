@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -93,15 +94,14 @@ public class MasterWalManager {
   private volatile boolean fsOk = true;
 
   public MasterWalManager(MasterServices services) throws IOException {
-    this(services.getConfiguration(), services.getMasterFileSystem().getWALFileSystem(),
-      services.getMasterFileSystem().getWALRootDir(), services);
+    this(services.getConfiguration(), services.getMasterFileSystem().getWALFileSystem(), services);
   }
 
-  public MasterWalManager(Configuration conf, FileSystem fs, Path rootDir, MasterServices services)
+  public MasterWalManager(Configuration conf, FileSystem fs,  MasterServices services)
       throws IOException {
     this.fs = fs;
     this.conf = conf;
-    this.rootDir = rootDir;
+    this.rootDir = CommonFSUtils.getWALRootDir(conf);
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
 
@@ -190,9 +190,10 @@ public class MasterWalManager {
 
   /**
    * @return Returns the WALs dir under <code>rootDir</code>
+   * @throws IOException
    */
-  Path getWALDirPath() {
-    return new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
+  Path getWALDirPath() throws IOException {
+    return new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
   }
 
   /**
@@ -213,7 +214,7 @@ public class MasterWalManager {
    *             it.
    */
   @Deprecated
-  public Set<ServerName> getFailedServersFromLogFolders() {
+  public Set<ServerName> getFailedServersFromLogFolders() throws IOException {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 

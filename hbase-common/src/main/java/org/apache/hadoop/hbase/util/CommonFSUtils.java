@@ -383,6 +383,7 @@ public abstract class CommonFSUtils {
    * @throws IOException e
    */
   public static Path getWALRootDir(final Configuration c) throws IOException {
+
     Path p = new Path(c.get(HBASE_WAL_DIR, c.get(HConstants.HBASE_DIR)));
     if (!isValidWALRootDir(p, c)) {
       return getRootDir(c);
