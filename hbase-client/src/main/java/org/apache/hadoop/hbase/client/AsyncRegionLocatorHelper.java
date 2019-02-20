@@ -53,12 +53,18 @@ final class AsyncRegionLocatorHelper {
       Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
       Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
-    LOG.debug("Try updating {} , the old value is {}", loc, oldLoc, exception);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,
+        exception != null ? exception.toString() : "none");
+    }
     if (!canUpdateOnError(loc, oldLoc)) {
       return;
     }
     Throwable cause = findException(exception);
-    LOG.debug("The actual exception when updating {}", loc, cause);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The actual exception when updating {} is {}", loc,
+        cause != null ? cause.toString() : "none");
+    }
     if (cause == null || !isMetaClearingException(cause)) {
       LOG.debug("Will not update {} because the exception is null or not the one we care about",
         loc);

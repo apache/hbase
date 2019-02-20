@@ -78,7 +78,7 @@ class AsyncMetaRegionLocator {
             metaRelocateFuture.getAndSet(null).completeExceptionally(error);
             return;
           }
-          LOG.debug("The fetched meta region location is {}" + locs);
+          LOG.debug("The fetched meta region location is {}", locs);
           // Here we update cache before reset future, so it is possible that someone can get a
           // stale value. Consider this:
           // 1. update cache

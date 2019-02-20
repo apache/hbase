@@ -45,7 +45,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -275,7 +274,9 @@ class AsyncNonMetaRegionLocator {
     }
     synchronized (tableCache) {
       tableCache.pendingRequests.remove(req);
-      if (error instanceof DoNotRetryIOException) {
+      if (error != null) {
+        // fail the request itself, no matter whether it is a DoNotRetryIOException, as we have
+        // already retried several times
         CompletableFuture<?> future = tableCache.allRequests.remove(req);
         if (future != null) {
           future.completeExceptionally(error);
