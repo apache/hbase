@@ -344,6 +344,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
     CompletionService<Integer> pool = new ExecutorCompletionService<>(this.exec);
+    String walGroupId = replicateContext.getWalGroupId();
     int sleepMultiplier = 1;
 
     if (!peersSelected && this.isRunning()) {
@@ -370,10 +371,19 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         reconnectToPeerCluster();
       }
       try {
+        long lastWriteTime;
+
         // replicate the batches to sink side.
-        parallelReplicate(pool, replicateContext, batches);
+        lastWriteTime = parallelReplicate(pool, replicateContext, batches);
+
+        // update metrics
+        if (lastWriteTime > 0) {
+          this.metrics.setAgeOfLastShippedOp(lastWriteTime, walGroupId);
+        }
         return true;
       } catch (IOException ioe) {
+        // Didn't ship anything, but must still age the last time we did
+        this.metrics.refreshAgeOfLastShippedOp(walGroupId);
         if (ioe instanceof RemoteException) {
           ioe = ((RemoteException) ioe).unwrapRemoteException();
           LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);

@@ -274,12 +274,25 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   }
 
   private void buildReplicationLoad() {
-    List<ReplicationSourceInterface> allSources = new ArrayList<>();
-    allSources.addAll(this.replicationManager.getSources());
-    allSources.addAll(this.replicationManager.getOldSources());
+    List<MetricsSource> sourceMetricsList = new ArrayList<>();
+
+    // get source
+    List<ReplicationSourceInterface> sources = this.replicationManager.getSources();
+    for (ReplicationSourceInterface source : sources) {
+      sourceMetricsList.add(source.getSourceMetrics());
+    }
+
+    // get old source
+    List<ReplicationSourceInterface> oldSources = this.replicationManager.getOldSources();
+    for (ReplicationSourceInterface source : oldSources) {
+      if (source instanceof ReplicationSource) {
+        sourceMetricsList.add(source.getSourceMetrics());
+      }
+    }
+
     // get sink
     MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
-    this.replicationLoad.buildReplicationLoad(allSources, sinkMetrics);
+    this.replicationLoad.buildReplicationLoad(sourceMetricsList, sinkMetrics);
   }
 
   @Override

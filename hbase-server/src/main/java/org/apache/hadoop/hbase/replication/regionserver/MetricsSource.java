@@ -41,11 +41,10 @@ public class MetricsSource implements BaseSource {
   private static final Logger LOG = LoggerFactory.getLogger(MetricsSource.class);
 
   // tracks last shipped timestamp for each wal group
-  private Map<String, Long> lastShippedTimeStamps = new HashMap<String, Long>();
+  private Map<String, Long> lastTimestamps = new HashMap<>();
   private Map<String, Long> ageOfLastShippedOp = new HashMap<>();
   private long lastHFileRefsQueueSize = 0;
   private String id;
-  private long timeStampNextToReplicate;
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
@@ -82,7 +81,7 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Set the age of the last edit that was shipped
-   * @param timestamp target write time of the edit
+   * @param timestamp write time of the edit
    * @param walGroup which group we are setting
    */
   public void setAgeOfLastShippedOp(long timestamp, String walGroup) {
@@ -90,7 +89,7 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
     this.ageOfLastShippedOp.put(walGroup, age);
-    this.lastShippedTimeStamps.put(walGroup, timestamp);
+    this.lastTimestamps.put(walGroup, timestamp);
   }
 
   /**
@@ -104,6 +103,15 @@ public class MetricsSource implements BaseSource {
         tableName, t -> CompatibilitySingletonFactory
             .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
             .setLastShippedAge(age);
+  }
+
+  /**
+   * get the last timestamp of given wal group. If the walGroup is null, return 0.
+   * @param walGroup which group we are getting
+   * @return timeStamp
+   */
+  public long getLastTimeStampOfWalGroup(String walGroup) {
+    return this.lastTimestamps.get(walGroup) == null ? 0 : lastTimestamps.get(walGroup);
   }
 
   /**
@@ -121,9 +129,9 @@ public class MetricsSource implements BaseSource {
    * @param walGroupId id of the group to update
    */
   public void refreshAgeOfLastShippedOp(String walGroupId) {
-    Long lastTimestamp = this.lastShippedTimeStamps.get(walGroupId);
+    Long lastTimestamp = this.lastTimestamps.get(walGroupId);
     if (lastTimestamp == null) {
-      this.lastShippedTimeStamps.put(walGroupId, 0L);
+      this.lastTimestamps.put(walGroupId, 0L);
       lastTimestamp = 0L;
     }
     if (lastTimestamp > 0) {
@@ -191,30 +199,6 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Gets the number of edits not eligible for replication this source queue logs so far.
-   * @return logEditsFiltered non-replicable edits filtered from this queue logs.
-   */
-  public long getEditsFiltered(){
-    return this.singleSourceSource.getEditsFiltered();
-  }
-
-  /**
-   * Gets the number of edits eligible for replication read from this source queue logs so far.
-   * @return replicableEdits total number of replicable edits read from this queue logs.
-   */
-  public long getReplicableEdits(){
-    return this.singleSourceSource.getWALEditsRead() - this.singleSourceSource.getEditsFiltered();
-  }
-
-  /**
-   * Gets the number of OPs shipped by this source queue to target cluster.
-   * @return oPsShipped total number of OPs shipped by this source.
-   */
-  public long getOpsShipped() {
-    return this.singleSourceSource.getShippedOps();
-  }
-
-  /**
    * Convience method to apply changes to metrics do to shipping a batch of logs.
    *
    * @param batchSize the size of the batch that was shipped to sinks.
@@ -239,9 +223,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
-    lastShippedTimeStamps.clear();
+    lastTimestamps.clear();
     lastHFileRefsQueueSize = 0;
-    timeStampNextToReplicate = 0;
   }
 
   /**
@@ -277,38 +260,12 @@ public class MetricsSource implements BaseSource {
    */
   public long getTimestampOfLastShippedOp() {
     long lastTimestamp = 0L;
-    for (long ts : lastShippedTimeStamps.values()) {
+    for (long ts : lastTimestamps.values()) {
       if (ts > lastTimestamp) {
         lastTimestamp = ts;
       }
     }
     return lastTimestamp;
-  }
-
-  /**
-   * TimeStamp of next edit to be replicated.
-   * @return timeStampNextToReplicate - TimeStamp of next edit to be replicated.
-   */
-  public long getTimeStampNextToReplicate() {
-    return timeStampNextToReplicate;
-  }
-
-  /**
-   * TimeStamp of next edit targeted for replication. Used for calculating lag,
-   * as if this timestamp is greater than timestamp of last shipped, it means there's
-   * at least one edit pending replication.
-   * @param timeStampNextToReplicate timestamp of next edit in the queue that should be replicated.
-   */
-  public void setTimeStampNextToReplicate(long timeStampNextToReplicate) {
-    this.timeStampNextToReplicate = timeStampNextToReplicate;
-  }
-
-  public long getReplicationDelay() {
-    if(getTimestampOfLastShippedOp()>=timeStampNextToReplicate){
-      return 0;
-    }else{
-      return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
-    }
   }
 
   /**

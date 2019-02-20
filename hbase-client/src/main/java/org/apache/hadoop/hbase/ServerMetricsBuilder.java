@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
-
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +75,7 @@ public final class ServerMetricsBuilder {
       .setRegionMetrics(serverLoadPB.getRegionLoadsList().stream()
         .map(RegionMetricsBuilder::toRegionMetrics).collect(Collectors.toList()))
       .setReplicationLoadSources(serverLoadPB.getReplLoadSourceList().stream()
-          .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
+        .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
       .setReplicationLoadSink(serverLoadPB.hasReplLoadSink()
         ? ProtobufUtil.toReplicationLoadSink(serverLoadPB.getReplLoadSink())
         : null)
@@ -302,16 +299,6 @@ public final class ServerMetricsBuilder {
     @Override
     public List<ReplicationLoadSource> getReplicationLoadSourceList() {
       return Collections.unmodifiableList(sources);
-    }
-
-    @Override
-    public Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap(){
-      Map<String,List<ReplicationLoadSource>> sourcesMap = new HashMap<>();
-      for(ReplicationLoadSource loadSource : sources){
-        sourcesMap.computeIfAbsent(loadSource.getPeerID(),
-          peerId -> new ArrayList()).add(loadSource);
-      }
-      return sourcesMap;
     }
 
     @Override

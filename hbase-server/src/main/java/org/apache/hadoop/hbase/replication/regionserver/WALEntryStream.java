@@ -174,7 +174,6 @@ class WALEntryStream implements Closeable {
   private void tryAdvanceEntry() throws IOException {
     if (checkReader()) {
       boolean beingWritten = readNextEntryAndRecordReaderPosition();
-      LOG.trace("reading wal file {}. Current open for write: {}", this.currentPath, beingWritten);
       if (currentEntry == null && !beingWritten) {
         // no more entries in this log file, and the file is already closed, i.e, rolled
         // Before dequeueing, we should always get one more attempt at reading.
@@ -274,7 +273,6 @@ class WALEntryStream implements Closeable {
       return true;
     }
     if (readEntry != null) {
-      LOG.trace("reading entry: {} ", readEntry);
       metrics.incrLogEditsRead();
       metrics.incrLogReadInBytes(readerPos - currentPositionOfEntry);
     }

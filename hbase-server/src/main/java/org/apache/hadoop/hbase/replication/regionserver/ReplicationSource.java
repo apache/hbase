@@ -179,7 +179,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.totalBufferUsed = manager.getTotalBufferUsed();
     this.walFileLengthProvider = walFileLengthProvider;
-    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
+    LOG.info("queueId={}, ReplicationSource : {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
 
@@ -209,8 +209,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     } else {
       queue.put(log);
     }
-    LOG.trace("Added log file {} to queue of source {}.", logPrefix,
-        this.replicationQueueInfo.getQueueId());
+
     this.metrics.incrSizeOfLogQueue();
     // This will log a warning for each new log that gets created above the warn threshold
     int queueSize = queue.size();
@@ -320,13 +319,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public Map<String, ReplicationStatus> getWalGroupStatus() {
     Map<String, ReplicationStatus> sourceReplicationStatus = new TreeMap<>();
-    long ageOfLastShippedOp, replicationDelay, fileSize;
+    long lastTimeStamp, ageOfLastShippedOp, replicationDelay, fileSize;
     for (Map.Entry<String, ReplicationSourceShipper> walGroupShipper : workerThreads.entrySet()) {
       String walGroupId = walGroupShipper.getKey();
       ReplicationSourceShipper shipper = walGroupShipper.getValue();
+      lastTimeStamp = metrics.getLastTimeStampOfWalGroup(walGroupId);
       ageOfLastShippedOp = metrics.getAgeofLastShippedOp(walGroupId);
       int queueSize = queues.get(walGroupId).size();
-      replicationDelay = metrics.getReplicationDelay();
+      replicationDelay =
+          ReplicationLoad.calculateReplicationDelay(ageOfLastShippedOp, lastTimeStamp, queueSize);
       Path currentPath = shipper.getCurrentPath();
       fileSize = -1;
       if (currentPath != null) {
@@ -480,8 +481,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     for (;;) {
       peerClusterId = replicationEndpoint.getPeerUUID();
       if (this.isSourceActive() && peerClusterId == null) {
-        LOG.debug("Could not connect to Peer ZK. Sleeping for "
-            + (this.sleepForRetries * sleepMultiplier) + " millis.");
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -499,8 +498,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       this.manager.removeSource(this);
       return;
     }
-    LOG.info("Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
-        this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
+    LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
 
     initializeWALEntryFilter(peerClusterId);
     // start workers
@@ -549,9 +547,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      if(worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
+      worker.entryReader.setReaderRunning(false);
     }
 
     for (ReplicationSourceShipper worker : workers) {
@@ -617,10 +613,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return !this.server.isStopped() && this.sourceRunning;
   }
 
-  public UUID getPeerClusterUUID(){
-    return this.clusterId;
-  }
-
   /**
    * Comparator used to compare logs together based on their start time
    */
@@ -644,19 +636,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     private static long getTS(Path p) {
       return AbstractFSWALProvider.getWALStartTimeFromWALName(p.getName());
     }
-  }
-
-  public ReplicationQueueInfo getReplicationQueueInfo() {
-    return replicationQueueInfo;
-  }
-
-  public boolean isWorkerRunning(){
-    for(ReplicationSourceShipper worker : this.workerThreads.values()){
-      if(worker.isActive()){
-        return worker.isActive();
-      }
-    }
-    return false;
   }
 
   @Override

@@ -77,12 +77,6 @@ public interface ServerMetrics {
 
   /**
    * Call directly from client such as hbase shell
-   * @return a map of ReplicationLoadSource list per peer id
-   */
-  Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap();
-
-  /**
-   * Call directly from client such as hbase shell
    * @return ReplicationLoadSink
    */
   @Nullable
