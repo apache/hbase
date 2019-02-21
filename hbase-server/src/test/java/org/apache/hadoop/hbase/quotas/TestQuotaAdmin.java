@@ -597,6 +597,48 @@ public class TestQuotaAdmin {
     testSwitchRpcThrottle(admin, false, true);
   }
 
+  @Test
+  public void testSwitchExceedThrottleQuota() throws IOException {
+    String regionServer = QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY;
+    Admin admin = TEST_UTIL.getAdmin();
+
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "if there is no region server quota");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.WRITE_NUMBER, 100, TimeUnit.SECONDS));
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "if there is no read region server quota");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      20, TimeUnit.MINUTES));
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "because not all region server quota are in seconds time unit");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      20, TimeUnit.SECONDS));
+
+    assertFalse(admin.exceedThrottleQuotaSwitch(true));
+    assertTrue(admin.exceedThrottleQuotaSwitch(true));
+    assertTrue(admin.exceedThrottleQuotaSwitch(false));
+    assertFalse(admin.exceedThrottleQuotaSwitch(false));
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(regionServer));
+  }
+
   private void testSwitchRpcThrottle(Admin admin, boolean oldRpcThrottle, boolean newRpcThrottle)
       throws IOException {
     boolean state = admin.switchRpcThrottle(newRpcThrottle);

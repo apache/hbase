@@ -1742,6 +1742,25 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preSwitchExceedThrottleQuota(boolean enable) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSwitchExceedThrottleQuota(this, enable);
+      }
+    });
+  }
+
+  public void postSwitchExceedThrottleQuota(final boolean oldValue, final boolean newValue)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSwitchExceedThrottleQuota(this, oldValue, newValue);
+      }
+    });
+  }
+
   public void preGrant(UserPermission userPermission, boolean mergeExistingPermissions)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {

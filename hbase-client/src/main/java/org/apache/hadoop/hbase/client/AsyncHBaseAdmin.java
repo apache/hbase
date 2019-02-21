@@ -764,6 +764,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> exceedThrottleQuotaSwitch(boolean enable) {
+    return wrap(rawAdmin.exceedThrottleQuotaSwitch(enable));
+  }
+
+  @Override
   public CompletableFuture<Map<TableName, Long>> getSpaceQuotaTableSizes() {
     return wrap(rawAdmin.getSpaceQuotaTableSizes());
   }

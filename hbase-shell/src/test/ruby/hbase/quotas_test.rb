@@ -272,6 +272,16 @@ module Hbase
       output = capture_stdout{ command(:list_quotas) }
       assert(output.include?('0 row(s)'))
     end
+
+    define_test 'switch exceed throttle quota' do
+      command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '1CU/sec')
+      output = capture_stdout { command(:enable_exceed_throttle_quota) }
+      assert(output.include?('Previous exceed throttle quota enabled : false'))
+
+      output = capture_stdout { command(:disable_exceed_throttle_quota) }
+      assert(output.include?('Previous exceed throttle quota enabled : true'))
+      command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE)
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

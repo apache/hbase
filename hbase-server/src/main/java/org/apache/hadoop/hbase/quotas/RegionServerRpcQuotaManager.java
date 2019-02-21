@@ -138,14 +138,20 @@ public class RegionServerRpcQuotaManager {
         QuotaLimiter rsLimiter = quotaCache
             .getRegionServerQuotaLimiter(QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY);
         useNoop &= tableLimiter.isBypass() && nsLimiter.isBypass() && rsLimiter.isBypass();
+        boolean exceedThrottleQuotaEnabled = quotaCache.isExceedThrottleQuotaEnabled();
         if (LOG.isTraceEnabled()) {
           LOG.trace("get quota for ugi=" + ugi + " table=" + table + " userLimiter=" + userLimiter
               + " tableLimiter=" + tableLimiter + " nsLimiter=" + nsLimiter + " rsLimiter="
-              + rsLimiter);
+              + rsLimiter + " exceedThrottleQuotaEnabled=" + exceedThrottleQuotaEnabled);
         }
         if (!useNoop) {
-          return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter,
-              tableLimiter, nsLimiter, rsLimiter);
+          if (exceedThrottleQuotaEnabled) {
+            return new ExceedOperationQuota(this.rsServices.getConfiguration(), rsLimiter,
+                userLimiter, tableLimiter, nsLimiter);
+          } else {
+            return new DefaultOperationQuota(this.rsServices.getConfiguration(), userLimiter,
+                tableLimiter, nsLimiter, rsLimiter);
+          }
         }
       }
     }

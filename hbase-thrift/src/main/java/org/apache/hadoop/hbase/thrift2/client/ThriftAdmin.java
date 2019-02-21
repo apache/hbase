@@ -512,6 +512,12 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean exceedThrottleQuotaSwitch(boolean enable) throws IOException {
+    throw new NotImplementedException(
+        "exceedThrottleQuotaSwitch by pattern not supported in ThriftAdmin");
+  }
+
+  @Override
   public HTableDescriptor[] disableTables(String regex) throws IOException {
     throw new NotImplementedException("disableTables by pattern not supported in ThriftAdmin");
   }

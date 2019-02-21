@@ -187,6 +187,12 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     assertEquals(true, future2.get().booleanValue());
   }
 
+  @Test
+  public void testSwitchExceedThrottleQuota() throws Exception {
+    AsyncAdmin admin = ASYNC_CONN.getAdmin();
+    assertEquals(false, admin.exceedThrottleQuotaSwitch(false).get().booleanValue());
+  }
+
   private void assertNumResults(int expected, final QuotaFilter filter) throws Exception {
     assertEquals(expected, countResults(filter));
   }
