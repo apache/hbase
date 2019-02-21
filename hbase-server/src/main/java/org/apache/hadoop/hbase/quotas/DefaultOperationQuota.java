@@ -34,17 +34,27 @@ import org.apache.hadoop.hbase.client.Result;
 public class DefaultOperationQuota implements OperationQuota {
   private static final Logger LOG = LoggerFactory.getLogger(DefaultOperationQuota.class);
 
-  private final List<QuotaLimiter> limiters;
+  protected final List<QuotaLimiter> limiters;
   private final long writeCapacityUnit;
   private final long readCapacityUnit;
 
-  private long writeAvailable = 0;
-  private long readAvailable = 0;
-  private long writeConsumed = 0;
-  private long readConsumed = 0;
-  private long writeCapacityUnitConsumed = 0;
-  private long readCapacityUnitConsumed = 0;
+  // the available read/write quota size in bytes
+  protected long writeAvailable = 0;
+  protected long readAvailable = 0;
+  // estimated quota
+  protected long writeConsumed = 0;
+  protected long readConsumed = 0;
+  protected long writeCapacityUnitConsumed = 0;
+  protected long readCapacityUnitConsumed = 0;
+  // real consumed quota
   private final long[] operationSize;
+  // difference between estimated quota and real consumed quota used in close method
+  // to adjust quota amount. Also used by ExceedOperationQuota which is a subclass
+  // of DefaultOperationQuota
+  protected long writeDiff = 0;
+  protected long readDiff = 0;
+  protected long writeCapacityUnitDiff = 0;
+  protected long readCapacityUnitDiff = 0;
 
   public DefaultOperationQuota(final Configuration conf, final QuotaLimiter... limiters) {
     this(conf, Arrays.asList(limiters));
@@ -69,12 +79,7 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException {
-    writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
-    readConsumed = estimateConsume(OperationType.GET, numReads, 100);
-    readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
-
-    writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
-    readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
+    updateEstimateConsumeQuota(numWrites, numReads, numScans);
 
     writeAvailable = Long.MAX_VALUE;
     readAvailable = Long.MAX_VALUE;
@@ -96,12 +101,12 @@ public class DefaultOperationQuota implements OperationQuota {
   @Override
   public void close() {
     // Adjust the quota consumed for the specified operation
-    long writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
-    long readDiff = operationSize[OperationType.GET.ordinal()]
+    writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
+    readDiff = operationSize[OperationType.GET.ordinal()]
         + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
-    long writeCapacityUnitDiff = calculateWriteCapacityUnitDiff(
+    writeCapacityUnitDiff = calculateWriteCapacityUnitDiff(
       operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
-    long readCapacityUnitDiff = calculateReadCapacityUnitDiff(
+    readCapacityUnitDiff = calculateReadCapacityUnitDiff(
       operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()],
       readConsumed);
 
@@ -138,6 +143,21 @@ public class DefaultOperationQuota implements OperationQuota {
   @Override
   public void addMutation(final Mutation mutation) {
     operationSize[OperationType.MUTATE.ordinal()] += QuotaUtil.calculateMutationSize(mutation);
+  }
+
+  /**
+   * Update estimate quota(read/write size/capacityUnits) which will be consumed
+   * @param numWrites the number of write requests
+   * @param numReads the number of read requests
+   * @param numScans the number of scan requests
+   */
+  protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
+    writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);
+    readConsumed = estimateConsume(OperationType.GET, numReads, 100);
+    readConsumed += estimateConsume(OperationType.SCAN, numScans, 1000);
+
+    writeCapacityUnitConsumed = calculateWriteCapacityUnit(writeConsumed);
+    readCapacityUnitConsumed = calculateReadCapacityUnit(readConsumed);
   }
 
   private long estimateConsume(final OperationType type, int numReqs, long avgSize) {

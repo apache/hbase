@@ -2774,6 +2774,14 @@ public interface Admin extends Abortable, Closeable {
   boolean isRpcThrottleEnabled() throws IOException;
 
   /**
+   * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
+   * can be exceeded if region server has availble quota.
+   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @return Previous exceed throttle enabled value
+   */
+  boolean exceedThrottleQuotaSwitch(final boolean enable) throws IOException;
+
+  /**
    * Fetches the table sizes on the filesystem as tracked by the HBase Master.
    */
   Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException;
