@@ -49,8 +49,11 @@ Release Notes - HBase - Version 1.5.0 2/28/2019
     * [HBASE-21582] - If call HBaseAdmin#snapshotAsync but forget call isSnapshotFinished, then SnapshotHFileCleaner will skip to run every time
     * [HBASE-21592] - quota.addGetResult(r)  throw  NPE
     * [HBASE-21618] - Scan with the same startRow(inclusive=true) and stopRow(inclusive=false) returns one result
+    * [HBASE-21740] - Fix NPE while shutting down RS
     * [HBASE-21749] - RS UI may throw NPE and make rs-status page inaccessible with multiwal and replication
     * [HBASE-21766] - TestSimpleRpcScheduler is flaky (branch-1)
+    * [HBASE-21866] - Do not move the table to null rsgroup when creating an existing table
+    * [HBASE-21915] - Make FileLinkInputStream implement CanUnbuffer
 
 ** New Feature
     * [HBASE-19528] - Major Compaction Tool 
@@ -87,6 +90,7 @@ Release Notes - HBase - Version 1.5.0 2/28/2019
     * [HBASE-21595] - Print thread's information and stack traces when RS is aborting forcibly
     * [HBASE-21645] - Perform sanity check and disallow table creation/modification with region replication < 1
     * [HBASE-21659] - Avoid to load duplicate coprocessors in system config and table descriptor
+    * [HBASE-21932] - Use Runtime.getRuntime().halt to terminate regionserver when abort timeout
 
 ** Test
     * [HBASE-20667] - Rename TestGlobalThrottler to TestReplicationGlobalThrottler
