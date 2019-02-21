@@ -2801,6 +2801,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
           break;
         }
+        case SERVERS_NAME: {
+          if (serverManager != null) {
+            builder.setServerNames(serverManager.getOnlineServersList());
+          }
+          break;
+        }
       }
     }
     return builder.build();

@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -99,6 +98,7 @@ public class TestClientClusterStatus {
     Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
     Assert.assertTrue(origin.getMasterInfoPort() == defaults.getMasterInfoPort());
     Assert.assertTrue(origin.equals(defaults));
+    Assert.assertTrue(origin.getServersName().size() == defaults.getServersName().size());
   }
 
   @Test
@@ -136,7 +136,8 @@ public class TestClientClusterStatus {
       }
     });
     // Retrieve live servers and dead servers info.
-    EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
+    EnumSet<Option> options =
+        EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS, Option.SERVERS_NAME);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     checkPbObjectNotNull(status);
     Assert.assertNotNull(status);
@@ -152,6 +153,8 @@ public class TestClientClusterStatus {
     Assert.assertEquals(1, status.getDeadServersSize());
     ServerName deadServerName = status.getDeadServerNames().iterator().next();
     Assert.assertEquals(DEAD.getServerName(), deadServerName);
+    Assert.assertNotNull(status.getServersName());
+    Assert.assertEquals(numRs, status.getServersName().size());
   }
 
   @Test

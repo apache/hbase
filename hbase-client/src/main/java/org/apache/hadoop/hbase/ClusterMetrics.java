@@ -139,6 +139,8 @@ public interface ClusterMetrics {
 
   int getMasterInfoPort();
 
+  List<ServerName> getServersName();
+
   /**
    * @return the average cluster load
    */
@@ -193,6 +195,10 @@ public interface ClusterMetrics {
     /**
      * metrics info port
      */
-    MASTER_INFO_PORT
+    MASTER_INFO_PORT,
+    /**
+     * metrics about live region servers name
+     */
+    SERVERS_NAME
   }
 }
