@@ -189,8 +189,7 @@ public class MasterWalManager {
    */
   public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
     Path walDirPath = new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] walDirForServerNames = FSUtils.listStatus(
-        CommonFSUtils.getWALFileSystem(conf), walDirPath, filter);
+    FileStatus[] walDirForServerNames = FSUtils.listStatus(fs, walDirPath, filter);
     return walDirForServerNames == null? new FileStatus[0]: walDirForServerNames;
   }
 
