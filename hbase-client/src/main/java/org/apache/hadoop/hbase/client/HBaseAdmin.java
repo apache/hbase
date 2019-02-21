@@ -4392,6 +4392,20 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
+  public boolean exceedThrottleQuotaSwitch(final boolean enable) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master
+            .switchExceedThrottleQuota(getRpcController(),
+              MasterProtos.SwitchExceedThrottleQuotaRequest.newBuilder()
+                  .setExceedThrottleQuotaEnabled(enable).build())
+            .getPreviousExceedThrottleQuotaEnabled();
+      }
+    });
+  }
+
+  @Override
   public Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException {
     return executeCallable(
       new MasterCallable<Map<TableName, Long>>(getConnection(), getRpcControllerFactory()) {

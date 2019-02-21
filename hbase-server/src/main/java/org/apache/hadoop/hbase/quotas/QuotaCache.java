@@ -71,6 +71,7 @@ public class QuotaCache implements Stoppable {
   private final ConcurrentHashMap<String, UserQuotaState> userQuotaCache = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, QuotaState> regionServerQuotaCache =
       new ConcurrentHashMap<>();
+  private volatile boolean exceedThrottleQuotaEnabled = false;
   private final RegionServerServices rsServices;
 
   private QuotaRefresherChore refreshChore;
@@ -158,6 +159,10 @@ public class QuotaCache implements Stoppable {
     return getQuotaState(this.regionServerQuotaCache, regionServer).getGlobalLimiter();
   }
 
+  protected boolean isExceedThrottleQuotaEnabled() {
+    return exceedThrottleQuotaEnabled;
+  }
+
   /**
    * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
    * returned and the quota request will be enqueued for the next cache refresh.
@@ -227,6 +232,7 @@ public class QuotaCache implements Stoppable {
       fetchTableQuotaState();
       fetchUserQuotaState();
       fetchRegionServerQuotaState();
+      fetchExceedThrottleQuota();
       lastUpdate = EnvironmentEdgeManager.currentTime();
     }
 
@@ -290,6 +296,15 @@ public class QuotaCache implements Stoppable {
             return QuotaUtil.fetchRegionServerQuotas(rsServices.getConnection(), gets);
           }
         });
+    }
+
+    private void fetchExceedThrottleQuota() {
+      try {
+        QuotaCache.this.exceedThrottleQuotaEnabled =
+            QuotaUtil.isExceedThrottleQuotaEnabled(rsServices.getConnection());
+      } catch (IOException e) {
+        LOG.warn("Unable to read if exceed throttle quota enabled from quota table", e);
+      }
     }
 
     private <K, V extends QuotaState> void fetch(final String type,

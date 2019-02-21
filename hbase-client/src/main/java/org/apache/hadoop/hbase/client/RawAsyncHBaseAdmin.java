@@ -257,6 +257,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
@@ -3679,6 +3681,20 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               stub, IsRpcThrottleEnabledRequest.newBuilder().build(),
               (s, c, req, done) -> s.isRpcThrottleEnabled(c, req, done),
               resp -> resp.getRpcThrottleEnabled()))
+        .call();
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> exceedThrottleQuotaSwitch(boolean enable) {
+    CompletableFuture<Boolean> future = this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this
+            .<SwitchExceedThrottleQuotaRequest, SwitchExceedThrottleQuotaResponse, Boolean> call(
+              controller, stub,
+              SwitchExceedThrottleQuotaRequest.newBuilder().setExceedThrottleQuotaEnabled(enable)
+                  .build(),
+              (s, c, req, done) -> s.switchExceedThrottleQuota(c, req, done),
+              resp -> resp.getPreviousExceedThrottleQuotaEnabled()))
         .call();
     return future;
   }

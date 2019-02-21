@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,12 +41,16 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TimeUnit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
 /**
  * Helper class to interact with the quota table
@@ -151,6 +157,86 @@ public class QuotaUtil extends QuotaTableUtil {
   public static void deleteRegionServerQuota(final Connection connection, final String regionServer)
       throws IOException {
     deleteQuotas(connection, getRegionServerRowKey(regionServer));
+  }
+
+  protected static void switchExceedThrottleQuota(final Connection connection,
+      boolean exceedThrottleQuotaEnabled) throws IOException {
+    if (exceedThrottleQuotaEnabled) {
+      checkRSQuotaToEnableExceedThrottle(
+        getRegionServerQuota(connection, QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY));
+    }
+
+    Put put = new Put(getExceedThrottleQuotaRowKey());
+    put.addColumn(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS,
+      Bytes.toBytes(exceedThrottleQuotaEnabled));
+    doPut(connection, put);
+  }
+
+  private static void checkRSQuotaToEnableExceedThrottle(Quotas quotas) throws IOException {
+    if (quotas != null && quotas.hasThrottle()) {
+      Throttle throttle = quotas.getThrottle();
+      // If enable exceed throttle quota, make sure that there are at least one read(req/read +
+      // num/size/cu) and one write(req/write + num/size/cu) region server throttle quotas.
+      boolean hasReadQuota = false;
+      boolean hasWriteQuota = false;
+      if (throttle.hasReqNum() || throttle.hasReqSize() || throttle.hasReqCapacityUnit()) {
+        hasReadQuota = true;
+        hasWriteQuota = true;
+      }
+      if (!hasReadQuota
+          && (throttle.hasReadNum() || throttle.hasReadSize() || throttle.hasReadCapacityUnit())) {
+        hasReadQuota = true;
+      }
+      if (!hasReadQuota) {
+        throw new DoNotRetryIOException(
+            "Please set at least one read region server quota before enable exceed throttle quota");
+      }
+      if (!hasWriteQuota && (throttle.hasWriteNum() || throttle.hasWriteSize()
+          || throttle.hasWriteCapacityUnit())) {
+        hasWriteQuota = true;
+      }
+      if (!hasWriteQuota) {
+        throw new DoNotRetryIOException("Please set at least one write region server quota "
+            + "before enable exceed throttle quota");
+      }
+      // If enable exceed throttle quota, make sure that region server throttle quotas are in
+      // seconds time unit. Because once previous requests exceed their quota and consume region
+      // server quota, quota in other time units may be refilled in a long time, this may affect
+      // later requests.
+      List<Pair<Boolean, TimedQuota>> list =
+          Arrays.asList(Pair.newPair(throttle.hasReqNum(), throttle.getReqNum()),
+            Pair.newPair(throttle.hasReadNum(), throttle.getReadNum()),
+            Pair.newPair(throttle.hasWriteNum(), throttle.getWriteNum()),
+            Pair.newPair(throttle.hasReqSize(), throttle.getReqSize()),
+            Pair.newPair(throttle.hasReadSize(), throttle.getReadSize()),
+            Pair.newPair(throttle.hasWriteSize(), throttle.getWriteSize()),
+            Pair.newPair(throttle.hasReqCapacityUnit(), throttle.getReqCapacityUnit()),
+            Pair.newPair(throttle.hasReadCapacityUnit(), throttle.getReadCapacityUnit()),
+            Pair.newPair(throttle.hasWriteCapacityUnit(), throttle.getWriteCapacityUnit()));
+      for (Pair<Boolean, TimedQuota> pair : list) {
+        if (pair.getFirst()) {
+          if (pair.getSecond().getTimeUnit() != TimeUnit.SECONDS) {
+            throw new DoNotRetryIOException("All region server quota must be "
+                + "in seconds time unit if enable exceed throttle quota");
+          }
+        }
+      }
+    } else {
+      // If enable exceed throttle quota, make sure that region server quota is already set
+      throw new DoNotRetryIOException(
+          "Please set region server quota before enable exceed throttle quota");
+    }
+  }
+
+  protected static boolean isExceedThrottleQuotaEnabled(final Connection connection)
+      throws IOException {
+    Get get = new Get(getExceedThrottleQuotaRowKey());
+    get.addColumn(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
+    Result result = doGet(connection, get);
+    if (result.isEmpty()) {
+      return false;
+    }
+    return Bytes.toBoolean(result.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS));
   }
 
   private static void addQuotas(final Connection connection, final byte[] rowKey,

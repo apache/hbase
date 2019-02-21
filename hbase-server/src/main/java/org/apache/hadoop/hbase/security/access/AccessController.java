@@ -2575,6 +2575,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     requirePermission(ctx, "isRpcThrottleEnabled", Action.ADMIN);
   }
 
+  @Override
+  public void preSwitchExceedThrottleQuota(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      boolean enable) throws IOException {
+    requirePermission(ctx, "switchExceedThrottleQuota", Action.ADMIN);
+  }
+
   /**
    * Returns the active user to which authorization checks should be applied.
    * If we are in the context of an RPC call, the remote user is used,

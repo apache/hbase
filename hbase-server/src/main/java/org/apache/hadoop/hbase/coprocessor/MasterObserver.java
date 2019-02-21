@@ -1576,6 +1576,26 @@ public interface MasterObserver {
   }
 
   /**
+   * Called before switching exceed throttle quota state.
+   * @param ctx the coprocessor instance's environment
+   * @param enable the exceed throttle quota value
+   */
+  default void preSwitchExceedThrottleQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean enable) throws IOException {
+  }
+
+  /**
+   * Called after switching exceed throttle quota state.
+   * @param ctx the coprocessor instance's environment
+   * @param oldValue the previously exceed throttle quota value
+   * @param newValue the newly exceed throttle quota value
+   */
+  default void postSwitchExceedThrottleQuota(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final boolean oldValue,
+      final boolean newValue) throws IOException {
+  }
+
+  /**
    * Called before granting user permissions.
    * @param ctx the coprocessor instance's environment
    * @param userPermission the user and permissions

@@ -100,6 +100,8 @@ public class QuotaTableUtil {
   protected static final byte[] QUOTA_TABLE_ROW_KEY_PREFIX = Bytes.toBytes("t.");
   protected static final byte[] QUOTA_NAMESPACE_ROW_KEY_PREFIX = Bytes.toBytes("n.");
   protected static final byte[] QUOTA_REGION_SERVER_ROW_KEY_PREFIX = Bytes.toBytes("r.");
+  private static final byte[] QUOTA_EXCEED_THROTTLE_QUOTA_ROW_KEY =
+      Bytes.toBytes("exceedThrottleQuota");
 
   /*
    * TODO: Setting specified region server quota isn't supported currently and the row key "r.all"
@@ -359,6 +361,11 @@ public class QuotaTableUtil {
       parseUserResult(result, visitor);
     } else if (isRegionServerRowKey(row)) {
       parseRegionServerResult(result, visitor);
+    } else if (isExceedThrottleQuotaRowKey(row)) {
+      // skip exceed throttle quota row key
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skip exceedThrottleQuota row-key when parse quota result");
+      }
     } else {
       LOG.warn("unexpected row-key: " + Bytes.toString(row));
     }
@@ -698,6 +705,10 @@ public class QuotaTableUtil {
     return getRowKeyRegEx(QUOTA_REGION_SERVER_ROW_KEY_PREFIX, regionServer);
   }
 
+  protected static byte[] getExceedThrottleQuotaRowKey() {
+    return QUOTA_EXCEED_THROTTLE_QUOTA_ROW_KEY;
+  }
+
   private static String getRowKeyRegEx(final byte[] prefix, final String regex) {
     return '^' + Pattern.quote(Bytes.toString(prefix)) + regex + '$';
   }
@@ -722,6 +733,10 @@ public class QuotaTableUtil {
 
   protected static boolean isRegionServerRowKey(final byte[] key) {
     return Bytes.startsWith(key, QUOTA_REGION_SERVER_ROW_KEY_PREFIX);
+  }
+
+  private static boolean isExceedThrottleQuotaRowKey(final byte[] key) {
+    return Bytes.equals(key, QUOTA_EXCEED_THROTTLE_QUOTA_ROW_KEY);
   }
 
   protected static String getRegionServerFromRowKey(final byte[] key) {

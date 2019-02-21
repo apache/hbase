@@ -266,6 +266,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
@@ -2505,6 +2507,17 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       return master.getMasterQuotaManager().isRpcThrottleEnabled(request);
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SwitchExceedThrottleQuotaResponse switchExceedThrottleQuota(RpcController controller,
+      SwitchExceedThrottleQuotaRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      return master.getMasterQuotaManager().switchExceedThrottleQuota(request);
     } catch (Exception e) {
       throw new ServiceException(e);
     }

@@ -58,6 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
@@ -301,7 +303,7 @@ public class MasterQuotaManager implements RegionStateListener {
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
         QuotaUtil.addNamespaceQuota(masterServices.getConnection(), namespace,
-            ((GlobalQuotaSettingsImpl) quotaPojo).toQuotas());
+          quotaPojo.toQuotas());
       }
       @Override
       public void delete() throws IOException {
@@ -330,7 +332,7 @@ public class MasterQuotaManager implements RegionStateListener {
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
         QuotaUtil.addRegionServerQuota(masterServices.getConnection(), regionServer,
-          ((GlobalQuotaSettingsImpl) quotaPojo).toQuotas());
+          quotaPojo.toQuotas());
       }
 
       @Override
@@ -402,6 +404,33 @@ public class MasterQuotaManager implements RegionStateListener {
     } else {
       LOG.warn("Skip get rpc throttle because rpc quota is disabled");
       return IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(false).build();
+    }
+  }
+
+  public SwitchExceedThrottleQuotaResponse
+      switchExceedThrottleQuota(SwitchExceedThrottleQuotaRequest request) throws IOException {
+    boolean enabled = request.getExceedThrottleQuotaEnabled();
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preSwitchExceedThrottleQuota(enabled);
+      boolean previousEnabled =
+          QuotaUtil.isExceedThrottleQuotaEnabled(masterServices.getConnection());
+      if (previousEnabled == enabled) {
+        LOG.warn("Skip switch exceed throttle quota to {} because it's the same with old value",
+          enabled);
+      } else {
+        QuotaUtil.switchExceedThrottleQuota(masterServices.getConnection(), enabled);
+        LOG.info("{} switch exceed throttle quota from {} to {}",
+          masterServices.getClientIdAuditPrefix(), previousEnabled, enabled);
+      }
+      SwitchExceedThrottleQuotaResponse response = SwitchExceedThrottleQuotaResponse.newBuilder()
+          .setPreviousExceedThrottleQuotaEnabled(previousEnabled).build();
+      masterServices.getMasterCoprocessorHost().postSwitchExceedThrottleQuota(previousEnabled,
+        enabled);
+      return response;
+    } else {
+      LOG.warn("Skip switch exceed throttle quota to {} because quota is disabled", enabled);
+      return SwitchExceedThrottleQuotaResponse.newBuilder()
+          .setPreviousExceedThrottleQuotaEnabled(false).build();
     }
   }
 
