@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,9 +19,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Utility class for converting objects to JSON
@@ -32,12 +31,13 @@ public final class JsonMapper {
   private JsonMapper() {
   }
 
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Gson GSON = GsonUtil.createGson().create();
 
-  public static String writeMapAsString(Map<String, Object> map) throws IOException { 
+  public static String writeMapAsString(Map<String, Object> map) throws IOException {
     return writeObjectAsString(map);
   }
-  public static String writeObjectAsString(Object object) throws IOException { 
-    return MAPPER.writeValueAsString(object);
+
+  public static String writeObjectAsString(Object object) throws IOException {
+    return GSON.toJson(object);
   }
 }

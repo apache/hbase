@@ -132,14 +132,14 @@ public class BucketCache implements BlockCache, HeapSize {
   final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
 
   // Store/read block data
-  final IOEngine ioEngine;
+  transient final IOEngine ioEngine;
 
   // Store the block in this map before writing it to cache
   @VisibleForTesting
-  final ConcurrentMap<BlockCacheKey, RAMQueueEntry> ramCache;
+  transient final ConcurrentMap<BlockCacheKey, RAMQueueEntry> ramCache;
   // In this map, store the block's meta data like offset, length
   @VisibleForTesting
-  ConcurrentMap<BlockCacheKey, BucketEntry> backingMap;
+  transient ConcurrentMap<BlockCacheKey, BucketEntry> backingMap;
 
   /**
    * Flag if the cache is enabled or not... We shut it off if there are IO
@@ -156,13 +156,13 @@ public class BucketCache implements BlockCache, HeapSize {
    * to the BucketCache.  It then updates the ramCache and backingMap accordingly.
    */
   @VisibleForTesting
-  final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
+  transient final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
   @VisibleForTesting
-  final WriterThread[] writerThreads;
+  transient final WriterThread[] writerThreads;
 
   /** Volatile boolean to track if free space is in process or not */
   private volatile boolean freeInProgress = false;
-  private final Lock freeSpaceLock = new ReentrantLock();
+  private transient final Lock freeSpaceLock = new ReentrantLock();
 
   private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<>();
 
@@ -203,7 +203,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
   @VisibleForTesting
-  final IdReadWriteLock<Long> offsetLock = new IdReadWriteLock<>(ReferenceType.SOFT);
+  transient final IdReadWriteLock<Long> offsetLock = new IdReadWriteLock<>(ReferenceType.SOFT);
 
   private final NavigableSet<BlockCacheKey> blocksByHFile =
       new ConcurrentSkipListSet<>(new Comparator<BlockCacheKey>() {
@@ -224,11 +224,12 @@ public class BucketCache implements BlockCache, HeapSize {
       });
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
-    new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
+  private transient final ScheduledExecutorService scheduleThreadPool =
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
 
   // Allocate or free space for the block
-  private BucketAllocator bucketAllocator;
+  private transient BucketAllocator bucketAllocator;
 
   /** Acceptable size of cache (no evictions if size < acceptable) */
   private float acceptableFactor;

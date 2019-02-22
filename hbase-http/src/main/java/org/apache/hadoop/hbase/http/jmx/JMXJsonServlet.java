@@ -160,7 +160,6 @@ public class JMXJsonServlet extends HttpServlet {
       try {
         jsonpcb = checkCallbackName(request.getParameter(CALLBACK_PARAM));
         writer = response.getWriter();
-        beanWriter = this.jsonBeanWriter.open(writer);
 
         // "callback" parameter implies JSONP outpout
         if (jsonpcb != null) {
@@ -169,6 +168,7 @@ public class JMXJsonServlet extends HttpServlet {
         } else {
           response.setContentType("application/json; charset=utf8");
         }
+        beanWriter = this.jsonBeanWriter.open(writer);
         // Should we output description on each attribute and bean?
         String tmpStr = request.getParameter(INCLUDE_DESCRIPTION);
         boolean description = tmpStr != null && tmpStr.length() > 0;
@@ -202,9 +202,11 @@ public class JMXJsonServlet extends HttpServlet {
           response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
       } finally {
-        if (beanWriter != null) beanWriter.close();
+        if (beanWriter != null) {
+          beanWriter.close();
+        }
         if (jsonpcb != null) {
-           writer.write(");");
+          writer.write(");");
         }
         if (writer != null) {
           writer.close();
