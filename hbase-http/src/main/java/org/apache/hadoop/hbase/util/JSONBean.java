@@ -16,9 +16,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonGenerator;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -47,54 +44,78 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
+
 /**
  * Utility for doing JSON and MBeans.
  */
 @InterfaceAudience.Private
 public class JSONBean {
   private static final Logger LOG = LoggerFactory.getLogger(JSONBean.class);
-  private final JsonFactory jsonFactory;
-
-  public JSONBean() {
-    this.jsonFactory = new JsonFactory();
-  }
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   /**
    * Use dumping out mbeans as JSON.
    */
   public interface Writer extends Closeable {
-    void write(final String key, final String value) throws JsonGenerationException, IOException;
-    int write(final MBeanServer mBeanServer, ObjectName qry, String attribute,
-        final boolean description) throws IOException;
+
+    void write(String key, String value) throws IOException;
+
+    int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description)
+        throws IOException;
+
     void flush() throws IOException;
   }
 
+  /**
+   * Notice that, closing the return {@link Writer} will not close the {@code writer} passed in, you
+   * still need to close the {@code writer} by yourself.
+   * <p/>
+   * This is because that, we can only finish the json after you call {@link Writer#close()}. So if
+   * we just close the {@code writer}, you can write nothing after finished the json.
+   */
   public Writer open(final PrintWriter writer) throws IOException {
-    final JsonGenerator jg = jsonFactory.createJsonGenerator(writer);
-    jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-    jg.useDefaultPrettyPrinter();
-    jg.writeStartObject();
-    return new Writer() {
+    JsonWriter jsonWriter = GSON.newJsonWriter(new java.io.Writer() {
+
+      @Override
+      public void write(char[] cbuf, int off, int len) throws IOException {
+        writer.write(cbuf, off, len);
+      }
+
       @Override
       public void flush() throws IOException {
-        jg.flush();
+        writer.flush();
       }
 
       @Override
       public void close() throws IOException {
-        jg.close();
+        // do nothing
+      }
+    });
+    jsonWriter.setIndent("  ");
+    jsonWriter.beginObject();
+    return new Writer() {
+      @Override
+      public void flush() throws IOException {
+        jsonWriter.flush();
       }
 
       @Override
-      public void write(String key, String value) throws JsonGenerationException, IOException {
-        jg.writeStringField(key, value);
+      public void close() throws IOException {
+        jsonWriter.endObject();
+        jsonWriter.close();
+      }
+
+      @Override
+      public void write(String key, String value) throws IOException {
+        jsonWriter.name(key).value(value);
       }
 
       @Override
       public int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
-          boolean description)
-      throws IOException {
-        return JSONBean.write(jg, mBeanServer, qry, attribute, description);
+          boolean description) throws IOException {
+        return JSONBean.write(jsonWriter, mBeanServer, qry, attribute, description);
       }
     };
   }
@@ -102,14 +123,12 @@ public class JSONBean {
   /**
    * @return Return non-zero if failed to find bean. 0
    */
-  private static int write(final JsonGenerator jg,
-      final MBeanServer mBeanServer, ObjectName qry, String attribute,
-      final boolean description)
-  throws IOException {
-    LOG.trace("Listing beans for "+qry);
+  private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
+      String attribute, boolean description) throws IOException {
+    LOG.trace("Listing beans for " + qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
-    jg.writeArrayFieldStart("beans");
+    writer.name("beans").beginArray();
     Iterator<ObjectName> it = names.iterator();
     while (it.hasNext()) {
       ObjectName oname = it.next();
@@ -120,7 +139,9 @@ public class JSONBean {
       try {
         minfo = mBeanServer.getMBeanInfo(oname);
         code = minfo.getClassName();
-        if (description) descriptionStr = minfo.getDescription();
+        if (description) {
+          descriptionStr = minfo.getDescription();
+        }
         String prs = "";
         try {
           if ("org.apache.commons.modeler.BaseModelMBean".equals(code)) {
@@ -132,89 +153,80 @@ public class JSONBean {
             attributeinfo = mBeanServer.getAttribute(oname, prs);
           }
         } catch (RuntimeMBeanException e) {
-         // UnsupportedOperationExceptions happen in the normal course of business,
-         // so no need to log them as errors all the time.
-         if (e.getCause() instanceof UnsupportedOperationException) {
-           if (LOG.isTraceEnabled()) {
-             LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
-           }
-         } else {
-           LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
-         }
-         return 0;
+          // UnsupportedOperationExceptions happen in the normal course of business,
+          // so no need to log them as errors all the time.
+          if (e.getCause() instanceof UnsupportedOperationException) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
+            }
+          } else {
+            LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
+          }
+          return 0;
         } catch (AttributeNotFoundException e) {
           // If the modelerType attribute was not found, the class name is used
           // instead.
-          LOG.error("getting attribute " + prs + " of " + oname
-              + " threw an exception", e);
+          LOG.error("getting attribute " + prs + " of " + oname + " threw an exception", e);
         } catch (MBeanException e) {
           // The code inside the attribute getter threw an exception so log it,
           // and fall back on the class name
-          LOG.error("getting attribute " + prs + " of " + oname
-              + " threw an exception", e);
+          LOG.error("getting attribute " + prs + " of " + oname + " threw an exception", e);
         } catch (RuntimeException e) {
           // For some reason even with an MBeanException available to them
           // Runtime exceptionscan still find their way through, so treat them
           // the same as MBeanException
-          LOG.error("getting attribute " + prs + " of " + oname
-              + " threw an exception", e);
+          LOG.error("getting attribute " + prs + " of " + oname + " threw an exception", e);
         } catch (ReflectionException e) {
           // This happens when the code inside the JMX bean (setter?? from the
           // java docs) threw an exception, so log it and fall back on the
           // class name
-          LOG.error("getting attribute " + prs + " of " + oname
-              + " threw an exception", e);
+          LOG.error("getting attribute " + prs + " of " + oname + " threw an exception", e);
         }
       } catch (InstanceNotFoundException e) {
-        //Ignored for some reason the bean was not found so don't output it
+        // Ignored for some reason the bean was not found so don't output it
         continue;
       } catch (IntrospectionException e) {
         // This is an internal error, something odd happened with reflection so
         // log it and don't output the bean.
-        LOG.error("Problem while trying to process JMX query: " + qry
-            + " with MBean " + oname, e);
+        LOG.error("Problem while trying to process JMX query: " + qry + " with MBean " + oname, e);
         continue;
       } catch (ReflectionException e) {
         // This happens when the code inside the JMX bean threw an exception, so
         // log it and don't output the bean.
-        LOG.error("Problem while trying to process JMX query: " + qry
-            + " with MBean " + oname, e);
+        LOG.error("Problem while trying to process JMX query: " + qry + " with MBean " + oname, e);
         continue;
       }
-
-      jg.writeStartObject();
-      jg.writeStringField("name", oname.toString());
+      writer.beginObject();
+      writer.name("name").value(oname.toString());
       if (description && descriptionStr != null && descriptionStr.length() > 0) {
-        jg.writeStringField("description", descriptionStr);
+        writer.name("description").value(descriptionStr);
       }
-      jg.writeStringField("modelerType", code);
+      writer.name("modelerType").value(code);
       if (attribute != null && attributeinfo == null) {
-        jg.writeStringField("result", "ERROR");
-        jg.writeStringField("message", "No attribute with name " + attribute + " was found.");
-        jg.writeEndObject();
-        jg.writeEndArray();
-        jg.close();
+        writer.name("result").value("ERROR");
+        writer.name("message").value("No attribute with name " + attribute + " was found.");
+        writer.endObject();
+        writer.endArray();
+        writer.close();
         return -1;
       }
 
       if (attribute != null) {
-        writeAttribute(jg, attribute, descriptionStr, attributeinfo);
+        writeAttribute(writer, attribute, descriptionStr, attributeinfo);
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          writeAttribute(jg, mBeanServer, oname, description, attrs[i]);
+          writeAttribute(writer, mBeanServer, oname, description, attrs[i]);
         }
       }
-      jg.writeEndObject();
+      writer.endObject();
     }
-    jg.writeEndArray();
+    writer.endArray();
     return 0;
   }
 
-  private static void writeAttribute(final JsonGenerator jg,
-      final MBeanServer mBeanServer, ObjectName oname,
-      final boolean description, final MBeanAttributeInfo attr)
-  throws IOException {
+  private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
+      boolean description, MBeanAttributeInfo attr) throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -225,7 +237,7 @@ public class JSONBean {
     if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0 || attName.indexOf(" ") >= 0) {
       return;
     }
-    String descriptionStr = description? attr.getDescription(): null;
+    String descriptionStr = description ? attr.getDescription() : null;
     Object value = null;
     try {
       value = mBeanServer.getAttribute(oname, attName);
@@ -237,117 +249,110 @@ public class JSONBean {
           LOG.trace("Getting attribute " + attName + " of " + oname + " threw " + e);
         }
       } else {
-        LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
+        LOG.error("getting attribute " + attName + " of " + oname + " threw an exception", e);
       }
       return;
     } catch (RuntimeErrorException e) {
       // RuntimeErrorException happens when an unexpected failure occurs in getAttribute
       // for example https://issues.apache.org/jira/browse/DAEMON-120
-      LOG.debug("getting attribute "+attName+" of "+oname+" threw an exception", e);
+      LOG.debug("getting attribute " + attName + " of " + oname + " threw an exception", e);
       return;
     } catch (AttributeNotFoundException e) {
-      //Ignored the attribute was not found, which should never happen because the bean
-      //just told us that it has this attribute, but if this happens just don't output
-      //the attribute.
+      // Ignored the attribute was not found, which should never happen because the bean
+      // just told us that it has this attribute, but if this happens just don't output
+      // the attribute.
       return;
     } catch (MBeanException e) {
-      //The code inside the attribute getter threw an exception so log it, and
+      // The code inside the attribute getter threw an exception so log it, and
       // skip outputting the attribute
-      LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
+      LOG.error("getting attribute " + attName + " of " + oname + " threw an exception", e);
       return;
     } catch (RuntimeException e) {
-      //For some reason even with an MBeanException available to them Runtime exceptions
-      //can still find their way through, so treat them the same as MBeanException
-      LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
+      // For some reason even with an MBeanException available to them Runtime exceptions
+      // can still find their way through, so treat them the same as MBeanException
+      LOG.error("getting attribute " + attName + " of " + oname + " threw an exception", e);
       return;
     } catch (ReflectionException e) {
-      //This happens when the code inside the JMX bean (setter?? from the java docs)
-      //threw an exception, so log it and skip outputting the attribute
-      LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
+      // This happens when the code inside the JMX bean (setter?? from the java docs)
+      // threw an exception, so log it and skip outputting the attribute
+      LOG.error("getting attribute " + attName + " of " + oname + " threw an exception", e);
       return;
     } catch (InstanceNotFoundException e) {
-      //Ignored the mbean itself was not found, which should never happen because we
-      //just accessed it (perhaps something unregistered in-between) but if this
-      //happens just don't output the attribute.
+      // Ignored the mbean itself was not found, which should never happen because we
+      // just accessed it (perhaps something unregistered in-between) but if this
+      // happens just don't output the attribute.
       return;
     }
 
-    writeAttribute(jg, attName, descriptionStr, value);
+    writeAttribute(writer, attName, descriptionStr, value);
   }
 
-  private static void writeAttribute(JsonGenerator jg, String attName, final String descriptionStr,
-      Object value)
-  throws IOException {
-    boolean description = false;
+  private static void writeAttribute(JsonWriter writer, String attName, String descriptionStr,
+      Object value) throws IOException {
     if (descriptionStr != null && descriptionStr.length() > 0 && !attName.equals(descriptionStr)) {
-      description = true;
-      jg.writeFieldName(attName);
-      jg.writeStartObject();
-      jg.writeFieldName("description");
-      jg.writeString(descriptionStr);
-      jg.writeFieldName("value");
-      writeObject(jg, description, value);
-      jg.writeEndObject();
+      writer.name(attName);
+      writer.beginObject();
+      writer.name("description").value(descriptionStr);
+      writer.name("value");
+      writeObject(writer, value);
+      writer.endObject();
     } else {
-      jg.writeFieldName(attName);
-      writeObject(jg, description, value);
+      writer.name(attName);
+      writeObject(writer, value);
     }
   }
 
-  private static void writeObject(final JsonGenerator jg, final boolean description, Object value)
-  throws IOException {
-    if(value == null) {
-      jg.writeNull();
+  private static void writeObject(JsonWriter writer, Object value) throws IOException {
+    if (value == null) {
+      writer.nullValue();
     } else {
       Class<?> c = value.getClass();
       if (c.isArray()) {
-        jg.writeStartArray();
+        writer.beginArray();
         int len = Array.getLength(value);
         for (int j = 0; j < len; j++) {
           Object item = Array.get(value, j);
-          writeObject(jg, description, item);
+          writeObject(writer, item);
         }
-        jg.writeEndArray();
-      } else if(value instanceof Number) {
-        Number n = (Number)value;
+        writer.endArray();
+      } else if (value instanceof Number) {
+        Number n = (Number) value;
         if (Double.isFinite(n.doubleValue())) {
-          jg.writeNumber(n.toString());
+          writer.value(n);
         } else {
-          jg.writeString(n.toString());
+          writer.value(n.toString());
         }
-      } else if(value instanceof Boolean) {
-        Boolean b = (Boolean)value;
-        jg.writeBoolean(b);
-      } else if(value instanceof CompositeData) {
-        CompositeData cds = (CompositeData)value;
+      } else if (value instanceof Boolean) {
+        Boolean b = (Boolean) value;
+        writer.value(b);
+      } else if (value instanceof CompositeData) {
+        CompositeData cds = (CompositeData) value;
         CompositeType comp = cds.getCompositeType();
         Set<String> keys = comp.keySet();
-        jg.writeStartObject();
-        for (String key: keys) {
-          writeAttribute(jg, key, null, cds.get(key));
+        writer.beginObject();
+        for (String key : keys) {
+          writeAttribute(writer, key, null, cds.get(key));
         }
-        jg.writeEndObject();
-      } else if(value instanceof TabularData) {
-        TabularData tds = (TabularData)value;
-        jg.writeStartArray();
-        for(Object entry : tds.values()) {
-          writeObject(jg, description, entry);
+        writer.endObject();
+      } else if (value instanceof TabularData) {
+        TabularData tds = (TabularData) value;
+        writer.beginArray();
+        for (Object entry : tds.values()) {
+          writeObject(writer, entry);
         }
-        jg.writeEndArray();
+        writer.endArray();
       } else {
-        jg.writeString(value.toString());
+        writer.value(value.toString());
       }
     }
   }
 
   /**
    * Dump out all registered mbeans as json on System.out.
-   * @throws IOException
-   * @throws MalformedObjectNameException
    */
   public static void dumpAllBeans() throws IOException, MalformedObjectNameException {
-    try (PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(System.out, StandardCharsets.UTF_8))) {
+    try (PrintWriter writer =
+      new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8))) {
       JSONBean dumper = new JSONBean();
       try (JSONBean.Writer jsonBeanWriter = dumper.open(writer)) {
         MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();

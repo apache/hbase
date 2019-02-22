@@ -18,16 +18,11 @@
 
 package org.apache.hadoop.hbase;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -37,11 +32,17 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.xml.ws.http.HTTPException;
-import java.io.IOException;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
+import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
 /**
  * A ClusterManager implementation designed to control Cloudera Manager (http://www.cloudera.com)
@@ -75,6 +76,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       "hbase.it.clustermanager.restapi.password";
   private static final String REST_API_CLUSTER_MANAGER_CLUSTER_NAME =
       "hbase.it.clustermanager.restapi.clustername";
+
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   // Some default values for the above properties.
   private static final String DEFAULT_SERVER_HOSTNAME = "http://localhost:7180";
@@ -215,17 +218,14 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   private String getHostId(String hostname) throws IOException {
     String hostId = null;
 
-    URI uri = UriBuilder.fromUri(serverHostname)
-        .path("api")
-        .path(API_VERSION)
-        .path("hosts")
-        .build();
-    JsonNode hosts = getJsonNodeFromURIGet(uri);
+    URI uri =
+      UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("hosts").build();
+    JsonElement hosts = getJsonNodeFromURIGet(uri);
     if (hosts != null) {
       // Iterate through the list of hosts, stopping once you've reached the requested hostname.
-      for (JsonNode host : hosts) {
-        if (host.get("hostname").textValue().equals(hostname)) {
-          hostId = host.get("hostId").textValue();
+      for (JsonElement host : hosts.getAsJsonArray()) {
+        if (host.getAsJsonObject().get("hostname").getAsString().equals(hostname)) {
+          hostId = host.getAsJsonObject().get("hostId").getAsString();
           break;
         }
       }
@@ -237,18 +237,17 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   }
 
   // Execute GET against URI, returning a JsonNode object to be traversed.
-  private JsonNode getJsonNodeFromURIGet(URI uri) throws IOException {
+  private JsonElement getJsonNodeFromURIGet(URI uri) throws IOException {
     LOG.info("Executing GET against " + uri + "...");
     WebTarget webTarget = client.target(uri);
-    Invocation.Builder invocationBuilder =  webTarget.request(MediaType.APPLICATION_JSON);
+    Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
     Response response = invocationBuilder.get();
     int statusCode = response.getStatus();
     if (statusCode != Response.Status.OK.getStatusCode()) {
       throw new HTTPException(statusCode);
     }
     // This API folds information as the value to an "items" attribute.
-    return new ObjectMapper().readTree(response.readEntity(String.class)).get("items");
-
+    return GSON.toJsonTree(response.readEntity(String.class)).getAsJsonObject().get("items");
   }
 
   // This API assigns a unique role name to each host's instance of a role.
@@ -257,29 +256,21 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     return getRolePropertyValue(serviceName, roleType, hostId, "name");
   }
 
-  // Get the value of a  property from a role on a particular host.
+  // Get the value of a property from a role on a particular host.
   private String getRolePropertyValue(String serviceName, String roleType, String hostId,
       String property) throws IOException {
     String roleValue = null;
-    URI uri = UriBuilder.fromUri(serverHostname)
-        .path("api")
-        .path(API_VERSION)
-        .path("clusters")
-        .path(clusterName)
-        .path("services")
-        .path(serviceName)
-        .path("roles")
-        .build();
-    JsonNode roles = getJsonNodeFromURIGet(uri);
+    URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("clusters")
+      .path(clusterName).path("services").path(serviceName).path("roles").build();
+    JsonElement roles = getJsonNodeFromURIGet(uri);
     if (roles != null) {
       // Iterate through the list of roles, stopping once the requested one is found.
-      for (JsonNode role : roles) {
-        if (role.get("hostRef").get("hostId").textValue().equals(hostId) &&
-            role.get("type")
-                .textValue()
-                .toLowerCase(Locale.ROOT)
-                .equals(roleType.toLowerCase(Locale.ROOT))) {
-          roleValue = role.get(property).textValue();
+      for (JsonElement role : roles.getAsJsonArray()) {
+        JsonObject roleObj = role.getAsJsonObject();
+        if (roleObj.get("hostRef").getAsJsonObject().get("hostId").getAsString().equals(hostId) &&
+          roleObj.get("type").getAsString().toLowerCase(Locale.ROOT)
+            .equals(roleType.toLowerCase(Locale.ROOT))) {
+          roleValue = roleObj.get(property).getAsString();
           break;
         }
       }
@@ -297,19 +288,14 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // Convert a service (e.g. "HBASE," "HDFS") into a service name (e.g. "HBASE-1," "HDFS-1").
   private String getServiceName(Service service) throws IOException {
     String serviceName = null;
-    URI uri = UriBuilder.fromUri(serverHostname)
-        .path("api")
-        .path(API_VERSION)
-        .path("clusters")
-        .path(clusterName)
-        .path("services")
-        .build();
-    JsonNode services = getJsonNodeFromURIGet(uri);
+    URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("clusters")
+      .path(clusterName).path("services").build();
+    JsonElement services = getJsonNodeFromURIGet(uri);
     if (services != null) {
       // Iterate through the list of services, stopping once the requested one is found.
-      for (JsonNode serviceEntry : services) {
-        if (serviceEntry.get("type").textValue().equals(service.toString())) {
-          serviceName = serviceEntry.get("name").textValue();
+      for (JsonElement serviceEntry : services.getAsJsonArray()) {
+        if (serviceEntry.getAsJsonObject().get("type").getAsString().equals(service.toString())) {
+          serviceName = serviceEntry.getAsJsonObject().get("name").getAsString();
           break;
         }
       }

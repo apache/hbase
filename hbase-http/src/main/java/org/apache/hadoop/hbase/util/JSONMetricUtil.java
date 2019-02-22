@@ -17,9 +17,6 @@
  * */
 package org.apache.hadoop.hbase.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.beans.IntrospectionException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -49,22 +46,22 @@ public final class JSONMetricUtil {
   private static final Logger LOG = LoggerFactory.getLogger(JSONMetricUtil.class);
 
   private static MBeanServer mbServer = ManagementFactory.getPlatformMBeanServer();
-  //MBeans ObjectName domain names
+  // MBeans ObjectName domain names
   public static final String JAVA_LANG_DOMAIN = "java.lang";
   public static final String JAVA_NIO_DOMAIN = "java.nio";
   public static final String SUN_MGMT_DOMAIN = "com.sun.management";
   public static final String HADOOP_DOMAIN = "Hadoop";
 
-  //MBeans ObjectName properties key names
+  // MBeans ObjectName properties key names
   public static final String TYPE_KEY = "type";
   public static final String NAME_KEY = "name";
   public static final String SERVICE_KEY = "service";
   public static final String SUBSYSTEM_KEY = "sub";
 
-/**
- * Utility for getting metric values. Collection of static methods intended for
- * easier access to metric values.
- */
+  /**
+   * Utility for getting metric values. Collection of static methods intended for easier access to
+   * metric values.
+   */
   private JSONMetricUtil() {
     // Not to be called
   }
@@ -80,70 +77,39 @@ public final class JSONMetricUtil {
     Object value = null;
     try {
       value = mbServer.getAttribute(bean, attribute);
-    }
-    catch(Exception e) {
-      LOG.error("Unable to get value from MBean= "+ bean.toString() +
-        "for attribute=" + attribute + " " + e.getMessage());
+    } catch (Exception e) {
+      LOG.error("Unable to get value from MBean= " + bean.toString() + "for attribute=" +
+        attribute + " " + e.getMessage());
     }
     return value;
   }
 
   /**
-   * Returns a subset of mbeans defined by qry.
-   * Modeled after DumpRegionServerMetrics#dumpMetrics.
+   * Returns a subset of mbeans defined by qry. Modeled after DumpRegionServerMetrics#dumpMetrics.
    * Example: String qry= "java.lang:type=Memory"
    * @throws MalformedObjectNameException if json have bad format
    * @throws IOException /
    * @return String representation of json array.
    */
-  public static String dumpBeanToString(String qry) throws MalformedObjectNameException,
-  IOException {
+  public static String dumpBeanToString(String qry)
+      throws MalformedObjectNameException, IOException {
     StringWriter sw = new StringWriter(1024 * 100); // Guess this size
     try (PrintWriter writer = new PrintWriter(sw)) {
       JSONBean dumper = new JSONBean();
       try (JSONBean.Writer jsonBeanWriter = dumper.open(writer)) {
         MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
-        jsonBeanWriter.write(mbeanServer,
-          new ObjectName(qry), null, false);
+        jsonBeanWriter.write(mbeanServer, new ObjectName(qry), null, false);
       }
     }
     sw.close();
     return sw.toString();
   }
 
-  public static JsonNode mappStringToJsonNode(String jsonString)
-      throws JsonProcessingException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    JsonNode node = mapper.readTree(jsonString);
-    return node;
-  }
-
-
-  public static JsonNode searchJson(JsonNode tree, String searchKey)
-      throws JsonProcessingException, IOException {
-    if (tree == null) {
-      return null;
-    }
-    if(tree.has(searchKey)) {
-      return tree.get(searchKey);
-    }
-    if(tree.isContainerNode()) {
-      for(JsonNode branch: tree) {
-        JsonNode branchResult = searchJson(branch, searchKey);
-        if (branchResult != null && !branchResult.isMissingNode()) {
-          return branchResult;
-        }
-      }
-    }
-    return null;
-  }
-
   /**
-   * Method for building hashtable used for constructing ObjectName.
-   * Mapping is done with arrays indices
-   * @param keys Hashtable keys
-   * @param values Hashtable values
-   * @return Hashtable or null if arrays are empty * or have different number of elements
+   * Method for building map used for constructing ObjectName. Mapping is done with arrays indices
+   * @param keys Map keys
+   * @param values Map values
+   * @return Map or null if arrays are empty * or have different number of elements
    */
   public static Hashtable<String, String> buldKeyValueTable(String[] keys, String[] values) {
     if (keys.length != values.length) {
@@ -154,8 +120,8 @@ public final class JSONMetricUtil {
       LOG.error("keys and values arrays can not be empty;");
       return null;
     }
-    Hashtable<String, String> table = new Hashtable<String, String>();
-    for(int i = 0; i < keys.length; i++) {
+    Hashtable<String, String> table = new Hashtable<>();
+    for (int i = 0; i < keys.length; i++) {
       table.put(keys[i], values[i]);
     }
     return table;
@@ -178,8 +144,7 @@ public final class JSONMetricUtil {
     return ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
   }
 
-  public static String getCommmand() throws MalformedObjectNameException,
-  IOException {
+  public static String getCommmand() throws MalformedObjectNameException, IOException {
     RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
     return runtimeBean.getSystemProperties().get("sun.java.command");
   }
@@ -193,7 +158,7 @@ public final class JSONMetricUtil {
     long lastGcDuration = 0;
     Object lastGcInfo = getValueFromMBean(gcCollector, "LastGcInfo");
     if (lastGcInfo != null && lastGcInfo instanceof CompositeData) {
-      CompositeData cds = (CompositeData)lastGcInfo;
+      CompositeData cds = (CompositeData) lastGcInfo;
       lastGcDuration = (long) cds.get("duration");
     }
     return lastGcDuration;
@@ -208,6 +173,6 @@ public final class JSONMetricUtil {
     if (a == 0 || b == 0) {
       return 0;
     }
-    return ((float)a / (float)b) *100;
+    return ((float) a / (float) b) * 100;
   }
 }

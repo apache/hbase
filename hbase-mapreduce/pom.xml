@@ -133,7 +133,6 @@
            Snapshot protos. TODO: Move to internal types.-->
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <version>${external.protobuf.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -255,19 +254,6 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- jackson(s) used by PerformanceEvaluation and it looks like TableMapReduceUtil -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
@@ -369,7 +355,6 @@
               <artifactId>xercesImpl</artifactId>
             </exclusion>
           </exclusions>
-          <version>${hadoop-two.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

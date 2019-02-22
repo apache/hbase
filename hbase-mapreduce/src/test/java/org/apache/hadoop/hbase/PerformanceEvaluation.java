@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -45,7 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -89,6 +85,7 @@ import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
@@ -108,8 +105,10 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -134,10 +133,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static final String RANDOM_READ = "randomRead";
   static final String PE_COMMAND_SHORTNAME = "pe";
   private static final Logger LOG = LoggerFactory.getLogger(PerformanceEvaluation.class.getName());
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  static {
-    MAPPER.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-  }
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   public static final String TABLE_NAME = "TestTable";
   public static final String FAMILY_NAME_BASE = "info";
@@ -308,8 +304,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       };
 
-      ObjectMapper mapper = new ObjectMapper();
-      TestOptions opts = mapper.readValue(value.toString(), TestOptions.class);
+      TestOptions opts = GSON.fromJson(value.toString(), TestOptions.class);
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
       final Connection con = ConnectionFactory.createConnection(conf);
       AsyncConnection asyncCon = null;
@@ -566,7 +561,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
       Histogram.class,     // yammer metrics
-      ObjectMapper.class,  // jackson-mapper-asl
+      Gson.class,  // gson
       FilterAllFilter.class // hbase-server tests jar
       );
 
@@ -612,7 +607,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         TestOptions next = new TestOptions(opts);
         next.startRow = j * perClientRows;
         next.perClientRunRows = perClientRows;
-        String s = MAPPER.writeValueAsString(next);
+        String s = GSON.toJson(next);
         LOG.info("Client=" + j + ", input=" + s);
         byte[] b = Bytes.toBytes(s);
         int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
@@ -2374,7 +2369,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       InterruptedException, ClassNotFoundException, ExecutionException {
     // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
     // the TestOptions introspection for us and dump the output in a readable format.
-    LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
+    LOG.info(cmd.getSimpleName() + " test run options=" + GSON.toJson(opts));
     Admin admin = null;
     Connection connection = null;
     try {

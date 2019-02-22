@@ -23,18 +23,18 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.GsonUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.TypeAdapter;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonReader;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -50,12 +50,29 @@ public class BlockCacheUtil {
   /**
    * Needed generating JSON.
    */
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  static {
-    MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-    MAPPER.configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
-    MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
-  }
+  private static final Gson GSON = GsonUtil.createGson()
+    .registerTypeAdapter(FastLongHistogram.class, new TypeAdapter<FastLongHistogram>() {
+
+      @Override
+      public void write(JsonWriter out, FastLongHistogram value) throws IOException {
+        AgeSnapshot snapshot = new AgeSnapshot(value);
+        out.beginObject();
+        out.name("mean").value(snapshot.getMean());
+        out.name("min").value(snapshot.getMin());
+        out.name("max").value(snapshot.getMax());
+        out.name("75thPercentile").value(snapshot.get75thPercentile());
+        out.name("95thPercentile").value(snapshot.get95thPercentile());
+        out.name("98thPercentile").value(snapshot.get98thPercentile());
+        out.name("99thPercentile").value(snapshot.get99thPercentile());
+        out.name("999thPercentile").value(snapshot.get999thPercentile());
+        out.endObject();
+      }
+
+      @Override
+      public FastLongHistogram read(JsonReader in) throws IOException {
+        throw new UnsupportedOperationException();
+      }
+    }).setPrettyPrinting().create();
 
   /**
    * @param cb
@@ -102,17 +119,12 @@ public class BlockCacheUtil {
   }
 
   /**
-   * @param filename
-   * @param blocks
    * @return A JSON String of <code>filename</code> and counts of <code>blocks</code>
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final String filename, final NavigableSet<CachedBlock> blocks)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  public static String toJSON(String filename, NavigableSet<CachedBlock> blocks)
+      throws IOException {
     CachedBlockCountsPerFile counts = new CachedBlockCountsPerFile(filename);
-    for (CachedBlock cb: blocks) {
+    for (CachedBlock cb : blocks) {
       counts.count++;
       counts.size += cb.getSize();
       BlockType bt = cb.getBlockType();
@@ -121,31 +133,21 @@ public class BlockCacheUtil {
         counts.sizeData += cb.getSize();
       }
     }
-    return MAPPER.writeValueAsString(counts);
+    return GSON.toJson(counts);
   }
 
   /**
-   * @param cbsbf
    * @return JSON string of <code>cbsf</code> aggregated
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final CachedBlocksByFile cbsbf)
-  throws JsonGenerationException, JsonMappingException, IOException {
-    return MAPPER.writeValueAsString(cbsbf);
+  public static String toJSON(CachedBlocksByFile cbsbf) throws IOException {
+    return GSON.toJson(cbsbf);
   }
 
   /**
-   * @param bc
    * @return JSON string of <code>bc</code> content.
-   * @throws JsonGenerationException
-   * @throws JsonMappingException
-   * @throws IOException
    */
-  public static String toJSON(final BlockCache bc)
-  throws JsonGenerationException, JsonMappingException, IOException {
-    return MAPPER.writeValueAsString(bc);
+  public static String toJSON(BlockCache bc) throws IOException {
+    return GSON.toJson(bc);
   }
 
   /**
@@ -254,7 +256,6 @@ public class BlockCacheUtil {
    * This is different than metrics in that it is stats on current state of a cache.
    * See getLoadedCachedBlocksByFile
    */
-  @JsonIgnoreProperties({"cachedBlockStatsByFile"})
   public static class CachedBlocksByFile {
     private int count;
     private int dataBlockCount;
@@ -282,7 +283,8 @@ public class BlockCacheUtil {
     /**
      * Map by filename. use concurent utils because we want our Map and contained blocks sorted.
      */
-    private NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile = new ConcurrentSkipListMap<>();
+    private transient NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile =
+      new ConcurrentSkipListMap<>();
     FastLongHistogram hist = new FastLongHistogram();
 
     /**

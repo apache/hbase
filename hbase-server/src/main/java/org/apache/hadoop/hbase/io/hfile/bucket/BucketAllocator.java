@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +26,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -44,19 +40,16 @@ import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.LinkedMap;
 
 /**
- * This class is used to allocate a block with specified size and free the block
- * when evicting. It manages an array of buckets, each bucket is associated with
- * a size and caches elements up to this size. For a completely empty bucket, this
- * size could be re-specified dynamically.
- *
+ * This class is used to allocate a block with specified size and free the block when evicting. It
+ * manages an array of buckets, each bucket is associated with a size and caches elements up to this
+ * size. For a completely empty bucket, this size could be re-specified dynamically.
+ * <p/>
  * This class is not thread safe.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
   private static final Logger LOG = LoggerFactory.getLogger(BucketAllocator.class);
 
-  @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {
     private long baseOffset;
     private int itemAllocationSize, sizeIndex;
@@ -308,7 +301,7 @@ public final class BucketAllocator {
   private Bucket[] buckets;
   private BucketSizeInfo[] bucketSizeInfos;
   private final long totalSize;
-  private long usedSize = 0;
+  private transient long usedSize = 0;
 
   BucketAllocator(long availableSpace, int[] bucketSizes)
       throws BucketAllocatorException {
