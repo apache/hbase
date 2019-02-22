@@ -24,14 +24,13 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.glassfish.jersey.servlet.ServletContainer;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * REST servlet container. It is used to get the remote request user
@@ -40,6 +39,10 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Private
 public class RESTServletContainer extends ServletContainer {
   private static final long serialVersionUID = -2474255003443394314L;
+
+  public RESTServletContainer(ResourceConfig config) {
+    super(config);
+  }
 
   /**
    * This container is used only if authentication and

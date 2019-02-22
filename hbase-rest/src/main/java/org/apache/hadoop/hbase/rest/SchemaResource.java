@@ -28,6 +28,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -137,6 +138,7 @@ public class SchemaResource extends ResourceBase {
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
     } catch (Exception e) {
+      LOG.info("Caught exception", e);
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     }
@@ -191,6 +193,10 @@ public class SchemaResource extends ResourceBase {
       }
     } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
+      // Avoid re-unwrapping the exception
+      if (e instanceof WebApplicationException) {
+        throw (WebApplicationException) e;
+      }
       return processException(e);
     }
   }
