@@ -1249,127 +1249,40 @@ WAL log splitting and recovery can be resource intensive and take a long time, d
 Distributed log processing is enabled by default since HBase 0.92.
 The setting is controlled by the `hbase.master.distributed.log.splitting` property, which can be set to `true` or `false`, but defaults to `true`.
 
-[[log.splitting.step.by.step]]
-.Distributed Log Splitting, Step by Step
+==== WAL splitting based on procedureV2
+After HBASE-20610, we introduce a new way to do WAL splitting coordination by procedureV2 framework. This can simplify the process of WAL splitting and no need to connect zookeeper any more.
 
-After configuring distributed log splitting, the HMaster controls the process.
-The HMaster enrolls each RegionServer in the log splitting process, and the actual work of splitting the logs is done by the RegionServers.
-The general process for log splitting, as described in <<log.splitting.step.by.step>> still applies here.
+[[background]]
+.Background
+Currently, splitting WAL processes are coordinated by zookeeper. Each region server are trying to grab tasks from zookeeper. And the burden becomes heavier when the number of region server increase.
 
-. If distributed log processing is enabled, the HMaster creates a _split log manager_ instance when the cluster is started.
-  .. The split log manager manages all log files which need to be scanned and split.
-  .. The split log manager places all the logs into the ZooKeeper splitWAL node (_/hbase/splitWAL_) as tasks.
-  .. You can view the contents of the splitWAL by issuing the following `zkCli` command. Example output is shown.
-+
-[source,bash]
-----
-ls /hbase/splitWAL
-[hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost8.sample.com%2C57020%2C1340474893275-splitting%2Fhost8.sample.com%253A57020.1340474893900,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost3.sample.com%2C57020%2C1340474893299-splitting%2Fhost3.sample.com%253A57020.1340474893931,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost4.sample.com%2C57020%2C1340474893287-splitting%2Fhost4.sample.com%253A57020.1340474893946]
-----
-+
-The output contains some non-ASCII characters.
-When decoded, it looks much more simple:
-+
-----
-[hdfs://host2.sample.com:56020/hbase/WALs
-/host8.sample.com,57020,1340474893275-splitting
-/host8.sample.com%3A57020.1340474893900,
-hdfs://host2.sample.com:56020/hbase/WALs
-/host3.sample.com,57020,1340474893299-splitting
-/host3.sample.com%3A57020.1340474893931,
-hdfs://host2.sample.com:56020/hbase/WALs
-/host4.sample.com,57020,1340474893287-splitting
-/host4.sample.com%3A57020.1340474893946]
-----
-+
-The listing represents WAL file names to be scanned and split, which is a list of log splitting tasks.
+[[implementation.on.master.side]]
+.Implementation on Master side
+During ServerCrashProcedure, SplitWALManager will create one SplitWALProcedure for each WAL file which should be split. Then each SplitWALProcedure will spawn a SplitWalRemoteProcedure to send the request to region server.
+SplitWALProcedure is a StateMachineProcedure and here is the state transfer diagram.
 
-. The split log manager monitors the log-splitting tasks and workers.
-+
-The split log manager is responsible for the following ongoing tasks:
-+
-* Once the split log manager publishes all the tasks to the splitWAL znode, it monitors these task nodes and waits for them to be processed.
-* Checks to see if there are any dead split log workers queued up.
-  If it finds tasks claimed by unresponsive workers, it will resubmit those tasks.
-  If the resubmit fails due to some ZooKeeper exception, the dead worker is queued up again for retry.
-* Checks to see if there are any unassigned tasks.
-  If it finds any, it create an ephemeral rescan node so that each split log worker is notified to re-scan unassigned tasks via the `nodeChildrenChanged` ZooKeeper event.
-* Checks for tasks which are assigned but expired.
-  If any are found, they are moved back to `TASK_UNASSIGNED` state again so that they can be retried.
-  It is possible that these tasks are assigned to slow workers, or they may already be finished.
-  This is not a problem, because log splitting tasks have the property of idempotence.
-  In other words, the same log splitting task can be processed many times without causing any problem.
-* The split log manager watches the HBase split log znodes constantly.
-  If any split log task node data is changed, the split log manager retrieves the node data.
-  The node data contains the current state of the task.
-  You can use the `zkCli` `get` command to retrieve the current state of a task.
-  In the example output below, the first line of the output shows that the task is currently unassigned.
-+
-----
-get /hbase/splitWAL/hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost6.sample.com%2C57020%2C1340474893287-splitting%2Fhost6.sample.com%253A57020.1340474893945
+.WAL_splitting_coordination
+image::WAL_splitting.png[]
 
-unassigned host2.sample.com:57000
-cZxid = 0×7115
-ctime = Sat Jun 23 11:13:40 PDT 2012
-...
-----
-+
-Based on the state of the task whose data is changed, the split log manager does one of the following:
-+
-* Resubmit the task if it is unassigned
-* Heartbeat the task if it is assigned
-* Resubmit or fail the task if it is resigned (see <<distributed.log.replay.failure.reasons>>)
-* Resubmit or fail the task if it is completed with errors (see <<distributed.log.replay.failure.reasons>>)
-* Resubmit or fail the task if it could not complete due to errors (see <<distributed.log.replay.failure.reasons>>)
-* Delete the task if it is successfully completed or failed
-+
-[[distributed.log.replay.failure.reasons]]
-[NOTE]
-.Reasons a Task Will Fail
-====
-* The task has been deleted.
-* The node no longer exists.
-* The log status manager failed to move the state of the task to `TASK_UNASSIGNED`.
-* The number of resubmits is over the resubmit threshold.
-====
+[[implementation.on.region.server.side]]
+.Implementation on Region Server side
+Region Server will receive a SplitWALCallable and execute it, which is much more straightforward than before. It will return null if success and return exception if there is any error.
 
-. Each RegionServer's split log worker performs the log-splitting tasks.
-+
-Each RegionServer runs a daemon thread called the _split log worker_, which does the work to split the logs.
-The daemon thread starts when the RegionServer starts, and registers itself to watch HBase znodes.
-If any splitWAL znode children change, it notifies a sleeping worker thread to wake up and grab more tasks.
-If a worker's current task's node data is changed,
-the worker checks to see if the task has been taken by another worker.
-If so, the worker thread stops work on the current task.
-+
-The worker monitors the splitWAL znode constantly.
-When a new task appears, the split log worker retrieves the task paths and checks each one until it finds an unclaimed task, which it attempts to claim.
-If the claim was successful, it attempts to perform the task and updates the task's `state` property based on the splitting outcome.
-At this point, the split log worker scans for another unclaimed task.
-+
-.How the Split Log Worker Approaches a Task
-* It queries the task state and only takes action if the task is in `TASK_UNASSIGNED `state.
-* If the task is in `TASK_UNASSIGNED` state, the worker attempts to set the state to `TASK_OWNED` by itself.
-  If it fails to set the state, another worker will try to grab it.
-  The split log manager will also ask all workers to rescan later if the task remains unassigned.
-* If the worker succeeds in taking ownership of the task, it tries to get the task state again to make sure it really gets it asynchronously.
-  In the meantime, it starts a split task executor to do the actual work:
-** Get the HBase root folder, create a temp folder under the root, and split the log file to the temp folder.
-** If the split was successful, the task executor sets the task to state `TASK_DONE`.
-** If the worker catches an unexpected IOException, the task is set to state `TASK_ERR`.
-** If the worker is shutting down, set the task to state `TASK_RESIGNED`.
-** If the task is taken by another worker, just log it.
+[[preformance]]
+.Performance
+According to tests on a cluster which has 5 regionserver and 1 master.
+procedureV2 coordinated WAL splitting has a better performance than ZK coordinated WAL splitting no master when restarting the whole cluster or one region server crashing.
 
+[[enable.this.feature]]
+.Enable this feature
+To enable this feature, first we should ensure our package of HBase already contains these code. If not, please upgrade the package of HBase cluster without any configuration change first.
+Then change configuration 'hbase.split.wal.zk.coordinated' to false. Rolling upgrade the master with new configuration. Now WAL splitting are handled by our new implementation.
+But region server are still trying to grab tasks from zookeeper, we can rolling upgrade the region servers with the new configuration to stop that.
 
-. The split log manager monitors for uncompleted tasks.
-+
-The split log manager returns when all tasks are completed successfully.
-If all tasks are completed with some failures, the split log manager throws an exception so that the log splitting can be retried.
-Due to an asynchronous implementation, in very rare cases, the split log manager loses track of some completed tasks.
-For that reason, it periodically checks for remaining uncompleted task in its task map or ZooKeeper.
-If none are found, it throws an exception so that the log splitting can be retried right away instead of hanging there waiting for something that won't happen.
+* steps as follows:
+** Upgrade whole cluster to get the new Implementation.
+** Upgrade Master with new configuration 'hbase.split.wal.zk.coordinated'=false.
+** Upgrade region server to stop grab tasks from zookeeper.
 
 [[wal.compression]]
 ==== WAL Compression ====
