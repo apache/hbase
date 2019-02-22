@@ -255,8 +255,11 @@ class AsyncBatchRpcRetryingCaller<T> {
       // multiRequestBuilder will be populated with region actions.
       // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
       // action list.
-      RequestConverter.buildNoDataRegionActions(entry.getKey(), entry.getValue().actions, cells,
-        multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup,
+      RequestConverter.buildNoDataRegionActions(entry.getKey(),
+        entry.getValue().actions.stream()
+          .sorted((a1, a2) -> Integer.compare(a1.getOriginalIndex(), a2.getOriginalIndex()))
+          .collect(Collectors.toList()),
+        cells, multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup,
         rowMutationsIndexMap);
     }
     return multiRequestBuilder.build();
