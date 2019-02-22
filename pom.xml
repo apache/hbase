@@ -32,7 +32,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>18</version>
+    <version>21</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
@@ -92,14 +92,6 @@
     <module>hbase-backup</module>
     <module>hbase-zookeeper</module>
   </modules>
-  <!--Add apache snapshots in case we want to use unreleased versions of plugins:
-      e.g. surefire 2.18-SNAPSHOT-->
-  <pluginRepositories>
-    <pluginRepository>
-      <id>apache.snapshots</id>
-      <url>http://repository.apache.org/snapshots/</url>
-    </pluginRepository>
-  </pluginRepositories>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/hbase.git</developerConnection>
@@ -109,10 +101,6 @@
     <system>JIRA</system>
     <url>http://issues.apache.org/jira/browse/HBASE</url>
   </issueManagement>
-  <ciManagement>
-    <system>hudson</system>
-    <url>http://hudson.zones.apache.org/hudson/view/HBase/job/HBase-TRUNK/</url>
-  </ciManagement>
   <mailingLists>
     <mailingList>
       <name>User List</name>
@@ -645,22 +633,7 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>${maven.dependency.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-           <artifactId>maven-javadoc-plugin</artifactId>
-           <version>${maven.javadoc.version}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-remote-resources-plugin</artifactId>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>${maven.shade.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -757,19 +730,6 @@
           <version>${surefire.version}</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-clean-plugin</artifactId>
-          <configuration>
-            <filesets>
-              <fileset>
-                <!--dfs tests have build dir hardcoded. Clean it as part of
-               clean target-->
-                <directory>build</directory>
-              </fileset>
-            </filesets>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>buildnumber-maven-plugin</artifactId>
           <version>${buildnumber.maven.version}</version>
@@ -839,10 +799,6 @@
               <exclude>log4j.properties</exclude>
               <exclude>mapred-queues.xml</exclude>
               <exclude>mapred-site.xml</exclude>
-              <!--I was seeing this w/o the below addition:
-                   [ERROR] Failed to execute goal org.apache.maven.plugins:maven-jar-plugin:2.4:jar (default-jar) on project hbase-protocol-shaded: Error assembling JAR: A zip file cannot include itself -> [Help 1]
-                -->
-              <exclude>*.jar</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -939,8 +895,6 @@
               <exclude>**/.*</exclude>
               <exclude>**/*.tgz</exclude>
               <exclude>**/*.orig</exclude>
-              <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
-              <exclude>**/a6a6562b777440fd9c34885428f5cb61.21e75333ada3d5bafb34bb918f29576c</exclude>
               <exclude>**/0000000000000016310</exclude>
               <exclude>**/.idea/**</exclude>
               <exclude>**/*.iml</exclude>
@@ -1334,8 +1288,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>${maven.site.version}</version>
-        <inherited>false</inherited>
         <dependencies>
           <dependency>
             <!-- add support for ssh/scp -->
@@ -1502,15 +1454,6 @@
         <inherited>true</inherited>
         <extensions>true</extensions>
       </plugin>
-      <plugin>
-        <!--TODO: Remove after figure how the scala:doc
-             target is being passed up on jenkins precommit.
-             Otherrwise, w/o this, we fail scaladoc.
-          -->
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
-      </plugin>
     </plugins>
   </build>
   <properties>
@@ -1561,8 +1504,6 @@
     <commons-lang3.version>3.6</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
-    <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
-    <collections.version>4.1</collections.version>
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.1</metrics-core.version>
@@ -1575,7 +1516,6 @@
     <jersey.version>2.25.1</jersey.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jruby.version>9.1.13.0</jruby.version>
     <junit.version>4.12</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
@@ -1619,15 +1559,7 @@
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
     <maven.compiler.version>3.8.0</maven.compiler.version>
-    <maven.dependency.version>3.0.1</maven.dependency.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
-    <maven.install.version>2.5.2</maven.install.version>
-    <maven.jar.version>3.0.2</maven.jar.version>
-    <maven.javadoc.version>3.0.0</maven.javadoc.version>
-    <maven.patch.version>1.2</maven.patch.version>
-    <maven.shade.version>3.0.0</maven.shade.version>
-    <maven.site.version>3.4</maven.site.version>
-    <maven.source.version>3.0.1</maven.source.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <plexus.errorprone.javac.version>2.8.2</plexus.errorprone.javac.version>
@@ -1635,13 +1567,6 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>2.1.0</hbase-thirdparty.version>
-    <!-- General Packaging -->
-    <package.prefix>/usr</package.prefix>
-    <package.conf.dir>/etc/hbase</package.conf.dir>
-    <package.log.dir>/var/log/hbase</package.log.dir>
-    <package.pid.dir>/var/run/hbase</package.pid.dir>
-    <package.release>1</package.release>
-    <final.name>${project.artifactId}-${project.version}</final.name>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1654,7 +1579,6 @@
     <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
     <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
     <shell-executable>bash</shell-executable>
-    <surefire.version>2.21.0</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
@@ -3665,22 +3589,20 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.9</version>
         <reportSets>
           <reportSet>
             <reports>
-              <report>cim</report>
               <report>dependencies</report>
               <report>dependency-convergence</report>
               <report>dependency-info</report>
               <report>dependency-management</report>
               <report>index</report>
-              <report>issue-tracking</report>
-              <report>license</report>
-              <report>mailing-list</report>
+              <report>issue-management</report>
+              <report>licenses</report>
+              <report>mailing-lists</report>
               <report>plugin-management</report>
               <report>plugins</report>
-              <report>project-team</report>
+              <report>team</report>
               <report>scm</report>
               <report>summary</report>
             </reports>
@@ -3695,7 +3617,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${maven.javadoc.version}</version>
         <reportSets>
           <!-- Dev API -->
           <reportSet>
@@ -3710,7 +3631,6 @@
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
-                <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
               <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
@@ -3753,7 +3673,6 @@
               <sourceFileExcludes>
                 <exclude>**/generated/*</exclude>
                 <exclude>**/protobuf/*</exclude>
-                <exclude>**/*.scala</exclude>
               </sourceFileExcludes>
               <excludePackageNames>org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.generated*</excludePackageNames>
               <show>private</show> <!-- (shows all classes and members) -->
