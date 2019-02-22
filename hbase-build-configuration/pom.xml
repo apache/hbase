@@ -75,7 +75,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven.compiler.version}</version>
             <configuration>
               <compilerId>javac-with-errorprone</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
