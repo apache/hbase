@@ -147,7 +147,7 @@
               <th>Num. Regions</th>
             </tr>
             <% int totalRegions = 0;
-               int totalRequests = 0;
+               int totalRequestsPerSecond = 0;
                int inconsistentNodeNum = 0;
                String masterVersion = VersionInfo.getVersion();
                for (Address server: rsGroupServers) {
@@ -165,7 +165,7 @@
                      requestsPerSecond = sl.getRequestCountPerSecond();
                      numRegionsOnline = sl.getRegionMetrics().size();
                      totalRegions += sl.getRegionMetrics().size();
-                     totalRequests += sl.getRequestCount();
+                     totalRequestsPerSecond += sl.getRequestCountPerSecond();
                      lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
                    }
                    long startcode = serverName.getStartcode();
@@ -198,7 +198,7 @@
             <%} else { %>
                 <td></td>
             <%} %>
-            <td><%= totalRequests %></td>
+            <td><%= totalRequestsPerSecond %></td>
             <td><%= totalRegions %></td>
             </tr>
           </table>
