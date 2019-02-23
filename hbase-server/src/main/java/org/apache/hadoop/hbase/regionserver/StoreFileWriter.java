@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
-import org.apache.hadoop.hbase.util.RowPrefixDelimiterBloomContext;
 import org.apache.hadoop.hbase.util.RowPrefixFixedLengthBloomContext;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -134,13 +133,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
           bloomContext = new RowPrefixFixedLengthBloomContext(generalBloomFilterWriter, comparator,
               Bytes.toInt(bloomParam));
           break;
-        case ROWPREFIX_DELIMITED:
-          bloomContext = new RowPrefixDelimiterBloomContext(generalBloomFilterWriter, comparator,
-              bloomParam);
-          break;
         default:
-          throw new IOException("Invalid Bloom filter type: "
-              + bloomType + " (ROW or ROWCOL or ROWPREFIX or ROWPREFIX_DELIMITED expected)");
+          throw new IOException(
+              "Invalid Bloom filter type: " + bloomType + " (ROW or ROWCOL or ROWPREFIX expected)");
       }
     } else {
       // Not using Bloom filters.
@@ -222,11 +217,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
        * http://2.bp.blogspot.com/_Cib_A77V54U/StZMrzaKufI/AAAAAAAAADo/ZhK7bGoJdMQ/s400/KeyValue.png
        * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + Timestamp
        *
-       * 4 Types of Filtering:
+       * 3 Types of Filtering:
        *  1. Row = Row
        *  2. RowCol = Row + Qualifier
        *  3. RowPrefixFixedLength  = Fixed Length Row Prefix
-       *  4. RowPrefixDelimiter = Delimited Row Prefix
        */
       bloomContext.writeBloom(cell);
     }

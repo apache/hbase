@@ -76,7 +76,6 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
   private int prefixLength = -1;
-  private byte[] delimiter = null;
 
   // Counter that is incremented every time a scanner is created on the
   // store file. It is decremented when the scan on the store file is
@@ -123,7 +122,6 @@ public class StoreFileReader {
     this.lastBloomKeyOnlyKV = reader.lastBloomKeyOnlyKV;
     this.skipResetSeqId = reader.skipResetSeqId;
     this.prefixLength = reader.prefixLength;
-    this.delimiter = reader.delimiter;
   }
 
   public boolean isPrimaryReplicaReader() {
@@ -295,8 +293,6 @@ public class StoreFileReader {
         return true;
       case ROWPREFIX_FIXED_LENGTH:
         return passesGeneralRowPrefixBloomFilter(scan);
-      case ROWPREFIX_DELIMITED:
-        return passesGeneralDelimitedRowPrefixBloomFilter(scan);
       default:
         return true;
     }
@@ -404,45 +400,6 @@ public class StoreFileReader {
         return true;
       }
       rowPrefix = Bytes.copy(row, 0, prefixLength);
-    }
-    return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
-  }
-
-  /**
-   * A method for checking Bloom filters. Called directly from
-   * StoreFileScanner in case of a multi-column query.
-   *
-   * @return True if passes
-   */
-  private boolean passesGeneralDelimitedRowPrefixBloomFilter(Scan scan) {
-    BloomFilter bloomFilter = this.generalBloomFilter;
-    if (bloomFilter == null) {
-      return true;
-    }
-
-    byte[] row = scan.getStartRow();
-    byte[] rowPrefix;
-    if (scan.isGetScan()) {
-      int rowPrefixLength = Bytes.indexOf(row, delimiter);
-      if (rowPrefixLength <= 0) {
-        rowPrefix = row;
-      } else {
-        rowPrefix = Bytes.copy(row, 0, rowPrefixLength);
-      }
-    } else {
-      // For non-get scans
-      // If startRow does not contain delimiter, return true directly.
-      int startRowPrefixLength = Bytes.indexOf(row, delimiter);
-      if (startRowPrefixLength <= 0) {
-        return true;
-      }
-      // If stopRow does not have the same prefix as startRow, return true directly.
-      int commonLength = Bytes.findCommonPrefix(scan.getStartRow(), scan.getStopRow(),
-          startRowPrefixLength, scan.getStopRow().length, 0, 0);
-      if (commonLength < startRowPrefixLength) {
-        return true;
-      }
-      rowPrefix = Bytes.copy(row, 0, startRowPrefixLength);
     }
     return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
   }
@@ -557,8 +514,6 @@ public class StoreFileReader {
     byte[] p = fi.get(BLOOM_FILTER_PARAM_KEY);
     if (bloomFilterType ==  BloomType.ROWPREFIX_FIXED_LENGTH) {
       prefixLength = Bytes.toInt(p);
-    } else if (bloomFilterType == BloomType.ROWPREFIX_DELIMITED) {
-      delimiter = p;
     }
 
     lastBloomKey = fi.get(LAST_BLOOM_KEY);
@@ -762,12 +717,7 @@ public class StoreFileReader {
     void storeFileReaderClosed(StoreFileReader reader);
   }
 
-
   public int getPrefixLength() {
     return prefixLength;
-  }
-
-  public byte[] getDelimiter() {
-    return delimiter;
   }
 }

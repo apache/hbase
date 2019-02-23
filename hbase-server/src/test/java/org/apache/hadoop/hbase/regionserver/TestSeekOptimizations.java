@@ -144,7 +144,6 @@ public class TestSeekOptimizations {
     rand = new Random(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
   }
 
   @Test
@@ -485,6 +484,5 @@ public class TestSeekOptimizations {
           HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
     }
   }
-
 }
 

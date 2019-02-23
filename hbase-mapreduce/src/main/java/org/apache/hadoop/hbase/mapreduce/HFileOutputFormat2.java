@@ -406,8 +406,6 @@ public class HFileOutputFormat2
         String bloomParam = bloomParamMap.get(tableAndFamily);
         if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
           conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, bloomParam);
-        } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
-          conf.set(BloomFilterUtil.DELIMITER_KEY, bloomParam);
         }
         Integer blockSize = blockSizeMap.get(tableAndFamily);
         blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
@@ -951,8 +949,6 @@ public class HFileOutputFormat2
     String bloomParam = "";
     if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
       bloomParam = familyDescriptor.getConfigurationValue(BloomFilterUtil.PREFIX_LENGTH_KEY);
-    } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
-      bloomParam = familyDescriptor.getConfigurationValue(BloomFilterUtil.DELIMITER_KEY);
     }
     return bloomParam;
   };
