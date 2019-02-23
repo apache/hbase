@@ -105,7 +105,6 @@ public class TestScanWithBloomError {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
     conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-    conf.set(BloomFilterUtil.DELIMITER_KEY, "#");
   }
 
   @Test

@@ -82,7 +82,6 @@ public class TestSeekBeforeWithInlineBlocks {
   public void testMultiIndexLevelRandomHFileWithBlooms() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
 
     // Try out different HFile versions to ensure reverse scan works on each version
     for (int hfileVersion = HFile.MIN_FORMAT_VERSION_WITH_TAGS;
@@ -105,7 +104,6 @@ public class TestSeekBeforeWithInlineBlocks {
           conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
           conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE, BLOOM_BLOCK_SIZE);
           conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-          conf.set(BloomFilterUtil.DELIMITER_KEY, "#");
 
           Cell[] cells = new Cell[NUM_KV];
 
