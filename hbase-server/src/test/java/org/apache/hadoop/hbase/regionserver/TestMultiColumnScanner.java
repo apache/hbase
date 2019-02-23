@@ -138,7 +138,6 @@ public abstract class TestMultiColumnScanner {
   @Test
   public void testMultiColumnScanner() throws IOException {
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-    TEST_UTIL.getConfiguration().set(BloomFilterUtil.DELIMITER_KEY, "#");
     HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
         ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType).setMaxVersions(MAX_VERSIONS)

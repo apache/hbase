@@ -880,7 +880,6 @@ public class ThriftUtilities {
       case 1: return BloomType.ROW;
       case 2: return BloomType.ROWCOL;
       case 3: return BloomType.ROWPREFIX_FIXED_LENGTH;
-      case 4: return BloomType.ROWPREFIX_DELIMITED;
       default: return BloomType.ROW;
     }
   }
@@ -1105,7 +1104,6 @@ public class ThriftUtilities {
       case ROW: return TBloomFilterType.ROW;
       case ROWCOL: return TBloomFilterType.ROWCOL;
       case ROWPREFIX_FIXED_LENGTH: return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
-      case ROWPREFIX_DELIMITED: return TBloomFilterType.ROWPREFIX_DELIMITED;
       default: return TBloomFilterType.ROW;
     }
   }

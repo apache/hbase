@@ -561,14 +561,6 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
     }
 
-    if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
-      if (!cmd.hasOption(OPT_BLOOM_PARAM)) {
-        LOG.error("the parameter of bloom filter {} is not specified", bloomType.name());
-      } else {
-        conf.set(BloomFilterUtil.DELIMITER_KEY, cmd.getOptionValue(OPT_BLOOM_PARAM));
-      }
-    }
-
     inMemoryCF = cmd.hasOption(OPT_INMEMORY);
     if (cmd.hasOption(OPT_ENCRYPTION)) {
       cipher = Encryption.getCipher(conf, cmd.getOptionValue(OPT_ENCRYPTION));

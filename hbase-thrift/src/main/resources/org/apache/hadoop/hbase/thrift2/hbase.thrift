@@ -339,10 +339,6 @@ enum TBloomFilterType {
    * Bloom enabled with Table row prefix as Key, specify the length of the prefix
    */
   ROWPREFIX_FIXED_LENGTH = 3,
-  /**
-   * Bloom enabled with Table row prefix as Key, specify the delimiter of the prefix
-   */
-  ROWPREFIX_DELIMITED = 4
 }
 
 /**
