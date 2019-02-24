@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
+import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.mergeRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
@@ -217,7 +218,7 @@ class AsyncNonMetaRegionLocator {
         if (loc1.getSeqNum() != loc2.getSeqNum()) {
           return false;
         }
-        if (!Objects.equal(loc1.getServerName(), loc2.getServerName())) {
+        if (Objects.equal(loc1.getServerName(), loc2.getServerName())) {
           return false;
         }
       }
@@ -234,7 +235,7 @@ class AsyncNonMetaRegionLocator {
       if (oldLocs == null) {
         return true;
       }
-      RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
+      RegionLocations mergedLocs = mergeRegionLocations(locs, oldLocs);
       if (isEqual(mergedLocs, oldLocs)) {
         // the merged one is the same with the old one, give up
         LOG.trace("Will not add {} to cache because the old value {} " +
