@@ -123,6 +123,20 @@ final class AsyncRegionLocatorHelper {
     }
   }
 
+  /**
+   * Create a new {@link RegionLocations} which is the merging result for the given two
+   * {@link RegionLocations}.
+   * <p/>
+   * All the {@link RegionLocations} in async locator related class are immutable because we want to
+   * access them concurrently, so here we need to create a new one, instead of calling
+   * {@link RegionLocations#mergeLocations(RegionLocations)} directly.
+   */
+  static RegionLocations mergeRegionLocations(RegionLocations newLocs, RegionLocations oldLocs) {
+    RegionLocations locs = new RegionLocations(newLocs.getRegionLocations());
+    locs.mergeLocations(oldLocs);
+    return locs;
+  }
+
   static boolean isGood(RegionLocations locs, int replicaId) {
     if (locs == null) {
       return false;
