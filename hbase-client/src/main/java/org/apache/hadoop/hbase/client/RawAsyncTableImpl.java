@@ -484,9 +484,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<Void>> put(List<Put> puts) {
-    for (Put put : puts) {
-      validatePut(put, conn.connConf.getMaxKeyValueSize());
-    }
     return voidMutate(puts);
   }
 
@@ -506,6 +503,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   private <T> List<CompletableFuture<T>> batch(List<? extends Row> actions, long rpcTimeoutNs) {
+    actions.stream().filter(action -> action instanceof Put).map(action -> (Put) action)
+      .forEach(put -> validatePut(put, conn.connConf.getMaxKeyValueSize()));
     return conn.callerFactory.batch().table(tableName).actions(actions)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
