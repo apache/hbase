@@ -596,8 +596,7 @@ public final class ConnectionUtils {
    * The rules are:
    * <ol>
    * <li>If user set a priority explicitly, then just use it.</li>
-   * <li>For meta table, use {@link HConstants#META_QOS}.</li>
-   * <li>For other system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
+   * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
    * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
    * </ol>
    * @param priority the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
