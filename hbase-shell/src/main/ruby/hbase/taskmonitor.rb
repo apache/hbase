@@ -33,18 +33,20 @@ module Hbase
     # Represents information reported by a server on a single MonitoredTask
     class Task
       def initialize(taskMap, host)
-        taskMap.each_pair do |k, v|
+        taskMap.entrySet.each do |entry|
+          k = entry.getKey
+          v = entry.getValue
           case k
           when 'statustimems'
-            @statustime = Time.at(v / 1000)
+            @statustime = Time.at(v.getAsLong / 1000)
           when 'status'
-            @status = v
+            @status = v.getAsString
           when 'starttimems'
-            @starttime = Time.at(v / 1000)
+            @starttime = Time.at(v.getAsLong / 1000)
           when 'description'
-            @description = v
+            @description = v.getAsString
           when 'state'
-            @state = v
+            @state = v.getAsString
           end
         end
 
@@ -74,7 +76,8 @@ module Hbase
     # Returns a filtered list of tasks on the given host
     def tasksOnHost(filter, host)
       java_import 'java.net.URL'
-      java_import 'com.fasterxml.jackson.databind.ObjectMapper'
+      java_import 'java.io.InputStreamReader'
+      java_import 'org.apache.hbase.thirdparty.com.google.gson.JsonParser'
 
       infoport = @admin.getClusterStatus.getLoad(host).getInfoServerPort.to_s
 
@@ -88,16 +91,19 @@ module Hbase
       schema = 'http://'
       url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
 
-      json = URL.new(url)
-      mapper = ObjectMapper.new
+      json = URL.new(url).openStream
+      parser = JsonParser.new
 
       # read and parse JSON
-      tasksArrayList = mapper.readValue(json, java.lang.Object.java_class)
-
+      begin
+        tasks_array_list = parser.parse(InputStreamReader.new(json, 'UTF-8')).getAsJsonArray
+      ensure
+        json.close
+      end
       # convert to an array of TaskMonitor::Task instances
       tasks = []
-      tasksArrayList.each do |t|
-        tasks.unshift Task.new(t, host)
+      tasks_array_list.each do |t|
+        tasks.unshift Task.new(t.getAsJsonObject, host)
       end
 
       tasks
