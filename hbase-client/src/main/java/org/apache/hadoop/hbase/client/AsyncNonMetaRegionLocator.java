@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
-import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.mergeRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
@@ -218,7 +217,7 @@ class AsyncNonMetaRegionLocator {
         if (loc1.getSeqNum() != loc2.getSeqNum()) {
           return false;
         }
-        if (Objects.equal(loc1.getServerName(), loc2.getServerName())) {
+        if (!Objects.equal(loc1.getServerName(), loc2.getServerName())) {
           return false;
         }
       }
@@ -226,25 +225,42 @@ class AsyncNonMetaRegionLocator {
     return true;
   }
 
-  // return whether we add this loc to cache
-  private boolean addToCache(TableCache tableCache, RegionLocations locs) {
+  // if we successfully add the locations to cache, return the locations, otherwise return the one
+  // which prevents us being added. The upper layer can use this value to complete pending requests.
+  private RegionLocations addToCache(TableCache tableCache, RegionLocations locs) {
     LOG.trace("Try adding {} to cache", locs);
     byte[] startKey = locs.getDefaultRegionLocation().getRegion().getStartKey();
     for (;;) {
       RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
       if (oldLocs == null) {
-        return true;
+        return locs;
       }
-      RegionLocations mergedLocs = mergeRegionLocations(locs, oldLocs);
-      if (isEqual(mergedLocs, oldLocs)) {
-        // the merged one is the same with the old one, give up
-        LOG.trace("Will not add {} to cache because the old value {} " +
-          " is newer than us or has the same server name." +
-          " Maybe it is updated before we replace it", locs, oldLocs);
-        return false;
-      }
-      if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
-        return true;
+      // check whether the regions are the same, this usually happens when table is split/merged, or
+      // deleted and recreated again.
+      RegionInfo region = locs.getRegionLocation().getRegion();
+      RegionInfo oldRegion = oldLocs.getRegionLocation().getRegion();
+      if (region.getEncodedName().equals(oldRegion.getEncodedName())) {
+        RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
+        if (isEqual(mergedLocs, oldLocs)) {
+          // the merged one is the same with the old one, give up
+          LOG.trace("Will not add {} to cache because the old value {} " +
+            " is newer than us or has the same server name." +
+            " Maybe it is updated before we replace it", locs, oldLocs);
+          return oldLocs;
+        }
+        if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
+          return mergedLocs;
+        }
+      } else {
+        // the region is different, here we trust the one we fetched. This maybe wrong but finally
+        // the upper layer can detect this and trigger removal of the wrong locations
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("The newnly fetch region {} is different from the old one {} for row '{}'," +
+            " try replaing the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
+        }
+        if (tableCache.cache.replace(startKey, oldLocs, locs)) {
+          return locs;
+        }
       }
     }
   }
@@ -258,37 +274,35 @@ class AsyncNonMetaRegionLocator {
     Optional<LocateRequest> toSend = Optional.empty();
     TableCache tableCache = getTableCache(tableName);
     if (locs != null) {
-      if (!addToCache(tableCache, locs)) {
-        // someone is ahead of us.
-        synchronized (tableCache) {
-          tableCache.pendingRequests.remove(req);
-          tableCache.clearCompletedRequests(Optional.empty());
-          // Remove a complete locate request in a synchronized block, so the table cache must have
-          // quota to send a candidate request.
-          toSend = tableCache.getCandidate();
-          toSend.ifPresent(r -> tableCache.send(r));
-        }
-        toSend.ifPresent(r -> locateInMeta(tableName, r));
-        return;
+      RegionLocations addedLocs = addToCache(tableCache, locs);
+      synchronized (tableCache) {
+        tableCache.pendingRequests.remove(req);
+        tableCache.clearCompletedRequests(Optional.of(addedLocs));
+        // Remove a complete locate request in a synchronized block, so the table cache must have
+        // quota to send a candidate request.
+        toSend = tableCache.getCandidate();
+        toSend.ifPresent(r -> tableCache.send(r));
       }
-    }
-    synchronized (tableCache) {
-      tableCache.pendingRequests.remove(req);
-      if (error != null) {
+      toSend.ifPresent(r -> locateInMeta(tableName, r));
+    } else {
+      // we meet an error
+      assert error != null;
+      synchronized (tableCache) {
+        tableCache.pendingRequests.remove(req);
         // fail the request itself, no matter whether it is a DoNotRetryIOException, as we have
         // already retried several times
         CompletableFuture<?> future = tableCache.allRequests.remove(req);
         if (future != null) {
           future.completeExceptionally(error);
         }
+        tableCache.clearCompletedRequests(Optional.empty());
+        // Remove a complete locate request in a synchronized block, so the table cache must have
+        // quota to send a candidate request.
+        toSend = tableCache.getCandidate();
+        toSend.ifPresent(r -> tableCache.send(r));
       }
-      tableCache.clearCompletedRequests(Optional.ofNullable(locs));
-      // Remove a complete locate request in a synchronized block, so the table cache must have
-      // quota to send a candidate request.
-      toSend = tableCache.getCandidate();
-      toSend.ifPresent(r -> tableCache.send(r));
+      toSend.ifPresent(r -> locateInMeta(tableName, r));
     }
-    toSend.ifPresent(r -> locateInMeta(tableName, r));
   }
 
   // return whether we should stop the scan
@@ -443,10 +457,9 @@ class AsyncNonMetaRegionLocator {
                 if (info == null || info.isOffline() || info.isSplitParent()) {
                   continue;
                 }
-                if (addToCache(tableCache, locs)) {
-                  synchronized (tableCache) {
-                    tableCache.clearCompletedRequests(Optional.of(locs));
-                  }
+                RegionLocations addedLocs = addToCache(tableCache, locs);
+                synchronized (tableCache) {
+                  tableCache.clearCompletedRequests(Optional.of(addedLocs));
                 }
               }
             }
