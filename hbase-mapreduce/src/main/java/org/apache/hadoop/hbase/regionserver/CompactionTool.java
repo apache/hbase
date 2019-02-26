@@ -173,6 +173,8 @@ public class CompactionTool extends Configured implements Tool {
           }
         }
       } while (store.needsCompaction() && !compactOnce);
+      //We need to close the store properly, to make sure it will archive compacted files
+      store.close();
     }
 
     /**
