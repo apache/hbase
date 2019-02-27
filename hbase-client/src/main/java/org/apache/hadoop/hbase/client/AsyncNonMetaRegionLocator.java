@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
@@ -169,9 +170,10 @@ class AsyncNonMetaRegionLocator {
         // startKey < req.row and endKey >= req.row. Here we split it to endKey == req.row ||
         // (endKey > req.row && startKey < req.row). The two conditions are equal since startKey <
         // endKey.
-        int c = Bytes.compareTo(loc.getRegion().getEndKey(), req.row);
-        completed =
-          c == 0 || (c > 0 && Bytes.compareTo(loc.getRegion().getStartKey(), req.row) < 0);
+        byte[] endKey = loc.getRegion().getEndKey();
+        int c = Bytes.compareTo(endKey, req.row);
+        completed = c == 0 || ((c > 0 || Bytes.equals(EMPTY_END_ROW, endKey)) &&
+          Bytes.compareTo(loc.getRegion().getStartKey(), req.row) < 0);
       } else {
         completed = loc.getRegion().containsRow(req.row);
       }
