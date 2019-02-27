@@ -138,8 +138,12 @@ public class TestClientOperationInterrupt {
       threads.add(t);
       t.start();
     }
+    int expectedNoExNum = nbThread / 2;
 
     for (int i = 0; i < nbThread / 2; i++) {
+      if (threads.get(i).getState().equals(Thread.State.TERMINATED)) {
+        expectedNoExNum--;
+      }
       threads.get(i).interrupt();
     }
 
@@ -156,9 +160,8 @@ public class TestClientOperationInterrupt {
     }
 
     Assert.assertFalse(Thread.currentThread().isInterrupted());
-
     Assert.assertTrue(" noEx: " + noEx.get() + ", badEx=" + badEx.get() + ", noInt=" + noInt.get(),
-        noEx.get() == nbThread / 2 && badEx.get() == 0);
+        noEx.get() == expectedNoExNum && badEx.get() == 0);
 
     // The problem here is that we need the server to free its handlers to handle all operations
     while (done.get() != nbThread){
