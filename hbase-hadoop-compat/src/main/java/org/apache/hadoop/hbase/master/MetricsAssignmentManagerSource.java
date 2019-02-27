@@ -60,6 +60,10 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
 
   String ASSIGN_METRIC_PREFIX = "assign";
   String UNASSIGN_METRIC_PREFIX = "unassign";
+  String MOVE_METRIC_PREFIX = "move";
+  String REOPEN_METRIC_PREFIX = "reopen";
+  String OPEN_METRIC_PREFIX = "open";
+  String CLOSE_METRIC_PREFIX = "close";
   String SPLIT_METRIC_PREFIX = "split";
   String MERGE_METRIC_PREFIX = "merge";
 
@@ -95,14 +99,34 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void incrementOperationCounter();
 
   /**
-   * @return {@link OperationMetrics} containing common metrics for assign operation
+   * @return {@link OperationMetrics} containing common metrics for assign region operation
    */
   OperationMetrics getAssignMetrics();
 
   /**
-   * @return {@link OperationMetrics} containing common metrics for unassign operation
+   * @return {@link OperationMetrics} containing common metrics for unassign region operation
    */
   OperationMetrics getUnassignMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for move region operation
+   */
+  OperationMetrics getMoveMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for reopen region operation
+   */
+  OperationMetrics getReopenMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for open region request
+   */
+  OperationMetrics getOpenMetrics();
+
+  /**
+   * @return {@link OperationMetrics} containing common metrics for close region request
+   */
+  OperationMetrics getCloseMetrics();
 
   /**
    * @return {@link OperationMetrics} containing common metrics for split operation

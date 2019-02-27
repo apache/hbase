@@ -30,6 +30,10 @@ public class MetricsAssignmentManager {
 
   private final ProcedureMetrics assignProcMetrics;
   private final ProcedureMetrics unassignProcMetrics;
+  private final ProcedureMetrics moveProcMetrics;
+  private final ProcedureMetrics reopenProcMetrics;
+  private final ProcedureMetrics openProcMetrics;
+  private final ProcedureMetrics closeProcMetrics;
   private final ProcedureMetrics splitProcMetrics;
   private final ProcedureMetrics mergeProcMetrics;
 
@@ -39,6 +43,10 @@ public class MetricsAssignmentManager {
 
     assignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getAssignMetrics());
     unassignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getUnassignMetrics());
+    moveProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getMoveMetrics());
+    reopenProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getReopenMetrics());
+    openProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getOpenMetrics());
+    closeProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getCloseMetrics());
     splitProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getSplitMetrics());
     mergeProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getMergeMetrics());
   }
@@ -100,6 +108,34 @@ public class MetricsAssignmentManager {
    */
   public ProcedureMetrics getUnassignProcMetrics() {
     return unassignProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for move procedure
+   */
+  public ProcedureMetrics getMoveProcMetrics() {
+    return moveProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for reopen procedure
+   */
+  public ProcedureMetrics getReopenProcMetrics() {
+    return reopenProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for OpenRegionProcedure
+   */
+  public ProcedureMetrics getOpenProcMetrics() {
+    return openProcMetrics;
+  }
+
+  /**
+   * @return Set of common metrics for CloseRegionProcedure
+   */
+  public ProcedureMetrics getCloseProcMetrics() {
+    return closeProcMetrics;
   }
 
   /**
