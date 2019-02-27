@@ -389,4 +389,15 @@ public class TestAsyncNonMetaRegionLocator {
       }
     });
   }
+
+  // Testcase for HBASE-21961
+  @Test
+  public void testLocateBeforeInOnlyRegion() throws IOException, InterruptedException {
+    createSingleRegionTable();
+    HRegionLocation loc =
+      getDefaultRegionLocation(TABLE_NAME, Bytes.toBytes(1), RegionLocateType.BEFORE, false).join();
+    // should locate to the only region
+    assertArrayEquals(loc.getRegion().getStartKey(), EMPTY_START_ROW);
+    assertArrayEquals(loc.getRegion().getEndKey(), EMPTY_END_ROW);
+  }
 }
