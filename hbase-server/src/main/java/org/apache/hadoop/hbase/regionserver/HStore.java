@@ -344,8 +344,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // Check if in-memory-compaction configured. Note MemoryCompactionPolicy is an enum!
     MemoryCompactionPolicy inMemoryCompaction = null;
     if (this.getTableName().isSystemTable()) {
-      inMemoryCompaction = MemoryCompactionPolicy.valueOf(
-          conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
+      inMemoryCompaction = MemoryCompactionPolicy
+        .valueOf(conf.get("hbase.systemtables.compacting.memstore.type", "NONE").toUpperCase());
     } else {
       inMemoryCompaction = family.getInMemoryCompaction();
     }
