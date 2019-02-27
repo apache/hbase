@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,10 +58,11 @@ public class ModifyTableProcedure
   private TableDescriptor unmodifiedTableDescriptor = null;
   private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
+  private boolean shouldCheckDescriptor;
 
   public ModifyTableProcedure() {
     super();
-    initilize();
+    initilize(null, false);
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd)
@@ -70,14 +73,23 @@ public class ModifyTableProcedure
   public ModifyTableProcedure(final MasterProcedureEnv env, final TableDescriptor htd,
       final ProcedurePrepareLatch latch)
   throws HBaseIOException {
+    this(env, htd, latch, null, false);
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env,
+      final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
+      final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
+          throws HBaseIOException {
     super(env, latch);
-    initilize();
-    this.modifiedTableDescriptor = htd;
+    initilize(oldTableDescriptor, shouldCheckDescriptor);
+    this.modifiedTableDescriptor = newTableDescriptor;
     preflightChecks(env, null/*No table checks; if changing peers, table can be online*/);
   }
 
-  private void initilize() {
-    this.unmodifiedTableDescriptor = null;
+  private void initilize(final TableDescriptor unmodifiedTableDescriptor,
+      final boolean shouldCheckDescriptor) {
+    this.unmodifiedTableDescriptor = unmodifiedTableDescriptor;
+    this.shouldCheckDescriptor = shouldCheckDescriptor;
     this.deleteColumnFamilyInModify = false;
   }
 
@@ -188,7 +200,8 @@ public class ModifyTableProcedure
         MasterProcedureProtos.ModifyTableStateData.newBuilder()
             .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
             .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor))
-            .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify);
+            .setDeleteColumnFamilyInModify(deleteColumnFamilyInModify)
+            .setShouldCheckDescriptor(shouldCheckDescriptor);
 
     if (unmodifiedTableDescriptor != null) {
       modifyTableMsg
@@ -208,6 +221,8 @@ public class ModifyTableProcedure
     setUser(MasterProcedureUtil.toUserInfo(modifyTableMsg.getUserInfo()));
     modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(modifyTableMsg.getModifiedTableSchema());
     deleteColumnFamilyInModify = modifyTableMsg.getDeleteColumnFamilyInModify();
+    shouldCheckDescriptor = modifyTableMsg.hasShouldCheckDescriptor()
+        ? modifyTableMsg.getShouldCheckDescriptor() : false;
 
     if (modifyTableMsg.hasUnmodifiedTableSchema()) {
       unmodifiedTableDescriptor =
@@ -242,9 +257,24 @@ public class ModifyTableProcedure
         " should have at least one column family.");
     }
 
-    // In order to update the descriptor, we need to retrieve the old descriptor for comparison.
-    this.unmodifiedTableDescriptor =
-        env.getMasterServices().getTableDescriptors().get(getTableName());
+    // If descriptor check is enabled, check whether the table descriptor when procedure was
+    // submitted matches with the current
+    // table descriptor of the table, else retrieve the old descriptor
+    // for comparison in order to update the descriptor.
+    if (shouldCheckDescriptor) {
+      if (TableDescriptor.COMPARATOR.compare(unmodifiedTableDescriptor,
+        env.getMasterServices().getTableDescriptors().get(getTableName())) != 0) {
+        LOG.error("Error while modifying table '" + getTableName().toString()
+            + "' Skipping procedure : " + this);
+        throw new ConcurrentTableModificationException(
+            "Skipping modify table operation on table '" + getTableName().toString()
+                + "' as it has already been modified by some other concurrent operation, "
+                + "Please retry.");
+      }
+    } else {
+      this.unmodifiedTableDescriptor =
+          env.getMasterServices().getTableDescriptors().get(getTableName());
+    }
 
     if (env.getMasterServices().getTableStateManager()
         .isTableState(getTableName(), TableState.State.ENABLED)) {
