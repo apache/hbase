@@ -112,11 +112,23 @@ public abstract class TestAssignmentManagerBase {
 
   protected ProcedureMetrics assignProcMetrics;
   protected ProcedureMetrics unassignProcMetrics;
+  protected ProcedureMetrics moveProcMetrics;
+  protected ProcedureMetrics reopenProcMetrics;
+  protected ProcedureMetrics openProcMetrics;
+  protected ProcedureMetrics closeProcMetrics;
 
   protected long assignSubmittedCount = 0;
   protected long assignFailedCount = 0;
   protected long unassignSubmittedCount = 0;
   protected long unassignFailedCount = 0;
+  protected long moveSubmittedCount = 0;
+  protected long moveFailedCount = 0;
+  protected long reopenSubmittedCount = 0;
+  protected long reopenFailedCount = 0;
+  protected long openSubmittedCount = 0;
+  protected long openFailedCount = 0;
+  protected long closeSubmittedCount = 0;
+  protected long closeFailedCount = 0;
 
   protected int newRsAdded;
 
@@ -147,6 +159,10 @@ public abstract class TestAssignmentManagerBase {
     am = master.getAssignmentManager();
     assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
+    moveProcMetrics = am.getAssignmentManagerMetrics().getMoveProcMetrics();
+    reopenProcMetrics = am.getAssignmentManagerMetrics().getReopenProcMetrics();
+    openProcMetrics = am.getAssignmentManagerMetrics().getOpenProcMetrics();
+    closeProcMetrics = am.getAssignmentManagerMetrics().getCloseProcMetrics();
     setUpMeta();
   }
 
@@ -654,10 +670,18 @@ public abstract class TestAssignmentManagerBase {
     }
   }
 
-  protected void collectAssignmentManagerMetrics() {
+  protected final void collectAssignmentManagerMetrics() {
     assignSubmittedCount = assignProcMetrics.getSubmittedCounter().getCount();
     assignFailedCount = assignProcMetrics.getFailedCounter().getCount();
     unassignSubmittedCount = unassignProcMetrics.getSubmittedCounter().getCount();
     unassignFailedCount = unassignProcMetrics.getFailedCounter().getCount();
+    moveSubmittedCount = moveProcMetrics.getSubmittedCounter().getCount();
+    moveFailedCount = moveProcMetrics.getFailedCounter().getCount();
+    reopenSubmittedCount = reopenProcMetrics.getSubmittedCounter().getCount();
+    reopenFailedCount = reopenProcMetrics.getFailedCounter().getCount();
+    openSubmittedCount = openProcMetrics.getSubmittedCounter().getCount();
+    openFailedCount = openProcMetrics.getFailedCounter().getCount();
+    closeSubmittedCount = closeProcMetrics.getSubmittedCounter().getCount();
+    closeFailedCount = closeProcMetrics.getFailedCounter().getCount();
   }
 }
