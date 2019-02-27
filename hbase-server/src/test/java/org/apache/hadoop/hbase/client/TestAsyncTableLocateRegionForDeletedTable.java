@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.commons.io.IOUtils;
@@ -64,13 +63,11 @@ public class TestAsyncTableLocateRegionForDeletedTable {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    assertFalse(ASYNC_CONN.isClosed());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     IOUtils.closeQuietly(ASYNC_CONN);
-    assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }
 
