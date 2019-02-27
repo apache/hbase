@@ -239,4 +239,48 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     // set it back as default, see setUpMeta()
     am.wakeMetaLoadedEvent();
   }
+
+  private void assertCloseThenOpen() {
+    assertEquals(closeSubmittedCount + 1, closeProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(closeFailedCount, closeProcMetrics.getFailedCounter().getCount());
+    assertEquals(openSubmittedCount + 1, openProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(openFailedCount, openProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testMove() throws Exception {
+    TableName tableName = TableName.valueOf("testMove");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    am.assign(hri);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    am.move(hri);
+
+    assertEquals(moveSubmittedCount + 1, moveProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(moveFailedCount, moveProcMetrics.getFailedCounter().getCount());
+    assertCloseThenOpen();
+  }
+
+  @Test
+  public void testReopen() throws Exception {
+    TableName tableName = TableName.valueOf("testReopen");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    am.assign(hri);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    TransitRegionStateProcedure proc =
+      TransitRegionStateProcedure.reopen(master.getMasterProcedureExecutor().getEnvironment(), hri);
+    am.getRegionStates().getRegionStateNode(hri).setProcedure(proc);
+    waitOnFuture(submitProcedure(proc));
+
+    assertEquals(reopenSubmittedCount + 1, reopenProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(reopenFailedCount, reopenProcMetrics.getFailedCounter().getCount());
+    assertCloseThenOpen();
+  }
 }

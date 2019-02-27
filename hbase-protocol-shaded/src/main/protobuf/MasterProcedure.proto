@@ -534,12 +534,17 @@ enum RegionStateTransitionState {
   REGION_STATE_TRANSITION_CONFIRM_CLOSED = 5;
 }
 
+enum RegionTransitionType {
+  ASSIGN = 1;
+  UNASSIGN = 2;
+  MOVE = 3;
+  REOPEN = 4;
+}
+
 message RegionStateTransitionStateData {
-  required RegionStateTransitionState initialState = 1;
-  required RegionStateTransitionState lastState = 2;
-  optional ServerName assign_candidate = 3;
-  required bool force_new_plan = 4;
-  optional bool override = 5 [default = false];
+  required RegionTransitionType type = 1;
+  optional ServerName assign_candidate = 2;
+  required bool force_new_plan = 3;
 }
 
 message RegionRemoteProcedureBaseStateData {

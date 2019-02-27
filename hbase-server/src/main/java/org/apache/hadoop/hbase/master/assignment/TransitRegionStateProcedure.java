@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -48,6 +49,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
@@ -106,6 +108,8 @@ public class TransitRegionStateProcedure
 
   private static final Logger LOG = LoggerFactory.getLogger(TransitRegionStateProcedure.class);
 
+  private TransitionType type;
+
   private RegionStateTransitionState initialState;
 
   private RegionStateTransitionState lastState;
@@ -120,15 +124,33 @@ public class TransitRegionStateProcedure
   public TransitRegionStateProcedure() {
   }
 
+  private void setInitalAndLastState() {
+    switch (type) {
+      case ASSIGN:
+        initialState = RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE;
+        lastState = RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED;
+        break;
+      case UNASSIGN:
+        initialState = RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE;
+        lastState = RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED;
+        break;
+      case MOVE:
+      case REOPEN:
+        initialState = RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE;
+        lastState = RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED;
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown TransitionType: " + type);
+    }
+  }
   @VisibleForTesting
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
-      ServerName assignCandidate, boolean forceNewPlan, RegionStateTransitionState initialState,
-      RegionStateTransitionState lastState) {
+      ServerName assignCandidate, boolean forceNewPlan, TransitionType type) {
     super(env, hri);
     this.assignCandidate = assignCandidate;
     this.forceNewPlan = forceNewPlan;
-    this.initialState = initialState;
-    this.lastState = lastState;
+    this.type = type;
+    setInitalAndLastState();
   }
 
   @Override
@@ -548,11 +570,41 @@ public class TransitRegionStateProcedure
     return initialState;
   }
 
+  private static TransitionType convert(RegionTransitionType type) {
+    switch (type) {
+      case ASSIGN:
+        return TransitionType.ASSIGN;
+      case UNASSIGN:
+        return TransitionType.UNASSIGN;
+      case MOVE:
+        return TransitionType.MOVE;
+      case REOPEN:
+        return TransitionType.REOPEN;
+      default:
+        throw new IllegalArgumentException("Unknown RegionTransitionType: " + type);
+    }
+  }
+
+  private static RegionTransitionType convert(TransitionType type) {
+    switch (type) {
+      case ASSIGN:
+        return RegionTransitionType.ASSIGN;
+      case UNASSIGN:
+        return RegionTransitionType.UNASSIGN;
+      case MOVE:
+        return RegionTransitionType.MOVE;
+      case REOPEN:
+        return RegionTransitionType.REOPEN;
+      default:
+        throw new IllegalArgumentException("Unknown TransitionType: " + type);
+    }
+  }
+
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     RegionStateTransitionStateData.Builder builder = RegionStateTransitionStateData.newBuilder()
-      .setInitialState(initialState).setLastState(lastState).setForceNewPlan(forceNewPlan);
+      .setType(convert(type)).setForceNewPlan(forceNewPlan);
     if (assignCandidate != null) {
       builder.setAssignCandidate(ProtobufUtil.toServerName(assignCandidate));
     }
@@ -564,8 +616,8 @@ public class TransitRegionStateProcedure
     super.deserializeStateData(serializer);
     RegionStateTransitionStateData data =
       serializer.deserialize(RegionStateTransitionStateData.class);
-    initialState = data.getInitialState();
-    lastState = data.getLastState();
+    type = convert(data.getType());
+    setInitalAndLastState();
     forceNewPlan = data.getForceNewPlan();
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());
@@ -574,11 +626,18 @@ public class TransitRegionStateProcedure
 
   @Override
   protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
-    // TODO: need to reimplement the metrics system for assign/unassign
-    if (initialState == RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE) {
-      return env.getAssignmentManager().getAssignmentManagerMetrics().getAssignProcMetrics();
-    } else {
-      return env.getAssignmentManager().getAssignmentManagerMetrics().getUnassignProcMetrics();
+    MetricsAssignmentManager metrics = env.getAssignmentManager().getAssignmentManagerMetrics();
+    switch (type) {
+      case ASSIGN:
+        return metrics.getAssignProcMetrics();
+      case UNASSIGN:
+        return metrics.getUnassignProcMetrics();
+      case MOVE:
+        return metrics.getMoveProcMetrics();
+      case REOPEN:
+        return metrics.getReopenProcMetrics();
+      default:
+        throw new IllegalArgumentException("Unknown transition type: " + type);
     }
   }
 
@@ -600,36 +659,32 @@ public class TransitRegionStateProcedure
     return proc;
   }
 
+  public enum TransitionType {
+    ASSIGN, UNASSIGN, MOVE, REOPEN
+  }
+
   // Be careful that, when you call these 4 methods below, you need to manually attach the returned
   // procedure with the RegionStateNode, otherwise the procedure will quit immediately without doing
   // anything. See the comment in executeFromState to find out why we need this assumption.
   public static TransitRegionStateProcedure assign(MasterProcedureEnv env, RegionInfo region,
       @Nullable ServerName targetServer) {
     return setOwner(env,
-      new TransitRegionStateProcedure(env, region, targetServer, false,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED));
+      new TransitRegionStateProcedure(env, region, targetServer, false, TransitionType.ASSIGN));
   }
 
   public static TransitRegionStateProcedure unassign(MasterProcedureEnv env, RegionInfo region) {
     return setOwner(env,
-      new TransitRegionStateProcedure(env, region, null, false,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED));
+      new TransitRegionStateProcedure(env, region, null, false, TransitionType.UNASSIGN));
   }
 
   public static TransitRegionStateProcedure reopen(MasterProcedureEnv env, RegionInfo region) {
     return setOwner(env,
-      new TransitRegionStateProcedure(env, region, null, false,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED));
+      new TransitRegionStateProcedure(env, region, null, false, TransitionType.REOPEN));
   }
 
   public static TransitRegionStateProcedure move(MasterProcedureEnv env, RegionInfo region,
       @Nullable ServerName targetServer) {
-    return setOwner(env,
-      new TransitRegionStateProcedure(env, region, targetServer, targetServer == null,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CLOSE,
-        RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED));
+    return setOwner(env, new TransitRegionStateProcedure(env, region, targetServer,
+      targetServer == null, TransitionType.MOVE));
   }
 }
