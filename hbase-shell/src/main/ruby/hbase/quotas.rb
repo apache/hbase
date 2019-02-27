@@ -24,6 +24,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.quotas.ThrottleType
 java_import org.apache.hadoop.hbase.quotas.QuotaFilter
 java_import org.apache.hadoop.hbase.quotas.QuotaRetriever
+java_import org.apache.hadoop.hbase.quotas.QuotaScope
 java_import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory
 java_import org.apache.hadoop.hbase.quotas.QuotaTableUtil
 java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
@@ -36,6 +37,9 @@ module HBaseQuotasConstants
   REQUEST = 'REQUEST'.freeze
   WRITE = 'WRITE'.freeze
   READ = 'READ'.freeze
+  SCOPE = 'SCOPE'.freeze
+  CLUSTER = 'CLUSTER'.freeze
+  MACHINE = 'MACHINE'.freeze
   # Space quota constants
   SPACE = 'SPACE'.freeze
   NO_INSERTS = 'NO_INSERTS'.freeze
@@ -60,30 +64,35 @@ module Hbase
       type = args.fetch(THROTTLE_TYPE, REQUEST)
       args.delete(THROTTLE_TYPE)
       type, limit, time_unit = _parse_limit(args.delete(LIMIT), ThrottleType, type)
+      scope = _parse_scope(args.fetch(SCOPE, MACHINE))
+      args.delete(SCOPE)
       if args.key?(USER)
         user = args.delete(USER)
         if args.key?(TABLE)
           table = TableName.valueOf(args.delete(TABLE))
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, table, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, table, type, limit, time_unit, scope)
         elsif args.key?(NAMESPACE)
           namespace = args.delete(NAMESPACE)
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, namespace, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, namespace, type, limit, time_unit, scope)
         else
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, type, limit, time_unit, scope)
         end
       elsif args.key?(TABLE)
         table = TableName.valueOf(args.delete(TABLE))
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.throttleTable(table, type, limit, time_unit)
+        settings = QuotaSettingsFactory.throttleTable(table, type, limit, time_unit, scope)
       elsif args.key?(NAMESPACE)
         namespace = args.delete(NAMESPACE)
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit)
+        settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit, scope)
       elsif args.key?(REGIONSERVER)
         # TODO: Setting specified region server quota isn't supported currently and using 'all' for all RS
+        if scope == QuotaScope.valueOf(CLUSTER)
+          raise(ArgumentError, 'Invalid region server throttle scope, must be MACHINE')
+        end
         settings = QuotaSettingsFactory.throttleRegionServer('all', type, limit, time_unit)
       else
         raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
@@ -324,6 +333,13 @@ module Hbase
       when 'p' then value <<= 50
       end
       value
+    end
+
+    def _parse_scope(scope_str)
+      scope_str = scope_str.upcase
+      return QuotaScope.valueOf(scope_str) if [CLUSTER, MACHINE].include?(scope_str)
+      unless raise(ArgumentError, 'Invalid throttle scope, must be either CLUSTER or MACHINE')
+      end
     end
   end
   # rubocop:enable Metrics/ClassLength

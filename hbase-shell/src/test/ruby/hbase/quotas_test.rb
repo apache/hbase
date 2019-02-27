@@ -282,6 +282,23 @@ module Hbase
       assert(output.include?('Previous exceed throttle quota enabled : true'))
       command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE)
     end
+
+    define_test 'can set and remove CLUSTER scope quota' do
+      command(:set_quota, TYPE => THROTTLE, TABLE => @test_name, LIMIT => '100req/sec', SCOPE => CLUSTER)
+      output = capture_stdout { command(:list_quotas) }
+      assert(output.include?('LIMIT => 100req/sec'))
+      assert(output.include?('SCOPE => CLUSTER'))
+
+      command(:set_quota, TYPE => THROTTLE, TABLE => @test_name, LIMIT => '200req/sec', SCOPE => MACHINE)
+      output = capture_stdout { command(:list_quotas) }
+      assert(output.include?('1 row(s)'))
+      assert(output.include?('LIMIT => 200req/sec'))
+      assert(output.include?('SCOPE => MACHINE'))
+
+      command(:set_quota, TYPE => THROTTLE, TABLE => @test_name, LIMIT => NONE)
+      output = capture_stdout { command(:list_quotas) }
+      assert(output.include?('0 row(s)'))
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end
