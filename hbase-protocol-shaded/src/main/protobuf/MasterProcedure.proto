@@ -78,6 +78,7 @@ message ModifyTableStateData {
   optional TableSchema unmodified_table_schema = 2;
   required TableSchema modified_table_schema = 3;
   required bool delete_column_family_in_modify = 4;
+  optional bool should_check_descriptor = 5;
 }
 
 enum TruncateTableState {
