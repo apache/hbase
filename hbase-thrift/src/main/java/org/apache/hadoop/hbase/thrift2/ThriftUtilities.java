@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -105,6 +104,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {
@@ -191,14 +193,8 @@ public class ThriftUtilities {
       }
     }
     if (in.isSetFilterBytes()) {
-      try {
-        Filter filter = FilterBase.parseFrom(in.getFilterBytes());
-        out.setFilter(filter);
-      } catch (DeserializationException e) {
-        throw new RuntimeException(e);
-      }
+      out.setFilter(filterFromThrift(in.getFilterBytes()));
     }
-
     return out;
   }
 
@@ -594,15 +590,20 @@ public class ThriftUtilities {
     }
 
     if (in.isSetFilterBytes()) {
-      try {
-        Filter filter = FilterBase.parseFrom(in.getFilterBytes());
-        out.setFilter(filter);
-      } catch (DeserializationException e) {
-        throw new RuntimeException(e);
-      }
+      out.setFilter(filterFromThrift(in.getFilterBytes()));
     }
 
     return out;
+  }
+
+  public static byte[] filterFromHBase(Filter filter) throws IOException {
+    FilterProtos.Filter filterPB = ProtobufUtil.toFilter(filter);
+    return filterPB.toByteArray();
+  }
+
+  public static Filter filterFromThrift(byte[] filterBytes) throws IOException {
+    FilterProtos.Filter filterPB  = FilterProtos.Filter.parseFrom(filterBytes);
+    return ProtobufUtil.toFilter(filterPB);
   }
 
   public static TScan scanFromHBase(Scan in) throws IOException {
@@ -662,7 +663,7 @@ public class ThriftUtilities {
     }
     if (in.getFilter() != null) {
       try {
-        out.setFilterBytes(in.getFilter().toByteArray());
+        out.setFilterBytes(filterFromHBase(in.getFilter()));
       } catch (IOException ioE) {
         throw new RuntimeException(ioE);
       }
@@ -1227,7 +1228,7 @@ public class ThriftUtilities {
     }
     if (in.getFilter() != null) {
       try {
-        out.setFilterBytes(in.getFilter().toByteArray());
+        out.setFilterBytes(filterFromHBase(in.getFilter()));
       } catch (IOException ioE) {
         throw new RuntimeException(ioE);
       }
