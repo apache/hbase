@@ -39,6 +39,10 @@ public class MetricsAssignmentManagerSourceImpl
 
   private OperationMetrics assignMetrics;
   private OperationMetrics unassignMetrics;
+  private OperationMetrics moveMetrics;
+  private OperationMetrics reopenMetrics;
+  private OperationMetrics openMetrics;
+  private OperationMetrics closeMetrics;
   private OperationMetrics splitMetrics;
   private OperationMetrics mergeMetrics;
 
@@ -67,6 +71,10 @@ public class MetricsAssignmentManagerSourceImpl
      */
     assignMetrics = new OperationMetrics(registry, ASSIGN_METRIC_PREFIX);
     unassignMetrics = new OperationMetrics(registry, UNASSIGN_METRIC_PREFIX);
+    moveMetrics = new OperationMetrics(registry, MOVE_METRIC_PREFIX);
+    reopenMetrics = new OperationMetrics(registry, REOPEN_METRIC_PREFIX);
+    openMetrics = new OperationMetrics(registry, OPEN_METRIC_PREFIX);
+    closeMetrics = new OperationMetrics(registry, CLOSE_METRIC_PREFIX);
     splitMetrics = new OperationMetrics(registry, SPLIT_METRIC_PREFIX);
     mergeMetrics = new OperationMetrics(registry, MERGE_METRIC_PREFIX);
   }
@@ -114,5 +122,25 @@ public class MetricsAssignmentManagerSourceImpl
   @Override
   public OperationMetrics getMergeMetrics() {
     return mergeMetrics;
+  }
+
+  @Override
+  public OperationMetrics getMoveMetrics() {
+    return moveMetrics;
+  }
+
+  @Override
+  public OperationMetrics getReopenMetrics() {
+    return reopenMetrics;
+  }
+
+  @Override
+  public OperationMetrics getOpenMetrics() {
+    return openMetrics;
+  }
+
+  @Override
+  public OperationMetrics getCloseMetrics() {
+    return closeMetrics;
   }
 }
