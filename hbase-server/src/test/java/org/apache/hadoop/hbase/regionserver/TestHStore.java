@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -1910,6 +1911,19 @@ public class TestHStore {
     StoreScanner storeScanner =
       (StoreScanner) store.getScanner(scan, scan.getFamilyMap().get(family), Long.MAX_VALUE);
     assertFalse(storeScanner.isScanUsePread());
+  }
+
+  @Test
+  public void testInMemoryCompactionTypeWithLowerCase() throws IOException, InterruptedException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.systemtables.compacting.memstore.type", "eager");
+    init(name.getMethodName(), conf,
+      TableDescriptorBuilder.newBuilder(
+        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME, "meta".getBytes())),
+      ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.NONE).build());
+    assertTrue(((MemStoreCompactor) ((CompactingMemStore) store.memstore).compactor).toString()
+      .startsWith("eager".toUpperCase()));
   }
 
   @Test
