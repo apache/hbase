@@ -32,13 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, LargeTests.class })
-public class TestServerCrashProcedureWithReplicas extends TestServerCrashProcedure {
+public class TestSCPWithReplicas extends TestSCP {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerCrashProcedureWithReplicas.class);
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestServerCrashProcedureWithReplicas.class);
+      HBaseClassTestRule.forClass(TestSCPWithReplicas.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSCPWithReplicas.class);
 
   @Override
   protected void startMiniCluster() throws Exception {
@@ -55,6 +54,7 @@ public class TestServerCrashProcedureWithReplicas extends TestServerCrashProcedu
     return t;
   }
 
+  @Override
   protected void assertReplicaDistributed(final Table t) {
     // Assert all data came back.
     List<RegionInfo> regionInfos = new ArrayList<>();

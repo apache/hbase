@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -37,7 +35,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -46,40 +43,27 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
 @Category({MasterTests.class, LargeTests.class})
-public class TestServerCrashProcedure {
+public class TestSCP {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerCrashProcedure.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestSCP.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestServerCrashProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSCP.class);
 
   protected HBaseTestingUtility util;
 
-  @Parameter
-  public boolean splitWALCoordinatedByZK;
-
-  private ProcedureMetrics serverCrashProcMetrics;
-  private long serverCrashSubmittedCount = 0;
-  private long serverCrashFailedCount = 0;
-
-  private void setupConf(Configuration conf) {
+  protected void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.set("hbase.balancer.tablesOnMaster", "none");
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 3);
     conf.setBoolean("hbase.split.writer.creation.bounded", true);
     conf.setInt("hbase.regionserver.hlog.splitlog.writer.threads", 8);
-    LOG.info("WAL splitting coordinated by zk? {}", splitWALCoordinatedByZK);
-    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK, splitWALCoordinatedByZK);
+    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK, true);
   }
 
   @Before
@@ -89,8 +73,6 @@ public class TestServerCrashProcedure {
     startMiniCluster();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
       this.util.getHBaseCluster().getMaster().getMasterProcedureExecutor(), false);
-    serverCrashProcMetrics = this.util.getHBaseCluster().getMaster().getMasterMetrics()
-        .getServerCrashProcMetrics();
   }
 
   protected void startMiniCluster() throws Exception {
@@ -178,16 +160,13 @@ public class TestServerCrashProcedure {
       assertReplicaDistributed(t);
       assertEquals(count, util.countRows(t));
       assertEquals(checksum, util.checksumRows(t));
-    } catch (Throwable throwable) {
-      LOG.error("Test failed!", throwable);
-      throw throwable;
     }
   }
 
   @Test
   public void testConcurrentSCPForSameServer() throws Exception {
     final TableName tableName =
-        TableName.valueOf("testConcurrentSCPForSameServer-" + splitWALCoordinatedByZK);
+        TableName.valueOf("testConcurrentSCPForSameServer");
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
@@ -230,15 +209,5 @@ public class TestServerCrashProcedure {
     final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
         HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     return t;
-  }
-
-  private void collectMasterMetrics() {
-    serverCrashSubmittedCount = serverCrashProcMetrics.getSubmittedCounter().getCount();
-    serverCrashFailedCount = serverCrashProcMetrics.getFailedCounter().getCount();
-  }
-
-  @Parameterized.Parameters
-  public static Collection coordinatedByZK() {
-    return Arrays.asList(false, true);
   }
 }
