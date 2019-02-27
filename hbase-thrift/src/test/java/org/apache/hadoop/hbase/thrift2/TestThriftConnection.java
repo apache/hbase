@@ -697,8 +697,8 @@ public class TestThriftConnection {
 
   @Test
   public void testScanWithFilters() throws Exception {
-    testIteratorScanner(thriftConnection, "testScanWithFiltersTable");
-    testIteratorScanner(thriftHttpConnection, "testScanWithFiltersHttpTable");
+    testScanWithFilters(thriftConnection, "testScanWithFiltersTable");
+    testScanWithFilters(thriftHttpConnection, "testScanWithFiltersHttpTable");
   }
 
   private void testScanWithFilters(Connection connection, String tableName) throws IOException {
@@ -712,6 +712,7 @@ public class TestThriftConnection {
       filterList.addFilter(columnValueFilter);
       Scan scan = new Scan();
       scan.setMaxVersions(2);
+      scan.setFilter(filterList);
       ResultScanner scanner = table.getScanner(scan);
       Iterator<Result> iterator = scanner.iterator();
       assertTrue(iterator.hasNext());
