@@ -22,12 +22,15 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+
+import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -56,6 +59,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       HBaseClassTestRule.forClass(TestModifyTableProcedure.class);
 
   @Rule public TestName name = new TestName();
+
+  private static final String column_Family1 = "cf1";
+  private static final String column_Family2 = "cf2";
+  private static final String column_Family3 = "cf3";
 
   @Test
   public void testModifyTable() throws Exception {
@@ -397,5 +404,176 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // cf2 should not be present
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1");
+  }
+
+  @Test
+  public void testConcurrentAddColumnFamily() throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, column_Family1);
+
+    class ConcurrentAddColumnFamily extends Thread {
+      TableName tableName = null;
+      HColumnDescriptor hcd = null;
+      boolean exception;
+
+      public ConcurrentAddColumnFamily(TableName tableName, HColumnDescriptor hcd) {
+        this.tableName = tableName;
+        this.hcd = hcd;
+        this.exception = false;
+      }
+
+      public void run() {
+        try {
+          UTIL.getAdmin().addColumnFamily(tableName, hcd);
+        } catch (Exception e) {
+          if (e.getClass().equals(ConcurrentTableModificationException.class)) {
+            this.exception = true;
+          }
+        }
+      }
+    }
+    ConcurrentAddColumnFamily t1 =
+        new ConcurrentAddColumnFamily(tableName, new HColumnDescriptor(column_Family2));
+    ConcurrentAddColumnFamily t2 =
+        new ConcurrentAddColumnFamily(tableName, new HColumnDescriptor(column_Family3));
+
+    t1.start();
+    t2.start();
+
+    t1.join();
+    t2.join();
+    int noOfColumnFamilies = UTIL.getAdmin().getDescriptor(tableName).getColumnFamilies().length;
+    assertTrue("Expected ConcurrentTableModificationException.",
+      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 3);
+  }
+
+  @Test
+  public void testConcurrentDeleteColumnFamily() throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(column_Family1));
+    htd.addFamily(new HColumnDescriptor(column_Family2));
+    htd.addFamily(new HColumnDescriptor(column_Family3));
+    UTIL.getAdmin().createTable(htd);
+
+    class ConcurrentCreateDeleteTable extends Thread {
+      TableName tableName = null;
+      String columnFamily = null;
+      boolean exception;
+
+      public ConcurrentCreateDeleteTable(TableName tableName, String columnFamily) {
+        this.tableName = tableName;
+        this.columnFamily = columnFamily;
+        this.exception = false;
+      }
+
+      public void run() {
+        try {
+          UTIL.getAdmin().deleteColumnFamily(tableName, columnFamily.getBytes());
+        } catch (Exception e) {
+          if (e.getClass().equals(ConcurrentTableModificationException.class)) {
+            this.exception = true;
+          }
+        }
+      }
+    }
+    ConcurrentCreateDeleteTable t1 = new ConcurrentCreateDeleteTable(tableName, column_Family2);
+    ConcurrentCreateDeleteTable t2 = new ConcurrentCreateDeleteTable(tableName, column_Family3);
+
+    t1.start();
+    t2.start();
+
+    t1.join();
+    t2.join();
+    int noOfColumnFamilies = UTIL.getAdmin().getDescriptor(tableName).getColumnFamilies().length;
+    assertTrue("Expected ConcurrentTableModificationException.",
+      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 1);
+  }
+
+  @Test
+  public void testConcurrentModifyColumnFamily() throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, column_Family1);
+
+    class ConcurrentModifyColumnFamily extends Thread {
+      TableName tableName = null;
+      ColumnFamilyDescriptor hcd = null;
+      boolean exception;
+
+      public ConcurrentModifyColumnFamily(TableName tableName, ColumnFamilyDescriptor hcd) {
+        this.tableName = tableName;
+        this.hcd = hcd;
+        this.exception = false;
+      }
+
+      public void run() {
+        try {
+          UTIL.getAdmin().modifyColumnFamily(tableName, hcd);
+        } catch (Exception e) {
+          if (e.getClass().equals(ConcurrentTableModificationException.class)) {
+            this.exception = true;
+          }
+        }
+      }
+    }
+    ColumnFamilyDescriptor modColumnFamily1 = ColumnFamilyDescriptorBuilder
+        .newBuilder(column_Family1.getBytes()).setMaxVersions(5).build();
+    ColumnFamilyDescriptor modColumnFamily2 = ColumnFamilyDescriptorBuilder
+        .newBuilder(column_Family1.getBytes()).setMaxVersions(6).build();
+
+    ConcurrentModifyColumnFamily t1 = new ConcurrentModifyColumnFamily(tableName, modColumnFamily1);
+    ConcurrentModifyColumnFamily t2 = new ConcurrentModifyColumnFamily(tableName, modColumnFamily2);
+
+    t1.start();
+    t2.start();
+
+    t1.join();
+    t2.join();
+
+    int maxVersions = UTIL.getAdmin().getDescriptor(tableName)
+        .getColumnFamily(column_Family1.getBytes()).getMaxVersions();
+    assertTrue("Expected ConcurrentTableModificationException.", (t1.exception && maxVersions == 5)
+        || (t2.exception && maxVersions == 6) || !(t1.exception && t2.exception));
+  }
+
+  @Test
+  public void testConcurrentModifyTable() throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, column_Family1);
+
+    class ConcurrentModifyTable extends Thread {
+      TableName tableName = null;
+      TableDescriptor htd = null;
+      boolean exception;
+
+      public ConcurrentModifyTable(TableName tableName, TableDescriptor htd) {
+        this.tableName = tableName;
+        this.htd = htd;
+        this.exception = false;
+      }
+
+      public void run() {
+        try {
+          UTIL.getAdmin().modifyTable(tableName, htd);
+        } catch (Exception e) {
+          if (e.getClass().equals(ConcurrentTableModificationException.class)) {
+            this.exception = true;
+          }
+        }
+      }
+    }
+    TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor modifiedDescriptor =
+        TableDescriptorBuilder.newBuilder(htd).setCompactionEnabled(false).build();
+
+    ConcurrentModifyTable t1 = new ConcurrentModifyTable(tableName, modifiedDescriptor);
+    ConcurrentModifyTable t2 = new ConcurrentModifyTable(tableName, modifiedDescriptor);
+
+    t1.start();
+    t2.start();
+
+    t1.join();
+    t2.join();
+    assertFalse("Expected ConcurrentTableModificationException.", (t1.exception || t2.exception));
   }
 }

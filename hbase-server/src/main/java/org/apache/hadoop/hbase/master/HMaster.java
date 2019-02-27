@@ -2506,7 +2506,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         return TableDescriptorBuilder.newBuilder(old).setColumnFamily(column).build();
       }
-    }, nonceGroup, nonce);
+    }, nonceGroup, nonce, true);
   }
 
   /**
@@ -2533,7 +2533,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         return TableDescriptorBuilder.newBuilder(old).modifyColumnFamily(descriptor).build();
       }
-    }, nonceGroup, nonce);
+    }, nonceGroup, nonce, true);
   }
 
   @Override
@@ -2558,7 +2558,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
         return TableDescriptorBuilder.newBuilder(old).removeColumnFamily(columnName).build();
       }
-    }, nonceGroup, nonce);
+    }, nonceGroup, nonce, true);
   }
 
   @Override
@@ -2651,8 +2651,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private long modifyTable(final TableName tableName,
-      final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce)
-      throws IOException {
+      final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
+      final boolean shouldCheckDescriptor) throws IOException {
     return MasterProcedureUtil
         .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
           @Override
@@ -2670,8 +2670,8 @@ public class HMaster extends HRegionServer implements MasterServices {
             // We need to wait for the procedure to potentially fail due to "prepare" sanity
             // checks. This will block only the beginning of the procedure. See HBASE-19953.
             ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-            submitProcedure(
-              new ModifyTableProcedure(procedureExecutor.getEnvironment(), newDescriptor, latch));
+            submitProcedure(new ModifyTableProcedure(procedureExecutor.getEnvironment(),
+                newDescriptor, latch, oldDescriptor, shouldCheckDescriptor));
             latch.await();
 
             getMaster().getMasterCoprocessorHost().postModifyTable(tableName, oldDescriptor,
@@ -2695,7 +2695,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       public TableDescriptor get() throws IOException {
         return newDescriptor;
       }
-    }, nonceGroup, nonce);
+    }, nonceGroup, nonce, false);
 
   }
 
