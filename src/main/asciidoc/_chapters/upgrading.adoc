@@ -314,6 +314,20 @@ Quitting...
 
 == Upgrade Paths
 
+[[upgrade 2.2]]
+=== Upgrade from 2.0 or 2.1 to 2.2+
+
+HBase 2.2+ uses a new Procedure form assiging/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
+
+And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
+
+. Shutdown both active and standby Masters (Your cluster will continue to server reads and writes without interruption).
+. Set the property hbase.procedure.upgrade-to-2-2 to true in hbase-site.xml for the Master, and start only one Master, still using the 2.1.1+ (or 2.0.3+) version.
+. Wait until the Master quits. Confirm that there is a 'READY TO ROLLING UPGRADE' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
+. Start new Masters with the new 2.2+ version.
+
+Then you can rolling upgrade RegionServers one by one. See link:https://issues.apache.org/jira/browse/HBASE-21075[HBASE-21075] for more details.
+
 [[upgrade2.0]]
 === Upgrading from 1.x to 2.x
 
