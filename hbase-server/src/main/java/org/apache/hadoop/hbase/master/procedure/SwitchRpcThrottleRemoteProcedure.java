@@ -18,17 +18,12 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
-import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
-import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.replication.regionserver.SwitchRpcThrottleRemoteCallable;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +35,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
  * The procedure to switch rpc throttle on region server
  */
 @InterfaceAudience.Private
-public class SwitchRpcThrottleRemoteProcedure extends Procedure<MasterProcedureEnv>
-    implements RemoteProcedure<MasterProcedureEnv, ServerName>, ServerProcedureInterface {
+public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
+    implements ServerProcedureInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(SwitchRpcThrottleRemoteProcedure.class);
-  private ServerName targetServer;
   private boolean rpcThrottleEnabled;
 
   public SwitchRpcThrottleRemoteProcedure() {
@@ -53,32 +47,6 @@ public class SwitchRpcThrottleRemoteProcedure extends Procedure<MasterProcedureE
   public SwitchRpcThrottleRemoteProcedure(ServerName serverName, boolean rpcThrottleEnabled) {
     this.targetServer = serverName;
     this.rpcThrottleEnabled = rpcThrottleEnabled;
-  }
-
-  private boolean dispatched;
-  private ProcedureEvent<?> event;
-  private boolean succ;
-
-  @Override
-  protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    if (dispatched) {
-      if (succ) {
-        return null;
-      }
-      dispatched = false;
-    }
-    try {
-      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
-    } catch (FailedRemoteDispatchException frde) {
-      LOG.warn("Can not add remote operation for switching rpc throttle to {} on {}",
-        rpcThrottleEnabled, targetServer);
-      return null;
-    }
-    dispatched = true;
-    event = new ProcedureEvent<>(this);
-    event.suspendIfNotReady(this);
-    throw new ProcedureSuspendedException();
   }
 
   @Override
@@ -118,22 +86,6 @@ public class SwitchRpcThrottleRemoteProcedure extends Procedure<MasterProcedureE
   }
 
   @Override
-  public void remoteCallFailed(MasterProcedureEnv env, ServerName serverName,
-      IOException exception) {
-    complete(env, exception);
-  }
-
-  @Override
-  public void remoteOperationCompleted(MasterProcedureEnv env) {
-    complete(env, null);
-  }
-
-  @Override
-  public void remoteOperationFailed(MasterProcedureEnv env, RemoteProcedureException error) {
-    complete(env, error);
-  }
-
-  @Override
   public ServerName getServerName() {
     return targetServer;
   }
@@ -148,7 +100,8 @@ public class SwitchRpcThrottleRemoteProcedure extends Procedure<MasterProcedureE
     return ServerOperationType.SWITCH_RPC_THROTTLE;
   }
 
-  private void complete(MasterProcedureEnv env, Throwable error) {
+  @Override
+  protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Failed to switch rpc throttle to {} on server {}", rpcThrottleEnabled, targetServer,
         error);
@@ -156,8 +109,6 @@ public class SwitchRpcThrottleRemoteProcedure extends Procedure<MasterProcedureE
     } else {
       this.succ = true;
     }
-    event.wake(env.getProcedureScheduler());
-    event = null;
   }
 
   @Override
