@@ -67,18 +67,15 @@ $ tar xzvf hbase-{Version}-bin.tar.gz
 $ cd hbase-{Version}/
 ----
 
-. You are required to set the `JAVA_HOME` environment variable before starting HBase.
-  You can set the variable via your operating system's usual mechanism, but HBase
-  provides a central mechanism, _conf/hbase-env.sh_.
-  Edit this file, uncomment the line starting with `JAVA_HOME`, and set it to the
-  appropriate location for your operating system.
-  The `JAVA_HOME` variable should be set to a directory which contains the executable file _bin/java_.
-  Most modern Linux operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS, for transparently switching between versions of executables such as Java.
-  In this case, you can set `JAVA_HOME` to the directory containing the symbolic link to _bin/java_, which is usually _/usr_.
+. You must set the `JAVA_HOME` environment variable before starting HBase.
+  To make this easier, HBase lets you set it within the _conf/hbase-env.sh_ file. You must locate where Java is
+  installed on your machine, and one way to find this is by using the _whereis java_ command. Once you have the location,
+  edit the _conf/hbase-env.sh_ file and uncomment the line starting with _#export JAVA_HOME=_, and then set it to your Java installation path.
 +
-----
-JAVA_HOME=/usr
-----
+.Example extract from _hbase-env.sh_ where _JAVA_HOME_ is set
+  # Set environment variables here.
+  # The java implementation to use.
+  export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
 +
 
 . Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
