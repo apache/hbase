@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -55,6 +56,15 @@ public class UserProvider extends BaseConfigurable {
   private LoadingCache<String, String[]> groupCache = null;
 
   static Groups groups = Groups.getUserToGroupsMappingService();
+
+  @VisibleForTesting
+  public static Groups getGroups() {
+    return groups;
+  }
+
+  public static void setGroups(Groups groups) {
+    UserProvider.groups = groups;
+  }
 
   @Override
   public void setConf(final Configuration conf) {

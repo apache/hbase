@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Performs authorization checks for a given user's assigned permissions.
@@ -102,10 +100,10 @@ public final class AuthManager implements Closeable {
   PermissionCache<TablePermission> TBL_NO_PERMISSION = new PermissionCache<>();
 
   /**
-   * Cache for global permission.
-   * Since every user/group can only have one global permission, no need to user PermissionCache.
+   * Cache for global permission excluding superuser and supergroup.
+   * Since every user/group can only have one global permission, no need to use PermissionCache.
    */
-  private volatile Map<String, GlobalPermission> globalCache;
+  private Map<String, GlobalPermission> globalCache = new ConcurrentHashMap<>();
   /** Cache for namespace permission. */
   private ConcurrentHashMap<String, PermissionCache<NamespacePermission>> namespaceCache =
     new ConcurrentHashMap<>();
@@ -122,8 +120,6 @@ public final class AuthManager implements Closeable {
   private AuthManager(ZKWatcher watcher, Configuration conf)
       throws IOException {
     this.conf = conf;
-    // initialize global permissions based on configuration
-    globalCache = initGlobal(conf);
 
     this.zkperms = new ZKPermissionWatcher(watcher, this, conf);
     try {
@@ -136,30 +132,6 @@ public final class AuthManager implements Closeable {
   @Override
   public void close() {
     this.zkperms.close();
-  }
-
-  /**
-   * Initialize with global permission assignments
-   * from the {@code hbase.superuser} configuration key.
-   */
-  private Map<String, GlobalPermission> initGlobal(Configuration conf) throws IOException {
-    UserProvider userProvider = UserProvider.instantiate(conf);
-    User user = userProvider.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, " +
-        "authorization checks for internal operations will not work correctly!");
-    }
-    String currentUser = user.getShortName();
-
-    Map<String, GlobalPermission> global = new HashMap<>();
-    // the system user is always included
-    List<String> superusers = Lists.asList(currentUser, conf.getStrings(
-        Superusers.SUPERUSER_CONF_KEY, new String[0]));
-    for (String name : superusers) {
-      GlobalPermission globalPermission = new GlobalPermission(Permission.Action.values());
-      global.put(name, globalPermission);
-    }
-    return global;
   }
 
   public ZKPermissionWatcher getZKPermissionWatcher() {
@@ -219,19 +191,13 @@ public final class AuthManager implements Closeable {
    * @param globalPerms new global permissions
    */
   private void updateGlobalCache(ListMultimap<String, Permission> globalPerms) {
-    try {
-      Map<String, GlobalPermission> global = initGlobal(conf);
-      for (String name : globalPerms.keySet()) {
-        for (Permission permission : globalPerms.get(name)) {
-          global.put(name, (GlobalPermission) permission);
-        }
+    globalCache.clear();
+    for (String name : globalPerms.keySet()) {
+      for (Permission permission : globalPerms.get(name)) {
+        globalCache.put(name, (GlobalPermission) permission);
       }
-      globalCache = global;
-      mtime.incrementAndGet();
-    } catch (Exception e) {
-      // Never happens
-      LOG.error("Error occurred while updating the global cache", e);
     }
+    mtime.incrementAndGet();
   }
 
   /**
@@ -286,6 +252,9 @@ public final class AuthManager implements Closeable {
   public boolean authorizeUserGlobal(User user, Permission.Action action) {
     if (user == null) {
       return false;
+    }
+    if (Superusers.isSuperUser(user)) {
+      return true;
     }
     if (authorizeGlobal(globalCache.get(user.getShortName()), action)) {
       return true;
@@ -506,8 +475,8 @@ public final class AuthManager implements Closeable {
     try {
       List<Permission> perms = AccessControlLists.getCellPermissionsForUser(user, cell);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Perms for user " + user.getShortName() + " in cell " + cell + ": " +
-          (perms != null ? perms : ""));
+        LOG.trace("Perms for user {} in table {} in cell {}: {}",
+          user.getShortName(), table, cell, (perms != null ? perms : ""));
       }
       if (perms != null) {
         for (Permission p: perms) {
