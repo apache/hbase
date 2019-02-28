@@ -22,15 +22,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.ServerOperation;
-import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.master.procedure.ServerRemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
-import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.replication.regionserver.RefreshPeerCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -42,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshPeerStateData;
 
 @InterfaceAudience.Private
-public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
+public class RefreshPeerProcedure extends ServerRemoteProcedure
     implements PeerProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RefreshPeerProcedure.class);
@@ -51,17 +46,7 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
 
   private PeerOperationType type;
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
-      justification = "Will never change after construction")
-  private ServerName targetServer;
-
   private int stage;
-
-  private boolean dispatched;
-
-  private ProcedureEvent<?> event;
-
-  private boolean succ;
 
   public RefreshPeerProcedure() {
   }
@@ -135,12 +120,8 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
             .toByteArray());
   }
 
-  private void complete(MasterProcedureEnv env, Throwable error) {
-    if (event == null) {
-      LOG.warn("procedure event for {} is null, maybe the procedure is created when recovery",
-        getProcId());
-      return;
-    }
+  @Override
+  protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
       LOG.warn("Refresh peer {} for {} on {} failed", peerId, type, targetServer, error);
       this.succ = false;
@@ -148,50 +129,6 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
       LOG.info("Refresh peer {} for {} on {} suceeded", peerId, type, targetServer);
       this.succ = true;
     }
-
-    event.wake(env.getProcedureScheduler());
-    event = null;
-  }
-
-  @Override
-  public synchronized void remoteCallFailed(MasterProcedureEnv env, ServerName remote,
-      IOException exception) {
-    complete(env, exception);
-  }
-
-  @Override
-  public synchronized void remoteOperationCompleted(MasterProcedureEnv env) {
-    complete(env, null);
-  }
-
-  @Override
-  public synchronized void remoteOperationFailed(MasterProcedureEnv env,
-      RemoteProcedureException error) {
-    complete(env, error);
-  }
-
-  @Override
-  protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    if (dispatched) {
-      if (succ) {
-        return null;
-      }
-      // retry
-      dispatched = false;
-    }
-    try {
-      env.getRemoteDispatcher().addOperationToNode(targetServer, this);
-    } catch (FailedRemoteDispatchException frde) {
-      LOG.info("Can not add remote operation for refreshing peer {} for {} to {}, " +
-        "this is usually because the server is already dead, " +
-        "give up and mark the procedure as complete", peerId, type, targetServer, frde);
-      return null;
-    }
-    dispatched = true;
-    event = new ProcedureEvent<>(this);
-    event.suspendIfNotReady(this);
-    throw new ProcedureSuspendedException();
   }
 
   @Override

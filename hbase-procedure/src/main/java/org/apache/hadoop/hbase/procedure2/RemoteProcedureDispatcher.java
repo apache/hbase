@@ -172,6 +172,16 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     }
   }
 
+  public void removeCompletedOperation(final TRemote key, RemoteProcedure rp) {
+    BufferNode node = nodeMap.get(key);
+    if (node == null) {
+      LOG.warn("since no node for this key {}, we can't removed the finished remote procedure",
+        key);
+      return;
+    }
+    node.operationCompleted(rp);
+  }
+
   /**
    * Remove a remote node
    * @param key the node identifier
@@ -237,6 +247,16 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
      * method.
      */
     void remoteOperationFailed(TEnv env, RemoteProcedureException error);
+
+    /**
+     * Whether store this remote procedure in dispatched queue
+     * only OpenRegionProcedure and CloseRegionProcedure return false since they are
+     * not fully controlled by dispatcher
+     */
+    default boolean storeInDispatchedQueue() {
+      return true;
+    }
+
   }
 
   /**
@@ -330,6 +350,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   protected final class BufferNode extends DelayedContainerWithTimestamp<TRemote>
       implements RemoteNode<TEnv, TRemote> {
     private Set<RemoteProcedure> operations;
+    private final Set<RemoteProcedure> dispatchedOperations = new HashSet<>();
 
     protected BufferNode(final TRemote key) {
       super(key, 0);
@@ -358,6 +379,8 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     public synchronized void dispatch() {
       if (operations != null) {
         remoteDispatch(getKey(), operations);
+        operations.stream().filter(operation -> operation.storeInDispatchedQueue())
+            .forEach(operation -> dispatchedOperations.add(operation));
         this.operations = null;
       }
     }
@@ -367,6 +390,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
         abortPendingOperations(getKey(), operations);
         this.operations = null;
       }
+      abortPendingOperations(getKey(), dispatchedOperations);
+      this.dispatchedOperations.clear();
+    }
+
+    public synchronized void operationCompleted(final RemoteProcedure remoteProcedure){
+      this.dispatchedOperations.remove(remoteProcedure);
     }
 
     @Override
