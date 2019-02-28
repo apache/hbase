@@ -28,12 +28,16 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.security.Groups;
@@ -355,6 +359,40 @@ public final class AccessChecker {
     }
   }
 
+  /**
+   * Check if caller is granting or revoking superusers's or supergroups's permissions.
+   * @param request request name
+   * @param caller caller
+   * @param userToBeChecked target user or group
+   * @throws IOException AccessDeniedException if target user is superuser
+   */
+  public void performOnSuperuser(String request, User caller, String userToBeChecked)
+      throws IOException {
+    if (!authorizationEnabled) {
+      return;
+    }
+
+    List<String> userGroups = new ArrayList<>();
+    userGroups.add(userToBeChecked);
+    if (!AuthUtil.isGroupPrincipal(userToBeChecked)) {
+      for (String group : getUserGroups(userToBeChecked)) {
+        userGroups.add(AuthUtil.toGroupEntry(group));
+      }
+    }
+    for (String name : userGroups) {
+      if (Superusers.isSuperUser(name)) {
+        AuthResult result = AuthResult.deny(
+          request,
+          "Granting or revoking superusers's or supergroups's permissions is not allowed",
+          caller,
+          Action.ADMIN,
+          NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+        logResult(result);
+        throw new AccessDeniedException(result.getReason());
+      }
+    }
+  }
+
   public void checkLockPermissions(User user, String namespace,
       TableName tableName, RegionInfo[] regionInfos, String reason)
       throws IOException {
@@ -466,7 +504,12 @@ public final class AccessChecker {
    */
   private void initGroupService(Configuration conf) {
     if (groupService == null) {
-      groupService = Groups.getUserToGroupsMappingService(conf);
+      if (conf.getBoolean(User.TestingGroups.TEST_CONF, false)) {
+        UserProvider.setGroups(new User.TestingGroups(UserProvider.getGroups()));
+        groupService = UserProvider.getGroups();
+      } else {
+        groupService = Groups.getUserToGroupsMappingService(conf);
+      }
     }
   }
 
@@ -480,7 +523,7 @@ public final class AccessChecker {
       return groupService.getGroups(user);
     } catch (IOException e) {
       LOG.error("Error occured while retrieving group for " + user, e);
-      return new ArrayList<String>();
+      return new ArrayList<>();
     }
   }
 }

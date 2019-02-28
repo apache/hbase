@@ -93,7 +93,11 @@ public class SecureTestUtil {
       sb.append(',');
       sb.append(currentUser); sb.append(".hfs."); sb.append(i);
     }
+    // Add a supergroup for improving test coverage.
+    sb.append(',').append("@supergroup");
     conf.set("hbase.superuser", sb.toString());
+    // hbase.group.service.for.test.only is used in test only.
+    conf.set(User.TestingGroups.TEST_CONF, "true");
   }
 
   public static void enableSecurity(Configuration conf) throws IOException {
@@ -383,6 +387,26 @@ public class SecureTestUtil {
   }
 
   /**
+   * Grant permissions globally to the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantGlobal(final User caller, final HBaseTestingUtility util,
+      final String user, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
+          connection.getAdmin().grant(new UserPermission(user, new GlobalPermission(actions)),
+            false);
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
    * Revoke permissions globally from the given user. Will wait until all active
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
@@ -393,6 +417,25 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          connection.getAdmin().revoke(new UserPermission(user, new GlobalPermission(actions)));
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions globally from the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeGlobal(final User caller, final HBaseTestingUtility util,
+      final String user, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
           connection.getAdmin().revoke(new UserPermission(user, new GlobalPermission(actions)));
         }
         return null;
@@ -413,6 +456,27 @@ public class SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
           connection.getAdmin()
               .grant(new UserPermission(user, new NamespacePermission(namespace, actions)), false);
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Grant permissions on a namespace to the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnNamespace(final User caller, final HBaseTestingUtility util,
+      final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
+          connection.getAdmin()
+            .grant(new UserPermission(user, new NamespacePermission(namespace, actions)), false);
         }
         return null;
       }
@@ -481,6 +545,27 @@ public class SecureTestUtil {
   }
 
   /**
+   * Revoke permissions on a namespace from the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromNamespace(final User caller, final HBaseTestingUtility util,
+      final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
+          connection.getAdmin()
+            .revoke(new UserPermission(user, new NamespacePermission(namespace, actions)));
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
    * Grant permissions on a table to the given user. Will wait until all active
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
@@ -492,6 +577,28 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          connection.getAdmin().grant(
+            new UserPermission(user, new TablePermission(table, family, qualifier, actions)),
+            false);
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Grant permissions on a table to the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnTable(final User caller, final HBaseTestingUtility util,
+      final String user, final TableName table, final byte[] family, final byte[] qualifier,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
           connection.getAdmin().grant(
             new UserPermission(user, new TablePermission(table, family, qualifier, actions)),
             false);
@@ -555,6 +662,27 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          connection.getAdmin().revoke(
+            new UserPermission(user, new TablePermission(table, family, qualifier, actions)));
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a table from the given user. Will wait until all active
+   * AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromTable(final User caller, final HBaseTestingUtility util,
+      final String user, final TableName table, final byte[] family, final byte[] qualifier,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Configuration conf = util.getConfiguration();
+        try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
           connection.getAdmin().revoke(
             new UserPermission(user, new TablePermission(table, family, qualifier, actions)));
         }
