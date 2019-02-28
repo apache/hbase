@@ -255,23 +255,33 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public synchronized void moveTables(Set<TableName> tableNames, String groupName)
       throws IOException {
+    // Check if rsGroup contains the destination rsgroup
     if (groupName != null && !rsGroupMap.containsKey(groupName)) {
       throw new DoNotRetryIOException("Group " + groupName + " does not exist");
     }
 
+    // Make a copy of rsGroupMap to update
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+
+    // Remove tables from their original rsgroups
+    // and update the copy of rsGroupMap
     for (TableName tableName : tableNames) {
       if (tableMap.containsKey(tableName)) {
         RSGroupInfo src = new RSGroupInfo(newGroupMap.get(tableMap.get(tableName)));
         src.removeTable(tableName);
         newGroupMap.put(src.getName(), src);
       }
-      if (groupName != null) {
-        RSGroupInfo dst = new RSGroupInfo(newGroupMap.get(groupName));
-        dst.addTable(tableName);
-        newGroupMap.put(dst.getName(), dst);
-      }
     }
+
+    // Add tables to the destination rsgroup
+    // and update the copy of rsGroupMap
+    if (groupName != null) {
+      RSGroupInfo dstGroup = new RSGroupInfo(newGroupMap.get(groupName));
+      dstGroup.addAllTables(tableNames);
+      newGroupMap.put(dstGroup.getName(), dstGroup);
+    }
+
+    // Flush according to the updated copy of rsGroupMap
     flushConfig(newGroupMap);
   }
 
