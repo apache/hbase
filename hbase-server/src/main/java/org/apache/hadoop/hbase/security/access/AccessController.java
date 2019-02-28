@@ -2672,5 +2672,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         break;
       default:
     }
+    if (!Superusers.isSuperUser(caller)) {
+      accessChecker.performOnSuperuser(request, caller, userPermission.getUser());
+    }
   }
 }

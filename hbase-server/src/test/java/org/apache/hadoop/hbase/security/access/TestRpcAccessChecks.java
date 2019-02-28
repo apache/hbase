@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
@@ -32,6 +32,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -103,6 +104,10 @@ public class TestRpcAccessChecks {
   private static User USER_ADMIN;
   // user without admin permissions
   private static User USER_NON_ADMIN;
+  // user in supergroup
+  private static User USER_IN_SUPERGROUPS;
+  // user with global permission but not a superuser
+  private static User USER_ADMIN_NOT_SUPER;
 
   private static final String GROUP_ADMIN = "admin_group";
   private static User USER_GROUP_ADMIN;
@@ -135,23 +140,26 @@ public class TestRpcAccessChecks {
 
     // Enable security
     enableSecurity(conf);
-    TEST_UTIL.startMiniCluster();
-
-    // Wait for the ACL table to become available
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
     // Create users
+    // admin is superuser as well.
     USER_ADMIN = User.createUserForTesting(conf, "admin", new String[0]);
     USER_NON_ADMIN = User.createUserForTesting(conf, "non_admin", new String[0]);
     USER_GROUP_ADMIN =
         User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_IN_SUPERGROUPS =
+        User.createUserForTesting(conf, "user_in_supergroup", new String[] { "supergroup" });
+    USER_ADMIN_NOT_SUPER = User.createUserForTesting(conf, "normal_admin", new String[0]);
 
-    // Assign permissions to users and groups
-    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
-      Permission.Action.ADMIN, Permission.Action.CREATE);
+    TEST_UTIL.startMiniCluster();
+    // Wait for the ACL table to become available
+    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+
+    // Assign permissions to groups
     SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN),
       Permission.Action.ADMIN, Permission.Action.CREATE);
-    // No permissions to USER_NON_ADMIN
+    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN_NOT_SUPER.getShortName(),
+      Permission.Action.ADMIN);
   }
 
   interface Action {
@@ -360,5 +368,78 @@ public class TestRpcAccessChecks {
       }
     };
     verifyAllowed(USER_NON_ADMIN, userAction);
+  }
+
+  @Test
+  public void testGrantDeniedOnSuperUsersGroups() {
+    /** User */
+    try {
+      // Global
+      SecureTestUtil.grantGlobal(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
+        Permission.Action.ADMIN, Permission.Action.CREATE);
+      fail("Granting superuser's global permissions is not allowed.");
+    } catch (Exception e) {
+    }
+    try {
+      // Namespace
+      SecureTestUtil.grantOnNamespace(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
+        TEST_NAME.getMethodName(),
+        Permission.Action.ADMIN, Permission.Action.CREATE);
+      fail("Granting superuser's namespace permissions is not allowed.");
+    } catch (Exception e) {
+    }
+    try {
+      // Table
+      SecureTestUtil.grantOnTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
+        TableName.valueOf(TEST_NAME.getMethodName()), null, null,
+        Permission.Action.ADMIN, Permission.Action.CREATE);
+      fail("Granting superuser's table permissions is not allowed.");
+    } catch (Exception e) {
+    }
+
+    /** Group */
+    try {
+      SecureTestUtil.grantGlobal(USER_ADMIN_NOT_SUPER, TEST_UTIL,
+        USER_IN_SUPERGROUPS.getShortName(), Permission.Action.ADMIN, Permission.Action.CREATE);
+      fail("Granting superuser's global permissions is not allowed.");
+    } catch (Exception e) {
+    }
+  }
+
+  @Test
+  public void testRevokeDeniedOnSuperUsersGroups() {
+    /** User */
+    try {
+      // Global
+      SecureTestUtil.revokeGlobal(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
+        Permission.Action.ADMIN);
+      fail("Revoking superuser's global permissions is not allowed.");
+    } catch (Exception e) {
+    }
+    try {
+      // Namespace
+      SecureTestUtil.revokeFromNamespace(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
+        TEST_NAME.getMethodName(), Permission.Action.ADMIN);
+      fail("Revoking superuser's namespace permissions is not allowed.");
+    } catch (Exception e) {
+    }
+    try {
+      // Table
+      SecureTestUtil.revokeFromTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
+        TableName.valueOf(TEST_NAME.getMethodName()), null, null,
+        Permission.Action.ADMIN);
+      fail("Revoking superuser's table permissions is not allowed.");
+    } catch (Exception e) {
+    }
+
+    /** Group */
+    try {
+      // Global revoke
+      SecureTestUtil.revokeGlobal(USER_ADMIN_NOT_SUPER, TEST_UTIL,
+        AuthUtil.toGroupEntry("supergroup"),
+        Permission.Action.ADMIN, Permission.Action.CREATE);
+      fail("Revoking supergroup's permissions is not allowed.");
+    } catch (Exception e) {
+    }
   }
 }
