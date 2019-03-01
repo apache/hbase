@@ -43,9 +43,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
@@ -252,7 +254,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   @SuppressWarnings("unchecked")
   private void onComplete(Action action, RegionRequest regionReq, int tries, ServerName serverName,
-      RegionResult regionResult, List<Action> failedActions, Throwable regionException) {
+      RegionResult regionResult, List<Action> failedActions, Throwable regionException,
+      MutableBoolean retryImmediately) {
     Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
       LOG.error("Server " + serverName + " sent us neither result nor exception for row '" +
@@ -268,6 +271,9 @@ class AsyncBatchRpcRetryingCaller<T> {
         failOne(action, tries, error, EnvironmentEdgeManager.currentTime(),
           getExtraContextForError(serverName));
       } else {
+        if (!retryImmediately.booleanValue() && error instanceof RetryImmediatelyException) {
+          retryImmediately.setTrue();
+        }
         failedActions.add(action);
       }
     } else {
@@ -278,17 +284,18 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void onComplete(Map<byte[], RegionRequest> actionsByRegion, int tries,
       ServerName serverName, MultiResponse resp) {
     List<Action> failedActions = new ArrayList<>();
+    MutableBoolean retryImmediately = new MutableBoolean(false);
     actionsByRegion.forEach((rn, regionReq) -> {
       RegionResult regionResult = resp.getResults().get(rn);
       Throwable regionException = resp.getException(rn);
       if (regionResult != null) {
         regionReq.actions.forEach(action -> onComplete(action, regionReq, tries, serverName,
-          regionResult, failedActions, regionException));
+          regionResult, failedActions, regionException, retryImmediately));
       } else {
         Throwable error;
         if (regionException == null) {
-          LOG
-            .error("Server sent us neither results nor exceptions for " + Bytes.toStringBinary(rn));
+          LOG.error("Server sent us neither results nor exceptions for {}",
+            Bytes.toStringBinary(rn));
           error = new RuntimeException("Invalid response");
         } else {
           error = translateException(regionException);
@@ -299,12 +306,15 @@ class AsyncBatchRpcRetryingCaller<T> {
           failAll(regionReq.actions.stream(), tries, error, serverName);
           return;
         }
+        if (!retryImmediately.booleanValue() && error instanceof RetryImmediatelyException) {
+          retryImmediately.setTrue();
+        }
         addError(regionReq.actions, error, serverName);
         failedActions.addAll(regionReq.actions);
       }
     });
     if (!failedActions.isEmpty()) {
-      tryResubmit(failedActions.stream(), tries);
+      tryResubmit(failedActions.stream(), tries, retryImmediately.booleanValue());
     }
   }
 
@@ -375,10 +385,14 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<Action> copiedActions = actionsByRegion.values().stream().flatMap(r -> r.actions.stream())
       .collect(Collectors.toList());
     addError(copiedActions, error, serverName);
-    tryResubmit(copiedActions.stream(), tries);
+    tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException);
   }
 
-  private void tryResubmit(Stream<Action> actions, int tries) {
+  private void tryResubmit(Stream<Action> actions, int tries, boolean immediately) {
+    if (immediately) {
+      groupAndSend(actions, tries);
+      return;
+    }
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
@@ -427,7 +441,7 @@ class AsyncBatchRpcRetryingCaller<T> {
           send(actionsByServer, tries);
         }
         if (!locateFailed.isEmpty()) {
-          tryResubmit(locateFailed.stream(), tries);
+          tryResubmit(locateFailed.stream(), tries, false);
         }
       });
   }
