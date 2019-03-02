@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.11
+Release Notes - HBase - Version 1.2.11 2019/02/25
 
 ** Sub-task
     * [HBASE-21374] - Backport HBASE-21342 to branch-1
