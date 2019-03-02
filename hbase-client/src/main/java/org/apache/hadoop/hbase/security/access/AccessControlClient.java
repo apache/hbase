@@ -93,10 +93,8 @@ public class AccessControlClient {
   private static void grant(Connection connection, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Priority is not used.
-    UserPermission userPermission =
-        new UserPermission(userName, new TablePermission(tableName, family, qual, actions));
-    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
+    connection.getAdmin().grant(userName, new TablePermission(tableName, family, qual, actions),
+      mergeExistingPermissions);
   }
 
   /**
@@ -128,9 +126,8 @@ public class AccessControlClient {
    */
   private static void grant(Connection connection, final String namespace, final String userName,
       boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
-    UserPermission userPermission =
-        new UserPermission(userName, new NamespacePermission(namespace, actions));
-    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
+    connection.getAdmin().grant(userName, new NamespacePermission(namespace, actions),
+      mergeExistingPermissions);
   }
 
   /**
@@ -160,8 +157,7 @@ public class AccessControlClient {
    */
   private static void grant(Connection connection, final String userName,
       boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
-    UserPermission userPermission = new UserPermission(userName, new GlobalPermission(actions));
-    connection.getAdmin().grant(userPermission, mergeExistingPermissions);
+    connection.getAdmin().grant(userName, new GlobalPermission(actions), mergeExistingPermissions);
   }
 
   /**
@@ -198,9 +194,8 @@ public class AccessControlClient {
   public static void revoke(Connection connection, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    UserPermission userPermission =
-        new UserPermission(username, new TablePermission(tableName, family, qualifier, actions));
-    connection.getAdmin().revoke(userPermission);
+    connection.getAdmin().revoke(username,
+      new TablePermission(tableName, family, qualifier, actions));
   }
 
   /**
@@ -213,9 +208,7 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    UserPermission userPermission =
-        new UserPermission(userName, new NamespacePermission(namespace, actions));
-    connection.getAdmin().revoke(userPermission);
+    connection.getAdmin().revoke(userName, new NamespacePermission(namespace, actions));
   }
 
   /**
@@ -224,8 +217,7 @@ public class AccessControlClient {
    */
   public static void revoke(Connection connection, final String userName,
       final Permission.Action... actions) throws Throwable {
-    UserPermission userPermission = new UserPermission(userName, new GlobalPermission(actions));
-    connection.getAdmin().revoke(userPermission);
+    connection.getAdmin().revoke(userName, new GlobalPermission(actions));
   }
 
   /**
