@@ -378,8 +378,7 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          connection.getAdmin().grant(new UserPermission(user, new GlobalPermission(actions)),
-            false);
+          connection.getAdmin().grant(user, new GlobalPermission(actions), false);
         }
         return null;
       }
@@ -398,7 +397,7 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin().grant(new UserPermission(user, new GlobalPermission(actions)),
+          connection.getAdmin().grant(user, Permission.newBuilder().withActions(actions).build(),
             false);
         }
         return null;
@@ -417,7 +416,7 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          connection.getAdmin().revoke(new UserPermission(user, new GlobalPermission(actions)));
+          connection.getAdmin().revoke(user, new GlobalPermission(actions));
         }
         return null;
       }
@@ -436,7 +435,7 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin().revoke(new UserPermission(user, new GlobalPermission(actions)));
+          connection.getAdmin().revoke(user, Permission.newBuilder().withActions(actions).build());
         }
         return null;
       }
@@ -455,7 +454,7 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
           connection.getAdmin()
-              .grant(new UserPermission(user, new NamespacePermission(namespace, actions)), false);
+              .grant(user, new NamespacePermission(namespace, actions), false);
         }
         return null;
       }
@@ -475,8 +474,8 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin()
-            .grant(new UserPermission(user, new NamespacePermission(namespace, actions)), false);
+          connection.getAdmin().grant(user,
+            Permission.newBuilder(namespace).withActions(actions).build(), false);
         }
         return null;
       }
@@ -536,8 +535,7 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          connection.getAdmin()
-              .revoke(new UserPermission(user, new NamespacePermission(namespace, actions)));
+          connection.getAdmin().revoke(user, new NamespacePermission(namespace, actions));
         }
         return null;
       }
@@ -557,8 +555,8 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin()
-            .revoke(new UserPermission(user, new NamespacePermission(namespace, actions)));
+          connection.getAdmin().revoke(user,
+            Permission.newBuilder(namespace).withActions(actions).build());
         }
         return null;
       }
@@ -577,8 +575,7 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          connection.getAdmin().grant(
-            new UserPermission(user, new TablePermission(table, family, qualifier, actions)),
+          connection.getAdmin().grant(user, new TablePermission(table, family, qualifier, actions),
             false);
         }
         return null;
@@ -599,8 +596,8 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin().grant(
-            new UserPermission(user, new TablePermission(table, family, qualifier, actions)),
+          connection.getAdmin().grant(user, Permission.newBuilder(table).withFamily(family)
+              .withQualifier(qualifier).withActions(actions).build(),
             false);
         }
         return null;
@@ -662,8 +659,8 @@ public class SecureTestUtil {
       @Override
       public Void call() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-          connection.getAdmin().revoke(
-            new UserPermission(user, new TablePermission(table, family, qualifier, actions)));
+          connection.getAdmin().revoke(user,
+            new TablePermission(table, family, qualifier, actions));
         }
         return null;
       }
@@ -683,8 +680,8 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         Configuration conf = util.getConfiguration();
         try (Connection connection = ConnectionFactory.createConnection(conf, caller)) {
-          connection.getAdmin().revoke(
-            new UserPermission(user, new TablePermission(table, family, qualifier, actions)));
+          connection.getAdmin().revoke(user, Permission.newBuilder(table).withFamily(family)
+              .withQualifier(qualifier).withActions(actions).build());
         }
         return null;
       }

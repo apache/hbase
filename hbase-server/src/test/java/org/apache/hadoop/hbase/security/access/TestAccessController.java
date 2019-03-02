@@ -1168,9 +1168,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          conn.getAdmin().grant(new UserPermission(USER_RO.getShortName(),
-              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)),
-            false);
+          conn.getAdmin().grant(USER_RO.getShortName(),
+            new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ), false);
         }
         return null;
       }
@@ -1179,9 +1178,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction revokeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf)) {
-            conn.getAdmin().revoke(new UserPermission(USER_RO.getShortName(),
-                            new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)));
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().revoke(USER_RO.getShortName(), Permission.newBuilder(TEST_TABLE)
+              .withFamily(TEST_FAMILY).withActions(Action.READ).build());
         }
         return null;
       }
