@@ -107,7 +107,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
       }
       REPLICA_ID_TO_COUNT.computeIfAbsent(region.getReplicaId(), k -> new AtomicInteger())
         .incrementAndGet();
-      if (region.getRegionId() == RegionReplicaUtil.DEFAULT_REPLICA_ID && FAIL_PRIMARY_GET) {
+      if (region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID && FAIL_PRIMARY_GET) {
         throw new IOException("Inject error");
       }
     }
