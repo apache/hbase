@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -4484,13 +4485,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
+  public void grant(String userName, Permission permission, boolean mergeExistingPermissions)
       throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
-        GrantRequest req =
-            ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
+        GrantRequest req = ShadedAccessControlUtil
+            .buildGrantRequest(new UserPermission(userName, permission), mergeExistingPermissions);
         this.master.grant(getRpcController(), req);
         return null;
       }
@@ -4498,11 +4499,12 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void revoke(UserPermission userPermission) throws IOException {
+  public void revoke(String userName, Permission permission) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
-        RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
+        RevokeRequest req =
+            ShadedAccessControlUtil.buildRevokeRequest(new UserPermission(userName, permission));
         this.master.revoke(getRpcController(), req);
         return null;
       }

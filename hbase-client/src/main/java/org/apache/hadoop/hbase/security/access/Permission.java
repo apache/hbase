@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -241,4 +243,77 @@ public class Permission extends VersionedWritable {
   public Scope getAccessScope() {
     return scope;
   }
+
+  /**
+   * Build a global permission
+   * @return global permission builder
+   */
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
+  /**
+   * Build a namespace permission
+   * @param namespace the specific namespace
+   * @return namespace permission builder
+   */
+  public static Builder newBuilder(String namespace) {
+    return new Builder(namespace);
+  }
+
+  /**
+   * Build a table permission
+   * @param tableName the specific table name
+   * @return table permission builder
+   */
+  public static Builder newBuilder(TableName tableName) {
+    return new Builder(tableName);
+  }
+
+  public static final class Builder {
+    private String namespace;
+    private TableName tableName;
+    private byte[] family;
+    private byte[] qualifier;
+    private Action[] actions;
+
+    private Builder() {
+    }
+
+    private Builder(String namespace) {
+      this.namespace = namespace;
+    }
+
+    private Builder(TableName tableName) {
+      this.tableName = tableName;
+    }
+
+    public Builder withFamily(byte[] family) {
+      Objects.requireNonNull(tableName, "The tableName can't be NULL");
+      this.family = family;
+      return this;
+    }
+
+    public Builder withQualifier(byte[] qualifier) {
+      Objects.requireNonNull(tableName, "The tableName can't be NULL");
+      this.qualifier = qualifier;
+      return this;
+    }
+
+    public Builder withActions(Action... actions) {
+      this.actions = actions;
+      return this;
+    }
+
+    public Permission build() {
+      if (namespace != null) {
+        return new NamespacePermission(namespace, actions);
+      } else if (tableName != null) {
+        return new TablePermission(tableName, family, qualifier, actions);
+      } else {
+        return new GlobalPermission(actions);
+      }
+    }
+  }
+
 }

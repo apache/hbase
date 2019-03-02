@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -797,13 +797,13 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> grant(UserPermission userPermission,
+  public CompletableFuture<Void> grant(String userName, Permission permission,
       boolean mergeExistingPermissions) {
-    return wrap(rawAdmin.grant(userPermission, mergeExistingPermissions));
+    return wrap(rawAdmin.grant(userName, permission, mergeExistingPermissions));
   }
 
   @Override
-  public CompletableFuture<Void> revoke(UserPermission userPermission) {
-    return wrap(rawAdmin.revoke(userPermission));
+  public CompletableFuture<Void> revoke(String userName, Permission permission) {
+    return wrap(rawAdmin.revoke(userName, permission));
   }
 }
