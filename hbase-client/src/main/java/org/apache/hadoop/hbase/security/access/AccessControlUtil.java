@@ -491,7 +491,7 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -520,7 +520,7 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -548,7 +548,7 @@ public class AccessControlUtil {
    * @param namespace the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -574,7 +574,7 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to revoke permissions
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,
@@ -604,7 +604,7 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,
@@ -631,7 +631,7 @@ public class AccessControlUtil {
    * @param namespace optional table name
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,

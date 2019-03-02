@@ -362,9 +362,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          connection.getAdmin().grant(
-            new UserPermission(testUser, new NamespacePermission(TEST_NAMESPACE, Action.WRITE)),
-            false);
+          connection.getAdmin().grant(testUser,
+            new NamespacePermission(TEST_NAMESPACE, Action.WRITE), false);
         }
         return null;
       }
@@ -373,9 +372,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          conn.getAdmin().grant(
-            new UserPermission(USER_GROUP_NS_ADMIN.getShortName(), TEST_NAMESPACE, Action.READ),
-            false);
+          conn.getAdmin().grant(USER_GROUP_NS_ADMIN.getShortName(),
+            new NamespacePermission(TEST_NAMESPACE, Action.READ), false);
         }
         return null;
       }
@@ -385,8 +383,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          connection.getAdmin().revoke(
-            new UserPermission(testUser, new NamespacePermission(TEST_NAMESPACE, Action.WRITE)));
+          connection.getAdmin().revoke(testUser,
+            new NamespacePermission(TEST_NAMESPACE, Action.WRITE));
         }
         return null;
       }
@@ -395,8 +393,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
-          connection.getAdmin().revoke(new UserPermission(USER_GROUP_NS_ADMIN.getShortName(),
-              new NamespacePermission(TEST_NAMESPACE, Action.READ)));
+          connection.getAdmin().revoke(USER_GROUP_NS_ADMIN.getShortName(),
+            new NamespacePermission(TEST_NAMESPACE, Action.READ));
         }
         return null;
       }

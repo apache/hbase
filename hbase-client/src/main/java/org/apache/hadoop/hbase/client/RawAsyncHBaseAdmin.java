@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -3739,21 +3740,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> grant(UserPermission userPermission,
+  public CompletableFuture<Void> grant(String userName, Permission permission,
       boolean mergeExistingPermissions) {
     return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.<GrantRequest, GrantResponse, Void> call(controller,
-          stub, ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions),
-          (s, c, req, done) -> s.grant(c, req, done), resp -> null))
+        .action(
+          (controller, stub) -> this.<GrantRequest, GrantResponse, Void> call(controller, stub,
+            ShadedAccessControlUtil.buildGrantRequest(new UserPermission(userName, permission),
+              mergeExistingPermissions),
+            (s, c, req, done) -> s.grant(c, req, done), resp -> null))
         .call();
   }
 
   @Override
-  public CompletableFuture<Void> revoke(UserPermission userPermission) {
+  public CompletableFuture<Void> revoke(String userName, Permission permission) {
     return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.<RevokeRequest, RevokeResponse, Void> call(controller,
-          stub, ShadedAccessControlUtil.buildRevokeRequest(userPermission),
-          (s, c, req, done) -> s.revoke(c, req, done), resp -> null))
+        .action(
+          (controller, stub) -> this.<RevokeRequest, RevokeResponse, Void> call(controller, stub,
+            ShadedAccessControlUtil.buildRevokeRequest(new UserPermission(userName, permission)),
+            (s, c, req, done) -> s.revoke(c, req, done), resp -> null))
         .call();
   }
 }
