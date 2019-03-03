@@ -561,7 +561,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     resetController(controller, callTimeoutNs);
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
-      nextCallSeq, false, false, scan.getLimit());
+      nextCallSeq, scan.isScanMetricsEnabled(), false, scan.getLimit());
     stub.scan(controller, req, resp -> onComplete(controller, resp));
   }
 
