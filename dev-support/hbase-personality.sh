@@ -488,7 +488,7 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  hbase_common_hadoop2_versions="2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
+  hbase_common_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     yetus_info "Setting Hadoop versions to test based on branch-1-ish rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
