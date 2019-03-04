@@ -283,6 +283,11 @@ public abstract class RegionTransitionProcedure
     return true;
   }
 
+  @Override
+  public boolean storeInDispatchedQueue() {
+    return false;
+  }
+
   protected void reportTransition(final MasterProcedureEnv env, final ServerName serverName,
       final TransitionCode code, final long seqId) throws UnexpectedStateException {
     final RegionStateNode regionNode = getRegionState(env);
