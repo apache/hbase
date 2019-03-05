@@ -156,10 +156,14 @@ public class TestReplicationBase {
   }
 
   protected static void loadData(String prefix, byte[] row) throws IOException {
+    loadData(prefix, row, famName);
+  }
+
+  protected static void loadData(String prefix, byte[] row, byte[] familyName) throws IOException {
     List<Put> puts = new ArrayList<>(NB_ROWS_IN_BATCH);
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(prefix + Integer.toString(i)));
-      put.addColumn(famName, row, row);
+      put.addColumn(familyName, row, row);
       puts.add(put);
     }
     htable1.put(puts);
