@@ -275,7 +275,9 @@ public class TestHBaseTestingUtility {
       List<Integer> clientPortListInCluster = cluster1.getClientPortList();
 
       for (i = 0; i < clientPortListInCluster.size(); i++) {
-        assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList1[i]);
+        // cannot assert the specific port due to the port conflict in which situation
+        // it always chooses a bigger port by +1. The below is the same.
+        assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList1[i]);
       }
     } finally {
       hbt.shutdownMiniZKCluster();
@@ -292,11 +294,11 @@ public class TestHBaseTestingUtility {
 
       for (i = 0, j = 0; i < clientPortListInCluster.size(); i++) {
         if (i < clientPortList2.length) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList2[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList2[i]);
         } else {
           // servers with no specified client port will use defaultClientPort or some other ports
           // based on defaultClientPort
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j++;
         }
       }
@@ -317,9 +319,9 @@ public class TestHBaseTestingUtility {
         // Servers will only use valid client ports; if ports are not specified or invalid,
         // the default port or a port based on default port will be used.
         if (i < clientPortList3.length && clientPortList3[i] > 0) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList3[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList3[i]);
         } else {
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j++;
         }
       }
@@ -343,9 +345,9 @@ public class TestHBaseTestingUtility {
         // Servers will only use valid client ports; if ports are not specified or invalid,
         // the default port or a port based on default port will be used.
         if (i < clientPortList4.length && clientPortList4[i] > 0) {
-          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList4[i]);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= clientPortList4[i]);
         } else {
-          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          assertTrue(clientPortListInCluster.get(i).intValue() >= defaultClientPort + j);
           j +=2;
         }
       }
