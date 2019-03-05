@@ -3608,6 +3608,7 @@
               <fixMethodComment>true</fixMethodComment>
               <fixTags>all</fixTags>
               <notimestamp>true</notimestamp>
+              <locale>en_US</locale>
               <!-- Pass some options straight to the javadoc executable since it is easier -->
               <additionalJOption>-J-Xmx2G</additionalJOption>
               <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
@@ -3650,6 +3651,7 @@
               <fixMethodComment>true</fixMethodComment>
               <fixTags>all</fixTags>
               <notimestamp>true</notimestamp>
+              <locale>en_US</locale>
               <!-- Pass some options straight to the javadoc executable since it is easier -->
               <additionalJOption>-J-Xmx2G</additionalJOption>
               <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
@@ -3704,6 +3706,7 @@
               <fixMethodComment>true</fixMethodComment>
               <fixTags>all</fixTags>
               <notimestamp>true</notimestamp>
+              <locale>en_US</locale>
               <!-- Pass some options straight to the javadoc executable since it is easier -->
               <additionalJOption>-J-Xmx2G</additionalJOption>
               <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
@@ -3757,6 +3760,7 @@
               <fixMethodComment>true</fixMethodComment>
               <fixTags>all</fixTags>
               <notimestamp>true</notimestamp>
+              <locale>en_US</locale>
               <!-- Pass some options straight to the javadoc executable since it is easier -->
               <additionalJOption>-J-Xmx2G</additionalJOption>
               <!-- JDK8 javadoc requires test scope transitive dependencies due to our custom doclet -->
