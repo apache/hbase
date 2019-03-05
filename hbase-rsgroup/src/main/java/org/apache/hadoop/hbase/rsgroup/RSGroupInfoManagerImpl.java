@@ -480,20 +480,37 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<TableName, String> newTableMap;
 
     // For offline mode persistence is still unavailable
-    // We're refreshing in-memory state but only for default servers
+    // We're refreshing in-memory state but only for servers in default group
     if (!isOnline()) {
-      Map<String, RSGroupInfo> m = Maps.newHashMap(rsGroupMap);
-      RSGroupInfo oldDefaultGroup = m.remove(RSGroupInfo.DEFAULT_GROUP);
-      RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
-      if (!m.equals(newGroupMap) ||
-        !oldDefaultGroup.getTables().equals(newDefaultGroup.getTables())) {
-        throw new IOException("Only default servers can be updated during offline mode");
+      if (newGroupMap == this.rsGroupMap) {
+        // When newGroupMap is this.rsGroupMap itself,
+        // do not need to check default group and other groups as followed
+        return;
       }
+
+      Map<String, RSGroupInfo> oldGroupMap = Maps.newHashMap(rsGroupMap);
+      RSGroupInfo oldDefaultGroup = oldGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
+      RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
+      if (!oldGroupMap.equals(newGroupMap) /* compare both tables and servers in other groups */ ||
+          !oldDefaultGroup.getTables().equals(newDefaultGroup.getTables())
+          /* compare tables in default group */) {
+        throw new IOException("Only servers in default group can be updated during offline mode");
+      }
+
+      // Restore newGroupMap by putting its default group back
       newGroupMap.put(RSGroupInfo.DEFAULT_GROUP, newDefaultGroup);
+
+      // Refresh rsGroupMap
+      // according to the inputted newGroupMap (an updated copy of rsGroupMap)
       rsGroupMap = newGroupMap;
+
+      // Do not need to update tableMap
+      // because only the update on servers in default group is allowed above,
+      // or IOException will be thrown
       return;
     }
 
+    /* For online mode, persist to Zookeeper */
     newTableMap = flushConfigTable(newGroupMap);
 
     // Make changes visible after having been persisted to the source of truth
