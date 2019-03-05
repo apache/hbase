@@ -97,6 +97,9 @@ NOTE: End-of-life releases are not included in this list.
 | 2.1
 | Duo Zhang
 
+| 2.2
+| Guanghao Zhang
+
 |===
 
 [[hbase.commit.msg.format]]
