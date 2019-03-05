@@ -2736,6 +2736,7 @@
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
+              <locale>en_US</locale>
             </configuration>
           </reportSet>
 
@@ -2761,7 +2762,7 @@
               </excludePackageNames>
               <!-- switch on dependency-driven aggregation -->
               <includeDependencySources>false</includeDependencySources>
-
+              <locale>en_US</locale>
               <dependencySourceIncludes>
                 <!-- include ONLY dependencies I control -->
                 <dependencySourceInclude>org.apache.hbase:hbase-annotations
