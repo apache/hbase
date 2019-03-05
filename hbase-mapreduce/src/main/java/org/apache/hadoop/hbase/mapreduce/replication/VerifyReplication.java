@@ -114,6 +114,8 @@ public class VerifyReplication extends Configured implements Tool {
   String peerFSAddress = null;
   //Peer cluster HBase root dir location
   String peerHBaseRootAddress = null;
+  //Peer Table Name
+  String peerTableName = null;
 
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
@@ -192,8 +194,10 @@ public class VerifyReplication extends Configured implements Tool {
         Configuration peerConf = HBaseConfiguration.createClusterConf(conf,
             zkClusterKey, PEER_CONFIG_PREFIX);
 
+        String peerName = peerConf.get(NAME + ".peerTableName", tableName.getNameAsString());
+        TableName peerTableName = TableName.valueOf(peerName);
         replicatedConnection = ConnectionFactory.createConnection(peerConf);
-        replicatedTable = replicatedConnection.getTable(tableName);
+        replicatedTable = replicatedConnection.getTable(peerTableName);
         scan.setStartRow(value.getRow());
 
         byte[] endRow = null;
@@ -419,6 +423,11 @@ public class VerifyReplication extends Configured implements Tool {
       conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
     }
 
+    if (peerTableName != null) {
+      LOG.info("Peer Table Name: " + peerTableName);
+      conf.set(NAME + ".peerTableName", peerTableName);
+    }
+
     conf.setInt(NAME + ".versions", versions);
     LOG.info("Number of version: " + versions);
 
@@ -617,6 +626,12 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        final String peerTableNameArgKey = "--peerTableName=";
+        if (cmd.startsWith(peerTableNameArgKey)) {
+          peerTableName = cmd.substring(peerTableNameArgKey.length());
+          continue;
+        }
+
         if (cmd.startsWith("--")) {
           printUsage("Invalid argument '" + cmd + "'");
           return false;
@@ -685,11 +700,11 @@ public class VerifyReplication extends Configured implements Tool {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: verifyrep [--starttime=X]" +
-        " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] " +
-        "[--batch=] [--verbose] [--sourceSnapshotName=P] [--sourceSnapshotTmpDir=Q] "
-      + "[--peerSnapshotName=R] [--peerSnapshotTmpDir=S] [--peerFSAddress=T] "
-      + "[--peerHBaseRootAddress=U] <peerid|peerQuorumAddress> <tablename>");
+    System.err.println("Usage: verifyrep [--starttime=X]"
+        + " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] "
+        + "[--batch=] [--verbose] [--peerTableName=] [--sourceSnapshotName=P] "
+        + "[--sourceSnapshotTmpDir=Q] [--peerSnapshotName=R] [--peerSnapshotTmpDir=S] "
+        + "[--peerFSAddress=T] [--peerHBaseRootAddress=U] <peerid|peerQuorumAddress> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
@@ -705,6 +720,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" recomparesleep   milliseconds to sleep before recompare row, " +
         "default value is 0 which disables the recompare.");
     System.err.println(" verbose      logs row keys of good rows");
+    System.err.println(" peerTableName  Peer Table Name");
     System.err.println(" sourceSnapshotName  Source Snapshot Name");
     System.err.println(" sourceSnapshotTmpDir Tmp location to restore source table snapshot");
     System.err.println(" peerSnapshotName  Peer Snapshot Name");
