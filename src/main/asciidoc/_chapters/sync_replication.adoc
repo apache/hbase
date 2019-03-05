@@ -1,0 +1,125 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[syncreplication]]
+= Synchronous Replication
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:source-language: java
+
+== Background
+
+The current <<Cluster Replication, replication>> in HBase in asynchronous. So if the master cluster crashes, the slave cluster may not have the
+newest data. If users want strong consistency then they can not switch to the slave cluster.
+
+== Design
+
+Please see the design doc on link:https://issues.apache.org/jira/browse/HBASE-19064[HBASE-19064]
+
+== Operation and maintenance
+
+Case.1 Setup two synchronous replication clusters::
+
+* Add a synchronous peer in both source cluster and peer cluster.
+
+For source cluster:
+[source,ruby]
+----
+hbase> add_peer  '1', CLUSTER_KEY => 'lg-hadoop-tst-st01.bj:10010,lg-hadoop-tst-st02.bj:10010,lg-hadoop-tst-st03.bj:10010:/hbase/test-hbase-slave', REMOTE_WAL_DIR=>'hdfs://lg-hadoop-tst-st01.bj:20100/hbase/test-hbase-slave/remoteWALs', TABLE_CFS => {"ycsb-test"=>[]}
+----
+
+For peer cluster:
+[source,ruby]
+----
+hbase> add_peer  '1', CLUSTER_KEY => 'lg-hadoop-tst-st01.bj:10010,lg-hadoop-tst-st02.bj:10010,lg-hadoop-tst-st03.bj:10010:/hbase/test-hbase', REMOTE_WAL_DIR=>'hdfs://lg-hadoop-tst-st01.bj:20100/hbase/test-hbase/remoteWALs', TABLE_CFS => {"ycsb-test"=>[]}
+----
+
+NOTE: For synchronous replication, the current implementation require that we have the same peer id for both source
+and peer cluster. Another thing that need attention is: the peer does not support cluster-level, namespace-level, or
+cf-level replication, only support table-level replication now.
+
+* Transit the peer cluster to be STANDBY state
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'STANDBY'
+----
+
+* Transit the source cluster to be ACTIVE state
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
+----
+
+Now, the synchronous replication has been set up successfully. the HBase client can only request to source cluster, if
+request to peer cluster, the peer cluster which is STANDBY state now will reject the read/write requests.
+
+Case.2 How to operate when standby cluster crashed::
+
+If the standby cluster has been crashed, it will fail to write remote WAL for the active cluster. So we need to transit
+the source cluster to DOWNGRANDE_ACTIVE state, which means source cluster won't write any remote WAL any more, but
+the normal replication (asynchronous Replication) can still work fine, it queue the newly written WALs, but the
+replication block until the peer cluster come back.
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'DOWNGRADE_ACTIVE'
+----
+
+Once the peer cluster come back, we can just transit the source cluster to ACTIVE, to ensure that the replication will be
+synchronous.
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
+----
+
+Case.3 How to operate when active cluster crashed::
+
+If the active cluster has been crashed (it may be not reachable now), so let's just transit the standby cluster to
+DOWNGRANDE_ACTIVE state, and after that, we should redirect all the requests from client to the DOWNGRADE_ACTIVE cluster.
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'DOWNGRADE_ACTIVE'
+----
+
+If the crashed cluster come back again, we just need to transit it to STANDBY directly. Otherwise if you transit the
+cluster to DOWNGRADE_ACTIVE, the original ACTIVE cluster may have redundant data compared to the current ACTIVE
+cluster. Because we designed to write source cluster WALs and remote cluster WALs concurrently, so it's possible that
+the source cluster WALs has more data than the remote cluster, which result in data inconsistency. The procedure of
+transiting ACTIVE to STANDBY has no problem, because we'll skip to replay the original WALs.
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'STANDBY'
+----
+
+After that, we can promote the DOWNGRADE_ACTIVE cluster to ACTIVE now, to ensure that the replication will be synchronous.
+
+[source,ruby]
+----
+hbase> transit_peer_sync_replication_state '1', 'ACTIVE'
+----

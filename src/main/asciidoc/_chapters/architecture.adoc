@@ -594,6 +594,80 @@ See <<regions.arch.assignment>> for more information on region assignment.
 Periodically checks and cleans up the `hbase:meta` table.
 See <<arch.catalog.meta>> for more information on the meta table.
 
+[[master.wal]]
+=== MasterProcWAL
+
+HMaster records administrative operations and their running states, such as the handling of a crashed server,
+table creation, and other DDLs, into its own WAL file. The WALs are stored under the MasterProcWALs
+directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows
+us run a state machine that is resilient across Master failures. For example, if a HMaster was in the
+middle of creating a table encounters an issue and fails, the next active HMaster can take up where
+the previous left off and carry the operation to completion. Since hbase-2.0.0, a
+new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment
+operations, server crash processing, balancing, etc., all via AMv2 persisting all state and
+transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
+
+See <<amv2>> (and <<pv2>> for its basis) if you would like to learn more about the new
+AssignmentManager.
+
+[[master.wal.conf]]
+==== Configurations for MasterProcWAL
+Here are the list of configurations that effect MasterProcWAL operation.
+You should not have to change your defaults.
+
+[[hbase.procedure.store.wal.periodic.roll.msec]]
+*`hbase.procedure.store.wal.periodic.roll.msec`*::
++
+.Description
+Frequency of generating a new WAL
++
+.Default
+`1h (3600000 in msec)`
+
+[[hbase.procedure.store.wal.roll.threshold]]
+*`hbase.procedure.store.wal.roll.threshold`*::
++
+.Description
+Threshold in size before the WAL rolls. Every time the WAL reaches this size or the above period, 1 hour, passes since last log roll, the HMaster will generate a new WAL.
++
+.Default
+`32MB (33554432 in byte)`
+
+[[hbase.procedure.store.wal.warn.threshold]]
+*`hbase.procedure.store.wal.warn.threshold`*::
++
+.Description
+If the number of WALs goes beyond this threshold, the following message should appear in the HMaster log with WARN level when rolling.
+
+ procedure WALs count=xx above the warning threshold 64. check running procedures to see if something is stuck.
+
++
+.Default
+`64`
+
+[[hbase.procedure.store.wal.max.retries.before.roll]]
+*`hbase.procedure.store.wal.max.retries.before.roll`*::
++
+.Description
+Max number of retry when syncing slots (records) to its underlying storage, such as HDFS. Every attempt, the following message should appear in the HMaster log.
+
+ unable to sync slots, retry=xx
+
++
+.Default
+`3`
+
+[[hbase.procedure.store.wal.sync.failure.roll.max]]
+*`hbase.procedure.store.wal.sync.failure.roll.max`*::
++
+.Description
+After the above 3 retrials, the log is rolled and the retry count is reset to 0, thereon a new set of retrial starts. This configuration controls the max number of attempts of log rolling upon sync failure. That is, HMaster is allowed to fail to sync 9 times in total. Once it exceeds, the following log should appear in the HMaster log.
+
+ Sync slots after log roll failed, abort.
++
+.Default
+`3`
+
 [[regionserver.arch]]
 == RegionServer
 
@@ -876,14 +950,14 @@ In the above, we set the BucketCache to be 4G.
 We configured the on-heap LruBlockCache have 20% (0.2) of the RegionServer's heap size (0.2 * 5G = 1G). In other words, you configure the L1 LruBlockCache as you would normally (as if there were no L2 cache present).
 
 link:https://issues.apache.org/jira/browse/HBASE-10641[HBASE-10641] introduced the ability to configure multiple sizes for the buckets of the BucketCache, in HBase 0.98 and newer.
-To configurable multiple bucket sizes, configure the new property `hfile.block.cache.sizes` (instead of `hfile.block.cache.size`) to a comma-separated list of block sizes, ordered from smallest to largest, with no spaces.
+To configurable multiple bucket sizes, configure the new property `hbase.bucketcache.bucket.sizes` to a comma-separated list of block sizes, ordered from smallest to largest, with no spaces.
 The goal is to optimize the bucket sizes based on your data access patterns.
 The following example configures buckets of size 4096 and 8192.
 
 [source,xml]
 ----
 <property>
-  <name>hfile.block.cache.sizes</name>
+  <name>hbase.bucketcache.bucket.sizes</name>
   <value>4096,8192</value>
 </property>
 ----
@@ -1175,127 +1249,40 @@ WAL log splitting and recovery can be resource intensive and take a long time, d
 Distributed log processing is enabled by default since HBase 0.92.
 The setting is controlled by the `hbase.master.distributed.log.splitting` property, which can be set to `true` or `false`, but defaults to `true`.
 
-[[log.splitting.step.by.step]]
-.Distributed Log Splitting, Step by Step
+==== WAL splitting based on procedureV2
+After HBASE-20610, we introduce a new way to do WAL splitting coordination by procedureV2 framework. This can simplify the process of WAL splitting and no need to connect zookeeper any more.
 
-After configuring distributed log splitting, the HMaster controls the process.
-The HMaster enrolls each RegionServer in the log splitting process, and the actual work of splitting the logs is done by the RegionServers.
-The general process for log splitting, as described in <<log.splitting.step.by.step>> still applies here.
+[[background]]
+.Background
+Currently, splitting WAL processes are coordinated by zookeeper. Each region server are trying to grab tasks from zookeeper. And the burden becomes heavier when the number of region server increase.
 
-. If distributed log processing is enabled, the HMaster creates a _split log manager_ instance when the cluster is started.
-  .. The split log manager manages all log files which need to be scanned and split.
-  .. The split log manager places all the logs into the ZooKeeper splitWAL node (_/hbase/splitWAL_) as tasks.
-  .. You can view the contents of the splitWAL by issuing the following `zkCli` command. Example output is shown.
-+
-[source,bash]
-----
-ls /hbase/splitWAL
-[hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost8.sample.com%2C57020%2C1340474893275-splitting%2Fhost8.sample.com%253A57020.1340474893900,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost3.sample.com%2C57020%2C1340474893299-splitting%2Fhost3.sample.com%253A57020.1340474893931,
-hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost4.sample.com%2C57020%2C1340474893287-splitting%2Fhost4.sample.com%253A57020.1340474893946]
-----
-+
-The output contains some non-ASCII characters.
-When decoded, it looks much more simple:
-+
-----
-[hdfs://host2.sample.com:56020/hbase/WALs
-/host8.sample.com,57020,1340474893275-splitting
-/host8.sample.com%3A57020.1340474893900,
-hdfs://host2.sample.com:56020/hbase/WALs
-/host3.sample.com,57020,1340474893299-splitting
-/host3.sample.com%3A57020.1340474893931,
-hdfs://host2.sample.com:56020/hbase/WALs
-/host4.sample.com,57020,1340474893287-splitting
-/host4.sample.com%3A57020.1340474893946]
-----
-+
-The listing represents WAL file names to be scanned and split, which is a list of log splitting tasks.
+[[implementation.on.master.side]]
+.Implementation on Master side
+During ServerCrashProcedure, SplitWALManager will create one SplitWALProcedure for each WAL file which should be split. Then each SplitWALProcedure will spawn a SplitWalRemoteProcedure to send the request to region server.
+SplitWALProcedure is a StateMachineProcedure and here is the state transfer diagram.
 
-. The split log manager monitors the log-splitting tasks and workers.
-+
-The split log manager is responsible for the following ongoing tasks:
-+
-* Once the split log manager publishes all the tasks to the splitWAL znode, it monitors these task nodes and waits for them to be processed.
-* Checks to see if there are any dead split log workers queued up.
-  If it finds tasks claimed by unresponsive workers, it will resubmit those tasks.
-  If the resubmit fails due to some ZooKeeper exception, the dead worker is queued up again for retry.
-* Checks to see if there are any unassigned tasks.
-  If it finds any, it create an ephemeral rescan node so that each split log worker is notified to re-scan unassigned tasks via the `nodeChildrenChanged` ZooKeeper event.
-* Checks for tasks which are assigned but expired.
-  If any are found, they are moved back to `TASK_UNASSIGNED` state again so that they can be retried.
-  It is possible that these tasks are assigned to slow workers, or they may already be finished.
-  This is not a problem, because log splitting tasks have the property of idempotence.
-  In other words, the same log splitting task can be processed many times without causing any problem.
-* The split log manager watches the HBase split log znodes constantly.
-  If any split log task node data is changed, the split log manager retrieves the node data.
-  The node data contains the current state of the task.
-  You can use the `zkCli` `get` command to retrieve the current state of a task.
-  In the example output below, the first line of the output shows that the task is currently unassigned.
-+
-----
-get /hbase/splitWAL/hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2FWALs%2Fhost6.sample.com%2C57020%2C1340474893287-splitting%2Fhost6.sample.com%253A57020.1340474893945
+.WAL_splitting_coordination
+image::WAL_splitting.png[]
 
-unassigned host2.sample.com:57000
-cZxid = 0×7115
-ctime = Sat Jun 23 11:13:40 PDT 2012
-...
-----
-+
-Based on the state of the task whose data is changed, the split log manager does one of the following:
-+
-* Resubmit the task if it is unassigned
-* Heartbeat the task if it is assigned
-* Resubmit or fail the task if it is resigned (see <<distributed.log.replay.failure.reasons>>)
-* Resubmit or fail the task if it is completed with errors (see <<distributed.log.replay.failure.reasons>>)
-* Resubmit or fail the task if it could not complete due to errors (see <<distributed.log.replay.failure.reasons>>)
-* Delete the task if it is successfully completed or failed
-+
-[[distributed.log.replay.failure.reasons]]
-[NOTE]
-.Reasons a Task Will Fail
-====
-* The task has been deleted.
-* The node no longer exists.
-* The log status manager failed to move the state of the task to `TASK_UNASSIGNED`.
-* The number of resubmits is over the resubmit threshold.
-====
+[[implementation.on.region.server.side]]
+.Implementation on Region Server side
+Region Server will receive a SplitWALCallable and execute it, which is much more straightforward than before. It will return null if success and return exception if there is any error.
 
-. Each RegionServer's split log worker performs the log-splitting tasks.
-+
-Each RegionServer runs a daemon thread called the _split log worker_, which does the work to split the logs.
-The daemon thread starts when the RegionServer starts, and registers itself to watch HBase znodes.
-If any splitWAL znode children change, it notifies a sleeping worker thread to wake up and grab more tasks.
-If a worker's current task's node data is changed,
-the worker checks to see if the task has been taken by another worker.
-If so, the worker thread stops work on the current task.
-+
-The worker monitors the splitWAL znode constantly.
-When a new task appears, the split log worker retrieves the task paths and checks each one until it finds an unclaimed task, which it attempts to claim.
-If the claim was successful, it attempts to perform the task and updates the task's `state` property based on the splitting outcome.
-At this point, the split log worker scans for another unclaimed task.
-+
-.How the Split Log Worker Approaches a Task
-* It queries the task state and only takes action if the task is in `TASK_UNASSIGNED `state.
-* If the task is in `TASK_UNASSIGNED` state, the worker attempts to set the state to `TASK_OWNED` by itself.
-  If it fails to set the state, another worker will try to grab it.
-  The split log manager will also ask all workers to rescan later if the task remains unassigned.
-* If the worker succeeds in taking ownership of the task, it tries to get the task state again to make sure it really gets it asynchronously.
-  In the meantime, it starts a split task executor to do the actual work:
-** Get the HBase root folder, create a temp folder under the root, and split the log file to the temp folder.
-** If the split was successful, the task executor sets the task to state `TASK_DONE`.
-** If the worker catches an unexpected IOException, the task is set to state `TASK_ERR`.
-** If the worker is shutting down, set the task to state `TASK_RESIGNED`.
-** If the task is taken by another worker, just log it.
+[[preformance]]
+.Performance
+According to tests on a cluster which has 5 regionserver and 1 master.
+procedureV2 coordinated WAL splitting has a better performance than ZK coordinated WAL splitting no master when restarting the whole cluster or one region server crashing.
 
+[[enable.this.feature]]
+.Enable this feature
+To enable this feature, first we should ensure our package of HBase already contains these code. If not, please upgrade the package of HBase cluster without any configuration change first.
+Then change configuration 'hbase.split.wal.zk.coordinated' to false. Rolling upgrade the master with new configuration. Now WAL splitting are handled by our new implementation.
+But region server are still trying to grab tasks from zookeeper, we can rolling upgrade the region servers with the new configuration to stop that.
 
-. The split log manager monitors for uncompleted tasks.
-+
-The split log manager returns when all tasks are completed successfully.
-If all tasks are completed with some failures, the split log manager throws an exception so that the log splitting can be retried.
-Due to an asynchronous implementation, in very rare cases, the split log manager loses track of some completed tasks.
-For that reason, it periodically checks for remaining uncompleted task in its task map or ZooKeeper.
-If none are found, it throws an exception so that the log splitting can be retried right away instead of hanging there waiting for something that won't happen.
+* steps as follows:
+** Upgrade whole cluster to get the new Implementation.
+** Upgrade Master with new configuration 'hbase.split.wal.zk.coordinated'=false.
+** Upgrade region server to stop grab tasks from zookeeper.
 
 [[wal.compression]]
 ==== WAL Compression ====
@@ -1710,6 +1697,9 @@ For example, to view the content of the file _hdfs://10.81.47.41:8020/hbase/defa
 ----
 If you leave off the option -v to see just a summary on the HFile.
 See usage for other things to do with the `hfile` tool.
+
+NOTE: In the output of this tool, you might see 'seqid=0' for certain keys in places such as 'Mid-key'/'firstKey'/'lastKey'. These are
+ 'KeyOnlyKeyValue' type instances - meaning their seqid is irrelevant & we just need the keys of these Key-Value instances.
 
 [[store.file.dir]]
 ===== StoreFile Directory Structure on HDFS
@@ -2469,12 +2459,6 @@ The most straightforward method is to either use the `TableOutputFormat` class f
 The bulk load feature uses a MapReduce job to output table data in HBase's internal data format, and then directly loads the generated StoreFiles into a running cluster.
 Using bulk load will use less CPU and network resources than simply using the HBase API.
 
-[[arch.bulk.load.limitations]]
-=== Bulk Load Limitations
-
-As bulk loading bypasses the write path, the WAL doesn't get written to as part of the process.
-Replication works by reading the WAL files so it won't see the bulk loaded data – and the same goes for the edits that use `Put.setDurability(SKIP_WAL)`. One way to handle that is to ship the raw files or the HFiles to the other cluster and do the other processing there.
-
 [[arch.bulk.load.arch]]
 === Bulk Load Architecture
 
@@ -2526,6 +2510,32 @@ To get started doing so, dig into `ImportTsv.java` and check the JavaDoc for HFi
 
 The import step of the bulk load can also be done programmatically.
 See the `LoadIncrementalHFiles` class for more information.
+
+[[arch.bulk.load.replication]]
+=== Bulk Loading Replication
+HBASE-13153 adds replication support for bulk loaded HFiles, available since HBase 1.3/2.0. This feature is enabled by setting `hbase.replication.bulkload.enabled` to `true` (default is `false`).
+You also need to copy the source cluster configuration files to the destination cluster.
+
+Additional configurations are required too:
+
+. `hbase.replication.source.fs.conf.provider`
++
+This defines the class which loads the source cluster file system client configuration in the destination cluster. This should be configured for all the RS in the destination cluster. Default is `org.apache.hadoop.hbase.replication.regionserver.DefaultSourceFSConfigurationProvider`.
++
+. `hbase.replication.conf.dir`
++
+This represents the base directory where the file system client configurations of the source cluster are copied to the destination cluster. This should be configured for all the RS in the destination cluster. Default is `$HBASE_CONF_DIR`.
++
+. `hbase.replication.cluster.id`
++
+This configuration is required in the cluster where replication for bulk loaded data is enabled. A source cluster is uniquely identified by the destination cluster using this id. This should be configured for all the RS in the source cluster configuration file for all the RS.
++
+
+
+
+For example: If source cluster FS client configurations are copied to the destination cluster under directory `/home/user/dc1/`, then `hbase.replication.cluster.id` should be configured as `dc1` and `hbase.replication.conf.dir` as `/home/user`.
+
+NOTE: `DefaultSourceFSConfigurationProvider` supports only `xml` type files. It loads source cluster FS client configuration only once, so if source cluster FS client configuration files are updated, every peer(s) cluster RS must be restarted to reload the configuration.
 
 [[arch.hdfs]]
 == HDFS
