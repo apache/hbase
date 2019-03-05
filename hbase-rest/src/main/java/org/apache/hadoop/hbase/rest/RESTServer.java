@@ -103,6 +103,9 @@ public class RESTServer implements Constants {
     "hbase.rest-csrf.browser-useragents-regex";
 
   // HACK, making this static for AuthFilter to get at our configuration. Necessary for unit tests.
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value={"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"},
+    justification="For testing")
   public static Configuration conf = null;
   private final UserProvider userProvider;
   private Server server;
