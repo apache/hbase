@@ -377,6 +377,12 @@
        <artifactId>findbugs-annotations</artifactId>
        <optional>true</optional>
     </dependency>
+    <!--Test-->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
