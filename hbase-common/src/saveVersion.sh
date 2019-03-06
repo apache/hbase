@@ -45,7 +45,7 @@ else
   revision="Unknown"
   url="file://$cwd"
 fi
-if [ -z $revision ]
+if [ -z $revision ]; then
   echo "$revision is empty!"
   exit 1
 fi
