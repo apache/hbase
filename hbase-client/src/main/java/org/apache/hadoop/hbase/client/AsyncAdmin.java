@@ -219,7 +219,9 @@ public interface AsyncAdmin {
    * {@link CompletableFuture}.
    * @param tableName name of table to check
    * @param splitKeys keys to check if the table has been created with all split keys
+   * @deprecated Since 2.2.0. Will be removed in 3.0.0. Use {@link #isTableAvailable(TableName)}
    */
+  @Deprecated
   CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys);
 
   /**
