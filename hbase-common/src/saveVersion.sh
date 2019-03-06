@@ -18,6 +18,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
+set -e
+
 unset LANG
 unset LC_CTYPE
 
@@ -49,10 +52,8 @@ if [ -z $revision ]; then
   echo "$revision is empty!"
   exit 1
 fi
-which md5sum > /dev/null
-if [ "$?" != "0" ] ; then
-  which md5 > /dev/null
-  if [ "$?" != "0" ] ; then
+if ! [  -x "$(command -v md5sum)" ]; then
+  if ! [ -x "$(command -v md5)" ]; then
     srcChecksum="Unknown"
   else
     srcChecksum=`find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs md5 | md5 | cut -d ' ' -f 1`
