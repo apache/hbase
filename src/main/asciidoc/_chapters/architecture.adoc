@@ -733,6 +733,8 @@ See configurations, sizings, current usage, time-in-the-cache, and even detail o
 
 `LruBlockCache` is the original implementation, and is entirely within the Java heap.
 `BucketCache` is optional and mainly intended for keeping block cache data off-heap, although `BucketCache` can also be a file-backed cache.
+ In file-backed we can either use it in the file mode or the mmaped mode.
+ We also have pmem mode where the bucket cache resides on the persistent memory device.
 
 When you enable BucketCache, you are enabling a two tier caching system. We used to describe the
 tiers as "L1" and "L2" but have deprecated this terminology as of hbase-2.0.0. The "L1" cache referred to an
