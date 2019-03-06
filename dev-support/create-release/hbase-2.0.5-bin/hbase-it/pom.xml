@@ -1,0 +1,449 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase-build-configuration</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.5</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
+
+  <artifactId>hbase-it</artifactId>
+  <name>Apache HBase - Integration Tests</name>
+  <description>Integration and System tests for HBase</description>
+
+  <properties>
+    <!-- Test inclusion patterns used by failsafe configuration -->
+    <unittest.include>**/Test*.java</unittest.include>
+    <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
+    <!-- To Run Tests with a particular Xmx Value use -Dfailsafe.Xmx=XXXg -->
+    <failsafe.Xmx>4g</failsafe.Xmx>
+    <!-- To run a single integration test, use -Dit.test=IntegrationTestXXX -->
+  </properties>
+
+  <build>
+    <testResources>
+      <testResource>
+         <!-- We depend on hbase-server test resources -->
+        <directory>../hbase-server/src/test/resources</directory>
+        <excludes>
+          <exclude>META-INF/NOTICE</exclude>
+          <exclude>META-INF/LICENSE</exclude>
+        </excludes>
+      </testResource>
+    </testResources>
+    <pluginManagement>
+      <plugins>
+        <!-- Make a jar and put the sources in the jar -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+        </plugin>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${surefire.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.surefire</groupId>
+              <artifactId>surefire-junit4</artifactId>
+              <version>${surefire.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <includes>
+              <include>${integrationtest.include}</include>
+            </includes>
+            <excludes>
+              <exclude>${unittest.include}</exclude>
+              <exclude>**/*$*</exclude>
+            </excludes>
+            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
+            <environmentVariables>
+              <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
+              <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
+              <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
+            </environmentVariables>
+            <failIfNoTests>false</failIfNoTests>
+            <testFailureIgnore>false</testFailureIgnore>
+          </configuration>
+          <executions>
+            <execution>
+              <id>integration-test</id>
+              <phase>integration-test</phase>
+              <goals>
+                <goal>integration-test</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>verify</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <!--This plugin's configuration is used to store Eclipse m2e settings
+             only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.8,)</versionRange>
+                    <goals>
+                      <goal>build-classpath</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!--  Run integration tests with mvn verify -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <skip>false</skip>
+            <forkMode>always</forkMode>
+            <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
+                 I believe it is a failsafe bug, we may consider using surefire -->
+            <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+            <argLine>-enableassertions -Xmx${failsafe.Xmx}
+                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
+                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
+          </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+	<!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol-shaded</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-rsgroup</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-rsgroup</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-client</artifactId>
+    </dependency>
+    <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>${netty.hadoop.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!--For Hadoop-->
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipIntegrationTests</id>
+      <activation>
+        <property>
+          <name>skipIntegrationTests</name>
+        </property>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
+
+
+    <!-- profile for building against Hadoop 2.x.  This is the default -->
+    <profile>
+      <id>hadoop-2.0</id>
+      <activation>
+        <property>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h2--><name>!hadoop.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
+                  the required classpath that is required in the env
+                  of the launch container in the mini mr/yarn cluster
+                  -->
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      profile for building against Hadoop 3.0.x. Activate using:
+       mvn -Dhadoop.profile=3.0
+    -->
+    <profile>
+      <id>hadoop-3.0</id>
+      <activation>
+        <property>
+          <name>hadoop.profile</name>
+          <value>3.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
+      </properties>
+      <dependencies>
+	    <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
+                  the required classpath that is required in the env
+                  of the launch container in the mini mr/yarn cluster
+                  -->
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <reporting>
+    <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-surefire-report-plugin</artifactId>
+      <version>${surefire.version}</version>
+      <reportSets>
+        <reportSet>
+          <id>integration-tests</id>
+          <reports>
+            <report>report-only</report>
+          </reports>
+          <configuration>
+            <outputName>failsafe-report</outputName>
+            <reportsDirectories>
+              <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
+            </reportsDirectories>
+          </configuration>
+        </reportSet>
+      </reportSets>
+    </plugin>
+  </plugins>
+  </reporting>
+
+</project>

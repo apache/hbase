@@ -1,0 +1,267 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
+    /**
+     * Licensed to the Apache Software Foundation (ASF) under one
+     * or more contributor license agreements.  See the NOTICE file
+     * distributed with this work for additional information
+     * regarding copyright ownership.  The ASF licenses this file
+     * to you under the Apache License, Version 2.0 (the
+     * "License"); you may not use this file except in compliance
+     * with the License.  You may obtain a copy of the License at
+     *
+     *     http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    -->
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase-build-configuration</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.5</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
+  <artifactId>hbase-protocol-shaded</artifactId>
+  <name>Apache HBase - Shaded Protocol</name>
+  <description>Shaded protobuf protocol classes used by HBase internally.</description>
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!--Version of protobuf that hbase uses internally (we shade our pb)
+         Must match what is out in hbase-thirdparty include.
+         3.5.1-1 is the same as 3.5.1 except includes corrected binaries for el6
+         to work around https://github.com/google/protobuf/issues/4109
+           -->
+    <internal.protobuf.version>3.5.1-1</internal.protobuf.version>
+  </properties>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/</directory>
+        <includes>
+          <include>**/*.proto</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+		  </plugin>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <!-- Always skip the second part executions, since we only run simple unit tests in this module -->
+        <executions>
+          <execution>
+            <id>secondPartTestsExecution</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <attachProtoSources>false</attachProtoSources>
+              <checkStaleness>true</checkStaleness>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--Need this old plugin to replace in generated files instances
+           of com.google.protobuf so instead its o.a.h.h.com.google.protobuf.
+           Plugin is old and in google code archive. Here is usage done by
+           anohther: https://github.com/beiliubei/maven-replacer-plugin/wiki/Usage-Guide
+           The mess with the regex in the below is to prevent replacement every time
+           we run mvn install. There is probably a better way of avoiding the
+           double interpolation but this is it for now.
+        -->
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+                <include>**/*.java</include>
+            </includes>
+            <replacements>
+              <replacement>
+                <token>([^\.])com.google.protobuf</token>
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+              </replacement>
+            </replacements>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <minimizeJar>true</minimizeJar>
+              <shadeSourcesContent>true</shadeSourcesContent>
+              <!-- Causes an NPE until shade 3.0.1.  See MSHADE-247
+              <createSourcesJar>true</createSourcesJar>
+              -->
+              <relocations>
+                <relocation>
+                  <pattern>com.google.protobuf</pattern>
+                  <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
+                </relocation>
+              </relocations>
+              <artifactSet>
+                <excludes>
+                  <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
+                    -->
+                  <exclude>org.apache.hbase.thirdparty:*</exclude>
+                  <exclude>com.google.protobuf:protobuf-java</exclude>
+                  <exclude>com.google.code.findbugs:*</exclude>
+                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
+                  <exclude>com.google.j2objc:j2objc-annotations</exclude>
+                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
+                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
+                  <exclude>junit:junit</exclude>
+                  <exclude>log4j:log4j</exclude>
+                  <exclude>commons-logging:commons-logging</exclude>
+                  <exclude>org.slf4j:slf4j-api</exclude>
+                  <exclude>org.apache.yetus:audience-annotations</exclude>
+                  <exclude>com.github.stephenc.fingbugs:*</exclude>
+                  <exclude></exclude>
+                </excludes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-maven-plugins</artifactId>
+                    <versionRange>[2.0.5-alpha,)</versionRange>
+                    <goals>
+                      <goal>protoc</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore/>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>
+                      com.google.code.maven-replacer-plugin
+                    </groupId>
+                    <artifactId>replacer</artifactId>
+                    <versionRange>[1.5.3,)</versionRange>
+                    <goals>
+                      <goal>replace</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                     <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <dependencies>
+    <!--BE CAREFUL! Any dependency added here needs to be
+          excluded above in the shade plugin else the dependency
+          will get bundled-->
+    <!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-protobuf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+    </dependency>
+  </dependencies>
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skip-protocol-shaded-tests</id>
+      <activation>
+        <property>
+          <name>skip-protocol-shaded-tests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+  </profiles>
+</project>

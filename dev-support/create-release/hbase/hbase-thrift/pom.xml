@@ -1,0 +1,601 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase-build-configuration</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.5</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
+  <artifactId>hbase-thrift</artifactId>
+  <name>Apache HBase - Thrift</name>
+  <description>HBase Thrift Server</description>
+
+  <build>
+    <!-- Makes sure the resources get added before they are processed
+  by placing this first -->
+    <resources>
+      <!-- Add the build webabpps to the classpth -->
+      <resource>
+        <directory>${project.build.directory}</directory>
+        <includes>
+          <include>hbase-webapps/**</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>**/*.thrift</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources/META-INF/</directory>
+        <targetPath>META-INF/</targetPath>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+        <filtering>true</filtering>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+
+    <plugins>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- General ant tasks, bound to different build phases -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate web app sources -->
+          <execution>
+            <id>generate</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
+                <property name="src.webapps"
+                          location="${basedir}/src/main/resources/hbase-webapps"/>
+                <property name="generated.sources"
+                          location="${project.build.directory}/generated-sources"/>
+                <mkdir dir="${build.webapps}"/>
+                <copy todir="${build.webapps}">
+                  <fileset dir="${src.webapps}">
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
+                  </fileset>
+                </copy>
+                <!--The compile.classpath is passed in by maven -->
+                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler"
+                         classpathref="maven.compile.classpath"/>
+                <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java"
+                             package="org.apache.hadoop.hbase.generated.thrift"
+                             webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <!-- Add the generated sources -->
+          <execution>
+            <id>jspcSource-packageInfo-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings
+             only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <versionRange>[1.6,)</versionRange>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.8,)</versionRange>
+                    <goals>
+                      <goal>build-classpath</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <dependencies>
+    <!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+    </dependency>
+    <dependency>
+      <!--Ant task needs this-->
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-jsp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+    </dependency>
+    <dependency>
+      <!--For JspC used in ant task-->
+      <groupId>org.glassfish.web</groupId>
+      <artifactId>javax.servlet.jsp</artifactId>
+    </dependency>
+    <!-- Specifically needed for jetty-jsp, included
+         to bypass version scanning that hits a bad repo
+         see HBASE-18831 -->
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.el</artifactId>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!-- Needs to make the profile in apache parent pom -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>license-javadocs</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>src/main/javadoc/META-INF/</directory>
+                      <targetPath>META-INF/</targetPath>
+                      <includes>
+                        <include>LICENSE</include>
+                        <include>NOTICE</include>
+                      </includes>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipThriftTests</id>
+      <activation>
+        <property>
+          <name>skipThriftTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+
+    <!--
+      Profile for regenerating the thrift java classes.
+      The generated files are to be committed to version control.
+      Activate using:
+       mvn compile -Pcompile-thrift
+    -->
+    <profile>
+      <id>compile-thrift</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>enforce-thrift-version</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>thrift.version</property>
+                      <message>"The Thrift version must be specified."</message>
+                      <regex>0\.12\.0</regex>
+                      <regexMessage>
+-
+-
+[FATAL] ==========================================================================================
+[FATAL] HBase Thrift requires the thrift generator version 0.12.0.
+[FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
+[FATAL] ==========================================================================================
+-
+-
+                      </regexMessage>
+                    </requireProperty>
+                  </rules>
+                  <fail>true</fail>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${exec.maven.version}</version>
+            <executions>
+              <execution>
+                <id>check-thrift-version</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>sh</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-c</argument>
+                    <argument>${thrift.path} -version | \
+                      fgrep 'Thrift version ${thrift.version}' &amp;&amp; exit 0;
+                      echo "========== [FATAL] Need Thrift version ${thrift.version} ==========";
+                      exit 1</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>thrift</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${thrift.path}</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-strict</argument>
+                    <argument>--gen</argument>
+                    <argument>java</argument>
+                    <argument>-out</argument>
+                    <argument>${basedir}/src/main/java</argument>
+                    <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>thrift2</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${thrift.path}</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-strict</argument>
+                    <argument>--gen</argument>
+                    <argument>java</argument>
+                    <argument>-out</argument>
+                    <argument>${basedir}/src/main/java</argument>
+                    <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- profile against Hadoop 2.x: This is the default -->
+    <profile>
+      <id>hadoop-2.0</id>
+      <activation>
+        <property>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
+          <name>!hadoop.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.zookeeper</groupId>
+              <artifactId>zookeeper</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
+                  the required classpath that is required in the env
+                  of the launch container in the mini mr/yarn cluster
+                  -->
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
+                  </outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      profile for building against Hadoop 3.0.x. Activate using:
+       mvn -Dhadoop.profile=3.0
+    -->
+    <profile>
+      <id>hadoop-3.0</id>
+      <activation>
+        <property>
+          <name>hadoop.profile</name>
+          <value>3.0</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-mrapp-generated-classpath</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <!-- needed to run the unit test for DS to generate
+                  the required classpath that is required in the env
+                  of the launch container in the mini mr/yarn cluster
+                  -->
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
+                  </outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+   http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License. See accompanying LICENSE file.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.5</version>
+    <relativePath>../..</relativePath>
+  </parent>
+  <artifactId>hbase-shaded-check-invariants</artifactId>
+  <packaging>pom</packaging>
+
+  <description>
+  Enforces our invariants for our shaded artifacts. e.g. shaded clients have
+  a specific set of transitive dependencies and shaded clients only contain
+  classes that are in particular packages. Does the enforcement through
+  the maven-enforcer-plugin and and integration test.
+  </description>
+  <name>Apache HBase Shaded Packaging Invariants</name>
+
+  <properties>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-mapreduce</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!-- parent pom defines these for children. :( :( :( -->
+    <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>extra-enforcer-rules</artifactId>
+            <version>1.0-beta-6</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>enforce-banned-dependencies</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <skip>true</skip>
+              <rules>
+                <banTransitiveDependencies>
+<!--
+                  <message>
+    Our client-facing artifacts are not supposed to have additional dependencies
+    and one or more of them do. The output from the enforcer plugin should give
+    specifics.
+                  </message>
+-->
+                  <excludes>
+                    <!-- We leave logging stuff alone -->
+                    <exclude>org.slf4j:*</exclude>
+                    <exclude>log4j:*</exclude>
+                    <exclude>commons-logging:*</exclude>
+                    <!-- annotations that never change -->
+                    <exclude>com.google.code.findbugs:*</exclude>
+                    <exclude>com.github.stephenc.findbugs:*</exclude>
+                    <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
+                    <exclude>org.apache.htrace:*</exclude>
+                  </excludes>
+                </banTransitiveDependencies>
+                <banDuplicateClasses>
+                  <findAllDuplicates>true</findAllDuplicates>
+                </banDuplicateClasses>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>test-resources</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>testResources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- create a maven pom property that has all of our dependencies.
+             below in the integration-test phase we'll pass this list
+             of paths to our jar checker script.
+          -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>put-client-artifacts-in-a-property</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <excludeScope>provided</excludeScope>
+              <excludeTransitive>true</excludeTransitive>
+              <outputProperty>hbase-client-artifacts</outputProperty>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Check that we actually relocated everything we included.
+        It's critical that we don't ship third party dependencies that haven't
+        been relocated under our pacakge space, since this will lead to
+        difficult to debug classpath errors for downstream. Unfortunately, that
+        means inspecting all the jars.
+        -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>check-jar-contents</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${shell-executable}</executable>
+              <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
+              <requiresOnline>false</requiresOnline>
+              <arguments>
+                <argument>ensure-jars-have-correct-contents.sh</argument>
+                <argument>${hbase-client-artifacts}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
