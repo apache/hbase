@@ -383,15 +383,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity);
     } else if (ioEngineName.startsWith("mmap:")) {
-      return new ExclusiveMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
-    } else if (ioEngineName.startsWith("pmem:")) {
-      // This mode of bucket cache creates an IOEngine over a file on the persistent memory
-      // device. Since the persistent memory device has its own address space the contents
-      // mapped to this address space does not get swapped out like in the case of mmapping
-      // on to DRAM. Hence the cells created out of the hfile blocks in the pmem bucket cache
-      // can be directly referred to without having to copy them onheap. Once the RPC is done,
-      // the blocks can be returned back as in case of ByteBufferIOEngine.
-      return new SharedMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
+      return new FileMmapEngine(ioEngineName.substring(5), capacity);
     } else {
       throw new IllegalArgumentException(
           "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
