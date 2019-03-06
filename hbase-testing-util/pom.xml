@@ -23,7 +23,7 @@
     <parent>
         <artifactId>hbase-build-configuration</artifactId>
         <groupId>org.apache.hbase</groupId>
-        <version>2.0.6-SNAPSHOT</version>
+        <version>2.0.5</version>
         <relativePath>../hbase-build-configuration</relativePath>
     </parent>
     <artifactId>hbase-testing-util</artifactId>
