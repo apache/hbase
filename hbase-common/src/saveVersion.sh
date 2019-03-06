@@ -45,6 +45,10 @@ else
   revision="Unknown"
   url="file://$cwd"
 fi
+if [ -z $revision ]
+  echo "$revision is empty!"
+  exit 1
+fi
 which md5sum > /dev/null
 if [ "$?" != "0" ] ; then
   which md5 > /dev/null
