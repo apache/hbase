@@ -175,7 +175,6 @@ public class TestAdmin extends TestAdminBase {
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
     RegionInfo hri;
-    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(table)) {
       regions = l.getAllRegionLocations();
 
@@ -216,7 +215,7 @@ public class TestAdmin extends TestAdminBase {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
     // Now test using start/end with a number of regions
@@ -273,7 +272,7 @@ public class TestAdmin extends TestAdminBase {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -294,7 +293,7 @@ public class TestAdmin extends TestAdminBase {
         expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
     // Try an invalid case where there are duplicate split keys

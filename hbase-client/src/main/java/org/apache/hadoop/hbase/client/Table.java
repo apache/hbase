@@ -27,14 +27,15 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,23 +66,6 @@ public interface Table extends Closeable {
    * affect this instance.
    */
   Configuration getConfiguration();
-
-  /**
-   * Gets the {@link org.apache.hadoop.hbase.HTableDescriptor table descriptor} for this table.
-   * @throws java.io.IOException if a remote or network exception occurs.
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getDescriptor()}
-   */
-  @Deprecated
-  default HTableDescriptor getTableDescriptor() throws IOException {
-    TableDescriptor descriptor = getDescriptor();
-
-    if (descriptor instanceof HTableDescriptor) {
-      return (HTableDescriptor)descriptor;
-    } else {
-      return new HTableDescriptor(descriptor);
-    }
-  }
 
   /**
    * Gets the {@link org.apache.hadoop.hbase.client.TableDescriptor table descriptor} for this table.
@@ -132,24 +116,6 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Test for the existence of columns in the table, as specified by the Gets.
-   * This will return an array of booleans. Each value will be true if the related Get matches
-   * one or more keys, false if not.
-   * This is a server-side call so it prevents any data from being transferred to
-   * the client.
-   *
-   * @param gets the Gets
-   * @return Array of boolean.  True if the specified Get matches one or more keys, false if not.
-   * @throws IOException e
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #exists(List)}
-   */
-  @Deprecated
-  default boolean[] existsAll(List<Get> gets) throws IOException {
-    return exists(gets);
-  }
-
-  /**
    * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends, RowMutations.
    * The ordering of execution of the actions is not defined. Meaning if you do a Put and a
    * Get in the same {@link #batch} call, you will not necessarily be
@@ -171,10 +137,15 @@ public interface Table extends Closeable {
   /**
    * Same as {@link #batch(List, Object[])}, but with a callback.
    * @since 0.96.0
+   * @deprecated since 3.0.0, will removed in 4.0.0. Please use the batch related methods in
+   *             {@link AsyncTable} directly if you want to use callback. We reuse the callback for
+   *             coprocessor here, and the problem is that for batch operation, the
+   *             {@link AsyncTable} does not tell us the region, so in this method we need an extra
+   *             locating after we get the result, which is not good.
    */
-  default <R> void batchCallback(
-    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
-      throws IOException, InterruptedException {
+  @Deprecated
+  default <R> void batchCallback(final List<? extends Row> actions, final Object[] results,
+      final Batch.Callback<R> callback) throws IOException, InterruptedException {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -285,55 +256,6 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the put.  If the passed value is null, the check
-   * is for the lack of column (ie: non-existance)
-   *
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param value the expected value
-   * @param put data to put if check succeeds
-   * @throws IOException e
-   * @return true if the new put was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
-   */
-  @Deprecated
-  default boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put)
-      throws IOException {
-    return checkAndPut(row, family, qualifier, CompareOperator.EQUAL, value, put);
-  }
-
-  /**
-   * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the put.  If the passed value is null, the check
-   * is for the lack of column (ie: non-existence)
-   *
-   * The expected value argument of this call is on the left and the current
-   * value of the cell is on the right side of the comparison operator.
-   *
-   * Ie. eg. GREATER operator means expected value > existing <=> add the put.
-   *
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op comparison operator to use
-   * @param value the expected value
-   * @param put data to put if check succeeds
-   * @throws IOException e
-   * @return true if the new put was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
-   */
-  @Deprecated
-  default boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
-      byte[] value, Put put) throws IOException {
-    RowMutations mutations = new RowMutations(put.getRow(), 1);
-    mutations.add(put);
-
-    return checkAndMutate(row, family, qualifier, op, value, mutations);
-  }
-
-  /**
    * Deletes the specified cells/row.
    *
    * @param delete The object that specifies what to delete.
@@ -369,55 +291,6 @@ public interface Table extends Closeable {
    */
   default void delete(List<Delete> deletes) throws IOException {
     throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the delete.  If the passed value is null, the
-   * check is for the lack of column (ie: non-existance)
-   *
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param value the expected value
-   * @param delete data to delete if check succeeds
-   * @throws IOException e
-   * @return true if the new delete was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
-   */
-  @Deprecated
-  default boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-    byte[] value, Delete delete) throws IOException {
-    return checkAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, delete);
-  }
-
-  /**
-   * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the delete.  If the passed value is null, the
-   * check is for the lack of column (ie: non-existence)
-   *
-   * The expected value argument of this call is on the left and the current
-   * value of the cell is on the right side of the comparison operator.
-   *
-   * Ie. eg. GREATER operator means expected value > existing <=> add the delete.
-   *
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op comparison operator to use
-   * @param value the expected value
-   * @param delete data to delete if check succeeds
-   * @throws IOException e
-   * @return true if the new delete was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
-   */
-  @Deprecated
-  default boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                         CompareOperator op, byte[] value, Delete delete) throws IOException {
-    RowMutations mutations = new RowMutations(delete.getRow(), 1);
-    mutations.add(delete);
-
-    return checkAndMutate(row, family, qualifier, op, value, mutations);
   }
 
   /**
@@ -587,32 +460,35 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the
-   * table region containing the specified row.  The row given does not actually have
-   * to exist.  Whichever region would contain the row based on start and end keys will
-   * be used.  Note that the {@code row} parameter is also not passed to the
-   * coprocessor handler registered for this protocol, unless the {@code row}
-   * is separately passed as an argument in the service request.  The parameter
-   * here is only used to locate the region used to handle the call.
-   *
+   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the table
+   * region containing the specified row. The row given does not actually have to exist. Whichever
+   * region would contain the row based on start and end keys will be used. Note that the
+   * {@code row} parameter is also not passed to the coprocessor handler registered for this
+   * protocol, unless the {@code row} is separately passed as an argument in the service request.
+   * The parameter here is only used to locate the region used to handle the call.
    * <p>
    * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
    * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
    * </p>
+   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
    *
-   * <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * <pre>
    * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
+   * </pre>
    *
+   * </blockquote></div>
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
+   * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
+   *             more. Use the coprocessorService methods in {@link AsyncTable} instead.
+   * @see Connection#toAsyncConnection()
    */
+  @Deprecated
   default CoprocessorRpcChannel coprocessorService(byte[] row) {
     throw new NotImplementedException("Add an implementation!");
   }
@@ -622,25 +498,41 @@ public interface Table extends Closeable {
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
    * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * with each {@link com.google.protobuf.Service} instance.
-   *
    * @param service the protocol buffer {@code Service} implementation to call
-   * @param startKey start region selection with region containing this row.  If {@code null}, the
-   *   selection will start with the first table region.
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
    * @param endKey select regions up to and including the region containing this row. If
-   *   {@code null}, selection will continue through the last table region.
+   *          {@code null}, selection will continue through the last table region.
    * @param callable this instance's
-   *   {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
-   *   method will be invoked once per table region, using the {@link com.google.protobuf.Service}
-   *   instance connected to that region.
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method will be
+   *          invoked once per table region, using the {@link com.google.protobuf.Service} instance
+   *          connected to that region.
    * @param <T> the {@link com.google.protobuf.Service} subclass to connect to
-   * @param <R> Return type for the {@code callable} parameter's {@link
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
+   * @param <R> Return type for the {@code callable} parameter's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * @return a map of result values keyed by region name
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
-  default <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
-    byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
-    throws ServiceException, Throwable {
-    throw new NotImplementedException("Add an implementation!");
+  @Deprecated
+  default <T extends Service, R> Map<byte[], R> coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
+      throws ServiceException, Throwable {
+    Map<byte[], R> results =
+      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+    coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
+      @Override
+      public void update(byte[] region, byte[] row, R value) {
+        if (region != null) {
+          results.put(region, value);
+        }
+      }
+    });
+    return results;
   }
 
   /**
@@ -648,112 +540,108 @@ public interface Table extends Closeable {
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
    * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * with each {@link Service} instance.
-   *
-   * <p> The given
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
-   * method will be called with the return value from each region's
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation. </p>
-   *
-   * @param service the protocol buffer {@code Service} implementation to call
-   * @param startKey start region selection with region containing this row.  If {@code null}, the
-   *   selection will start with the first table region.
-   * @param endKey select regions up to and including the region containing this row. If
-   *   {@code null}, selection will continue through the last table region.
-   * @param callable this instance's
-   *   {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
-   *   method will be invoked once per table region, using the {@link Service} instance connected to
-   *   that region.
-   * @param <T> the {@link Service} subclass to connect to
-   * @param <R> Return type for the {@code callable} parameter's {@link
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
-   */
-  default <T extends Service, R> void coprocessorService(final Class<T> service,
-    byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
-    final Batch.Callback<R> callback) throws ServiceException, Throwable {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
-   * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters.
-   *
-   * @param methodDescriptor
-   *          the descriptor for the protobuf service method to call.
-   * @param request
-   *          the method call parameters
-   * @param startKey
-   *          start region selection with region containing this row. If {@code null}, the
-   *          selection will start with the first table region.
-   * @param endKey
-   *          select regions up to and including the region containing this row. If {@code null},
-   *          selection will continue through the last table region.
-   * @param responsePrototype
-   *          the proto type of the response of the method in Service.
-   * @param <R>
-   *          the response type for the coprocessor Service method
-   * @return a map of result values keyed by region name
-   */
-  default <R extends Message> Map<byte[], R> batchCoprocessorService(
-    Descriptors.MethodDescriptor methodDescriptor, Message request,
-    byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
-   * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters.
-   *
    * <p>
    * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
-   * method will be called with the return value from each region's invocation.
+   * method will be called with the return value from each region's
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation.
    * </p>
-   *
-   * @param methodDescriptor the descriptor for the protobuf service method to call.
-   * @param request the method call parameters
-   * @param startKey start region selection with region containing this row.
-   *   If {@code null}, the selection will start with the first table region.
-   * @param endKey select regions up to and including the region containing this row.
-   *   If {@code null}, selection will continue through the last table region.
-   * @param responsePrototype the proto type of the response of the method in Service.
-   * @param callback callback to invoke with the response for each region
-   * @param <R>
-   *          the response type for the coprocessor Service method
+   * @param service the protocol buffer {@code Service} implementation to call
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
+   * @param callable this instance's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method will be
+   *          invoked once per table region, using the {@link Service} instance connected to that
+   *          region.
+   * @param <T> the {@link Service} subclass to connect to
+   * @param <R> Return type for the {@code callable} parameter's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
-  default <R extends Message> void batchCoprocessorService(
-      Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
-      byte[] endKey, R responsePrototype, Batch.Callback<R> callback)
+  @Deprecated
+  default <T extends Service, R> void coprocessorService(final Class<T> service, byte[] startKey,
+      byte[] endKey, final Batch.Call<T, R> callable, final Batch.Callback<R> callback)
       throws ServiceException, Throwable {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
-   * Atomically checks if a row/family/qualifier value matches the expected value.
-   * If it does, it performs the row mutations.  If the passed value is null, the check
-   * is for the lack of column (ie: non-existence)
-   *
-   * The expected value argument of this call is on the left and the current
-   * value of the cell is on the right side of the comparison operator.
-   *
-   * Ie. eg. GREATER operator means expected value > existing <=> perform row mutations.
-   *
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op the comparison operator
-   * @param value the expected value
-   * @param mutation  mutations to perform if check succeeds
-   * @throws IOException e
-   * @return true if the new put was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
+   * the invocations to the same region server will be batched into one call. The coprocessor
+   * service is invoked according to the service instance, method name and parameters.
+   * @param methodDescriptor the descriptor for the protobuf service method to call.
+   * @param request the method call parameters
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
+   * @param responsePrototype the proto type of the response of the method in Service.
+   * @param <R> the response type for the coprocessor Service method
+   * @return a map of result values keyed by region name
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
   @Deprecated
-  default boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
-                         byte[] value, RowMutations mutation) throws IOException {
+  default <R extends Message> Map<byte[], R> batchCoprocessorService(
+      Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
+      byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+    final Map<byte[], R> results =
+      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+    batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
+      new Callback<R>() {
+        @Override
+        public void update(byte[] region, byte[] row, R result) {
+          if (region != null) {
+            results.put(region, result);
+          }
+        }
+      });
+    return results;
+  }
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
+   * the invocations to the same region server will be batched into one call. The coprocessor
+   * service is invoked according to the service instance, method name and parameters.
+   * <p>
+   * The given
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
+   * method will be called with the return value from each region's invocation.
+   * </p>
+   * @param methodDescriptor the descriptor for the protobuf service method to call.
+   * @param request the method call parameters
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
+   * @param responsePrototype the proto type of the response of the method in Service.
+   * @param callback callback to invoke with the response for each region
+   * @param <R> the response type for the coprocessor Service method
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
+   */
+  @Deprecated
+  default <R extends Message> void batchCoprocessorService(
+      Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
+      byte[] endKey, R responsePrototype, Batch.Callback<R> callback)
+      throws ServiceException, Throwable {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -770,65 +658,11 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Get timeout (millisecond) of each rpc request in this Table instance.
-   *
-   * @return Currently configured read timeout
-   * @deprecated use {@link #getReadRpcTimeout(TimeUnit)} or
-   *             {@link #getWriteRpcTimeout(TimeUnit)} instead
-   */
-  @Deprecated
-  default int getRpcTimeout() {
-    return (int)getRpcTimeout(TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Set timeout (millisecond) of each rpc request in operations of this Table instance, will
-   * override the value of hbase.rpc.timeout in configuration.
-   * If a rpc request waiting too long, it will stop waiting and send a new request to retry until
-   * retries exhausted or operation timeout reached.
-   * <p>
-   * NOTE: This will set both the read and write timeout settings to the provided value.
-   *
-   * @param rpcTimeout the timeout of each rpc request in millisecond.
-   *
-   * @deprecated Use setReadRpcTimeout or setWriteRpcTimeout instead
-   */
-  @Deprecated
-  default void setRpcTimeout(int rpcTimeout) {
-    setReadRpcTimeout(rpcTimeout);
-    setWriteRpcTimeout(rpcTimeout);
-  }
-
-  /**
    * Get timeout of each rpc read request in this Table instance.
    * @param unit the unit of time the timeout to be represented in
    * @return read rpc timeout in the specified time unit
    */
   default long getReadRpcTimeout(TimeUnit unit) {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Get timeout (millisecond) of each rpc read request in this Table instance.
-   * @deprecated since 2.0 and will be removed in 3.0 version
-   *             use {@link #getReadRpcTimeout(TimeUnit)} instead
-   */
-  @Deprecated
-  default int getReadRpcTimeout() {
-    return (int)getReadRpcTimeout(TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Set timeout (millisecond) of each rpc read request in operations of this Table instance, will
-   * override the value of hbase.rpc.read.timeout in configuration.
-   * If a rpc read request waiting too long, it will stop waiting and send a new request to retry
-   * until retries exhausted or operation timeout reached.
-   *
-   * @param readRpcTimeout the timeout for read rpc request in milliseconds
-   * @deprecated since 2.0.0, use {@link TableBuilder#setReadRpcTimeout} instead
-   */
-  @Deprecated
-  default void setReadRpcTimeout(int readRpcTimeout) {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -842,61 +676,11 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Get timeout (millisecond) of each rpc write request in this Table instance.
-   * @deprecated since 2.0 and will be removed in 3.0 version
-   *             use {@link #getWriteRpcTimeout(TimeUnit)} instead
-   */
-  @Deprecated
-  default int getWriteRpcTimeout() {
-    return (int)getWriteRpcTimeout(TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Set timeout (millisecond) of each rpc write request in operations of this Table instance, will
-   * override the value of hbase.rpc.write.timeout in configuration.
-   * If a rpc write request waiting too long, it will stop waiting and send a new request to retry
-   * until retries exhausted or operation timeout reached.
-   *
-   * @param writeRpcTimeout the timeout for write rpc request in milliseconds
-   * @deprecated since 2.0.0, use {@link TableBuilder#setWriteRpcTimeout} instead
-   */
-  @Deprecated
-  default void setWriteRpcTimeout(int writeRpcTimeout) {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
    * Get timeout of each operation in Table instance.
    * @param unit the unit of time the timeout to be represented in
    * @return operation rpc timeout in the specified time unit
    */
   default long getOperationTimeout(TimeUnit unit) {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Get timeout (millisecond) of each operation for in Table instance.
-   * @deprecated since 2.0 and will be removed in 3.0 version
-   *             use {@link #getOperationTimeout(TimeUnit)} instead
-   */
-  @Deprecated
-  default int getOperationTimeout() {
-    return (int)getOperationTimeout(TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Set timeout (millisecond) of each operation in this Table instance, will override the value
-   * of hbase.client.operation.timeout in configuration.
-   * Operation timeout is a top-level restriction that makes sure a blocking method will not be
-   * blocked more than this. In each operation, if rpc request fails because of timeout or
-   * other reason, it will retry until success or throw a RetriesExhaustedException. But if the
-   * total time being blocking reach the operation timeout before retries exhausted, it will break
-   * early and throw SocketTimeoutException.
-   * @param operationTimeout the total timeout of each operation in millisecond.
-   * @deprecated since 2.0.0, use {@link TableBuilder#setOperationTimeout} instead
-   */
-  @Deprecated
-  default void setOperationTimeout(int operationTimeout) {
     throw new NotImplementedException("Add an implementation!");
   }
 }

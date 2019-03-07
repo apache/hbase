@@ -24,15 +24,19 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 public class TestAdminBase {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static ConnectionImplementation CONN;
   protected static Admin ADMIN;
 
   @Rule
@@ -47,11 +51,15 @@ public class TestAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 30);
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 30);
     TEST_UTIL.startMiniCluster(3);
-    ADMIN = TEST_UTIL.getAdmin();
+    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
+    ADMIN = CONN.getAdmin();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(ADMIN, true);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

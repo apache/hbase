@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -157,6 +158,7 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
@@ -274,19 +276,6 @@ public class HRegionServer extends HasThread implements
   protected MemStoreFlusher cacheFlusher;
 
   protected HeapMemoryManager hMemManager;
-
-  /**
-   * Connection to be shared by services.
-   * <p/>
-   * Initialized at server startup and closed when server shuts down.
-   * <p/>
-   * Clients must never close it explicitly.
-   * <p/>
-   * Clients hosted by this Server should make use of this connection rather than create their own;
-   * if they create their own, there is no way for the hosting server to shutdown ongoing client
-   * RPCs.
-   */
-  protected Connection connection;
 
   /**
    * The asynchronous cluster connection to be shared by services.
@@ -828,29 +817,7 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Create a 'smarter' Connection, one that is capable of by-passing RPC if the request is to the
-   * local server; i.e. a short-circuit Connection. Safe to use going to local or remote server.
-   */
-  private Connection createConnection() throws IOException {
-    // Create a cluster connection that when appropriate, can short-circuit and go directly to the
-    // local server if the request is to the local server bypassing RPC. Can be used for both local
-    // and remote invocations.
-    Connection conn =
-      ConnectionUtils.createShortCircuitConnection(unsetClientZookeeperQuorum(), null,
-        userProvider.getCurrent(), serverName, rpcServices, rpcServices);
-    // This is used to initialize the batch thread pool inside the connection implementation.
-    // When deploy a fresh cluster, we may first use the cluster connection in InitMetaProcedure,
-    // which will be executed inside the PEWorker, and then the batch thread pool will inherit the
-    // thread group of PEWorker, which will be destroy when shutting down the ProcedureExecutor. It
-    // will cause lots of procedure related UTs to fail, so here let's initialize it first, no harm.
-    conn.getTable(TableName.META_TABLE_NAME).close();
-    return conn;
-  }
-
-  /**
    * Run test on configured codecs to make sure supporting libs are in place.
-   * @param c
-   * @throws IOException
    */
   private static void checkCodecs(final Configuration c) throws IOException {
     // check to see if the codec list is available:
@@ -872,11 +839,12 @@ public class HRegionServer extends HasThread implements
    * Setup our cluster connection if not already initialized.
    */
   protected final synchronized void setupClusterConnection() throws IOException {
-    if (connection == null) {
-      connection = createConnection();
+    if (asyncClusterConnection == null) {
+      Configuration conf = unsetClientZookeeperQuorum();
+      InetSocketAddress localAddress = new InetSocketAddress(this.rpcServices.isa.getAddress(), 0);
+      User user = userProvider.getCurrent();
       asyncClusterConnection =
-        ClusterConnectionFactory.createAsyncClusterConnection(unsetClientZookeeperQuorum(),
-          new InetSocketAddress(this.rpcServices.isa.getAddress(), 0), userProvider.getCurrent());
+        ClusterConnectionFactory.createAsyncClusterConnection(conf, localAddress, user);
     }
   }
 
@@ -1130,15 +1098,6 @@ public class HRegionServer extends HasThread implements
       LOG.info("stopping server " + this.serverName);
     }
 
-    if (this.connection != null && !connection.isClosed()) {
-      try {
-        this.connection.close();
-      } catch (IOException e) {
-        // Although the {@link Closeable} interface throws an {@link
-        // IOException}, in reality, the implementation would never do that.
-        LOG.warn("Attempt to close server's short circuit ClusterConnection failed.", e);
-      }
-    }
     if (this.asyncClusterConnection != null) {
       try {
         this.asyncClusterConnection.close();
@@ -2203,7 +2162,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public Connection getConnection() {
-    return this.connection;
+    return getAsyncConnection().toConnection();
   }
 
   @Override
@@ -2309,8 +2268,8 @@ public class HRegionServer extends HasThread implements
           }
         } else {
           try {
-            MetaTableAccessor.updateRegionLocation(connection,
-              hris[0], serverName, openSeqNum, masterSystemTime);
+            MetaTableAccessor.updateRegionLocation(asyncClusterConnection.toConnection(), hris[0],
+              serverName, openSeqNum, masterSystemTime);
           } catch (IOException e) {
             LOG.info("Failed to update meta", e);
             return false;
@@ -2340,7 +2299,7 @@ public class HRegionServer extends HasThread implements
     // Keep looping till we get an error. We want to send reports even though server is going down.
     // Only go down if clusterConnection is null. It is set to null almost as last thing as the
     // HRegionServer does down.
-    while (this.connection != null && !this.connection.isClosed()) {
+    while (this.asyncClusterConnection != null && !this.asyncClusterConnection.isClosed()) {
       RegionServerStatusService.BlockingInterface rss = rssStub;
       try {
         if (rss == null) {
@@ -3813,7 +3772,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void unassign(byte[] regionName) throws IOException {
-    connection.getAdmin().unassign(regionName, false);
+    FutureUtils.get(asyncClusterConnection.getAdmin().unassign(regionName, false));
   }
 
   @Override
@@ -3862,8 +3821,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public Connection createConnection(Configuration conf) throws IOException {
     User user = UserProvider.instantiate(conf).getCurrent();
-    return ConnectionUtils.createShortCircuitConnection(conf, null, user, this.serverName,
-        this.rpcServices, this.rpcServices);
+    return ConnectionFactory.createConnection(conf, null, user);
   }
 
   public void executeProcedure(long procId, RSProcedureCallable callable) {

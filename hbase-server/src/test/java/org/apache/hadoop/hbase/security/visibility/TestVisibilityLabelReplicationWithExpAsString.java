@@ -115,7 +115,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZKWatcher(conf, "cluster1", null, true);
-    admin = TEST_UTIL.getAdmin();
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
@@ -136,6 +135,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
 
+    admin = TEST_UTIL.getAdmin();
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
     admin.addReplicationPeer("2", rpc);

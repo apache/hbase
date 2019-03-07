@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -59,6 +60,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
+/**
+ * Will be removed along with ConnectionImplementation soon.
+ */
+@Ignore
 @Category({MediumTests.class, ClientTests.class})
 public class TestMetaCache {
 

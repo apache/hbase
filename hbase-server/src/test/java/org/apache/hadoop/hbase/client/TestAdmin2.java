@@ -247,7 +247,7 @@ public class TestAdmin2 extends TestAdminBase {
   /**
    * Can't enable a table if the table isn't in disabled state
    */
-  @Test (expected=TableNotDisabledException.class)
+  @Test(expected = TableNotDisabledException.class)
   public void testTableNotDisabledExceptionWithATable() throws IOException {
     final TableName name = TableName.valueOf(this.name.getMethodName());
     try (Table t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY)) {
@@ -732,12 +732,10 @@ public class TestAdmin2 extends TestAdminBase {
     long expectedStoreFilesSize = store.getStorefilesSize();
     Assert.assertNotNull(store);
     Assert.assertEquals(expectedStoreFilesSize, store.getSize());
-
-    ConnectionImplementation conn = (ConnectionImplementation) ADMIN.getConnection();
-    HBaseRpcController controller = conn.getRpcControllerFactory().newController();
+    HBaseRpcController controller = CONN.getRpcControllerFactory().newController();
     for (int i = 0; i < 10; i++) {
       RegionInfo ri =
-          ProtobufUtil.getRegionInfo(controller, conn.getAdmin(rs.getServerName()), regionName);
+          ProtobufUtil.getRegionInfo(controller, CONN.getAdmin(rs.getServerName()), regionName);
       Assert.assertEquals(region.getRegionInfo(), ri);
 
       // Make sure that the store size is still the actual file system's store size.

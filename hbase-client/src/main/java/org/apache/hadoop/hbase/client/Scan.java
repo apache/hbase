@@ -1113,6 +1113,11 @@ public class Scan extends Query {
     return asyncPrefetch;
   }
 
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. After building sync client upon async
+   *             client, the implementation is always 'async prefetch', so this flag is useless now.
+   */
+  @Deprecated
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
     this.asyncPrefetch = asyncPrefetch;
     return this;
