@@ -31,12 +31,14 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -134,6 +137,45 @@ public class TestRestoreSnapshotHelper {
     Path restoreDir = new Path("/hbase/.tmp-restore");
     RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
     checkNoHFileLinkInTableDir(tableName);
+  }
+
+  @Test
+  public void testSkipReplayAndUpdateSeqId() throws Exception {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    FSUtils.setRootDir(conf, rootDir);
+    TableName tableName = TableName.valueOf("testSkipReplayAndUpdateSeqId");
+    String snapshotName = "testSkipReplayAndUpdateSeqId";
+    createTableAndSnapshot(tableName, snapshotName);
+    // put some data in the table
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    TEST_UTIL.loadTable(table, Bytes.toBytes("A"));
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path restoreDir = new Path("/hbase/.tmp-restore/testScannerWithRestoreScanner2");
+    // restore snapshot.
+    final RestoreSnapshotHelper.RestoreMetaChanges meta =
+        RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    TableDescriptor htd = meta.getTableDescriptor();
+    final List<RegionInfo> restoredRegions = meta.getRegionsToAdd();
+    for (RegionInfo restoredRegion : restoredRegions) {
+      // open restored region
+      HRegion region = HRegion.newHRegion(FSUtils.getTableDir(restoreDir, tableName), null, fs,
+        conf, restoredRegion, htd, null);
+      // set restore flag
+      region.setRestoredRegion(true);
+      region.initialize();
+      Path recoveredEdit =
+          FSUtils.getWALRegionDir(conf, tableName, region.getRegionInfo().getEncodedName());
+      long maxSeqId = WALSplitter.getMaxRegionSequenceId(fs, recoveredEdit);
+
+      // open restored region without set restored flag
+      HRegion region2 = HRegion.newHRegion(FSUtils.getTableDir(restoreDir, tableName), null, fs,
+        conf, restoredRegion, htd, null);
+      region2.initialize();
+      long maxSeqId2 = WALSplitter.getMaxRegionSequenceId(fs, recoveredEdit);
+      Assert.assertTrue(maxSeqId2 > maxSeqId);
+    }
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
