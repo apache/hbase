@@ -925,10 +925,8 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.bucketcache.ioengine</name>
     <value></value>
     <description>Where to store the contents of the bucketcache. One of: offheap,
-    file, files, mmap or pmem. If a file or files, set it to file(s):PATH_TO_FILE.
-    mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE. 'pmem'
-    is bucket cache over a file on the persistent memory device.
-    Use pmem:PATH_TO_FILE.
+    file, files or mmap. If a file or files, set it to file(s):PATH_TO_FILE.
+    mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE.
     See http://hbase.apache.org/book.html#offheap.blockcache for more information.
     </description>
   </property>

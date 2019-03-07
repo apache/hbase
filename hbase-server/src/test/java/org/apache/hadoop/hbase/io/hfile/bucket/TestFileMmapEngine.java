@@ -32,21 +32,21 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Basic test for {@link ExclusiveMemoryMmapIOEngine}
+ * Basic test for {@link FileMmapEngine}
  */
 @Category({IOTests.class, SmallTests.class})
-public class TestExclusiveMemoryMmapEngine {
+public class TestFileMmapEngine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExclusiveMemoryMmapEngine.class);
+      HBaseClassTestRule.forClass(TestFileMmapEngine.class);
 
   @Test
   public void testFileMmapEngine() throws IOException {
     int size = 2 * 1024 * 1024; // 2 MB
     String filePath = "testFileMmapEngine";
     try {
-      ExclusiveMemoryMmapIOEngine fileMmapEngine = new ExclusiveMemoryMmapIOEngine(filePath, size);
+      FileMmapEngine fileMmapEngine = new FileMmapEngine(filePath, size);
       for (int i = 0; i < 50; i++) {
         int len = (int) Math.floor(Math.random() * 100);
         long offset = (long) Math.floor(Math.random() * size % (size - len));

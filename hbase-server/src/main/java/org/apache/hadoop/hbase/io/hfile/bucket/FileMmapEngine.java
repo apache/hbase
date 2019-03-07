@@ -1,19 +1,20 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright The Apache Software Foundation
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
@@ -23,31 +24,33 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.util.ByteBufferAllocator;
-import org.apache.hadoop.hbase.util.ByteBufferArray;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
+import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.util.ByteBufferAllocator;
+import org.apache.hadoop.hbase.util.ByteBufferArray;
+import org.apache.hadoop.util.StringUtils;
 
 /**
- * IO engine that stores data to a file on the specified file system using memory mapping
+ * IO engine that stores data to a file on the local file system using memory mapping
  * mechanism
  */
 @InterfaceAudience.Private
-public abstract class FileMmapIOEngine implements IOEngine {
-  static final Logger LOG = LoggerFactory.getLogger(FileMmapIOEngine.class);
+public class FileMmapEngine implements IOEngine {
+  static final Logger LOG = LoggerFactory.getLogger(FileMmapEngine.class);
 
-  protected final String path;
-  protected long size;
-  protected ByteBufferArray bufferArray;
+  private final String path;
+  private long size;
+  private ByteBufferArray bufferArray;
   private final FileChannel fileChannel;
   private RandomAccessFile raf = null;
 
-  public FileMmapIOEngine(String filePath, long capacity) throws IOException {
+  public FileMmapEngine(String filePath, long capacity) throws IOException {
     this.path = filePath;
     this.size = capacity;
     long fileSize = 0;
@@ -61,15 +64,13 @@ public abstract class FileMmapIOEngine implements IOEngine {
       LOG.error("Can't create bucket cache file " + filePath, fex);
       throw fex;
     } catch (IOException ioex) {
-      LOG.error(
-        "Can't extend bucket cache file; insufficient space for " + StringUtils.byteDesc(fileSize),
-        ioex);
+      LOG.error("Can't extend bucket cache file; insufficient space for "
+          + StringUtils.byteDesc(fileSize), ioex);
       shutdown();
       throw ioex;
     }
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       AtomicInteger pos = new AtomicInteger(0);
-
       @Override
       public ByteBuffer allocate(long size) throws IOException {
         ByteBuffer buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE,
@@ -86,8 +87,8 @@ public abstract class FileMmapIOEngine implements IOEngine {
 
   @Override
   public String toString() {
-    return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path + ", size="
-        + String.format("%,d", this.size);
+    return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path +
+      ", size=" + String.format("%,d", this.size);
   }
 
   /**
@@ -96,13 +97,17 @@ public abstract class FileMmapIOEngine implements IOEngine {
    */
   @Override
   public boolean isPersistent() {
-    // TODO : HBASE-21981 needed for persistence to really work
     return true;
   }
 
   @Override
-  public abstract Cacheable read(long offset, int length,
-      CacheableDeserializer<Cacheable> deserializer) throws IOException;
+  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
+      throws IOException {
+    byte[] dst = new byte[length];
+    bufferArray.getMultiple(offset, length, dst);
+    return deserializer.deserialize(new SingleByteBuff(ByteBuffer.wrap(dst)), true,
+      MemoryType.EXCLUSIVE);
+  }
 
   /**
    * Transfers data from the given byte buffer to file
@@ -114,7 +119,7 @@ public abstract class FileMmapIOEngine implements IOEngine {
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
     assert srcBuffer.hasArray();
     bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
+        srcBuffer.arrayOffset());
   }
 
   @Override
@@ -122,9 +127,9 @@ public abstract class FileMmapIOEngine implements IOEngine {
     // This singleByteBuff can be considered to be array backed
     assert srcBuffer.hasArray();
     bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
-  }
+        srcBuffer.arrayOffset());
 
+  }
   /**
    * Sync the data to file after writing
    * @throws IOException
