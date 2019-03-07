@@ -24,9 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -38,19 +37,19 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Ensure Coprocessors get ShortCircuit Connections when they get a Connection from their
+ * Ensure Coprocessors get ShardConnections when they get a Connection from their
  * CoprocessorEnvironment.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
-public class TestCoprocessorShortCircuitRPC {
+@Category({ CoprocessorTests.class, MediumTests.class })
+public class TestCoprocessorSharedConnection {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorShortCircuitRPC.class);
+      HBaseClassTestRule.forClass(TestCoprocessorSharedConnection.class);
 
   @Rule
   public TestName name = new TestName();
-  private static final HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
   /**
    * Start up a mini cluster with my three CPs loaded.
@@ -83,8 +82,6 @@ public class TestCoprocessorShortCircuitRPC {
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not MasterCoprocessorEnvironment,
       checkShared(((MasterCoprocessorEnvironment) env).getConnection());
-      checkShortCircuit(
-        ((MasterCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
@@ -96,8 +93,6 @@ public class TestCoprocessorShortCircuitRPC {
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not RegionServerCoprocessorEnvironment,
       checkShared(((RegionServerCoprocessorEnvironment) env).getConnection());
-      checkShortCircuit(
-        ((RegionServerCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
@@ -109,17 +104,11 @@ public class TestCoprocessorShortCircuitRPC {
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not RegionCoprocessorEnvironment,
       checkShared(((RegionCoprocessorEnvironment) env).getConnection());
-      checkShortCircuit(
-        ((RegionCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
   private static void checkShared(Connection connection) {
     assertTrue(connection instanceof SharedConnection);
-  }
-
-  private static void checkShortCircuit(Connection connection) {
-    assertTrue(connection instanceof ConnectionUtils.ShortCircuitingClusterConnection);
   }
 
   @Test

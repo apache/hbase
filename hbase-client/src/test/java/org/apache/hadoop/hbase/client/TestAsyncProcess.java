@@ -1351,7 +1351,7 @@ public class TestAsyncProcess {
       ap.previousTimeout = -1;
 
       try {
-        ht.existsAll(gets);
+        ht.exists(gets);
       } catch (ClassCastException e) {
         // No result response on this test.
       }

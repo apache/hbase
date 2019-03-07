@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.SortedMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,10 +42,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -118,37 +115,11 @@ public class TestClientNoCluster extends Configured implements Tool {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
-    // Run my Connection overrides.  Use my little ConnectionImplementation below which
+    // Run my Connection overrides. Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
-  }
-
-  /**
-   * Simple cluster registry inserted in place of our usual zookeeper based one.
-   */
-  static class SimpleRegistry extends DoNothingAsyncRegistry {
-    final ServerName META_HOST = META_SERVERNAME;
-
-    public SimpleRegistry(Configuration conf) {
-      super(conf);
-    }
-
-    @Override
-    public CompletableFuture<RegionLocations> getMetaRegionLocation() {
-      return CompletableFuture.completedFuture(new RegionLocations(
-          new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
-    }
-
-    @Override
-    public CompletableFuture<String> getClusterId() {
-      return CompletableFuture.completedFuture(HConstants.CLUSTER_ID_DEFAULT);
-    }
-
-    @Override
-    public CompletableFuture<Integer> getCurrentNrHRS() {
-      return CompletableFuture.completedFuture(1);
-    }
+    SimpleRegistry.setMetaHost(conf, META_SERVERNAME);
   }
 
   /**

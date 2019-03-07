@@ -41,8 +41,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +74,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -419,11 +416,6 @@ class ConnectionImplementation implements Connection, Closeable {
   }
 
   @Override
-  public BufferedMutator getBufferedMutator(TableName tableName) {
-    return getBufferedMutator(new BufferedMutatorParams(tableName));
-  }
-
-  @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException {
     return new HRegionLocator(tableName, this);
   }
@@ -478,30 +470,8 @@ class ConnectionImplementation implements Connection, Closeable {
   private ExecutorService getThreadPool(int maxThreads, int coreThreads, String nameHint,
       BlockingQueue<Runnable> passedWorkQueue) {
     // shared HTable thread executor not yet initialized
-    if (maxThreads == 0) {
-      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
-    BlockingQueue<Runnable> workQueue = passedWorkQueue;
-    if (workQueue == null) {
-      workQueue =
-        new LinkedBlockingQueue<>(maxThreads *
-            conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-                HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
-      coreThreads = maxThreads;
-    }
-    ThreadPoolExecutor tpe = new ThreadPoolExecutor(
-        coreThreads,
-        maxThreads,
-        keepAliveTime,
-        TimeUnit.SECONDS,
-        workQueue,
-        Threads.newDaemonThreadFactory(toString() + nameHint));
-    tpe.allowCoreThreadTimeOut(true);
-    return tpe;
+    return ConnectionUtils.getThreadPool(conf, maxThreads, coreThreads, () -> toString() + nameHint,
+      passedWorkQueue);
   }
 
   private ExecutorService getMetaLookupPool() {
@@ -533,21 +503,10 @@ class ConnectionImplementation implements Connection, Closeable {
 
   private void shutdownPools() {
     if (this.cleanupPool && this.batchPool != null && !this.batchPool.isShutdown()) {
-      shutdownBatchPool(this.batchPool);
+      ConnectionUtils.shutdownPool(this.batchPool);
     }
     if (this.metaLookupPool != null && !this.metaLookupPool.isShutdown()) {
-      shutdownBatchPool(this.metaLookupPool);
-    }
-  }
-
-  private void shutdownBatchPool(ExecutorService pool) {
-    pool.shutdown();
-    try {
-      if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
-        pool.shutdownNow();
-      }
-    } catch (InterruptedException e) {
-      pool.shutdownNow();
+      ConnectionUtils.shutdownPool(this.metaLookupPool);
     }
   }
 
@@ -2209,5 +2168,10 @@ class ConnectionImplementation implements Connection, Closeable {
       Throwables.propagateIfPossible(cause, IOException.class);
       throw new IOException(cause);
     }
+  }
+
+  @Override
+  public AsyncConnection toAsyncConnection() {
+    throw new UnsupportedOperationException();
   }
 }
