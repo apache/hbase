@@ -216,7 +216,6 @@ public class TestReplicationBase {
     // than default
     conf1 = utility1.getConfiguration();
     zkw1 = new ZKWatcher(conf1, "cluster1", null, true);
-    admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
     utility2.setZkCluster(miniZK);
@@ -229,6 +228,7 @@ public class TestReplicationBase {
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
     utility2.startMiniCluster(4);
 
+    admin = new ReplicationAdmin(conf1);
     hbaseAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)

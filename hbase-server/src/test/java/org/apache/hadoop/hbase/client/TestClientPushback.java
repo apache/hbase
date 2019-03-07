@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -91,121 +92,120 @@ public class TestClientPushback {
   }
 
   @Test
-  public void testClientTracksServerPushback() throws Exception{
+  public void testClientTracksServerPushback() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
-    ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
-    BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
+    try (ConnectionImplementation conn = ConnectionFactory.createConnectionImpl(conf, null,
+      UserProvider.instantiate(conf).getCurrent())) {
+      BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
 
-    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getRegions(tableName).get(0);
+      HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
+      Region region = rs.getRegions(tableName).get(0);
 
-    LOG.debug("Writing some data to "+tableName);
-    // write some data
-    Put p = new Put(Bytes.toBytes("row"));
-    p.addColumn(family, qualifier, Bytes.toBytes("value1"));
-    mutator.mutate(p);
-    mutator.flush();
+      LOG.debug("Writing some data to " + tableName);
+      // write some data
+      Put p = new Put(Bytes.toBytes("row"));
+      p.addColumn(family, qualifier, Bytes.toBytes("value1"));
+      mutator.mutate(p);
+      mutator.flush();
 
-    // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
-    int load = (int) ((region.getMemStoreHeapSize() * 100)
-        / flushSizeBytes);
-    LOG.debug("Done writing some data to "+tableName);
+      // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
+      int load = (int) ((region.getMemStoreHeapSize() * 100) / flushSizeBytes);
+      LOG.debug("Done writing some data to " + tableName);
 
-    // get the stats for the region hosting our table
-    ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
-    assertTrue("Backoff policy is not correctly configured",
-      backoffPolicy instanceof ExponentialClientBackoffPolicy);
+      // get the stats for the region hosting our table
+      ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
+      assertTrue("Backoff policy is not correctly configured",
+        backoffPolicy instanceof ExponentialClientBackoffPolicy);
 
-    ServerStatisticTracker stats = conn.getStatisticsTracker();
-    assertNotNull( "No stats configured for the client!", stats);
-    // get the names so we can query the stats
-    ServerName server = rs.getServerName();
-    byte[] regionName = region.getRegionInfo().getRegionName();
+      ServerStatisticTracker stats = conn.getStatisticsTracker();
+      assertNotNull("No stats configured for the client!", stats);
+      // get the names so we can query the stats
+      ServerName server = rs.getServerName();
+      byte[] regionName = region.getRegionInfo().getRegionName();
 
-    // check to see we found some load on the memstore
-    ServerStatistics serverStats = stats.getServerStatsForTesting(server);
-    ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
-    assertEquals("We did not find some load on the memstore", load,
-      regionStats.getMemStoreLoadPercent());
-    // check that the load reported produces a nonzero delay
-    long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
-    assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
-    LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
-      server + " is " + backoffTime);
+      // check to see we found some load on the memstore
+      ServerStatistics serverStats = stats.getServerStatsForTesting(server);
+      ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
+      assertEquals("We did not find some load on the memstore", load,
+        regionStats.getMemStoreLoadPercent());
+      // check that the load reported produces a nonzero delay
+      long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
+      assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
+      LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
+        server + " is " + backoffTime);
 
-    // Reach into the connection and submit work directly to AsyncProcess so we can
-    // monitor how long the submission was delayed via a callback
-    List<Row> ops = new ArrayList<>(1);
-    ops.add(p);
-    final CountDownLatch latch = new CountDownLatch(1);
-    final AtomicLong endTime = new AtomicLong();
-    long startTime = EnvironmentEdgeManager.currentTime();
-    Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
+      // Reach into the connection and submit work directly to AsyncProcess so we can
+      // monitor how long the submission was delayed via a callback
+      List<Row> ops = new ArrayList<>(1);
+      ops.add(p);
+      final CountDownLatch latch = new CountDownLatch(1);
+      final AtomicLong endTime = new AtomicLong();
+      long startTime = EnvironmentEdgeManager.currentTime();
+      Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
         endTime.set(EnvironmentEdgeManager.currentTime());
         latch.countDown();
-    };
-    AsyncProcessTask<Result> task = AsyncProcessTask.newBuilder(callback)
-            .setPool(mutator.getPool())
-            .setTableName(tableName)
-            .setRowAccess(ops)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
-            .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
-            .setRpcTimeout(60 * 1000)
-            .build();
-    mutator.getAsyncProcess().submit(task);
-    // Currently the ExponentialClientBackoffPolicy under these test conditions
-    // produces a backoffTime of 151 milliseconds. This is long enough so the
-    // wait and related checks below are reasonable. Revisit if the backoff
-    // time reported by above debug logging has significantly deviated.
-    String name = server.getServerName() + "," + Bytes.toStringBinary(regionName);
-    MetricsConnection.RegionStats rsStats = conn.getConnectionMetrics().
-            serverStats.get(server).get(regionName);
-    assertEquals(name, rsStats.name);
-    assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
-        (double)regionStats.getHeapOccupancyPercent(), 0.1 );
-    assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
-        (double)regionStats.getMemStoreLoadPercent(), 0.1);
+      };
+      AsyncProcessTask<Result> task =
+        AsyncProcessTask.newBuilder(callback).setPool(mutator.getPool()).setTableName(tableName)
+          .setRowAccess(ops).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
+          .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
+          .setRpcTimeout(60 * 1000).build();
+      mutator.getAsyncProcess().submit(task);
+      // Currently the ExponentialClientBackoffPolicy under these test conditions
+      // produces a backoffTime of 151 milliseconds. This is long enough so the
+      // wait and related checks below are reasonable. Revisit if the backoff
+      // time reported by above debug logging has significantly deviated.
+      String name = server.getServerName() + "," + Bytes.toStringBinary(regionName);
+      MetricsConnection.RegionStats rsStats =
+        conn.getConnectionMetrics().serverStats.get(server).get(regionName);
+      assertEquals(name, rsStats.name);
+      assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
+        (double) regionStats.getHeapOccupancyPercent(), 0.1);
+      assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
+        (double) regionStats.getMemStoreLoadPercent(), 0.1);
 
-    MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
+      MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
 
-    assertEquals(1, runnerStats.delayRunners.getCount());
-    assertEquals(1, runnerStats.normalRunners.getCount());
-    assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(),
-      (double)backoffTime, 0.1);
+      assertEquals(1, runnerStats.delayRunners.getCount());
+      assertEquals(1, runnerStats.normalRunners.getCount());
+      assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(), (double) backoffTime,
+        0.1);
 
-    latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
-    assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
-    assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
+      latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
+      assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
+      assertTrue("AsyncProcess did not delay long enough",
+        endTime.get() - startTime >= backoffTime);
+    }
   }
 
   @Test
   public void testMutateRowStats() throws IOException {
     Configuration conf = UTIL.getConfiguration();
-    ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
-    Table table = conn.getTable(tableName);
-    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getRegions(tableName).get(0);
+    try (ConnectionImplementation conn = ConnectionFactory.createConnectionImpl(conf, null,
+      UserProvider.instantiate(conf).getCurrent())) {
+      Table table = conn.getTable(tableName);
+      HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
+      Region region = rs.getRegions(tableName).get(0);
 
-    RowMutations mutations = new RowMutations(Bytes.toBytes("row"));
-    Put p = new Put(Bytes.toBytes("row"));
-    p.addColumn(family, qualifier, Bytes.toBytes("value2"));
-    mutations.add(p);
-    table.mutateRow(mutations);
+      RowMutations mutations = new RowMutations(Bytes.toBytes("row"));
+      Put p = new Put(Bytes.toBytes("row"));
+      p.addColumn(family, qualifier, Bytes.toBytes("value2"));
+      mutations.add(p);
+      table.mutateRow(mutations);
 
-    ServerStatisticTracker stats = conn.getStatisticsTracker();
-    assertNotNull( "No stats configured for the client!", stats);
-    // get the names so we can query the stats
-    ServerName server = rs.getServerName();
-    byte[] regionName = region.getRegionInfo().getRegionName();
+      ServerStatisticTracker stats = conn.getStatisticsTracker();
+      assertNotNull("No stats configured for the client!", stats);
+      // get the names so we can query the stats
+      ServerName server = rs.getServerName();
+      byte[] regionName = region.getRegionInfo().getRegionName();
 
-    // check to see we found some load on the memstore
-    ServerStatistics serverStats = stats.getServerStatsForTesting(server);
-    ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
+      // check to see we found some load on the memstore
+      ServerStatistics serverStats = stats.getServerStatsForTesting(server);
+      ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
 
-    assertNotNull(regionStats);
-    assertTrue(regionStats.getMemStoreLoadPercent() > 0);
+      assertNotNull(regionStats);
+      assertTrue(regionStats.getMemStoreLoadPercent() > 0);
     }
+  }
 }

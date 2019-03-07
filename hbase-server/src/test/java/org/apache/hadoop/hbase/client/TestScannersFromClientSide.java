@@ -20,20 +20,19 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
 import static org.apache.hadoop.hbase.client.TestFromClientSide3.generateHugeValue;
 import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -90,9 +89,6 @@ public class TestScannersFromClientSide {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -100,17 +96,11 @@ public class TestScannersFromClientSide {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     // Nothing to do.
@@ -126,8 +116,6 @@ public class TestScannersFromClientSide {
 
   /**
    * Test from client side for batch of scan
-   *
-   * @throws Exception
    */
   @Test
   public void testScanBatch() throws Exception {
@@ -236,17 +224,15 @@ public class TestScannersFromClientSide {
     // Create a scan with the default configuration.
     Scan scan = new Scan();
 
-    ResultScanner scanner = ht.getScanner(scan);
-    assertTrue(scanner instanceof ClientScanner);
-    ClientScanner clientScanner = (ClientScanner) scanner;
-
-    // Call next to issue a single RPC to the server
-    scanner.next();
-
-    // The scanner should have, at most, a single result in its cache. If there more results exists
-    // in the cache it means that more than the expected max result size was fetched.
-    assertTrue("The cache contains: " + clientScanner.getCacheSize() + " results",
-      clientScanner.getCacheSize() <= 1);
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      assertThat(scanner, instanceOf(AsyncTableResultScanner.class));
+      scanner.next();
+      AsyncTableResultScanner s = (AsyncTableResultScanner) scanner;
+      // The scanner should have, at most, a single result in its cache. If there more results
+      // exists
+      // in the cache it means that more than the expected max result size was fetched.
+      assertTrue("The cache contains: " + s.getCacheSize() + " results", s.getCacheSize() <= 1);
+    }
   }
 
   /**
@@ -304,11 +290,6 @@ public class TestScannersFromClientSide {
 
   /**
    * Run through a variety of test configurations with a small scan
-   * @param table
-   * @param reversed
-   * @param rows
-   * @param columns
-   * @throws Exception
    */
   private void testSmallScan(Table table, boolean reversed, int rows, int columns) throws Exception {
     Scan baseScan = new Scan();
@@ -349,8 +330,6 @@ public class TestScannersFromClientSide {
 
   /**
    * Test from client side for get with maxResultPerCF set
-   *
-   * @throws Exception
    */
   @Test
   public void testGetMaxResults() throws Exception {
@@ -469,8 +448,6 @@ public class TestScannersFromClientSide {
 
   /**
    * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
    */
   @Test
   public void testScanMaxResults() throws Exception {
@@ -519,8 +496,6 @@ public class TestScannersFromClientSide {
 
   /**
    * Test from client side for get with rowOffset
-   *
-   * @throws Exception
    */
   @Test
   public void testGetRowOffset() throws Exception {
@@ -639,8 +614,6 @@ public class TestScannersFromClientSide {
   /**
    * Test from client side for scan while the region is reopened
    * on the same region server.
-   *
-   * @throws Exception
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
@@ -711,125 +684,6 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[1], 1, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing scan on re-opened region");
-  }
-
-  @Test
-  public void testAsyncScannerWithSmallData() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
-      2,
-      3,
-      10,
-      -1,
-      null);
-  }
-
-  @Test
-  public void testAsyncScannerWithManyRows() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
-      30000,
-      1,
-      1,
-      -1,
-      null);
-  }
-
-  @Test
-  public void testAsyncScannerWithoutCaching() throws Exception {
-    testAsyncScanner(TableName.valueOf(name.getMethodName()),
-      5,
-      1,
-      1,
-      1,
-      (b) -> {
-        try {
-          TimeUnit.MILLISECONDS.sleep(500);
-        } catch (InterruptedException ex) {
-        }
-      });
-  }
-
-  private void testAsyncScanner(TableName table, int rowNumber, int familyNumber,
-      int qualifierNumber, int caching, Consumer<Boolean> listener) throws Exception {
-    assert rowNumber > 0;
-    assert familyNumber > 0;
-    assert qualifierNumber > 0;
-    byte[] row = Bytes.toBytes("r");
-    byte[] family = Bytes.toBytes("f");
-    byte[] qualifier = Bytes.toBytes("q");
-    byte[][] rows = makeNAsciiWithZeroPrefix(row, rowNumber);
-    byte[][] families = makeNAsciiWithZeroPrefix(family, familyNumber);
-    byte[][] qualifiers = makeNAsciiWithZeroPrefix(qualifier, qualifierNumber);
-
-    Table ht = TEST_UTIL.createTable(table, families);
-
-    boolean toLog = true;
-    List<Cell> kvListExp = new ArrayList<>();
-
-    List<Put> puts = new ArrayList<>();
-    for (byte[] r : rows) {
-      Put put = new Put(r);
-      for (byte[] f : families) {
-        for (byte[] q : qualifiers) {
-          KeyValue kv = new KeyValue(r, f, q, 1, VALUE);
-          put.add(kv);
-          kvListExp.add(kv);
-        }
-      }
-      puts.add(put);
-      if (puts.size() > 1000) {
-        ht.put(puts);
-        puts.clear();
-      }
-    }
-    if (!puts.isEmpty()) {
-      ht.put(puts);
-      puts.clear();
-    }
-
-    Scan scan = new Scan();
-    scan.setAsyncPrefetch(true);
-    if (caching > 0) {
-      scan.setCaching(caching);
-    }
-    try (ResultScanner scanner = ht.getScanner(scan)) {
-      assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
-      ((ClientAsyncPrefetchScanner) scanner).setPrefetchListener(listener);
-      List<Cell> kvListScan = new ArrayList<>();
-      Result result;
-      boolean first = true;
-      int actualRows = 0;
-      while ((result = scanner.next()) != null) {
-        ++actualRows;
-        // waiting for cache. see HBASE-17376
-        if (first) {
-          TimeUnit.SECONDS.sleep(1);
-          first = false;
-        }
-        for (Cell kv : result.listCells()) {
-          kvListScan.add(kv);
-        }
-      }
-      assertEquals(rowNumber, actualRows);
-      // These cells may have different rows but it is ok. The Result#getRow
-      // isn't used in the verifyResult()
-      result = Result.create(kvListScan);
-      verifyResult(result, kvListExp, toLog, "Testing async scan");
-    }
-
-    TEST_UTIL.deleteTable(table);
-  }
-
-  private static byte[][] makeNAsciiWithZeroPrefix(byte[] base, int n) {
-    int maxLength = Integer.toString(n).length();
-    byte [][] ret = new byte[n][];
-    for (int i = 0; i < n; i++) {
-      int length = Integer.toString(i).length();
-      StringBuilder buf = new StringBuilder(Integer.toString(i));
-      IntStream.range(0, maxLength - length).forEach(v -> buf.insert(0, "0"));
-      byte[] tail = Bytes.toBytes(buf.toString());
-      ret[i] = Bytes.add(base, tail);
-    }
-    return ret;
   }
 
   static void verifyResult(Result result, List<Cell> expKvList, boolean toLog,

@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,6 +72,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
@@ -79,15 +82,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
  * Spins up the minicluster once at test start and then takes it down afterward.
  * Add any testing of HBaseAdmin functionality here.
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAdmin1 {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAdmin1.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin1.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin1.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static ConnectionImplementation CONN;
   private static Admin ADMIN;
 
   @Rule
@@ -101,12 +104,16 @@ public class TestAdmin1 {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
     ADMIN = TEST_UTIL.getAdmin();
+    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
+
   @After
   public void tearDown() throws Exception {
     for (TableDescriptor htd : ADMIN.listTableDescriptors()) {
@@ -702,7 +709,7 @@ public class TestAdmin1 {
       ADMIN.createTable(desc, Bytes.toBytes("a"), Bytes.toBytes("z"), 2);
       fail("Should not be able to create a table with only 2 regions using this API.");
     } catch (IllegalArgumentException eae) {
-    // Expected
+      // Expected
     }
 
     TableName TABLE_5 = TableName.valueOf(tableName.getNameAsString() + "_5");
@@ -741,7 +748,6 @@ public class TestAdmin1 {
     List<HRegionLocation> regions;
     Iterator<HRegionLocation> hris;
     RegionInfo hri;
-    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       regions = l.getAllRegionLocations();
 
@@ -781,7 +787,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
 
@@ -841,7 +847,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -864,7 +870,7 @@ public class TestAdmin1 {
           "but only found " + regions.size(), expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(conn, l, expectedRegions);
+      verifyRoundRobinDistribution(CONN, l, expectedRegions);
     }
 
 

@@ -121,7 +121,6 @@ public class TestReplicationWithTags {
     // Have to reget conf1 in case zk cluster location different
     // than default
     conf1 = utility1.getConfiguration();
-    replicationAdmin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
     // Base conf2 on conf1 so it gets the right zk cluster.
@@ -141,6 +140,7 @@ public class TestReplicationWithTags {
     utility1.startMiniCluster(2);
     utility2.startMiniCluster(2);
 
+    replicationAdmin = new ReplicationAdmin(conf1);
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
     replicationAdmin.addPeer("2", rpc, null);
