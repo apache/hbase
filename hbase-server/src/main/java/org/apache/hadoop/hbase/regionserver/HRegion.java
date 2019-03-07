@@ -340,6 +340,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private Path regionDir;
   private FileSystem walFS;
 
+  // set to true if the region is restored from snapshot
+  private boolean isRestoredRegion = false;
+
+  public void setRestoredRegion(boolean restoredRegion) {
+    isRestoredRegion = restoredRegion;
+  }
+
   // The internal wait duration to acquire a lock before read/update
   // from the region. It is not per row. The purpose of this wait time
   // is to avoid waiting a long time while the region is busy, so that
@@ -953,7 +960,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Initializing all the Stores");
     long maxSeqId = initializeStores(reporter, status);
     this.mvcc.advanceTo(maxSeqId);
-    if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
+    if (!isRestoredRegion && ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
       Collection<HStore> stores = this.stores.values();
       try {
         // update the stores that we are replaying
@@ -1006,15 +1013,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
-    long maxSeqIdFromFile =
-        WALSplitter.getMaxRegionSequenceId(getWalFileSystem(), getWALRegionDirOfDefaultReplica());
-    long nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
-    // The openSeqNum will always be increase even for read only region, as we rely on it to
-    // determine whether a region has been successfully reopend, so here we always need to update
-    // the max sequence id file.
-    if (RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
-      LOG.debug("writing seq id for {}", this.getRegionInfo().getEncodedName());
-      WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(), nextSeqId - 1);
+    long nextSeqId = maxSeqId + 1;
+    if (!isRestoredRegion) {
+      long maxSeqIdFromFile =
+          WALSplitter.getMaxRegionSequenceId(getWalFileSystem(), getWALRegionDirOfDefaultReplica());
+      nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
+      // The openSeqNum will always be increase even for read only region, as we rely on it to
+      // determine whether a region has been successfully reopend, so here we always need to update
+      // the max sequence id file.
+      if (RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
+        LOG.debug("writing seq id for {}", this.getRegionInfo().getEncodedName());
+        WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(), nextSeqId - 1);
+      }
     }
 
     LOG.info("Opened {}; next sequenceid={}", this.getRegionInfo().getShortNameToLog(), nextSeqId);
