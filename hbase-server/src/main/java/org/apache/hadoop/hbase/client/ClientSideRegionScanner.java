@@ -60,6 +60,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     // open region from the snapshot directory
     region = HRegion.newHRegion(FSUtils.getTableDir(rootDir, htd.getTableName()), null, fs, conf,
       hri, htd, null);
+    region.setRestoredRegion(true);
     // we won't initialize the MobFileCache when not running in RS process. so provided an
     // initialized cache. Consider the case: an CF was set from an mob to non-mob. if we only
     // initialize cache for MOB region, NPE from HMobStore will still happen. So Initialize the
