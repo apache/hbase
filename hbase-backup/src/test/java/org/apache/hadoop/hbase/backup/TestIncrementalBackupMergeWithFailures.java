@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Pair;
@@ -245,14 +244,14 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     assertTrue(checkSucceeded(backupIdFull));
 
     // #2 - insert some data to table1
-    HTable t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
+    Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
     LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
 
     Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS);
     t1.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table1);
 
-    HTable t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
+    Table t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
 
     Assert.assertEquals(TEST_UTIL.countRows(t2), NB_ROWS_IN_BATCH + ADD_ROWS);
     t2.close();
@@ -334,7 +333,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     Table hTable = conn.getTable(table1_restore);
-    LOG.debug("After incremental restore: " + hTable.getTableDescriptor());
+    LOG.debug("After incremental restore: " + hTable.getDescriptor());
     LOG.debug("f1 has " + TEST_UTIL.countRows(hTable, famName) + " rows");
     Assert.assertEquals(TEST_UTIL.countRows(hTable, famName), NB_ROWS_IN_BATCH + 2 * ADD_ROWS);
 

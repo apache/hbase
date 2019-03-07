@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -76,9 +80,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
@@ -144,24 +145,11 @@ public class TestFromClientSide3 {
     table.put(put);
   }
 
-  private void performMultiplePutAndFlush(HBaseAdmin admin, Table table,
-      byte[] row, byte[] family, int nFlushes, int nPuts)
-  throws Exception {
-
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(table.getName())) {
-      // connection needed for poll-wait
-      HRegionLocation loc = locator.getRegionLocation(row, true);
-      AdminProtos.AdminService.BlockingInterface server =
-        ((ConnectionImplementation) admin.getConnection()).getAdmin(loc.getServerName());
-      byte[] regName = loc.getRegionInfo().getRegionName();
-
-      for (int i = 0; i < nFlushes; i++) {
-        randomCFPuts(table, row, family, nPuts);
-        List<String> sf = ProtobufUtil.getStoreFiles(server, regName, FAMILY);
-        int sfCount = sf.size();
-
-        admin.flush(table.getName());
-      }
+  private void performMultiplePutAndFlush(HBaseAdmin admin, Table table, byte[] row, byte[] family,
+      int nFlushes, int nPuts) throws Exception {
+    for (int i = 0; i < nFlushes; i++) {
+      randomCFPuts(table, row, family, nPuts);
+      admin.flush(table.getName());
     }
   }
 
@@ -265,6 +253,16 @@ public class TestFromClientSide3 {
     }
   }
 
+  private int getStoreFileCount(Admin admin, ServerName serverName, RegionInfo region)
+      throws IOException {
+    for (RegionMetrics metrics : admin.getRegionMetrics(serverName, region.getTable())) {
+      if (Bytes.equals(region.getRegionName(), metrics.getRegionName())) {
+        return metrics.getStoreFileCount();
+      }
+    }
+    return 0;
+  }
+
   // override the config settings at the CF level and ensure priority
   @Test
   public void testAdvancedConfigOverride() throws Exception {
@@ -282,7 +280,6 @@ public class TestFromClientSide3 {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
     Admin admin = TEST_UTIL.getAdmin();
-    ConnectionImplementation connection = (ConnectionImplementation) TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());
@@ -291,9 +288,7 @@ public class TestFromClientSide3 {
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       // Verify we have multiple store files.
       HRegionLocation loc = locator.getRegionLocation(row, true);
-      byte[] regionName = loc.getRegionInfo().getRegionName();
-      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(loc.getServerName());
-      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
+      assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) > 1);
 
       // Issue a compaction request
       admin.compact(tableName);
@@ -302,21 +297,19 @@ public class TestFromClientSide3 {
       for (int i = 0; i < 10 * 1000 / 40; ++i) {
         // The number of store files after compaction should be lesser.
         loc = locator.getRegionLocation(row, true);
-        if (!loc.getRegionInfo().isOffline()) {
-          regionName = loc.getRegionInfo().getRegionName();
-          server = connection.getAdmin(loc.getServerName());
-          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
+        if (!loc.getRegion().isOffline()) {
+          if (getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) <= 1) {
             break;
           }
         }
         Thread.sleep(40);
       }
       // verify the compactions took place and that we didn't just time out
-      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
+      assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) <= 1);
 
       // change the compaction.min config option for this table to 5
       LOG.info("hbase.hstore.compaction.min should now be 5");
-      HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
+      HTableDescriptor htd = new HTableDescriptor(hTable.getDescriptor());
       htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
       admin.modifyTable(htd);
       LOG.info("alter status finished");
@@ -330,9 +323,7 @@ public class TestFromClientSide3 {
       // This time, the compaction request should not happen
       Thread.sleep(10 * 1000);
       loc = locator.getRegionLocation(row, true);
-      regionName = loc.getRegionInfo().getRegionName();
-      server = connection.getAdmin(loc.getServerName());
-      int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
+      int sfCount = getStoreFileCount(admin, loc.getServerName(), loc.getRegion());
       assertTrue(sfCount > 1);
 
       // change an individual CF's config option to 2 & online schema update
@@ -349,21 +340,19 @@ public class TestFromClientSide3 {
       // poll wait for the compactions to happen
       for (int i = 0; i < 10 * 1000 / 40; ++i) {
         loc = locator.getRegionLocation(row, true);
-        regionName = loc.getRegionInfo().getRegionName();
         try {
-          server = connection.getAdmin(loc.getServerName());
-          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
+          if (getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) < sfCount) {
             break;
           }
         } catch (Exception e) {
-          LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
+          LOG.debug("Waiting for region to come online: " +
+            Bytes.toStringBinary(loc.getRegion().getRegionName()));
         }
         Thread.sleep(40);
       }
 
       // verify the compaction took place and that we didn't just time out
-      assertTrue(ProtobufUtil.getStoreFiles(
-        server, regionName, FAMILY).size() < sfCount);
+      assertTrue(getStoreFileCount(admin, loc.getServerName(), loc.getRegion()) < sfCount);
 
       // Finally, ensure that we can remove a custom config value after we made it
       LOG.info("Removing CF config value");
@@ -373,8 +362,8 @@ public class TestFromClientSide3 {
       htd.modifyFamily(hcd);
       admin.modifyTable(htd);
       LOG.info("alter status finished");
-      assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
-          "hbase.hstore.compaction.min"));
+      assertNull(hTable.getDescriptor().getColumnFamily(FAMILY).getValue(
+          Bytes.toBytes("hbase.hstore.compaction.min")));
     }
   }
 
@@ -461,7 +450,7 @@ public class TestFromClientSide3 {
           new Put(ROW).addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE)));
         t.batch(Arrays.asList(arm), batchResult);
         fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
-      } catch(RetriesExhaustedWithDetailsException e) {
+      } catch(RetriesExhaustedException e) {
         String msg = e.getMessage();
         assertTrue(msg.contains("NoSuchColumnFamilyException"));
       }
@@ -548,7 +537,7 @@ public class TestFromClientSide3 {
       getList.add(get);
       getList.add(get2);
 
-      boolean[] exists = table.existsAll(getList);
+      boolean[] exists = table.exists(getList);
       assertEquals(true, exists[0]);
       assertEquals(true, exists[1]);
 
@@ -597,7 +586,7 @@ public class TestFromClientSide3 {
     gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
 
     LOG.info("Calling exists");
-    boolean[] results = table.existsAll(gets);
+    boolean[] results = table.exists(gets);
     assertFalse(results[0]);
     assertFalse(results[1]);
     assertTrue(results[2]);
@@ -611,7 +600,7 @@ public class TestFromClientSide3 {
     gets = new ArrayList<>();
     gets.add(new Get(new byte[] { 0x00 }));
     gets.add(new Get(new byte[] { 0x00, 0x00 }));
-    results = table.existsAll(gets);
+    results = table.exists(gets);
     assertTrue(results[0]);
     assertFalse(results[1]);
 
@@ -624,7 +613,7 @@ public class TestFromClientSide3 {
     gets.add(new Get(new byte[] { (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
-    results = table.existsAll(gets);
+    results = table.exists(gets);
     assertFalse(results[0]);
     assertTrue(results[1]);
     assertFalse(results[2]);
@@ -661,8 +650,10 @@ public class TestFromClientSide3 {
 
   @Test
   public void testConnectionDefaultUsesCodec() throws Exception {
-    ConnectionImplementation con = (ConnectionImplementation) TEST_UTIL.getConnection();
-    assertTrue(con.hasCellBlockSupport());
+    try (
+      RpcClient client = RpcClientFactory.createClient(TEST_UTIL.getConfiguration(), "cluster")) {
+      assertTrue(client.hasCellBlockSupport());
+    }
   }
 
   @Test

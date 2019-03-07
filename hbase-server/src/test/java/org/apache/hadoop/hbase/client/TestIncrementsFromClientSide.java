@@ -112,30 +112,23 @@ public class TestIncrementsFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(3 * 1000);
 
-      try {
-        Increment inc = new Increment(ROW);
-        inc.addColumn(TEST_UTIL.fam1, QUALIFIER, 1);
-        Result result = table.increment(inc);
+    try (Connection connection = ConnectionFactory.createConnection(c);
+        Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+          .setOperationTimeout(3 * 1000).build()) {
+      Increment inc = new Increment(ROW);
+      inc.addColumn(TEST_UTIL.fam1, QUALIFIER, 1);
+      Result result = table.increment(inc);
 
-        Cell [] cells = result.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
 
-        // Verify expected result
-        Result readResult = table.get(new Get(ROW));
-        cells = readResult.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
-      } finally {
-        table.close();
-        connection.close();
-      }
+      // Verify expected result
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
     }
   }
 
@@ -216,38 +209,36 @@ public class TestIncrementsFromClientSide {
   public void testIncrementInvalidArguments() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     try {
       // try null row
       ht.incrementColumnValue(null, FAMILY, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
+      fail("Should have thrown NPE/IOE");
+    } catch (NullPointerException | IOException error) {
       // success
     }
     try {
       // try null family
       ht.incrementColumnValue(ROW, null, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
+      fail("Should have thrown NPE/IOE");
+    } catch (NullPointerException | IOException error) {
       // success
     }
     // try null row
     try {
-      Increment incNoRow = new Increment((byte [])null);
+      Increment incNoRow = new Increment((byte[]) null);
       incNoRow.addColumn(FAMILY, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
-    } catch (IllegalArgumentException iax) {
-      // success
-    } catch (NullPointerException npe) {
+      fail("Should have thrown IAE/NPE");
+    } catch (IllegalArgumentException | NullPointerException error) {
       // success
     }
     // try null family
     try {
       Increment incNoFamily = new Increment(ROW);
       incNoFamily.addColumn(null, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
+      fail("Should have thrown IAE");
     } catch (IllegalArgumentException iax) {
       // success
     }

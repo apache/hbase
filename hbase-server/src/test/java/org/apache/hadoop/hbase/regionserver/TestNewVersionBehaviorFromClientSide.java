@@ -311,9 +311,10 @@ public class TestNewVersionBehaviorFromClientSide {
 
   @Test
   public void testgetColumnHint() throws IOException {
-    try (Table t = createTable()) {
-      t.setOperationTimeout(10000);
-      t.setRpcTimeout(10000);
+    createTable();
+    try (Table t =
+      TEST_UTIL.getConnection().getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+        .setOperationTimeout(10000).setRpcTimeout(10000).build()) {
       t.put(new Put(ROW).addColumn(FAMILY, col1, 100, value));
       t.put(new Put(ROW).addColumn(FAMILY, col1, 101, value));
       t.put(new Put(ROW).addColumn(FAMILY, col1, 102, value));

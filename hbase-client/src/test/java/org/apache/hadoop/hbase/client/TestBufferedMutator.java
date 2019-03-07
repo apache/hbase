@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -33,12 +34,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestBufferedMutator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBufferedMutator.class);
+    HBaseClassTestRule.forClass(TestBufferedMutator.class);
 
   @Rule
   public TestName name = new TestName();
@@ -55,10 +56,12 @@ public class TestBufferedMutator {
 
   @Test
   public void testAlternateBufferedMutatorImpl() throws IOException {
-    BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
+    BufferedMutatorParams params =
+      new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
     conf.set(AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY, DoNothingAsyncRegistry.class.getName());
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+    try (ConnectionImplementation connection = ConnectionFactory.createConnectionImpl(conf, null,
+      UserProvider.instantiate(conf).getCurrent())) {
       BufferedMutator bm = connection.getBufferedMutator(params);
       // Assert we get default BM if nothing specified.
       assertTrue(bm instanceof BufferedMutatorImpl);
@@ -70,7 +73,8 @@ public class TestBufferedMutator {
     // Now try creating a Connection after setting an alterate BufferedMutator into
     // the configuration and confirm we get what was expected.
     conf.set(BufferedMutator.CLASSNAME_KEY, MyBufferedMutator.class.getName());
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+    try (Connection connection = ConnectionFactory.createConnectionImpl(conf, null,
+      UserProvider.instantiate(conf).getCurrent())) {
       BufferedMutator bm = connection.getBufferedMutator(params);
       assertTrue(bm instanceof MyBufferedMutator);
     }

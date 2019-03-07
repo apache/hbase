@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -217,7 +218,9 @@ public class TestMetaWithReplicas {
       util.getAdmin().deleteTable(TABLE);
     }
     ServerName master = null;
-    try (Connection c = ConnectionFactory.createConnection(util.getConfiguration())) {
+    try (
+      ConnectionImplementation c = ConnectionFactory.createConnectionImpl(util.getConfiguration(),
+        null, UserProvider.instantiate(util.getConfiguration()).getCurrent())) {
       try (Table htable = util.createTable(TABLE, FAMILIES)) {
         util.getAdmin().flush(TableName.META_TABLE_NAME);
         Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
@@ -287,6 +290,10 @@ public class TestMetaWithReplicas {
     }
   }
 
+  /**
+   * Will removed along with ConnectionImplementation soon.
+   */
+  @Ignore
   @Test
   public void testMetaLookupThreadPoolCreated() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());

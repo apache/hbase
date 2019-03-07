@@ -144,9 +144,8 @@ public abstract class MultiThreadedAction {
 
   public static final int REPORTING_INTERVAL_MS = 5000;
 
-  public MultiThreadedAction(LoadTestDataGenerator dataGen, Configuration conf,
-                             TableName tableName,
-                             String actionLetter) throws IOException {
+  public MultiThreadedAction(LoadTestDataGenerator dataGen, Configuration conf, TableName tableName,
+      String actionLetter) throws IOException {
     this.conf = conf;
     this.dataGenerator = dataGen;
     this.tableName = tableName;

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Map;
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -35,20 +34,19 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.namespace.QName;
-
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class SchemaResource extends ResourceBase {
@@ -73,13 +71,9 @@ public class SchemaResource extends ResourceBase {
     this.tableResource = tableResource;
   }
 
-  private HTableDescriptor getTableSchema() throws IOException,
-      TableNotFoundException {
-    Table table = servlet.getTable(tableResource.getName());
-    try {
-      return table.getTableDescriptor();
-    } finally {
-      table.close();
+  private HTableDescriptor getTableSchema() throws IOException, TableNotFoundException {
+    try (Table table = servlet.getTable(tableResource.getName())) {
+      return new HTableDescriptor(table.getDescriptor());
     }
   }
 
