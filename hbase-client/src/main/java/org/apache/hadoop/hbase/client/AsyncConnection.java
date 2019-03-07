@@ -202,6 +202,14 @@ public interface AsyncConnection extends Closeable {
   boolean isClosed();
 
   /**
+   * Convert this connection to a {@link Connection}.
+   * <p/>
+   * Usually we will return the same instance if you call this method multiple times so you can
+   * consider this as a light-weighted operation.
+   */
+  Connection toConnection();
+
+  /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
    * be thread-safe. A new instance should be created by each thread. This is a lightweight
    * operation. Pooling or caching of the returned Hbck instance is not recommended.

@@ -409,9 +409,7 @@ public class ThriftTable implements Table {
     }
   }
 
-
-  @Override
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+  private boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
       byte[] value, RowMutations mutation) throws IOException {
     try {
       ByteBuffer valueBuffer = value == null? null : ByteBuffer.wrap(value);

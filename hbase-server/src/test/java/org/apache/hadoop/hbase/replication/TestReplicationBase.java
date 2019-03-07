@@ -215,7 +215,6 @@ public class TestReplicationBase {
   protected static void startClusters() throws Exception {
     UTIL1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = UTIL1.getZkCluster();
-    admin = new ReplicationAdmin(CONF1);
     LOG.info("Setup first Zk");
 
     UTIL2.setZkCluster(miniZK);
@@ -227,6 +226,7 @@ public class TestReplicationBase {
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
     UTIL2.startMiniCluster(NUM_SLAVES2);
 
+    admin = new ReplicationAdmin(CONF1);
     hbaseAdmin = ConnectionFactory.createConnection(CONF1).getAdmin();
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)

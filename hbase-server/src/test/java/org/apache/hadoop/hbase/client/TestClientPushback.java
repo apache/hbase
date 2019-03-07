@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -48,7 +49,9 @@ public class TestClientPushback extends ClientPushbackTestBase {
 
   @Before
   public void setUp() throws IOException {
-    conn = (ConnectionImplementation) ConnectionFactory.createConnection(UTIL.getConfiguration());
+    conn =
+      (ConnectionImplementation) ConnectionFactory.createConnectionImpl(UTIL.getConfiguration(),
+        null, UserProvider.instantiate(UTIL.getConfiguration()).getCurrent());
     mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
   }
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +28,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -41,6 +39,8 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -71,9 +71,10 @@ public class TestMultiRespectsLimits {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setLong(
-        HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
-        MAX_SIZE);
+    // disable the debug log to avoid flooding the output
+    LogManager.getLogger(AsyncRegionLocatorHelper.class).setLevel(Level.INFO);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
+      MAX_SIZE);
 
     // Only start on regionserver so that all regions are on the same server.
     TEST_UTIL.startMiniCluster(1);
@@ -126,11 +127,9 @@ public class TestMultiRespectsLimits {
   @Test
   public void testBlockMultiLimits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-    hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-    desc.addFamily(hcd);
-    TEST_UTIL.getAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(FAMILY).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).build()).build());
     Table t = TEST_UTIL.getConnection().getTable(tableName);
 
     final HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);

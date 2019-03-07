@@ -93,7 +93,7 @@ public class TestServerSideScanMetricsFromClientSide {
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
   }
 
-  static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
+  private static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
       byte[][] qualifiers, byte[] cellValue) throws IOException {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
@@ -109,14 +109,8 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
    */
-  static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
+  private static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
     Put put;
     ArrayList<Put> puts = new ArrayList<>();
@@ -139,7 +133,6 @@ public class TestServerSideScanMetricsFromClientSide {
    * @return The approximate heap size of a cell in the test table. All cells should have
    *         approximately the same heap size, so the value is cached to avoid repeating the
    *         calculation
-   * @throws Exception
    */
   private long getCellHeapSize() throws Exception {
     if (CELL_HEAP_SIZE == -1) {
@@ -163,21 +156,11 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   @Test
-  public void testRowsSeenMetricWithSync() throws Exception {
-    testRowsSeenMetric(false);
-  }
-
-  @Test
-  public void testRowsSeenMetricWithAsync() throws Exception {
-    testRowsSeenMetric(true);
-  }
-
-  private void testRowsSeenMetric(boolean async) throws Exception {
+  public void testRowsSeenMetric() throws Exception {
     // Base scan configuration
     Scan baseScan;
     baseScan = new Scan();
     baseScan.setScanMetricsEnabled(true);
-    baseScan.setAsyncPrefetch(async);
     testRowsSeenMetric(baseScan);
 
     // Test case that only a single result will be returned per RPC to the serer
@@ -196,7 +179,7 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsSeenMetric(baseScan);
   }
 
-  public void testRowsSeenMetric(Scan baseScan) throws Exception {
+  private void testRowsSeenMetric(Scan baseScan) throws Exception {
     Scan scan;
     scan = new Scan(baseScan);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, NUM_ROWS);
@@ -263,7 +246,7 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsSeenMetric(baseScan);
   }
 
-  public void testRowsFilteredMetric(Scan baseScan) throws Exception {
+  private void testRowsFilteredMetric(Scan baseScan) throws Exception {
     testRowsFilteredMetric(baseScan, null, 0);
 
     // Row filter doesn't match any row key. All rows should be filtered
@@ -315,34 +298,32 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
   }
 
-  public void testRowsFilteredMetric(Scan baseScan, Filter filter, int expectedNumFiltered)
+  private void testRowsFilteredMetric(Scan baseScan, Filter filter, int expectedNumFiltered)
       throws Exception {
     Scan scan = new Scan(baseScan);
-    if (filter != null) scan.setFilter(filter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, expectedNumFiltered);
+    if (filter != null) {
+      scan.setFilter(filter);
+    }
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME,
+      expectedNumFiltered);
   }
 
   /**
-   * Run the scan to completetion and check the metric against the specified value
-   * @param scan
-   * @param metricKey
-   * @param expectedValue
-   * @throws Exception
+   * Run the scan to completion and check the metric against the specified value
    */
-  public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
+  private void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
-
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
     assertTrue("Metrics are null", metrics != null);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals("Metric: " + metricKey + " Expected: " + expectedValue + " Actual: "
-        + actualMetricValue, expectedValue, actualMetricValue);
-
+    assertEquals(
+      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+      expectedValue, actualMetricValue);
   }
 }

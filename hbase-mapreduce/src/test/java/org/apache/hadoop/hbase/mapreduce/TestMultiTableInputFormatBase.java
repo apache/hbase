@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
@@ -239,6 +240,11 @@ public class TestMultiTableInputFormatBase {
 
     @Override
     public void clearRegionLocationCache() {
+    }
+
+    @Override
+    public AsyncConnection toAsyncConnection() {
+      return null;
     }
   }
 }

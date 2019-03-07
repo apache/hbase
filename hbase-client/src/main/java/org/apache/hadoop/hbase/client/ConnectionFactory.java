@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -211,26 +212,31 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
-    final User user) throws IOException {
-    String className = conf.get(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
-      ConnectionImplementation.class.getName());
-    Class<?> clazz;
-    try {
-      clazz = Class.forName(className);
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
+      final User user) throws IOException {
+    Class<?> clazz = conf.getClass(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
+      ConnectionOverAsyncConnection.class, Connection.class);
+    if (clazz != ConnectionOverAsyncConnection.class) {
+      try {
+        // Default HCM#HCI is not accessible; make it so before invoking.
+        Constructor<?> constructor =
+          clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
+        constructor.setAccessible(true);
+        return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
+          .newInstance(conf, pool, user));
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    } else {
+      return FutureUtils.get(createAsyncConnection(conf, user)).toConnection();
     }
-    try {
-      // Default HCM#HCI is not accessible; make it so before invoking.
-      Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
-        ExecutorService.class, User.class);
-      constructor.setAccessible(true);
-      return user.runAs(
-        (PrivilegedExceptionAction<Connection>)() ->
-          (Connection) constructor.newInstance(conf, pool, user));
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+  }
+
+  /**
+   * Create a {@link ConnectionImplementation}, internal use only.
+   */
+  static ConnectionImplementation createConnectionImpl(Configuration conf, ExecutorService pool,
+      User user) throws IOException {
+    return new ConnectionImplementation(conf, pool, user);
   }
 
   /**

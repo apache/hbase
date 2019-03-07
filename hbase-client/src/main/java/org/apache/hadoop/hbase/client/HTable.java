@@ -99,7 +99,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HTable implements Table {
+class HTable implements Table {
   private static final Logger LOG = LoggerFactory.getLogger(HTable.class);
   private static final Consistency DEFAULT_CONSISTENCY = Consistency.STRONG;
   private final ConnectionImplementation connection;
@@ -654,22 +654,6 @@ public class HTable implements Table {
         callWithRetries(callable, this.operationTimeoutMs);
   }
 
-  @Override
-  @Deprecated
-  public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, CompareOperator.EQUAL.name(), value, null, put);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op, final byte [] value, final Put put) throws IOException {
-    // The name of the operators in CompareOperator are intentionally those of the
-    // operators in the filter's CompareOp enum.
-    return doCheckAndPut(row, family, qualifier, op.name(), value, null, put);
-  }
-
   private boolean doCheckAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
     final String opName, final byte[] value, final TimeRange timeRange, final Put put)
     throws IOException {
@@ -688,21 +672,6 @@ public class HTable implements Table {
     };
     return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeoutMs)
         .callWithRetries(callable, this.operationTimeoutMs);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, CompareOperator.EQUAL.name(), value, null,
-      delete);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, op.name(), value, null, delete);
   }
 
   private boolean doCheckAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
@@ -794,13 +763,6 @@ public class HTable implements Table {
     }
 
     return ((Result)results[0]).getExists();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, op.name(), value, null, rm);
   }
 
   @Override
@@ -905,23 +867,6 @@ public class HTable implements Table {
   }
 
   @Override
-  public <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
-      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
-      throws ServiceException, Throwable {
-    final Map<byte[],R> results =  Collections.synchronizedMap(
-        new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
-    coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
-      @Override
-      public void update(byte[] region, byte[] row, R value) {
-        if (region != null) {
-          results.put(region, value);
-        }
-      }
-    });
-    return results;
-  }
-
-  @Override
   public <T extends Service, R> void coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
       final Batch.Callback<R> callback) throws ServiceException, Throwable {
@@ -977,33 +922,8 @@ public class HTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public int getRpcTimeout() {
-    return rpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setRpcTimeout(int rpcTimeout) {
-    setReadRpcTimeout(rpcTimeout);
-    setWriteRpcTimeout(rpcTimeout);
-  }
-
-  @Override
   public long getReadRpcTimeout(TimeUnit unit) {
     return unit.convert(readRpcTimeoutMs, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  @Deprecated
-  public int getReadRpcTimeout() {
-    return readRpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setReadRpcTimeout(int readRpcTimeout) {
-    this.readRpcTimeoutMs = readRpcTimeout;
   }
 
   @Override
@@ -1012,55 +932,13 @@ public class HTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public int getWriteRpcTimeout() {
-    return writeRpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setWriteRpcTimeout(int writeRpcTimeout) {
-    this.writeRpcTimeoutMs = writeRpcTimeout;
-  }
-
-  @Override
   public long getOperationTimeout(TimeUnit unit) {
     return unit.convert(operationTimeoutMs, TimeUnit.MILLISECONDS);
   }
 
   @Override
-  @Deprecated
-  public int getOperationTimeout() {
-    return operationTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setOperationTimeout(int operationTimeout) {
-    this.operationTimeoutMs = operationTimeout;
-  }
-
-  @Override
   public String toString() {
     return tableName + ";" + connection;
-  }
-
-  @Override
-  public <R extends Message> Map<byte[], R> batchCoprocessorService(
-      Descriptors.MethodDescriptor methodDescriptor, Message request,
-      byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
-    final Map<byte[], R> results = Collections.synchronizedMap(new TreeMap<byte[], R>(
-        Bytes.BYTES_COMPARATOR));
-    batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
-        new Callback<R>() {
-      @Override
-      public void update(byte[] region, byte[] row, R result) {
-        if (region != null) {
-          results.put(region, result);
-        }
-      }
-    });
-    return results;
   }
 
   @Override

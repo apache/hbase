@@ -33,9 +33,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+/**
+ * To be rewrite to check async meta cache.
+ */
+@Ignore
 @Category({MediumTests.class, ClientTests.class})
 public class TestRegionLocationCaching {
 
