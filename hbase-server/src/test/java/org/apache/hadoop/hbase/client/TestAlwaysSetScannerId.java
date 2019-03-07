@@ -24,6 +24,8 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,6 +35,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -48,7 +51,7 @@ public class TestAlwaysSetScannerId {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAlwaysSetScannerId.class);
+    HBaseClassTestRule.forClass(TestAlwaysSetScannerId.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -62,7 +65,9 @@ public class TestAlwaysSetScannerId {
 
   private static RegionInfo HRI;
 
-  private static ClientProtos.ClientService.BlockingInterface STUB;
+  private static AsyncConnectionImpl CONN;
+
+  private static ClientProtos.ClientService.Interface STUB;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -73,38 +78,46 @@ public class TestAlwaysSetScannerId {
       }
     }
     HRI = UTIL.getAdmin().getRegions(TABLE_NAME).get(0);
-    STUB = ((ConnectionImplementation) UTIL.getConnection())
-        .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
+    CONN =
+      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+    STUB = CONN.getRegionServerStub(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
+    Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
+  }
+
+  private ScanResponse scan(ScanRequest req) throws IOException {
+    BlockingRpcCallback<ScanResponse> callback = new BlockingRpcCallback<>();
+    STUB.scan(new HBaseRpcControllerImpl(), req, callback);
+    return callback.get();
   }
 
   @Test
   public void test() throws ServiceException, IOException {
     Scan scan = new Scan();
     ScanRequest req = RequestConverter.buildScanRequest(HRI.getRegionName(), scan, 1, false);
-    ScanResponse resp = STUB.scan(null, req);
+    ScanResponse resp = scan(req);
     assertTrue(resp.hasScannerId());
     long scannerId = resp.getScannerId();
     int nextCallSeq = 0;
     // test next
     for (int i = 0; i < COUNT / 2; i++) {
       req = RequestConverter.buildScanRequest(scannerId, 1, false, nextCallSeq++, false, false, -1);
-      resp = STUB.scan(null, req);
+      resp = scan(req);
       assertTrue(resp.hasScannerId());
       assertEquals(scannerId, resp.getScannerId());
     }
     // test renew
     req = RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq++, false, true, -1);
-    resp = STUB.scan(null, req);
+    resp = scan(req);
     assertTrue(resp.hasScannerId());
     assertEquals(scannerId, resp.getScannerId());
     // test close
     req = RequestConverter.buildScanRequest(scannerId, 0, true, false);
-    resp = STUB.scan(null, req);
+    resp = scan(req);
     assertTrue(resp.hasScannerId());
     assertEquals(scannerId, resp.getScannerId());
   }

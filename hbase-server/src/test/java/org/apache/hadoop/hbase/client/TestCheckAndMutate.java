@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -135,18 +137,16 @@ public class TestCheckAndMutate {
       // get row back and assert the values
       getOneRowAndAssertAllButCExist(table);
 
-      //Test that we get a region level exception
+      // Test that we get a region level exception
       try {
         rm = getBogusRowMutations();
         table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
-            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
         fail("Expected NoSuchColumnFamilyException");
-      } catch (RetriesExhaustedWithDetailsException e) {
-        try {
-          throw e.getCause(0);
-        } catch (NoSuchColumnFamilyException e1) {
-          // expected
-        }
+      } catch (NoSuchColumnFamilyException e) {
+        // expected
+      } catch (RetriesExhaustedException e) {
+        assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
       }
     }
   }
@@ -168,18 +168,16 @@ public class TestCheckAndMutate {
       // get row back and assert the values
       getOneRowAndAssertAllButCExist(table);
 
-      //Test that we get a region level exception
+      // Test that we get a region level exception
       try {
         rm = getBogusRowMutations();
         table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
-            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
         fail("Expected NoSuchColumnFamilyException");
-      } catch (RetriesExhaustedWithDetailsException e) {
-        try {
-          throw e.getCause(0);
-        } catch (NoSuchColumnFamilyException e1) {
-          // expected
-        }
+      } catch (NoSuchColumnFamilyException e) {
+        // expected
+      } catch (RetriesExhaustedException e) {
+        assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
       }
     }
   }

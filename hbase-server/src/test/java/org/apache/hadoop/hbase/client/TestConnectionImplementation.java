@@ -83,7 +83,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * This class is for testing HBaseConnectionManager features
+ * <p/>
+ * Will be removed in the future, ignore.
  */
+@Ignore
 @Category({LargeTests.class})
 public class TestConnectionImplementation {
 

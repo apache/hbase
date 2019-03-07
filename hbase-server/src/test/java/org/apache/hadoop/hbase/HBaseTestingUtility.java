@@ -63,7 +63,9 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -118,6 +120,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -153,6 +156,8 @@ import org.apache.zookeeper.ZooKeeper.States;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.Log4jLoggerAdapter;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -211,10 +216,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     * HBaseTestingUtility*/
   private Path dataTestDirOnTestFS = null;
 
-  /**
-   * Shared cluster connection.
-   */
-  private volatile Connection connection;
+  private volatile AsyncClusterConnection asyncConnection;
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
@@ -1206,9 +1208,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       hbaseAdmin.close();
       hbaseAdmin = null;
     }
-    if (this.connection != null) {
-      this.connection.close();
-      this.connection = null;
+    if (this.asyncConnection != null) {
+      this.asyncConnection.close();
+      this.asyncConnection = null;
     }
     this.hbaseCluster = new MiniHBaseCluster(this.conf, 1, servers, ports, null, null);
     // Don't leave here till we've done a successful scan of the hbase:meta
@@ -1289,14 +1291,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   // close hbase admin, close current connection and reset MIN MAX configs for RS.
   private void cleanup() throws IOException {
-    if (hbaseAdmin != null) {
-      hbaseAdmin.close();
-      hbaseAdmin = null;
-    }
-    if (this.connection != null) {
-      this.connection.close();
-      this.connection = null;
-    }
+    closeConnection();
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
@@ -3004,17 +2999,35 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseCluster;
   }
 
+  private void initConnection() throws IOException {
+    User user = UserProvider.instantiate(conf).getCurrent();
+    this.asyncConnection = ClusterConnectionFactory.createAsyncClusterConnection(conf, null, user);
+  }
+
   /**
-   * Get a Connection to the cluster.
-   * Not thread-safe (This class needs a lot of work to make it thread-safe).
+   * Get a Connection to the cluster. Not thread-safe (This class needs a lot of work to make it
+   * thread-safe).
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
-   * @throws IOException
    */
   public Connection getConnection() throws IOException {
-    if (this.connection == null) {
-      this.connection = ConnectionFactory.createConnection(this.conf);
+    if (this.asyncConnection == null) {
+      initConnection();
     }
-    return this.connection;
+    return this.asyncConnection.toConnection();
+  }
+
+  public AsyncClusterConnection getAsyncConnection() throws IOException {
+    if (this.asyncConnection == null) {
+      initConnection();
+    }
+    return this.asyncConnection;
+  }
+
+  public void closeConnection() throws IOException {
+    Closeables.close(hbaseAdmin, true);
+    Closeables.close(asyncConnection, true);
+    this.hbaseAdmin = null;
+    this.asyncConnection = null;
   }
 
   /**
@@ -3186,36 +3199,30 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Wait until all regions in a table have been assigned
    * @param table Table to wait on.
    * @param timeoutMillis Timeout.
-   * @throws InterruptedException
-   * @throws IOException
    */
   public void waitTableAvailable(byte[] table, long timeoutMillis)
-  throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     waitFor(timeoutMillis, predicateTableAvailable(TableName.valueOf(table)));
   }
 
   public String explainTableAvailability(TableName tableName) throws IOException {
     String msg = explainTableState(tableName, TableState.State.ENABLED) + ", ";
     if (getHBaseCluster().getMaster().isAlive()) {
-      Map<RegionInfo, ServerName> assignments =
-          getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-              .getRegionAssignments();
+      Map<RegionInfo, ServerName> assignments = getHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().getRegionAssignments();
       final List<Pair<RegionInfo, ServerName>> metaLocations =
-          MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+        MetaTableAccessor.getTableRegionsAndLocations(asyncConnection.toConnection(), tableName);
       for (Pair<RegionInfo, ServerName> metaLocation : metaLocations) {
         RegionInfo hri = metaLocation.getFirst();
         ServerName sn = metaLocation.getSecond();
         if (!assignments.containsKey(hri)) {
-          msg += ", region " + hri
-              + " not assigned, but found in meta, it expected to be on " + sn;
+          msg += ", region " + hri + " not assigned, but found in meta, it expected to be on " + sn;
 
         } else if (sn == null) {
-          msg += ",  region " + hri
-              + " assigned,  but has no server in meta";
+          msg += ",  region " + hri + " assigned,  but has no server in meta";
         } else if (!sn.equals(assignments.get(hri))) {
-          msg += ",  region " + hri
-              + " assigned,  but has different servers in meta and AM ( " +
-              sn + " <> " + assignments.get(hri);
+          msg += ",  region " + hri + " assigned,  but has different servers in meta and AM ( " +
+            sn + " <> " + assignments.get(hri);
         }
       }
     }
@@ -3224,10 +3231,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public String explainTableState(final TableName table, TableState.State state)
       throws IOException {
-    TableState tableState = MetaTableAccessor.getTableState(connection, table);
+    TableState tableState = MetaTableAccessor.getTableState(asyncConnection.toConnection(), table);
     if (tableState == null) {
-      return "TableState in META: No table state in META for table " + table
-          + " last state in meta (including deleted is " + findLastTableState(table) + ")";
+      return "TableState in META: No table state in META for table " + table +
+        " last state in meta (including deleted is " + findLastTableState(table) + ")";
     } else if (!tableState.inStates(state)) {
       return "TableState in META: Not " + state + " state, but " + tableState;
     } else {
@@ -3241,18 +3248,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        if (!Arrays.equals(r.getRow(), table.getName()))
+        if (!Arrays.equals(r.getRow(), table.getName())) {
           return false;
+        }
         TableState state = MetaTableAccessor.getTableState(r);
-        if (state != null)
+        if (state != null) {
           lastTableState.set(state);
+        }
         return true;
       }
     };
-    MetaTableAccessor
-        .scanMeta(connection, null, null,
-            MetaTableAccessor.QueryType.TABLE,
-            Integer.MAX_VALUE, visitor);
+    MetaTableAccessor.scanMeta(asyncConnection.toConnection(), null, null,
+      MetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 
