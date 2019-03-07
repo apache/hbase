@@ -252,8 +252,7 @@ public class TestCanaryTool {
   private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
     Integer port =
       Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
-    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM,
-      "localhost:" + port + "/hbase");
+    testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
     ExecutorService executor = new ScheduledThreadPoolExecutor(2);
     Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
     Canary canary = new Canary(executor, sink);

@@ -377,22 +377,20 @@ public class TestScannerResource {
     assertEquals(404, response.getCode());
   }
 
-  // performs table scan during which the underlying table is disabled
-  // assert that we get 410 (Gone)
   @Test
   public void testTableScanWithTableDisable() throws IOException {
+    TEST_UTIL.getAdmin().disableTable(TABLE_TO_BE_DISABLED);
     ScannerModel model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_1));
     model.setCaching(1);
     Response response = client.put("/" + TABLE_TO_BE_DISABLED + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    // we will see the exception when we actually want to get the result.
     assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
-    TEST_UTIL.getAdmin().disableTable(TABLE_TO_BE_DISABLED);
-      response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
-    assertTrue("got " + response.getCode(), response.getCode() == 410);
+    response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
+    assertEquals(410, response.getCode());
   }
-
 }
 

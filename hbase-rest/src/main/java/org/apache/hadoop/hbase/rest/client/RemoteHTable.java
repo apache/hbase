@@ -22,20 +22,27 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
-
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -63,19 +70,9 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -257,36 +254,6 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public HTableDescriptor getTableDescriptor() throws IOException {
-    StringBuilder sb = new StringBuilder();
-    sb.append('/');
-    sb.append(Bytes.toString(name));
-    sb.append('/');
-    sb.append("schema");
-    for (int i = 0; i < maxRetries; i++) {
-      Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
-      int code = response.getCode();
-      switch (code) {
-      case 200:
-        TableSchemaModel schema = new TableSchemaModel();
-        schema.getObjectFromMessage(response.getBody());
-        return schema.getTableDescriptor();
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException e) {
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-        }
-        break;
-      default:
-        throw new IOException("schema request returned " + code);
-      }
-    }
-    throw new IOException("schema request timed out");
-  }
-
-  @Override
   public void close() throws IOException {
     client.shutdown();
   }
@@ -316,12 +283,13 @@ public class RemoteHTable implements Table {
     int maxVersions = 1;
     int count = 0;
 
-    for(Get g:gets) {
+    for (Get g : gets) {
 
-      if ( count == 0 ) {
+      if (count == 0) {
         maxVersions = g.getMaxVersions();
       } else if (g.getMaxVersions() != maxVersions) {
-        LOG.warn("MaxVersions on Gets do not match, using the first in the list ("+maxVersions+")");
+        LOG.warn(
+          "MaxVersions on Gets do not match, using the first in the list (" + maxVersions + ")");
       }
 
       if (g.getFilter() != null) {
@@ -329,7 +297,7 @@ public class RemoteHTable implements Table {
       }
 
       rows[count] = g.getRow();
-      count ++;
+      count++;
     }
 
     String spec = buildMultiRowSpec(rows, maxVersions);
@@ -346,7 +314,7 @@ public class RemoteHTable implements Table {
           CellSetModel model = new CellSetModel();
           model.getObjectFromMessage(response.getBody());
           Result[] results = buildResultFromModel(model);
-          if ( results.length > 0) {
+          if (results.length > 0) {
             return results;
           }
           // fall through
@@ -357,7 +325,7 @@ public class RemoteHTable implements Table {
           try {
             Thread.sleep(sleepTime);
           } catch (InterruptedException e) {
-            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
           }
           break;
         default:
@@ -393,21 +361,21 @@ public class RemoteHTable implements Table {
     sb.append('/');
     sb.append(toURLEncodedBytes(put.getRow()));
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-        model.createProtobufOutput());
+      Response response =
+        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
-      case 200:
-        return;
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException e) {
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-        }
-        break;
-      default:
-        throw new IOException("put request failed with " + code);
+        case 200:
+          return;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+          }
+          break;
+        default:
+          throw new IOException("put request failed with " + code);
       }
     }
     throw new IOException("put request timed out");
@@ -419,24 +387,24 @@ public class RemoteHTable implements Table {
     // ignores the row specification in the URI
 
     // separate puts by row
-    TreeMap<byte[],List<Cell>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (Put put: puts) {
+    TreeMap<byte[], List<Cell>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (Put put : puts) {
       byte[] row = put.getRow();
       List<Cell> cells = map.get(row);
       if (cells == null) {
         cells = new ArrayList<>();
         map.put(row, cells);
       }
-      for (List<Cell> l: put.getFamilyCellMap().values()) {
+      for (List<Cell> l : put.getFamilyCellMap().values()) {
         cells.addAll(l);
       }
     }
 
     // build the cell set
     CellSetModel model = new CellSetModel();
-    for (Map.Entry<byte[], List<Cell>> e: map.entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> e : map.entrySet()) {
       RowModel row = new RowModel(e.getKey());
-      for (Cell cell: e.getValue()) {
+      for (Cell cell : e.getValue()) {
         row.addCell(new CellModel(cell));
       }
       model.addRow(row);
@@ -448,21 +416,21 @@ public class RemoteHTable implements Table {
     sb.append(Bytes.toString(name));
     sb.append("/$multiput"); // can be any nonexistent row
     for (int i = 0; i < maxRetries; i++) {
-      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-        model.createProtobufOutput());
+      Response response =
+        client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
-      case 200:
-        return;
-      case 509:
-        try {
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException e) {
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-        }
-        break;
-      default:
-        throw new IOException("multiput request failed with " + code);
+        case 200:
+          return;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+          }
+          break;
+        default:
+          throw new IOException("multiput request failed with " + code);
       }
     }
     throw new IOException("multiput request timed out");
@@ -505,7 +473,31 @@ public class RemoteHTable implements Table {
 
   @Override
   public TableDescriptor getDescriptor() throws IOException {
-    return getTableDescriptor();
+    StringBuilder sb = new StringBuilder();
+    sb.append('/');
+    sb.append(Bytes.toString(name));
+    sb.append('/');
+    sb.append("schema");
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
+      int code = response.getCode();
+      switch (code) {
+        case 200:
+          TableSchemaModel schema = new TableSchemaModel();
+          schema.getObjectFromMessage(response.getBody());
+          return schema.getTableDescriptor();
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) {
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+          }
+          break;
+        default:
+          throw new IOException("schema request returned " + code);
+      }
+    }
+    throw new IOException("schema request timed out");
   }
 
   class Scanner implements ResultScanner {
@@ -671,13 +663,6 @@ public class RemoteHTable implements Table {
     return true;
   }
 
-  @Override
-  @Deprecated
-  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-      byte[] value, Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, value, put);
-  }
-
   private boolean doCheckAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
     // column to check-the-value
@@ -712,19 +697,6 @@ public class RemoteHTable implements Table {
       }
     }
     throw new IOException("checkAndPut request timed out");
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                             CompareOperator compareOp, byte[] value, Put put) throws IOException {
-    throw new IOException("checkAndPut for non-equal comparison not implemented");
-  }
-
-  @Override
-  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      byte[] value, Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, value, delete);
   }
 
   private boolean doCheckAndDelete(byte[] row, byte[] family, byte[] qualifier,
@@ -765,22 +737,8 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                                CompareOperator compareOp, byte[] value, Delete delete) throws IOException {
-    throw new IOException("checkAndDelete for non-equal comparison not implemented");
-  }
-
-  @Override
   public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     return new CheckAndMutateBuilderImpl(row, family);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
-    throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 
   @Override
@@ -856,31 +814,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public void setOperationTimeout(int operationTimeout) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public int getOperationTimeout() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public void setRpcTimeout(int rpcTimeout) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public long getReadRpcTimeout(TimeUnit unit) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public int getRpcTimeout() {
     throw new UnsupportedOperationException();
   }
 
@@ -890,31 +824,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public int getReadRpcTimeout() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public void setReadRpcTimeout(int readRpcTimeout) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public long getWriteRpcTimeout(TimeUnit unit) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public int getWriteRpcTimeout() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public void setWriteRpcTimeout(int writeRpcTimeout) {
     throw new UnsupportedOperationException();
   }
 

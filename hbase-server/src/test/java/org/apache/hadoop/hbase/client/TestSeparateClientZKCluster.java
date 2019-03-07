@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -44,7 +45,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Category({ ClientTests.class, MediumTests.class })
 public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -98,13 +99,11 @@ public class TestSeparateClientZKCluster {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
     Connection conn = TEST_UTIL.getConnection();
-    Admin admin = conn.getAdmin();
-    HTable table = (HTable) conn.getTable(tn);
-    try {
+    try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(family);
+        ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // test simple get and put
       Put put = new Put(row);
@@ -114,9 +113,6 @@ public class TestSeparateClientZKCluster {
       Result result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
       Assert.assertArrayEquals(value, result.getValue(family, qualifier));
-    } finally {
-      admin.close();
-      table.close();
     }
   }
 
@@ -124,9 +120,8 @@ public class TestSeparateClientZKCluster {
   public void testMasterSwitch() throws Exception {
     // get an admin instance and issue some request first
     Connection conn = TEST_UTIL.getConnection();
-    Admin admin = conn.getAdmin();
-    LOG.debug("Tables: " + admin.listTableDescriptors());
-    try {
+    try (Admin admin = conn.getAdmin()) {
+      LOG.debug("Tables: " + admin.listTableDescriptors());
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       // switch active master
       HMaster master = cluster.getMaster();
@@ -139,8 +134,6 @@ public class TestSeparateClientZKCluster {
       }
       // confirm client access still works
       Assert.assertTrue(admin.balance(false));
-    } finally {
-      admin.close();
     }
   }
 
@@ -149,14 +142,14 @@ public class TestSeparateClientZKCluster {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
     Connection conn = TEST_UTIL.getConnection();
-    Admin admin = conn.getAdmin();
-    HTable table = (HTable) conn.getTable(tn);
-    try {
+    try (Admin admin = conn.getAdmin();
+        Table table = conn.getTable(tn);
+        RegionLocator locator = conn.getRegionLocator(tn)) {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(family);
+        ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // issue some requests to cache the region location
       Put put = new Put(row);
@@ -176,8 +169,7 @@ public class TestSeparateClientZKCluster {
       admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), destServerName);
       LOG.debug("Finished moving meta");
       // invalidate client cache
-      RegionInfo region =
-          table.getRegionLocator().getRegionLocation(row).getRegion();
+      RegionInfo region = locator.getRegionLocation(row).getRegion();
       ServerName currentServer = cluster.getServerHoldingRegion(tn, region.getRegionName());
       for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
         ServerName name = rst.getRegionServer().getServerName();
@@ -194,9 +186,6 @@ public class TestSeparateClientZKCluster {
       result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
       Assert.assertArrayEquals(newVal, result.getValue(family, qualifier));
-    } finally {
-      admin.close();
-      table.close();
     }
   }
 
@@ -205,13 +194,11 @@ public class TestSeparateClientZKCluster {
     TableName tn = TableName.valueOf(name.getMethodName());
     // create table
     Connection conn = TEST_UTIL.getConnection();
-    Admin admin = conn.getAdmin();
-    Table table = conn.getTable(tn);
-    try {
+    try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
       ColumnFamilyDescriptorBuilder cfDescBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(family);
+        ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
-          TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
       admin.createTable(tableDescBuilder.build());
       // put some data
       Put put = new Put(row);
@@ -241,9 +228,6 @@ public class TestSeparateClientZKCluster {
       Result result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
       Assert.assertArrayEquals(value, result.getValue(family, qualifier));
-    } finally {
-      admin.close();
-      table.close();
     }
   }
 

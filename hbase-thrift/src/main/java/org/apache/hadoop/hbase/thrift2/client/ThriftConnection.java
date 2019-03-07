@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
@@ -366,5 +367,10 @@ public class ThriftConnection implements Connection {
   @Override
   public void clearRegionLocationCache() {
     throw new NotImplementedException("clearRegionLocationCache not supported in ThriftTable");
+  }
+
+  @Override
+  public AsyncConnection toAsyncConnection() {
+    throw new NotImplementedException("toAsyncConnection not supported in ThriftTable");
   }
 }

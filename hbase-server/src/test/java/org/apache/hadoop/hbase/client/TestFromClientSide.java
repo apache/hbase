@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -181,31 +183,23 @@ public class TestFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(3 * 1000);
+    try (Connection connection = ConnectionFactory.createConnection(c);
+        Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+          .setOperationTimeout(3 * 1000).build()) {
+      Append append = new Append(ROW);
+      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      Result result = table.append(append);
 
-      try {
-        Append append = new Append(ROW);
-        append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-        Result result = table.append(append);
+      // Verify expected result
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
 
-        // Verify expected result
-        Cell[] cells = result.rawCells();
-        assertEquals(1, cells.length);
-        assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-
-        // Verify expected result again
-        Result readResult = table.get(new Get(ROW));
-        cells = readResult.rawCells();
-        assertEquals(1, cells.length);
-        assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-      } finally {
-        table.close();
-        connection.close();
-      }
+      // Verify expected result again
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
     }
   }
 
@@ -2219,10 +2213,6 @@ public class TestFromClientSide {
     Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10);
 
     int NUM_OPS = 100;
-    int FAILED_OPS = 50;
-
-    RetriesExhaustedWithDetailsException expectedException = null;
-    IllegalArgumentException iae = null;
 
     // 1.1 Put with no column families (local validation, runtime exception)
     List<Put> puts = new ArrayList<Put>(NUM_OPS);
@@ -2233,16 +2223,16 @@ public class TestFromClientSide {
 
     try {
       foo.put(puts);
+      fail();
     } catch (IllegalArgumentException e) {
-      iae = e;
+      // expected
+      assertEquals(NUM_OPS, puts.size());
     }
-    assertNotNull(iae);
-    assertEquals(NUM_OPS, puts.size());
+
 
     // 1.2 Put with invalid column family
-    iae = null;
     puts.clear();
-    for (int i = 0; i != NUM_OPS; i++) {
+    for (int i = 0; i < NUM_OPS; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY, Bytes.toBytes(i));
       puts.add(put);
@@ -2250,47 +2240,46 @@ public class TestFromClientSide {
 
     try {
       foo.put(puts);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
+      fail();
+    } catch (RetriesExhaustedException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
     }
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(puts.get(1)));
 
     // 2.1 Get non-existent rows
     List<Get> gets = new ArrayList<>(NUM_OPS);
     for (int i = 0; i < NUM_OPS; i++) {
       Get get = new Get(Bytes.toBytes(i));
-      // get.addColumn(FAMILY, FAMILY);
       gets.add(get);
     }
     Result[] getsResult = foo.get(gets);
-
     assertNotNull(getsResult);
     assertEquals(NUM_OPS, getsResult.length);
-    assertNull(getsResult[1].getRow());
+    for (int i = 0; i < NUM_OPS; i++) {
+      Result getResult = getsResult[i];
+      if (i % 2 == 0) {
+        assertFalse(getResult.isEmpty());
+      } else {
+        assertTrue(getResult.isEmpty());
+      }
+    }
 
     // 2.2 Get with invalid column family
     gets.clear();
-    getsResult = null;
-    expectedException = null;
     for (int i = 0; i < NUM_OPS; i++) {
       Get get = new Get(Bytes.toBytes(i));
       get.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
       gets.add(get);
     }
     try {
-      getsResult = foo.get(gets);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
+      foo.get(gets);
+      fail();
+    } catch (RetriesExhaustedException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
     }
-    assertNull(getsResult);
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(gets.get(1)));
 
     // 3.1 Delete with invalid column family
-    expectedException = null;
     List<Delete> deletes = new ArrayList<>(NUM_OPS);
     for (int i = 0; i < NUM_OPS; i++) {
       Delete delete = new Delete(Bytes.toBytes(i));
@@ -2299,14 +2288,24 @@ public class TestFromClientSide {
     }
     try {
       foo.delete(deletes);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
+      fail();
+    } catch (RetriesExhaustedException e) {
+      // expected
+      assertThat(e.getCause(), instanceOf(NoSuchColumnFamilyException.class));
     }
-    assertEquals((NUM_OPS - FAILED_OPS), deletes.size());
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(deletes.get(1)));
 
+    // all valid rows should have been deleted
+    gets.clear();
+    for (int i = 0; i < NUM_OPS; i++) {
+      Get get = new Get(Bytes.toBytes(i));
+      gets.add(get);
+    }
+    getsResult = foo.get(gets);
+    assertNotNull(getsResult);
+    assertEquals(NUM_OPS, getsResult.length);
+    for (Result getResult : getsResult) {
+      assertTrue(getResult.isEmpty());
+    }
 
     // 3.2 Delete non-existent rows
     deletes.clear();
@@ -2315,58 +2314,6 @@ public class TestFromClientSide {
       deletes.add(delete);
     }
     foo.delete(deletes);
-
-    assertTrue(deletes.isEmpty());
-  }
-
-  /*
-   * Baseline "scalability" test.
-   *
-   * Tests one hundred families, one million columns, one million versions
-   */
-  @Ignore @Test
-  public void testMillions() throws Exception {
-
-    // 100 families
-
-    // millions of columns
-
-    // millions of versions
-
-  }
-
-  @Ignore @Test
-  public void testMultipleRegionsAndBatchPuts() throws Exception {
-    // Two family table
-
-    // Insert lots of rows
-
-    // Insert to the same row with batched puts
-
-    // Insert to multiple rows with batched puts
-
-    // Split the table
-
-    // Get row from first region
-
-    // Get row from second region
-
-    // Scan all rows
-
-    // Insert to multiple regions with batched puts
-
-    // Get row from first region
-
-    // Get row from second region
-
-    // Scan all rows
-
-
-  }
-
-  @Ignore @Test
-  public void testMultipleRowMultipleFamily() throws Exception {
-
   }
 
   //
@@ -4323,7 +4270,7 @@ public class TestFromClientSide {
     // Test user metadata
     Admin admin = TEST_UTIL.getAdmin();
     // make a modifiable descriptor
-    HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
+    HTableDescriptor desc = new HTableDescriptor(a.getDescriptor());
     // offline the table
     admin.disableTable(tableAname);
     // add a user attribute to HTD
@@ -4337,7 +4284,7 @@ public class TestFromClientSide {
     admin.enableTable(tableAname);
 
     // Test that attribute changes were applied
-    desc = a.getTableDescriptor();
+    desc = new HTableDescriptor(a.getDescriptor());
     assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
     // check HTD attribute
     value = desc.getValue(attrName);
@@ -4549,6 +4496,8 @@ public class TestFromClientSide {
       arm.add(p);
       t.mutateRow(arm);
       fail("Expected NoSuchColumnFamilyException");
+    } catch (NoSuchColumnFamilyException e) {
+      return;
     } catch(RetriesExhaustedWithDetailsException e) {
       for(Throwable rootCause: e.getCauses()){
         if(rootCause instanceof NoSuchColumnFamilyException){
@@ -4664,10 +4613,11 @@ public class TestFromClientSide {
       for (int j = 0; j != resultWithWal.rawCells().length; ++j) {
         Cell cellWithWal = resultWithWal.rawCells()[j];
         Cell cellWithoutWal = resultWithoutWal.rawCells()[j];
-        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal), CellUtil.cloneFamily(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal), CellUtil.cloneQualifier(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal), CellUtil.cloneValue(cellWithoutWal)));
+        assertArrayEquals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal));
+        assertArrayEquals(CellUtil.cloneFamily(cellWithWal), CellUtil.cloneFamily(cellWithoutWal));
+        assertArrayEquals(CellUtil.cloneQualifier(cellWithWal),
+          CellUtil.cloneQualifier(cellWithoutWal));
+        assertArrayEquals(CellUtil.cloneValue(cellWithWal), CellUtil.cloneValue(cellWithoutWal));
       }
     }
   }
@@ -6367,6 +6317,8 @@ public class TestFromClientSide {
     }
   }
 
+  // to be removed
+  @Ignore
   @Test
   public void testRegionCache() throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
