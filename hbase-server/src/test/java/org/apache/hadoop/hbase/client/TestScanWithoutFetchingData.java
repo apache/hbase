@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -66,7 +67,9 @@ public class TestScanWithoutFetchingData {
 
   private static RegionInfo HRI;
 
-  private static ClientProtos.ClientService.BlockingInterface STUB;
+  private static AsyncConnectionImpl CONN;
+
+  private static ClientProtos.ClientService.Interface STUB;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -77,13 +80,20 @@ public class TestScanWithoutFetchingData {
       }
     }
     HRI = UTIL.getAdmin().getRegions(TABLE_NAME).get(0);
-    STUB = ((ConnectionImplementation) UTIL.getConnection())
-        .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
+    CONN =
+      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+    STUB = CONN.getRegionServerStub(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
+  }
+
+  private ScanResponse scan(HBaseRpcController hrc, ScanRequest req) throws IOException {
+    BlockingRpcCallback<ScanResponse> callback = new BlockingRpcCallback<>();
+    STUB.scan(hrc, req, callback);
+    return callback.get();
   }
 
   private void assertResult(int row, Result result) {
@@ -96,7 +106,7 @@ public class TestScanWithoutFetchingData {
     Scan scan = new Scan();
     ScanRequest req = RequestConverter.buildScanRequest(HRI.getRegionName(), scan, 0, false);
     HBaseRpcController hrc = new HBaseRpcControllerImpl();
-    ScanResponse resp = STUB.scan(hrc, req);
+    ScanResponse resp = scan(hrc, req);
     assertTrue(resp.getMoreResults());
     assertTrue(resp.getMoreResultsInRegion());
     assertEquals(0, ResponseConverter.getResults(hrc.cellScanner(), resp).length);
@@ -106,7 +116,7 @@ public class TestScanWithoutFetchingData {
     for (int i = 0; i < COUNT / 2; i++) {
       req = RequestConverter.buildScanRequest(scannerId, 1, false, nextCallSeq++, false, false, -1);
       hrc.reset();
-      resp = STUB.scan(hrc, req);
+      resp = scan(hrc, req);
       assertTrue(resp.getMoreResults());
       assertTrue(resp.getMoreResultsInRegion());
       Result[] results = ResponseConverter.getResults(hrc.cellScanner(), resp);
@@ -116,14 +126,14 @@ public class TestScanWithoutFetchingData {
     // test zero next
     req = RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq++, false, false, -1);
     hrc.reset();
-    resp = STUB.scan(hrc, req);
+    resp = scan(hrc, req);
     assertTrue(resp.getMoreResults());
     assertTrue(resp.getMoreResultsInRegion());
     assertEquals(0, ResponseConverter.getResults(hrc.cellScanner(), resp).length);
     for (int i = COUNT / 2; i < COUNT; i++) {
       req = RequestConverter.buildScanRequest(scannerId, 1, false, nextCallSeq++, false, false, -1);
       hrc.reset();
-      resp = STUB.scan(hrc, req);
+      resp = scan(hrc, req);
       assertTrue(resp.getMoreResults());
       assertEquals(i != COUNT - 1, resp.getMoreResultsInRegion());
       Result[] results = ResponseConverter.getResults(hrc.cellScanner(), resp);
@@ -132,6 +142,7 @@ public class TestScanWithoutFetchingData {
     }
     // close
     req = RequestConverter.buildScanRequest(scannerId, 0, true, false);
-    resp = STUB.scan(null, req);
+    hrc.reset();
+    resp = scan(hrc, req);
   }
 }

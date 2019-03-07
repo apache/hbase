@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -354,9 +353,9 @@ public class TestBackupBase {
     TEST_UTIL.shutdownMiniMapReduceCluster();
   }
 
-  HTable insertIntoTable(Connection conn, TableName table, byte[] family, int id, int numRows)
+  Table insertIntoTable(Connection conn, TableName table, byte[] family, int id, int numRows)
       throws IOException {
-    HTable t = (HTable) conn.getTable(table);
+    Table t = conn.getTable(table);
     Put p1;
     for (int i = 0; i < numRows; i++) {
       p1 = new Put(Bytes.toBytes("row-" + table + "-" + id + "-" + i));

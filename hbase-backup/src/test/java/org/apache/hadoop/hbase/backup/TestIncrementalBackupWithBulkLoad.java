@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.TestBulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,7 +79,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     assertTrue(checkSucceeded(backupIdFull));
 
     // #2 - insert some data to table table1
-    HTable t1 = (HTable) conn.getTable(table1);
+    Table t1 = conn.getTable(table1);
     Put p1;
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       p1 = new Put(Bytes.toBytes("row-t1" + i));
@@ -127,7 +127,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple1,
       false, tablesRestoreIncMultiple, tablesRestoreIncMultiple, true));
 
-    HTable hTable = (HTable) conn.getTable(table1);
+    Table hTable = conn.getTable(table1);
     Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2 + actual + actual1);
     request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
 

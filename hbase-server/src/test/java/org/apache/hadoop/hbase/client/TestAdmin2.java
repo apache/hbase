@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,6 +73,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -87,7 +90,8 @@ public class TestAdmin2 {
       HBaseClassTestRule.forClass(TestAdmin2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin2.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static ConnectionImplementation CONN;
   private static Admin ADMIN;
 
   @Rule
@@ -102,11 +106,14 @@ public class TestAdmin2 {
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 30);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
+    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
     ADMIN = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -282,7 +289,7 @@ public class TestAdmin2 {
   /**
    * Can't enable a table if the table isn't in disabled state
    */
-  @Test (expected=TableNotDisabledException.class)
+  @Test(expected = TableNotDisabledException.class)
   public void testTableNotDisabledExceptionWithATable() throws IOException {
     final TableName name = TableName.valueOf(this.name.getMethodName());
     try (Table t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY)) {
@@ -768,12 +775,10 @@ public class TestAdmin2 {
     long expectedStoreFilesSize = store.getStorefilesSize();
     Assert.assertNotNull(store);
     Assert.assertEquals(expectedStoreFilesSize, store.getSize());
-
-    ConnectionImplementation conn = (ConnectionImplementation) ADMIN.getConnection();
-    HBaseRpcController controller = conn.getRpcControllerFactory().newController();
+    HBaseRpcController controller = CONN.getRpcControllerFactory().newController();
     for (int i = 0; i < 10; i++) {
       RegionInfo ri =
-          ProtobufUtil.getRegionInfo(controller, conn.getAdmin(rs.getServerName()), regionName);
+          ProtobufUtil.getRegionInfo(controller, CONN.getAdmin(rs.getServerName()), regionName);
       Assert.assertEquals(region.getRegionInfo(), ri);
 
       // Make sure that the store size is still the actual file system's store size.

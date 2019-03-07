@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -521,7 +522,7 @@ public class TestHFileOutputFormat2  {
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
     setupMockStartKeys(regionLocator);
     setupMockTableName(regionLocator);
-    HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+    HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
     assertEquals(job.getNumReduceTasks(), 4);
   }
 
@@ -631,7 +632,7 @@ public class TestHFileOutputFormat2  {
       assertEquals("Should make " + regionNum + " regions", numRegions, regionNum);
 
       allTables.put(tableStrSingle, table);
-      tableInfo.add(new HFileOutputFormat2.TableInfo(table.getTableDescriptor(), r));
+      tableInfo.add(new HFileOutputFormat2.TableInfo(table.getDescriptor(), r));
     }
     Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
     // Generate the bulk load files
@@ -817,7 +818,7 @@ public class TestHFileOutputFormat2  {
       conf.set(HFileOutputFormat2.COMPRESSION_FAMILIES_CONF_KEY,
               HFileOutputFormat2.serializeColumnFamilyAttribute
                       (HFileOutputFormat2.compressionDetails,
-                              Arrays.asList(table.getTableDescriptor())));
+                              Arrays.asList(table.getDescriptor())));
 
       // read back family specific compression setting from the configuration
       Map<byte[], Algorithm> retrievedFamilyToCompressionMap = HFileOutputFormat2
@@ -843,7 +844,7 @@ public class TestHFileOutputFormat2  {
           .setBlockCacheEnabled(false)
           .setTimeToLive(0));
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
 
   /**
@@ -889,7 +890,7 @@ public class TestHFileOutputFormat2  {
           familyToBloomType);
       conf.set(HFileOutputFormat2.BLOOM_TYPE_FAMILIES_CONF_KEY,
               HFileOutputFormat2.serializeColumnFamilyAttribute(HFileOutputFormat2.bloomTypeDetails,
-              Arrays.asList(table.getTableDescriptor())));
+              Arrays.asList(table.getDescriptor())));
 
       // read back family specific data block encoding settings from the
       // configuration
@@ -917,7 +918,7 @@ public class TestHFileOutputFormat2  {
           .setBlockCacheEnabled(false)
           .setTimeToLive(0));
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
 
   /**
@@ -961,7 +962,7 @@ public class TestHFileOutputFormat2  {
       conf.set(HFileOutputFormat2.BLOCK_SIZE_FAMILIES_CONF_KEY,
               HFileOutputFormat2.serializeColumnFamilyAttribute
                       (HFileOutputFormat2.blockSizeDetails, Arrays.asList(table
-                              .getTableDescriptor())));
+                              .getDescriptor())));
 
       // read back family specific data block encoding settings from the
       // configuration
@@ -990,7 +991,7 @@ public class TestHFileOutputFormat2  {
           .setBlockCacheEnabled(false)
           .setTimeToLive(0));
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
 
   /**
@@ -1035,7 +1036,7 @@ public class TestHFileOutputFormat2  {
       Table table = Mockito.mock(Table.class);
       setupMockColumnFamiliesForDataBlockEncoding(table,
           familyToDataBlockEncoding);
-      HTableDescriptor tableDescriptor = table.getTableDescriptor();
+      TableDescriptor tableDescriptor = table.getDescriptor();
       conf.set(HFileOutputFormat2.DATABLOCK_ENCODING_FAMILIES_CONF_KEY,
               HFileOutputFormat2.serializeColumnFamilyAttribute
                       (HFileOutputFormat2.dataBlockEncodingDetails, Arrays
@@ -1067,7 +1068,7 @@ public class TestHFileOutputFormat2  {
           .setBlockCacheEnabled(false)
           .setTimeToLive(0));
     }
-    Mockito.doReturn(mockTableDescriptor).when(table).getTableDescriptor();
+    Mockito.doReturn(mockTableDescriptor).when(table).getDescriptor();
   }
 
   /**
@@ -1125,7 +1126,7 @@ public class TestHFileOutputFormat2  {
     Table table = Mockito.mock(Table.class);
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAMES[0]);
-    Mockito.doReturn(htd).when(table).getTableDescriptor();
+    Mockito.doReturn(htd).when(table).getDescriptor();
     for (HColumnDescriptor hcd: HBaseTestingUtility.generateColumnDescriptors()) {
       htd.addFamily(hcd);
     }
@@ -1145,7 +1146,7 @@ public class TestHFileOutputFormat2  {
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job, false);
-      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+      HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
       FileOutputFormat.setOutputPath(job, dir);
       context = createTestTaskAttemptContext(job);
       HFileOutputFormat2 hof = new HFileOutputFormat2();
@@ -1411,10 +1412,8 @@ public class TestHFileOutputFormat2  {
           Admin admin = c.getAdmin();
           RegionLocator regionLocator = c.getRegionLocator(tname)) {
         Path outDir = new Path("incremental-out");
-        runIncrementalPELoad(conf,
-          Arrays
-            .asList(new HFileOutputFormat2.TableInfo(admin.getDescriptor(tname), regionLocator)),
-          outDir, false);
+        runIncrementalPELoad(conf, Arrays.asList(new HFileOutputFormat2.TableInfo(admin
+                .getDescriptor(tname), regionLocator)), outDir, false);
       }
     } else {
       throw new RuntimeException(
