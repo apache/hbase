@@ -1588,8 +1588,9 @@ public class HRegionServer extends HasThread implements
           MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
       // init the chunkCreator
-      ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
-        initialCountPercentage, this.hMemManager);
+      ChunkCreator chunkCreator =
+          ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
+      initialCountPercentage, this.hMemManager);
     }
   }
 
