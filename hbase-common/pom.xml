@@ -86,13 +86,13 @@
           </execution>
                 <!-- Generate web app sources -->
                 <execution>
-                    <id>generate</id>
+                    <id>generate-Version-information</id>
                     <phase>generate-sources</phase>
                     <configuration>
                         <target>
                             <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
 
-                            <exec executable="bash">
+                            <exec executable="bash" failonerror="true">
                                 <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
                             </exec>
                         </target>
