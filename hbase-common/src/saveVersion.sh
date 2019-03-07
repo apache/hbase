@@ -37,19 +37,17 @@ fi
 date=`date`
 cwd=`pwd`
 if [ -d .svn ]; then
-  revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
-  url=`svn info | sed -n -e 's/^URL: \(.*\)/\1/p'`
+  revision=`(svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p') || true`
+  url=`(svn info | sed -n -e 's/^URL: \(.*\)/\1/p') || true`
 elif [ -d .git ]; then
-  revision=`git log -1 --no-show-signature --pretty=format:"%H"`
+  revision=`git log -1 --no-show-signature --pretty=format:"%H" || true`
   hostname=`hostname`
   url="git://${hostname}${cwd}"
-else
+fi
+if [ -z "${revision}" ]; then
+  echo "[WARN] revision info is empty! either we're not in VCS or VCS commands failed." >&2
   revision="Unknown"
   url="file://$cwd"
-fi
-if [ -z $revision ]; then
-  echo "$revision is empty!"
-  exit 1
 fi
 if ! [  -x "$(command -v md5sum)" ]; then
   if ! [ -x "$(command -v md5)" ]; then
