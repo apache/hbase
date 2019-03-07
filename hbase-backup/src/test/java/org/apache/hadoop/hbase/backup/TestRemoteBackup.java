@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -78,7 +78,7 @@ public class TestRemoteBackup extends TestBackupBase {
       } catch (InterruptedException ie) {
       }
       try {
-        HTable t1 = (HTable) conn.getTable(table1);
+        Table t1 = conn.getTable(table1);
         Put p1;
         for (int i = 0; i < NB_ROWS_IN_FAM3; i++) {
           p1 = new Put(Bytes.toBytes("row-t1" + i));
@@ -102,7 +102,7 @@ public class TestRemoteBackup extends TestBackupBase {
     HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
 
     SnapshotTestingUtils.loadData(TEST_UTIL, table1, 50, fam2Name);
-    HTable t1 = (HTable) conn.getTable(table1);
+    Table t1 = conn.getTable(table1);
     int rows0 = MobSnapshotTestingUtils.countMobRows(t1, fam2Name);
 
     latch.countDown();
@@ -130,7 +130,7 @@ public class TestRemoteBackup extends TestBackupBase {
     assertTrue(hAdmin.tableExists(table1_restore));
 
     // #5.2 - checking row count of tables for full restore
-    HTable hTable = (HTable) conn.getTable(table1_restore);
+    Table hTable = conn.getTable(table1_restore);
     Assert.assertEquals(TEST_UTIL.countRows(hTable, famName), NB_ROWS_IN_BATCH);
     int cnt3 = TEST_UTIL.countRows(hTable, fam3Name);
     Assert.assertTrue(cnt3 >= 0 && cnt3 <= NB_ROWS_IN_FAM3);

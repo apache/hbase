@@ -222,7 +222,7 @@ public class TestEndToEndSplitTransaction {
     RegionSplitter(Table table) throws IOException {
       this.table = table;
       this.tableName = table.getName();
-      this.family = table.getTableDescriptor().getFamiliesKeys().iterator().next();
+      this.family = table.getDescriptor().getColumnFamilyNames().iterator().next();
       admin = TEST_UTIL.getAdmin();
       rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
       connection = TEST_UTIL.getConnection();

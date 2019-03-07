@@ -227,7 +227,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   public List<Boolean> existsAll(ByteBuffer table, List<TGet> gets) throws TIOError, TException {
     Table htable = getTable(table);
     try {
-      boolean[] exists = htable.existsAll(getsFromThrift(gets));
+      boolean[] exists = htable.exists(getsFromThrift(gets));
       List<Boolean> result = new ArrayList<>(exists.length);
       for (boolean exist : exists) {
         result.add(exist);

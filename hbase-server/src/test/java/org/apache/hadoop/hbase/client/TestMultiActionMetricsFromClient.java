@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,7 +50,7 @@ public class TestMultiActionMetricsFromClient {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME.META_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
   }
 
@@ -62,12 +63,10 @@ public class TestMultiActionMetricsFromClient {
   public void testMultiMetrics() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, "true");
-    ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
-
-    try {
+    try (ConnectionImplementation conn = ConnectionFactory.createConnectionImpl(conf, null,
+      UserProvider.instantiate(conf).getCurrent())) {
       BufferedMutator mutator = conn.getBufferedMutator(TABLE_NAME);
-      byte[][] keys = {Bytes.toBytes("aaa"), Bytes.toBytes("mmm"), Bytes.toBytes("zzz")};
+      byte[][] keys = { Bytes.toBytes("aaa"), Bytes.toBytes("mmm"), Bytes.toBytes("zzz") };
       for (byte[] key : keys) {
         Put p = new Put(key);
         p.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(10));
@@ -81,8 +80,6 @@ public class TestMultiActionMetricsFromClient {
       assertEquals(1, metrics.multiTracker.reqHist.getCount());
       assertEquals(3, metrics.numActionsPerServerHist.getSnapshot().getMean(), 1e-15);
       assertEquals(1, metrics.numActionsPerServerHist.getCount());
-    } finally {
-      conn.close();
     }
   }
 }
