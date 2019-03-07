@@ -127,7 +127,7 @@ public class TestRegionSnapshotTask {
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     final SnapshotManifest manifest =
         SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
-    manifest.addTableDescriptor(table.getTableDescriptor());
+    manifest.addTableDescriptor(table.getDescriptor());
 
     if (!fs.exists(workingDir)) {
       fs.mkdirs(workingDir);

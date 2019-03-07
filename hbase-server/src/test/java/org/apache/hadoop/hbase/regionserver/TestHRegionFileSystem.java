@@ -39,10 +39,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -81,9 +82,9 @@ public class TestHRegionFileSystem {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster();
-    HTable table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
     assertEquals("Should start with empty table", 0, TEST_UTIL.countRows(table));
-    HRegionFileSystem regionFs = getHRegionFS(table, conf);
+    HRegionFileSystem regionFs = getHRegionFS(TEST_UTIL.getConnection(), table, conf);
     // the original block storage policy would be HOT
     String spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
     String spB = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[1]));
@@ -96,8 +97,8 @@ public class TestHRegionFileSystem {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getConfiguration().set(HStore.BLOCK_STORAGE_POLICY_KEY, "WARM");
     TEST_UTIL.startMiniCluster();
-    table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
-    regionFs = getHRegionFS(table, conf);
+    table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    regionFs = getHRegionFS(TEST_UTIL.getConnection(), table, conf);
 
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
@@ -180,14 +181,16 @@ public class TestHRegionFileSystem {
     }
   }
 
-  private HRegionFileSystem getHRegionFS(HTable table, Configuration conf) throws IOException {
+  private HRegionFileSystem getHRegionFS(Connection conn, Table table, Configuration conf)
+      throws IOException {
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), table.getName());
     List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDirs.get(0));
     assertEquals(2, familyDirs.size());
-    RegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo();
+    RegionInfo hri =
+      conn.getRegionLocator(table.getName()).getAllRegionLocations().get(0).getRegionInfo();
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, new HFileSystem(fs), tableDir, hri);
     return regionFs;
   }

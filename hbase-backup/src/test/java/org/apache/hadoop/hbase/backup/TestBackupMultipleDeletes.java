@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -67,7 +67,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     String backupIdFull = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdFull));
     // #2 - insert some data to table table1
-    HTable t1 = (HTable) conn.getTable(table1);
+    Table t1 = conn.getTable(table1);
     Put p1;
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       p1 = new Put(Bytes.toBytes("row-t1" + i));
@@ -82,7 +82,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     String backupIdInc1 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdInc1));
     // #4 - insert some data to table table2
-    HTable t2 = (HTable) conn.getTable(table2);
+    Table t2 = conn.getTable(table2);
     Put p2 = null;
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       p2 = new Put(Bytes.toBytes("row-t2" + i));
@@ -95,7 +95,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     String backupIdInc2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdInc2));
     // #6 - insert some data to table table1
-    t1 = (HTable) conn.getTable(table1);
+    t1 = conn.getTable(table1);
     for (int i = NB_ROWS_IN_BATCH; i < 2 * NB_ROWS_IN_BATCH; i++) {
       p1 = new Put(Bytes.toBytes("row-t1" + i));
       p1.addColumn(famName, qualName, Bytes.toBytes("val" + i));
@@ -107,7 +107,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     String backupIdInc3 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdInc3));
     // #8 - insert some data to table table2
-    t2 = (HTable) conn.getTable(table2);
+    t2 = conn.getTable(table2);
     for (int i = NB_ROWS_IN_BATCH; i < 2 * NB_ROWS_IN_BATCH; i++) {
       p2 = new Put(Bytes.toBytes("row-t1" + i));
       p2.addColumn(famName, qualName, Bytes.toBytes("val" + i));

@@ -31,6 +31,7 @@
   import="java.util.TreeMap"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
@@ -131,7 +132,7 @@
 if ( fqtn != null ) {
   try {
   table = master.getConnection().getTable(TableName.valueOf(fqtn));
-  if (table.getTableDescriptor().getRegionReplication() > 1) {
+  if (table.getDescriptor().getRegionReplication() > 1) {
     tableHeader = "<h2>Table Regions</h2><table id=\"tableRegionTable\" class=\"tablesorter table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><thead><tr><th>Name</th><th>Region Server</th><th>ReadRequests</th><th>WriteRequests</th><th>StorefileSize</th><th>Num.Storefiles</th><th>MemSize</th><th>Locality</th><th>Start Key</th><th>End Key</th><th>ReplicaID</th></tr></thead>";
     withReplica = true;
   } else {
@@ -365,7 +366,7 @@ if ( fqtn != null ) {
       <th></th>
   </tr>
   <%
-    Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
+    Collection<HColumnDescriptor> families = new HTableDescriptor(table.getDescriptor()).getFamilies();
     for (HColumnDescriptor family: families) {
   %>
   <tr>

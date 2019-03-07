@@ -43,7 +43,6 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 
@@ -115,10 +114,8 @@ public class TestGetProcedureResult {
 
   private GetProcedureResultResponse.State getState(long procId)
       throws MasterNotRunningException, IOException, ServiceException {
-    MasterProtos.MasterService.BlockingInterface master =
-      ((ConnectionImplementation) UTIL.getConnection()).getMaster();
-    GetProcedureResultResponse resp = master.getProcedureResult(null,
-      GetProcedureResultRequest.newBuilder().setProcId(procId).build());
+    GetProcedureResultResponse resp = UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices()
+      .getProcedureResult(null, GetProcedureResultRequest.newBuilder().setProcId(procId).build());
     return resp.getState();
   }
 

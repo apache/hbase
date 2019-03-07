@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -43,28 +44,29 @@ public class TestCIBadHostname {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCIBadHostname.class);
 
-  private static HBaseTestingUtility testUtil;
-  private static ConnectionImplementation conn;
+  private static HBaseTestingUtility TEST_UTIL;
+  private static ConnectionImplementation CONN;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    testUtil = HBaseTestingUtility.createLocalHTU();
-    testUtil.startMiniCluster();
-    conn = (ConnectionImplementation) testUtil.getConnection();
+    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL.startMiniCluster();
+    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
   }
 
   @AfterClass
   public static void teardownAfterClass() throws Exception {
-    conn.close();
-    testUtil.shutdownMiniCluster();
+    CONN.close();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test(expected = UnknownHostException.class)
   public void testGetAdminBadHostname() throws Exception {
     // verify that we can get an instance with the cluster hostname
-    ServerName master = testUtil.getHBaseCluster().getMaster().getServerName();
+    ServerName master = TEST_UTIL.getHBaseCluster().getMaster().getServerName();
     try {
-      conn.getAdmin(master);
+      CONN.getAdmin(master);
     } catch (UnknownHostException uhe) {
       fail("Obtaining admin to the cluster master should have succeeded");
     }
@@ -74,16 +76,16 @@ public class TestCIBadHostname {
     ServerName badHost =
         ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT,
         System.currentTimeMillis());
-    conn.getAdmin(badHost);
+    CONN.getAdmin(badHost);
     fail("Obtaining admin to unresolvable hostname should have failed");
   }
 
   @Test(expected = UnknownHostException.class)
   public void testGetClientBadHostname() throws Exception {
     // verify that we can get an instance with the cluster hostname
-    ServerName rs = testUtil.getHBaseCluster().getRegionServer(0).getServerName();
+    ServerName rs = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     try {
-      conn.getClient(rs);
+      CONN.getClient(rs);
     } catch (UnknownHostException uhe) {
       fail("Obtaining client to the cluster regionserver should have succeeded");
     }
@@ -93,7 +95,7 @@ public class TestCIBadHostname {
     ServerName badHost =
         ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT,
         System.currentTimeMillis());
-    conn.getAdmin(badHost);
+    CONN.getAdmin(badHost);
     fail("Obtaining client to unresolvable hostname should have failed");
   }
 }
