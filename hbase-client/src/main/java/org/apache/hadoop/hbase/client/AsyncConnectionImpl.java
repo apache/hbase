@@ -28,6 +28,7 @@ import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLE
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -119,6 +120,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final ClusterStatusListener clusterStatusListener;
 
+  private volatile ConnectionOverAsyncConnection conn;
+
   public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
       SocketAddress localAddress, User user) {
     this.conf = conf;
@@ -185,6 +188,11 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
+  public boolean isClosed() {
+    return closed;
+  }
+
+  @Override
   public void close() {
     // As the code below is safe to be executed in parallel, here we do not use CAS or lock, just a
     // simple volatile flag.
@@ -198,17 +206,21 @@ class AsyncConnectionImpl implements AsyncConnection {
       authService.shutdown();
     }
     metrics.ifPresent(MetricsConnection::shutdown);
+    ConnectionOverAsyncConnection c = this.conn;
+    if (c != null) {
+      c.closeConnImpl();
+    }
     closed = true;
-  }
-
-  @Override
-  public boolean isClosed() {
-    return closed;
   }
 
   @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
     return new AsyncTableRegionLocatorImpl(tableName, this);
+  }
+
+  @Override
+  public void clearRegionLocationCache() {
+    locator.clearCache();
   }
 
   // we will override this method for testing retry caller, so do not remove this method.
@@ -340,6 +352,30 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
+  public Connection toConnection() {
+    ConnectionOverAsyncConnection c = this.conn;
+    if (c != null) {
+      return c;
+    }
+    synchronized (this) {
+      c = this.conn;
+      if (c != null) {
+        return c;
+      }
+      try {
+        c = new ConnectionOverAsyncConnection(this,
+          ConnectionFactory.createConnectionImpl(conf, null, user));
+      } catch (IOException e) {
+        // TODO: finally we will not rely on ConnectionImplementation anymore and there will no
+        // IOException here.
+        throw new UncheckedIOException(e);
+      }
+      this.conn = c;
+    }
+    return c;
+  }
+
+  @Override
   public CompletableFuture<Hbck> getHbck() {
     CompletableFuture<Hbck> future = new CompletableFuture<>();
     addListener(registry.getMasterAddress(), (sn, error) -> {
@@ -363,11 +399,6 @@ class AsyncConnectionImpl implements AsyncConnection {
     // time instead of caching the stub here.
     return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
       rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
-  }
-
-  @Override
-  public void clearRegionLocationCache() {
-    locator.clearCache();
   }
 
   Optional<MetricsConnection> getConnectionMetrics() {

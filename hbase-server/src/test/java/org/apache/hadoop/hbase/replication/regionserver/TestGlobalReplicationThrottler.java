@@ -99,13 +99,13 @@ public class TestGlobalReplicationThrottler {
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster2", null, true);
 
-    Admin admin1 = ConnectionFactory.createConnection(conf1).getAdmin();
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();
 
+    Admin admin1 = ConnectionFactory.createConnection(conf1).getAdmin();
     admin1.addReplicationPeer("peer1", rpc);
     admin1.addReplicationPeer("peer2", rpc);
     admin1.addReplicationPeer("peer3", rpc);

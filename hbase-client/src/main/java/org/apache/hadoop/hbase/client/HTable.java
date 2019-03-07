@@ -99,7 +99,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HTable implements Table {
+class HTable implements Table {
   private static final Logger LOG = LoggerFactory.getLogger(HTable.class);
   private static final Consistency DEFAULT_CONSISTENCY = Consistency.STRONG;
   private final ConnectionImplementation connection;
@@ -867,23 +867,6 @@ public class HTable implements Table {
   }
 
   @Override
-  public <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
-      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
-      throws ServiceException, Throwable {
-    final Map<byte[],R> results =  Collections.synchronizedMap(
-        new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
-    coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
-      @Override
-      public void update(byte[] region, byte[] row, R value) {
-        if (region != null) {
-          results.put(region, value);
-        }
-      }
-    });
-    return results;
-  }
-
-  @Override
   public <T extends Service, R> void coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
       final Batch.Callback<R> callback) throws ServiceException, Throwable {
@@ -956,24 +939,6 @@ public class HTable implements Table {
   @Override
   public String toString() {
     return tableName + ";" + connection;
-  }
-
-  @Override
-  public <R extends Message> Map<byte[], R> batchCoprocessorService(
-      Descriptors.MethodDescriptor methodDescriptor, Message request,
-      byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
-    final Map<byte[], R> results = Collections.synchronizedMap(new TreeMap<byte[], R>(
-        Bytes.BYTES_COMPARATOR));
-    batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
-        new Callback<R>() {
-      @Override
-      public void update(byte[] region, byte[] row, R result) {
-        if (region != null) {
-          results.put(region, result);
-        }
-      }
-    });
-    return results;
   }
 
   @Override

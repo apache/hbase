@@ -203,7 +203,6 @@ public class OfflineMetaRebuildTestCore {
   protected RegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
     Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
-    TableDescriptor htd = htbl.getDescriptor();
     RegionInfo hri = RegionInfoBuilder.newBuilder(htbl.getName())
         .setStartKey(startKey)
         .setEndKey(endKey)

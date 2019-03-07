@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,10 +137,15 @@ public interface Table extends Closeable {
   /**
    * Same as {@link #batch(List, Object[])}, but with a callback.
    * @since 0.96.0
+   * @deprecated since 3.0.0, will removed in 4.0.0. Please use the batch related methods in
+   *             {@link AsyncTable} directly if you want to use callback. We reuse the callback for
+   *             coprocessor here, and the problem is that for batch operation, the
+   *             {@link AsyncTable} does not tell us the region, so in this method we need an extra
+   *             locating after we get the result, which is not good.
    */
-  default <R> void batchCallback(
-    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
-      throws IOException, InterruptedException {
+  @Deprecated
+  default <R> void batchCallback(final List<? extends Row> actions, final Object[] results,
+      final Batch.Callback<R> callback) throws IOException, InterruptedException {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -453,32 +460,35 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the
-   * table region containing the specified row.  The row given does not actually have
-   * to exist.  Whichever region would contain the row based on start and end keys will
-   * be used.  Note that the {@code row} parameter is also not passed to the
-   * coprocessor handler registered for this protocol, unless the {@code row}
-   * is separately passed as an argument in the service request.  The parameter
-   * here is only used to locate the region used to handle the call.
-   *
+   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the table
+   * region containing the specified row. The row given does not actually have to exist. Whichever
+   * region would contain the row based on start and end keys will be used. Note that the
+   * {@code row} parameter is also not passed to the coprocessor handler registered for this
+   * protocol, unless the {@code row} is separately passed as an argument in the service request.
+   * The parameter here is only used to locate the region used to handle the call.
    * <p>
    * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
    * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
    * </p>
+   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
    *
-   * <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * <pre>
    * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
+   * </pre>
    *
+   * </blockquote></div>
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
+   * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
+   *             more. Use the coprocessorService methods in {@link AsyncTable} instead.
+   * @see Connection#toAsyncConnection()
    */
+  @Deprecated
   default CoprocessorRpcChannel coprocessorService(byte[] row) {
     throw new NotImplementedException("Add an implementation!");
   }
@@ -488,25 +498,41 @@ public interface Table extends Closeable {
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
    * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * with each {@link com.google.protobuf.Service} instance.
-   *
    * @param service the protocol buffer {@code Service} implementation to call
-   * @param startKey start region selection with region containing this row.  If {@code null}, the
-   *   selection will start with the first table region.
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
    * @param endKey select regions up to and including the region containing this row. If
-   *   {@code null}, selection will continue through the last table region.
+   *          {@code null}, selection will continue through the last table region.
    * @param callable this instance's
-   *   {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
-   *   method will be invoked once per table region, using the {@link com.google.protobuf.Service}
-   *   instance connected to that region.
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method will be
+   *          invoked once per table region, using the {@link com.google.protobuf.Service} instance
+   *          connected to that region.
    * @param <T> the {@link com.google.protobuf.Service} subclass to connect to
-   * @param <R> Return type for the {@code callable} parameter's {@link
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
+   * @param <R> Return type for the {@code callable} parameter's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * @return a map of result values keyed by region name
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
-  default <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
-    byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
-    throws ServiceException, Throwable {
-    throw new NotImplementedException("Add an implementation!");
+  @Deprecated
+  default <T extends Service, R> Map<byte[], R> coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
+      throws ServiceException, Throwable {
+    Map<byte[], R> results =
+      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+    coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
+      @Override
+      public void update(byte[] region, byte[] row, R value) {
+        if (region != null) {
+          results.put(region, value);
+        }
+      }
+    });
+    return results;
   }
 
   /**
@@ -514,56 +540,35 @@ public interface Table extends Closeable {
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
    * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * with each {@link Service} instance.
-   *
-   * <p> The given
+   * <p>
+   * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
    * method will be called with the return value from each region's
-   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation. </p>
-   *
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation.
+   * </p>
    * @param service the protocol buffer {@code Service} implementation to call
-   * @param startKey start region selection with region containing this row.  If {@code null}, the
-   *   selection will start with the first table region.
-   * @param endKey select regions up to and including the region containing this row. If
-   *   {@code null}, selection will continue through the last table region.
-   * @param callable this instance's
-   *   {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call}
-   *   method will be invoked once per table region, using the {@link Service} instance connected to
-   *   that region.
-   * @param <T> the {@link Service} subclass to connect to
-   * @param <R> Return type for the {@code callable} parameter's {@link
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
-   */
-  default <T extends Service, R> void coprocessorService(final Class<T> service,
-    byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
-    final Batch.Callback<R> callback) throws ServiceException, Throwable {
-    throw new NotImplementedException("Add an implementation!");
-  }
-
-  /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
-   * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters.
-   *
-   * @param methodDescriptor
-   *          the descriptor for the protobuf service method to call.
-   * @param request
-   *          the method call parameters
-   * @param startKey
-   *          start region selection with region containing this row. If {@code null}, the
+   * @param startKey start region selection with region containing this row. If {@code null}, the
    *          selection will start with the first table region.
-   * @param endKey
-   *          select regions up to and including the region containing this row. If {@code null},
-   *          selection will continue through the last table region.
-   * @param responsePrototype
-   *          the proto type of the response of the method in Service.
-   * @param <R>
-   *          the response type for the coprocessor Service method
-   * @return a map of result values keyed by region name
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
+   * @param callable this instance's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method will be
+   *          invoked once per table region, using the {@link Service} instance connected to that
+   *          region.
+   * @param <T> the {@link Service} subclass to connect to
+   * @param <R> Return type for the {@code callable} parameter's
+   *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
-  default <R extends Message> Map<byte[], R> batchCoprocessorService(
-    Descriptors.MethodDescriptor methodDescriptor, Message request,
-    byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+  @Deprecated
+  default <T extends Service, R> void coprocessorService(final Class<T> service, byte[] startKey,
+      byte[] endKey, final Batch.Call<T, R> callable, final Batch.Callback<R> callback)
+      throws ServiceException, Throwable {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -572,24 +577,67 @@ public interface Table extends Closeable {
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
    * the invocations to the same region server will be batched into one call. The coprocessor
    * service is invoked according to the service instance, method name and parameters.
-   *
+   * @param methodDescriptor the descriptor for the protobuf service method to call.
+   * @param request the method call parameters
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
+   * @param responsePrototype the proto type of the response of the method in Service.
+   * @param <R> the response type for the coprocessor Service method
+   * @return a map of result values keyed by region name
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
+   */
+  @Deprecated
+  default <R extends Message> Map<byte[], R> batchCoprocessorService(
+      Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
+      byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+    final Map<byte[], R> results =
+      Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
+    batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
+      new Callback<R>() {
+        @Override
+        public void update(byte[] region, byte[] row, R result) {
+          if (region != null) {
+            results.put(region, result);
+          }
+        }
+      });
+    return results;
+  }
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
+   * the invocations to the same region server will be batched into one call. The coprocessor
+   * service is invoked according to the service instance, method name and parameters.
    * <p>
    * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
    * method will be called with the return value from each region's invocation.
    * </p>
-   *
    * @param methodDescriptor the descriptor for the protobuf service method to call.
    * @param request the method call parameters
-   * @param startKey start region selection with region containing this row.
-   *   If {@code null}, the selection will start with the first table region.
-   * @param endKey select regions up to and including the region containing this row.
-   *   If {@code null}, selection will continue through the last table region.
+   * @param startKey start region selection with region containing this row. If {@code null}, the
+   *          selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row. If
+   *          {@code null}, selection will continue through the last table region.
    * @param responsePrototype the proto type of the response of the method in Service.
    * @param callback callback to invoke with the response for each region
-   * @param <R>
-   *          the response type for the coprocessor Service method
+   * @param <R> the response type for the coprocessor Service method
+   * @deprecated since 3.0.0, will removed in 4.0.0. The batch call here references the blocking
+   *             interface for of a protobuf stub, so it is not possible to do it in an asynchronous
+   *             way, even if now we are building the {@link Table} implementation based on the
+   *             {@link AsyncTable}, which is not good. Use the coprocessorService methods in
+   *             {@link AsyncTable} directly instead.
+   * @see Connection#toAsyncConnection()
    */
+  @Deprecated
   default <R extends Message> void batchCoprocessorService(
       Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
       byte[] endKey, R responsePrototype, Batch.Callback<R> callback)

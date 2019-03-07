@@ -1412,10 +1412,8 @@ public class TestHFileOutputFormat2  {
           Admin admin = c.getAdmin();
           RegionLocator regionLocator = c.getRegionLocator(tname)) {
         Path outDir = new Path("incremental-out");
-        runIncrementalPELoad(conf,
-          Arrays
-            .asList(new HFileOutputFormat2.TableInfo(admin.getDescriptor(tname), regionLocator)),
-          outDir, false);
+        runIncrementalPELoad(conf, Arrays.asList(new HFileOutputFormat2.TableInfo(admin
+                .getDescriptor(tname), regionLocator)), outDir, false);
       }
     } else {
       throw new RuntimeException(

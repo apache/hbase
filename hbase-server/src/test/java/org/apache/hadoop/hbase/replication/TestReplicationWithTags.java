@@ -67,6 +67,8 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationWithTags {
 
@@ -83,7 +85,6 @@ public class TestReplicationWithTags {
   private static Admin replicationAdmin;
 
   private static Connection connection1;
-  private static Connection connection2;
 
   private static Table htable1;
   private static Table htable2;
@@ -120,7 +121,6 @@ public class TestReplicationWithTags {
     // Have to reget conf1 in case zk cluster location different
     // than default
     conf1 = utility1.getConfiguration();
-    replicationAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
     LOG.info("Setup first Zk");
 
     // Base conf2 on conf1 so it gets the right zk cluster.
@@ -140,6 +140,8 @@ public class TestReplicationWithTags {
     utility1.startMiniCluster(2);
     utility2.startMiniCluster(2);
 
+    connection1 = ConnectionFactory.createConnection(conf1);
+    replicationAdmin = connection1.getAdmin();
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
     replicationAdmin.addReplicationPeer("2", rpc);
@@ -161,11 +163,10 @@ public class TestReplicationWithTags {
     htable2 = utility2.getConnection().getTable(TABLE_NAME);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(replicationAdmin, true);
+    Closeables.close(connection1, true);
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }

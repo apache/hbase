@@ -105,6 +105,18 @@ public class TestMasterShutdown {
     htu.shutdownMiniCluster();
   }
 
+  private Connection createConnection(HBaseTestingUtility util) throws InterruptedException {
+    // the cluster may have not been initialized yet which means we can not get the cluster id thus
+    // an exception will be thrown. So here we need to retry.
+    for (;;) {
+      try {
+        return ConnectionFactory.createConnection(util.getConfiguration());
+      } catch (Exception e) {
+        Thread.sleep(10);
+      }
+    }
+  }
+
   @Test
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     final int NUM_MASTERS = 1;
@@ -131,13 +143,8 @@ public class TestMasterShutdown {
       @Override
       public void run() {
         LOG.info("Before call to shutdown master");
-        try {
-          try (
-            Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-            try (Admin admin = connection.getAdmin()) {
-              admin.shutdown();
-            }
-          }
+        try (Connection connection = createConnection(util); Admin admin = connection.getAdmin()) {
+          admin.shutdown();
         } catch (Exception e) {
           LOG.info("Error while calling Admin.shutdown, which is expected: " + e.getMessage());
         }

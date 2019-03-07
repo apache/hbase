@@ -208,38 +208,36 @@ public class TestIncrementsFromClientSide {
   public void testIncrementInvalidArguments() throws Exception {
     LOG.info("Starting " + this.name.getMethodName());
     final TableName TABLENAME =
-        TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     try {
       // try null row
       ht.incrementColumnValue(null, FAMILY, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
+      fail("Should have thrown NPE/IOE");
+    } catch (NullPointerException | IOException error) {
       // success
     }
     try {
       // try null family
       ht.incrementColumnValue(ROW, null, COLUMN, 5);
-      fail("Should have thrown IOException");
-    } catch (IOException iox) {
+      fail("Should have thrown NPE/IOE");
+    } catch (NullPointerException | IOException error) {
       // success
     }
     // try null row
     try {
-      Increment incNoRow = new Increment((byte [])null);
+      Increment incNoRow = new Increment((byte[]) null);
       incNoRow.addColumn(FAMILY, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
-    } catch (IllegalArgumentException iax) {
-      // success
-    } catch (NullPointerException npe) {
+      fail("Should have thrown IAE/NPE");
+    } catch (IllegalArgumentException | NullPointerException error) {
       // success
     }
     // try null family
     try {
       Increment incNoFamily = new Increment(ROW);
       incNoFamily.addColumn(null, COLUMN, 5);
-      fail("Should have thrown IllegalArgumentException");
+      fail("Should have thrown IAE");
     } catch (IllegalArgumentException iax) {
       // success
     }

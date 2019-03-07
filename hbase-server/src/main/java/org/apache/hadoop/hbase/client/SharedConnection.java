@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.BufferedMutatorParams;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Hbck;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.TableBuilder;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Wraps a Connection to make it can't be closed or aborted.
+ * Wraps a {@link Connection} to make it can't be closed or aborted.
  */
 @InterfaceAudience.Private
 public class SharedConnection implements Connection {
@@ -104,5 +99,10 @@ public class SharedConnection implements Connection {
   @Override
   public Hbck getHbck(ServerName masterServer) throws IOException {
     return conn.getHbck(masterServer);
+  }
+
+  @Override
+  public AsyncConnection toAsyncConnection() {
+    return new SharedAsyncConnection(conn.toAsyncConnection());
   }
 }

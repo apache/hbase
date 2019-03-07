@@ -29,9 +29,12 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -49,9 +52,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -66,11 +69,9 @@ import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * Utility used by client connections.
@@ -138,68 +139,6 @@ public final class ConnectionUtils {
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
-  }
-
-  /**
-   * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
-   * if the invocation target is 'this' server; save on network and protobuf invocations.
-   */
-  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
-  @VisibleForTesting // Class is visible so can assert we are short-circuiting when expected.
-  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
-    private final ServerName serverName;
-    private final AdminService.BlockingInterface localHostAdmin;
-    private final ClientService.BlockingInterface localHostClient;
-
-    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
-        ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client) throws IOException {
-      super(conf, pool, user);
-      this.serverName = serverName;
-      this.localHostAdmin = admin;
-      this.localHostClient = client;
-    }
-
-    @Override
-    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
-    }
-
-    @Override
-    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
-    }
-
-    @Override
-    public MasterKeepAliveConnection getMaster() throws IOException {
-      if (this.localHostClient instanceof MasterService.BlockingInterface) {
-        return new ShortCircuitMasterConnection(
-          (MasterService.BlockingInterface) this.localHostClient);
-      }
-      return super.getMaster();
-    }
-  }
-
-  /**
-   * Creates a short-circuit connection that can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) when talking to a local server.
-   * @param conf the current configuration
-   * @param pool the thread pool to use for batch operations
-   * @param user the user the connection is for
-   * @param serverName the local server name
-   * @param admin the admin interface of the local server
-   * @param client the client interface of the local server
-   * @return an short-circuit connection.
-   * @throws IOException if IO failure occurred
-   */
-  public static ConnectionImplementation createShortCircuitConnection(final Configuration conf,
-      ExecutorService pool, User user, final ServerName serverName,
-      final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
-      throws IOException {
-    if (user == null) {
-      user = UserProvider.instantiate(conf).getCurrent();
-    }
-    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
   /**
@@ -741,5 +680,39 @@ public final class ConnectionUtils {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  static ThreadPoolExecutor getThreadPool(Configuration conf, int maxThreads, int coreThreads,
+      Supplier<String> threadName, BlockingQueue<Runnable> passedWorkQueue) {
+    // shared HTable thread executor not yet initialized
+    if (maxThreads == 0) {
+      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
+    }
+    if (coreThreads == 0) {
+      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
+    }
+    long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
+    BlockingQueue<Runnable> workQueue = passedWorkQueue;
+    if (workQueue == null) {
+      workQueue =
+        new LinkedBlockingQueue<>(maxThreads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+      coreThreads = maxThreads;
+    }
+    ThreadPoolExecutor tpe = new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime,
+      TimeUnit.SECONDS, workQueue, Threads.newDaemonThreadFactory(threadName.get()));
+    tpe.allowCoreThreadTimeOut(true);
+    return tpe;
+  }
+
+  static void shutdownPool(ExecutorService pool) {
+    pool.shutdown();
+    try {
+      if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+        pool.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      pool.shutdownNow();
+    }
   }
 }
