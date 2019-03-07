@@ -91,7 +91,7 @@ public class ChecksumUtil {
    */
   private static boolean verifyChunkedSums(DataChecksum dataChecksum, ByteBuff data,
       ByteBuff checksums, String pathName) {
-    // Almost all of the HFile Block are about 64KB, so it would be a SingleByteBuff, use the
+    // Almost all of the HFile Block are about 64KB, and it would be a SingleByteBuff, use the
     // Hadoop's verify checksum directly, because it'll use the native checksum, which has no extra
     // byte[] allocation or copying. (HBASE-21917)
     if (data instanceof SingleByteBuff && checksums instanceof SingleByteBuff) {
@@ -108,8 +108,7 @@ public class ChecksumUtil {
       }
     }
 
-    // Only when the dataBlock is larger than 4MB (default buffer size in BucketCache), the block
-    // will be an MultiByteBuff. we use a small byte[] to update the checksum many times for
+    // If the block is a MultiByteBuff. we use a small byte[] to update the checksum many times for
     // reducing GC pressure. it's a rare case.
     int checksumTypeSize = dataChecksum.getChecksumType().size;
     if (checksumTypeSize == 0) {
