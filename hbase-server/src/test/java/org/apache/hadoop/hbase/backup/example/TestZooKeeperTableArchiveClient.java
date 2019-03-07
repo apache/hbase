@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.DummyAsyncRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
@@ -80,7 +82,7 @@ public class TestZooKeeperTableArchiveClient {
       HBaseClassTestRule.forClass(TestZooKeeperTableArchiveClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeperTableArchiveClient.class);
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
@@ -89,6 +91,17 @@ public class TestZooKeeperTableArchiveClient {
   private static Connection CONNECTION;
   private static RegionServerServices rss;
 
+  public static final class MockRegistry extends DummyAsyncRegistry {
+
+    public MockRegistry(Configuration conf) {
+    }
+
+    @Override
+    public CompletableFuture<String> getClusterId() {
+      return CompletableFuture.completedFuture("clusterId");
+    }
+  }
+
   /**
    * Setup the config for the cluster
    */
@@ -96,6 +109,8 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
+    UTIL.getConfiguration().setClass("hbase.client.registry.impl", MockRegistry.class,
+      DummyAsyncRegistry.class);
     CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
@@ -377,7 +392,7 @@ public class TestZooKeeperTableArchiveClient {
         if (counter[0] >= expected) finished.countDown();
         return ret;
       }
-    }).when(delegateSpy).getDeletableFiles(Mockito.anyListOf(FileStatus.class));
+    }).when(delegateSpy).getDeletableFiles(Mockito.anyList());
     cleaners.set(0, delegateSpy);
 
     return finished;

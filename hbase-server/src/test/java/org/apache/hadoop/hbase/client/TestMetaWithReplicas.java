@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
@@ -206,7 +207,9 @@ public class TestMetaWithReplicas {
     }
     byte[] row = Bytes.toBytes("test");
     ServerName master = null;
-    try (Connection c = ConnectionFactory.createConnection(conf)) {
+    try (
+      ConnectionImplementation c = ConnectionFactory.createConnectionImpl(util.getConfiguration(),
+        null, UserProvider.instantiate(util.getConfiguration()).getCurrent())) {
       try (Table htable = util.createTable(TABLE, FAMILIES)) {
         util.getAdmin().flush(TableName.META_TABLE_NAME);
         Thread.sleep(
@@ -335,8 +338,10 @@ public class TestMetaWithReplicas {
   public void testShutdownOfReplicaHolder() throws Exception {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
-    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-        RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
+    try (
+      Connection conn = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+        UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
+      RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
       HRegionLocation hrl = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);

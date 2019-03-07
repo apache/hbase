@@ -1857,7 +1857,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         List<NormalizationPlan> plans = this.normalizer.computePlanForTable(table);
         if (plans != null) {
           for (NormalizationPlan plan : plans) {
-            plan.execute(connection.getAdmin());
+            plan.execute(asyncClusterConnection.toConnection().getAdmin());
             if (plan.getType() == PlanType.SPLIT) {
               splitPlanCount++;
             } else if (plan.getType() == PlanType.MERGE) {
@@ -3058,9 +3058,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     // this is what we want especially if the Master is in startup phase doing call outs to
     // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
     // the rpc to timeout.
-    if (this.connection != null) {
-      this.connection.close();
-    }
     if (this.asyncClusterConnection != null) {
       this.asyncClusterConnection.close();
     }

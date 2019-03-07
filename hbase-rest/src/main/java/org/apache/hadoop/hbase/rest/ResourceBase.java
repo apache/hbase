@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +19,13 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ResourceBase implements Constants {
@@ -82,10 +79,9 @@ public class ResourceBase implements Constants {
               StringUtils.stringifyException(exp) + CRLF)
             .build());
     }
-    if (exp instanceof RetriesExhaustedWithDetailsException) {
-      RetriesExhaustedWithDetailsException retryException =
-          (RetriesExhaustedWithDetailsException) exp;
-      processException(retryException.getCause(0));
+    if (exp instanceof RetriesExhaustedException) {
+      RetriesExhaustedException retryException = (RetriesExhaustedException) exp;
+      processException(retryException.getCause());
     }
     throw new WebApplicationException(
       Response.status(Response.Status.SERVICE_UNAVAILABLE)

@@ -18,143 +18,95 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.security.token.Token;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Can be overridden in UT if you only want to implement part of the methods in
- * {@link AsyncClusterConnection}.
+ * Wraps a {@link AsyncConnection} to make it can't be closed.
  */
-public class DummyAsyncClusterConnection implements AsyncClusterConnection {
+@InterfaceAudience.Private
+public class SharedAsyncConnection implements AsyncConnection {
+
+  private final AsyncConnection conn;
+
+  public SharedAsyncConnection(AsyncConnection conn) {
+    this.conn = conn;
+  }
+
+  @Override
+  public boolean isClosed() {
+    return conn.isClosed();
+  }
+
+  @Override
+  public void close() throws IOException {
+    throw new UnsupportedOperationException("Shared connection");
+  }
 
   @Override
   public Configuration getConfiguration() {
-    return null;
+    return conn.getConfiguration();
   }
 
   @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
-    return null;
+    return conn.getRegionLocator(tableName);
   }
 
   @Override
   public void clearRegionLocationCache() {
+    conn.clearRegionLocationCache();
   }
 
   @Override
   public AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName) {
-    return null;
+    return conn.getTableBuilder(tableName);
   }
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
       ExecutorService pool) {
-    return null;
+    return conn.getTableBuilder(tableName, pool);
   }
 
   @Override
   public AsyncAdminBuilder getAdminBuilder() {
-    return null;
+    return conn.getAdminBuilder();
   }
 
   @Override
   public AsyncAdminBuilder getAdminBuilder(ExecutorService pool) {
-    return null;
+    return conn.getAdminBuilder(pool);
   }
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName) {
-    return null;
+    return conn.getBufferedMutatorBuilder(tableName);
   }
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
       ExecutorService pool) {
-    return null;
+    return conn.getBufferedMutatorBuilder(tableName, pool);
   }
 
   @Override
   public CompletableFuture<Hbck> getHbck() {
-    return null;
+    return conn.getHbck();
   }
 
   @Override
   public Hbck getHbck(ServerName masterServer) throws IOException {
-    return null;
-  }
-
-  @Override
-  public boolean isClosed() {
-    return false;
-  }
-
-  @Override
-  public void close() throws IOException {
-  }
-
-  @Override
-  public AsyncRegionServerAdmin getRegionServerAdmin(ServerName serverName) {
-    return null;
-  }
-
-  @Override
-  public NonceGenerator getNonceGenerator() {
-    return null;
-  }
-
-  @Override
-  public RpcClient getRpcClient() {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
-      boolean writeFlushWALMarker) {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs) {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      boolean reload) {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<String> prepareBulkLoad(TableName tableName) {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<Boolean> bulkLoad(TableName tableName,
-      List<Pair<byte[], String>> familyPaths, byte[] row, boolean assignSeqNum, Token<?> userToken,
-      String bulkToken, boolean copyFiles) {
-    return null;
-  }
-
-  @Override
-  public CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken) {
-    return null;
+    return conn.getHbck(masterServer);
   }
 
   @Override
   public Connection toConnection() {
-    return null;
+    return new SharedConnection(conn.toConnection());
   }
+
 }

@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -103,16 +103,12 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   /**
    * Returns a list of all the column families for a given Table.
-   *
-   * @param table table
-   * @throws IOException
    */
   byte[][] getAllColumns(Table table) throws IOException {
-    HColumnDescriptor[] cds = table.getTableDescriptor().getColumnFamilies();
+    ColumnFamilyDescriptor[] cds = table.getDescriptor().getColumnFamilies();
     byte[][] columns = new byte[cds.length][];
     for (int i = 0; i < cds.length; i++) {
-      columns[i] = Bytes.add(cds[i].getName(),
-          KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
+      columns[i] = Bytes.add(cds[i].getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
     }
     return columns;
   }
@@ -1090,7 +1086,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       TreeMap<ByteBuffer, ColumnDescriptor> columns = new TreeMap<>();
 
       table = getTable(tableName);
-      HTableDescriptor desc = table.getTableDescriptor();
+      HTableDescriptor desc = new HTableDescriptor(table.getDescriptor());
 
       for (HColumnDescriptor e : desc.getFamilies()) {
         ColumnDescriptor col = ThriftUtilities.colDescFromHbase(e);

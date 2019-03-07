@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Based class for testing operation timeout logic for {@link ConnectionImplementation}.
+ * Based class for testing operation timeout logic.
  */
 public abstract class AbstractTestCIOperationTimeout extends AbstractTestCITimeout {
 
@@ -73,7 +73,7 @@ public abstract class AbstractTestCIOperationTimeout extends AbstractTestCITimeo
       SleepAndFailFirstTime.ct.set(0);
       execute(table);
       fail("We expect an exception here");
-    } catch (SocketTimeoutException | RetriesExhaustedWithDetailsException e) {
+    } catch (SocketTimeoutException | RetriesExhaustedException e) {
       // The client has a CallTimeout class, but it's not shared. We're not very clean today,
       // in the general case you can expect the call to stop, but the exception may vary.
       // In this test however, we're sure that it will be a socket timeout.
