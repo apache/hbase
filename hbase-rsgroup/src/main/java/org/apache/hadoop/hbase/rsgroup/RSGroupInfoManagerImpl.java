@@ -596,17 +596,19 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
   private SortedSet<Address> getDefaultServers() throws IOException {
+    // Build a list of servers in other groups than default group, from rsGroupMap
+    Set<Address> serversInOtherGroup = new HashSet<>();
+    for (RSGroupInfo group : listRSGroups() /* get from rsGroupMap */) {
+      if (!RSGroupInfo.DEFAULT_GROUP.equals(group.getName())) { // not default group
+        serversInOtherGroup.addAll(group.getServers());
+      }
+    }
+
+    // Get all online servers from Zookeeper and find out servers in default group
     SortedSet<Address> defaultServers = Sets.newTreeSet();
     for (ServerName serverName : getOnlineRS()) {
       Address server = Address.fromParts(serverName.getHostname(), serverName.getPort());
-      boolean found = false;
-      for (RSGroupInfo rsgi : listRSGroups()) {
-        if (!RSGroupInfo.DEFAULT_GROUP.equals(rsgi.getName()) && rsgi.containsServer(server)) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
+      if (!serversInOtherGroup.contains(server)) { // not in other groups
         defaultServers.add(server);
       }
     }
