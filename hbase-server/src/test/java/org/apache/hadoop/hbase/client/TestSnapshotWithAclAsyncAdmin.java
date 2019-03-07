@@ -25,25 +25,34 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestSnapshotWithAcl extends SnapshotWithAclTestBase {
+public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWithAcl.class);
+    HBaseClassTestRule.forClass(TestSnapshotWithAclAsyncAdmin.class);
 
   @Override
   protected void snapshot(String snapshotName, TableName tableName) throws Exception {
-    TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+      conn.getAdmin().snapshot(snapshotName, tableName).get();
+    }
   }
 
   @Override
   protected void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
       throws Exception {
-    TEST_UTIL.getAdmin().cloneSnapshot(snapshotName, tableName, restoreAcl);
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+      conn.getAdmin().cloneSnapshot(snapshotName, tableName, restoreAcl).get();
+    }
   }
 
   @Override
   protected void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception {
-    TEST_UTIL.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl);
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+      conn.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl).get();
+    }
   }
 }

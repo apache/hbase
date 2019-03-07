@@ -1839,8 +1839,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> restoreSnapshot(String snapshotName,
-      boolean takeFailSafeSnapshot) {
+  public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+      boolean restoreAcl) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(listSnapshots(Pattern.compile(snapshotName)), (snapshotDescriptions, err) -> {
       if (err != null) {
@@ -1868,7 +1868,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         } else if (!exists) {
           // if table does not exist, then just clone snapshot into new table.
           completeConditionalOnFuture(future,
-            internalRestoreSnapshot(snapshotName, finalTableName));
+            internalRestoreSnapshot(snapshotName, finalTableName, restoreAcl));
         } else {
           addListener(isTableDisabled(finalTableName), (disabled, err4) -> {
             if (err4 != null) {
@@ -1877,7 +1877,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               future.completeExceptionally(new TableNotDisabledException(finalTableName));
             } else {
               completeConditionalOnFuture(future,
-                restoreSnapshot(snapshotName, finalTableName, takeFailSafeSnapshot));
+                restoreSnapshot(snapshotName, finalTableName, takeFailSafeSnapshot, restoreAcl));
             }
           });
         }
@@ -1887,7 +1887,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> restoreSnapshot(String snapshotName, TableName tableName,
-      boolean takeFailSafeSnapshot) {
+      boolean takeFailSafeSnapshot, boolean restoreAcl) {
     if (takeFailSafeSnapshot) {
       CompletableFuture<Void> future = new CompletableFuture<>();
       // Step.1 Take a snapshot of the current state
@@ -1904,40 +1904,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
         } else {
           // Step.2 Restore snapshot
-          addListener(internalRestoreSnapshot(snapshotName, tableName), (void2, err2) -> {
-            if (err2 != null) {
-              // Step.3.a Something went wrong during the restore and try to rollback.
-              addListener(internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName),
-                (void3, err3) -> {
+          addListener(internalRestoreSnapshot(snapshotName, tableName, restoreAcl),
+            (void2, err2) -> {
+              if (err2 != null) {
+                // Step.3.a Something went wrong during the restore and try to rollback.
+                addListener(
+                  internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName, restoreAcl),
+                  (void3, err3) -> {
+                    if (err3 != null) {
+                      future.completeExceptionally(err3);
+                    } else {
+                      String msg =
+                        "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot=" +
+                          failSafeSnapshotSnapshotName + " succeeded.";
+                      future.completeExceptionally(new RestoreSnapshotException(msg));
+                    }
+                  });
+              } else {
+                // Step.3.b If the restore is succeeded, delete the pre-restore snapshot.
+                LOG.info("Deleting restore-failsafe snapshot: " + failSafeSnapshotSnapshotName);
+                addListener(deleteSnapshot(failSafeSnapshotSnapshotName), (ret3, err3) -> {
                   if (err3 != null) {
+                    LOG.error(
+                      "Unable to remove the failsafe snapshot: " + failSafeSnapshotSnapshotName,
+                      err3);
                     future.completeExceptionally(err3);
                   } else {
-                    String msg =
-                      "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot=" +
-                        failSafeSnapshotSnapshotName + " succeeded.";
-                    future.completeExceptionally(new RestoreSnapshotException(msg));
+                    future.complete(ret3);
                   }
                 });
-            } else {
-              // Step.3.b If the restore is succeeded, delete the pre-restore snapshot.
-              LOG.info("Deleting restore-failsafe snapshot: " + failSafeSnapshotSnapshotName);
-              addListener(deleteSnapshot(failSafeSnapshotSnapshotName), (ret3, err3) -> {
-                if (err3 != null) {
-                  LOG.error(
-                    "Unable to remove the failsafe snapshot: " + failSafeSnapshotSnapshotName,
-                    err3);
-                  future.completeExceptionally(err3);
-                } else {
-                  future.complete(ret3);
-                }
-              });
-            }
-          });
+              }
+            });
         }
       });
       return future;
     } else {
-      return internalRestoreSnapshot(snapshotName, tableName);
+      return internalRestoreSnapshot(snapshotName, tableName, restoreAcl);
     }
   }
 
@@ -1953,7 +1955,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName) {
+  public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
@@ -1961,27 +1964,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       } else if (exists) {
         future.completeExceptionally(new TableExistsException(tableName));
       } else {
-        completeConditionalOnFuture(future, internalRestoreSnapshot(snapshotName, tableName));
+        completeConditionalOnFuture(future,
+          internalRestoreSnapshot(snapshotName, tableName, restoreAcl));
       }
     });
     return future;
   }
 
-  private CompletableFuture<Void> internalRestoreSnapshot(String snapshotName, TableName tableName) {
+  private CompletableFuture<Void> internalRestoreSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl) {
     SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
-        .setName(snapshotName).setTable(tableName.getNameAsString()).build();
+      .setName(snapshotName).setTable(tableName.getNameAsString()).build();
     try {
       ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
-    return waitProcedureResult(this
-        .<Long> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<RestoreSnapshotRequest, RestoreSnapshotResponse, Long> call(
-            controller, stub, RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot)
-                .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build(), (s, c, req,
-                done) -> s.restoreSnapshot(c, req, done), (resp) -> resp.getProcId())).call());
+    return waitProcedureResult(this.<Long> newMasterCaller().action((controller, stub) -> this
+      .<RestoreSnapshotRequest, RestoreSnapshotResponse, Long> call(controller, stub,
+        RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup())
+          .setNonce(ng.newNonce()).setRestoreACL(restoreAcl).build(),
+        (s, c, req, done) -> s.restoreSnapshot(c, req, done), (resp) -> resp.getProcId()))
+      .call());
   }
 
   @Override

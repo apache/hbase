@@ -734,14 +734,42 @@ public interface AsyncAdmin {
    * @param snapshotName name of the snapshot to restore
    * @param takeFailSafeSnapshot true if the failsafe snapshot should be taken
    */
-  CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot);
+  default CompletableFuture<Void> restoreSnapshot(String snapshotName,
+      boolean takeFailSafeSnapshot) {
+    return restoreSnapshot(snapshotName, takeFailSafeSnapshot, false);
+  }
+
+  /**
+   * Restore the specified snapshot on the original table. (The table must be disabled) If
+   * 'takeFailSafeSnapshot' is set to true, a snapshot of the current table is taken before
+   * executing the restore operation. In case of restore failure, the failsafe snapshot will be
+   * restored. If the restore completes without problem the failsafe snapshot is deleted. The
+   * failsafe snapshot name is configurable by using the property
+   * "hbase.snapshot.restore.failsafe.name".
+   * @param snapshotName name of the snapshot to restore
+   * @param takeFailSafeSnapshot true if the failsafe snapshot should be taken
+   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   */
+  CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
+      boolean restoreAcl);
 
   /**
    * Create a new table by cloning the snapshot content.
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
    */
-  CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName);
+  default CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName) {
+    return cloneSnapshot(snapshotName, tableName, false);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   */
+  CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl);
 
   /**
    * List completed snapshots.
