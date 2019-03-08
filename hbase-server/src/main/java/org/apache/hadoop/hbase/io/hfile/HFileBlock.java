@@ -21,7 +21,6 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -280,9 +278,7 @@ public class HFileBlock implements Cacheable {
       boolean usesChecksum = buf.get() == (byte) 1;
       long offset = buf.getLong();
       int nextBlockOnDiskSize = buf.getInt();
-      HFileBlock hFileBlock =
-          new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null);
-      return hFileBlock;
+      return new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null);
     }
 
     @Override
@@ -315,9 +311,9 @@ public class HFileBlock implements Cacheable {
    * param.
    */
   private HFileBlock(HFileBlock that, boolean bufCopy) {
-    init(that.blockType, that.onDiskSizeWithoutHeader,
-        that.uncompressedSizeWithoutHeader, that.prevBlockOffset,
-        that.offset, that.onDiskDataSizeWithHeader, that.nextBlockOnDiskSize, that.fileContext);
+    init(that.blockType, that.onDiskSizeWithoutHeader, that.uncompressedSizeWithoutHeader,
+      that.prevBlockOffset, that.offset, that.onDiskDataSizeWithHeader, that.nextBlockOnDiskSize,
+      that.fileContext);
     if (bufCopy) {
       this.buf = new SingleByteBuff(ByteBuffer.wrap(that.buf.toBytes(0, that.buf.limit())));
     } else {
@@ -331,6 +327,7 @@ public class HFileBlock implements Cacheable {
    * and is sitting in a byte buffer and we want to stuff the block into cache.
    *
    * <p>TODO: The caller presumes no checksumming
+   * <p>TODO: HFile block writer can also off-heap ? </p>
    * required of this block instance since going into cache; checksum already verified on
    * underlying block data pulled in from filesystem. Is that correct? What if cache is SSD?
    *
@@ -349,8 +346,8 @@ public class HFileBlock implements Cacheable {
       int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
       long offset, final int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
       HFileContext fileContext) {
-    init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-        prevBlockOffset, offset, onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
+    init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, offset,
+      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
     this.buf = new SingleByteBuff(b);
     if (fillHeader) {
       overwriteHeader();
@@ -366,7 +363,8 @@ public class HFileBlock implements Cacheable {
    * @param buf Has header, content, and trailing checksums if present.
    */
   HFileBlock(ByteBuff buf, boolean usesHBaseChecksum, MemoryType memType, final long offset,
-      final int nextBlockOnDiskSize, HFileContext fileContext) throws IOException {
+      final int nextBlockOnDiskSize, HFileContext fileContext)
+      throws IOException {
     buf.rewind();
     final BlockType blockType = BlockType.read(buf);
     final int onDiskSizeWithoutHeader = buf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX);
@@ -394,8 +392,8 @@ public class HFileBlock implements Cacheable {
     }
     fileContext = fileContextBuilder.build();
     assert usesHBaseChecksum == fileContext.isUseHBaseChecksum();
-    init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-        prevBlockOffset, offset, onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
+    init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, offset,
+      onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext);
     this.memType = memType;
     this.offset = offset;
     this.buf = buf;
@@ -406,9 +404,8 @@ public class HFileBlock implements Cacheable {
    * Called from constructors.
    */
   private void init(BlockType blockType, int onDiskSizeWithoutHeader,
-      int uncompressedSizeWithoutHeader, long prevBlockOffset,
-      long offset, int onDiskDataSizeWithHeader, final int nextBlockOnDiskSize,
-      HFileContext fileContext) {
+      int uncompressedSizeWithoutHeader, long prevBlockOffset, long offset,
+      int onDiskDataSizeWithHeader, final int nextBlockOnDiskSize, HFileContext fileContext) {
     this.blockType = blockType;
     this.onDiskSizeWithoutHeader = onDiskSizeWithoutHeader;
     this.uncompressedSizeWithoutHeader = uncompressedSizeWithoutHeader;
@@ -425,10 +422,9 @@ public class HFileBlock implements Cacheable {
    * @param verifyChecksum true if checksum verification is in use.
    * @return Size of the block with header included.
    */
-  private static int getOnDiskSizeWithHeader(final ByteBuffer headerBuf,
+  private static int getOnDiskSizeWithHeader(final ByteBuff headerBuf,
       boolean verifyChecksum) {
-    return headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) +
-      headerSize(verifyChecksum);
+    return headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) + headerSize(verifyChecksum);
   }
 
   /**
@@ -651,9 +647,10 @@ public class HFileBlock implements Cacheable {
     ByteBuff dup = this.buf.duplicate();
     dup.position(this.headerSize());
     dup = dup.slice();
+
     ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-      unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(),
-      dup);
+      unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(), dup);
+
     return unpacked;
   }
 
@@ -667,15 +664,14 @@ public class HFileBlock implements Cacheable {
     int headerSize = headerSize();
     int capacityNeeded = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
 
-    // TODO we need consider allocating offheap here?
-    ByteBuffer newBuf = ByteBuffer.allocate(capacityNeeded);
+    ByteBuff newBuf = new SingleByteBuff(ByteBuffer.allocate(capacityNeeded));
 
     // Copy header bytes into newBuf.
     // newBuf is HBB so no issue in calling array()
     buf.position(0);
-    buf.get(newBuf.array(), newBuf.arrayOffset(), headerSize);
+    newBuf.put(0, buf, 0, headerSize);
 
-    buf = new SingleByteBuff(newBuf);
+    buf = newBuf;
     // set limit to exclude next block's header
     buf.limit(headerSize + uncompressedSizeWithoutHeader + cksumBytes);
   }
@@ -690,17 +686,6 @@ public class HFileBlock implements Cacheable {
     final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
     final int bufCapacity = buf.capacity();
     return bufCapacity == expectedCapacity || bufCapacity == expectedCapacity + headerSize;
-  }
-
-  /** An additional sanity-check in case no compression or encryption is being used. */
-  @VisibleForTesting
-  void sanityCheckUncompressedSize() throws IOException {
-    if (onDiskSizeWithoutHeader != uncompressedSizeWithoutHeader + totalChecksumBytes()) {
-      throw new IOException("Using no compression but "
-          + "onDiskSizeWithoutHeader=" + onDiskSizeWithoutHeader + ", "
-          + "uncompressedSizeWithoutHeader=" + uncompressedSizeWithoutHeader
-          + ", numChecksumbytes=" + totalChecksumBytes());
-    }
   }
 
   /**
@@ -745,82 +730,6 @@ public class HFileBlock implements Cacheable {
     }
 
     return ClassSize.align(size);
-  }
-
-  /**
-   * Read from an input stream at least <code>necessaryLen</code> and if possible,
-   * <code>extraLen</code> also if available. Analogous to
-   * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but specifies a
-   * number of "extra" bytes to also optionally read.
-   *
-   * @param in the input stream to read from
-   * @param buf the buffer to read into
-   * @param bufOffset the destination offset in the buffer
-   * @param necessaryLen the number of bytes that are absolutely necessary to read
-   * @param extraLen the number of extra bytes that would be nice to read
-   * @return true if succeeded reading the extra bytes
-   * @throws IOException if failed to read the necessary bytes
-   */
-  static boolean readWithExtra(InputStream in, byte[] buf,
-      int bufOffset, int necessaryLen, int extraLen) throws IOException {
-    int bytesRemaining = necessaryLen + extraLen;
-    while (bytesRemaining > 0) {
-      int ret = in.read(buf, bufOffset, bytesRemaining);
-      if (ret == -1 && bytesRemaining <= extraLen) {
-        // We could not read the "extra data", but that is OK.
-        break;
-      }
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream (read "
-            + "returned " + ret + ", was trying to read " + necessaryLen
-            + " necessary bytes and " + extraLen + " extra bytes, "
-            + "successfully read "
-            + (necessaryLen + extraLen - bytesRemaining));
-      }
-      bufOffset += ret;
-      bytesRemaining -= ret;
-    }
-    return bytesRemaining <= 0;
-  }
-
-  /**
-   * Read from an input stream at least <code>necessaryLen</code> and if possible,
-   * <code>extraLen</code> also if available. Analogous to
-   * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but uses
-   * positional read and specifies a number of "extra" bytes that would be
-   * desirable but not absolutely necessary to read.
-   *
-   * @param in the input stream to read from
-   * @param position the position within the stream from which to start reading
-   * @param buf the buffer to read into
-   * @param bufOffset the destination offset in the buffer
-   * @param necessaryLen the number of bytes that are absolutely necessary to
-   *     read
-   * @param extraLen the number of extra bytes that would be nice to read
-   * @return true if and only if extraLen is > 0 and reading those extra bytes
-   *     was successful
-   * @throws IOException if failed to read the necessary bytes
-   */
-  @VisibleForTesting
-  static boolean positionalReadWithExtra(FSDataInputStream in,
-      long position, byte[] buf, int bufOffset, int necessaryLen, int extraLen)
-      throws IOException {
-    int bytesRemaining = necessaryLen + extraLen;
-    int bytesRead = 0;
-    while (bytesRead < necessaryLen) {
-      int ret = in.read(position, buf, bufOffset, bytesRemaining);
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream (positional read "
-            + "returned " + ret + ", was trying to read " + necessaryLen
-            + " necessary bytes and " + extraLen + " extra bytes, "
-            + "successfully read " + bytesRead);
-      }
-      position += ret;
-      bufOffset += ret;
-      bytesRemaining -= ret;
-      bytesRead += ret;
-    }
-    return bytesRead != necessaryLen && bytesRemaining <= 0;
   }
 
   /**
@@ -985,18 +894,6 @@ public class HFileBlock implements Cacheable {
       this.unencodedDataSizeWritten +=
           this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx, this.userDataStream);
       this.encodedDataSizeWritten += this.userDataStream.size() - posBeforeEncode;
-    }
-
-    /**
-     * Returns the stream for the user to write to. The block writer takes care
-     * of handling compression and buffering for caching on write. Can only be
-     * called in the "writing" state.
-     *
-     * @return the data output stream for the user to write to
-     */
-    DataOutputStream getUserDataStream() {
-      expectState(State.WRITING);
-      return userDataStream;
     }
 
     /**
@@ -1261,11 +1158,9 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Clones the header followed by the on-disk (compressed/encoded/encrypted) data. This is
-     * needed for storing packed blocks in the block cache. Expects calling semantics identical to
-     * {@link #getUncompressedBufferWithHeader()}. Returns only the header and data,
-     * Does not include checksum data.
-     *
+     * Clones the header followed by the on-disk (compressed/encoded/encrypted) data. This is needed
+     * for storing packed blocks in the block cache. Returns only the header and data, Does not
+     * include checksum data.
      * @return Returns a copy of block bytes for caching on write
      */
     private ByteBuffer cloneOnDiskBufferWithHeader() {
@@ -1321,11 +1216,10 @@ public class HFileBlock implements Cacheable {
                                 .withIncludesMvcc(fileContext.isIncludesMvcc())
                                 .withIncludesTags(fileContext.isIncludesTags())
                                 .build();
-       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
+      return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
-          cacheConf.shouldCacheCompressed(blockType.getCategory())?
-            cloneOnDiskBufferWithHeader() :
-            cloneUncompressedBufferWithHeader(),
+          cacheConf.shouldCacheCompressed(blockType.getCategory()) ? cloneOnDiskBufferWithHeader()
+              : cloneUncompressedBufferWithHeader(),
           FILL_HEADER, startOffset, UNSET,
           onDiskBlockBytesWithHeader.size() + onDiskChecksum.length, newContext);
     }
@@ -1415,8 +1309,8 @@ public class HFileBlock implements Cacheable {
    */
   private static class PrefetchedHeader {
     long offset = -1;
-    byte [] header = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
-    final ByteBuffer buf = ByteBuffer.wrap(header, 0, HConstants.HFILEBLOCK_HEADER_SIZE);
+    byte[] header = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
+    final ByteBuff buf = new SingleByteBuff(ByteBuffer.wrap(header, 0, header.length));
 
     @Override
     public String toString() {
@@ -1479,11 +1373,11 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * A constructor that reads files with the latest minor version.
-     * This is used by unit tests only.
+     * A constructor that reads files with the latest minor version. This is used by unit tests
+     * only.
      */
     FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext)
-    throws IOException {
+        throws IOException {
       this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext);
     }
 
@@ -1520,60 +1414,49 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Does a positional read or a seek and read into the given buffer. Returns
-     * the on-disk size of the next block, or -1 if it could not be read/determined; e.g. EOF.
-     *
+     * Does a positional read or a seek and read into the given byte buffer. We need take care that
+     * we will call the {@link ByteBuff#release()} for every exit to deallocate the ByteBuffers,
+     * otherwise the memory leak may happen.
      * @param dest destination buffer
-     * @param destOffset offset into the destination buffer at where to put the bytes we read
      * @param size size of read
      * @param peekIntoNextBlock whether to read the next block's on-disk size
      * @param fileOffset position in the stream to read at
      * @param pread whether we should do a positional read
      * @param istream The input source of data
-     * @return the on-disk size of the next block with header size included, or
-     *         -1 if it could not be determined; if not -1, the <code>dest</code> INCLUDES the
-     *         next header
-     * @throws IOException
+     * @return true to indicate the destination buffer include the next block header, otherwise only
+     *         include the current block data without the next block header.
+     * @throws IOException if any IO error happen.
      */
-    @VisibleForTesting
-    protected int readAtOffset(FSDataInputStream istream, byte[] dest, int destOffset, int size,
-        boolean peekIntoNextBlock, long fileOffset, boolean pread)
-        throws IOException {
-      if (peekIntoNextBlock && destOffset + size + hdrSize > dest.length) {
-        // We are asked to read the next block's header as well, but there is
-        // not enough room in the array.
-        throw new IOException("Attempted to read " + size + " bytes and " + hdrSize +
-            " bytes of next header into a " + dest.length + "-byte array at offset " + destOffset);
-      }
-
+    protected boolean readAtOffset(FSDataInputStream istream, ByteBuff dest, int size,
+        boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
       if (!pread) {
         // Seek + read. Better for scanning.
         HFileUtil.seekOnMultipleSources(istream, fileOffset);
-        // TODO: do we need seek time latencies?
         long realOffset = istream.getPos();
         if (realOffset != fileOffset) {
-          throw new IOException("Tried to seek to " + fileOffset + " to " + "read " + size +
-              " bytes, but pos=" + realOffset + " after seek");
+          throw new IOException("Tried to seek to " + fileOffset + " to read " + size
+              + " bytes, but pos=" + realOffset + " after seek");
         }
-
         if (!peekIntoNextBlock) {
-          IOUtils.readFully(istream, dest, destOffset, size);
-          return -1;
+          BlockIOUtils.readFully(dest, istream, size);
+          return false;
         }
 
-        // Try to read the next block header.
-        if (!readWithExtra(istream, dest, destOffset, size, hdrSize)) {
-          return -1;
+        // Try to read the next block header
+        if (!BlockIOUtils.readWithExtra(dest, istream, size, hdrSize)) {
+          // did not read the next block header.
+          return false;
         }
       } else {
         // Positional read. Better for random reads; or when the streamLock is already locked.
         int extraSize = peekIntoNextBlock ? hdrSize : 0;
-        if (!positionalReadWithExtra(istream, fileOffset, dest, destOffset, size, extraSize)) {
-          return -1;
+        if (!BlockIOUtils.preadWithExtra(dest, istream, fileOffset, size, extraSize)) {
+          // did not read the next block header.
+          return false;
         }
       }
       assert peekIntoNextBlock;
-      return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) + hdrSize;
+      return true;
     }
 
     /**
@@ -1672,7 +1555,7 @@ public class HFileBlock implements Cacheable {
      * is not right.
      * @throws IOException
      */
-    private void verifyOnDiskSizeMatchesHeader(final int passedIn, final ByteBuffer headerBuf,
+    private void verifyOnDiskSizeMatchesHeader(final int passedIn, final ByteBuff headerBuf,
         final long offset, boolean verifyChecksum)
     throws IOException {
       // Assert size provided aligns with what is in the header
@@ -1691,11 +1574,11 @@ public class HFileBlock implements Cacheable {
      * we have to backup the stream because we over-read (the next block's header).
      * @see PrefetchedHeader
      * @return The cached block header or null if not found.
-     * @see #cacheNextBlockHeader(long, byte[], int, int)
+     * @see #cacheNextBlockHeader(long, ByteBuff, int, int)
      */
-    private ByteBuffer getCachedHeader(final long offset) {
+    private ByteBuff getCachedHeader(final long offset) {
       PrefetchedHeader ph = this.prefetchedHeader.get();
-      return ph != null && ph.offset == offset? ph.buf: null;
+      return ph != null && ph.offset == offset ? ph.buf : null;
     }
 
     /**
@@ -1704,11 +1587,22 @@ public class HFileBlock implements Cacheable {
      * @see PrefetchedHeader
      */
     private void cacheNextBlockHeader(final long offset,
-        final byte [] header, final int headerOffset, final int headerLength) {
+        ByteBuff onDiskBlock, int onDiskSizeWithHeader, int headerLength) {
       PrefetchedHeader ph = new PrefetchedHeader();
       ph.offset = offset;
-      System.arraycopy(header, headerOffset, ph.header, 0, headerLength);
+      onDiskBlock.get(onDiskSizeWithHeader, ph.header, 0, headerLength);
       this.prefetchedHeader.set(ph);
+    }
+
+    private int getNextBlockOnDiskSize(boolean readNextHeader, ByteBuff onDiskBlock,
+        int onDiskSizeWithHeader) {
+      int nextBlockOnDiskSize = -1;
+      if (readNextHeader) {
+        nextBlockOnDiskSize =
+            onDiskBlock.getIntAfterPosition(onDiskSizeWithHeader + BlockType.MAGIC_LENGTH)
+                + hdrSize;
+      }
+      return nextBlockOnDiskSize;
     }
 
     /**
@@ -1737,7 +1631,7 @@ public class HFileBlock implements Cacheable {
       // Try and get cached header. Will serve us in rare case where onDiskSizeWithHeaderL is -1
       // and will save us having to seek the stream backwards to reread the header we
       // read the last time through here.
-      ByteBuffer headerBuf = getCachedHeader(offset);
+      ByteBuff headerBuf = getCachedHeader(offset);
       LOG.trace("Reading {} at offset={}, pread={}, verifyChecksum={}, cachedHeader={}, " +
           "onDiskSizeWithHeader={}", this.fileContext.getHFileName(), offset, pread,
           verifyChecksum, headerBuf, onDiskSizeWithHeader);
@@ -1757,9 +1651,9 @@ public class HFileBlock implements Cacheable {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Extra see to get block size!", new RuntimeException());
           }
-          headerBuf = ByteBuffer.allocate(hdrSize);
-          readAtOffset(is, headerBuf.array(), headerBuf.arrayOffset(), hdrSize, false,
-              offset, pread);
+          headerBuf = new SingleByteBuff(ByteBuffer.allocate(hdrSize));
+          readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
+          headerBuf.rewind();
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
       }
@@ -1770,46 +1664,55 @@ public class HFileBlock implements Cacheable {
       // says where to start reading. If we have the header cached, then we don't need to read
       // it again and we can likely read from last place we left off w/o need to backup and reread
       // the header we read last time through here.
-      // TODO: Make this ByteBuffer-based. Will make it easier to go to HDFS with BBPool (offheap).
-      byte [] onDiskBlock = new byte[onDiskSizeWithHeader + hdrSize];
-      int nextBlockOnDiskSize = readAtOffset(is, onDiskBlock, preReadHeaderSize,
+      ByteBuff onDiskBlock =
+          new SingleByteBuff(ByteBuffer.allocate(onDiskSizeWithHeader + hdrSize));
+      boolean initHFileBlockSuccess = false;
+      try {
+        if (headerBuf != null) {
+          onDiskBlock.put(0, headerBuf, 0, hdrSize).position(hdrSize);
+        }
+        boolean readNextHeader = readAtOffset(is, onDiskBlock,
           onDiskSizeWithHeader - preReadHeaderSize, true, offset + preReadHeaderSize, pread);
-      if (headerBuf != null) {
-        // The header has been read when reading the previous block OR in a distinct header-only
-        // read. Copy to this block's header.
-        System.arraycopy(headerBuf.array(), headerBuf.arrayOffset(), onDiskBlock, 0, hdrSize);
-      } else {
-        headerBuf = ByteBuffer.wrap(onDiskBlock, 0, hdrSize);
+        onDiskBlock.rewind(); // in case of moving position when copying a cached header
+        int nextBlockOnDiskSize =
+            getNextBlockOnDiskSize(readNextHeader, onDiskBlock, onDiskSizeWithHeader);
+        if (headerBuf == null) {
+          headerBuf = onDiskBlock.duplicate().position(0).limit(hdrSize);
+        }
+        // Do a few checks before we go instantiate HFileBlock.
+        assert onDiskSizeWithHeader > this.hdrSize;
+        verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset, checksumSupport);
+        ByteBuff curBlock = onDiskBlock.duplicate().limit(onDiskSizeWithHeader);
+        // Verify checksum of the data before using it for building HFileBlock.
+        if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
+          return null;
+        }
+        long duration = System.currentTimeMillis() - startTime;
+        if (updateMetrics) {
+          HFile.updateReadLatency(duration, pread);
+        }
+        // The onDiskBlock will become the headerAndDataBuffer for this block.
+        // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
+        // contains the header of next block, so no need to set next block's header in it.
+        HFileBlock hFileBlock = new HFileBlock(curBlock, checksumSupport, MemoryType.EXCLUSIVE,
+            offset, nextBlockOnDiskSize, fileContext);
+        // Run check on uncompressed sizings.
+        if (!fileContext.isCompressedOrEncrypted()) {
+          hFileBlock.sanityCheckUncompressed();
+        }
+        LOG.trace("Read {} in {} ns", hFileBlock, duration);
+        // Cache next block header if we read it for the next time through here.
+        if (nextBlockOnDiskSize != -1) {
+          cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(), onDiskBlock,
+            onDiskSizeWithHeader, hdrSize);
+        }
+        initHFileBlockSuccess = true;
+        return hFileBlock;
+      } finally {
+        if (!initHFileBlockSuccess) {
+          onDiskBlock.release();
+        }
       }
-      // Do a few checks before we go instantiate HFileBlock.
-      assert onDiskSizeWithHeader > this.hdrSize;
-      verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset, checksumSupport);
-      ByteBuff onDiskBlockByteBuff =
-          new SingleByteBuff(ByteBuffer.wrap(onDiskBlock, 0, onDiskSizeWithHeader));
-      // Verify checksum of the data before using it for building HFileBlock.
-      if (verifyChecksum && !validateChecksum(offset, onDiskBlockByteBuff, hdrSize)) {
-        return null;
-      }
-      long duration = System.currentTimeMillis() - startTime;
-      if (updateMetrics) {
-        HFile.updateReadLatency(duration, pread);
-      }
-      // The onDiskBlock will become the headerAndDataBuffer for this block.
-      // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
-      // contains the header of next block, so no need to set next block's header in it.
-      HFileBlock hFileBlock = new HFileBlock(onDiskBlockByteBuff, checksumSupport,
-          MemoryType.EXCLUSIVE, offset, nextBlockOnDiskSize, fileContext);
-      // Run check on uncompressed sizings.
-      if (!fileContext.isCompressedOrEncrypted()) {
-        hFileBlock.sanityCheckUncompressed();
-      }
-      LOG.trace("Read {} in {} ns", hFileBlock, duration);
-      // Cache next block header if we read it for the next time through here.
-      if (nextBlockOnDiskSize != -1) {
-        cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(),
-            onDiskBlock, onDiskSizeWithHeader, hdrSize);
-      }
-      return hFileBlock;
     }
 
     @Override
