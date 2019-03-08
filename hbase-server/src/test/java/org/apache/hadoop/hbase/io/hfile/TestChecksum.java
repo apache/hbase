@@ -398,23 +398,25 @@ public class TestChecksum {
       return b;
     }
 
+
     @Override
-    protected int readAtOffset(FSDataInputStream istream, byte [] dest, int destOffset, int size,
+    protected boolean readAtOffset(FSDataInputStream istream, ByteBuff dest, int size,
         boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
-      int returnValue = super.readAtOffset(istream, dest, destOffset, size, peekIntoNextBlock,
-          fileOffset, pread);
+      int destOffset = dest.position();
+      boolean returnValue =
+          super.readAtOffset(istream, dest, size, peekIntoNextBlock, fileOffset, pread);
       if (!corruptDataStream) {
         return returnValue;
       }
       // Corrupt 3rd character of block magic of next block's header.
       if (peekIntoNextBlock) {
-        dest[destOffset + size + 3] = 0b00000000;
+        dest.put(destOffset + size + 3, (byte) 0b00000000);
       }
       // We might be reading this block's header too, corrupt it.
-      dest[destOffset + 1] = 0b00000000;
+      dest.put(destOffset + 1, (byte) 0b00000000);
       // Corrupt non header data
       if (size > hdrSize) {
-        dest[destOffset + hdrSize + 1] = 0b00000000;
+        dest.put(destOffset + hdrSize + 1, (byte) 0b00000000);
       }
       return returnValue;
     }
