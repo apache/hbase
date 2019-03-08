@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -45,7 +44,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -87,7 +85,6 @@ import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
@@ -270,6 +267,11 @@ public class HBaseAdmin implements Admin {
     return operationTimeout;
   }
 
+  @Override
+  public int getSyncWaitTimeout() {
+    return syncWaitTimeout;
+  }
+
   HBaseAdmin(ClusterConnection connection) throws IOException {
     this.conf = connection.getConfiguration();
     this.connection = connection;
@@ -335,11 +337,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(Pattern pattern) throws IOException {
-    return listTableDescriptors(pattern, false);
-  }
-
-  @Override
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
       throws IOException {
     return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
@@ -359,11 +356,6 @@ public class HBaseAdmin implements Admin {
       throws TableNotFoundException, IOException {
     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
        operationTimeout, rpcTimeout);
-  }
-
-  @Override
-  public void modifyTable(TableDescriptor td) throws IOException {
-    get(modifyTableAsync(td), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -511,11 +503,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public TableName[] listTableNames(Pattern pattern) throws IOException {
-    return listTableNames(pattern, false);
-  }
-
-  @Override
   public TableName[] listTableNames(String regex) throws IOException {
     return listTableNames(Pattern.compile(regex), false);
   }
@@ -611,35 +598,27 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createTable(TableDescriptor desc)
-  throws IOException {
+  public void createTable(TableDescriptor desc) throws IOException {
     createTable(desc, null);
   }
 
   @Override
-  public void createTable(TableDescriptor desc, byte [] startKey,
-      byte [] endKey, int numRegions)
-  throws IOException {
-    if(numRegions < 3) {
+  public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
+      throws IOException {
+    if (numRegions < 3) {
       throw new IllegalArgumentException("Must create at least three regions");
-    } else if(Bytes.compareTo(startKey, endKey) >= 0) {
+    } else if (Bytes.compareTo(startKey, endKey) >= 0) {
       throw new IllegalArgumentException("Start key must be smaller than end key");
     }
     if (numRegions == 3) {
-      createTable(desc, new byte[][]{startKey, endKey});
+      createTable(desc, new byte[][] { startKey, endKey });
       return;
     }
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    if(splitKeys == null || splitKeys.length != numRegions - 1) {
+    byte[][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    if (splitKeys == null || splitKeys.length != numRegions - 1) {
       throw new IllegalArgumentException("Unable to split key range into enough regions");
     }
     createTable(desc, splitKeys);
-  }
-
-  @Override
-  public void createTable(final TableDescriptor desc, byte [][] splitKeys)
-      throws IOException {
-    get(createTableAsync(desc, splitKeys), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -709,11 +688,6 @@ public class HBaseAdmin implements Admin {
       waitForAllRegionsOnline(deadlineTs, splitKeys);
       return null;
     }
-  }
-
-  @Override
-  public void deleteTable(final TableName tableName) throws IOException {
-    get(deleteTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -792,12 +766,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void truncateTable(final TableName tableName, final boolean preserveSplits)
-      throws IOException {
-    get(truncateTableAsync(tableName, preserveSplits), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> truncateTableAsync(final TableName tableName, final boolean preserveSplits)
       throws IOException {
     TruncateTableResponse response =
@@ -858,12 +826,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void enableTable(final TableName tableName)
-  throws IOException {
-    get(enableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> enableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     EnableTableResponse response = executeCallable(
@@ -920,12 +882,6 @@ public class HBaseAdmin implements Admin {
       }
     }
     return failed.toArray(new HTableDescriptor[failed.size()]);
-  }
-
-  @Override
-  public void disableTable(final TableName tableName)
-  throws IOException {
-    get(disableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -1042,12 +998,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    get(addColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> addColumnFamilyAsync(final TableName tableName,
       final ColumnFamilyDescriptor columnFamily) throws IOException {
     AddColumnResponse response =
@@ -1087,14 +1037,8 @@ public class HBaseAdmin implements Admin {
   @Override
   @Deprecated
   public void deleteColumn(final TableName tableName, final byte[] columnFamily)
-  throws IOException {
-    deleteColumnFamily(tableName, columnFamily);
-  }
-
-  @Override
-  public void deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
       throws IOException {
-    get(deleteColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
+    deleteColumnFamily(tableName, columnFamily);
   }
 
   @Override
@@ -1128,12 +1072,6 @@ public class HBaseAdmin implements Admin {
     public String getOperationType() {
       return "DELETE_COLUMN_FAMILY";
     }
-  }
-
-  @Override
-  public void modifyColumnFamily(final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily) throws IOException {
-    get(modifyColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -1983,22 +1921,6 @@ public class HBaseAdmin implements Admin {
     splitRegionAsync(regionServerPair.getFirst(), splitPoint);
   }
 
-  @Override
-  public void modifyTable(final TableName tableName, final TableDescriptor td)
-      throws IOException {
-    get(modifyTableAsync(tableName, td), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  public Future<Void> modifyTableAsync(final TableName tableName, final TableDescriptor td)
-      throws IOException {
-    if (!tableName.equals(td.getTableName())) {
-      throw new IllegalArgumentException("the specified table name '" + tableName +
-        "' doesn't match with the HTD one: " + td.getTableName());
-    }
-    return modifyTableAsync(td);
-  }
-
   private static class ModifyTableFuture extends TableFuture<Void> {
     public ModifyTableFuture(final HBaseAdmin admin, final TableName tableName,
         final ModifyTableResponse response) {
@@ -2229,12 +2151,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createNamespace(final NamespaceDescriptor descriptor)
-  throws IOException {
-    get(createNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> createNamespaceAsync(final NamespaceDescriptor descriptor)
       throws IOException {
     CreateNamespaceResponse response =
@@ -2256,12 +2172,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void modifyNamespace(final NamespaceDescriptor descriptor)
-  throws IOException {
-    get(modifyNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> modifyNamespaceAsync(final NamespaceDescriptor descriptor)
       throws IOException {
     ModifyNamespaceResponse response =
@@ -2280,12 +2190,6 @@ public class HBaseAdmin implements Admin {
         return "MODIFY_NAMESPACE";
       }
     };
-  }
-
-  @Override
-  public void deleteNamespace(final String name)
-  throws IOException {
-    get(deleteNamespaceAsync(name), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -2489,44 +2393,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  /**
-   * Roll the log writer. I.e. when using a file system based write ahead log,
-   * start writing log messages to a new file.
-   *
-   * Note that when talking to a version 1.0+ HBase deployment, the rolling is asynchronous.
-   * This method will return as soon as the roll is requested and the return value will
-   * always be null. Additionally, the named region server may schedule store flushes at the
-   * request of the wal handling the roll request.
-   *
-   * When talking to a 0.98 or older HBase deployment, the rolling is synchronous and the
-   * return value may be either null or a list of encoded region names.
-   *
-   * @param serverName
-   *          The servername of the regionserver. A server name is made of host,
-   *          port and startcode. This is mandatory. Here is an example:
-   *          <code> host187.example.com,60020,1289493121758</code>
-   * @return a set of {@link HRegionInfo#getEncodedName()} that would allow the wal to
-   *         clean up some underlying files. null if there's nothing to flush.
-   * @throws IOException if a remote or network exception occurs
-   * @throws FailedLogCloseException
-   * @deprecated use {@link #rollWALWriter(ServerName)}
-   */
-  @Deprecated
-  public synchronized byte[][] rollHLogWriter(String serverName)
-      throws IOException, FailedLogCloseException {
-    ServerName sn = ServerName.valueOf(serverName);
-    final RollWALWriterResponse response = rollWALWriterImpl(sn);
-    int regionCount = response.getRegionToFlushCount();
-    if (0 == regionCount) {
-      return null;
-    }
-    byte[][] regionsToFlush = new byte[regionCount][];
-    for (int i = 0; i < regionCount; i++) {
-      regionsToFlush[i] = ProtobufUtil.toBytes(response.getRegionToFlush(i));
-    }
-    return regionsToFlush;
-  }
-
   @Override
   public synchronized void rollWALWriter(ServerName serverName)
       throws IOException, FailedLogCloseException {
@@ -2565,26 +2431,6 @@ public class HBaseAdmin implements Admin {
       return ProtobufUtil.createCompactionState(response.getCompactionState());
     }
     return null;
-  }
-
-  @Override
-  public void snapshot(final String snapshotName,
-                       final TableName tableName) throws IOException,
-      SnapshotCreationException, IllegalArgumentException {
-    snapshot(snapshotName, tableName, SnapshotType.FLUSH);
-  }
-
-  @Override
-  public void snapshot(final byte[] snapshotName, final TableName tableName)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    snapshot(Bytes.toString(snapshotName), tableName, SnapshotType.FLUSH);
-  }
-
-  @Override
-  public void snapshot(final String snapshotName, final TableName tableName,
-      SnapshotType type)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    snapshot(new SnapshotDescription(snapshotName, tableName, type));
   }
 
   @Override
@@ -2632,9 +2478,35 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void snapshotAsync(SnapshotDescription snapshotDesc) throws IOException,
-      SnapshotCreationException {
+  public Future<Void> snapshotAsync(SnapshotDescription snapshotDesc)
+      throws IOException, SnapshotCreationException {
     asyncSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc));
+    return new ProcedureFuture<Void>(this, null) {
+
+      @Override
+      protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
+        waitForState(deadlineTs, new WaitForStateCallable() {
+
+          @Override
+          public void throwInterruptedException() throws InterruptedIOException {
+            throw new InterruptedIOException(
+              "Interrupted while waiting for taking snapshot" + snapshotDesc);
+          }
+
+          @Override
+          public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+            throw new TimeoutException("Snapshot '" + snapshotDesc.getName() +
+              "' wasn't completed in expectedTime:" + elapsedTime + " ms");
+          }
+
+          @Override
+          public boolean checkState(int tries) throws IOException {
+            return isSnapshotFinished(snapshotDesc);
+          }
+        });
+        return null;
+      }
+    };
   }
 
   private SnapshotResponse asyncSnapshot(SnapshotProtos.SnapshotDescription snapshot)
@@ -2688,7 +2560,7 @@ public class HBaseAdmin implements Admin {
     restoreSnapshot(Bytes.toString(snapshotName), takeFailSafeSnapshot);
   }
 
-  /*
+  /**
    * Check whether the snapshot exists and contains disabled table
    *
    * @param snapshotName name of the snapshot to restore
@@ -2806,36 +2678,12 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void cloneSnapshot(final byte[] snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(Bytes.toString(snapshotName), tableName);
-  }
-
-  @Override
-  public void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+      boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
-    get(
-      internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
-      Integer.MAX_VALUE,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  public void cloneSnapshot(final String snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(snapshotName, tableName, false);
-  }
-
-  @Override
-  public Future<Void> cloneSnapshotAsync(final String snapshotName, final TableName tableName)
-      throws IOException, TableExistsException {
-    if (tableExists(tableName)) {
-      throw new TableExistsException(tableName);
-    }
-    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl);
   }
 
   @Override
@@ -3977,13 +3825,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws IOException {
-    get(addReplicationPeerAsync(peerId, peerConfig, enabled), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> addReplicationPeerAsync(String peerId, ReplicationPeerConfig peerConfig,
       boolean enabled) throws IOException {
     AddReplicationPeerResponse response = executeCallable(
@@ -3995,11 +3836,6 @@ public class HBaseAdmin implements Admin {
         }
       });
     return new ReplicationFuture(this, peerId, response.getProcId(), () -> "ADD_REPLICATION_PEER");
-  }
-
-  @Override
-  public void removeReplicationPeer(String peerId) throws IOException {
-    get(removeReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -4018,11 +3854,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void enableReplicationPeer(final String peerId) throws IOException {
-    get(enableReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> enableReplicationPeerAsync(final String peerId) throws IOException {
     EnableReplicationPeerResponse response =
       executeCallable(new MasterCallable<EnableReplicationPeerResponse>(getConnection(),
@@ -4035,11 +3866,6 @@ public class HBaseAdmin implements Admin {
       });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "ENABLE_REPLICATION_PEER");
-  }
-
-  @Override
-  public void disableReplicationPeer(final String peerId) throws IOException {
-    get(disableReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -4071,13 +3897,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void updateReplicationPeerConfig(final String peerId,
-      final ReplicationPeerConfig peerConfig) throws IOException {
-    get(updateReplicationPeerConfigAsync(peerId, peerConfig), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> updateReplicationPeerConfigAsync(final String peerId,
       final ReplicationPeerConfig peerConfig) throws IOException {
     UpdateReplicationPeerConfigResponse response =
@@ -4091,13 +3910,6 @@ public class HBaseAdmin implements Admin {
       });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "UPDATE_REPLICATION_PEER_CONFIG");
-  }
-
-  @Override
-  public void transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState state)
-      throws IOException {
-    get(transitReplicationPeerSyncReplicationStateAsync(peerId, state), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -4115,32 +3927,6 @@ public class HBaseAdmin implements Admin {
         });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "TRANSIT_REPLICATION_PEER_SYNCHRONOUS_REPLICATION_STATE");
-  }
-
-  @Override
-  public void appendReplicationPeerTableCFs(String id,
-      Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    if (tableCfs == null) {
-      throw new ReplicationException("tableCfs is null");
-    }
-    ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    ReplicationPeerConfig newPeerConfig =
-        ReplicationPeerConfigUtil.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
-    updateReplicationPeerConfig(id, newPeerConfig);
-  }
-
-  @Override
-  public void removeReplicationPeerTableCFs(String id,
-      Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    if (tableCfs == null) {
-      throw new ReplicationException("tableCfs is null");
-    }
-    ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    ReplicationPeerConfig newPeerConfig =
-        ReplicationPeerConfigUtil.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
-    updateReplicationPeerConfig(id, newPeerConfig);
   }
 
   @Override
