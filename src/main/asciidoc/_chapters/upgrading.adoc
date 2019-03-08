@@ -314,7 +314,7 @@ Quitting...
 
 == Upgrade Paths
 
-[[upgrade 2.2]]
+[[upgrade2.2]]
 === Upgrade from 2.0 or 2.1 to 2.2+
 
 HBase 2.2+ uses a new Procedure form assiging/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
