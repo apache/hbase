@@ -3,13 +3,6 @@
     "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <!--
-  TODO Update to use the message suppression filter once we can update
-  to checkstyle 8.6+
-<!DOCTYPE suppressions PUBLIC
-    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
-    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
--->
-  <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
