@@ -24,7 +24,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,6 +135,24 @@ public final class FutureUtils {
       Throwable cause = e.getCause();
       Throwables.propagateIfPossible(cause, IOException.class);
       throw new IOException(cause);
+    }
+  }
+
+  /**
+   * A helper class for getting the result of a Future, and convert the error to an
+   * {@link IOException}.
+   */
+  public static <T> T get(Future<T> future, long timeout, TimeUnit unit) throws IOException {
+    try {
+      return future.get(timeout, unit);
+    } catch (InterruptedException e) {
+      throw (IOException) new InterruptedIOException().initCause(e);
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      Throwables.propagateIfPossible(cause, IOException.class);
+      throw new IOException(cause);
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
     }
   }
 

@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -56,10 +56,10 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -78,6 +78,7 @@ public class ThriftAdmin implements Admin {
   private THBaseService.Client client;
   private TTransport transport;
   private int operationTimeout;
+  private int syncWaitTimeout;
   private Configuration conf;
 
 
@@ -85,7 +86,8 @@ public class ThriftAdmin implements Admin {
     this.client = client;
     this.transport = tTransport;
     this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+      HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.syncWaitTimeout = conf.getInt("hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
     this.conf = conf;
   }
 
@@ -95,8 +97,12 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void abort(String why, Throwable e) {
+  public int getSyncWaitTimeout() {
+    return syncWaitTimeout;
+  }
 
+  @Override
+  public void abort(String why, Throwable e) {
   }
 
   @Override
@@ -986,7 +992,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void snapshotAsync(SnapshotDescription snapshot) {
+  public Future<Void> snapshotAsync(SnapshotDescription snapshot) {
     throw new NotImplementedException("snapshotAsync not supported in ThriftAdmin");
 
   }
@@ -1014,44 +1020,14 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void restoreSnapshot(byte[] snapshotName, boolean takeFailSafeSnapshot) {
-    throw new NotImplementedException("restoreSnapshot not supported in ThriftAdmin");
-
-  }
-
-  @Override
-  public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot) {
-    throw new NotImplementedException("restoreSnapshot not supported in ThriftAdmin");
-
-  }
-
-  @Override
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
       boolean restoreAcl) {
     throw new NotImplementedException("restoreSnapshot not supported in ThriftAdmin");
-
   }
 
   @Override
-  public void cloneSnapshot(byte[] snapshotName, TableName tableName) {
-    throw new NotImplementedException("cloneSnapshot not supported in ThriftAdmin");
-
-  }
-
-  @Override
-  public void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl) {
-    throw new NotImplementedException("cloneSnapshot not supported in ThriftAdmin");
-
-  }
-
-  @Override
-  public void cloneSnapshot(String snapshotName, TableName tableName) {
-    throw new NotImplementedException("cloneSnapshot not supported in ThriftAdmin");
-
-  }
-
-  @Override
-  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName) {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl)
+      throws IOException, TableExistsException, RestoreSnapshotException {
     throw new NotImplementedException("cloneSnapshotAsync not supported in ThriftAdmin");
   }
 
@@ -1102,43 +1078,36 @@ public class ThriftAdmin implements Admin {
   @Override
   public void deleteSnapshot(byte[] snapshotName) {
     throw new NotImplementedException("deleteSnapshot not supported in ThriftAdmin");
-
   }
 
   @Override
   public void deleteSnapshot(String snapshotName) {
     throw new NotImplementedException("deleteSnapshot not supported in ThriftAdmin");
-
   }
 
   @Override
   public void deleteSnapshots(String regex) {
     throw new NotImplementedException("deleteSnapshots not supported in ThriftAdmin");
-
   }
 
   @Override
   public void deleteSnapshots(Pattern pattern) {
     throw new NotImplementedException("deleteSnapshots not supported in ThriftAdmin");
-
   }
 
   @Override
   public void deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex) {
     throw new NotImplementedException("deleteTableSnapshots not supported in ThriftAdmin");
-
   }
 
   @Override
   public void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern) {
     throw new NotImplementedException("deleteTableSnapshots not supported in ThriftAdmin");
-
   }
 
   @Override
   public void setQuota(QuotaSettings quota) {
     throw new NotImplementedException("setQuota not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -1164,13 +1133,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public void updateConfiguration(ServerName server) {
     throw new NotImplementedException("updateConfiguration not supported in ThriftAdmin");
-
   }
 
   @Override
   public void updateConfiguration() {
     throw new NotImplementedException("updateConfiguration not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -1199,21 +1166,9 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled) {
-    throw new NotImplementedException("addReplicationPeer not supported in ThriftAdmin");
-
-  }
-
-  @Override
   public Future<Void> addReplicationPeerAsync(String peerId, ReplicationPeerConfig peerConfig,
       boolean enabled) {
     throw new NotImplementedException("addReplicationPeerAsync not supported in ThriftAdmin");
-  }
-
-  @Override
-  public void removeReplicationPeer(String peerId) {
-    throw new NotImplementedException("removeReplicationPeer not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -1222,20 +1177,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void enableReplicationPeer(String peerId) {
-    throw new NotImplementedException("enableReplicationPeer not supported in ThriftAdmin");
-
-  }
-
-  @Override
   public Future<Void> enableReplicationPeerAsync(String peerId) {
     throw new NotImplementedException("enableReplicationPeerAsync not supported in ThriftAdmin");
-  }
-
-  @Override
-  public void disableReplicationPeer(String peerId) {
-    throw new NotImplementedException("disableReplicationPeer not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -1249,30 +1192,10 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig) {
-    throw new NotImplementedException("updateReplicationPeerConfig not supported in ThriftAdmin");
-
-  }
-
-  @Override
   public Future<Void> updateReplicationPeerConfigAsync(String peerId,
       ReplicationPeerConfig peerConfig) {
     throw new NotImplementedException(
         "updateReplicationPeerConfigAsync not supported in ThriftAdmin");
-  }
-
-  @Override
-  public void appendReplicationPeerTableCFs(String id, Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    throw new NotImplementedException("appendReplicationPeerTableCFs not supported in ThriftAdmin");
-
-  }
-
-  @Override
-  public void removeReplicationPeerTableCFs(String id, Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    throw new NotImplementedException("removeReplicationPeerTableCFs not supported in ThriftAdmin");
-
   }
 
   @Override
