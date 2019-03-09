@@ -2441,9 +2441,10 @@ public class MasterRpcServices extends RSRpcServices
       for (HBaseProtos.ServerName serverName : serverNames) {
         ServerName server = ProtobufUtil.toServerName(serverName);
         if (shouldSubmitSCP(server)) {
+          master.getServerManager().moveFromOnlineToDeadServers(server);
           ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
           pids.add(procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(),
-              server, true, containMetaWals(server))));
+            server, true, containMetaWals(server))));
         } else {
           pids.add(-1L);
         }
