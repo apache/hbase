@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -59,16 +59,14 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * Class to test HBaseHbck.
- * Spins up the minicluster once at test start and then takes it down afterward.
- * Add any testing of HBaseHbck functionality here.
+ * Class to test HBaseHbck. Spins up the minicluster once at test start and then takes it down
+ * afterward. Add any testing of HBaseHbck functionality here.
  */
 @RunWith(Parameterized.class)
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestHbck {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHbck.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHbck.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHbck.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -112,15 +110,20 @@ public class TestHbck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Before
+  public void setUp() throws IOException {
+    TEST_UTIL.ensureSomeRegionServersAvailable(3);
+  }
+
   public static class SuspendProcedure extends
       ProcedureTestingUtility.NoopProcedure<MasterProcedureEnv> implements TableProcedureInterface {
     public SuspendProcedure() {
       super();
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
-    protected Procedure[] execute(final MasterProcedureEnv env)
-        throws ProcedureSuspendedException {
+    protected Procedure[] execute(final MasterProcedureEnv env) throws ProcedureSuspendedException {
       // Always suspend the procedure
       throw new ProcedureSuspendedException();
     }
@@ -143,8 +146,8 @@ public class TestHbck {
     long procId = procExec.submitProcedure(proc);
     Thread.sleep(500);
 
-    //bypass the procedure
-    List<Long> pids = Arrays.<Long>asList(procId);
+    // bypass the procedure
+    List<Long> pids = Arrays.<Long> asList(procId);
     List<Boolean> results = getHbck().bypassProcedure(pids, 30000, false, false);
     assertTrue("Failed to by pass procedure!", results.get(0));
     TEST_UTIL.waitFor(5000, () -> proc.isSuccess() && proc.isBypass());
@@ -159,9 +162,9 @@ public class TestHbck {
     // Method {@link Hbck#setTableStateInMeta()} returns previous state, which in this case
     // will be DISABLED
     TableState prevState =
-        hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
+      hbck.setTableStateInMeta(new TableState(TABLE_NAME, TableState.State.ENABLED));
     assertTrue("Incorrect previous state! expeced=DISABLED, found=" + prevState.getState(),
-        prevState.isDisabled());
+      prevState.isDisabled());
   }
 
   @Test
@@ -169,33 +172,33 @@ public class TestHbck {
     Hbck hbck = getHbck();
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
-      for (RegionInfo ri: regions) {
-        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().getRegionState(ri.getEncodedName());
+      for (RegionInfo ri : regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
       }
-      List<Long> pids = hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).
-          collect(Collectors.toList()));
+      List<Long> pids =
+        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
-      for (RegionInfo ri: regions) {
-        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().getRegionState(ri.getEncodedName());
+      for (RegionInfo ri : regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
         assertTrue(rs.toString(), rs.isClosed());
       }
-      pids = hbck.assigns(regions.stream().map(r -> r.getEncodedName()).
-          collect(Collectors.toList()));
+      pids =
+        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
-      for (RegionInfo ri: regions) {
-        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().getRegionState(ri.getEncodedName());
+      for (RegionInfo ri : regions) {
+        RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().getRegionState(ri.getEncodedName());
         LOG.info("RS: {}", rs.toString());
         assertTrue(rs.toString(), rs.isOpened());
       }
       // What happens if crappy region list passed?
-      pids = hbck.assigns(Arrays.stream(new String [] {"a", "some rubbish name"}).
-          collect(Collectors.toList()));
-      for (long pid: pids) {
+      pids = hbck.assigns(
+        Arrays.stream(new String[] { "a", "some rubbish name" }).collect(Collectors.toList()));
+      for (long pid : pids) {
         assertEquals(org.apache.hadoop.hbase.procedure2.Procedure.NO_PROC_ID, pid);
       }
     }
@@ -209,21 +212,18 @@ public class TestHbck {
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids =
-        hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
-    pids = hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
-    assertTrue(pids.get(0) == -1);
-    LOG.info("pid is {}", pids.get(0));
+    List<Long> newPids =
+      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+    assertTrue(newPids.get(0) < 0);
+    LOG.info("pid is {}", newPids.get(0));
+    waitOnPids(pids);
   }
 
   private void waitOnPids(List<Long> pids) {
-    for (Long pid: pids) {
-      while (!TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().
-          isFinished(pid)) {
-        Threads.sleep(100);
-      }
-    }
+    TEST_UTIL.waitFor(60000, () -> pids.stream().allMatch(procExec::isFinished));
   }
 }
