@@ -13,6 +13,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -72,6 +75,11 @@ public class TestMetaTableMetrics {
   private static final String value = "foo";
   private static Configuration conf = null;
   private static int connectorPort = 61120;
+
+  final byte[] cf = Bytes.toBytes("info");
+  final byte[] col = Bytes.toBytes("any");
+  byte[] tablename;
+  final int nthreads = 20;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -224,4 +232,95 @@ public class TestMetaTableMetrics {
     assertEquals(5L, putWithClientMetricsCount);
   }
 
+  @Test(timeout = 30000)
+  public void testConcurrentAccess() {
+    try {
+      tablename = Bytes.toBytes("hbase:meta");
+      int numRows = 3000;
+      int numRowsInTableBefore = UTIL.countRows(TableName.valueOf(tablename));
+      putData(numRows);
+      Thread.sleep(2000);
+      int numRowsInTableAfter = UTIL.countRows(TableName.valueOf(tablename));
+      assertTrue(numRowsInTableAfter >= numRowsInTableBefore + numRows);
+      getData(numRows);
+    } catch (InterruptedException e) {
+      LOG.info("Caught InterruptedException while testConcurrentAccess: " + e.getMessage());
+      fail();
+    } catch (IOException e) {
+      LOG.info("Caught IOException while testConcurrentAccess: " + e.getMessage());
+      fail();
+    }
+  }
+
+  public void putData(int nrows) throws InterruptedException {
+    LOG.info(String.format("Putting %d rows in hbase:meta", nrows));
+    Thread[] threads = new Thread[nthreads];
+    for (int i = 1; i <= nthreads; i++) {
+      threads[i - 1] = new PutThread(1, nrows);
+    }
+    startThreadsAndWaitToJoin(threads);
+  }
+
+  public void getData(int nrows) throws InterruptedException {
+    LOG.info(String.format("Getting %d rows from hbase:meta", nrows));
+    Thread[] threads = new Thread[nthreads];
+    for (int i = 1; i <= nthreads; i++) {
+      threads[i - 1] = new GetThread(1, nrows);
+    }
+    startThreadsAndWaitToJoin(threads);
+  }
+
+  private void startThreadsAndWaitToJoin(Thread[] threads) throws InterruptedException {
+    for (int i = 1; i <= nthreads; i++) {
+      threads[i - 1].start();
+    }
+    for (int i = 1; i <= nthreads; i++) {
+      threads[i - 1].join();
+    }
+  }
+
+  class PutThread extends Thread {
+    int start;
+    int end;
+
+    public PutThread(int start, int end) {
+      this.start = start;
+      this.end = end;
+    }
+
+    @Override
+    public void run() {
+      try (Table table = UTIL.getConnection().getTable(TableName.valueOf(tablename))) {
+        for (int i = start; i <= end; i++) {
+          Put p = new Put(Bytes.toBytes(String.format("tableName,rowKey%d,region%d", i, i)));
+          p.addColumn(cf, col, Bytes.toBytes("Value" + i));
+          table.put(p);
+        }
+      } catch (IOException e) {
+        LOG.info("Caught IOException while PutThread operation: " + e.getMessage());
+      }
+    }
+  }
+
+  class GetThread extends Thread {
+    int start;
+    int end;
+
+    public GetThread(int start, int end) {
+      this.start = start;
+      this.end = end;
+    }
+
+    @Override
+    public void run() {
+      try (Table table = UTIL.getConnection().getTable(TableName.valueOf(tablename))) {
+        for (int i = start; i <= end; i++) {
+          Get get = new Get(Bytes.toBytes(String.format("tableName,rowKey%d,region%d", i, i)));
+          table.get(get);
+        }
+      } catch (IOException e) {
+        LOG.info("Caught IOException while GetThread operation: " + e.getMessage());
+      }
+    }
+  }
 }

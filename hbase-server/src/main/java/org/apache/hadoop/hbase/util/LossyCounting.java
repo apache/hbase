@@ -51,9 +51,11 @@ public class LossyCounting {
   private double errorRate;
   private Map<String, Integer> data;
   private long totalDataCount;
+  private String name;
 
-  public LossyCounting(double errorRate) {
+  public LossyCounting(double errorRate, String name) {
     this.errorRate = errorRate;
+    this.name = name;
     if (errorRate < 0.0 || errorRate > 1.0) {
       throw new IllegalArgumentException(" Lossy Counting error rate should be within range [0,1]");
     }
@@ -64,8 +66,9 @@ public class LossyCounting {
     calculateCurrentTerm();
   }
 
-  public LossyCounting() {
-    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02));
+  public LossyCounting(String name) {
+    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02),
+        name);
   }
 
   public Set<String> addByOne(String key) {
@@ -93,7 +96,7 @@ public class LossyCounting {
     for(String key : dataToBeSwept) {
       data.remove(key);
     }
-    LOG.debug(String.format("Swept %d elements.", dataToBeSwept.size()));
+    LOG.trace(String.format("%s swept %d elements.", name, dataToBeSwept.size()));
     return dataToBeSwept;
   }
 
