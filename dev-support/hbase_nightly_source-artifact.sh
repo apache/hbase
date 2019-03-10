@@ -182,5 +182,8 @@ if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" cl
     fi
   done
 fi
-echo "Building a binary tarball from the source tarball failed. see srtarball_install.log for details."
+echo "Building a binary tarball from the source tarball failed. see srctarball_install.log for details."
+# Copy up the rat.txt to the working dir so available in build archive in case rat complaints.
+# rat.txt can be under any module target dir... copy them all up renaming them to include parent dir as we go.
+find ${unpack_dir} -name rat.txt -type f | while IFS= read -r NAME; do cp -v "$NAME" "${working_dir}/${NAME//\//_}"; done
 exit 1
