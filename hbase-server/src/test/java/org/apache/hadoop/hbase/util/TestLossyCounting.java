@@ -38,15 +38,15 @@ public class TestLossyCounting {
 
   @Test
   public void testBucketSize() {
-    LossyCounting lossyCounting = new LossyCounting(0.01);
+    LossyCounting lossyCounting = new LossyCounting(0.01, "testBucketSize");
     assertEquals(100L, lossyCounting.getBucketSize());
-    LossyCounting lossyCounting2 = new LossyCounting();
+    LossyCounting lossyCounting2 = new LossyCounting("testBucketSize2");
     assertEquals(50L, lossyCounting2.getBucketSize());
   }
 
   @Test
   public void testAddByOne() {
-    LossyCounting lossyCounting = new LossyCounting(0.01);
+    LossyCounting lossyCounting = new LossyCounting(0.01, "testAddByOne");
     for(int i = 0; i < 100; i++){
       String key = "" + i;
       lossyCounting.addByOne(key);
@@ -60,7 +60,7 @@ public class TestLossyCounting {
 
   @Test
   public void testSweep1() {
-    LossyCounting lossyCounting = new LossyCounting(0.01);
+    LossyCounting lossyCounting = new LossyCounting(0.01, "testSweep1");
     for(int i = 0; i < 400; i++){
       String key = "" + i;
       lossyCounting.addByOne(key);
@@ -71,7 +71,7 @@ public class TestLossyCounting {
 
   @Test
   public void testSweep2() {
-    LossyCounting lossyCounting = new LossyCounting(0.1);
+    LossyCounting lossyCounting = new LossyCounting(0.1, "testSweep2");
     for(int i = 0; i < 10; i++){
       String key = "" + i;
       lossyCounting.addByOne(key);

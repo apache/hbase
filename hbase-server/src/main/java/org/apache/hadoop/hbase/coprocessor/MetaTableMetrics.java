@@ -50,8 +50,8 @@ public class MetaTableMetrics implements RegionCoprocessor {
 
   private ExampleRegionObserverMeta observer;
   private Map<String, Optional<Metric>> requestsMap;
-  private RegionCoprocessorEnvironment regionCoprocessorEnv;
-  private LossyCounting clientMetricsLossyCounting;
+  private MetricRegistry registry;
+  private LossyCounting clientMetricsLossyCounting, regionMetricsLossyCounting;
   private boolean active = false;
 
   enum MetaTableOps {
@@ -94,11 +94,11 @@ public class MetaTableMetrics implements RegionCoprocessor {
       if (!active || !isMetaTableOp(e)) {
         return;
       }
-      tableMetricRegisterAndMark(e, row);
-      clientMetricRegisterAndMark(e);
-      regionMetricRegisterAndMark(e, row);
-      opMetricRegisterAndMark(e, row);
-      opWithClientMetricRegisterAndMark(e, row);
+      tableMetricRegisterAndMark(row);
+      clientMetricRegisterAndMark();
+      regionMetricRegisterAndMark(row);
+      opMetricRegisterAndMark(row);
+      opWithClientMetricRegisterAndMark(row);
     }
 
     private void markMeterIfPresent(String requestMeter) {
@@ -106,19 +106,18 @@ public class MetaTableMetrics implements RegionCoprocessor {
         return;
       }
 
-      if (requestsMap.containsKey(requestMeter) && requestsMap.get(requestMeter).isPresent()) {
-        Meter metric = (Meter) requestsMap.get(requestMeter).get();
+      Optional<Metric> optionalMetric = requestsMap.get(requestMeter);
+      if (optionalMetric != null && optionalMetric.isPresent()) {
+        Meter metric = (Meter) optionalMetric.get();
         metric.mark();
       }
     }
 
-    private void registerMeterIfNotPresent(ObserverContext<RegionCoprocessorEnvironment> e,
-        String requestMeter) {
+    private void registerMeterIfNotPresent(String requestMeter) {
       if (requestMeter.isEmpty()) {
         return;
       }
       if (!requestsMap.containsKey(requestMeter)) {
-        MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
         registry.meter(requestMeter);
         requestsMap.put(requestMeter, registry.get(requestMeter));
       }
@@ -129,32 +128,36 @@ public class MetaTableMetrics implements RegionCoprocessor {
      * By using lossy count to maintain meters, at most 7 / e meters will be kept  (e is error rate)
      * e.g. when e is 0.02 by default, at most 350 Clients request metrics will be kept
      *      also, all kept elements have frequency higher than e * N. (N is total count)
-     * @param e Region coprocessor environment
      * @param requestMeter meter to be registered
      * @param lossyCounting lossyCounting object for one type of meters.
      */
-    private void registerLossyCountingMeterIfNotPresent(
-        ObserverContext<RegionCoprocessorEnvironment> e,
-        String requestMeter, LossyCounting lossyCounting) {
+    private void registerLossyCountingMeterIfNotPresent(String requestMeter,
+        LossyCounting lossyCounting) {
+
       if (requestMeter.isEmpty()) {
         return;
       }
-      Set<String> metersToBeRemoved = lossyCounting.addByOne(requestMeter);
-      if(!requestsMap.containsKey(requestMeter) && metersToBeRemoved.contains(requestMeter)){
-        for(String meter: metersToBeRemoved) {
-          //cleanup requestsMap according swept data from lossy count;
+      synchronized (lossyCounting) {
+        Set<String> metersToBeRemoved = lossyCounting.addByOne(requestMeter);
+
+        boolean isNewMeter = !requestsMap.containsKey(requestMeter);
+        boolean requestMeterRemoved = metersToBeRemoved.contains(requestMeter);
+        if (isNewMeter) {
+          if (requestMeterRemoved) {
+            // if the new metric is swept off by lossyCounting then don't add in the map
+            metersToBeRemoved.remove(requestMeter);
+          } else {
+            // else register the new metric and add in the map
+            registry.meter(requestMeter);
+            requestsMap.put(requestMeter, registry.get(requestMeter));
+          }
+        }
+
+        for (String meter : metersToBeRemoved) {
+          //cleanup requestsMap according to the swept data from lossy count;
           requestsMap.remove(meter);
-          MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
           registry.remove(meter);
         }
-        // newly added meter is swept by lossy counting cleanup. No need to put it into requestsMap.
-        return;
-      }
-
-      if (!requestsMap.containsKey(requestMeter)) {
-        MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
-        registry.meter(requestMeter);
-        requestsMap.put(requestMeter, registry.get(requestMeter));
       }
     }
 
@@ -191,49 +194,59 @@ public class MetaTableMetrics implements RegionCoprocessor {
           .equals(e.getEnvironment().getRegionInfo().getTable());
     }
 
-    private void clientMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e) {
+    private void clientMetricRegisterAndMark() {
       // Mark client metric
       String clientIP = RpcServer.getRemoteIp() != null ? RpcServer.getRemoteIp().toString() : "";
-
+      if (clientIP == null || clientIP.isEmpty()) {
+        return;
+      }
       String clientRequestMeter = clientRequestMeterName(clientIP);
-      registerLossyCountingMeterIfNotPresent(e, clientRequestMeter, clientMetricsLossyCounting);
+      registerLossyCountingMeterIfNotPresent(clientRequestMeter, clientMetricsLossyCounting);
       markMeterIfPresent(clientRequestMeter);
     }
 
-    private void tableMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e,
-        Row op) {
+    private void tableMetricRegisterAndMark(Row op) {
       // Mark table metric
       String tableName = getTableNameFromOp(op);
+      if (tableName == null || tableName.isEmpty()) {
+        return;
+      }
       String tableRequestMeter = tableMeterName(tableName);
-      registerAndMarkMeterIfNotPresent(e, tableRequestMeter);
+      registerAndMarkMeterIfNotPresent(tableRequestMeter);
     }
 
-    private void regionMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e,
-        Row op) {
+    private void regionMetricRegisterAndMark(Row op) {
       // Mark region metric
       String regionId = getRegionIdFromOp(op);
+      if (regionId == null || regionId.isEmpty()) {
+        return;
+      }
       String regionRequestMeter = regionMeterName(regionId);
-      registerAndMarkMeterIfNotPresent(e, regionRequestMeter);
+      registerLossyCountingMeterIfNotPresent(regionRequestMeter, regionMetricsLossyCounting);
+      markMeterIfPresent(regionRequestMeter);
     }
 
-    private void opMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e,
-        Row op) {
+    private void opMetricRegisterAndMark(Row op) {
       // Mark access type ["get", "put", "delete"] metric
       String opMeterName = opMeterName(op);
-      registerAndMarkMeterIfNotPresent(e, opMeterName);
+      if (opMeterName == null || opMeterName.isEmpty()) {
+        return;
+      }
+      registerAndMarkMeterIfNotPresent(opMeterName);
     }
 
-    private void opWithClientMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e,
-        Object op) {
+    private void opWithClientMetricRegisterAndMark(Object op) {
       // // Mark client + access type metric
       String opWithClientMeterName = opWithClientMeterName(op);
-      registerAndMarkMeterIfNotPresent(e, opWithClientMeterName);
+      if (opWithClientMeterName == null || opWithClientMeterName.isEmpty()) {
+        return;
+      }
+      registerAndMarkMeterIfNotPresent(opWithClientMeterName);
     }
 
     // Helper function to register and mark meter if not present
-    private void registerAndMarkMeterIfNotPresent(ObserverContext<RegionCoprocessorEnvironment> e,
-        String name) {
-      registerMeterIfNotPresent(e, name);
+    private void registerAndMarkMeterIfNotPresent(String name) {
+      registerMeterIfNotPresent(name);
       markMeterIfPresent(name);
     }
 
@@ -291,12 +304,12 @@ public class MetaTableMetrics implements RegionCoprocessor {
       if (clientIP.isEmpty()) {
         return "";
       }
-      return String.format("MetaTable_client_%s_request", clientIP);
+      return String.format("MetaTable_client_%s_lossy_request", clientIP);
     }
 
     private String regionMeterName(String regionId) {
       // Extract meter name containing the region ID
-      return String.format("MetaTable_region_%s_request", regionId);
+      return String.format("MetaTable_region_%s_lossy_request", regionId);
     }
   }
 
@@ -312,9 +325,11 @@ public class MetaTableMetrics implements RegionCoprocessor {
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable() != null
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable()
           .equals(TableName.META_TABLE_NAME)) {
-      regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
+      RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
+      registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
       requestsMap = new ConcurrentHashMap<>();
-      clientMetricsLossyCounting = new LossyCounting();
+      clientMetricsLossyCounting = new LossyCounting("clientMetaMetrics");
+      regionMetricsLossyCounting = new LossyCounting("regionMetaMetrics");
       // only be active mode when this region holds meta table.
       active = true;
     }
@@ -324,7 +339,6 @@ public class MetaTableMetrics implements RegionCoprocessor {
   public void stop(CoprocessorEnvironment env) throws IOException {
     // since meta region can move around, clear stale metrics when stop.
     if (requestsMap != null) {
-      MetricRegistry registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
       for (String meterName : requestsMap.keySet()) {
         registry.remove(meterName);
       }
