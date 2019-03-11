@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnValueFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -313,6 +314,26 @@ public class TestThriftConnection {
       assertEquals(2, count);
     }
 
+  }
+
+  @Test
+  public void testHBASE22011()throws Exception{
+    testHBASE22011(thriftConnection, "testHBASE22011Table");
+    testHBASE22011(thriftHttpConnection, "testHBASE22011HttpTable");
+  }
+
+  public void testHBASE22011(Connection connection, String tableName) throws IOException {
+    createTable(thriftAdmin, tableName);
+    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+      Get get = new Get(ROW_2);
+      Result result = table.get(get);
+      assertEquals(2, result.listCells().size());
+
+      ColumnCountGetFilter filter = new ColumnCountGetFilter(1);
+      get.setFilter(filter);
+      result = table.get(get);
+      assertEquals(1, result.listCells().size());
+    }
   }
 
   @Test

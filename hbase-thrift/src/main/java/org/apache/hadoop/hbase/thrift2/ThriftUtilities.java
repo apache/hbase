@@ -180,18 +180,16 @@ public final class ThriftUtilities {
       out.setCheckExistenceOnly(in.isExistence_only());
     }
 
-
-    if (!in.isSetColumns()) {
-      return out;
-    }
-
-    for (TColumn column : in.getColumns()) {
-      if (column.isSetQualifier()) {
-        out.addColumn(column.getFamily(), column.getQualifier());
-      } else {
-        out.addFamily(column.getFamily());
+    if (in.isSetColumns()) {
+      for (TColumn column : in.getColumns()) {
+        if (column.isSetQualifier()) {
+          out.addColumn(column.getFamily(), column.getQualifier());
+        } else {
+          out.addFamily(column.getFamily());
+        }
       }
     }
+
     if (in.isSetFilterBytes()) {
       out.setFilter(filterFromThrift(in.getFilterBytes()));
     }
