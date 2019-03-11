@@ -623,6 +623,20 @@ public class TestKeyValue {
     }
   }
 
+  @Test
+  public void testNullByteArrayKeyValueFailure() {
+    //can't add to testCheckKeyValueBytesFailureCase because it
+    //goes through the InputStream KeyValue API which can't produce a null buffer
+    try {
+      KeyValue kv = new KeyValue(null, 0, 0);
+    } catch (IllegalArgumentException iae){
+      assertEquals("Invalid to have null byte array in KeyValue.", iae.getMessage());
+      return;
+    }
+    fail("Should have thrown an IllegalArgumentException when " +
+        "creating a KeyValue with a null buffer");
+  }
+
   private static class FailureCase {
     byte[] buf;
     int offset;
@@ -681,7 +695,7 @@ public class TestKeyValue {
       "Overflow when reading family length at position=13",
       "Invalid family length in KeyValue, familyLength=1", "Timestamp cannot be negative, ts=-1",
       "Invalid type in KeyValue, type=3", "Overflow when reading value part at position=25",
-      "Invalid tags length in KeyValue at position=26", };
+      "Invalid tags length in KeyValue at position=26"};
     byte[][] withTagsInputs = new byte[][] {
       Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
           + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x01"), // case.13
