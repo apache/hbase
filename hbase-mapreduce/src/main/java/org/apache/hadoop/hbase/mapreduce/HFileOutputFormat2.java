@@ -160,9 +160,11 @@ public class HFileOutputFormat2
   // This constant is public since the client can modify this when setting
   // up their conf object and thus refer to this symbol.
   // It is present for backwards compatibility reasons. Use it only to
-  // override the auto-detection of datablock encoding.
+  // override the auto-detection of datablock encoding and compression.
   public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.datablock.encoding";
+  public static final String COMPRESSION_OVERRIDE_CONF_KEY =
+      "hbase.mapreduce.hfileoutputformat.compression";
 
   /**
    * Keep locality while generating HFiles for bulkload. See HBASE-12596
@@ -210,6 +212,14 @@ public class HFileOutputFormat2
         Compression.Algorithm.NONE.getName());
     final Algorithm defaultCompression = HFileWriterImpl
         .compressionByName(defaultCompressionStr);
+    String compressionStr = conf.get(COMPRESSION_OVERRIDE_CONF_KEY);
+    final Algorithm overriddenCompression;
+    if (compressionStr != null) {
+      overriddenCompression = Compression.getCompressionAlgorithmByName(compressionStr);
+    } else {
+      overriddenCompression = null;
+    }
+
     final boolean compactionExclude = conf.getBoolean(
         "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
 
@@ -399,7 +409,8 @@ public class HFileOutputFormat2
                   new Path(getTableRelativePath(tableName), Bytes.toString(family)));
         }
         WriterLength wl = new WriterLength();
-        Algorithm compression = compressionMap.get(tableAndFamily);
+        Algorithm compression = overriddenCompression;
+        compression = compression == null ? compressionMap.get(tableAndFamily) : compression;
         compression = compression == null ? defaultCompression : compression;
         BloomType bloomType = bloomTypeMap.get(tableAndFamily);
         bloomType = bloomType == null ? BloomType.NONE : bloomType;
