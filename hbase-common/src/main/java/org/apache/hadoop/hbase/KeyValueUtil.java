@@ -509,11 +509,17 @@ public class KeyValueUtil {
   }
 
   static String bytesToHex(byte[] buf, int offset, int length) {
-    return ", KeyValueBytesHex=" + Bytes.toStringBinary(buf, offset, length) + ", offset=" + offset
+    String bufferContents = buf != null ? Bytes.toStringBinary(buf, offset, length) : "<null>";
+    return ", KeyValueBytesHex=" + bufferContents + ", offset=" + offset
         + ", length=" + length;
   }
 
   static void checkKeyValueBytes(byte[] buf, int offset, int length, boolean withTags) {
+    if (buf == null) {
+      throw new IllegalArgumentException("Invalid to have null " +
+          "byte array in KeyValue.");
+    }
+
     int pos = offset, endOffset = offset + length;
     // check the key
     if (pos + Bytes.SIZEOF_INT > endOffset) {

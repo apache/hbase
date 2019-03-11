@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -624,6 +625,20 @@ public class TestKeyValue {
     }
   }
 
+  @Test
+  public void testNullByteArrayKeyValueFailure() {
+    //can't add to testCheckKeyValueBytesFailureCase because it
+    //goes through the InputStream KeyValue API which can't produce a null buffer
+    try {
+      KeyValue kv = new KeyValue(null, 0, 0);
+    } catch (IllegalArgumentException iae){
+      assertEquals("Invalid to have null byte array in KeyValue.", iae.getMessage());
+      return;
+    }
+    fail("Should have thrown an IllegalArgumentException when " +
+        "creating a KeyValue with a null buffer");
+  }
+
   private static class FailureCase {
     byte[] buf;
     int offset;
@@ -673,16 +688,16 @@ public class TestKeyValue {
             + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04VALUE"), // case.12
     };
     String[] outputs = new String[] { "Overflow when reading key length at position=0",
-        "Overflow when reading key length at position=0",
-        "Invalid key length in KeyValue. keyLength=1",
-        "Overflow when reading value length at position=4",
-        "Invalid value length in KeyValue, valueLength=1",
-        "Overflow when reading row length at position=8",
-        "Invalid row length in KeyValue, rowLength=1",
-        "Overflow when reading family length at position=13",
-        "Invalid family length in KeyValue, familyLength=1", "Timestamp cannot be negative, ts=-1",
-        "Invalid type in KeyValue, type=3", "Overflow when reading value part at position=25",
-        "Invalid tags length in KeyValue at position=26", };
+      "Overflow when reading key length at position=0",
+      "Invalid key length in KeyValue. keyLength=1",
+      "Overflow when reading value length at position=4",
+      "Invalid value length in KeyValue, valueLength=1",
+      "Overflow when reading row length at position=8",
+      "Invalid row length in KeyValue, rowLength=1",
+      "Overflow when reading family length at position=13",
+      "Invalid family length in KeyValue, familyLength=1", "Timestamp cannot be negative, ts=-1",
+      "Invalid type in KeyValue, type=3", "Overflow when reading value part at position=25",
+      "Invalid tags length in KeyValue at position=26"};
     byte[][] withTagsInputs = new byte[][] {
         Bytes.toBytesBinary("\\x00\\x00\\x00\\x11\\x00\\x00\\x00\\x01\\x00\\x03ROW\\x01FQ\\x00"
             + "\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x04V\\x01"), // case.13
