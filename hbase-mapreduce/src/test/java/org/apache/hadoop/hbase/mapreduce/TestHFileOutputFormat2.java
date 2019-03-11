@@ -1551,5 +1551,48 @@ public class TestHFileOutputFormat2  {
     Assert.assertTrue(partitionPathString.startsWith(fooHomeDirectory.toString()));
     Assert.assertTrue(fs.exists(new Path(partitionPathString)));
   }
+
+  @Test
+  public void TestConfigureCompression() throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, Cell> writer = null;
+    TaskAttemptContext context = null;
+    Path dir = util.getDataTestDir("TestConfigureCompression");
+    String hfileoutputformatCompression = "gz";
+
+    try {
+      conf.set(HFileOutputFormat2.OUTPUT_TABLE_NAME_CONF_KEY, TABLE_NAMES[0].getNameAsString());
+      conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
+
+      conf.set(HFileOutputFormat2.COMPRESSION_OVERRIDE_CONF_KEY, hfileoutputformatCompression);
+
+      Job job = Job.getInstance(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = createTestTaskAttemptContext(job);
+      HFileOutputFormat2 hof = new HFileOutputFormat2();
+      writer = hof.getRecordWriter(context);
+      final byte[] b = Bytes.toBytes("b");
+
+      KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b);
+      writer.write(new ImmutableBytesWritable(), kv);
+      writer.close(context);
+      writer = null;
+      FileSystem fs = dir.getFileSystem(conf);
+      RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+            HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        assertEquals(reader.getCompressionAlgorithm().getName(), hfileoutputformatCompression);
+      }
+    } finally {
+      if (writer != null && context != null) {
+        writer.close(context);
+      }
+      dir.getFileSystem(conf).delete(dir, true);
+    }
+
+  }
+
 }
 
