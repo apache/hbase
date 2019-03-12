@@ -80,7 +80,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
       priorRange = ranges[i];
       cumNum = val;
     }
-    long val = histogram.getCount();
+    long val = snapshot.getCount();
     if (val - cumNum > 0) {
       metricsRecordBuilder.addCounter(
           Interns.info(name + "_" + rangeType + "_" + ranges[ranges.length - 1] + "-inf", desc),
