@@ -43,3 +43,5 @@ Makefile
 
 # Copied from hbase-common at build-time
 include/hbase/utils/version.h
+
+.idea/*
