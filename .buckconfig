@@ -1,2 +1,0 @@
-[cxx]
-  gtest_dep = //third-party:google-test

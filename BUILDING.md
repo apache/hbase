@@ -19,7 +19,7 @@ under the License.
 
 # Building HBase native client
 
-The HBase native client build using buck and produces a linux library.
+The HBase native client build using cmake and produces a linux library.
 
 
 # Dependencies
@@ -35,7 +35,9 @@ slow. If things get too slow using [dinghy](https://github.com/codekitchen/dingh
 can help speed things up by using nfs.
 
 If possible pairing virtual box with dinghy will result in the fastest,
-most stable docker environment. However none of it is needed.
+most stable docker environment.
+
+However none of them is a must.
 
 # Building using docker
 
@@ -45,7 +47,7 @@ hbase instance from the jar's created.
 
 Then go into the hbase-native-client directory and run `./bin/start-docker.sh`
 that will build the docker development environment and when complete will
-drop you into a shell on a linux vm with all the tools needed installed.
+drop you into a shell on a linux vm with all the dependencies needed installed.
 
 
 # CMake

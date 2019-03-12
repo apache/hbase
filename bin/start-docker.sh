@@ -26,22 +26,11 @@ eval "$(docker-machine env dinghy)"
 BIN_DIR=$(pushd `dirname "$0"` 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
 BASE_DIR=$(pushd "${BIN_DIR}/../" 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
 
-# TODO: this is wrong. These should be called from BUCK, but I could not find a
-# way to execute scripts in BUCK that are in under bin/.
 ${BIN_DIR}/copy-protobuf.sh
 ${BIN_DIR}/copy-version.sh
 
 # Go into the base dir. This just makes things cleaner.
 pushd ${BASE_DIR}
-
-# Make sure that there is a thrid-party dir.
-mkdir third-party || true
-
-# Get gtest
-# TODO(eclark): Remove this ( see HBASE-15427 )
-if [[ ! -d third-party/googletest ]]; then
-        git clone https://github.com/google/googletest.git third-party/googletest
-fi
 
 # We don't want to have to re-download all the jars in docker if we can help it
 if [[ ! -d ~/.m2 ]]; then
