@@ -36,8 +36,10 @@ import sun.nio.ch.DirectBuffer;
 /**
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
+ * @deprecated This class will become IA.Private in HBase 3.0. Downstream folks should avoid using it.
  */
 @SuppressWarnings("restriction")
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class ByteBufferUtils {
@@ -649,6 +651,28 @@ public final class ByteBufferUtils {
       }
     }
   }
+
+  /**
+   * Find length of common prefix of two parts in the buffer
+   * @param buffer Where parts are located.
+   * @param offsetLeft Offset of the first part.
+   * @param offsetRight Offset of the second part.
+   * @param limit Maximal length of common prefix.
+   * @return Length of prefix.
+   */
+  public static int findCommonPrefix(ByteBuffer buffer, int offsetLeft,
+      int offsetRight, int limit) {
+    int prefix = 0;
+
+    for (; prefix < limit; ++prefix) {
+      if (buffer.get(offsetLeft + prefix) != buffer.get(offsetRight + prefix)) {
+        break;
+      }
+    }
+
+    return prefix;
+  }
+
 
   /**
    * Find length of common prefix in two arrays.
