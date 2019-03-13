@@ -25,7 +25,6 @@ import java.util.EnumSet;
 import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
@@ -61,7 +60,7 @@ public class MoveRegionsOfTableAction extends Action {
     ServerName[] servers = getServers(admin);
 
     LOG.info("Performing action: Move regions of table {}", tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table {} doesn't have regions to move", tableName);
       return;
@@ -70,8 +69,7 @@ public class MoveRegionsOfTableAction extends Action {
     Collections.shuffle(regions);
 
     long start = System.currentTimeMillis();
-    for (HRegionInfo regionInfo:regions) {
-
+    for (RegionInfo regionInfo : regions) {
       // Don't try the move if we're stopping
       if (context.isStopping()) {
         return;

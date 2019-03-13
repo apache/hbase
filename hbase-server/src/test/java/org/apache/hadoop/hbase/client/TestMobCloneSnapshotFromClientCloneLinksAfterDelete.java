@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -112,14 +113,14 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     delayFlush = true;
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 20, FAMILY);
     long tid = System.currentTimeMillis();
-    byte[] snapshotName3 = Bytes.toBytes("snaptb3-" + tid);
+    String snapshotName3 = "snaptb3-" + tid;
     TableName clonedTableName3 =
       TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
     admin.snapshot(snapshotName3, tableName);
     delayFlush = false;
     int snapshot3Rows = -1;
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-      snapshot3Rows = TEST_UTIL.countRows(table);
+      snapshot3Rows = HBaseTestingUtility.countRows(table);
     }
     admin.cloneSnapshot(snapshotName3, clonedTableName3);
     admin.deleteSnapshot(snapshotName3);

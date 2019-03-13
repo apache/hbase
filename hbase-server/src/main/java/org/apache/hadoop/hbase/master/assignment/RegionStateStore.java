@@ -229,7 +229,7 @@ public class RegionStateStore {
   // ============================================================================================
   public void splitRegion(RegionInfo parent, RegionInfo hriA, RegionInfo hriB,
       ServerName serverName) throws IOException {
-    TableDescriptor htd = getTableDescriptor(parent.getTable());
+    TableDescriptor htd = getDescriptor(parent.getTable());
     long parentOpenSeqNum = HConstants.NO_SEQNUM;
     if (htd.hasGlobalReplicationScope()) {
       parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
@@ -243,7 +243,7 @@ public class RegionStateStore {
   // ============================================================================================
   public void mergeRegions(RegionInfo child, RegionInfo hriA, RegionInfo hriB,
       ServerName serverName) throws IOException {
-    TableDescriptor htd = getTableDescriptor(child.getTable());
+    TableDescriptor htd = getDescriptor(child.getTable());
     long regionAOpenSeqNum = -1L;
     long regionBOpenSeqNum = -1L;
     if (htd.hasGlobalReplicationScope()) {
@@ -269,7 +269,7 @@ public class RegionStateStore {
   //  Table Descriptors helpers
   // ==========================================================================
   private boolean hasGlobalReplicationScope(TableName tableName) throws IOException {
-    return hasGlobalReplicationScope(getTableDescriptor(tableName));
+    return hasGlobalReplicationScope(getDescriptor(tableName));
   }
 
   private boolean hasGlobalReplicationScope(TableDescriptor htd) {
@@ -280,7 +280,7 @@ public class RegionStateStore {
     return htd != null ? htd.getRegionReplication() : 1;
   }
 
-  private TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
+  private TableDescriptor getDescriptor(TableName tableName) throws IOException {
     return master.getTableDescriptors().get(tableName);
   }
 

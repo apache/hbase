@@ -21,23 +21,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility client for doing access control admin operations.
@@ -254,7 +253,7 @@ public class AccessControlClient {
         CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
         BlockingInterface protocol =
             AccessControlProtos.AccessControlService.newBlockingStub(service);
-        HTableDescriptor[] htds = null;
+        List<TableDescriptor> htds = null;
         if (tableRegex == null || tableRegex.isEmpty()) {
           permList = AccessControlUtil.getUserPermissions(null, protocol, userName);
         } else if (tableRegex.charAt(0) == '@') { // Namespaces
@@ -268,8 +267,8 @@ public class AccessControlClient {
             }
           }
         } else { // Tables
-          htds = admin.listTables(Pattern.compile(tableRegex), true);
-          for (HTableDescriptor htd : htds) {
+          htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
+          for (TableDescriptor htd : htds) {
             permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
               null, null, userName));
           }
@@ -352,9 +351,9 @@ public class AccessControlClient {
         CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
         BlockingInterface protocol =
             AccessControlProtos.AccessControlService.newBlockingStub(service);
-        HTableDescriptor[] htds = admin.listTables(Pattern.compile(tableRegex), true);
+        List<TableDescriptor> htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
         // Retrieve table permissions
-        for (HTableDescriptor htd : htds) {
+        for (TableDescriptor htd : htds) {
           permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
             columnFamily, columnQualifier, userName));
         }

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -134,8 +133,8 @@ public class TestIncrementalBackup extends TestBackupBase {
       long startSplitTime = EnvironmentEdgeManager.currentTime();
 
       try {
-        admin.splitRegion(name);
-      } catch (IOException e) {
+        admin.splitRegionAsync(name, null).get();
+      } catch (Exception e) {
         // although split fail, this may not affect following check in current API,
         // exception will be thrown.
         LOG.debug("region is not splittable, because " + e);

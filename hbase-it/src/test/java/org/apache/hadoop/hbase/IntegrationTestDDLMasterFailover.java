@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -151,8 +152,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
   public void cleanUpCluster() throws Exception {
     if (!keepObjectsAtTheEnd) {
       Admin admin = util.getAdmin();
-      admin.disableTables("ittable-\\d+");
-      admin.deleteTables("ittable-\\d+");
+      for (TableName tableName: admin.listTableNames(Pattern.compile("ittable-\\d+"))) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+      }
       NamespaceDescriptor [] nsds = admin.listNamespaceDescriptors();
       for(NamespaceDescriptor nsd: nsds) {
         if(nsd.getName().matches("itnamespace\\d+")) {
@@ -713,7 +716,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.modifyTable(td);
 
         // assertion
-        TableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
+        TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         ColumnFamilyDescriptor freshColumnDesc = freshTableDesc.getColumnFamily(columnDesc.getName());
         Assert.assertEquals("Encoding of column family: " + columnDesc + " was not altered",
             freshColumnDesc.getDataBlockEncoding().getId(), id);
@@ -781,7 +784,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       Admin admin = connection.getAdmin();
       TableName tableName = selected.getTableName();
       try (Table table = connection.getTable(tableName)){
-        ArrayList<HRegionInfo> regionInfos = new ArrayList<>(admin.getTableRegions(
+        ArrayList<RegionInfo> regionInfos = new ArrayList<>(admin.getRegions(
             selected.getTableName()));
         int numRegions = regionInfos.size();
         // average number of rows to be added per action to each region

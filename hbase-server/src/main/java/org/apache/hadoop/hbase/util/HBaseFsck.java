@@ -2291,7 +2291,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (hi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return;
     }
-    int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+    int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
     for (int i = 1; i < numReplicas; i++) {
       if (hi.getPrimaryHRIForDeployedReplica() == null) continue;
       RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
@@ -2344,7 +2344,7 @@ public class HBaseFsck extends Configured implements Closeable {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
     // also get the locations of the replicas to close if the primary region is being closed
     if (hi.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-      int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+      int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
       for (int i = 0; i < numReplicas; i++) {
         get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
         get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i));
@@ -2395,7 +2395,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       // also assign replicas if needed (do it only when this call operates on a primary replica)
       if (hbi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) return;
-      int replicationCount = admin.getTableDescriptor(hri.getTable()).getRegionReplication();
+      int replicationCount = admin.getDescriptor(hri.getTable()).getRegionReplication();
       for (int i = 1; i < replicationCount; i++) {
         hri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
         HbckInfo h = regionInfoMap.get(hri.getEncodedName());
@@ -2512,7 +2512,7 @@ public class HBaseFsck extends Configured implements Closeable {
           }
         }
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
-        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
             admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
               .getLiveServerMetrics().keySet(), numReplicas);
@@ -2540,7 +2540,7 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
-        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
             admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
               .getLiveServerMetrics().keySet(), numReplicas);
@@ -3660,7 +3660,7 @@ public class HBaseFsck extends Configured implements Closeable {
         metaRegions.put(value.getReplicaId(), value);
       }
     }
-    int metaReplication = admin.getTableDescriptor(TableName.META_TABLE_NAME)
+    int metaReplication = admin.getDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication();
     boolean noProblem = true;
     // There will be always entries in regionInfoMap corresponding to hbase:meta & its replicas

@@ -25,9 +25,9 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -67,7 +67,7 @@ public class TestLockManager {
 
   private static String namespace = "namespace";
   private static TableName tableName = TableName.valueOf(namespace, "table");
-  private static HRegionInfo[] tableRegions;
+  private static RegionInfo[] tableRegions;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -83,9 +83,9 @@ public class TestLockManager {
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
     UTIL.createTable(tableName, new byte[][]{Bytes.toBytes("fam")},
         new byte[][] {Bytes.toBytes("1")});
-    List<HRegionInfo> regions = UTIL.getAdmin().getTableRegions(tableName);
+    List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
     assert regions.size() > 0;
-    tableRegions = new HRegionInfo[regions.size()];
+    tableRegions = new RegionInfo[regions.size()];
     regions.toArray(tableRegions);
   }
 

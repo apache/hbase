@@ -104,7 +104,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     cluster = TEST_UTIL.getMiniHBaseCluster();
     master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     admin = TEST_UTIL.getAdmin();
-    admin.setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
   }
 
   @After
@@ -130,8 +130,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     // Now try to run balance, and verify no regions are moved to the 2 region servers recently
     // started.
-    admin.setBalancerRunning(true, true);
-    assertTrue("Balancer did not run", admin.balancer());
+    admin.balancerSwitch(true, true);
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition(120000);
 
     List<RegionInfo> hris = admin.getRegions(rs1.getRegionServer().getServerName());
@@ -159,7 +159,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
     LoadBalancer balancer = master.getLoadBalancer();
     List<RegionInfo> regions = admin.getRegions(tableName);
-    regions.addAll(admin.getTableRegions(TableName.META_TABLE_NAME));
+    regions.addAll(admin.getRegions(TableName.META_TABLE_NAME));
     List<ServerName> servers = Lists.newArrayList(
       admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet());
     Map<ServerName, List<RegionInfo>> map = balancer.roundRobinAssignment(regions, servers);
@@ -219,7 +219,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc);
     TEST_UTIL.waitTableAvailable(desc.getTableName());
 
-    RegionInfo hri = admin.getTableRegions(TableName.valueOf(tableName)).get(0);
+    RegionInfo hri = admin.getRegions(TableName.valueOf(tableName)).get(0);
 
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     fnm.deleteFavoredNodesForRegions(Lists.newArrayList(hri));
@@ -250,7 +250,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
     TEST_UTIL.waitTableAvailable(tableName);
 
-    final RegionInfo region = admin.getTableRegions(tableName).get(0);
+    final RegionInfo region = admin.getRegions(tableName).get(0);
     LOG.info("Region thats supposed to be in transition: " + region);
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     List<ServerName> currentFN = fnm.getFavoredNodes(region);
@@ -259,10 +259,10 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     fnm.deleteFavoredNodesForRegions(Lists.newArrayList(region));
 
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    admin.setBalancerRunning(true, true);
+    admin.balancerSwitch(true, true);
 
     // Balancer should unassign the region
-    assertTrue("Balancer did not run", admin.balancer());
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition();
 
     admin.assign(region.getEncodedNameAsBytes());
@@ -273,7 +273,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     assertEquals("Expected number of FN not present",
       FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, currentFN.size());
 
-    assertTrue("Balancer did not run", admin.balancer());
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
 
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
@@ -288,7 +288,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
     TEST_UTIL.waitTableAvailable(tableName);
 
-    final RegionInfo misplacedRegion = admin.getTableRegions(tableName).get(0);
+    final RegionInfo misplacedRegion = admin.getRegions(tableName).get(0);
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     List<ServerName> currentFN = fnm.getFavoredNodes(misplacedRegion);
     assertNotNull(currentFN);
@@ -314,8 +314,8 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     final ServerName current = regionStates.getRegionServerOfRegion(misplacedRegion);
     assertNull("Misplaced region is still hosted on favored node, not expected.",
         FavoredNodesPlan.getFavoredServerPosition(fnm.getFavoredNodes(misplacedRegion), current));
-    admin.setBalancerRunning(true, true);
-    assertTrue("Balancer did not run", admin.balancer());
+    admin.balancerSwitch(true, true);
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitFor(120000, 30000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -335,7 +335,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
     TEST_UTIL.waitTableAvailable(tableName);
 
-    final RegionInfo region = admin.getTableRegions(tableName).get(0);
+    final RegionInfo region = admin.getRegions(tableName).get(0);
     LOG.info("Region that's supposed to be in transition: " + region);
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     List<ServerName> currentFN = fnm.getFavoredNodes(region);
@@ -356,9 +356,9 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       }
     });
 
-    assertEquals("Not all regions are online", REGION_NUM, admin.getTableRegions(tableName).size());
-    admin.setBalancerRunning(true, true);
-    assertTrue("Balancer did not run", admin.balancer());
+    assertEquals("Not all regions are online", REGION_NUM, admin.getRegions(tableName).size());
+    admin.balancerSwitch(true, true);
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
 
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
@@ -373,7 +373,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
     TEST_UTIL.waitTableAvailable(tableName);
 
-    final RegionInfo region = admin.getTableRegions(tableName).get(0);
+    final RegionInfo region = admin.getRegions(tableName).get(0);
     LOG.info("Region that's supposed to be in transition: " + region);
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     List<ServerName> currentFN = fnm.getFavoredNodes(region);
@@ -417,10 +417,10 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       admin.assign(regionInfo.getEncodedNameAsBytes());
     }
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    assertEquals("Not all regions are online", REGION_NUM, admin.getTableRegions(tableName).size());
+    assertEquals("Not all regions are online", REGION_NUM, admin.getRegions(tableName).size());
 
-    admin.setBalancerRunning(true, true);
-    assertTrue("Balancer did not run", admin.balancer());
+    admin.balancerSwitch(true, true);
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
 
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
@@ -435,7 +435,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
     TEST_UTIL.waitTableAvailable(tableName);
 
-    final RegionInfo region = admin.getTableRegions(tableName).get(0);
+    final RegionInfo region = admin.getRegions(tableName).get(0);
     LOG.info("Region that's supposed to be in transition: " + region);
     FavoredNodesManager fnm = master.getFavoredNodesManager();
     List<ServerName> currentFN = fnm.getFavoredNodes(region);
@@ -511,10 +511,10 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
       admin.assign(regionInfo.getEncodedNameAsBytes());
     }
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    assertEquals("Not all regions are online", REGION_NUM, admin.getTableRegions(tableName).size());
+    assertEquals("Not all regions are online", REGION_NUM, admin.getRegions(tableName).size());
 
-    admin.setBalancerRunning(true, true);
-    assertTrue("Balancer did not run", admin.balancer());
+    admin.balancerSwitch(true, true);
+    assertTrue("Balancer did not run", admin.balance());
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
 
     checkFavoredNodeAssignments(tableName, fnm, regionStates);
@@ -522,7 +522,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
   private void checkFavoredNodeAssignments(TableName tableName, FavoredNodesManager fnm,
       RegionStates regionStates) throws IOException {
-    for (RegionInfo hri : admin.getTableRegions(tableName)) {
+    for (RegionInfo hri : admin.getRegions(tableName)) {
       ServerName host = regionStates.getRegionServerOfRegion(hri);
       assertNotNull("Region: " + hri.getEncodedName() + " not on FN, current: " + host
               + " FN list: " + fnm.getFavoredNodes(hri),

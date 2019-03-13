@@ -19,13 +19,12 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 /**
  * Region that queues a compaction of a random region from the table.
@@ -55,14 +54,14 @@ public class CompactRandomRegionOfTableAction extends Action {
 
     LOG.info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table " + tableName + " doesn't have regions to compact");
       return;
     }
 
-    HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new HRegionInfo[regions.size()]));
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
+      regions.toArray(new RegionInfo[regions.size()]));
 
     try {
       if (major) {

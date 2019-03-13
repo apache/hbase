@@ -101,7 +101,7 @@ public class TestTableDescriptorModificationFromClient {
       HTableDescriptor modifiedHtd = new HTableDescriptor(TABLE_NAME);
       modifiedHtd.addFamily(new HColumnDescriptor(FAMILY_0));
       modifiedHtd.addFamily(new HColumnDescriptor(FAMILY_1));
-      admin.modifyTable(TABLE_NAME, modifiedHtd);
+      admin.modifyTable(modifiedHtd);
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
     } finally {
       admin.deleteTable(TABLE_NAME);
@@ -178,7 +178,7 @@ public class TestTableDescriptorModificationFromClient {
       // Modify colymn family
       admin.modifyColumnFamily(TABLE_NAME, cfDescriptor);
 
-      HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME);
+      HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(TABLE_NAME));
       HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
       assertTrue(hcfd.getBlocksize() == newBlockSize);
     } finally {
@@ -267,12 +267,12 @@ public class TestTableDescriptorModificationFromClient {
     }
   }
 
-  private void verifyTableDescriptor(final TableName tableName,
-                                     final byte[]... families) throws IOException {
+  private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
+      throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
-    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(tableName));
     verifyTableDescriptor(htd, tableName, families);
 
     // Verify descriptor from HDFS

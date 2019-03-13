@@ -151,7 +151,7 @@ public class TestCoprocessorTableEndpoint {
   private static void updateTable(HTableDescriptor desc) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     admin.disableTable(desc.getTableName());
-    admin.modifyTable(desc.getTableName(), desc);
+    admin.modifyTable(desc);
     admin.enableTable(desc.getTableName());
   }
 

@@ -34,7 +34,7 @@ public class CloneSnapshotFromClientNormalTestBase extends CloneSnapshotFromClie
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
   }
 
-  private void testCloneSnapshot(TableName tableName, byte[] snapshotName, int snapshotRows)
+  private void testCloneSnapshot(TableName tableName, String snapshotName, int snapshotRows)
       throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);

@@ -172,7 +172,7 @@ if ( fqtn != null ) {
     %> Compact request accepted. <%
     } else if (action.equals("merge")) {
         if (left != null && left.length() > 0 && right != null && right.length() > 0) {
-            admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
+            admin.mergeRegionsAsync(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
         }
         %> Merge request accepted. <%
     }

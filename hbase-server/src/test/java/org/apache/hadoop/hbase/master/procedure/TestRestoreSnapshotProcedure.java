@@ -99,7 +99,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
   private void setupSnapshotAndUpdateTable() throws Exception {
     long tid = System.currentTimeMillis();
-    final byte[] snapshotName = Bytes.toBytes("snapshot-" + tid);
+    final String snapshotName = "snapshot-" + tid;
     Admin admin = UTIL.getAdmin();
     // create Table
     SnapshotTestingUtils.createTable(UTIL, snapshotTableName, getNumReplicas(), CF1, CF2);
@@ -108,7 +108,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF2, CF2);
     SnapshotTestingUtils.verifyRowCount(UTIL, snapshotTableName, rowCountCF1 + rowCountCF2);
 
-    snapshotHTD = admin.getTableDescriptor(snapshotTableName);
+    snapshotHTD = new HTableDescriptor(admin.getDescriptor(snapshotTableName));
 
     admin.disableTable(snapshotTableName);
     // take a snapshot
@@ -128,7 +128,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF3, CF3);
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF4, CF4);
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF1addition, CF1);
-    HTableDescriptor currentHTD = admin.getTableDescriptor(snapshotTableName);
+    HTableDescriptor currentHTD = new HTableDescriptor(admin.getDescriptor(snapshotTableName));
     assertTrue(currentHTD.hasFamily(CF1));
     assertFalse(currentHTD.hasFamily(CF2));
     assertTrue(currentHTD.hasFamily(CF3));
@@ -216,7 +216,8 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     try {
       UTIL.getAdmin().enableTable(snapshotTableName);
 
-      HTableDescriptor currentHTD = UTIL.getAdmin().getTableDescriptor(snapshotTableName);
+      HTableDescriptor currentHTD =
+        new HTableDescriptor(UTIL.getAdmin().getDescriptor(snapshotTableName));
       assertTrue(currentHTD.hasFamily(CF1));
       assertTrue(currentHTD.hasFamily(CF2));
       assertFalse(currentHTD.hasFamily(CF3));

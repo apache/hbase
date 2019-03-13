@@ -54,7 +54,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -705,13 +705,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   @Override
   public boolean isTableAvailableWithSplit(TTableName tableName, List<ByteBuffer> splitKeys)
       throws TIOError, TException {
-    try {
-      TableName table = tableNameFromThrift(tableName);
-      byte[][] split = splitKeyFromThrift(splitKeys);
-      return connectionCache.getAdmin().isTableAvailable(table, split);
-    } catch (IOException e) {
-      throw getTIOError(e);
-    }
+    throw new NotImplementedException("isTableAvailableWithSplit not supported");
   }
 
   @Override

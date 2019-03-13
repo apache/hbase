@@ -219,9 +219,9 @@ public class TestMasterOperationsForRegionReplicas {
       assert(ADMIN.isTableDisabled(tableName));
       //increase the replica
       desc.setRegionReplication(numReplica + 1);
-      ADMIN.modifyTable(tableName, desc);
+      ADMIN.modifyTable(desc);
       ADMIN.enableTable(tableName);
-      LOG.info(ADMIN.getTableDescriptor(tableName).toString());
+      LOG.info(ADMIN.getDescriptor(tableName).toString());
       assert(ADMIN.isTableEnabled(tableName));
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().
           getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
@@ -231,7 +231,7 @@ public class TestMasterOperationsForRegionReplicas {
       //decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
       ADMIN.disableTable(tableName);
       desc.setRegionReplication(numReplica);
-      ADMIN.modifyTable(tableName, desc);
+      ADMIN.modifyTable(desc);
       ADMIN.enableTable(tableName);
       assert(ADMIN.isTableEnabled(tableName));
       regions = TEST_UTIL.getMiniHBaseCluster().getMaster()

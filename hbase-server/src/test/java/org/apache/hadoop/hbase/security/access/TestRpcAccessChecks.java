@@ -218,7 +218,7 @@ public class TestRpcAccessChecks {
 
   @Test
   public void testEnableCatalogJanitor() throws Exception {
-    verifyAdminCheckForAction((admin) -> admin.enableCatalogJanitor(true));
+    verifyAdminCheckForAction((admin) -> admin.catalogJanitorSwitch(true));
   }
 
   @Test

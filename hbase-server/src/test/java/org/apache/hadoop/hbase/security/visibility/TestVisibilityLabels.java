@@ -683,7 +683,7 @@ public abstract class TestVisibilityLabels {
       HTableDescriptor htd = new HTableDescriptor(LABELS_TABLE_NAME);
       htd.addFamily(new HColumnDescriptor("f1"));
       htd.addFamily(new HColumnDescriptor("f2"));
-      admin.modifyTable(LABELS_TABLE_NAME, htd);
+      admin.modifyTable(htd);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }

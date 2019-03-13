@@ -93,15 +93,15 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test
   public void disableNotFullReplication() throws Exception {
-    HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
+    HTableDescriptor table = new HTableDescriptor(admin2.getDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("notReplicatedFamily");
     table.addFamily(f);
     admin1.disableTable(tableName);
-    admin1.modifyTable(tableName, table);
+    admin1.modifyTable(table);
     admin1.enableTable(tableName);
 
     admin1.disableTableReplication(tableName);
-    table = admin1.getTableDescriptor(tableName);
+    table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
@@ -121,20 +121,20 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test
   public void testEnableReplicationWhenReplicationNotEnabled() throws Exception {
-    HTableDescriptor table = new HTableDescriptor(admin1.getTableDescriptor(tableName));
+    HTableDescriptor table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       fam.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     }
     admin1.disableTable(tableName);
-    admin1.modifyTable(tableName, table);
+    admin1.modifyTable(table);
     admin1.enableTable(tableName);
 
     admin2.disableTable(tableName);
-    admin2.modifyTable(tableName, table);
+    admin2.modifyTable(table);
     admin2.enableTable(tableName);
 
     admin1.enableTableReplication(tableName);
-    table = admin1.getTableDescriptor(tableName);
+    table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
@@ -142,11 +142,11 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test
   public void testEnableReplicationWhenTableDescriptorIsNotSameInClusters() throws Exception {
-    HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
+    HTableDescriptor table = new HTableDescriptor(admin2.getDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("newFamily");
     table.addFamily(f);
     admin2.disableTable(tableName);
-    admin2.modifyTable(tableName, table);
+    admin2.modifyTable(table);
     admin2.enableTable(tableName);
 
     try {
@@ -156,10 +156,10 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
     }
     admin1.disableTable(tableName);
-    admin1.modifyTable(tableName, table);
+    admin1.modifyTable(table);
     admin1.enableTable(tableName);
     admin1.enableTableReplication(tableName);
-    table = admin1.getTableDescriptor(tableName);
+    table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
@@ -171,12 +171,12 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   @Test
   public void testDisableAndEnableReplication() throws Exception {
     admin1.disableTableReplication(tableName);
-    HTableDescriptor table = admin1.getTableDescriptor(tableName);
+    HTableDescriptor table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
     admin1.enableTableReplication(tableName);
-    table = admin1.getTableDescriptor(tableName);
+    table = new HTableDescriptor(admin1.getDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }

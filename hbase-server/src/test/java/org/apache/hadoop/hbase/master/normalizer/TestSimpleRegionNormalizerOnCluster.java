@@ -141,9 +141,9 @@ public class TestSimpleRegionNormalizerOnCluster {
       region.flush(true);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(TABLENAME));
+    HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(TABLENAME));
     htd.setNormalizationEnabled(true);
-    admin.modifyTable(TABLENAME, htd);
+    admin.modifyTable(htd);
 
     admin.flush(TABLENAME);
 
@@ -213,9 +213,9 @@ public class TestSimpleRegionNormalizerOnCluster {
       region.flush(true);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(tableName));
     htd.setNormalizationEnabled(true);
-    admin.modifyTable(tableName, htd);
+    admin.modifyTable(htd);
 
     admin.flush(tableName);
 

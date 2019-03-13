@@ -96,7 +96,7 @@ public class TestMultiRespectsLimits {
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return admin.getTableRegions(tableName).size() > 1;
+          return admin.getRegions(tableName).size() > 1;
         }
       });
     }

@@ -262,10 +262,9 @@ public class TestEndToEndSplitTransaction {
 
           log("Initiating region split for:" + region.getRegionNameAsString());
           try {
-            admin.splitRegion(region.getRegionName(), splitPoint);
+            admin.splitRegionAsync(region.getRegionName(), splitPoint).get();
             // wait until the split is complete
             blockUntilRegionSplit(CONF, 50000, region.getRegionName(), true);
-
           } catch (NotServingRegionException ex) {
             // ignore
           }

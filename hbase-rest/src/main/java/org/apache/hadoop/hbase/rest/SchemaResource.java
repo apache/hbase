@@ -124,7 +124,7 @@ public class SchemaResource extends ResourceBase {
       }
       if (admin.tableExists(name)) {
         admin.disableTable(name);
-        admin.modifyTable(name, htd);
+        admin.modifyTable(htd);
         admin.enableTable(name);
         servlet.getMetrics().incrementSucessfulPutRequests(1);
       } else try {
@@ -152,7 +152,7 @@ public class SchemaResource extends ResourceBase {
         .build();
     }
     try {
-      HTableDescriptor htd = admin.getTableDescriptor(name);
+      HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(name));
       admin.disableTable(name);
       try {
         for (ColumnSchemaModel family: model.getColumns()) {

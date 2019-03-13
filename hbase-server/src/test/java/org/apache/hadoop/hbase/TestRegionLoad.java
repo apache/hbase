@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -70,7 +71,7 @@ public class TestRegionLoad {
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", MSG_INTERVAL);
     UTIL.startMiniCluster(4);
     admin = UTIL.getAdmin();
-    admin.setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
     createTables();
   }
 
@@ -95,7 +96,7 @@ public class TestRegionLoad {
     // Check if regions match with the regionLoad from the server
     for (ServerName serverName : admin
         .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet()) {
-      List<HRegionInfo> regions = admin.getOnlineRegions(serverName);
+      List<RegionInfo> regions = admin.getRegions(serverName);
       LOG.info("serverName=" + serverName + ", regions=" +
           regions.stream().map(r -> r.getRegionNameAsString()).collect(Collectors.toList()));
       Collection<RegionLoad> regionLoads = admin.getRegionMetrics(serverName)
@@ -108,7 +109,7 @@ public class TestRegionLoad {
 
     // Check if regionLoad matches the table's regions and nothing is missed
     for (TableName table : new TableName[]{TABLE_1, TABLE_2, TABLE_3}) {
-      List<HRegionInfo> tableRegions = admin.getTableRegions(table);
+      List<RegionInfo> tableRegions = admin.getRegions(table);
 
       List<RegionLoad> regionLoads = Lists.newArrayList();
       for (ServerName serverName : admin
@@ -159,23 +160,21 @@ public class TestRegionLoad {
     assertEquals("regionLoads from SN should be empty", 0, regionLoads.size());
   }
 
-  private void checkRegionsAndRegionLoads(Collection<HRegionInfo> regions,
+  private void checkRegionsAndRegionLoads(Collection<RegionInfo> regions,
       Collection<RegionLoad> regionLoads) {
-
     for (RegionLoad load : regionLoads) {
       assertNotNull(load.regionLoadPB);
     }
 
-    assertEquals("No of regions and regionloads doesn't match",
-        regions.size(), regionLoads.size());
+    assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
 
     Map<byte[], RegionLoad> regionLoadMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (RegionLoad regionLoad : regionLoads) {
       regionLoadMap.put(regionLoad.getName(), regionLoad);
     }
-    for (HRegionInfo info : regions) {
+    for (RegionInfo info : regions) {
       assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString() +
-          " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
+        " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
     }
   }
 }

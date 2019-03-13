@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
+import java.util.List;
 import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -33,16 +33,16 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.rest.model.NamespacesInstanceModel;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
 import org.apache.hadoop.hbase.rest.model.TableModel;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the following REST end points:
@@ -100,9 +100,10 @@ public class NamespacesInstanceResource extends ResourceBase {
     if(queryTables){
       TableListModel tableModel = new TableListModel();
       try{
-        HTableDescriptor[] tables = servlet.getAdmin().listTableDescriptorsByNamespace(namespace);
-        for(int i = 0; i < tables.length; i++){
-          tableModel.add(new TableModel(tables[i].getTableName().getQualifierAsString()));
+        List<TableDescriptor> tables =
+          servlet.getAdmin().listTableDescriptorsByNamespace(Bytes.toBytes(namespace));
+        for (TableDescriptor table : tables) {
+          tableModel.add(new TableModel(table.getTableName().getQualifierAsString()));
         }
 
         servlet.getMetrics().incrementSucessfulGetRequests(1);

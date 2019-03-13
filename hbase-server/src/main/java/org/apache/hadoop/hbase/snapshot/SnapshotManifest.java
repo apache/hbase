@@ -130,7 +130,7 @@ public final class SnapshotManifest {
   /**
    * Return a SnapshotManifest instance with the information already loaded in-memory.
    *    SnapshotManifest manifest = SnapshotManifest.open(...)
-   *    TableDescriptor htd = manifest.getTableDescriptor()
+   *    TableDescriptor htd = manifest.getDescriptor()
    *    for (SnapshotRegionManifest regionManifest: manifest.getRegionManifests())
    *      hri = regionManifest.getRegionInfo()
    *      for (regionManifest.getFamilyFiles())

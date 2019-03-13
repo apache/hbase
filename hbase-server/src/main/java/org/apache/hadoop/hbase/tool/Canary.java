@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -99,6 +98,7 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -1202,13 +1202,13 @@ public final class Canary implements Tool {
 
       if (this.useRegExp) {
         Pattern pattern = null;
-        TableDescriptor[] tds = null;
+        List<TableDescriptor> tds = null;
         Set<String> tmpTables = new TreeSet<>();
         try {
           LOG.debug(String.format("reading list of tables"));
-          tds = this.admin.listTables(pattern);
+          tds = this.admin.listTableDescriptors(pattern);
           if (tds == null) {
-            tds = new TableDescriptor[0];
+            tds = Collections.emptyList();
           }
           for (String monitorTarget : monitorTargets) {
             pattern = Pattern.compile(monitorTarget);
@@ -1293,7 +1293,7 @@ public final class Canary implements Tool {
       }
       int numberOfCoveredServers = serverSet.size();
       if (numberOfCoveredServers < numberOfServers) {
-        admin.balancer();
+        admin.balance();
       }
     }
 

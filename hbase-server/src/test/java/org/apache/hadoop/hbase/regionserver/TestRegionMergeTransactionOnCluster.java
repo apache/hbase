@@ -197,7 +197,7 @@ public class TestRegionMergeTransactionOnCluster {
   @Test
   public void testCleanMergeReference() throws Exception {
     LOG.info("Starting " + name.getMethodName());
-    ADMIN.enableCatalogJanitor(false);
+    ADMIN.catalogJanitorSwitch(false);
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create table and load data.
@@ -278,7 +278,7 @@ public class TestRegionMergeTransactionOnCluster {
       // files of merging regions
       int cleaned = 0;
       while (cleaned == 0) {
-        cleaned = ADMIN.runCatalogScan();
+        cleaned = ADMIN.runCatalogJanitor();
         LOG.debug("catalog janitor returned " + cleaned);
         Thread.sleep(50);
         // Cleanup is async so wait till all procedures are done running.
@@ -297,7 +297,7 @@ public class TestRegionMergeTransactionOnCluster {
           HConstants.MERGEB_QUALIFIER) != null);
 
     } finally {
-      ADMIN.enableCatalogJanitor(true);
+      ADMIN.catalogJanitorSwitch(true);
     }
   }
 

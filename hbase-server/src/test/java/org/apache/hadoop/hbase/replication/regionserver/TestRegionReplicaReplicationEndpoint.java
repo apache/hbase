@@ -198,7 +198,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     HTU.getAdmin().disableTable(htd.getTableName());
     htd.setRegionReplication(2);
-    HTU.getAdmin().modifyTable(htd.getTableName(), htd);
+    HTU.getAdmin().modifyTable(htd);
     HTU.getAdmin().enableTable(htd.getTableName());
 
     // assert peer configuration is correct
@@ -442,7 +442,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.getAdmin().deleteTable(toBeDisabledTable);
     } else if (disableReplication) {
       htd.setRegionReplication(regionReplication - 2);
-      HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
+      HTU.getAdmin().modifyTable(htd);
       HTU.getAdmin().enableTable(toBeDisabledTable);
     }
     sinkWriter.append(toBeDisabledTable, encodedRegionName,
@@ -454,7 +454,7 @@ public class TestRegionReplicaReplicationEndpoint {
       // enable replication again so that we can verify replication
       HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
       htd.setRegionReplication(regionReplication);
-      HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
+      HTU.getAdmin().modifyTable(htd);
       HTU.getAdmin().enableTable(toBeDisabledTable);
     }
 

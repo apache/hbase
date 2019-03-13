@@ -1256,11 +1256,11 @@ public class TestMasterObserver {
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static byte[] TEST_SNAPSHOT = Bytes.toBytes("observed_snapshot");
+  private static String TEST_SNAPSHOT = "observed_snapshot";
   private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
-  private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -1507,10 +1507,10 @@ public class TestMasterObserver {
 
   private void modifyTableSync(Admin admin, TableName tableName, HTableDescriptor htd)
       throws IOException {
-    admin.modifyTable(tableName, htd);
+    admin.modifyTable(htd);
     //wait until modify table finishes
     for (int t = 0; t < 100; t++) { //10 sec timeout
-      HTableDescriptor td = admin.getTableDescriptor(htd.getTableName());
+      HTableDescriptor td = new HTableDescriptor(admin.getDescriptor(htd.getTableName()));
       if (td.equals(htd)) {
         break;
       }

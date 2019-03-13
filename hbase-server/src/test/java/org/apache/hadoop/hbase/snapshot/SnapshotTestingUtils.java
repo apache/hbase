@@ -777,7 +777,7 @@ public final class SnapshotTestingUtils {
     byte[][] splitKeys = getSplitKeys(nRegions);
     util.createTable(builder.build(), splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
-        util.getAdmin().getTableRegions(tableName).size());
+        util.getAdmin().getRegions(tableName).size());
   }
 
   public static byte[][] getSplitKeys() {

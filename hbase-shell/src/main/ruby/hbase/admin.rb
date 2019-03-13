@@ -144,8 +144,8 @@ module Hbase
       split_point_bytes = nil
       split_point_bytes = split_point.to_java_bytes unless split_point.nil?
       begin
-        @admin.splitRegion(table_or_region_name.to_java_bytes, split_point_bytes)
-      rescue java.lang.IllegalArgumentException => e
+        @admin.splitRegionAsync(table_or_region_name.to_java_bytes, split_point_bytes).get
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException => e
         @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
       end
     end
@@ -154,33 +154,26 @@ module Hbase
     # Enable/disable one split or merge switch
     # Returns previous switch setting.
     def splitormerge_switch(type, enabled)
-      switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
+        @admin.splitSwitch(java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false))
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
+        @admin.mergeSwitch(java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false))
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
-      @admin.setSplitOrMergeEnabled(
-        java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false),
-        switch_type
-      )[0]
     end
 
     #----------------------------------------------------------------------------------------------
     # Query the current state of the split or merge switch.
     # Returns the switch's state (true is enabled).
     def splitormerge_enabled(type)
-      switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
+        @admin.isSplitEnabled
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
+        @admin.isMergeEnabled
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
-      @admin.isSplitOrMergeEnabled(switch_type)
     end
 
     def locate_region(table_name, row_key)
@@ -203,7 +196,7 @@ module Hbase
     # Enable/disable balancer
     # Returns previous balancer switch setting.
     def balance_switch(enableDisable)
-      @admin.setBalancerRunning(
+      @admin.balancerSwitch(
         java.lang.Boolean.valueOf(enableDisable), java.lang.Boolean.valueOf(false)
       )
     end
@@ -232,7 +225,7 @@ module Hbase
     # Enable/disable region normalizer
     # Returns previous normalizer switch setting.
     def normalizer_switch(enableDisable)
-      @admin.setNormalizerRunning(java.lang.Boolean.valueOf(enableDisable))
+      @admin.normalizerSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -253,14 +246,14 @@ module Hbase
     # Request a scan of the catalog table (for garbage collection)
     # Returns an int signifying the number of entries cleaned
     def catalogjanitor_run
-      @admin.runCatalogScan
+      @admin.runCatalogJanitor
     end
 
     #----------------------------------------------------------------------------------------------
     # Enable/disable the catalog janitor
     # Returns previous catalog janitor switch setting.
     def catalogjanitor_switch(enableDisable)
-      @admin.enableCatalogJanitor(java.lang.Boolean.valueOf(enableDisable))
+      @admin.catalogJanitorSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -280,7 +273,7 @@ module Hbase
     # Enable/disable the cleaner chore
     # Returns previous cleaner switch setting.
     def cleaner_chore_switch(enableDisable)
-      @admin.setCleanerChoreRunning(java.lang.Boolean.valueOf(enableDisable))
+      @admin.cleanerChoreSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -301,8 +294,17 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Enables all tables matching the given regex
     def enable_all(regex)
-      regex = regex.to_s
-      @admin.enableTables(Pattern.compile(regex))
+      pattern = Pattern.compile(regex.to_s)
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.enableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -317,7 +319,16 @@ module Hbase
     # Disables all tables matching the given regex
     def disable_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      @admin.disableTables(pattern).map { |t| t.getTableName.getNameAsString }
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.disableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #---------------------------------------------------------------------------------------------
@@ -347,8 +358,16 @@ module Hbase
     # Drops a table
     def drop_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      failed = @admin.deleteTables(pattern).map { |t| t.getTableName.getNameAsString }
-      failed
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.deleteTable(table_name)
+        rescue java.io.IOException => e
+          puts puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -492,17 +511,17 @@ module Hbase
     # Returns table's structure description
     def describe(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).to_s
+      @admin.getDescriptor(TableName.valueOf(table_name)).to_s
     end
 
     def get_column_families(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).getColumnFamilies
+      @admin.getDescriptor(TableName.valueOf(table_name)).getColumnFamilies
     end
 
     def get_table_attributes(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+      @admin.getDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
     end
 
     #----------------------------------------------------------------------------------------------
@@ -510,7 +529,7 @@ module Hbase
     def truncate(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getDescriptor(table_name)
       raise ArgumentError, "Table #{table_name_str} is not enabled. Enable it first." unless
           enabled?(table_name_str)
       puts 'Disabling table...'
@@ -551,7 +570,7 @@ module Hbase
         locator.close
       end
 
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getDescriptor(table_name)
       puts 'Disabling table...'
       disable(table_name_str)
 
@@ -627,7 +646,7 @@ module Hbase
       table_name = TableName.valueOf(table_name_str)
 
       # Get table descriptor
-      htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getTableDescriptor(table_name))
+      htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(table_name))
       hasTableUpdate = false
 
       # Process all args
@@ -742,17 +761,17 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        @admin.modifyTable(table_name, htd)
+        future = @admin.modifyTableAsync(htd)
 
         if wait == true
           puts 'Updating all regions with the new schema...'
-          alter_status(table_name_str)
+          future.get
         end
       end
     end
 
     def status(format, type)
-      status = @admin.getClusterStatus
+      status = org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
       if format == 'detailed'
         puts(format('version %s', status.getHBaseVersion))
         # Put regions in transition first because usually empty
@@ -767,7 +786,7 @@ module Hbase
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
 
-        master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors)
+        master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
         end
@@ -1124,13 +1143,13 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns the ClusterStatus of the cluster
     def getClusterStatus
-      @admin.getClusterStatus
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers
-      @admin.getClusterStatus.getServers.map { |serverName| serverName }
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.map { |serverName| serverName }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1393,7 +1412,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # List live region servers
     def list_liveservers
-      @admin.getClusterStatus.getServers.to_a
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.to_a
     end
 
     #---------------------------------------------------------------------------
