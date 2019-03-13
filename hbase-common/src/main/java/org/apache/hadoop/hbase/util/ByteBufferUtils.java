@@ -40,8 +40,10 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 /**
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
+ * @deprecated This class will become IA.Private in HBase 3.0. Downstream folks should avoid using it.
  */
 @SuppressWarnings("restriction")
+@Deprecated
 @InterfaceAudience.Public
 public final class ByteBufferUtils {
   // "Compressed integer" serialization helper constants.
