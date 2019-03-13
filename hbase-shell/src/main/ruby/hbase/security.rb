@@ -66,7 +66,7 @@ module Hbase
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
-            htd = @admin.getTableDescriptor(tableName)
+            htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(tableName))
 
             unless family.nil?
               raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
@@ -111,7 +111,7 @@ module Hbase
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
-            htd = @admin.getTableDescriptor(tableName)
+            htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(tableName))
 
             unless family.nil?
               raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)

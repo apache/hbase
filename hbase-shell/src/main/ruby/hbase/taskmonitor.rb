@@ -79,7 +79,7 @@ module Hbase
       java_import 'java.io.InputStreamReader'
       java_import 'org.apache.hbase.thirdparty.com.google.gson.JsonParser'
 
-      infoport = @admin.getClusterStatus.getLoad(host).getInfoServerPort.to_s
+      infoport = org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getLoad(host).getInfoServerPort.to_s
 
       # Note: This condition use constants from hbase-server
       # if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_KEY,

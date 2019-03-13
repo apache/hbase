@@ -340,7 +340,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "Must specify an existing table for read commands. Run a write command first.");
     }
     HTableDescriptor desc =
-      exists ? admin.getTableDescriptor(TableName.valueOf(opts.tableName)) : null;
+      exists ? new HTableDescriptor(admin.getDescriptor(TableName.valueOf(opts.tableName))) : null;
     byte[][] splits = getSplits(opts);
 
     // recreate the table when user has requested presplit or when existing

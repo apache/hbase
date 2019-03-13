@@ -154,20 +154,6 @@ public class TestRegionServerMetrics {
     admin.deleteTable(tableName);
   }
 
-  public void waitTableDeleted(TableName name, long timeoutInMillis) throws Exception {
-    long start = System.currentTimeMillis();
-    while (true) {
-      HTableDescriptor[] tables = admin.listTables();
-      for (HTableDescriptor htd : tables) {
-        if (htd.getNameAsString() == name.getNameAsString())
-          return;
-      }
-      if (System.currentTimeMillis() - start > timeoutInMillis)
-        return;
-      Thread.sleep(1000);
-    }
-  }
-
   public void assertCounter(String metric, long expectedValue) {
     metricsHelper.assertCounter(metric, expectedValue, serverSource);
   }

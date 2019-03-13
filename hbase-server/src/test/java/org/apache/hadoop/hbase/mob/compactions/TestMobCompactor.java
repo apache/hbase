@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -268,13 +267,7 @@ public class TestMobCompactor {
 
     hcd1.setMobCompactPartitionPolicy(type);
     desc.modifyFamily(hcd1);
-    admin.modifyTable(tableName, desc);
-    Pair<Integer, Integer> st;
-
-    while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-      LOG.debug(st.getFirst() + " regions left to update");
-      Thread.sleep(40);
-    }
+    admin.modifyTable(desc);
     LOG.info("alter status finished");
   }
 
@@ -439,7 +432,7 @@ public class TestMobCompactor {
     int rowNumPerRegion = count * rowNumPerFile;
 
     long tid = System.currentTimeMillis();
-    byte[] snapshotName1 = Bytes.toBytes("snaptb-" + tid);
+    String snapshotName1 = "snaptb-" + tid;
     // take a snapshot
     admin.snapshot(snapshotName1, tableName);
 

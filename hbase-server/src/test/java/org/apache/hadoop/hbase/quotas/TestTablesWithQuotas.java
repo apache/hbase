@@ -180,7 +180,7 @@ public class TestTablesWithQuotas {
     // Set up Admin to return null (match the implementation)
     Admin admin = mock(Admin.class);
     when(conn.getAdmin()).thenReturn(admin);
-    when(admin.getTableRegions(missingTable)).thenReturn(null);
+    when(admin.getRegions(missingTable)).thenReturn(null);
 
     QuotaObserverChore chore = mock(QuotaObserverChore.class);
     Map<RegionInfo,Long> regionUsage = new HashMap<>();

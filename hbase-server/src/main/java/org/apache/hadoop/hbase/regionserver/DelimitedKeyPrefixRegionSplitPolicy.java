@@ -53,8 +53,8 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
     // read the prefix length from the table descriptor
     String delimiterString = region.getTableDescriptor().getValue(DELIMITER_KEY);
     if (delimiterString == null || delimiterString.length() == 0) {
-      LOG.error(DELIMITER_KEY + " not specified for table " + region.getTableDescriptor().getTableName() +
-        ". Using default RegionSplitPolicy");
+      LOG.error(DELIMITER_KEY + " not specified for table " +
+        region.getTableDescriptor().getTableName() + ". Using default RegionSplitPolicy");
       return;
     }
     delimiter = Bytes.toBytes(delimiterString);

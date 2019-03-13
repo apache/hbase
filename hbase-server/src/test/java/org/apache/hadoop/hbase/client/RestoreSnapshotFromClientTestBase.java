@@ -42,10 +42,10 @@ public class RestoreSnapshotFromClientTestBase {
   protected final byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
   protected TableName tableName;
-  protected byte[] emptySnapshot;
-  protected byte[] snapshotName0;
-  protected byte[] snapshotName1;
-  protected byte[] snapshotName2;
+  protected String emptySnapshot;
+  protected String snapshotName0;
+  protected String snapshotName1;
+  protected String snapshotName2;
   protected int snapshot0Rows;
   protected int snapshot1Rows;
   protected Admin admin;
@@ -84,10 +84,10 @@ public class RestoreSnapshotFromClientTestBase {
 
     long tid = System.currentTimeMillis();
     tableName = TableName.valueOf(getValidMethodName() + "-" + tid);
-    emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
-    snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
-    snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
+    emptySnapshot = "emptySnaptb-" + tid;
+    snapshotName0 = "snaptb0-" + tid;
+    snapshotName1 = "snaptb1-" + tid;
+    snapshotName2 = "snaptb2-" + tid;
 
     // create Table and disable it
     createTable();

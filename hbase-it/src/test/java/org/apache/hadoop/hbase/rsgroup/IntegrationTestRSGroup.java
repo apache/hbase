@@ -70,7 +70,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
     deleteTableIfNecessary();
     deleteNamespaceIfNecessary();
     deleteGroups();
-    admin.setBalancerRunning(true, true);
+    admin.balancerSwitch(true, true);
 
     LOG.info("Restoring the cluster");
     ((IntegrationTestingUtility)TEST_UTIL).restoreCluster();

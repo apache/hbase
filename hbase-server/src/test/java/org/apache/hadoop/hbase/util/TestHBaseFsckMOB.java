@@ -77,7 +77,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     connection = (ClusterConnection) TEST_UTIL.getConnection();
 
     admin = connection.getAdmin();
-    admin.setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
 
     TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
   }

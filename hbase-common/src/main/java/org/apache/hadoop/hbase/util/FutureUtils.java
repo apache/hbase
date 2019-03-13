@@ -139,7 +139,7 @@ public final class FutureUtils {
   }
 
   /**
-   * A helper class for getting the result of a Future, and convert the error to an
+   * A helper class for getting the result of a Future with timeout, and convert the error to an
    * {@link IOException}.
    */
   public static <T> T get(Future<T> future, long timeout, TimeUnit unit) throws IOException {

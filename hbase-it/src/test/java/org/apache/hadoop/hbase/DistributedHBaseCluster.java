@@ -522,11 +522,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     // and the restore put the cluster back to Initial configuration, HAdmin instance will need
     // to refresh its connections (otherwise it will return incorrect information) or we can
     // point it to new instance.
-    try {
-      admin.close();
-    } catch (IOException ioe) {
-      LOG.warn("While closing the old connection", ioe);
-    }
+    admin.close();
     this.admin = this.connection.getAdmin();
     LOG.info("Added new HBaseAdmin");
     return true;

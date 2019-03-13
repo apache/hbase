@@ -1771,7 +1771,7 @@ public class TestAccessController extends SecureTestUtil {
 
       User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
       htd.setOwner(newOwner);
-      admin.modifyTable(tableName, htd);
+      admin.modifyTable(htd);
 
       acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
       try {
@@ -2055,7 +2055,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testSnapshot() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
+    final HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(TEST_TABLE));
     final SnapshotDescription snapshot = new SnapshotDescription(
         TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE);
     AccessTestAction snapshotAction = new AccessTestAction() {
@@ -2114,7 +2114,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testSnapshotWithOwner() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
+    final HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(TEST_TABLE));
     final SnapshotDescription snapshot = new SnapshotDescription(
         TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null, USER_OWNER.getName());
 
@@ -2243,7 +2243,7 @@ public class TestAccessController extends SecureTestUtil {
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
               Admin admin = conn.getAdmin()) {
-            return Arrays.asList(admin.listTables());
+            return admin.listTableDescriptors();
           }
         }
       };
@@ -2253,7 +2253,7 @@ public class TestAccessController extends SecureTestUtil {
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
               Admin admin = conn.getAdmin()) {
-            return admin.getTableDescriptor(TEST_TABLE);
+            return admin.getDescriptor(TEST_TABLE);
           }
         }
       };

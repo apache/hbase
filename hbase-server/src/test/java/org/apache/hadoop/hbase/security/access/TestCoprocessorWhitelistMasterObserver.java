@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -115,7 +116,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
       Coprocessor.PRIORITY_USER, null);
     LOG.info("Modifying Table");
     try {
-      connection.getAdmin().modifyTable(TEST_TABLE, htd);
+      connection.getAdmin().modifyTable(htd);
       fail("Expected coprocessor to raise IOException");
     } catch (IOException e) {
       // swallow exception from coprocessor
@@ -160,8 +161,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
       new Path(coprocessorPath),
       Coprocessor.PRIORITY_USER, null);
     LOG.info("Modifying Table");
-    admin.modifyTable(TEST_TABLE, htd);
-    assertEquals(1, t.getTableDescriptor().getCoprocessors().size());
+    admin.modifyTable(htd);
+    assertEquals(1, t.getDescriptor().getCoprocessorDescriptors().size());
     LOG.info("Done Modifying Table");
   }
 
@@ -288,8 +289,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     }
     LOG.info("Done Creating Table");
     // ensure table was not created
-    assertEquals(new HTableDescriptor[0],
-      admin.listTables("^" + TEST_TABLE.getNameAsString() + "$"));
+    assertEquals(0,
+      admin.listTableDescriptors(Pattern.compile("^" + TEST_TABLE.getNameAsString() + "$")).size());
   }
 
   public static class TestRegionObserver implements RegionCoprocessor, RegionObserver {

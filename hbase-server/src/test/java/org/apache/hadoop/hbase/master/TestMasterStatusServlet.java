@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
@@ -118,11 +120,9 @@ public class TestMasterStatusServlet {
   }
 
   private void setupMockTables() throws IOException {
-    HTableDescriptor tables[] = new HTableDescriptor[] {
-        new HTableDescriptor(TableName.valueOf("foo")),
-        new HTableDescriptor(TableName.valueOf("bar"))
-    };
-    Mockito.doReturn(tables).when(admin).listTables();
+    List<TableDescriptor> tables = Arrays.asList(new HTableDescriptor(TableName.valueOf("foo")),
+      new HTableDescriptor(TableName.valueOf("bar")));
+    Mockito.doReturn(tables).when(admin).listTableDescriptors();
   }
 
   @Test

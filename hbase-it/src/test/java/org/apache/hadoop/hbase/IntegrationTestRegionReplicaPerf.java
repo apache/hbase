@@ -278,7 +278,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     // one last sanity check, then send in the clowns!
     assertEquals("Table must be created with DisabledRegionSplitPolicy. Broken test.",
         DisabledRegionSplitPolicy.class.getName(),
-        util.getAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName());
+        util.getAdmin().getDescriptor(tableName).getRegionSplitPolicyClassName());
     startMonkey();
 
     // collect a baseline without region replicas.

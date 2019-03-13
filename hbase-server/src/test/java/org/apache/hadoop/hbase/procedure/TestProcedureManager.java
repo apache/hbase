@@ -66,7 +66,7 @@ public class TestProcedureManager {
   public void testSimpleProcedureManager() throws IOException {
     Admin admin = util.getAdmin();
 
-    byte[] result = admin.execProcedureWithRet(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
+    byte[] result = admin.execProcedureWithReturn(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
         "mytest", new HashMap<>());
     assertArrayEquals("Incorrect return data from execProcedure",
         Bytes.toBytes(SimpleMasterProcedureManager.SIMPLE_DATA), result);

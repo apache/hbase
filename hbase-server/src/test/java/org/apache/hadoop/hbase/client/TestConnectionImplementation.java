@@ -284,7 +284,7 @@ public class TestConnectionImplementation {
     TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -366,7 +366,7 @@ public class TestConnectionImplementation {
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
-    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
   /**
@@ -377,7 +377,7 @@ public class TestConnectionImplementation {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime =  20000;
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -425,7 +425,7 @@ public class TestConnectionImplementation {
 
     connection.close();
     EnvironmentEdgeManager.reset();
-    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
     /**
@@ -438,7 +438,7 @@ public class TestConnectionImplementation {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -493,7 +493,7 @@ public class TestConnectionImplementation {
     } finally {
       syncBlockingFilter.set(true);
       t.join();
-      TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+      TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
     }
 
     table.close();
@@ -572,7 +572,7 @@ public class TestConnectionImplementation {
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     assertNotNull(conn.getCachedLocation(TableName.valueOf(TABLE_NAME.getName()), ROW.clone()));
 
-    TEST_UTIL.getAdmin().setBalancerRunning(false, false);
+    TEST_UTIL.getAdmin().balancerSwitch(false, false);
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
@@ -874,7 +874,7 @@ public class TestConnectionImplementation {
       conn.clearRegionCache(TABLE_NAME3);
       Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
 
-      TEST_UTIL.getAdmin().setBalancerRunning(false, false);
+      TEST_UTIL.getAdmin().balancerSwitch(false, false);
       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
       // We can wait for all regions to be online, that makes log reading easier when debugging

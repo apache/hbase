@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -152,9 +153,9 @@ public class TestSnapshotTemporaryDirectory {
       throws IOException, InterruptedException {
     long tid = System.currentTimeMillis();
     TableName tableName = TableName.valueOf("testtb-" + tid);
-    byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
-    byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    byte[] snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
+    String emptySnapshot = "emptySnaptb-" + tid;
+    String snapshotName0 = "snaptb0-" + tid;
+    String snapshotName1 = "snaptb1-" + tid;
     int snapshot0Rows;
     int snapshot1Rows;
 
@@ -163,7 +164,7 @@ public class TestSnapshotTemporaryDirectory {
     admin.disableTable(tableName);
 
     // take an empty snapshot
-    takeSnapshot(tableName, Bytes.toString(emptySnapshot), true);
+    takeSnapshot(tableName, emptySnapshot, true);
 
     // enable table and insert data
     admin.enableTable(tableName);
@@ -174,7 +175,7 @@ public class TestSnapshotTemporaryDirectory {
     admin.disableTable(tableName);
 
     // take a snapshot
-    takeSnapshot(tableName, Bytes.toString(snapshotName0), true);
+    takeSnapshot(tableName, snapshotName0, true);
 
     // enable table and insert more data
     admin.enableTable(tableName);
@@ -185,7 +186,7 @@ public class TestSnapshotTemporaryDirectory {
 
     SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
     admin.disableTable(tableName);
-    takeSnapshot(tableName, Bytes.toString(snapshotName1), true);
+    takeSnapshot(tableName, snapshotName1, true);
 
     // Restore from snapshot-0
     admin.restoreSnapshot(snapshotName0);
@@ -218,9 +219,9 @@ public class TestSnapshotTemporaryDirectory {
       throws IOException, InterruptedException {
     long tid = System.currentTimeMillis();
     TableName tableName = TableName.valueOf("testtb-" + tid);
-    byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
-    byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    byte[] snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
+    String emptySnapshot = "emptySnaptb-" + tid;
+    String snapshotName0 = "snaptb0-" + tid;
+    String snapshotName1 = "snaptb1-" + tid;
     int snapshot0Rows;
     int snapshot1Rows;
 
@@ -228,7 +229,7 @@ public class TestSnapshotTemporaryDirectory {
     SnapshotTestingUtils.createTable(UTIL, tableName, getNumReplicas(), TEST_FAM);
 
     // take an empty snapshot
-    takeSnapshot(tableName, Bytes.toString(emptySnapshot), false);
+    takeSnapshot(tableName, emptySnapshot, false);
 
     // Insert data
     SnapshotTestingUtils.loadData(UTIL, tableName, 500, TEST_FAM);
@@ -237,7 +238,7 @@ public class TestSnapshotTemporaryDirectory {
     }
 
     // take a snapshot
-    takeSnapshot(tableName, Bytes.toString(snapshotName0), false);
+    takeSnapshot(tableName, snapshotName0, false);
 
     // Insert more data
     SnapshotTestingUtils.loadData(UTIL, tableName, 500, TEST_FAM);
@@ -246,7 +247,7 @@ public class TestSnapshotTemporaryDirectory {
     }
 
     SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    takeSnapshot(tableName, Bytes.toString(snapshotName1), false);
+    takeSnapshot(tableName, snapshotName1, false);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
@@ -416,12 +417,11 @@ public class TestSnapshotTemporaryDirectory {
   }
 
   // Ensures that the snapshot is transferred to the proper completed snapshot directory
-  @Test(timeout = 180000) public void testEnsureTemporaryDirectoryTransfer() throws Exception {
-    Admin admin = null;
+  @Test(timeout = 180000)
+  public void testEnsureTemporaryDirectoryTransfer() throws Exception {
+    Admin admin = UTIL.getAdmin();
     TableName tableName2 = TableName.valueOf("testListTableSnapshots");
     try {
-      admin = UTIL.getHBaseAdmin();
-
       HTableDescriptor htd = new HTableDescriptor(tableName2);
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
@@ -437,7 +437,8 @@ public class TestSnapshotTemporaryDirectory {
       takeSnapshot(TABLE_NAME, table2Snapshot1, false);
       LOG.debug("Table2Snapshot1 completed.");
 
-      List<SnapshotDescription> listTableSnapshots = admin.listTableSnapshots("test.*", ".*");
+      List<SnapshotDescription> listTableSnapshots =
+        admin.listTableSnapshots(Pattern.compile("test.*"), Pattern.compile(".*"));
       List<String> listTableSnapshotNames = new ArrayList<String>();
       assertEquals(3, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {
@@ -447,16 +448,14 @@ public class TestSnapshotTemporaryDirectory {
       assertTrue(listTableSnapshotNames.contains(table1Snapshot2));
       assertTrue(listTableSnapshotNames.contains(table2Snapshot1));
     } finally {
-      if (admin != null) {
-        try {
-          admin.deleteSnapshots("Table.*");
-        } catch (SnapshotDoesNotExistException ignore) {
-        }
-        if (admin.tableExists(tableName2)) {
-          UTIL.deleteTable(tableName2);
-        }
-        admin.close();
+      try {
+        admin.deleteSnapshots(Pattern.compile("Table.*"));
+      } catch (SnapshotDoesNotExistException ignore) {
       }
+      if (admin.tableExists(tableName2)) {
+        UTIL.deleteTable(tableName2);
+      }
+      admin.close();
     }
   }
 

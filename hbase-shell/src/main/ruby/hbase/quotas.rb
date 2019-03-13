@@ -238,30 +238,25 @@ module Hbase
       raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
 
       # Start the scanner
-      scanner = @admin.getQuotaRetriever(filter)
-      begin
-        iter = scanner.iterator
+      quotas = @admin.getQuota(filter)
+      iter = quotas.iterator
 
-        # Iterate results
-        while iter.hasNext
-          break if limit > 0 && count >= limit
+      # Iterate results
+      while iter.hasNext
+        break if limit > 0 && count >= limit
 
-          settings = iter.next
-          owner = {
-            USER => settings.getUserName,
-            TABLE => settings.getTableName,
-            NAMESPACE => settings.getNamespace,
-            REGIONSERVER => settings.getRegionServer
-          }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
+        settings = iter.next
+        owner = {
+          USER => settings.getUserName,
+          TABLE => settings.getTableName,
+          NAMESPACE => settings.getNamespace,
+          REGIONSERVER => settings.getRegionServer
+        }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
 
-          yield owner, settings.to_s
+        yield owner, settings.to_s
 
-          count += 1
-        end
-      ensure
-        scanner.close
+        count += 1
       end
-
       count
     end
 

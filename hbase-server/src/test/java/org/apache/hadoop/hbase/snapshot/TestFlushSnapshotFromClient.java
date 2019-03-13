@@ -34,10 +34,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
@@ -254,13 +254,13 @@ public class TestFlushSnapshotFromClient {
     // make sure the table doesn't exist
     boolean fail = false;
     do {
-    try {
-      admin.getTableDescriptor(tableName);
-      fail = true;
-      LOG.error("Table:" + tableName + " already exists, checking a new name");
-      tableName = TableName.valueOf(tableName+"!");
-    } catch (TableNotFoundException e) {
-      fail = false;
+      try {
+        admin.getDescriptor(tableName);
+        fail = true;
+        LOG.error("Table:" + tableName + " already exists, checking a new name");
+        tableName = TableName.valueOf(tableName + "!");
+      } catch (TableNotFoundException e) {
+        fail = false;
       }
     } while (fail);
 
@@ -280,7 +280,7 @@ public class TestFlushSnapshotFromClient {
         .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).build();
 
     // take the snapshot async
-    admin.takeSnapshotAsync(
+    admin.snapshotAsync(
       new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH));
 
     // constantly loop, looking for the snapshot to complete
@@ -311,15 +311,15 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneBeforeMergeName);
 
     // Merge two regions
-    List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
-    Collections.sort(regions, new Comparator<HRegionInfo>() {
+    List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+    Collections.sort(regions, new Comparator<RegionInfo>() {
       @Override
-      public int compare(HRegionInfo r1, HRegionInfo r2) {
+      public int compare(RegionInfo r1, RegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }
     });
 
-    int numRegions = admin.getTableRegions(TABLE_NAME).size();
+    int numRegions = admin.getRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
@@ -328,7 +328,7 @@ public class TestFlushSnapshotFromClient {
 
     // Verify that there's one region less
     waitRegionsAfterMerge(numRegionsAfterMerge);
-    assertEquals(numRegionsAfterMerge, admin.getTableRegions(TABLE_NAME).size());
+    assertEquals(numRegionsAfterMerge, admin.getRegions(TABLE_NAME).size());
 
     // Clone the table
     TableName cloneAfterMergeName = TableName.valueOf("cloneAfterMerge");
@@ -353,15 +353,15 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, numRows, TEST_FAM);
 
     // Merge two regions
-    List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
-    Collections.sort(regions, new Comparator<HRegionInfo>() {
+    List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+    Collections.sort(regions, new Comparator<RegionInfo>() {
       @Override
-      public int compare(HRegionInfo r1, HRegionInfo r2) {
+      public int compare(RegionInfo r1, RegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }
     });
 
-    int numRegions = admin.getTableRegions(TABLE_NAME).size();
+    int numRegions = admin.getRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
         regions.get(2).getEncodedNameAsBytes(), true);
@@ -369,7 +369,7 @@ public class TestFlushSnapshotFromClient {
         regions.get(5).getEncodedNameAsBytes(), true);
 
     waitRegionsAfterMerge(numRegionsAfterMerge);
-    assertEquals(numRegionsAfterMerge, admin.getTableRegions(TABLE_NAME).size());
+    assertEquals(numRegionsAfterMerge, admin.getRegions(TABLE_NAME).size());
 
     // Take a snapshot
     String snapshotName = "snapshotAfterMerge";
@@ -436,7 +436,7 @@ public class TestFlushSnapshotFromClient {
         try {
           LOG.info("Submitting snapshot request: " + ClientSnapshotDescriptionUtils
               .toString(ProtobufUtil.createHBaseProtosSnapshotDesc(ss)));
-          admin.takeSnapshotAsync(ss);
+          admin.snapshotAsync(ss);
         } catch (Exception e) {
           LOG.info("Exception during snapshot request: " + ClientSnapshotDescriptionUtils.toString(
             ProtobufUtil.createHBaseProtosSnapshotDesc(ss))
@@ -514,7 +514,7 @@ public class TestFlushSnapshotFromClient {
       throws IOException, InterruptedException {
     // Verify that there's one region less
     long startTime = System.currentTimeMillis();
-    while (admin.getTableRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
+    while (admin.getRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
       // This may be flaky... if after 15sec the merge is not complete give up
       // it will fail in the assertEquals(numRegionsAfterMerge).
       if ((System.currentTimeMillis() - startTime) > 15000)

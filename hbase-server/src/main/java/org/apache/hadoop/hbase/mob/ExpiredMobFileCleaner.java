@@ -111,11 +111,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
       cleanExpiredMobFiles(tableName, family);
       return 0;
     } finally {
-      try {
-        admin.close();
-      } catch (IOException e) {
-        LOG.error("Failed to close the HBaseAdmin.", e);
-      }
+      admin.close();
       try {
         connection.close();
       } catch (IOException e) {

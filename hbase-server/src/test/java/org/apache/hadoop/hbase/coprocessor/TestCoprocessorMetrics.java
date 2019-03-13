@@ -286,7 +286,7 @@ public class TestCoprocessorMetrics {
   public void setup() throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      for (HTableDescriptor htd : admin.listTables()) {
+      for (TableDescriptor htd : admin.listTableDescriptors()) {
         UTIL.deleteTable(htd.getTableName());
       }
     }

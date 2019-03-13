@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -121,23 +120,17 @@ public class TestFromClientSide3 {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     // Nothing to do.
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd: TEST_UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
-  }
+    }
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
@@ -325,12 +318,7 @@ public class TestFromClientSide3 {
       LOG.info("hbase.hstore.compaction.min should now be 5");
       HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
       htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-      admin.modifyTable(tableName, htd);
-      Pair<Integer, Integer> st;
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
 
       // Create 3 more store files.
@@ -352,11 +340,7 @@ public class TestFromClientSide3 {
       HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
       htd.modifyFamily(hcd);
-      admin.modifyTable(tableName, htd);
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
 
       // Issue a compaction request
@@ -387,11 +371,7 @@ public class TestFromClientSide3 {
       hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", null);
       htd.modifyFamily(hcd);
-      admin.modifyTable(tableName, htd);
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
       assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
           "hbase.hstore.compaction.min"));
