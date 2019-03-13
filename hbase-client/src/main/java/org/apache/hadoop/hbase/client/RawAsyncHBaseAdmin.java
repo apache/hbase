@@ -1173,8 +1173,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> mergeSwitch(boolean on) {
-    return setSplitOrMergeOn(on, MasterSwitchType.MERGE);
+  public CompletableFuture<Boolean> mergeSwitch(boolean enabled, boolean drainMerges) {
+    return setSplitOrMergeOn(enabled, drainMerges, MasterSwitchType.MERGE);
   }
 
   @Override
@@ -1183,8 +1183,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> splitSwitch(boolean on) {
-    return setSplitOrMergeOn(on, MasterSwitchType.SPLIT);
+  public CompletableFuture<Boolean> splitSwitch(boolean enabled, boolean drainSplits) {
+    return setSplitOrMergeOn(enabled, drainSplits, MasterSwitchType.SPLIT);
   }
 
   @Override
@@ -1192,16 +1192,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return isSplitOrMergeOn(MasterSwitchType.SPLIT);
   }
 
-  private CompletableFuture<Boolean> setSplitOrMergeOn(boolean on, MasterSwitchType switchType) {
+  private CompletableFuture<Boolean> setSplitOrMergeOn(boolean enabled, boolean synchronous,
+      MasterSwitchType switchType) {
     SetSplitOrMergeEnabledRequest request =
-        RequestConverter.buildSetSplitOrMergeEnabledRequest(on, false, switchType);
-    return this
-        .<Boolean> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<SetSplitOrMergeEnabledRequest, SetSplitOrMergeEnabledResponse, Boolean> call(
-                controller, stub, request, (s, c, req, done) -> s.setSplitOrMergeEnabled(c, req,
-                  done), (resp) -> resp.getPrevValueList().get(0))).call();
+      RequestConverter.buildSetSplitOrMergeEnabledRequest(enabled, synchronous, switchType);
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this
+        .<SetSplitOrMergeEnabledRequest, SetSplitOrMergeEnabledResponse, Boolean> call(controller,
+          stub, request, (s, c, req, done) -> s.setSplitOrMergeEnabled(c, req, done),
+          (resp) -> resp.getPrevValueList().get(0)))
+      .call();
   }
 
   private CompletableFuture<Boolean> isSplitOrMergeOn(MasterSwitchType switchType) {
@@ -3114,15 +3114,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balancerSwitch(final boolean on) {
-    return this
-        .<Boolean> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<SetBalancerRunningRequest, SetBalancerRunningResponse, Boolean> call(controller,
-                stub, RequestConverter.buildSetBalancerRunningRequest(on, true),
-                (s, c, req, done) -> s.setBalancerRunning(c, req, done),
-                (resp) -> resp.getPrevBalanceValue())).call();
+  public CompletableFuture<Boolean> balancerSwitch(boolean on, boolean drainRITs) {
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this
+        .<SetBalancerRunningRequest, SetBalancerRunningResponse, Boolean> call(controller, stub,
+          RequestConverter.buildSetBalancerRunningRequest(on, drainRITs),
+          (s, c, req, done) -> s.setBalancerRunning(c, req, done),
+          (resp) -> resp.getPrevBalanceValue()))
+      .call();
   }
 
   @Override

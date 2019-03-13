@@ -431,10 +431,25 @@ public interface AsyncAdmin {
 
   /**
    * Turn the Merge switch on or off.
-   * @param on
+   * @param enabled enabled or not
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> mergeSwitch(boolean on);
+  default CompletableFuture<Boolean> mergeSwitch(boolean enabled) {
+    return mergeSwitch(enabled, false);
+  }
+
+  /**
+   * Turn the Merge switch on or off.
+   * <p/>
+   * Notice that, the method itself is always non-blocking, which means it will always return
+   * immediately. The {@code drainMerges} parameter only effects when will we complete the returned
+   * {@link CompletableFuture}.
+   * @param enabled enabled or not
+   * @param drainMerges If <code>true</code>, it waits until current merge() call, if outstanding,
+   *          to return.
+   * @return Previous switch value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> mergeSwitch(boolean enabled, boolean drainMerges);
 
   /**
    * Query the current state of the Merge switch.
@@ -445,10 +460,25 @@ public interface AsyncAdmin {
 
   /**
    * Turn the Split switch on or off.
-   * @param on
+   * @param enabled enabled or not
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> splitSwitch(boolean on);
+  default CompletableFuture<Boolean> splitSwitch(boolean enabled) {
+    return splitSwitch(enabled, false);
+  }
+
+  /**
+   * Turn the Split switch on or off.
+   * <p/>
+   * Notice that, the method itself is always non-blocking, which means it will always return
+   * immediately. The {@code drainSplits} parameter only effects when will we complete the returned
+   * {@link CompletableFuture}.
+   * @param enabled enabled or not
+   * @param drainSplits If <code>true</code>, it waits until current split() call, if outstanding,
+   *          to return.
+   * @return Previous switch value wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> splitSwitch(boolean enabled, boolean drainSplits);
 
   /**
    * Query the current state of the Split switch.
@@ -1099,10 +1129,25 @@ public interface AsyncAdmin {
 
   /**
    * Turn the load balancer on or off.
-   * @param on
+   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
    * @return Previous balancer value wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> balancerSwitch(boolean on);
+  default CompletableFuture<Boolean> balancerSwitch(boolean on) {
+    return balancerSwitch(on, false);
+  }
+
+  /**
+   * Turn the load balancer on or off.
+   * <p/>
+   * Notice that, the method itself is always non-blocking, which means it will always return
+   * immediately. The {@code drainRITs} parameter only effects when will we complete the returned
+   * {@link CompletableFuture}.
+   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param drainRITs If <code>true</code>, it waits until current balance() call, if outstanding,
+   *          to return.
+   * @return Previous balancer value wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> balancerSwitch(boolean on, boolean drainRITs);
 
   /**
    * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
