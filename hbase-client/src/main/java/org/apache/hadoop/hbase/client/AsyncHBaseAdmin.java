@@ -295,8 +295,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> mergeSwitch(boolean on) {
-    return wrap(rawAdmin.mergeSwitch(on));
+  public CompletableFuture<Boolean> mergeSwitch(boolean enabled, boolean drainMerges) {
+    return wrap(rawAdmin.mergeSwitch(enabled, drainMerges));
   }
 
   @Override
@@ -305,8 +305,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> splitSwitch(boolean on) {
-    return wrap(rawAdmin.splitSwitch(on));
+  public CompletableFuture<Boolean> splitSwitch(boolean enabled, boolean drainSplits) {
+    return wrap(rawAdmin.splitSwitch(enabled, drainSplits));
   }
 
   @Override
@@ -655,8 +655,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balancerSwitch(boolean on) {
-    return wrap(rawAdmin.balancerSwitch(on));
+  public CompletableFuture<Boolean> balancerSwitch(boolean on, boolean drainRITs) {
+    return wrap(rawAdmin.balancerSwitch(on, drainRITs));
   }
 
   @Override
