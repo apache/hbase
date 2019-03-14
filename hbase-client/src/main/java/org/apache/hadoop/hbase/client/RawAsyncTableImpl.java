@@ -430,6 +430,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return newScan;
   }
 
+  @Override
   public void scan(Scan scan, AdvancedScanResultConsumer consumer) {
     new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, retryTimer,
       pauseNs, maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt).start();
