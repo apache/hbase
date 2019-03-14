@@ -26,6 +26,9 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -547,7 +550,7 @@ public class HttpServer implements FilterContainer {
       }
     }
 
-    addDefaultServlets();
+    addDefaultServlets(contexts);
 
     if (pathSpecs != null) {
       for (String path : pathSpecs) {
@@ -675,13 +678,28 @@ public class HttpServer implements FilterContainer {
   /**
    * Add default servlets.
    */
-  protected void addDefaultServlets() {
+  protected void addDefaultServlets(ContextHandlerCollection contexts) throws IOException {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
     addServlet("metrics", "/metrics", MetricsServlet.class);
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
     addServlet("conf", "/conf", ConfServlet.class);
+    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
+    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
+      addServlet("prof", "/prof", ProfileServlet.class);
+      Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
+      if (Files.notExists(tmpDir)) {
+        Files.createDirectories(tmpDir);
+      }
+      Context genCtx = new Context(contexts, "/prof-output");
+      genCtx.addServlet(ProfileOutputServlet.class, "/*");
+      genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
+      genCtx.setDisplayName("prof-output");
+    } else {
+      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +
+        "not specified. Disabling /prof endpoint.");
+    }
   }
 
   public void addContext(Context ctxt, boolean isFiltered)
