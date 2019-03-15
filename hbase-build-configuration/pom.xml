@@ -68,6 +68,31 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <!-- https://errorprone.info/docs/installation Maven section has details -->
+        <!-- required when compiling with JDK 8 -->
+        <javac.version>9+181-r4173-1</javac.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.google.errorprone</groupId>
+          <artifactId>error_prone_core</artifactId>
+          <version>${error-prone.version}</version>
+          <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.google.errorprone</groupId>
+          <artifactId>javac</artifactId>
+          <version>${javac.version}</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <!-- Turn on error-prone -->
@@ -76,42 +101,26 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <version>${maven.compiler.version}</version>
             <configuration>
-              <compilerId>javac-with-errorprone</compilerId>
-              <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <source>${compileSource}</source>
+              <target>${compileSource}</target>
+              <!-- required when compiling with JDK 8 -->
+              <fork>true</fork>
               <showWarnings>true</showWarnings>
               <compilerArgs>
-                <arg>-XepDisableWarningsInGeneratedCode</arg>
-                <arg>-Xep:FallThrough:OFF</arg> <!-- already in findbugs -->
-                <arg>-Xep:ClassNewInstance:ERROR</arg>
-                <arg>-Xep:MissingDefault:ERROR</arg>
+                <arg>-XDcompilePolicy=simple</arg>
+                <!-- All -Xep need to be on single line see: https://github.com/google/error-prone/pull/1115 -->
+                <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:FallThrough:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR</arg>
+                <!-- Required when compiling with JDK 8 -->
+                <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/${javac.version}/javac-${javac.version}.jar</arg>
               </compilerArgs>
               <annotationProcessorPaths>
                 <path>
-                  <groupId>org.apache.hbase</groupId>
-                  <artifactId>hbase-error-prone</artifactId>
-                  <version>${project.version}</version>
+                  <groupId>com.google.errorprone</groupId>
+                  <artifactId>error_prone_core</artifactId>
+                  <version>${error-prone.version}</version>
                 </path>
               </annotationProcessorPaths>
             </configuration>
-            <dependencies>
-              <dependency>
-                <groupId>org.codehaus.plexus</groupId>
-                <artifactId>plexus-compiler-javac-errorprone</artifactId>
-                <version>${plexus.errorprone.javac.version}</version>
-              </dependency>
-              <!-- override plexus-compiler-javac-errorprone's dependency on
-                Error Prone with the latest version -->
-              <dependency>
-                <groupId>com.google.errorprone</groupId>
-                <artifactId>error_prone_core</artifactId>
-                <version>${error-prone.version}</version>
-              </dependency>
-              <dependency>
-                <groupId>org.apache.hbase</groupId>
-                <artifactId>hbase-error-prone</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
           </plugin>
         </plugins>
       </build>

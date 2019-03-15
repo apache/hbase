@@ -61,7 +61,6 @@
   </licenses>
 
   <modules>
-    <module>hbase-build-support</module>
     <module>hbase-build-configuration</module>
     <module>hbase-replication</module>
     <module>hbase-mapreduce</module>
@@ -1568,7 +1567,7 @@
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>8.11</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
-    <error-prone.version>2.2.0</error-prone.version>
+    <error-prone.version>2.3.3</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <findbugs.maven.version>3.0.4</findbugs.maven.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
@@ -1580,7 +1579,6 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
-    <plexus.errorprone.javac.version>2.8.2</plexus.errorprone.javac.version>
     <spotbugs.version>3.1.11</spotbugs.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
@@ -1662,11 +1660,6 @@
       <dependency>
         <artifactId>hbase-backup</artifactId>
         <groupId>org.apache.hbase</groupId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-error-prone</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
