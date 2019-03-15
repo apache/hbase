@@ -673,6 +673,26 @@ public final class CellUtil {
     };
   }
 
+  public static byte[] cloneTags(Cell cell) {
+    byte[] output = new byte[cell.getTagsLength()];
+    copyTagsTo(cell, output, 0);
+    return output;
+  }
+
+  /**
+   * Copies the tags info into the tag portion of the cell
+   * @param cell the cell
+   * @param destination byte array that will receive tag data
+   * @param destinationOffset start offset in byte array that will receive tag data
+   * @return position after tags
+   */
+  public static int copyTagsTo(Cell cell, byte[] destination, int destinationOffset) {
+    int tlen = cell.getTagsLength();
+    System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination,
+      destinationOffset, tlen);
+    return destinationOffset + tlen;
+  }
+
   /**
    * Returns true if the first range start1...end1 overlaps with the second range
    * start2...end2, assuming the byte arrays represent row keys

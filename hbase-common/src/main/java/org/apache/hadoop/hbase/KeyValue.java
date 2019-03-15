@@ -252,6 +252,15 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     }
 
     /**
+     * True to indicate that the byte b is a valid type.
+     * @param b byte to check
+     * @return true or false
+     */
+    static boolean isValidType(byte b) {
+      return codeArray[b & 0xff] != null;
+    }
+
+    /**
      * Cannot rely on enum ordinals . They change if item is removed or moved.
      * Do our own codes.
      * @param b
@@ -346,7 +355,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * @param offset offset to start of the KeyValue
    * @param length length of the KeyValue
    */
-  public KeyValue(final byte [] bytes, final int offset, final int length) {
+  public KeyValue(final byte[] bytes, final int offset, final int length) {
+    KeyValueUtil.checkKeyValueBytes(bytes, offset, length, true);
     this.bytes = bytes;
     this.offset = offset;
     this.length = length;
@@ -2510,11 +2520,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * @param in
    * @return Created KeyValue or throws an exception
    * @throws IOException
-   * @deprecated Use {@link KeyValueUtil#iscreate(InputStream, boolean)}
+   * @deprecated Use {@link KeyValueUtil#createKeyValueFromInputStream(InputStream, boolean)}
    */
   @Deprecated
   public static KeyValue iscreate(final InputStream in) throws IOException {
-    return KeyValueUtil.iscreate(in, true);
+    return KeyValueUtil.createKeyValueFromInputStream(in, true);
   }
 
   /**

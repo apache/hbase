@@ -134,34 +134,6 @@ public class TestDataBlockEncoders {
   }
 
   /**
-   * Test KeyValues with negative timestamp.
-   *
-   * @throws IOException
-   *           On test failure.
-   */
-  @Test
-  public void testNegativeTimestamps() throws IOException {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
-    byte[] row = new byte[0];
-    byte[] family = new byte[0];
-    byte[] qualifier = new byte[0];
-    byte[] value = new byte[0];
-    if (includesTags) {
-      byte[] metaValue1 = Bytes.toBytes("metaValue1");
-      byte[] metaValue2 = Bytes.toBytes("metaValue2");
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue1) }));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
-          metaValue2) }));
-    } else {
-      kvList.add(new KeyValue(row, family, qualifier, -1l, Type.Put, value));
-      kvList.add(new KeyValue(row, family, qualifier, -2l, Type.Put, value));
-    }
-    testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
-  }
-
-
-  /**
    * Test whether compression -> decompression gives the consistent results on
    * pseudorandom sample.
    * @throws IOException On test failure.
@@ -441,7 +413,7 @@ public class TestDataBlockEncoders {
     byte[] family = new byte[0];
     byte[] qualifier = new byte[0];
     byte[] value = new byte[0];
-    KeyValue expectedKV = new KeyValue(row, family, qualifier, -1L, Type.Put, value);
+    KeyValue expectedKV = new KeyValue(row, family, qualifier, 1L, Type.Put, value);
     kvList.add(expectedKV);
     DataBlockEncoding encoding = DataBlockEncoding.ROW_INDEX_V1;
     DataBlockEncoder encoder = encoding.getEncoder();
