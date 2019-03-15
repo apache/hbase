@@ -169,9 +169,7 @@
                   <exclude>org.apache.hbase.thirdparty:*</exclude>
                   <exclude>com.google.protobuf:protobuf-java</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>
-                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
                   <exclude>com.google.j2objc:j2objc-annotations</exclude>
-                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>junit:junit</exclude>
                   <exclude>log4j:log4j</exclude>
