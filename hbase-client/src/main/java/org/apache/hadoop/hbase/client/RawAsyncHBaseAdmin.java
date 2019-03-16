@@ -1165,13 +1165,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     });
   }
 
-  private CompletableFuture<TableName> checkRegionsAndGetTableName(byte[] encodeRegionNameA,
-      byte[] encodeRegionNameB) {
+  private CompletableFuture<TableName> checkRegionsAndGetTableName(byte[][] encodedRegionNames) {
     AtomicReference<TableName> tableNameRef = new AtomicReference<>();
     CompletableFuture<TableName> future = new CompletableFuture<>();
-
-    checkAndGetTableName(encodeRegionNameA, tableNameRef, future);
-    checkAndGetTableName(encodeRegionNameB, tableNameRef, future);
+    for (byte[] encodedRegionName : encodedRegionNames) {
+      checkAndGetTableName(encodedRegionName, tableNameRef, future);
+    }
     return future;
   }
 
@@ -1221,41 +1220,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
-      boolean forcible) {
+  public CompletableFuture<Void> mergeRegions(List<byte[]> nameOfRegionsToMerge, boolean forcible) {
+    if (nameOfRegionsToMerge.size() < 2) {
+      return failedFuture(new IllegalArgumentException(
+        "Can not merge only " + nameOfRegionsToMerge.size() + " region"));
+    }
     CompletableFuture<Void> future = new CompletableFuture<>();
-    final byte[] encodeRegionNameA = toEncodeRegionName(nameOfRegionA);
-    final byte[] encodeRegionNameB = toEncodeRegionName(nameOfRegionB);
+    byte[][] encodedNameOfRegionsToMerge =
+      nameOfRegionsToMerge.stream().map(this::toEncodeRegionName).toArray(byte[][]::new);
 
-    addListener(checkRegionsAndGetTableName(encodeRegionNameA, encodeRegionNameB),
-      (tableName, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-          return;
-        }
+    addListener(checkRegionsAndGetTableName(encodedNameOfRegionsToMerge), (tableName, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
 
-        MergeTableRegionsRequest request = null;
-        try {
-          request = RequestConverter.buildMergeTableRegionsRequest(
-            new byte[][] { encodeRegionNameA, encodeRegionNameB }, forcible, ng.getNonceGroup(),
-            ng.newNonce());
-        } catch (DeserializationException e) {
-          future.completeExceptionally(e);
-          return;
-        }
+      MergeTableRegionsRequest request = null;
+      try {
+        request = RequestConverter.buildMergeTableRegionsRequest(encodedNameOfRegionsToMerge,
+          forcible, ng.getNonceGroup(), ng.newNonce());
+      } catch (DeserializationException e) {
+        future.completeExceptionally(e);
+        return;
+      }
 
-        addListener(
-          this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(tableName,
-            request, (s, c, req, done) -> s.mergeTableRegions(c, req, done),
-            (resp) -> resp.getProcId(), new MergeTableRegionProcedureBiConsumer(tableName)),
-          (ret, err2) -> {
-            if (err2 != null) {
-              future.completeExceptionally(err2);
-            } else {
-              future.complete(ret);
-            }
-          });
-      });
+      addListener(
+        this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(tableName, request,
+          (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
+          new MergeTableRegionProcedureBiConsumer(tableName)),
+        (ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }
+        });
+    });
     return future;
   }
 

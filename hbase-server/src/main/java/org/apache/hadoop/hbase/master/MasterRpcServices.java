@@ -794,7 +794,10 @@ public class MasterRpcServices extends RSRpcServices
 
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
 
-    assert(request.getRegionCount() == 2);
+    if (request.getRegionCount() != 2) {
+      throw new ServiceException(new DoNotRetryIOException(
+        "Only support merging 2 regions but " + request.getRegionCount() + " region passed"));
+    }
     RegionInfo[] regionsToMerge = new RegionInfo[request.getRegionCount()];
     for (int i = 0; i < request.getRegionCount(); i++) {
       final byte[] encodedNameOfRegion = request.getRegion(i).getValue().toByteArray();

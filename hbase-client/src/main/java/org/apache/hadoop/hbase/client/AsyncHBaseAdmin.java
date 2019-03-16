@@ -316,9 +316,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
-      boolean forcible) {
-    return wrap(rawAdmin.mergeRegions(nameOfRegionA, nameOfRegionB, forcible));
+  public CompletableFuture<Void> mergeRegions(List<byte[]> nameOfRegionsToMerge, boolean forcible) {
+    return wrap(rawAdmin.mergeRegions(nameOfRegionsToMerge, forcible));
   }
 
   @Override
