@@ -559,6 +559,11 @@
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${maven.javadoc.version}</version>
+        </plugin>
         <!-- Test oriented plugins -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -1415,6 +1420,7 @@
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
+    <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
@@ -3980,7 +3986,7 @@
           <reportSet>
             <id>devapi</id>
             <reports>
-              <report>aggregate</report>
+              <report>aggregate-no-fork</report>
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
@@ -4029,7 +4035,7 @@
           <reportSet>
             <id>testdevapi</id>
             <reports>
-              <report>test-aggregate</report>
+              <report>test-aggregate-no-fork</report>
             </reports>
             <configuration>
               <destDir>testdevapidocs</destDir>
@@ -4080,7 +4086,7 @@
           <reportSet>
             <id>userapi</id>
             <reports>
-              <report>aggregate</report>
+              <report>aggregate-no-fork</report>
             </reports>
             <configuration>
               <doclet>
@@ -4140,7 +4146,7 @@
           <reportSet>
             <id>testuserapi</id>
             <reports>
-              <report>test-aggregate</report>
+              <report>test-aggregate-no-fork</report>
             </reports>
             <configuration>
               <doclet>
