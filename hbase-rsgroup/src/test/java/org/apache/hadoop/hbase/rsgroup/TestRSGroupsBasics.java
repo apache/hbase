@@ -85,10 +85,10 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
   @Test
   public void testBasicStartUp() throws IOException {
     RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    assertEquals(4, defaultInfo.getServers().size());
-    // Assignment of root and meta regions.
+    assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
+    // Assignment of meta and rsgroup regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    // 2 meta, group
+    // 2 (meta and rsgroup)
     assertEquals(2, count);
   }
 
@@ -212,17 +212,25 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
   @Test
   public void testClearDeadServers() throws Exception {
     LOG.info("testClearDeadServers");
-    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 3);
+
+    // move region servers from default group to new group
+    final int serverCountToMoveToNewGroup = 3;
+    final RSGroupInfo newGroup =
+        addGroup(getGroupName(name.getMethodName()), serverCountToMoveToNewGroup);
+
+    // get the existing dead servers
     NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
 
-    ServerName targetServer = getServerName(newGroup.getServers().iterator().next());
+    // stop 1 region server in new group
+    ServerName serverToStop = getServerName(newGroup.getServers().iterator().next());
     try {
       // stopping may cause an exception
       // due to the connection loss
-      admin.stopRegionServer(targetServer.getAddress().toString());
+      admin.stopRegionServer(serverToStop.getAddress().toString());
       NUM_DEAD_SERVERS++;
     } catch (Exception e) {
     }
+
     // wait for stopped regionserver to dead server list
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -231,29 +239,38 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
           !master.getServerManager().areDeadServersInProgress();
       }
     });
-    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
-    assertTrue(cluster.getClusterMetrics().getDeadServerNames().contains(targetServer));
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(serverToStop));
+    assertTrue(cluster.getClusterMetrics().getDeadServerNames().contains(serverToStop));
+    assertTrue(newGroup.getServers().contains(serverToStop.getAddress()));
 
     // clear dead servers list
-    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(serverToStop));
     assertEquals(0, notClearedServers.size());
 
+    // the stopped region server gets cleared and removed from the group
     Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
-    assertFalse(newGroupServers.contains(targetServer.getAddress()));
-    assertEquals(2, newGroupServers.size());
+    assertFalse(newGroupServers.contains(serverToStop.getAddress()));
+    assertEquals(serverCountToMoveToNewGroup - 1 /* 1 stopped */, newGroupServers.size());
   }
 
   @Test
   public void testClearNotProcessedDeadServer() throws Exception {
     LOG.info("testClearNotProcessedDeadServer");
+
+    // get the existing dead servers
     NUM_DEAD_SERVERS = cluster.getClusterMetrics().getDeadServerNames().size();
-    RSGroupInfo appInfo = addGroup("deadServerGroup", 1);
-    ServerName targetServer = getServerName(appInfo.getServers().iterator().next());
+
+    // move region servers from default group to "dead server" group
+    final int serverCountToMoveToDeadServerGroup = 1;
+    RSGroupInfo deadServerGroup =
+        addGroup("deadServerGroup", serverCountToMoveToDeadServerGroup);
+
+    // stop 1 region servers in "dead server" group
+    ServerName serverToStop = getServerName(deadServerGroup.getServers().iterator().next());
     try {
       // stopping may cause an exception
       // due to the connection loss
-      admin.stopRegionServer(targetServer.getAddress().toString());
+      admin.stopRegionServer(serverToStop.getAddress().toString());
       NUM_DEAD_SERVERS++;
     } catch (Exception e) {
     }
@@ -263,8 +280,15 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
         return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
       }
     });
-    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
-    assertEquals(1, notClearedServers.size());
+
+    // the one and only region server in the group does not get cleared, even though it is stopped
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(serverToStop));
+    assertEquals(serverCountToMoveToDeadServerGroup, notClearedServers.size());
+
+    Set<Address> ServersInDeadServerGroup =
+        rsGroupAdmin.getRSGroupInfo(deadServerGroup.getName()).getServers();
+    assertEquals(serverCountToMoveToDeadServerGroup, ServersInDeadServerGroup.size());
+    assertTrue(ServersInDeadServerGroup.contains(serverToStop.getAddress()));
   }
 
   @Test
