@@ -41,7 +41,7 @@ may have to bulk import old-style CHANGES.txt on to the end in a code
 comment to preserve continuity of the CHANGELOG.
 
 DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.0.5 - Unreleased (as of 2019-03-16)
+## Release 2.0.5 - Unreleased (as of 2019-03-17)
 
 ### INCOMPATIBLE CHANGES:
 
