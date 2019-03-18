@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -494,8 +495,22 @@ public interface AsyncAdmin {
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    *          regions
    */
-  CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
-      boolean forcible);
+  default CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
+      boolean forcible) {
+    return mergeRegions(Arrays.asList(nameOfRegionA, nameOfRegionB), forcible);
+  }
+
+  /**
+   * Merge regions.
+   * <p/>
+   * You may get a {@code DoNotRetryIOException} if you pass more than two regions in but the master
+   * does not support merging more than two regions. At least till 2.2.0, we still only support
+   * merging two regions.
+   * @param nameOfRegionsToMerge encoded or full name of daughter regions
+   * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
+   *          regions
+   */
+  CompletableFuture<Void> mergeRegions(List<byte[]> nameOfRegionsToMerge, boolean forcible);
 
   /**
    * Split a table. The method will execute split action for each region in table.

@@ -111,6 +111,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -1739,40 +1740,20 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Merge two regions. Asynchronous operation.
-   * @param nameOfRegionA encoded or full name of region a
-   * @param nameOfRegionB encoded or full name of region b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @throws IOException
-   */
-  @Override
-  public Future<Void> mergeRegionsAsync(
-      final byte[] nameOfRegionA,
-      final byte[] nameOfRegionB,
-      final boolean forcible) throws IOException {
-    byte[][] nameofRegionsToMerge = new byte[2][];
-    nameofRegionsToMerge[0] = nameOfRegionA;
-    nameofRegionsToMerge[1] = nameOfRegionB;
-    return mergeRegionsAsync(nameofRegionsToMerge, forcible);
-  }
-
-  /**
-   * Merge two regions. Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
-   * @throws IOException
    */
   @Override
-  public Future<Void> mergeRegionsAsync(
-      final byte[][] nameofRegionsToMerge,
-      final boolean forcible) throws IOException {
-    assert(nameofRegionsToMerge.length >= 2);
+  public Future<Void> mergeRegionsAsync(final byte[][] nameofRegionsToMerge, final boolean forcible)
+      throws IOException {
+    Preconditions.checkArgument(nameofRegionsToMerge.length >= 2, "Can not merge only %s region",
+      nameofRegionsToMerge.length);
     byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
-    for(int i = 0; i < nameofRegionsToMerge.length; i++) {
-      encodedNameofRegionsToMerge[i] = HRegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ?
-          nameofRegionsToMerge[i] :
-          Bytes.toBytes(HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]));
+    for (int i = 0; i < nameofRegionsToMerge.length; i++) {
+      encodedNameofRegionsToMerge[i] =
+        RegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ? nameofRegionsToMerge[i]
+          : Bytes.toBytes(RegionInfo.encodeRegionName(nameofRegionsToMerge[i]));
     }
 
     TableName tableName = null;

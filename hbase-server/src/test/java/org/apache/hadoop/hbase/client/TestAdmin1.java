@@ -29,8 +29,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1433,6 +1435,50 @@ public class TestAdmin1 {
     } finally {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testMergeRegionsInvalidRegionCount()
+      throws IOException, InterruptedException, ExecutionException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
+    byte[][] splitRows = new byte[2][];
+    splitRows[0] = new byte[] { (byte) '3' };
+    splitRows[1] = new byte[] { (byte) '6' };
+    try {
+      TEST_UTIL.createTable(td, splitRows);
+      TEST_UTIL.waitTableAvailable(tableName);
+
+      List<RegionInfo> tableRegions = admin.getRegions(tableName);
+      // 0
+      try {
+        admin.mergeRegionsAsync(new byte[0][0], false).get();
+        fail();
+      } catch (IllegalArgumentException e) {
+        // expected
+      }
+      // 1
+      try {
+        admin.mergeRegionsAsync(new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false)
+          .get();
+        fail();
+      } catch (IllegalArgumentException e) {
+        // expected
+      }
+      // 3
+      try {
+        admin.mergeRegionsAsync(
+          tableRegions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new),
+          false).get();
+        fail();
+      } catch (DoNotRetryIOException e) {
+        // expected
+      }
+    } finally {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
     }
   }
 
