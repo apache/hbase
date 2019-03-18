@@ -20,100 +20,17 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.util.Objects;
 
-import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * UserPermission consists of a user name and a permission.
  * Permission can be one of [Global, Namespace, Table] permission.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class UserPermission {
 
   private String user;
   private Permission permission;
-
-  /**
-   * Construct a global user permission.
-   * @param user user name
-   * @param assigned assigned actions
-   */
-  public UserPermission(String user, Permission.Action... assigned) {
-    this.user = user;
-    this.permission = new GlobalPermission(assigned);
-  }
-
-  /**
-   * Construct a global user permission.
-   * @param user user name
-   * @param actionCode action codes
-   */
-  public UserPermission(String user, byte[] actionCode) {
-    this.user = user;
-    this.permission = new GlobalPermission(actionCode);
-  }
-
-  /**
-   * Construct a namespace user permission.
-   * @param user user name
-   * @param namespace namespace
-   * @param assigned assigned actions
-   */
-  public UserPermission(String user, String namespace, Permission.Action... assigned) {
-    this.user = user;
-    this.permission = new NamespacePermission(namespace, assigned);
-  }
-
-  /**
-   * Construct a table user permission.
-   * @param user user name
-   * @param tableName table name
-   * @param assigned assigned actions
-   */
-  public UserPermission(String user, TableName tableName, Permission.Action... assigned) {
-    this.user = user;
-    this.permission = new TablePermission(tableName, assigned);
-  }
-
-  /**
-   * Construct a table:family user permission.
-   * @param user user name
-   * @param tableName table name
-   * @param family family name of table
-   * @param assigned assigned actions
-   */
-  public UserPermission(String user, TableName tableName, byte[] family,
-    Permission.Action... assigned) {
-    this(user, tableName, family, null, assigned);
-  }
-
-  /**
-   * Construct a table:family:qualifier user permission.
-   * @param user user name
-   * @param tableName table name
-   * @param family family name of table
-   * @param qualifier qualifier name of table
-   * @param assigned assigned actions
-   */
-  public UserPermission(String user, TableName tableName, byte[] family, byte[] qualifier,
-      Permission.Action... assigned) {
-    this.user = user;
-    this.permission = new TablePermission(tableName, family, qualifier, assigned);
-  }
-
-  /**
-   * Construct a table:family:qualifier user permission.
-   * @param user user name
-   * @param tableName table name
-   * @param family family name of table
-   * @param qualifier qualifier name of table
-   * @param actionCodes assigned actions
-   */
-  public UserPermission(String user, TableName tableName, byte[] family, byte[] qualifier,
-      byte[] actionCodes) {
-    this.user = user;
-    this.permission = new TablePermission(tableName, family, qualifier, actionCodes);
-  }
 
   /**
    * Construct a user permission given permission.

@@ -381,11 +381,12 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     AccessTestAction checkMultiQualifierRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), new Permission[] {
-          new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1,
-            Permission.Action.READ),
-          new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q2,
-            Permission.Action.READ), });
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(),
+          new Permission[] {
+              Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
+                  .withQualifier(TEST_Q1).withActions(Action.READ).build(),
+              Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
+                  .withQualifier(TEST_Q2).withActions(Action.READ).build() });
         return null;
       }
     };
@@ -397,11 +398,14 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     AccessTestAction checkMultiQualifierReadWrite = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), new Permission[] {
-            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1,
-              Permission.Action.READ, Permission.Action.WRITE),
-            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q2,
-              Permission.Action.READ, Permission.Action.WRITE), });
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(),
+          new Permission[] {
+              Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
+                  .withQualifier(TEST_Q1)
+                  .withActions(Permission.Action.READ, Permission.Action.WRITE).build(),
+              Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
+                  .withQualifier(TEST_Q2)
+                  .withActions(Permission.Action.READ, Permission.Action.WRITE).build() });
         return null;
       }
     };

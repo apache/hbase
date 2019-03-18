@@ -23,14 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Represents an authorization for access whole cluster.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class GlobalPermission extends Permission {
-
-  /** Default constructor for Writable, do not use */
-  public GlobalPermission() {
-    super();
-    this.scope = Scope.EMPTY;
-  }
 
   /**
    * Construct a global permission.
@@ -38,15 +32,6 @@ public class GlobalPermission extends Permission {
    */
   GlobalPermission(Action... assigned) {
     super(assigned);
-    this.scope = Scope.GLOBAL;
-  }
-
-  /**
-   * Construct a global permission.
-   * @param actionCode assigned actions
-   */
-  GlobalPermission(byte[] actionCode) {
-    super(actionCode);
     this.scope = Scope.GLOBAL;
   }
 

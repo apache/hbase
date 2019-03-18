@@ -30,35 +30,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Represents an authorization for access for the given namespace.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class NamespacePermission extends Permission {
 
   private String namespace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
-
-  /** Default constructor for Writable, do not use */
-  public NamespacePermission() {
-    super();
-    this.scope = Scope.EMPTY;
-  }
 
   /**
    * Construct a namespace permission.
    * @param namespace namespace's name
    * @param assigned assigned actions
    */
-  public NamespacePermission(String namespace, Action... assigned) {
+  NamespacePermission(String namespace, Action... assigned) {
     super(assigned);
-    this.namespace = namespace;
-    this.scope = Scope.NAMESPACE;
-  }
-
-  /**
-   * Construct a namespace permission.
-   * @param namespace namespace's name
-   * @param actionCode assigned actions
-   */
-  public NamespacePermission(String namespace, byte[] actionCode) {
-    super(actionCode);
     this.namespace = namespace;
     this.scope = Scope.NAMESPACE;
   }

@@ -887,7 +887,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         if (owner == null)
           owner = getActiveUser(c).getShortName();
         final UserPermission userPermission = new UserPermission(owner,
-          desc.getTableName(), Action.values());
+            Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
         // switch to the real hbase master user for doing the RPC on the ACL table
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
@@ -990,7 +990,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       @Override
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(owner,
-          currentDesc.getTableName(), Action.values());
+            Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
         try (Table table = c.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.addUserPermission(conf, userperm, table);
@@ -2053,7 +2053,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   /* ---- Protobuf AccessControlService implementation ---- */
 
   /**
-   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   @Override
@@ -2076,7 +2076,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         preGrantOrRevoke(caller, "grant", perm);
 
         // regionEnv is set at #start. Hopefully not null at this point.
-        regionEnv.getConnection().getAdmin().grant(perm.getUser(), perm.getPermission(),
+        regionEnv.getConnection().getAdmin().grant(
+          new UserPermission(perm.getUser(), perm.getPermission()),
           request.getMergeExistingPermissions());
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should store permission changes in addition to auth results
@@ -2095,7 +2096,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
+   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
    */
   @Deprecated
   @Override
@@ -2116,7 +2117,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         }
         preGrantOrRevoke(caller, "revoke", perm);
         // regionEnv is set at #start. Hopefully not null here.
-        regionEnv.getConnection().getAdmin().revoke(perm.getUser(), perm.getPermission());
+        regionEnv.getConnection().getAdmin()
+            .revoke(new UserPermission(perm.getUser(), perm.getPermission()));
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should record all permission changes
           AUDITLOG.trace("Revoked permission " + perm.toString());
@@ -2211,7 +2213,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             // them. Also using acl as table name to be inline with the results of global admin and
             // will help in avoiding any leakage of information about being superusers.
             for (String user : Superusers.getSuperUsers()) {
-              perms.add(new UserPermission(user, Action.values()));
+              perms.add(new UserPermission(user,
+                  Permission.newBuilder().withActions(Action.values()).build()));
             }
           }
         }

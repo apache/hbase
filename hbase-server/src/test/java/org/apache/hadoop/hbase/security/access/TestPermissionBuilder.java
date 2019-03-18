@@ -46,7 +46,7 @@ public class TestPermissionBuilder {
     assertEquals(0, permission.getActions().length);
 
     // check global permission with ADMIN action
-    permission = Permission.newBuilder().withActions(Action.ADMIN).build();
+    permission = Permission.newBuilder().withActionCodes(Bytes.toBytes("A")).build();
     assertTrue(permission instanceof GlobalPermission);
     assertEquals(1, permission.getActions().length);
     assertTrue(permission.getActions()[0] == Action.ADMIN);
@@ -57,8 +57,15 @@ public class TestPermissionBuilder {
           .withActions(Action.CREATE, Action.READ).build();
       fail("Should throw NPE");
     } catch (NullPointerException e) {
-      // catch NPE because set family but table name is null
+      // catch NPE because set qualifier but table name is null
     }
+
+    permission = Permission.newBuilder().withActionCodes(Bytes.toBytes("ACP"))
+        .withActions(Action.READ, Action.ADMIN).build();
+    assertEquals(3, permission.getActions().length);
+    assertEquals(Action.READ, permission.getActions()[0]);
+    assertEquals(Action.CREATE, permission.getActions()[1]);
+    assertEquals(Action.ADMIN, permission.getActions()[2]);
   }
 
   @Test
