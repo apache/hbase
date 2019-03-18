@@ -88,6 +88,7 @@ public class RecoverableZooKeeper {
   private String quorumServers;
   private final Random salter;
   private final RetryCounter authFailedRetryCounter;
+  private int maxMultiSize;
 
   // The metadata attached to each piece of data has the
   // format:
@@ -106,7 +107,7 @@ public class RecoverableZooKeeper {
       justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
-      int authFailedRetries, int authFailedPause) throws IOException {
+      int authFailedRetries, int authFailedPause, int maxMultiSize) throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries+1, retryIntervalMillis, maxSleepTime);
@@ -123,7 +124,14 @@ public class RecoverableZooKeeper {
     this.watcher = watcher;
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
-    try {checkZk();} catch (Exception x) {/* ignore */}
+    this.maxMultiSize = maxMultiSize;
+
+    try {
+      checkZk();
+    } catch (Exception x) {
+      /* ignore */
+    }
+
     salter = new Random();
 
     RetryConfig authFailedRetryConfig = new RetryConfig(
@@ -136,7 +144,18 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * Try to create a Zookeeper connection. Turns any exception encountered into a
+   * Returns the maximum size (in bytes) that should be included in any single multi() call.
+   *
+   * NB: This is an approximation, so there may be variance in the msg actually sent over the
+   * wire. Please be sure to set this approximately, with respect to your ZK server configuration
+   * for jute.maxbuffer.
+   */
+  public int getMaxMultiSizeLimit() {
+    return maxMultiSize;
+  }
+
+  /**
+   * Try to create a ZooKeeper connection. Turns any exception encountered into a
    * KeeperException.OperationTimeoutException so it can retried.
    * @return The created Zookeeper connection object
    * @throws KeeperException

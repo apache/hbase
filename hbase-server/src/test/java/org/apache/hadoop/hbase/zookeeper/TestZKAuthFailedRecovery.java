@@ -59,9 +59,10 @@ public class TestZKAuthFailedRecovery {
     @Override
     public RecoverableZooKeeper create(String quorumServers, int sessionTimeout, Watcher watcher,
         int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
-        int authFailedRetries, int authFailedPause) throws IOException {
+        int authFailedRetries, int authFailedPause, int multiMaxSize) throws IOException {
       return new AuthFailingRecoverableZooKeeper(quorumServers, sessionTimeout, watcher, maxRetries,
-          retryIntervalMillis, maxSleepTime, identifier, authFailedRetries, authFailedPause);
+          retryIntervalMillis, maxSleepTime, identifier, authFailedRetries, authFailedPause,
+          multiMaxSize);
     }
   }
 
@@ -71,10 +72,10 @@ public class TestZKAuthFailedRecovery {
     @Override
     public RecoverableZooKeeper create(String quorumServers, int sessionTimeout, Watcher watcher,
         int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
-        int authFailedRetries, int authFailedPause) throws IOException {
+        int authFailedRetries, int authFailedPause, int multiMaxSize) throws IOException {
       return new SelfHealingRecoverableZooKeeper(quorumServers, sessionTimeout, watcher, maxRetries,
           retryIntervalMillis, maxSleepTime, identifier, authFailedRetries, authFailedPause,
-          FAILURES_BEFORE_SUCCESS);
+          FAILURES_BEFORE_SUCCESS, multiMaxSize);
     }
   }
 

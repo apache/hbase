@@ -39,9 +39,10 @@ public class SelfHealingRecoverableZooKeeper extends RecoverableZooKeeper {
 
   public SelfHealingRecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher,
       int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
-      int authFailedRetries, int authFailedPause, int numFailuresBeforeSuccess) throws IOException {
+      int authFailedRetries, int authFailedPause, int numFailuresBeforeSuccess, int multiMaxSize)
+      throws IOException {
     super(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
-        identifier, authFailedRetries, authFailedPause);
+        identifier, authFailedRetries, authFailedPause, multiMaxSize);
     this.quorumServers = quorumServers;
     this.sessionTimeout = sessionTimeout;
     this.watcher = watcher;

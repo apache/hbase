@@ -33,9 +33,9 @@ public class AuthFailingRecoverableZooKeeper extends RecoverableZooKeeper {
 
   public AuthFailingRecoverableZooKeeper(String quorumServers, int sessionTimeout, Watcher watcher,
       int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
-      int authFailedRetries, int authFailedPause) throws IOException {
+      int authFailedRetries, int authFailedPause, int multiMaxSize) throws IOException {
     super(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
-        identifier, authFailedRetries, authFailedPause);
+        identifier, authFailedRetries, authFailedPause, multiMaxSize);
     this.quorumServers = quorumServers;
     this.sessionTimeout = sessionTimeout;
     this.watcher = watcher;
