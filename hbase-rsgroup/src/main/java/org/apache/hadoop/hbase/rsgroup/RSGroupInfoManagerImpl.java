@@ -479,18 +479,18 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   private List<Address> getDefaultServers() throws IOException {
+    // Build a list of servers in other groups than default group, from rsGroupMap
+    Set<Address> serversInOtherGroup = new HashSet<>();
+    for (RSGroupInfo group : listRSGroups() /* get from rsGroupMap */) {
+      if (!RSGroupInfo.DEFAULT_GROUP.equals(group.getName())) { // not default group
+        serversInOtherGroup.addAll(group.getServers());
+        }
+      }
+    // Get all online servers from Zookeeper and find out servers in default group
     List<Address> defaultServers = new LinkedList<Address>();
     for(ServerName server : getOnlineRS()) {
       Address address = Address.fromParts(server.getHostname(), server.getPort());
-      boolean found = false;
-      for(RSGroupInfo info : rsGroupMap.values()) {
-        if(!RSGroupInfo.DEFAULT_GROUP.equals(info.getName()) &&
-            info.containsServer(address)) {
-          found = true;
-          break;
-        }
-      }
-      if(!found) {
+      if (!serversInOtherGroup.contains(server)) { // not in other groups
         defaultServers.add(address);
       }
     }
