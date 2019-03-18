@@ -82,18 +82,13 @@ public class RecoverableZooKeeper {
   private Watcher watcher;
   private int sessionTimeout;
   private String quorumServers;
-
-  public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
-    throws IOException {
-    this(quorumServers, sessionTimeout, watcher, maxRetries, retryIntervalMillis, maxSleepTime,
-        null);
-  }
+  private int maxMultiSize;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
-      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier)
+      Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime, String identifier,
+      int maxMultiSize)
     throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.retryCounterFactory =
@@ -111,12 +106,24 @@ public class RecoverableZooKeeper {
     this.watcher = watcher;
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
+    this.maxMultiSize = maxMultiSize;
 
     try {
       checkZk();
     } catch (Exception x) {
       /* ignore */
     }
+  }
+
+  /**
+   * Returns the maximum size (in bytes) that should be included in any single multi() call.
+   *
+   * NB: This is an approximation, so there may be variance in the msg actually sent over the
+   * wire. Please be sure to set this approximately, with respect to your ZK server configuration
+   * for jute.maxbuffer.
+   */
+  public int getMaxMultiSizeLimit() {
+    return maxMultiSize;
   }
 
   /**
