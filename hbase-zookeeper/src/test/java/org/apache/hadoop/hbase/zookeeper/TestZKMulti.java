@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -57,21 +61,23 @@ public class TestZKMulti {
   private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
   private static ZKWatcher zkw = null;
 
+  private static class ZKMultiAbortable implements Abortable {
+    @Override
+    public void abort(String why, Throwable e) {
+      LOG.info(why, e);
+    }
+
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
-    Abortable abortable = new Abortable() {
-      @Override
-      public void abort(String why, Throwable e) {
-        LOG.info(why, e);
-      }
-
-      @Override
-      public boolean isAborted() {
-        return false;
-      }
-    };
+    Abortable abortable = new ZKMultiAbortable();
     zkw = new ZKWatcher(conf,
       "TestZKMulti", abortable, true);
   }
@@ -366,6 +372,73 @@ public class TestZKMulti {
     assertTrue("Wrongly deleted parent znode 3!", ZKUtil.checkExists(zkw, parentZNode3) > -1);
     children = zkw.getRecoverableZooKeeper().getChildren(parentZNode3, false);
     assertTrue("Failed to delete child znodes of parent znode 1!", 0 == children.size());
+  }
+
+  @Test
+  public void testBatchedDeletesOfWideZNodes() throws Exception {
+    // Batch every 50bytes
+    final int batchSize = 50;
+    Configuration localConf = new Configuration(TEST_UTIL.getConfiguration());
+    localConf.setInt("zookeeper.multi.max.size", batchSize);
+    try (ZKWatcher customZkw = new ZKWatcher(localConf,
+      "TestZKMulti_Custom", new ZKMultiAbortable(), true)) {
+
+      // With a parent znode like this, we'll get batches of 2-3 elements
+      final String parent1 = "/batchedDeletes1";
+      final String parent2 = "/batchedDeletes2";
+      final byte[] EMPTY_BYTES = new byte[0];
+
+      // Write one node
+      List<Op> ops = new ArrayList<>();
+      ops.add(Op.create(parent1, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+      for (int i = 0; i < batchSize * 2; i++) {
+        ops.add(Op.create(
+            parent1 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+      }
+      customZkw.getRecoverableZooKeeper().multi(ops);
+
+      // Write into a second node
+      ops.clear();
+      ops.add(Op.create(parent2, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+      for (int i = 0; i < batchSize * 4; i++) {
+        ops.add(Op.create(
+            parent2 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+      }
+      customZkw.getRecoverableZooKeeper().multi(ops);
+
+      // These should return successfully
+      ZKUtil.deleteChildrenRecursively(customZkw, parent1);
+      ZKUtil.deleteChildrenRecursively(customZkw, parent2);
+    }
+  }
+
+  @Test
+  public void testListPartitioning() {
+    // 10 Bytes
+    ZKUtilOp tenByteOp = ZKUtilOp.deleteNodeFailSilent("/123456789");
+
+    // Simple, single element case
+    assertEquals(Collections.singletonList(Collections.singletonList(tenByteOp)),
+        ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 15));
+
+    // Simple case where we exceed the limit, but must make the list
+    assertEquals(Collections.singletonList(Collections.singletonList(tenByteOp)),
+        ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 5));
+
+    // Each gets its own bucket
+    assertEquals(
+        Arrays.asList(Arrays.asList(tenByteOp), Arrays.asList(tenByteOp), Arrays.asList(tenByteOp)),
+        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 15));
+
+    // Test internal boundary
+    assertEquals(
+        Arrays.asList(Arrays.asList(tenByteOp,tenByteOp), Arrays.asList(tenByteOp)),
+        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 20));
+
+    // Plenty of space for one partition
+    assertEquals(
+        Arrays.asList(Arrays.asList(tenByteOp, tenByteOp, tenByteOp)),
+        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 50));
   }
 
   private void createZNodeTree(String rootZNode) throws KeeperException,
