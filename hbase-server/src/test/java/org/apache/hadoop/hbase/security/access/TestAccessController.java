@@ -1168,8 +1168,9 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          conn.getAdmin().grant(USER_RO.getShortName(),
-            new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ), false);
+          conn.getAdmin().grant(new UserPermission(USER_RO.getShortName(), Permission
+              .newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withActions(Action.READ).build()),
+            false);
         }
         return null;
       }
@@ -1179,8 +1180,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          conn.getAdmin().revoke(USER_RO.getShortName(), Permission.newBuilder(TEST_TABLE)
-              .withFamily(TEST_FAMILY).withActions(Action.READ).build());
+          conn.getAdmin().revoke(new UserPermission(USER_RO.getShortName(), Permission
+              .newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withActions(Action.READ).build()));
         }
         return null;
       }
@@ -1218,8 +1219,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preGrant(ObserverContextImpl.createAndPrepare(CP_ENV),
-          new UserPermission(USER_RO.getShortName(),
-              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)),
+          new UserPermission(USER_RO.getShortName(), Permission.newBuilder(TEST_TABLE)
+              .withFamily(TEST_FAMILY).withActions(Action.READ).build()),
           false);
         return null;
       }
@@ -1229,8 +1230,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRevoke(ObserverContextImpl.createAndPrepare(CP_ENV),
-          new UserPermission(USER_RO.getShortName(),
-              new TablePermission(TEST_TABLE, TEST_FAMILY, Action.READ)));
+          new UserPermission(USER_RO.getShortName(), Permission.newBuilder(TEST_TABLE)
+              .withFamily(TEST_FAMILY).withActions(Action.READ).build()));
         return null;
       }
     };
@@ -1689,8 +1690,8 @@ public class TestAccessController extends SecureTestUtil {
         acl.close();
       }
 
-      UserPermission ownerperm =
-          new UserPermission(USER_OWNER.getName(), tableName, Action.values());
+      UserPermission ownerperm = new UserPermission(USER_OWNER.getName(),
+          Permission.newBuilder(tableName).withActions(Action.values()).build());
       assertTrue("Owner should have all permissions on table",
         hasFoundUserPermission(ownerperm, perms));
 
@@ -1698,7 +1699,8 @@ public class TestAccessController extends SecureTestUtil {
       String userName = user.getShortName();
 
       UserPermission up =
-          new UserPermission(userName, tableName, family1, qualifier, Permission.Action.READ);
+          new UserPermission(userName, Permission.newBuilder(tableName).withFamily(family1)
+              .withQualifier(qualifier).withActions(Permission.Action.READ).build());
       assertFalse("User should not be granted permission: " + up.toString(),
         hasFoundUserPermission(up, perms));
 
@@ -1717,12 +1719,13 @@ public class TestAccessController extends SecureTestUtil {
       }
 
       UserPermission upToVerify =
-          new UserPermission(userName, tableName, family1, qualifier, Permission.Action.READ);
+          new UserPermission(userName, Permission.newBuilder(tableName).withFamily(family1)
+              .withQualifier(qualifier).withActions(Permission.Action.READ).build());
       assertTrue("User should be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
 
-      upToVerify =
-          new UserPermission(userName, tableName, family1, qualifier, Permission.Action.WRITE);
+      upToVerify = new UserPermission(userName, Permission.newBuilder(tableName).withFamily(family1)
+          .withQualifier(qualifier).withActions(Permission.Action.WRITE).build());
       assertFalse("User should not be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
 
@@ -1740,9 +1743,9 @@ public class TestAccessController extends SecureTestUtil {
         acl.close();
       }
 
-      upToVerify =
-          new UserPermission(userName, tableName, family1, qualifier, Permission.Action.WRITE,
-              Permission.Action.READ);
+      upToVerify = new UserPermission(userName,
+          Permission.newBuilder(tableName).withFamily(family1).withQualifier(qualifier)
+              .withActions(Permission.Action.WRITE, Permission.Action.READ).build());
       assertTrue("User should be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
 
@@ -1780,8 +1783,8 @@ public class TestAccessController extends SecureTestUtil {
         acl.close();
       }
 
-      UserPermission newOwnerperm =
-          new UserPermission(newOwner.getName(), tableName, Action.values());
+      UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
+          Permission.newBuilder(tableName).withActions(Action.values()).build());
       assertTrue("New owner should have all permissions on table",
         hasFoundUserPermission(newOwnerperm, perms));
     } finally {
@@ -1805,10 +1808,12 @@ public class TestAccessController extends SecureTestUtil {
 
     Collection<String> superUsers = Superusers.getSuperUsers();
     List<UserPermission> adminPerms = new ArrayList<>(superUsers.size() + 1);
-    adminPerms.add(new UserPermission(USER_ADMIN.getShortName(), Bytes.toBytes("ACRW")));
-    for(String user: superUsers) {
+    adminPerms.add(new UserPermission(USER_ADMIN.getShortName(), Permission.newBuilder()
+        .withActions(Action.ADMIN, Action.CREATE, Action.READ, Action.WRITE).build()));
+    for (String user : superUsers) {
       // Global permission
-      adminPerms.add(new UserPermission(user, Action.values()));
+      adminPerms.add(
+        new UserPermission(user, Permission.newBuilder().withActions(Action.values()).build()));
     }
     assertTrue("Only super users, global users and user admin has permission on table hbase:acl " +
         "per setup", perms.size() == 5 + superUsers.size() &&

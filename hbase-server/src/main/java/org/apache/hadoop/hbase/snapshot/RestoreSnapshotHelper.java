@@ -865,10 +865,8 @@ public class RestoreSnapshotHelper {
         for (Entry<String, Permission> e : perms.entries()) {
           String user = e.getKey();
           TablePermission tablePerm = (TablePermission) e.getValue();
-          TablePermission newPerm = new TablePermission(newTableName,
-            tablePerm.getFamily(), tablePerm.getQualifier(), tablePerm.getActions());
-          AccessControlClient.grant(conn, newPerm.getTableName(), user, newPerm.getFamily(),
-            newPerm.getQualifier(), newPerm.getActions());
+          AccessControlClient.grant(conn, newTableName, user, tablePerm.getFamily(),
+            tablePerm.getQualifier(), tablePerm.getActions());
         }
       } catch (Throwable e) {
         throw new IOException("Grant acl into newly creatd table failed. snapshot: " + snapshot

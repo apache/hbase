@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -275,7 +277,7 @@ public class Permission extends VersionedWritable {
     private TableName tableName;
     private byte[] family;
     private byte[] qualifier;
-    private Action[] actions;
+    private List<Action> actions = new ArrayList<>();
 
     private Builder() {
     }
@@ -301,17 +303,37 @@ public class Permission extends VersionedWritable {
     }
 
     public Builder withActions(Action... actions) {
-      this.actions = actions;
+      for (Action action : actions) {
+        if (action != null) {
+          this.actions.add(action);
+        }
+      }
+      return this;
+    }
+
+    public Builder withActionCodes(byte[] actionCodes) {
+      if (actionCodes != null) {
+        for (byte code : actionCodes) {
+          Action action = ACTION_BY_CODE.get(code);
+          if (action == null) {
+            LOG.error("Ignoring unknown action code '{}'",
+              Bytes.toStringBinary(new byte[] { code }));
+            continue;
+          }
+          this.actions.add(action);
+        }
+      }
       return this;
     }
 
     public Permission build() {
+      Action[] actionArray = actions.toArray(new Action[actions.size()]);
       if (namespace != null) {
-        return new NamespacePermission(namespace, actions);
+        return new NamespacePermission(namespace, actionArray);
       } else if (tableName != null) {
-        return new TablePermission(tableName, family, qualifier, actions);
+        return new TablePermission(tableName, family, qualifier, actionArray);
       } else {
-        return new GlobalPermission(actions);
+        return new GlobalPermission(actionArray);
       }
     }
   }

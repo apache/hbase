@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -1395,19 +1395,16 @@ public interface AsyncAdmin {
 
   /**
    * Grants user specific permissions
-   * @param userName user name
-   * @param permission the specific permission
+   * @param userPermission user name and the specific permission
    * @param mergeExistingPermissions If set to false, later granted permissions will override
    *          previous granted permissions. otherwise, it'll merge with previous granted
    *          permissions.
    */
-  CompletableFuture<Void> grant(String userName, Permission permission,
-      boolean mergeExistingPermissions);
+  CompletableFuture<Void> grant(UserPermission userPermission, boolean mergeExistingPermissions);
 
   /**
    * Revokes user specific permissions
-   * @param userName user name
-   * @param permission the specific permission
+   * @param userPermission user name and the specific permission
    */
-  CompletableFuture<Void> revoke(String userName, Permission permission);
+  CompletableFuture<Void> revoke(UserPermission userPermission);
 }
