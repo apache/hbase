@@ -247,7 +247,7 @@ public class AccessControlUtil {
    * @return the converted TablePermission
    */
   public static TablePermission toTablePermission(AccessControlProtos.TablePermission proto) {
-    List<Permission.Action> actions = toPermissionActions(proto.getActionList());
+    Permission.Action[] actions = toPermissionActions(proto.getActionList());
     TableName table = null;
     byte[] qualifier = null;
     byte[] family = null;
@@ -261,8 +261,7 @@ public class AccessControlUtil {
     if (proto.hasQualifier()) {
       qualifier = proto.getQualifier().toByteArray();
     }
-    return new TablePermission(table, family, qualifier,
-        actions.toArray(new Permission.Action[actions.size()]));
+    return new TablePermission(table, family, qualifier, actions);
   }
 
   /**
@@ -273,21 +272,21 @@ public class AccessControlUtil {
   public static Permission toPermission(AccessControlProtos.Permission proto) {
     if (proto.getType() == AccessControlProtos.Permission.Type.Global) {
       AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-      return new GlobalPermission(actions.toArray(new Permission.Action[actions.size()]));
+      Permission.Action[] actions = toPermissionActions(perm.getActionList());
+      return Permission.newBuilder().withActions(actions).build();
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
       AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
+      Permission.Action[] actions = toPermissionActions(perm.getActionList());
       if (!proto.hasNamespacePermission()) {
         throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
       }
-      return new NamespacePermission(perm.getNamespaceName().toStringUtf8(),
-        actions.toArray(new Permission.Action[actions.size()]));
+      return Permission.newBuilder(perm.getNamespaceName().toStringUtf8()).withActions(actions)
+          .build();
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Table) {
       AccessControlProtos.TablePermission perm = proto.getTablePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
+      Permission.Action[] actions = toPermissionActions(perm.getActionList());
       byte[] qualifier = null;
       byte[] family = null;
       TableName table = null;
@@ -301,8 +300,8 @@ public class AccessControlUtil {
       if (perm.hasQualifier()) {
         qualifier = perm.getQualifier().toByteArray();
       }
-      return new TablePermission(table, family, qualifier,
-        actions.toArray(new Permission.Action[actions.size()]));
+      return Permission.newBuilder(table).withFamily(family).withQualifier(qualifier)
+          .withActions(actions).build();
     }
     throw new IllegalStateException("Unrecognize Perm Type: " + proto.getType());
   }
@@ -364,16 +363,16 @@ public class AccessControlUtil {
   }
 
   /**
-   * Converts a list of Permission.Action proto to a list of client Permission.Action objects.
+   * Converts a list of Permission.Action proto to an array of client Permission.Action objects.
    *
    * @param protoActions the list of protobuf Actions
-   * @return the converted list of Actions
+   * @return the converted array of Actions
    */
-  public static List<Permission.Action> toPermissionActions(
-      List<AccessControlProtos.Permission.Action> protoActions) {
-    List<Permission.Action> actions = new ArrayList<>(protoActions.size());
-    for (AccessControlProtos.Permission.Action a : protoActions) {
-      actions.add(toPermissionAction(a));
+  public static Permission.Action[]
+      toPermissionActions(List<AccessControlProtos.Permission.Action> protoActions) {
+    Permission.Action[] actions = new Permission.Action[protoActions.size()];
+    for (int i = 0; i < protoActions.size(); i++) {
+      actions[i] = toPermissionAction(protoActions.get(i));
     }
     return actions;
   }
@@ -491,7 +490,7 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -520,7 +519,7 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -548,7 +547,7 @@ public class AccessControlUtil {
    * @param namespace the short name of the user to grant permissions
    * @param actions the permissions to be granted
    * @throws ServiceException
-   * @deprecated Use {@link Admin#grant(String, Permission, boolean)} instead.
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -574,7 +573,7 @@ public class AccessControlUtil {
    * @param userShortName the short name of the user to revoke permissions
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
+   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,
@@ -604,7 +603,7 @@ public class AccessControlUtil {
    * @param q optional qualifier
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
+   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,
@@ -631,7 +630,7 @@ public class AccessControlUtil {
    * @param namespace optional table name
    * @param actions the permissions to be revoked
    * @throws ServiceException on failure
-   * @deprecated Use {@link Admin#revoke(String, Permission)} instead.
+   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
    */
   @Deprecated
   public static void revoke(RpcController controller,

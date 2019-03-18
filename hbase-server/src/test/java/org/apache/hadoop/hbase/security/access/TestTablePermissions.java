@@ -143,14 +143,18 @@ public class TestTablePermissions {
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       // add some permissions
       addUserPermission(conf,
-        new UserPermission("george", TEST_TABLE, Permission.Action.READ, Permission.Action.WRITE),
+        new UserPermission("george",
+            Permission.newBuilder(TEST_TABLE)
+                .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
         connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-        new UserPermission("hubert", TEST_TABLE, Permission.Action.READ),
+        new UserPermission("hubert",
+            Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()),
         connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-        new UserPermission("humphrey", TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER,
-          Permission.Action.READ),
+        new UserPermission("humphrey",
+            Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
+                .withActions(Permission.Action.READ).build()),
         connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     // retrieve the same
@@ -211,7 +215,8 @@ public class TestTablePermissions {
     try (Connection connection = ConnectionFactory.createConnection(conf);
         Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
       AccessControlLists.addUserPermission(conf,
-        new UserPermission("hubert", TEST_TABLE2, Permission.Action.READ, Permission.Action.WRITE),
+        new UserPermission("hubert", Permission.newBuilder(TEST_TABLE2)
+            .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
         table);
     }
     // check full load
@@ -246,17 +251,24 @@ public class TestTablePermissions {
     Configuration conf = UTIL.getConfiguration();
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       addUserPermission(conf,
-        new UserPermission("albert", TEST_TABLE, Permission.Action.READ),
-          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("albert",
+            Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-        new UserPermission("betty", TEST_TABLE, Permission.Action.READ, Permission.Action.WRITE),
-          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("betty",
+            Permission.newBuilder(TEST_TABLE)
+                .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-        new UserPermission("clark", TEST_TABLE, TEST_FAMILY, Permission.Action.READ),
-          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("clark",
+            Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+                .withActions(Permission.Action.READ).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-        new UserPermission("dwight", TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER,
-          Permission.Action.WRITE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("dwight",
+            Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
+                .withActions(Permission.Action.WRITE).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     // verify permissions survive changes in table metadata
     ListMultimap<String, UserPermission> preperms =
@@ -302,17 +314,16 @@ public class TestTablePermissions {
 
   private ListMultimap<String, UserPermission> createPermissions() {
     ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
-    permissions.put("george",
-      new UserPermission("george", TEST_TABLE, Permission.Action.READ));
-    permissions.put("george",
-      new UserPermission("george", TEST_TABLE, TEST_FAMILY, Permission.Action.WRITE));
-    permissions.put("george",
-      new UserPermission("george", TEST_TABLE2, Permission.Action.READ));
-    permissions.put("hubert",
-      new UserPermission("hubert", TEST_TABLE2, Permission.Action.READ,
-        Permission.Action.WRITE));
-    permissions.put("bruce",
-      new UserPermission("bruce", TEST_NAMESPACE, Permission.Action.READ));
+    permissions.put("george", new UserPermission("george",
+        Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()));
+    permissions.put("george", new UserPermission("george", Permission.newBuilder(TEST_TABLE)
+        .withFamily(TEST_FAMILY).withActions(Permission.Action.WRITE).build()));
+    permissions.put("george", new UserPermission("george",
+        Permission.newBuilder(TEST_TABLE2).withActions(Permission.Action.READ).build()));
+    permissions.put("hubert", new UserPermission("hubert", Permission.newBuilder(TEST_TABLE2)
+        .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
+    permissions.put("bruce", new UserPermission("bruce",
+        Permission.newBuilder(TEST_NAMESPACE).withActions(Permission.Action.READ).build()));
     return permissions;
   }
 
@@ -334,50 +345,58 @@ public class TestTablePermissions {
 
   @Test
   public void testEquals() throws Exception {
-    Permission p1 = new TablePermission(TEST_TABLE, Permission.Action.READ);
-    Permission p2 = new TablePermission(TEST_TABLE, Permission.Action.READ);
+    Permission p1 = Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
+    Permission p2 = Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
     assertTrue(p1.equals(p2));
     assertTrue(p2.equals(p1));
 
-    p1 = new TablePermission(TEST_TABLE, TablePermission.Action.READ, TablePermission.Action.WRITE);
-    p2 = new TablePermission(TEST_TABLE, TablePermission.Action.WRITE, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_TABLE)
+        .withActions(TablePermission.Action.READ, TablePermission.Action.WRITE).build();
+    p2 = Permission.newBuilder(TEST_TABLE)
+        .withActions(TablePermission.Action.WRITE, TablePermission.Action.READ).build();
     assertTrue(p1.equals(p2));
     assertTrue(p2.equals(p1));
 
-    p1 = new TablePermission(TEST_TABLE, TEST_FAMILY, TablePermission.Action.READ, TablePermission.Action.WRITE);
-    p2 = new TablePermission(TEST_TABLE, TEST_FAMILY, TablePermission.Action.WRITE, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+        .withActions(TablePermission.Action.READ, TablePermission.Action.WRITE).build();
+    p2 = Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+        .withActions(TablePermission.Action.WRITE, TablePermission.Action.READ).build();
     assertTrue(p1.equals(p2));
     assertTrue(p2.equals(p1));
 
-    p1 = new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER, TablePermission.Action.READ, TablePermission.Action.WRITE);
-    p2 = new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER, TablePermission.Action.WRITE, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
+        .withActions(TablePermission.Action.READ, TablePermission.Action.WRITE).build();
+    p2 = Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
+        .withActions(TablePermission.Action.WRITE, TablePermission.Action.READ).build();
     assertTrue(p1.equals(p2));
     assertTrue(p2.equals(p1));
 
-    p1 = new TablePermission(TEST_TABLE, TablePermission.Action.READ);
-    p2 = new TablePermission(TEST_TABLE, TEST_FAMILY, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build();
+    p2 = Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+        .withActions(TablePermission.Action.READ).build();
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
 
-    p1 = new TablePermission(TEST_TABLE, TablePermission.Action.READ);
-    p2 = new TablePermission(TEST_TABLE, TablePermission.Action.WRITE);
+    p1 = Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build();
+    p2 = Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.WRITE).build();
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
-    p2 = new TablePermission(TEST_TABLE, TablePermission.Action.READ, TablePermission.Action.WRITE);
-    assertFalse(p1.equals(p2));
-    assertFalse(p2.equals(p1));
-
-    p1 = new TablePermission(TEST_TABLE, TablePermission.Action.READ);
-    p2 = new TablePermission(TEST_TABLE2, TablePermission.Action.READ);
+    p2 = Permission.newBuilder(TEST_TABLE)
+        .withActions(TablePermission.Action.READ, TablePermission.Action.WRITE).build();
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
 
-    p1 = new NamespacePermission(TEST_NAMESPACE, TablePermission.Action.READ);
-    p2 = new NamespacePermission(TEST_NAMESPACE, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build();
+    p2 = Permission.newBuilder(TEST_TABLE2).withActions(TablePermission.Action.READ).build();
+    assertFalse(p1.equals(p2));
+    assertFalse(p2.equals(p1));
+
+    p1 = Permission.newBuilder(TEST_NAMESPACE).withActions(TablePermission.Action.READ).build();
+    p2 = Permission.newBuilder(TEST_NAMESPACE).withActions(TablePermission.Action.READ).build();
     assertEquals(p1, p2);
 
-    p1 = new NamespacePermission(TEST_NAMESPACE, TablePermission.Action.READ);
-    p2 = new NamespacePermission(TEST_NAMESPACE2, TablePermission.Action.READ);
+    p1 = Permission.newBuilder(TEST_NAMESPACE).withActions(TablePermission.Action.READ).build();
+    p2 = Permission.newBuilder(TEST_NAMESPACE2).withActions(TablePermission.Action.READ).build();
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
   }
@@ -389,15 +408,20 @@ public class TestTablePermissions {
     // add some permissions
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       addUserPermission(conf,
-          new UserPermission("user1",
-              Permission.Action.READ, Permission.Action.WRITE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("user1", Permission.newBuilder()
+            .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-          new UserPermission("user2",
-              Permission.Action.CREATE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("user2",
+            Permission.newBuilder().withActions(Permission.Action.CREATE).build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
       addUserPermission(conf,
-          new UserPermission("user3",
-              Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE),
-          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        new UserPermission("user3",
+            Permission.newBuilder()
+                .withActions(Permission.Action.ADMIN, Permission.Action.READ,
+                  Permission.Action.CREATE)
+                .build()),
+        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     ListMultimap<String, UserPermission> perms =
       AccessControlLists.getTablePermissions(conf, null);
@@ -434,9 +458,13 @@ public class TestTablePermissions {
     User currentUser = User.getCurrent();
     assertTrue(authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN));
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      for (int i=1; i<=50; i++) {
-        addUserPermission(conf, new UserPermission("testauth"+i,
-          Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.WRITE),
+      for (int i = 1; i <= 50; i++) {
+        addUserPermission(conf,
+          new UserPermission("testauth" + i,
+              Permission.newBuilder()
+                  .withActions(Permission.Action.ADMIN, Permission.Action.READ,
+                    Permission.Action.WRITE)
+                  .build()),
           connection.getTable(AccessControlLists.ACL_TABLE_NAME));
         // make sure the system user still shows as authorized
         assertTrue("Failed current user auth check on iter "+i,

@@ -34,38 +34,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  * given table. If the family property is <code>null</code>, it implies
  * full table access.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class TablePermission extends Permission {
 
   private TableName table;
   private byte[] family;
   private byte[] qualifier;
 
-  /** Nullary constructor for Writable, do not use */
-  public TablePermission() {
-    super();
-    this.scope = Scope.EMPTY;
-  }
-
-  /**
-   * Construct a table permission.
-   * @param table table name
-   * @param assigned assigned actions
-   */
-  public TablePermission(TableName table, Action... assigned) {
-    this(table, null, null, assigned);
-  }
-
-  /**
-   * Construct a table:family permission.
-   * @param table table name
-   * @param family family name
-   * @param assigned assigned actions
-   */
-  public TablePermission(TableName table, byte[] family, Action... assigned) {
-    this(table, family, null, assigned);
-  }
-
   /**
    * Construct a table:family:qualifier permission.
    * @param table table name
@@ -73,42 +48,8 @@ public class TablePermission extends Permission {
    * @param qualifier qualifier name
    * @param assigned assigned actions
    */
-  public TablePermission(TableName table, byte[] family, byte[] qualifier, Action... assigned) {
+  TablePermission(TableName table, byte[] family, byte[] qualifier, Action... assigned) {
     super(assigned);
-    this.table = table;
-    this.family = family;
-    this.qualifier = qualifier;
-    this.scope = Scope.TABLE;
-  }
-
-  /**
-   * Construct a table permission.
-   * @param table table name
-   * @param actionCodes assigned actions
-   */
-  public TablePermission(TableName table, byte[] actionCodes) {
-    this(table, null, null, actionCodes);
-  }
-
-  /**
-   * Construct a table:family permission.
-   * @param table table name
-   * @param family family name
-   * @param actionCodes assigned actions
-   */
-  public TablePermission(TableName table, byte[] family, byte[] actionCodes) {
-    this(table, family, null, actionCodes);
-  }
-
-  /**
-   * Construct a table:family:qualifier permission.
-   * @param table table name
-   * @param family family name
-   * @param qualifier qualifier name
-   * @param actionCodes assigned actions
-   */
-  public TablePermission(TableName table, byte[] family, byte[] qualifier, byte[] actionCodes) {
-    super(actionCodes);
     this.table = table;
     this.family = family;
     this.qualifier = qualifier;
@@ -117,10 +58,6 @@ public class TablePermission extends Permission {
 
   public TableName getTableName() {
     return table;
-  }
-
-  public void setTableName(TableName table) {
-    this.table = table;
   }
 
   public boolean hasFamily() {
