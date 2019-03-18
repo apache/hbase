@@ -15,28 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# HBASE  2.1.4 Release Notes
-
-These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
-
-
----
-
-* [HBASE-21636](https://issues.apache.org/jira/browse/HBASE-21636) | *Major* | **Enhance the shell scan command to support missing scanner specifications like ReadType, IsolationLevel etc.**
-
-Allows shell to set Scan options previously not exposed. See additions as part of the scan help by typing following hbase shell:
-
-hbase\> help 'scan'
-
-
----
-
-* [HBASE-21057](https://issues.apache.org/jira/browse/HBASE-21057) | *Minor* | **upgrade to latest spotbugs**
-
-Change spotbugs version to 3.1.11.
-
-
-
 # HBASE  2.1.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
