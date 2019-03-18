@@ -546,24 +546,179 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 
 [[maven.release]]
 === Making a Release Candidate
-Only committers may make releases of hbase artifacts.
+Only committers can make releases of hbase artifacts.
+
+Making a Release Candidate (RC) is comprised of many involved steps.
+The steps are described in detail below in the section
+<<rc_procedure>> but a script that automates the process is
+described first in <<do-release-docker.sh>>.
 
 .Before You Begin
-Make sure your environment is properly set up. Maven and Git are the main tooling
-used in the below. You'll need a properly configured _settings.xml_ file in your
-local _~/.m2_ maven repository with logins for apache repos (See <<maven.settings.xml>>).
-You will also need to have a published signing key. Browse the Hadoop
-link:http://wiki.apache.org/hadoop/HowToRelease[How To Release] wiki page on
-how to release. It is a model for most of the instructions below. It often has more
-detail on particular steps, for example, on adding your code signing key to the
-project KEYS file up in Apache or on how to update JIRA in preparation for release.
-
-Before you make a release candidate, do a practice run by deploying a SNAPSHOT.
 Check to be sure recent builds have been passing for the branch from where you
 are going to take your release. You should also have tried recent branch tips
 out on a cluster under load, perhaps by running the `hbase-it` integration test
 suite for a few hours to 'burn in' the near-candidate bits.
 
+Make sure your environment is properly set up.
+
+You will need to have a published signing key added to the hbase
+link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
+Browse the Hadoop link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
+wiki page on how to release. It is a model for the instructions below. It often has more
+detail on particular steps. For example, _Step 1._ describes how to add
+your code signing key to the
+link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file up in Apache
+(as well as outlinks on what a signing key is).
+
+Next make sure JIRA is properly primed, that all issues targeted against
+the prospective release have been resolved and are present in git on the
+particular branch. If any outstanding, move them out of the release by
+adjusting the fix version to remove this pending release as a target.
+Any JIRA with a fix version that matches the release candidate
+target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
+that ship with the release so make sure JIRA is correct before you begin.
+(_Step 2._ in link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
+talks of how it is done in Hadoop).
+
+[[do-release-docker.sh]]
+==== Release Candidate Generating Script
+The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
+Generating script is maintained in the master branch but can generate RCs
+for any 2.x+ branch (The script does not work against branch-1). Check out
+and update the master branch when making RCs.
+
+The script builds in a Docker container to ensure we have a consistent
+environment building. It will ask you for passwords for apache and for your
+gpg signing key so it can sign and commit on your behalf. The passwords
+are passed to gpg-agent in the container and purged along with the container
+when the build is done.
+
+[NOTE]
+====
+_dev-support/create-release/do-release-docker.sh_ supercedes the previous
+_dev-support/make_rc.sh_ script. It is more comprehensive automating all
+steps, rather than a portion, building a RC.
+====
+
+The script will:
+
+ * Set version to the release version 
+ * Updates RELEASENOTES.md and CHANGES.md
+ * Tag the RC
+ * Set version to next SNAPSHOT version. 
+ * Builds, signs, and hashes all artifacts. 
+ * Generates the api compatibility report
+ * Pushes release tgzs to the dev dir in a apache dist. 
+ * Pushes to repository.apache.org staging. 
+ * Creates vote email template.
+
+Pass _-h_ to _dev-support/create-release/do-release-docker.sh_ to
+see available options:
+
+```
+Usage: do-release-docker.sh [options]
+
+This script runs the release scripts inside a docker image.
+
+Options:
+
+  -d [path]  required. working directory. output will be written to "output" in here.
+  -n         dry run mode. Checks and local builds, but does not upload anything.
+  -t [tag]   tag for the hbase-rm docker image to use for building (default: "latest").
+  -j [path]  path to local JDK installation to use building. By default the script will
+               use openjdk8 installed in the docker image.
+  -s [step]  runs a single step of the process; valid steps are: tag, build, publish. if
+               none specified, runs tag, then build, and then publish.
+```
+
+Running the below command will do all steps above using the
+'rm' working directory under Downloads as workspace: 
+```
+  $ ./dev-support/create-release/do-release-docker.sh -d ~/Downloads/rm  
+```
+
+The script will ask you a set of questions about the release version
+and branch, the version to generate the compatibility report against,
+and so on, before it starts executing (If you set the appropriate
+environment variables, the script will skip asking you questions --
+which can come in handy if you end up having to re-run the script
+multiple times).
+
+On branch 2.1, a Release Candidate (RC) creation can take many hours
+(~8 hours) so run your build on a machine you know will be
+around for this swath of time. Start the build inside a _screen_
+or _tmux_ session in case you become disconnected from your
+build box.
+
+The build is made of three stages: tag, build, and
+publish. If the script fails, you may resort to 'fixing' the
+failure manually and then asking the script to run the
+subsequent stage rather than start over.
+
+When the scripts run, they use the passed working directory.
+Under the working directory is an _output_ dir. In here is
+where the checkouts go, where we build up the _svn_ directory
+to _svn_ commit to _apache/dist/dev_, etc. Each step also
+dumps a log file in here: e.g. _tag.log_ for the tagging
+step and _build.log_ for building.
+
+The _tagging_ step will checkout hbase, set the version number
+in all the poms – e.g. if branch-2.0 is at 2.0.6-SNAPSHOT
+and you are making a 2.0.5 RC, it will set the versions in
+all poms to 2.0.5 – appropriately. It then generate CHANGES.md
+and RELEASENOTES.md by checking out yetus and then
+calling its generator scripts. It then commits the poms with
+their new versions along with the changed CHANGES.md and
+RELEASENOTES.md, tags, and pushes up all changes to the
+apache repo.
+
+The _build_ step will checkout hbase, build all including
+javadoc and doc (javadoc takes the bulk of the time – 4 hours plus),
+run assemblies to produce src and bin tarballs, sign and hash it
+all, and then make a dir under apache dist dev named for the RC.
+It will copy all artifacts in here including top-level CHANGES.md
+and RELEASENOTES.md. It will generate api diff docs and put them
+into this RC dir too. When done, it commits the svn RC.
+
+The publish step will checkout hbase, build, and then copy up all
+artifacts to repository.apache.org (signed and hashed). When done,
+it will dump out an email template with all the correct links in place.
+
+Check the artifacts pushed to the dev distribution directory and up
+in repository.apache.org. If all looks good, check the generated
+email and send to the dev list.
+
+Under the create-release dir, scripts should make some sense:
+```
+do-release-docker.sh   # Main entrance.
+do-release.sh .        # More checks. Not usable really other than by setting env variables before running it.
+release-tag.sh         # Does tagging steps.
+release-build.sh .     # Does the build and publish step.
+release-util.sh        # Utility used by all of the above.
+vote.tmpl              # Template for email to send out.
+hbase-rm               # Has docker image we use.
+```
+
+If the RC fails, the script will do the right thing when it comes
+to edit of the _CHANGES.md_ and _RELEASENOTES.md_ removing the old
+and updating the files with the updated content (No harm verifying
+though).
+
+One trick for checking stuff especially in utility is to do as follows:
+
+```
+$ source release-util.sh ; generate_api_report ../../ rel/2.1.3 2.14RC1
+```
+
+i.e. source the release-util.sh script and then run one of its functions
+passing args. Helped debugging stuff.
+
+[[rc_procedure]]
+==== Release Candidate Procedure
+Here we describe the steps involved generating a Release Candidate, the steps
+automated by the script described in the previous section.
+
+The process below makes use of various tools, mainly _git_ and _maven_.
 
 .Specifying the Heap Space for Maven
 [NOTE]
@@ -579,75 +734,60 @@ MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
 You could also set this in an environment variable or alias in your shell.
 ====
 
+===== Update the _CHANGES.md_  and _RELEASENOTES.md_ files and the POM files.
 
-[NOTE]
-====
-The script _dev-support/make_rc.sh_ automates many of the below steps.
-It will checkout a tag, clean the checkout, build src and bin tarballs,
-and deploy the built jars to repository.apache.org.
-It does NOT do the modification of the _CHANGES.txt_ for the release,
-the checking of the produced artifacts to ensure they are 'good' --
-e.g. extracting the produced tarballs, verifying that they
-look right, then starting HBase and checking that everything is running
-correctly -- or the signing and pushing of the tarballs to
-link:https://people.apache.org[people.apache.org].
-Take a look. Modify/improve as you see fit.
-====
+Update _CHANGES.md_ with the changes since the last release. Be careful with where you put
+headings and license. Respect the instructions and warning you find in current
+_CHANGES.md_ and _RELEASENOTES.md_ since these two files are processed by tooling that is
+looking for particular string sequences. See link:https://issues.apache.org/jira/browse/HBASE-21399[HBASE-21399]
+for description on how to make use of yetus generating additions to
+_CHANGES.md_ and _RELEASENOTES.md_ (RECOMMENDED!).  Adding JIRA fixes, make sure the
+URL to the JIRA points to the proper location which lists fixes for this release.
 
-.Procedure: Release Procedure
-. Update the _CHANGES.txt_ file and the POM files.
-+
-Update _CHANGES.txt_ with the changes since the last release.
-Make sure the URL to the JIRA points to the proper location which lists fixes for this release.
-Adjust the version in all the POM files appropriately.
+Next, adjust the version in all the POM files appropriately.
 If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
 in all pom.xml files.
 If you are running this receipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
 The link:http://www.mojohaus.org/versions-maven-plugin/[Versions Maven Plugin] can be of use here.
 To set a version in all the many poms of the hbase multi-module project, use a command like the following:
-+
+
 [source,bourne]
 ----
 $ mvn clean org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=2.1.0-SNAPSHOT
 ----
-+
-Make sure all versions in poms are changed! Checkin the _CHANGES.txt_ and any maven version changes.
 
-. Update the documentation.
-+
+Make sure all versions in poms are changed! Checkin the _CHANGES.md_, _RELEASENOTES.md_, and
+any maven version changes.
+
+===== Update the documentation.
+
 Update the documentation under _src/main/asciidoc_.
 This usually involves copying the latest from master branch and making version-particular
-adjustments to suit this release candidate version.
+adjustments to suit this release candidate version. Commit your changes.
 
-. Clean the checkout dir
-+
+===== Clean the checkout dir
 [source,bourne]
 ----
-
 $ mvn clean
 $ git clean -f -x -d
 ----
 
-
-. Run Apache-Rat
+===== Run Apache-Rat
 Check licenses are good
-+
+
 [source,bourne]
 ----
-
-$ mvn apache-rat
+$ mvn apache-rat:check
 ----
-+
+
 If the above fails, check the rat log.
 
-+
 [source,bourne]
 ----
 $ grep 'Rat check' patchprocess/mvn_apache_rat.log
 ----
-+
 
-. Create a release tag.
+===== Create a release tag.
 Presuming you have run basic tests, the rat check, passes and all is
 looking good, now is the time to tag the release candidate (You
 always remove the tag if you need to redo). To tag, do
@@ -656,10 +796,8 @@ All tags should be signed tags; i.e. pass the _-s_ option (See
 link:http://https://git-scm.com/book/id/v2/Git-Tools-Signing-Your-Work[Signing Your Work]
 for how to set up your git environment for signing).
 
-+
 [source,bourne]
 ----
-
 $ git tag -s 2.0.0-alpha4-RC0 -m "Tagging the 2.0.0-alpha4 first Releae Candidate (Candidates start at zero)"
 ----
 
@@ -672,25 +810,22 @@ they are preserved in the Apache repo as in:
 ----
 
 Push the (specific) tag (only) so others have access.
-+
+
 [source,bourne]
 ----
-
 $ git push origin 2.0.0-alpha4-RC0
 ----
-+
+
 For how to delete tags, see
 link:http://www.manikrathee.com/how-to-delete-a-tag-in-git.html[How to Delete a Tag]. Covers
 deleting tags that have not yet been pushed to the remote Apache
 repo as well as delete of tags pushed to Apache.
 
-
-. Build the source tarball.
-+
+===== Build the source tarball.
 Now, build the source tarball. Lets presume we are building the source
 tarball for the tag _2.0.0-alpha4-RC0_ into _/tmp/hbase-2.0.0-alpha4-RC0/_
 (This step requires that the mvn and git clean steps described above have just been done).
-+
+
 [source,bourne]
 ----
 $ git archive --format=tar.gz --output="/tmp/hbase-2.0.0-alpha4-RC0/hbase-2.0.0-alpha4-src.tar.gz" --prefix="hbase-2.0.0-alpha4/" $git_tag
@@ -701,7 +836,7 @@ _/tmp/hbase-2.0.0-alpha4-RC0_ build output directory (We don't want the _RC0_ in
 These bits are currently a release candidate but if the VOTE passes, they will become the release so we do not taint
 the artifact names with _RCX_).
 
-. Build the binary tarball.
+===== Build the binary tarball.
 Next, build the binary tarball. Add the `-Prelease` profile when building.
 It runs the license apache-rat check among other rules that help ensure
 all is wholesome. Do it in two steps.
@@ -710,7 +845,6 @@ First install into the local repository
 
 [source,bourne]
 ----
-
 $ mvn clean install -DskipTests -Prelease
 ----
 
@@ -720,24 +854,21 @@ documentation.
 
 [source,bourne]
 ----
-
 $ mvn install -DskipTests site assembly:single -Prelease
 ----
 
-+
 Otherwise, the build complains that hbase modules are not in the maven repository
 when you try to do it all in one step, especially on a fresh repository.
 It seems that you need the install goal in both steps.
-+
+
 Extract the generated tarball -- you'll find it under
 _hbase-assembly/target_ and check it out.
 Look at the documentation, see if it runs, etc.
 If good, copy the tarball beside the source tarball in the
 build output directory.
 
+===== Deploy to the Maven Repository.
 
-. Deploy to the Maven Repository.
-+
 Next, deploy HBase to the Apache Maven repository. Add the
 apache-release` profile when running the `mvn deploy` command.
 This profile comes from the Apache parent pom referenced by our pom files.
@@ -746,43 +877,42 @@ _settings.xml_ is configured correctly, as described in <<maven.settings.xml>>.
 This step depends on the local repository having been populate
 by the just-previous bin tarball build.
 
-+
+
 [source,bourne]
 ----
-
 $ mvn deploy -DskipTests -Papache-release -Prelease
 ----
-+
+
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
 More work needs to be done on these maven artifacts to make them generally available.
-+
+
 We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not
 include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
 
 .make_rc.sh
 [NOTE]
 ====
-If you run the _dev-support/make_rc.sh_ script, this is as far as it takes you.
+If you ran the old _dev-support/make_rc.sh_ script, this is as far as it takes you.
 To finish the release, take up the script from here on out.
 ====
 
-. Make the Release Candidate available.
-+
+===== Make the Release Candidate available.
+
 The artifacts are in the maven repository in the staging area in the 'open' state.
 While in this 'open' state you can check out what you've published to make sure all is good.
 To do this, log in to Apache's Nexus at link:https://repository.apache.org[repository.apache.org] using your Apache ID.
 Find your artifacts in the staging repository. Click on 'Staging Repositories' and look for a new one ending in "hbase" with a status of 'Open', select it.
 Use the tree view to expand the list of repository contents and inspect if the artifacts you expect are present. Check the POMs.
 As long as the staging repo is open you can re-upload if something is missing or built incorrectly.
-+
+
 If something is seriously wrong and you would like to back out the upload, you can use the 'Drop' button to drop and delete the staging repository.
 Sometimes the upload fails in the middle. This is another reason you might have to 'Drop' the upload from the staging repository.
-+
+
 If it checks out, close the repo using the 'Close' button. The repository must be closed before a public URL to it becomes available. It may take a few minutes for the repository to close. Once complete you'll see a public URL to the repository in the Nexus UI. You may also receive an email with the URL. Provide the URL to the temporary staging repository in the email that announces the release candidate.
 (Folks will need to add this repo URL to their local poms or to their local _settings.xml_ file to pull the published release candidate artifacts.)
-+
+
 When the release vote concludes successfully, return here and click the 'Release' button to release the artifacts to central. The release process will automatically drop and delete the staging repository.
-+
+
 .hbase-downstreamer
 [NOTE]
 ====
@@ -793,11 +923,11 @@ Make sure you are pulling from the repository when tests run and that you are no
 ====
 
 See link:https://www.apache.org/dev/publishing-maven-artifacts.html[Publishing Maven Artifacts] for some pointers on this maven staging process.
-+
+
 If the HBase version ends in `-SNAPSHOT`, the artifacts go elsewhere.
 They are put into the Apache snapshots repository directly and are immediately available.
 Making a SNAPSHOT release, this is what you want to happen.
-+
+
 At this stage, you have two tarballs in your 'build output directory' and a set of artifacts
 in a staging area of the maven repository, in the 'closed' state.
 Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
@@ -808,7 +938,6 @@ link:https://dist.apache.org/repos/dist/release/hbase[release/hbase]). In the _v
 
 [source,bourne]
 ----
-
 $ for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done
 $ for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
@@ -832,11 +961,10 @@ $ mv 0.96.0RC0 /Users/stack/checkouts/hbase.dist.dev.svn
 $ svn add 0.96.0RC0
 $ svn commit ...
 ----
-+
+
 Ensure it actually gets published by checking link:https://dist.apache.org/repos/dist/dev/hbase/[https://dist.apache.org/repos/dist/dev/hbase/].
 
 Announce the release candidate on the mailing list and call a vote.
-
 
 [[maven.snapshot]]
 === Publishing a SNAPSHOT to maven

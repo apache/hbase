@@ -863,6 +863,7 @@
               <!-- exclude the shaded protobuf files -->
               <exclude>**/shaded/com/google/protobuf/**</exclude>
               <exclude>**/src/main/patches/**</exclude>
+              <exclude>**/vote.tmpl</exclude>
             </excludes>
           </configuration>
         </plugin>
