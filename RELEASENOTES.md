@@ -14,7 +14,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--->
+
+# Be careful doing manual edits in this file. Do not change format
+# of release header or remove the below marker. This file is generated.
+# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
 # HBASE  2.1.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

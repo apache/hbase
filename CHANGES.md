@@ -16,7 +16,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--->
+
+# Be careful doing manual edits in this file. Do not change format
+# of release header or remove the below marker. This file is generated.
+# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
 
 ## Release 2.1.3 - Unreleased (as of 2019-02-10)
 
