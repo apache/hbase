@@ -188,9 +188,7 @@ public class MetaTableMetrics extends BaseRegionObserver {
   }
 
   private boolean isMetaTableOp(ObserverContext<RegionCoprocessorEnvironment> e) {
-    return TableName.META_TABLE_NAME.toString()
-        .equals(new String(e.getEnvironment().getRegionInfo().getTable().getName(),
-            StandardCharsets.UTF_8));
+    return TableName.META_TABLE_NAME.equals(e.getEnvironment().getRegionInfo().getTable());
   }
 
   private void clientMetricRegisterAndMark(ObserverContext<RegionCoprocessorEnvironment> e) {
