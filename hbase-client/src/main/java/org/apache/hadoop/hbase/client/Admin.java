@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -2808,21 +2808,18 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Grants user specific permissions
-   * @param userName user name
-   * @param permission the specific permission
+   * @param userPermission user name and the specific permission
    * @param mergeExistingPermissions If set to false, later granted permissions will override
    *          previous granted permissions. otherwise, it'll merge with previous granted
    *          permissions.
    * @throws IOException if a remote or network exception occurs
    */
-  void grant(String userName, Permission permission, boolean mergeExistingPermissions)
-      throws IOException;
+  void grant(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException;
 
   /**
    * Revokes user specific permissions
-   * @param userName user name
-   * @param permission the specific permission
+   * @param userPermission user name and the specific permission
    * @throws IOException if a remote or network exception occurs
    */
-  void revoke(String userName, Permission permission) throws IOException;
+  void revoke(UserPermission userPermission) throws IOException;
 }

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -86,16 +85,16 @@ public class ShadedAccessControlUtil {
   }
 
   /**
-   * Converts a list of Permission.Action shaded proto to a list of client Permission.Action
+   * Converts a list of Permission.Action shaded proto to an array of client Permission.Action
    * objects.
    * @param protoActions the list of shaded protobuf Actions
-   * @return the converted list of Actions
+   * @return the converted array of Actions
    */
-  public static List<Permission.Action> toPermissionActions(
-      List<AccessControlProtos.Permission.Action> protoActions) {
-    List<Permission.Action> actions = new ArrayList<>(protoActions.size());
-    for (AccessControlProtos.Permission.Action a : protoActions) {
-      actions.add(toPermissionAction(a));
+  public static Permission.Action[]
+      toPermissionActions(List<AccessControlProtos.Permission.Action> protoActions) {
+    Permission.Action[] actions = new Permission.Action[protoActions.size()];
+    for (int i = 0; i < protoActions.size(); i++) {
+      actions[i] = toPermissionAction(protoActions.get(i));
     }
     return actions;
   }
@@ -121,23 +120,22 @@ public class ShadedAccessControlUtil {
 
     if (proto.getType() == AccessControlProtos.Permission.Type.Global) {
       AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
-      List<Action> actions = toPermissionActions(perm.getActionList());
-
-      return new GlobalPermission(actions.toArray(new Permission.Action[actions.size()]));
+      Action[] actions = toPermissionActions(perm.getActionList());
+      return Permission.newBuilder().withActions(actions).build();
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
       AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
+      Action[] actions = toPermissionActions(perm.getActionList());
 
       if (!proto.hasNamespacePermission()) {
         throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
       }
       String ns = perm.getNamespaceName().toStringUtf8();
-      return new NamespacePermission(ns, actions.toArray(new Permission.Action[actions.size()]));
+      return Permission.newBuilder(ns).withActions(actions).build();
     }
     if (proto.getType() == AccessControlProtos.Permission.Type.Table) {
       AccessControlProtos.TablePermission perm = proto.getTablePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
+      Action[] actions = toPermissionActions(perm.getActionList());
 
       byte[] qualifier = null;
       byte[] family = null;
@@ -149,9 +147,8 @@ public class ShadedAccessControlUtil {
 
       if (perm.hasFamily()) family = perm.getFamily().toByteArray();
       if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
-
-      return new TablePermission(table, family, qualifier,
-          actions.toArray(new Permission.Action[actions.size()]));
+      return Permission.newBuilder(table).withFamily(family).withQualifier(qualifier)
+          .withActions(actions).build();
     }
     throw new IllegalStateException("Unrecognize Perm Type: " + proto.getType());
   }

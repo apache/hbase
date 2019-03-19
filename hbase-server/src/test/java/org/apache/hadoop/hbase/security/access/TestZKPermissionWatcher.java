@@ -113,8 +113,8 @@ public class TestZKPermissionWatcher {
 
     // update ACL: george RW
     List<UserPermission> acl = new ArrayList<>(1);
-    acl.add(new UserPermission(george.getShortName(), TEST_TABLE,
-      Permission.Action.READ, Permission.Action.WRITE));
+    acl.add(new UserPermission(george.getShortName(), Permission.newBuilder(TEST_TABLE)
+        .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
     ListMultimap<String, UserPermission> multimap = ArrayListMultimap.create();
     multimap.putAll(george.getShortName(), acl);
     byte[] serialized = AccessControlLists.writePermissionsAsBytes(multimap, conf);
@@ -141,7 +141,8 @@ public class TestZKPermissionWatcher {
 
     // update ACL: hubert R
     List<UserPermission> acl2 = new ArrayList<>(1);
-    acl2.add(new UserPermission(hubert.getShortName(), TEST_TABLE, TablePermission.Action.READ));
+    acl2.add(new UserPermission(hubert.getShortName(),
+        Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build()));
     final long mtimeA = AUTH_A.getMTime();
     multimap.putAll(hubert.getShortName(), acl2);
     byte[] serialized2 = AccessControlLists.writePermissionsAsBytes(multimap, conf);

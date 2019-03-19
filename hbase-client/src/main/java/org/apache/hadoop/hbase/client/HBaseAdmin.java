@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -4440,13 +4439,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void grant(String userName, Permission permission, boolean mergeExistingPermissions)
+  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
       throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
-        GrantRequest req = ShadedAccessControlUtil
-            .buildGrantRequest(new UserPermission(userName, permission), mergeExistingPermissions);
+        GrantRequest req =
+            ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
         this.master.grant(getRpcController(), req);
         return null;
       }
@@ -4454,12 +4453,11 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void revoke(String userName, Permission permission) throws IOException {
+  public void revoke(UserPermission userPermission) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
-        RevokeRequest req =
-            ShadedAccessControlUtil.buildRevokeRequest(new UserPermission(userName, permission));
+        RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
         this.master.revoke(getRpcController(), req);
         return null;
       }

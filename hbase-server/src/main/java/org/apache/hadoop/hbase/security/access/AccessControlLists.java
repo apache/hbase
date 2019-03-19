@@ -638,7 +638,8 @@ public class AccessControlLists {
       }
 
       return new Pair<>(username,
-        new NamespacePermission(Bytes.toString(fromNamespaceEntry(entryName)), value));
+          Permission.newBuilder(Bytes.toString(fromNamespaceEntry(entryName)))
+              .withActionCodes(value).build());
     }
 
     // Handle global entry
@@ -648,7 +649,7 @@ public class AccessControlLists {
         return null;
       }
 
-      return new Pair<>(username, new GlobalPermission(value));
+      return new Pair<>(username, Permission.newBuilder().withActionCodes(value).build());
     }
 
     // Handle table entry
@@ -681,8 +682,8 @@ public class AccessControlLists {
       }
     }
 
-    return new Pair<>(username,
-        new TablePermission(TableName.valueOf(entryName), permFamily, permQualifier, value));
+    return new Pair<>(username, Permission.newBuilder(TableName.valueOf(entryName))
+        .withFamily(permFamily).withQualifier(permQualifier).withActionCodes(value).build());
   }
 
   /*

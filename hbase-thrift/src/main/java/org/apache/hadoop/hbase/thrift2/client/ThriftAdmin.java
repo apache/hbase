@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -1418,12 +1418,12 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void grant(String userName, Permission permission, boolean mergeExistingPermissions) {
+  public void grant(UserPermission userPermission, boolean mergeExistingPermissions) {
     throw new NotImplementedException("grant not supported in ThriftAdmin");
   }
 
   @Override
-  public void revoke(String userName, Permission permission) {
+  public void revoke(UserPermission userPermission) {
     throw new NotImplementedException("revoke not supported in ThriftAdmin");
   }
 }
