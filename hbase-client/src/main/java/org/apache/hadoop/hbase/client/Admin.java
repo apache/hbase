@@ -1514,7 +1514,9 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param snapshotName name of the snapshot
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.2.0. Will be removed in 3.0.0. Use {@link #deleteSnapshot(String)} instead.
    */
+  @Deprecated
   void deleteSnapshot(byte[] snapshotName) throws IOException;
 
   /**
