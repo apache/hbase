@@ -137,6 +137,26 @@ public class SplitTableRegionProcedure
     }
   }
 
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (env.getProcedureScheduler().waitRegions(this, getTableName(), getParentRegion(),
+      daughter_1_RI, daughter_2_RI)) {
+      try {
+        LOG.debug(LockState.LOCK_EVENT_WAIT + " " + env.getProcedureScheduler().dumpLocks());
+      } catch (IOException e) {
+        // Ignore, just for logging
+      }
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
+  }
+
+  @Override
+  protected void releaseLock(final MasterProcedureEnv env) {
+    env.getProcedureScheduler().wakeRegions(this, getTableName(), getParentRegion(), daughter_1_RI,
+      daughter_2_RI);
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
