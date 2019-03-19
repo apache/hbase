@@ -408,12 +408,12 @@
                     <requireProperty>
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
-                      <regex>0\.9\.3</regex>
+                      <regex>0\.9\.3-1</regex>
                       <regexMessage>
 -
 -
 [FATAL] ==========================================================================================
-[FATAL] HBase Thrift requires the thrift generator version 0.9.3.
+[FATAL] HBase Thrift requires the thrift generator version 0.9.3-1.
 [FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
 [FATAL] ==========================================================================================
 -
@@ -442,8 +442,9 @@
                   <workingDirectory>${basedir}</workingDirectory>
                   <arguments>
                     <argument>-c</argument>
+                    <!-- Hardcode the version number here since curent thrift.version (0.9.3-1), is a java-only release -->
                     <argument>${thrift.path} -version | \
-                      fgrep 'Thrift version ${thrift.version}' &amp;&amp; exit 0;
+                      fgrep 'Thrift version 0.9.3' &amp;&amp; exit 0;
                       echo "========== [FATAL] Need Thrift version ${thrift.version} ==========";
                       exit 1</argument>
                   </arguments>
