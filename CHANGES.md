@@ -1,3 +1,4 @@
+# HBASE Changelog
 
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -15,8 +16,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--->
-# HBASE Changelog
+
+# Be careful doing manual edits in this file. Do not change format
+# of release header or remove the below marker. This file is generated.
+# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
 
 ## Release 2.2.0 - Unreleased (as of 2019-03-04)
 
