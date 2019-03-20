@@ -34,9 +34,9 @@ public class TestLossyCounting {
   @Test
   public void testBucketSize() {
     LossyCounting lossyCounting = new LossyCounting(0.01);
-    assertEquals(100L, lossyCounting.getBuketSize());
+    assertEquals(100L, lossyCounting.getBucketSize());
     LossyCounting lossyCounting2 = new LossyCounting();
-    assertEquals(50L, lossyCounting2.getBuketSize());
+    assertEquals(50L, lossyCounting2.getBucketSize());
   }
 
   @Test
