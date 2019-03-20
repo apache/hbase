@@ -827,7 +827,7 @@ public class RestoreSnapshotHelper {
       throw new IllegalArgumentException("Filesystems for restore directory and HBase root " +
           "directory should be the same");
     }
-    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath())) {
+    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath() + "/" )) {
       throw new IllegalArgumentException("Restore directory cannot be a sub directory of HBase " +
           "root directory. RootDir: " + rootDir + ", restoreDir: " + restoreDir);
     }
