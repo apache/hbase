@@ -80,10 +80,10 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
   @Test
   public void testBasicStartUp() throws IOException {
     RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
-    assertEquals(4, defaultInfo.getServers().size());
-    // Assignment of root and meta regions.
+    assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
+    // Assignment of meta, namespace and rsgroup regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    //3 meta,namespace, group
+    // 3 (meta, namespace and rsgroup)
     assertEquals(3, count);
   }
 
@@ -176,23 +176,28 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @Test
   public void testClearDeadServers() throws Exception {
-    final RSGroupInfo newGroup = addGroup(rsGroupAdmin, "testClearDeadServers", 3);
+    // move region servers from default group to new group
+    final int serverCountToMoveToNewGroup = 3;
+    final RSGroupInfo newGroup =
+        addGroup(rsGroupAdmin, "testClearDeadServers", serverCountToMoveToNewGroup);
 
-    ServerName targetServer = ServerName.parseServerName(
+    // stop 1 region server in new group
+    ServerName serverToStop = ServerName.parseServerName(
         newGroup.getServers().iterator().next().toString());
-    AdminProtos.AdminService.BlockingInterface targetRS =
-        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    AdminProtos.AdminService.BlockingInterface regionServerToStop =
+        ((ClusterConnection) admin.getConnection()).getAdmin(serverToStop);
     try {
-      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
+      serverToStop = ProtobufUtil.toServerName(regionServerToStop.getServerInfo(null,
           GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
       //stopping may cause an exception
       //due to the connection loss
-      targetRS.stopServer(null,
+      regionServerToStop.stopServer(null,
           AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
     } catch(Exception e) {
     }
+
+    // wait for the stopped region server to show up in dead server list
     final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    //wait for stopped regionserver to dead server list
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -200,16 +205,19 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
             && cluster.getClusterStatus().getDeadServerNames().size() > 0;
       }
     });
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-    assertTrue(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
-    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
-    //clear dead servers list
-    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
+    // verify
+    assertFalse(cluster.getClusterStatus().getServers().contains(serverToStop));
+    assertTrue(cluster.getClusterStatus().getDeadServerNames().contains(serverToStop));
+    assertTrue(newGroup.getServers().contains(serverToStop.getAddress()));
+
+    // clear dead servers list
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(serverToStop));
     assertEquals(0, notClearedServers.size());
 
+    // verify if the stopped region server gets cleared and removed from the group
     Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
-    assertFalse(newGroupServers.contains(targetServer.getAddress()));
-    assertEquals(2, newGroupServers.size());
+    assertFalse(newGroupServers.contains(serverToStop.getAddress()));
+    assertEquals(serverCountToMoveToNewGroup - 1 /* 1 stopped */, newGroupServers.size());
   }
 }
