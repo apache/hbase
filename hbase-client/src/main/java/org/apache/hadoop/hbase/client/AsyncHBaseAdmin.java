@@ -89,6 +89,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(List<TableName> tableNames) {
+    return wrap(rawAdmin.listTableDescriptors(tableNames));
+  }
+
+  @Override
   public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name) {
     return wrap(rawAdmin.listTableDescriptorsByNamespace(name));
   }
