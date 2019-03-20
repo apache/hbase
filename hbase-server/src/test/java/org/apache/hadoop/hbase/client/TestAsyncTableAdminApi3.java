@@ -25,6 +25,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -109,6 +111,22 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       }
       assertTrue("Not found: " + tables[i], found);
     }
+
+    tableNames = new ArrayList<TableName>(tables.length + 1);
+    tableDescs = admin.listTableDescriptors(tableNames).get();
+    size = tableDescs.size();
+    assertEquals(0, size);
+
+    Collections.addAll(tableNames, tables);
+    tableNames.add(TableName.META_TABLE_NAME);
+    tableDescs = admin.listTableDescriptors(tableNames).get();
+    size = tableDescs.size();
+    assertEquals(tables.length + 1, size);
+    for (int i = 0, j = 0; i < tables.length && j < size; i++, j++) {
+      assertTrue("tableName should be equal in order",
+          tableDescs.get(j).getTableName().equals(tables[i]));
+    }
+    assertTrue(tableDescs.get(size - 1).getTableName().equals(TableName.META_TABLE_NAME));
 
     for (int i = 0; i < tables.length; i++) {
       admin.disableTable(tables[i]).join();
