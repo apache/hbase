@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -60,27 +59,19 @@ public class LossyCounting {
     this.bucketSize = (long) Math.ceil(1 / errorRate);
     this.currentTerm = 1;
     this.totalDataCount = 0;
-    this.errorRate = errorRate;
     this.data = new ConcurrentHashMap<>();
     calculateCurrentTerm();
   }
 
   public LossyCounting() {
-    Configuration conf = HBaseConfiguration.create();
-    this.errorRate = conf.getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02);
-    this.bucketSize = (long) Math.ceil(1.0 / errorRate);
-    this.currentTerm = 1;
-    this.totalDataCount = 0;
-    this.data = new ConcurrentHashMap<>();
-    calculateCurrentTerm();
+    this(HBaseConfiguration.create().getDouble(HConstants.DEFAULT_LOSSY_COUNTING_ERROR_RATE, 0.02));
   }
 
   public Set<String> addByOne(String key) {
-    if(data.containsKey(key)) {
-      data.put(key, data.get(key) +1);
-    } else {
-      data.put(key, 1);
+    if (!data.containsKey(key)) {
+      data.put(key, 0);
     }
+    data.put(key, data.get(key) + 1);
     totalDataCount++;
     calculateCurrentTerm();
     Set<String> dataToBeSwept = new HashSet<>();
@@ -104,7 +95,7 @@ public class LossyCounting {
     for(String key : dataToBeSwept) {
       data.remove(key);
     }
-    LOG.debug(String.format("Swept %d of elements.", dataToBeSwept.size()));
+    LOG.debug(String.format("Swept %d elements.", dataToBeSwept.size()));
     return dataToBeSwept;
   }
 
@@ -115,7 +106,7 @@ public class LossyCounting {
     this.currentTerm = (int) Math.ceil(1.0 * totalDataCount / bucketSize);
   }
 
-  public long getBuketSize(){
+  public long getBucketSize(){
     return bucketSize;
   }
 
