@@ -55,6 +55,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,8 +65,6 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  * An integration test to detect regressions in HBASE-7912. Create
@@ -335,7 +335,9 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
    */
   protected boolean checkSucceeded(String backupId) throws IOException {
     BackupInfo status = getBackupInfo(backupId);
-    if (status == null) return false;
+    if (status == null) {
+      return false;
+    }
     return status.getState() == BackupState.COMPLETE;
   }
 
@@ -416,7 +418,8 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       "Total number iterations." + " Default: " + DEFAULT_NUM_ITERATIONS);
     addOptWithArg(NUMBER_OF_TABLES_KEY,
       "Total number of tables in the test." + " Default: " + DEFAULT_NUMBER_OF_TABLES);
-
+    addOptWithArg(SLEEP_TIME_KEY, "Sleep time of chaos monkey in ms " +
+            "to restart random region server. Default: " + SLEEP_TIME_DEFAULT);
   }
 
   @Override
@@ -435,10 +438,17 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       Integer.toString(DEFAULT_NUM_ITERATIONS)));
     numTables = Integer.parseInt(cmd.getOptionValue(NUMBER_OF_TABLES_KEY,
       Integer.toString(DEFAULT_NUMBER_OF_TABLES)));
+    sleepTime = Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY,
+      Long.toString(SLEEP_TIME_DEFAULT)));
 
-    LOG.info(MoreObjects.toStringHelper("Parsed Options").
-      add(REGION_COUNT_KEY, regionsCountPerServer)
-      .add(REGIONSERVER_COUNT_KEY, regionServerCount).add(ROWS_PER_ITERATION_KEY, rowsInIteration)
+
+    LOG.info(MoreObjects.toStringHelper("Parsed Options")
+      .add(REGION_COUNT_KEY, regionsCountPerServer)
+      .add(REGIONSERVER_COUNT_KEY, regionServerCount)
+      .add(ROWS_PER_ITERATION_KEY, rowsInIteration)
+      .add(NUM_ITERATIONS_KEY, numIterations)
+      .add(NUMBER_OF_TABLES_KEY, numTables)
+      .add(SLEEP_TIME_KEY, sleepTime)
       .toString());
   }
 
