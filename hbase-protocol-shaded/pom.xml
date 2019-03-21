@@ -196,51 +196,6 @@
         <artifactId>warbucks-maven-plugin</artifactId>
       </plugin>
     </plugins>
-    <pluginManagement>
-      <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-maven-plugins</artifactId>
-                    <versionRange>[2.0.5-alpha,)</versionRange>
-                    <goals>
-                      <goal>protoc</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore/>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>
-                      com.google.code.maven-replacer-plugin
-                    </groupId>
-                    <artifactId>replacer</artifactId>
-                    <versionRange>[1.5.3,)</versionRange>
-                    <goals>
-                      <goal>replace</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute>
-                     <runOnIncremental>false</runOnIncremental>
-                    </execute>
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
   <dependencies>
     <!--BE CAREFUL! Any dependency added here needs to be
@@ -286,6 +241,61 @@
           <artifactId>javax.annotation-api</artifactId>
         </dependency>
       </dependencies>
+    </profile>
+    <profile>
+      <id>eclipse-specific</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+            <plugin>
+              <groupId>org.eclipse.m2e</groupId>
+              <artifactId>lifecycle-mapping</artifactId>
+              <configuration>
+                <lifecycleMappingMetadata>
+                  <pluginExecutions>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.apache.hadoop</groupId>
+                        <artifactId>hadoop-maven-plugins</artifactId>
+                        <versionRange>[2.0.5-alpha,)</versionRange>
+                        <goals>
+                          <goal>protoc</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore/>
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>
+                          com.google.code.maven-replacer-plugin
+                        </groupId>
+                        <artifactId>replacer</artifactId>
+                        <versionRange>[1.5.3,)</versionRange>
+                        <goals>
+                          <goal>replace</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <execute>
+                         <runOnIncremental>false</runOnIncremental>
+                        </execute>
+                      </action>
+                    </pluginExecution>
+                  </pluginExecutions>
+                </lifecycleMappingMetadata>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
   </profiles>
 </project>
