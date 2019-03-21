@@ -267,10 +267,6 @@
                   <groupId>com.google.guava</groupId>
                   <artifactId>guava</artifactId>
                 </exclusion>
-                <exclusion>
-                  <groupId>org.apache.hadoop</groupId>
-                  <artifactId>hadoop-yarn-common</artifactId>
-                </exclusion>
               </exclusions>
             </dependency>
             <dependency>
