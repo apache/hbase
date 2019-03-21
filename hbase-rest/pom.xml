@@ -172,15 +172,6 @@
     </pluginManagement>
   </build>
   <dependencies>
-    <!--This one is upfront to get in front of
-         any dependency that pulls in jersey-core.
-         Jersey-core has implemented version 1
-         Interfaces of what is in this dependency
-         which does version 2.-->
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-    </dependency>
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -236,15 +227,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-testing-util</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <!--This dependency pulls in hadoop-minicluster
-             which pulls in the below. It messes up
-             this build at assembly time. See HBASE-22029-->
-        <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-core</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -290,6 +272,10 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -428,6 +414,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
+          <version>${hadoop-two.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -456,6 +443,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-nodemanager</artifactId>
+            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -466,6 +454,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -476,6 +465,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
@@ -486,6 +476,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -504,6 +495,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
+          <version>${hadoop-three.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

@@ -369,6 +369,7 @@
               <artifactId>xercesImpl</artifactId>
             </exclusion>
           </exclusions>
+          <version>${hadoop-two.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -415,6 +416,9 @@
           <value>3.0</value>
         </property>
       </activation>
+      <properties>
+        <hadoop.version>${hadoop-three.version}</hadoop.version>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
