@@ -3678,7 +3678,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       visitBatchOperations(true, miniBatchOp.getLastIndexExclusive(), (int index) -> {
         Mutation mutation = getMutation(index);
         if (mutation instanceof Put) {
-          region.updateCellTimestamps(familyCellMaps[index].values(), byteTS);
+          HRegion.updateCellTimestamps(familyCellMaps[index].values(), byteTS);
           miniBatchOp.incrementNumOfPuts();
         } else {
           region.prepareDeleteTimestamps(mutation, familyCellMaps[index], byteTS);
