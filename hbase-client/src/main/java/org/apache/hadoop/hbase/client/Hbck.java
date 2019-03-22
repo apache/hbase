@@ -20,12 +20,15 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 /**
  * Hbck fixup tool APIs. Obtain an instance from {@link ClusterConnection#getHbck()} and call
@@ -106,4 +109,16 @@ public interface Hbck extends Abortable, Closeable {
 
   List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
       throws IOException;
+
+  /**
+   * This method is to get the regions which left by failed split/merge procedures for a certain
+   * table. There are two kinds of region this method will return. One is orphan regions left on FS,
+   * which left because split/merge procedure crashed before updating meta. And the other one is
+   * unassigned split daughter region or merged region, which left because split/merge procedure
+   * crashed before assignment.
+   * @param tableName table to check
+   * @return Map of problematic regions
+   */
+  Map<String, MasterProtos.REGION_ERROR_TYPE>
+      getFailedSplitMergeLegacyRegions(List<TableName> tableName) throws IOException;
 }
