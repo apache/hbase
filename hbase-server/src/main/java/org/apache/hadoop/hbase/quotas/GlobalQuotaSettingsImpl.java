@@ -110,6 +110,60 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     return builder.build();
   }
 
+  private boolean hasThrottle(QuotaProtos.ThrottleType quotaType,
+      QuotaProtos.Throttle.Builder throttleBuilder) {
+    boolean hasThrottle = false;
+    switch (quotaType) {
+      case REQUEST_NUMBER:
+        if (throttleBuilder.hasReqNum()) {
+          hasThrottle = true;
+        }
+        break;
+      case REQUEST_SIZE:
+        if (throttleBuilder.hasReqSize()) {
+          hasThrottle = true;
+        }
+        break;
+      case WRITE_NUMBER:
+        if (throttleBuilder.hasWriteNum()) {
+          hasThrottle = true;
+        }
+        break;
+      case WRITE_SIZE:
+        if (throttleBuilder.hasWriteSize()) {
+          hasThrottle = true;
+        }
+        break;
+      case READ_NUMBER:
+        if (throttleBuilder.hasReadNum()) {
+          hasThrottle = true;
+        }
+        break;
+      case READ_SIZE:
+        if (throttleBuilder.hasReadSize()) {
+          hasThrottle = true;
+        }
+        break;
+      case REQUEST_CAPACITY_UNIT:
+        if (throttleBuilder.hasReqCapacityUnit()) {
+          hasThrottle = true;
+        }
+        break;
+      case READ_CAPACITY_UNIT:
+        if (throttleBuilder.hasReadCapacityUnit()) {
+          hasThrottle = true;
+        }
+        break;
+      case WRITE_CAPACITY_UNIT:
+        if (throttleBuilder.hasWriteCapacityUnit()) {
+          hasThrottle = true;
+        }
+        break;
+      default:
+    }
+    return hasThrottle;
+  }
+
   @Override
   protected GlobalQuotaSettingsImpl merge(QuotaSettings other) throws IOException {
     // Validate the quota subject
@@ -124,14 +178,60 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
       if (!otherThrottle.proto.hasType() || !otherThrottle.proto.hasTimedQuota()) {
         // It means it's a remove request
         // To prevent the "empty" row in QuotaTableUtil.QUOTA_TABLE_NAME
-        throttleBuilder = null;
+
+        QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
+        if (throttleBuilder != null && !otherThrottle.proto.hasTimedQuota() && otherThrottle.proto
+            .hasType()) {
+          switch (otherProto.getType()) {
+            case REQUEST_NUMBER:
+              throttleBuilder.clearReqNum();
+              break;
+            case REQUEST_SIZE:
+              throttleBuilder.clearReqSize();
+              break;
+            case WRITE_NUMBER:
+              throttleBuilder.clearWriteNum();
+              break;
+            case WRITE_SIZE:
+              throttleBuilder.clearWriteSize();
+              break;
+            case READ_NUMBER:
+              throttleBuilder.clearReadNum();
+              break;
+            case READ_SIZE:
+              throttleBuilder.clearReadSize();
+              break;
+            case REQUEST_CAPACITY_UNIT:
+              throttleBuilder.clearReqCapacityUnit();
+              break;
+            case READ_CAPACITY_UNIT:
+              throttleBuilder.clearReadCapacityUnit();
+              break;
+            case WRITE_CAPACITY_UNIT:
+              throttleBuilder.clearWriteCapacityUnit();
+              break;
+            default:
+          }
+          boolean hasThrottle = false;
+          for (QuotaProtos.ThrottleType quotaType : QuotaProtos.ThrottleType.values()) {
+            hasThrottle = hasThrottle(quotaType, throttleBuilder);
+            if (hasThrottle) {
+              break;
+            }
+          }
+          if (!hasThrottle) {
+            throttleBuilder = null;
+          }
+        } else {
+          throttleBuilder = null;
+        }
+
       } else {
         QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
         validateTimedQuota(otherProto.getTimedQuota());
         if (throttleBuilder == null) {
           throttleBuilder = QuotaProtos.Throttle.newBuilder();
         }
-
         switch (otherProto.getType()) {
           case REQUEST_NUMBER:
             throttleBuilder.setReqNum(otherProto.getTimedQuota());
@@ -166,8 +266,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     }
 
     // Propagate the space quota portion
-    QuotaProtos.SpaceQuota.Builder spaceBuilder = (spaceProto == null
-        ? null : spaceProto.toBuilder());
+    QuotaProtos.SpaceQuota.Builder spaceBuilder =
+        (spaceProto == null ? null : spaceProto.toBuilder());
     if (other instanceof SpaceLimitSettings) {
       if (spaceBuilder == null) {
         spaceBuilder = QuotaProtos.SpaceQuota.newBuilder();
@@ -181,10 +281,9 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         SpaceQuota quotaToMerge = spaceRequest.getQuota();
         // Validate that the two settings are for the same target.
         // SpaceQuotas either apply to a table or a namespace (no user spacequota).
-        if (!Objects.equals(getTableName(), settingsToMerge.getTableName())
-            && !Objects.equals(getNamespace(), settingsToMerge.getNamespace())) {
-          throw new IllegalArgumentException(
-              "Cannot merge " + settingsToMerge + " into " + this);
+        if (!Objects.equals(getTableName(), settingsToMerge.getTableName()) && !Objects
+            .equals(getNamespace(), settingsToMerge.getNamespace())) {
+          throw new IllegalArgumentException("Cannot merge " + settingsToMerge + " into " + this);
         }
 
         if (quotaToMerge.getRemove()) {
@@ -210,10 +309,9 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
       return null;
     }
 
-    return new GlobalQuotaSettingsImpl(
-        getUserName(), getTableName(), getNamespace(), getRegionServer(),
-        (throttleBuilder == null ? null : throttleBuilder.build()), bypassGlobals,
-        (removeSpaceBuilder ? null : spaceBuilder.build()));
+    return new GlobalQuotaSettingsImpl(getUserName(), getTableName(), getNamespace(),
+        getRegionServer(), (throttleBuilder == null ? null : throttleBuilder.build()),
+        bypassGlobals, (removeSpaceBuilder ? null : spaceBuilder.build()));
   }
 
   private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {
