@@ -291,6 +291,18 @@ public class QuotaSettingsFactory {
   }
 
   /**
+   * Remove the throttling for the specified user.
+   *
+   * @param userName the user
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleUserByThrottleType(final String userName,
+      final ThrottleType type) {
+    return throttle(userName, null, null, null, type, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
    * Remove the throttling for the specified user on the specified table.
    *
    * @param userName the user
@@ -302,6 +314,19 @@ public class QuotaSettingsFactory {
   }
 
   /**
+   * Remove the throttling for the specified user on the specified table.
+   *
+   * @param userName the user
+   * @param tableName the table
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleUserByThrottleType(final String userName,
+      final TableName tableName, final ThrottleType type) {
+    return throttle(userName, tableName, null, null, type, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
    * Remove the throttling for the specified user on the specified namespace.
    *
    * @param userName the user
@@ -310,6 +335,19 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings unthrottleUser(final String userName, final String namespace) {
     return throttle(userName, null, namespace, null, null, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
+   * Remove the throttling for the specified user on the specified namespace.
+   *
+   * @param userName the user
+   * @param namespace the namespace
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleUserByThrottleType(final String userName,
+      final String namespace, final ThrottleType type) {
+    return throttle(userName, null, namespace, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
@@ -351,6 +389,18 @@ public class QuotaSettingsFactory {
   }
 
   /**
+   * Remove the throttling for the specified table.
+   *
+   * @param tableName the table
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleTableByThrottleType(final TableName tableName,
+      final ThrottleType type) {
+    return throttle(null, tableName, null, null, type, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
    * Throttle the specified namespace.
    *
    * @param namespace the namespace to throttle
@@ -389,6 +439,18 @@ public class QuotaSettingsFactory {
   }
 
   /**
+   * Remove the throttling for the specified namespace by throttle type.
+   *
+   * @param namespace the namespace
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleNamespaceByThrottleType(final String namespace,
+      final ThrottleType type) {
+    return throttle(null, null, namespace, null, type, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
    * Throttle the specified region server.
    *
    * @param regionServer the region server to throttle
@@ -410,6 +472,18 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings unthrottleRegionServer(final String regionServer) {
     return throttle(null, null, null, regionServer, null, 0, null, QuotaScope.MACHINE);
+  }
+
+  /**
+   * Remove the throttling for the specified region server by throttle type.
+   *
+   * @param regionServer  the region Server
+   * @param type the type of throttling
+   * @return the quota settings
+   */
+  public static QuotaSettings unthrottleRegionServerByThrottleType(final String regionServer,
+      final ThrottleType type) {
+    return throttle(null, null, null, regionServer, type, 0, null, QuotaScope.MACHINE);
   }
 
   /* Throttle helper */

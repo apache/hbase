@@ -46,6 +46,15 @@ module HBaseQuotasConstants
   NO_WRITES = 'NO_WRITES'.freeze
   NO_WRITES_COMPACTIONS = 'NO_WRITES_COMPACTIONS'.freeze
   DISABLE = 'DISABLE'.freeze
+  READ_NUMBER = 'READ_NUMBER'.freeze
+  READ_SIZE = 'READ_SIZE'.freeze
+  WRITE_NUMBER = 'WRITE_NUMBER'.freeze
+  WRITE_SIZE = 'WRITE_SIZE'.freeze
+  REQUEST_NUMBER = 'REQUEST_NUMBER'.freeze
+  REQUEST_SIZE = 'REQUEST_SIZE'.freeze
+  REQUEST_CAPACITY_UNIT = 'REQUEST_CAPACITY_UNIT'.freeze
+  WRITE_CAPACITY_UNIT = 'WRITE_CAPACITY_UNIT'.freeze
+  READ_CAPACITY_UNIT = 'READ_CAPACITY_UNIT'.freeze
 end
 
 module Hbase
@@ -102,37 +111,122 @@ module Hbase
 
     def unthrottle(args)
       raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
-      if args.key?(USER)
-        user = args.delete(USER)
-        if args.key?(TABLE)
-          table = TableName.valueOf(args.delete(TABLE))
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user, table)
-        elsif args.key?(NAMESPACE)
-          namespace = args.delete(NAMESPACE)
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user, namespace)
-        else
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user)
-        end
-      elsif args.key?(TABLE)
-        table = TableName.valueOf(args.delete(TABLE))
-        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.unthrottleTable(table)
-      elsif args.key?(NAMESPACE)
-        namespace = args.delete(NAMESPACE)
-        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
+
+      if args.key?(USER) then settings = unthrottle_user_table_namespace(args)
+      elsif args.key?(TABLE) then settings = unthrottle_table(args)
+      elsif args.key?(NAMESPACE) then settings = unthrottle_namespace(args)
       elsif args.key?(REGIONSERVER)
-        regionServer = args.delete(REGIONSERVER)
-        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        # TODO: Setting specified region server quota isn't supported currently and using 'all' for all RS
-        settings = QuotaSettingsFactory.unthrottleRegionServer('all')
+        settings = unthrottle_regionserver(args)
       else
         raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
       end
       @admin.setQuota(settings)
+    end
+
+    def _parse_throttle_type(type_cls, throttle_type)
+      type_cls.valueOf(throttle_type)
+    end
+
+    def get_throttle_type(args)
+      throttle_type_str = args.delete(THROTTLE_TYPE)
+      throttle_type = _parse_throttle_type(ThrottleType, throttle_type_str)
+      throttle_type
+    end
+
+    def unthrottle_user_table_namespace(args)
+      user = args.delete(USER)
+      settings = if args.key?(TABLE)
+                   unthrottle_user_table(args, user)
+                 elsif args.key?(NAMESPACE)
+                   unthrottle_user_namespace(args, user)
+                 else
+                   unthrottle_user(args, user)
+                 end
+      settings
+    end
+
+    def args_empty(args)
+      return if args.empty?
+
+      raise(ArgumentError,
+            'Unexpected arguments: ' + args.inspect)
+    end
+
+    def unthrottle_user_table(args, user)
+      table = TableName.valueOf(args.delete(TABLE))
+      if args.key?(THROTTLE_TYPE)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user,
+                                                 table, get_throttle_type(args))
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user, table)
+      end
+      settings
+    end
+
+    def unthrottle_user_namespace(args, user)
+      namespace = args.delete(NAMESPACE)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user, namespace, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user, namespace)
+      end
+      settings
+    end
+
+    def unthrottle_user(args, user)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user)
+      end
+      settings
+    end
+
+    def unthrottle_table(args)
+      table = TableName.valueOf(args.delete(TABLE))
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleTableByThrottleType(table, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleTable(table)
+      end
+      settings
+    end
+
+    def unthrottle_namespace(args)
+      namespace = args.delete(NAMESPACE)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleNamespaceByThrottleType(namespace, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
+      end
+      settings
+    end
+
+    def unthrottle_regionserver(args)
+      _region_server = args.delete(REGIONSERVER)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleRegionServerByThrottleType('all', throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleRegionServer('all')
+      end
+      settings
     end
 
     # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
