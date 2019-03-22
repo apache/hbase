@@ -1806,7 +1806,7 @@ image::bc_config.png[]
 .Stats shows statistics about the performance of the cache.
 image::bc_stats.png[]
 
-.L1 and L2 shows information about the L1 and L2 caches.
+.L1 and L2 show information about the L1 and L2 caches.
 image::bc_l1.png[]
 
 This is not an exhaustive list of all the screens and reports available.
