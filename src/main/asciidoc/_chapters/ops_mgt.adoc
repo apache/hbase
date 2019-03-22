@@ -1794,19 +1794,19 @@ This particular example, for example, would indicate that the likely cause of sl
 === Block Cache Monitoring
 
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache.
-To view the block cache reports, click .
+To view the block cache reports, see the Block Cache section of the region server UI.
 Following are a few examples of the reporting capabilities.
 
-.Basic Info
+.Basic Info shows the cache implementation.
 image::bc_basic.png[]
 
-.Config
+.Config shows all cache configuration options.
 image::bc_config.png[]
 
-.Stats
+.Stats shows statistics about the performance of the cache.
 image::bc_stats.png[]
 
-.L1 and L2
+.L1 and L2 shows information about the L1 and L2 caches.
 image::bc_l1.png[]
 
 This is not an exhaustive list of all the screens and reports available.
