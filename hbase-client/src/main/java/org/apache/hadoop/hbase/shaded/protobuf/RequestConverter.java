@@ -1904,6 +1904,15 @@ public final class RequestConverter {
     return b.addAllServerName(serverNames).build();
   }
 
+  public static MasterProtos.GetFailedSplitMergeLegacyRegionsRequest
+      toGetFailedSplitMergeLegacyRegionsRequest(List<TableName> tableNames) {
+    MasterProtos.GetFailedSplitMergeLegacyRegionsRequest.Builder b =
+        MasterProtos.GetFailedSplitMergeLegacyRegionsRequest.newBuilder();
+    List<HBaseProtos.TableName> protoTableNames = tableNames.stream()
+        .map(tableName -> ProtobufUtil.toProtoTableName(tableName)).collect(Collectors.toList());
+    return b.addAllTable(protoTableNames).build();
+  }
+
   private static List<RegionSpecifier> toEncodedRegionNameRegionSpecifiers(
       List<String> encodedRegionNames) {
     return encodedRegionNames.stream().
