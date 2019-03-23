@@ -271,9 +271,11 @@ public final class SnapshotDescriptionUtils {
    * @param conf configuration for the HBase cluster
    * @return true if the given workingDir is a subdirectory of the default working directory for
    *   snapshots, false otherwise
+   * @throws IOException if we can't get the root dir
    */
-  public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf) {
-    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(new Path(conf.get(HConstants.HBASE_DIR)));
+  public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf)
+    throws IOException {
+    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(FSUtils.getRootDir(conf));
     return workingDir.equals(defaultWorkingDir) || isSubDirectoryOf(workingDir, defaultWorkingDir);
   }
 
