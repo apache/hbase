@@ -57,6 +57,8 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
+      verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
+
       RegionStates regionStates =
         TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
 
