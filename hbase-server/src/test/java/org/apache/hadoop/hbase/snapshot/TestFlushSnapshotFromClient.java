@@ -186,7 +186,7 @@ public class TestFlushSnapshotFromClient {
 
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
-    byte[] snapshot = Bytes.toBytes(snapshotString);
+    String snapshot = snapshotString;
     admin.snapshot(snapshotString, TABLE_NAME, SnapshotType.SKIPFLUSH);
     LOG.debug("Snapshot completed.");
 

@@ -2473,11 +2473,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void deleteSnapshot(final byte[] snapshotName) throws IOException {
-    deleteSnapshot(Bytes.toString(snapshotName));
-  }
-
-  @Override
   public void deleteSnapshot(final String snapshotName) throws IOException {
     // make sure the snapshot is possibly valid
     TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(snapshotName));

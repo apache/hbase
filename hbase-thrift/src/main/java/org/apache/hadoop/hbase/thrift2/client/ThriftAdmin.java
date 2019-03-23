@@ -855,11 +855,6 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void deleteSnapshot(byte[] snapshotName) {
-    throw new NotImplementedException("deleteSnapshot not supported in ThriftAdmin");
-  }
-
-  @Override
   public void deleteSnapshot(String snapshotName) {
     throw new NotImplementedException("deleteSnapshot not supported in ThriftAdmin");
   }
