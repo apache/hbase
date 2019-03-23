@@ -313,7 +313,7 @@ public class TestSnapshotFromMaster {
 
     // take a snapshot of the table
     String snapshotName = "snapshot";
-    byte[] snapshotNameBytes = Bytes.toBytes(snapshotName);
+    String snapshotNameBytes = snapshotName;
     admin.snapshot(snapshotName, TABLE_NAME);
 
     LOG.info("After snapshot File-System state");

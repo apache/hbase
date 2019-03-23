@@ -306,7 +306,7 @@ public class TestSnapshotTemporaryDirectory {
 
     // take a snapshot of the disabled table
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
-    byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
+    String snapshot = SNAPSHOT_NAME;
     takeSnapshot(TABLE_NAME, SNAPSHOT_NAME, true);
     LOG.debug("Snapshot completed.");
 
@@ -390,8 +390,8 @@ public class TestSnapshotTemporaryDirectory {
             LOG);
 
     // take a snapshot of the disabled table
-    byte[] snapshot = Bytes.toBytes("testOfflineTableSnapshotWithEmptyRegion");
-    takeSnapshot(TABLE_NAME, Bytes.toString(snapshot), true);
+    String snapshot = "testOfflineTableSnapshotWithEmptyRegion";
+    takeSnapshot(TABLE_NAME, snapshot, true);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
