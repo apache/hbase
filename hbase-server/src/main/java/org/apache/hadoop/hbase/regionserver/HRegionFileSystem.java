@@ -807,12 +807,6 @@ public class HRegionFileSystem {
     Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
     // Move the tmp dir in the expected location
     if (mergedRegionTmpDir != null && fs.exists(mergedRegionTmpDir)) {
-
-      // Write HRI to a file in case we need to recover hbase:meta
-      Path regionInfoFile = new Path(mergedRegionTmpDir, REGION_INFO_FILE);
-      byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
-      writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-
       if (!fs.rename(mergedRegionTmpDir, regionDir)) {
         throw new IOException("Unable to rename " + mergedRegionTmpDir + " to "
             + regionDir);
