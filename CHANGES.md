@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.1.4 - Unreleased (as of 2019-03-19)
+## Release 2.1.4 - Unreleased (as of 2019-03-24)
 
 
 
@@ -93,7 +93,6 @@
 |:---- |:---- | :--- |:---- |
 | [HBASE-21057](https://issues.apache.org/jira/browse/HBASE-21057) | upgrade to latest spotbugs |  Minor | community, test |
 | [HBASE-21884](https://issues.apache.org/jira/browse/HBASE-21884) | Fix box/unbox findbugs warning in secure bulk load |  Minor | . |
-
 
 
 ## Release 2.1.3 - Unreleased (as of 2019-02-10)
