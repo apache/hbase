@@ -2496,10 +2496,6 @@
                 <artifactId>jersey-core</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.apache.htrace</groupId>
-                <artifactId>htrace-core</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
                 <artifactId>jsp-api</artifactId>
               </exclusion>
@@ -2591,10 +2587,6 @@
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.apache.htrace</groupId>
-                <artifactId>htrace-core</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>commons-beanutils</groupId>
