@@ -1031,6 +1031,8 @@ service MasterService {
   rpc Grant(GrantRequest) returns (GrantResponse);
 
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
+
+  rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
 }
 
 // HBCK Service definitions.

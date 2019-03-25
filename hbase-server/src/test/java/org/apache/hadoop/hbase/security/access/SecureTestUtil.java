@@ -144,7 +144,8 @@ public class SecureTestUtil {
       Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
-      perms[i] = new TablePermission(table, family, column, actions[i]);
+      perms[i] = Permission.newBuilder(table).withFamily(family).withQualifier(column)
+          .withActions(actions[i]).build();
     }
 
     checkTablePerms(conf, table, perms);
@@ -878,7 +879,8 @@ public class SecureTestUtil {
       byte[] column, Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
-      perms[i] = new TablePermission(table, family, column, actions[i]);
+      perms[i] = Permission.newBuilder(table).withFamily(family).withQualifier(column)
+          .withActions(actions[i]).build();
     }
     checkTablePerms(testUtil, table, perms);
   }

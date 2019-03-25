@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -106,6 +107,8 @@ import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
@@ -3780,6 +3783,20 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .action((controller, stub) -> this.<RevokeRequest, RevokeResponse, Void> call(controller,
           stub, ShadedAccessControlUtil.buildRevokeRequest(userPermission),
           (s, c, req, done) -> s.revoke(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<UserPermission>>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
+    return this.<List<UserPermission>> newMasterCaller().action((controller,
+        stub) -> this.<AccessControlProtos.GetUserPermissionsRequest, GetUserPermissionsResponse,
+            List<UserPermission>> call(controller, stub,
+              ShadedAccessControlUtil.buildGetUserPermissionsRequest(getUserPermissionsRequest),
+              (s, c, req, done) -> s.getUserPermissions(c, req, done),
+              resp -> resp.getUserPermissionList().stream()
+                .map(uPerm -> ShadedAccessControlUtil.toUserPermission(uPerm))
+                .collect(Collectors.toList())))
         .call();
   }
 }
