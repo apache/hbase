@@ -978,6 +978,24 @@ Copyright 2010 FasterXML.com
   </supplement>
 
   <supplement>
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.3.0 -->
+      <groupId>org.jline</groupId>
+      <artifactId>jline</artifactId>
+      <version>3.9.0</version>
+      <licenses>
+        <license>
+          <name>BSD license</name>
+          <url>https://opensource.org/licenses/BSD-3-Clause</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2002-2018, the original author or authors.
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
     <project>
       <groupId>org.jruby.jcodings</groupId>
       <artifactId>jcodings</artifactId>
