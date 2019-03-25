@@ -135,7 +135,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 Note that you can use HBase in this manner to spin up a ZooKeeper cluster, unrelated to HBase.
 Just make sure to set `HBASE_MANAGES_ZK` to `false`      if you want it to stay up across HBase restarts so that when HBase shuts down, it doesn't take ZooKeeper down with it.
 
-For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:https://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html[Getting
+For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:https://zookeeper.apache.org/doc/current/zookeeperStarted.html[Getting
         Started Guide].
 Additionally, see the link:https://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKeeper Wiki] or the link:https://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
         documentation] for more information on ZooKeeper sizing.
