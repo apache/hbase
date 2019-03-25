@@ -374,7 +374,7 @@ possible configurations would overwhelm and obscure the important.
     <description>ZooKeeper session timeout in milliseconds. It is used in two different ways.
       First, this value is used in the ZK client that HBase uses to connect to the ensemble.
       It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'.
-      See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
+      See https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkSessions.
       For example, if an HBase region server connects to a ZK ensemble that's also managed
       by HBase, then the session timeout will be the one specified by this configuration.
       But, a region server that connects to an ensemble managed with a different configuration
@@ -419,14 +419,14 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.zookeeper.peerport</name>
     <value>2888</value>
     <description>Port used by ZooKeeper peers to talk to each other.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.</description>
   </property>
   <property>
     <name>hbase.zookeeper.leaderport</name>
     <value>3888</value>
     <description>Port used by ZooKeeper for leader election.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.</description>
   </property>
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
