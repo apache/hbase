@@ -406,12 +406,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction getPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, Bytes.toBytes(TEST_NAMESPACE));
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          connection.getAdmin()
+              .getUserPermissions(GetUserPermissionsRequest.newBuilder(TEST_NAMESPACE).build());
         }
         return null;
       }
@@ -421,7 +418,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preGrant(ObserverContextImpl.createAndPrepare(CP_ENV),
-          new UserPermission(testUser, new NamespacePermission(TEST_NAMESPACE, Action.WRITE)),
+          new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()),
           false);
         return null;
       }
@@ -430,7 +428,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRevoke(ObserverContextImpl.createAndPrepare(CP_ENV),
-          new UserPermission(testUser, new NamespacePermission(TEST_NAMESPACE, Action.WRITE)));
+          new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()));
         return null;
       }
     };

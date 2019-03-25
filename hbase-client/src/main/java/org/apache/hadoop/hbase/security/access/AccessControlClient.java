@@ -249,35 +249,26 @@ public class AccessControlClient {
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex,
       String userName) throws Throwable {
-    /**
-     * TODO: Pass an rpcController HBaseRpcController controller = ((ClusterConnection)
-     * connection).getRpcControllerFactory().newController();
-     */
     List<UserPermission> permList = new ArrayList<>();
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      try (Admin admin = connection.getAdmin()) {
-        CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
-        BlockingInterface protocol =
-            AccessControlProtos.AccessControlService.newBlockingStub(service);
-        List<TableDescriptor> htds = null;
-        if (tableRegex == null || tableRegex.isEmpty()) {
-          permList = AccessControlUtil.getUserPermissions(null, protocol, userName);
-        } else if (tableRegex.charAt(0) == '@') { // Namespaces
-          String namespaceRegex = tableRegex.substring(1);
-          for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) { // Read out all
-                                                                              // namespaces
-            String namespace = nsds.getName();
-            if (namespace.matches(namespaceRegex)) { // Match the given namespace regex?
-              permList.addAll(AccessControlUtil.getUserPermissions(null, protocol,
-                Bytes.toBytes(namespace), userName));
-            }
+    try (Admin admin = connection.getAdmin()) {
+      if (tableRegex == null || tableRegex.isEmpty()) {
+        permList = admin.getUserPermissions(
+          GetUserPermissionsRequest.newBuilder().withUserName(userName).build());
+      } else if (tableRegex.charAt(0) == '@') { // Namespaces
+        String namespaceRegex = tableRegex.substring(1);
+        for (NamespaceDescriptor nsds : admin.listNamespaceDescriptors()) { // Read out all
+                                                                            // namespaces
+          String namespace = nsds.getName();
+          if (namespace.matches(namespaceRegex)) { // Match the given namespace regex?
+            permList.addAll(admin.getUserPermissions(
+              GetUserPermissionsRequest.newBuilder(namespace).withUserName(userName).build()));
           }
-        } else { // Tables
-          htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
-          for (TableDescriptor htd : htds) {
-            permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
-              null, null, userName));
-          }
+        }
+      } else { // Tables
+        List<TableDescriptor> htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
+        for (TableDescriptor htd : htds) {
+          permList.addAll(admin.getUserPermissions(GetUserPermissionsRequest
+              .newBuilder(htd.getTableName()).withUserName(userName).build()));
         }
       }
     }
@@ -347,22 +338,14 @@ public class AccessControlClient {
     if (tableRegex == null || tableRegex.isEmpty() || tableRegex.charAt(0) == '@') {
       throw new IllegalArgumentException("Table name can't be null or empty or a namespace.");
     }
-    /**
-     * TODO: Pass an rpcController HBaseRpcController controller = ((ClusterConnection)
-     * connection).getRpcControllerFactory().newController();
-     */
     List<UserPermission> permList = new ArrayList<UserPermission>();
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      try (Admin admin = connection.getAdmin()) {
-        CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
-        BlockingInterface protocol =
-            AccessControlProtos.AccessControlService.newBlockingStub(service);
-        List<TableDescriptor> htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
-        // Retrieve table permissions
-        for (TableDescriptor htd : htds) {
-          permList.addAll(AccessControlUtil.getUserPermissions(null, protocol, htd.getTableName(),
-            columnFamily, columnQualifier, userName));
-        }
+    try (Admin admin = connection.getAdmin()) {
+      List<TableDescriptor> htds = admin.listTableDescriptors(Pattern.compile(tableRegex), true);
+      // Retrieve table permissions
+      for (TableDescriptor htd : htds) {
+        permList.addAll(admin.getUserPermissions(
+          GetUserPermissionsRequest.newBuilder(htd.getTableName()).withFamily(columnFamily)
+              .withQualifier(columnQualifier).withUserName(userName).build()));
       }
     }
     return permList;

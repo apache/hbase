@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
@@ -1103,5 +1104,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public void revoke(UserPermission userPermission) {
     throw new NotImplementedException("revoke not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<UserPermission>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
+    throw new NotImplementedException("getUserPermissions not supported in ThriftAdmin");
   }
 }

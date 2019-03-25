@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -2044,4 +2045,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void revoke(UserPermission userPermission) throws IOException;
+
+  /**
+   * Get the global/namespace/table permissions for user
+   * @param getUserPermissionsRequest A request contains which user, global, namespace or table
+   *          permissions needed
+   * @return The user and permission list
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<UserPermission> getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest)
+      throws IOException;
 }
