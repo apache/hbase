@@ -66,23 +66,23 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.0.4
+        2.0.5
       </td>
       <td style="test-align: left">
-        2018/12/02
+        2019/03/25
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.4/compatibility_report_2.0.3vs2.0.4.html">2.0.3 vs 2.0.4</a>
+        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/api_compare_2.0.4_to_2.0.5RC1.html">2.0.4 vs 2.0.5</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.4/CHANGES.md">Changes</a>
+        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.4/RELEASENOTES.md">Release Notes</a>
+        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.4/hbase-2.0.4-src.tar.gz.asc">asc</a>)
+        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz">src</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz">bin</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.asc">asc</a>)
       </td>
     </tr>
     <tr>
