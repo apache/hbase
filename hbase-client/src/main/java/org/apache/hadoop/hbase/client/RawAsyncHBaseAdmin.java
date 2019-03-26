@@ -1099,6 +1099,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.completeExceptionally(err);
             return;
           }
+          if (locations == null || locations.isEmpty()) {
+            future.completeExceptionally(new TableNotFoundException(tableName));
+          }
           CompletableFuture<?>[] compactFutures =
             locations.stream().filter(l -> l.getRegion() != null)
               .filter(l -> !l.getRegion().isOffline()).filter(l -> l.getServerName() != null)
