@@ -30,6 +30,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -307,5 +310,36 @@ public class QuotaUtil extends QuotaTableUtil {
       }
     }
     return size;
+  }
+
+  /**
+   * Method to enable a table, if not already enabled. This method suppresses
+   * {@link TableNotDisabledException} and {@link TableNotFoundException}, if thrown while enabling
+   * the table.
+   * @param conn connection to re-use
+   * @param tableName name of the table to be enabled
+   */
+  public static void enableTableIfNotEnabled(Connection conn, TableName tableName)
+      throws IOException {
+    try {
+      conn.getAdmin().enableTable(tableName);
+    } catch (TableNotDisabledException | TableNotFoundException e) {
+      // ignore
+    }
+  }
+
+  /**
+   * Method to disable a table, if not already disabled. This method suppresses
+   * {@link TableNotEnabledException}, if thrown while disabling the table.
+   * @param conn connection to re-use
+   * @param tableName table name which has moved into space quota violation
+   */
+  public static void disableTableIfNotDisabled(Connection conn, TableName tableName)
+      throws IOException {
+    try {
+      conn.getAdmin().disableTable(tableName);
+    } catch (TableNotEnabledException | TableNotFoundException e) {
+      // ignore
+    }
   }
 }
