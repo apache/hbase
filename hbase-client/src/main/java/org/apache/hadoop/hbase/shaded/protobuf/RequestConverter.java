@@ -941,27 +941,6 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer OpenRegionRequest to open a list of regions
-   * @param server the serverName for the RPC
-   * @param regionOpenInfos info of a list of regions to open
-   * @return a protocol buffer OpenRegionRequest
-   */
-  public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-      final List<Pair<RegionInfo, List<ServerName>>> regionOpenInfos) {
-    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    for (Pair<RegionInfo, List<ServerName>> regionOpenInfo : regionOpenInfos) {
-      builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
-        regionOpenInfo.getSecond()));
-    }
-    if (server != null) {
-      builder.setServerStartCode(server.getStartcode());
-    }
-    // send the master's wall clock time as well, so that the RS can refer to it
-    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
-    return builder.build();
-  }
-
-  /**
    * Create a protocol buffer OpenRegionRequest for a given region
    * @param server the serverName for the RPC
    * @param region the region to open
@@ -971,7 +950,7 @@ public final class RequestConverter {
   public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
       final RegionInfo region, List<ServerName> favoredNodes) {
     OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes));
+    builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes, -1L));
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
     }
@@ -1622,8 +1601,8 @@ public final class RequestConverter {
   /**
    * Create a RegionOpenInfo based on given region info and version of offline node
    */
-  public static RegionOpenInfo buildRegionOpenInfo(
-      final RegionInfo region, final List<ServerName> favoredNodes) {
+  public static RegionOpenInfo buildRegionOpenInfo(RegionInfo region, List<ServerName> favoredNodes,
+      long openProcId) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
     if (favoredNodes != null) {
@@ -1631,6 +1610,7 @@ public final class RequestConverter {
         builder.addFavoredNodes(ProtobufUtil.toServerName(server));
       }
     }
+    builder.setOpenProcId(openProcId);
     return builder.build();
   }
 

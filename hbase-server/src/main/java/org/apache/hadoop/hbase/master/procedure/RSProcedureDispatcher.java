@@ -399,54 +399,36 @@ public class RSProcedureDispatcher
   }
 
   public static abstract class RegionOperation extends RemoteOperation {
-    private final RegionInfo regionInfo;
+    protected final RegionInfo regionInfo;
+    protected final long procId;
 
-    protected RegionOperation(final RemoteProcedure remoteProcedure,
-        final RegionInfo regionInfo) {
+    protected RegionOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId) {
       super(remoteProcedure);
       this.regionInfo = regionInfo;
-    }
-
-    public RegionInfo getRegionInfo() {
-      return this.regionInfo;
+      this.procId = procId;
     }
   }
 
   public static class RegionOpenOperation extends RegionOperation {
-    private final List<ServerName> favoredNodes;
-    private final boolean openForReplay;
-    private boolean failedOpen;
 
-    public RegionOpenOperation(final RemoteProcedure remoteProcedure,
-        final RegionInfo regionInfo, final List<ServerName> favoredNodes,
-        final boolean openForReplay) {
-      super(remoteProcedure, regionInfo);
-      this.favoredNodes = favoredNodes;
-      this.openForReplay = openForReplay;
-    }
-
-    protected void setFailedOpen(final boolean failedOpen) {
-      this.failedOpen = failedOpen;
-    }
-
-    public boolean isFailedOpen() {
-      return failedOpen;
+    public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo,
+        long procId) {
+      super(remoteProcedure, regionInfo, procId);
     }
 
     public OpenRegionRequest.RegionOpenInfo buildRegionOpenInfoRequest(
         final MasterProcedureEnv env) {
-      return RequestConverter.buildRegionOpenInfo(getRegionInfo(),
-        env.getAssignmentManager().getFavoredNodes(getRegionInfo()));
+      return RequestConverter.buildRegionOpenInfo(regionInfo,
+        env.getAssignmentManager().getFavoredNodes(regionInfo), procId);
     }
   }
 
   public static class RegionCloseOperation extends RegionOperation {
     private final ServerName destinationServer;
-    private boolean closed = false;
 
-    public RegionCloseOperation(final RemoteProcedure remoteProcedure,
-        final RegionInfo regionInfo, final ServerName destinationServer) {
-      super(remoteProcedure, regionInfo);
+    public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
+        ServerName destinationServer) {
+      super(remoteProcedure, regionInfo, procId);
       this.destinationServer = destinationServer;
     }
 
@@ -454,17 +436,9 @@ public class RSProcedureDispatcher
       return destinationServer;
     }
 
-    protected void setClosed(final boolean closed) {
-      this.closed = closed;
-    }
-
-    public boolean isClosed() {
-      return closed;
-    }
-
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
-      return ProtobufUtil.buildCloseRegionRequest(serverName,
-        getRegionInfo().getRegionName(), getDestinationServer());
+      return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
+        getDestinationServer(), procId);
     }
   }
 }

@@ -400,6 +400,13 @@ public abstract class TestAssignmentManagerBase {
         if (retries == timeoutTimes) {
           LOG.info("Mark server=" + server + " as dead. retries=" + retries);
           master.getServerManager().moveFromOnlineToDeadServers(server);
+          executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+              LOG.info("Sending in CRASH of " + server);
+              doCrash(server);
+            }
+          }, 1, TimeUnit.SECONDS);
         }
         throw new SocketTimeoutException("simulate socket timeout");
       } else {
