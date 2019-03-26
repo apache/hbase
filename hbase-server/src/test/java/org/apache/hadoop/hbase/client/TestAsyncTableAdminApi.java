@@ -453,4 +453,11 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       assertTrue(e.getCause() instanceof TableExistsException);
     }
   }
+
+  @Test
+  public void testIsTableAvailableWithInexistantTable() throws Exception {
+    final TableName newTableName = TableName.valueOf(tableName.getNameAsString() + "_new");
+    // test for inexistant table
+    assertFalse(admin.isTableAvailable(newTableName).get());
+  }
 }
