@@ -91,11 +91,13 @@ import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -118,8 +120,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -2532,6 +2538,57 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.postRevoke(userPermission);
       }
       return RevokeResponse.getDefaultInstance();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public GetUserPermissionsResponse getUserPermissions(RpcController controller,
+      GetUserPermissionsRequest request) throws ServiceException {
+    try {
+      final String userName = request.hasUserName() ? request.getUserName().toStringUtf8() : null;
+      String namespace =
+          request.hasNamespaceName() ? request.getNamespaceName().toStringUtf8() : null;
+      TableName table =
+          request.hasTableName() ? ProtobufUtil.toTableName(request.getTableName()) : null;
+      byte[] cf = request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
+      byte[] cq = request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
+      Type permissionType = request.hasType() ? request.getType() : null;
+      if (master.cpHost != null) {
+        master.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq);
+      }
+
+      List<UserPermission> perms = null;
+      if (permissionType == Type.Table) {
+        boolean filter = (cf != null || userName != null) ? true : false;
+        perms = AccessControlLists.getUserTablePermissions(master.getConfiguration(), table, cf, cq,
+          userName, filter);
+      } else if (permissionType == Type.Namespace) {
+        perms = AccessControlLists.getUserNamespacePermissions(master.getConfiguration(), namespace,
+          userName, userName != null ? true : false);
+      } else {
+        perms = AccessControlLists.getUserPermissions(master.getConfiguration(), null, null, null,
+          userName, userName != null ? true : false);
+        // Skip super users when filter user is specified
+        if (userName == null) {
+          // Adding superusers explicitly to the result set as AccessControlLists do not store
+          // them. Also using acl as table name to be inline with the results of global admin and
+          // will help in avoiding any leakage of information about being superusers.
+          for (String user : Superusers.getSuperUsers()) {
+            perms.add(new UserPermission(user,
+                Permission.newBuilder().withActions(Action.values()).build()));
+          }
+        }
+      }
+
+      if (master.cpHost != null) {
+        master.getMasterCoprocessorHost().postGetUserPermissions(userName, namespace, table, cf,
+          cq);
+      }
+      AccessControlProtos.GetUserPermissionsResponse response =
+          ShadedAccessControlUtil.buildGetUserPermissionsResponse(perms);
+      return response;
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

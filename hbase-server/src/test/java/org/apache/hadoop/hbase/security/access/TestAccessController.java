@@ -1190,12 +1190,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getTablePermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)){
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, TEST_TABLE);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin()
+              .getUserPermissions(GetUserPermissionsRequest.newBuilder(TEST_TABLE).build());
         }
         return null;
       }
@@ -1204,12 +1201,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getGlobalPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME);) {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol);
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          conn.getAdmin().getUserPermissions(GetUserPermissionsRequest.newBuilder().build());
         }
         return null;
       }
@@ -1679,17 +1673,8 @@ public class TestAccessController extends SecureTestUtil {
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd);
     try {
-      List<UserPermission> perms;
-      Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
-      } finally {
-        acl.close();
-      }
-
+      List<UserPermission> perms =
+          admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission ownerperm = new UserPermission(USER_OWNER.getName(),
           Permission.newBuilder(tableName).withActions(Action.values()).build());
       assertTrue("Owner should have all permissions on table",
@@ -1708,16 +1693,7 @@ public class TestAccessController extends SecureTestUtil {
       grantOnTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
         Permission.Action.READ);
 
-      acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
-      } finally {
-        acl.close();
-      }
-
+      perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission upToVerify =
           new UserPermission(userName, Permission.newBuilder(tableName).withFamily(family1)
               .withQualifier(qualifier).withActions(Permission.Action.READ).build());
@@ -1733,16 +1709,7 @@ public class TestAccessController extends SecureTestUtil {
       grantOnTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
         Permission.Action.WRITE, Permission.Action.READ);
 
-      acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
-      } finally {
-        acl.close();
-      }
-
+      perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       upToVerify = new UserPermission(userName,
           Permission.newBuilder(tableName).withFamily(family1).withQualifier(qualifier)
               .withActions(Permission.Action.WRITE, Permission.Action.READ).build());
@@ -1753,16 +1720,7 @@ public class TestAccessController extends SecureTestUtil {
       revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
         Permission.Action.WRITE, Permission.Action.READ);
 
-      acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
-      } finally {
-        acl.close();
-      }
-
+      perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       assertFalse("User should not be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
 
@@ -1773,16 +1731,7 @@ public class TestAccessController extends SecureTestUtil {
       htd.setOwner(newOwner);
       admin.modifyTable(tableName, htd);
 
-      acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
-      } finally {
-        acl.close();
-      }
-
+      perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
           Permission.newBuilder(tableName).withActions(Action.values()).build());
       assertTrue("New owner should have all permissions on table",
@@ -1795,16 +1744,8 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testGlobalPermissionList() throws Exception {
-    List<UserPermission> perms;
-    Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
-    try {
-      BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(service);
-      perms = AccessControlUtil.getUserPermissions(null, protocol);
-    } finally {
-      acl.close();
-    }
+    List<UserPermission> perms = systemUserConnection.getAdmin()
+        .getUserPermissions(GetUserPermissionsRequest.newBuilder().build());
 
     Collection<String> superUsers = Superusers.getSuperUsers();
     List<UserPermission> adminPerms = new ArrayList<>(superUsers.size() + 1);
@@ -1900,9 +1841,12 @@ public class TestAccessController extends SecureTestUtil {
       AccessTestAction multiQualifierRead = new AccessTestAction() {
         @Override
         public Void run() throws Exception {
-          checkTablePerms(TEST_UTIL, TEST_TABLE, new Permission[] {
-              new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_Q1, Permission.Action.READ),
-              new TablePermission(TEST_TABLE, TEST_FAMILY, TEST_Q2, Permission.Action.READ), });
+          checkTablePerms(TEST_UTIL, TEST_TABLE,
+            new Permission[] {
+                Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_Q1)
+                    .withActions(Permission.Action.READ).build(),
+                Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_Q2)
+                    .withActions(Permission.Action.READ).build(), });
           return null;
         }
       };
@@ -1912,7 +1856,7 @@ public class TestAccessController extends SecureTestUtil {
         public Void run() throws Exception {
           checkTablePerms(TEST_UTIL, TEST_TABLE, new Permission[] {
               new Permission(Permission.Action.READ),
-              new TablePermission(TEST_TABLE, null, (byte[]) null, Permission.Action.READ), });
+              Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build() });
           return null;
         }
       };
@@ -3527,12 +3471,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction globalUserPermissionAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, "dummy");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().getUserPermissions(
+            GetUserPermissionsRequest.newBuilder().withUserName("dummy").build());
         }
         return null;
       }
@@ -3566,12 +3507,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction namespaceUserPermissionAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, Bytes.toBytes(namespace1), "dummy");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().getUserPermissions(
+            GetUserPermissionsRequest.newBuilder(namespace1).withUserName("dummy").build());
         }
         return null;
       }
@@ -3610,13 +3548,9 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction tableUserPermissionAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, TEST_TABLE, TEST_FAMILY,
-            TEST_QUALIFIER, "dummy");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().getUserPermissions(GetUserPermissionsRequest.newBuilder(TEST_TABLE)
+              .withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER).withUserName("dummy").build());
         }
         return null;
       }

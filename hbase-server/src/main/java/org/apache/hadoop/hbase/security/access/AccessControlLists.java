@@ -538,8 +538,9 @@ public class AccessControlLists {
    * Returns the currently granted permissions for a given table as the specified user plus
    * associated permissions.
    */
-  static List<UserPermission> getUserTablePermissions(Configuration conf, TableName tableName,
-      byte[] cf, byte[] cq, String userName, boolean hasFilterUser) throws IOException {
+  public static List<UserPermission> getUserTablePermissions(Configuration conf,
+      TableName tableName, byte[] cf, byte[] cq, String userName, boolean hasFilterUser)
+      throws IOException {
     return getUserPermissions(conf, tableName == null ? null : tableName.getName(), cf, cq,
       userName, hasFilterUser);
   }
@@ -548,8 +549,8 @@ public class AccessControlLists {
    * Returns the currently granted permissions for a given namespace as the specified user plus
    * associated permissions.
    */
-  static List<UserPermission> getUserNamespacePermissions(Configuration conf, String namespace,
-      String user, boolean hasFilterUser) throws IOException {
+  public static List<UserPermission> getUserNamespacePermissions(Configuration conf,
+      String namespace, String user, boolean hasFilterUser) throws IOException {
     return getUserPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, user,
       hasFilterUser);
   }
@@ -566,8 +567,8 @@ public class AccessControlLists {
    * @return List of UserPermissions
    * @throws IOException on failure
    */
-  static List<UserPermission> getUserPermissions(Configuration conf, byte[] entryName, byte[] cf,
-      byte[] cq, String user, boolean hasFilterUser) throws IOException {
+  public static List<UserPermission> getUserPermissions(Configuration conf, byte[] entryName,
+      byte[] cf, byte[] cq, String user, boolean hasFilterUser) throws IOException {
     ListMultimap<String, UserPermission> allPerms =
         getPermissions(conf, entryName, null, cf, cq, user, hasFilterUser);
     List<UserPermission> perms = new ArrayList<>();

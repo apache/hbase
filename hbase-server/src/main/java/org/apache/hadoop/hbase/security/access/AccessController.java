@@ -2136,6 +2136,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     done.run(response);
   }
 
+  /**
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   */
+  @Deprecated
   @Override
   public void getUserPermissions(RpcController controller,
       AccessControlProtos.GetUserPermissionsRequest request,
@@ -2148,77 +2152,29 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           throw new CoprocessorException("AccessController not yet initialized");
         }
         User caller = RpcServer.getRequestUser().orElse(null);
-
-        List<UserPermission> perms = null;
-        // Initialize username, cf and cq. Set to null if request doesn't have.
         final String userName = request.hasUserName() ? request.getUserName().toStringUtf8() : null;
+        final String namespace =
+            request.hasNamespaceName() ? request.getNamespaceName().toStringUtf8() : null;
+        final TableName table =
+            request.hasTableName() ? ProtobufUtil.toTableName(request.getTableName()) : null;
         final byte[] cf =
             request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
         final byte[] cq =
             request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
-
+        preGetUserPermissions(caller, userName, namespace, table, cf, cq);
+        GetUserPermissionsRequest getUserPermissionsRequest = null;
         if (request.getType() == AccessControlProtos.Permission.Type.Table) {
-          final TableName table = request.hasTableName() ?
-            ProtobufUtil.toTableName(request.getTableName()) : null;
-          accessChecker.requirePermission(caller, "userPermissions", table, cf, cq, userName,
-            Action.ADMIN);
-          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
-            @Override
-            public List<UserPermission> run() throws Exception {
-              if (cf != null || userName != null) {
-                // retrieve permission based on the requested parameters
-                return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(),
-                  table, cf, cq, userName, true);
-              } else {
-                return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(),
-                  table, null, null, null, false);
-              }
-            }
-          });
+          getUserPermissionsRequest = GetUserPermissionsRequest.newBuilder(table).withFamily(cf)
+              .withQualifier(cq).withUserName(userName).build();
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
-          final String namespace = request.getNamespaceName().toStringUtf8();
-          accessChecker.requireNamespacePermission(caller, "userPermissions",
-            namespace, userName, Action.ADMIN);
-          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
-            @Override
-            public List<UserPermission> run() throws Exception {
-              if (userName != null) {
-                // retrieve permission based on the requested parameters
-                return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
-                  namespace, userName, true);
-              } else {
-                return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
-                  namespace, null, false);
-              }
-            }
-          });
+          getUserPermissionsRequest =
+              GetUserPermissionsRequest.newBuilder(namespace).withUserName(userName).build();
         } else {
-          accessChecker.requirePermission(caller, "userPermissions", userName, Action.ADMIN);
-          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
-            @Override
-            public List<UserPermission> run() throws Exception {
-              if (userName != null) {
-                // retrieve permission based on the requested parameters
-                return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null,
-                  null, null, userName, true);
-              } else {
-                return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null,
-                  null, null, null, false);
-              }
-            }
-          });
-
-          // Skip super users when filter user is specified
-          if (userName == null) {
-            // Adding superusers explicitly to the result set as AccessControlLists do not store
-            // them. Also using acl as table name to be inline with the results of global admin and
-            // will help in avoiding any leakage of information about being superusers.
-            for (String user : Superusers.getSuperUsers()) {
-              perms.add(new UserPermission(user,
-                  Permission.newBuilder().withActions(Action.values()).build()));
-            }
-          }
+          getUserPermissionsRequest =
+              GetUserPermissionsRequest.newBuilder().withUserName(userName).build();
         }
+        List<UserPermission> perms =
+            regionEnv.getConnection().getAdmin().getUserPermissions(getUserPermissionsRequest);
         response = AccessControlUtil.buildGetUserPermissionsResponse(perms);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
@@ -2672,6 +2628,26 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     if (!Superusers.isSuperUser(caller)) {
       accessChecker.performOnSuperuser(request, caller, userPermission.getUser());
+    }
+  }
+
+  @Override
+  public void preGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier)
+      throws IOException {
+    preGetUserPermissions(getActiveUser(ctx), userName, namespace, tableName, family, qualifier);
+  }
+
+  private void preGetUserPermissions(User caller, String userName, String namespace,
+      TableName tableName, byte[] family, byte[] qualifier) throws IOException {
+    if (tableName != null) {
+      accessChecker.requirePermission(caller, "getUserPermissions", tableName, family, qualifier,
+        userName, Action.ADMIN);
+    } else if (namespace != null) {
+      accessChecker.requireNamespacePermission(caller, "getUserPermissions", namespace, userName,
+        Action.ADMIN);
+    } else {
+      accessChecker.requirePermission(caller, "getUserPermissions", userName, Action.ADMIN);
     }
   }
 }
