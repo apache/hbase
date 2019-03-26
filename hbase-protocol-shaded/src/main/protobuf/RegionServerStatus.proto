@@ -96,6 +96,7 @@ message RegionStateTransition {
   /** For newly opened region, the open seq num is needed */
   optional uint64 open_seq_num = 3;
 
+  repeated int64 proc_id = 4;
   enum TransitionCode {
     OPENED = 0;
     FAILED_OPEN = 1;

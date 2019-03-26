@@ -2992,28 +2992,32 @@ public final class ProtobufUtil {
    }
 
   /**
-    * Create a CloseRegionRequest for a given region name
-    *
-    * @param regionName the name of the region to close
-    * @return a CloseRegionRequest
-    */
-   public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-       final byte[] regionName) {
-     return ProtobufUtil.buildCloseRegionRequest(server, regionName, null);
-   }
+   * Create a CloseRegionRequest for a given region name
+   * @param regionName the name of the region to close
+   * @return a CloseRegionRequest
+   */
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName) {
+    return ProtobufUtil.buildCloseRegionRequest(server, regionName, null);
+  }
 
-  public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-    final byte[] regionName, ServerName destinationServer) {
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
+      ServerName destinationServer) {
+    return buildCloseRegionRequest(server, regionName, destinationServer, -1);
+  }
+
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
+      ServerName destinationServer, long closeProcId) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
-    RegionSpecifier region = RequestConverter.buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
+    RegionSpecifier region =
+      RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    if (destinationServer != null){
+    if (destinationServer != null) {
       builder.setDestinationServer(toServerName(destinationServer));
     }
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
     }
+    builder.setCloseProcId(closeProcId);
     return builder.build();
   }
 

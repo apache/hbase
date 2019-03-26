@@ -20,15 +20,18 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.OpenRegionProcedureStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * The remote procedure used to open a region.
@@ -36,12 +39,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.O
 @InterfaceAudience.Private
 public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
+  private static final Logger LOG = LoggerFactory.getLogger(OpenRegionProcedure.class);
+
   public OpenRegionProcedure() {
     super();
   }
 
-  public OpenRegionProcedure(RegionInfo region, ServerName targetServer) {
-    super(region, targetServer);
+  public OpenRegionProcedure(TransitRegionStateProcedure parent, RegionInfo region,
+      ServerName targetServer) {
+    super(parent, region, targetServer);
   }
 
   @Override
@@ -51,8 +57,7 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
-    return new RegionOpenOperation(this, region, env.getAssignmentManager().getFavoredNodes(region),
-      false);
+    return new RegionOpenOperation(this, region, getProcId());
   }
 
   @Override
@@ -73,7 +78,48 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected boolean shouldDispatch(RegionStateNode regionNode) {
-    return regionNode.isInState(RegionState.State.OPENING);
+  protected void reportTransition(RegionStateNode regionNode, TransitionCode transitionCode,
+      long seqId) throws IOException {
+    switch (transitionCode) {
+      case OPENED:
+        // this is the openSeqNum
+        if (seqId < 0) {
+          throw new UnexpectedStateException("Received report unexpected " + TransitionCode.OPENED +
+            " transition openSeqNum=" + seqId + ", " + regionNode + ", proc=" + this);
+        }
+        break;
+      case FAILED_OPEN:
+        // nothing to check
+        break;
+      default:
+        throw new UnexpectedStateException(
+          "Received report unexpected " + transitionCode + " transition, " +
+            regionNode.toShortString() + ", " + this + ", expected OPENED or FAILED_OPEN.");
+    }
+  }
+
+  @Override
+  protected void updateTransition(MasterProcedureEnv env, RegionStateNode regionNode,
+      TransitionCode transitionCode, long openSeqNum) throws IOException {
+    switch (transitionCode) {
+      case OPENED:
+        if (openSeqNum < regionNode.getOpenSeqNum()) {
+          LOG.warn(
+            "Received report {} transition from {} for {}, pid={} but the new openSeqNum {}" +
+              " is less than the current one {}, ignoring...",
+            transitionCode, targetServer, regionNode, getProcId(), openSeqNum,
+            regionNode.getOpenSeqNum());
+        } else {
+          regionNode.setOpenSeqNum(openSeqNum);
+        }
+        env.getAssignmentManager().regionOpened(regionNode);
+        break;
+      case FAILED_OPEN:
+        env.getAssignmentManager().regionFailedOpen(regionNode, false);
+        break;
+      default:
+        throw new UnexpectedStateException("Unexpected transition code: " + transitionCode);
+    }
+
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
@@ -123,7 +124,7 @@ public class CloseRegionHandler extends EventHandler {
 
       this.rsServices.removeRegion(region, destination);
       rsServices.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
-          HConstants.NO_SEQNUM, -1, regionInfo));
+        HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo));
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed " + region.getRegionInfo().getRegionNameAsString());

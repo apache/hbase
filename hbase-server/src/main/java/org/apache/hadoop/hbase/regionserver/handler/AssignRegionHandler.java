@@ -51,16 +51,19 @@ public class AssignRegionHandler extends EventHandler {
 
   private final RegionInfo regionInfo;
 
+  private final long openProcId;
+
   private final TableDescriptor tableDesc;
 
   private final long masterSystemTime;
 
   private final RetryCounter retryCounter;
 
-  public AssignRegionHandler(RegionServerServices server, RegionInfo regionInfo,
+  public AssignRegionHandler(RegionServerServices server, RegionInfo regionInfo, long openProcId,
       @Nullable TableDescriptor tableDesc, long masterSystemTime, EventType eventType) {
     super(server, eventType);
     this.regionInfo = regionInfo;
+    this.openProcId = openProcId;
     this.tableDesc = tableDesc;
     this.masterSystemTime = masterSystemTime;
     this.retryCounter = HandlerUtil.getRetryCounter();
@@ -76,7 +79,7 @@ public class AssignRegionHandler extends EventHandler {
     RegionServerServices rs = getServer();
     rs.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes(), Boolean.TRUE);
     if (!rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.FAILED_OPEN,
-      HConstants.NO_SEQNUM, masterSystemTime, regionInfo))) {
+      HConstants.NO_SEQNUM, openProcId, masterSystemTime, regionInfo))) {
       throw new IOException(
         "Failed to report failed open to master: " + regionInfo.getRegionNameAsString());
     }
@@ -133,7 +136,7 @@ public class AssignRegionHandler extends EventHandler {
       cleanUpAndReportFailure(e);
       return;
     }
-    rs.postOpenDeployTasks(new PostOpenDeployContext(region, masterSystemTime));
+    rs.postOpenDeployTasks(new PostOpenDeployContext(region, openProcId, masterSystemTime));
     rs.addRegion(region);
     LOG.info("Opened {}", regionName);
     Boolean current = rs.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes());
@@ -156,7 +159,7 @@ public class AssignRegionHandler extends EventHandler {
   }
 
   public static AssignRegionHandler create(RegionServerServices server, RegionInfo regionInfo,
-      TableDescriptor tableDesc, long masterSystemTime) {
+      long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
     if (regionInfo.isMetaRegion()) {
       eventType = EventType.M_RS_CLOSE_META;
@@ -166,6 +169,7 @@ public class AssignRegionHandler extends EventHandler {
     } else {
       eventType = EventType.M_RS_OPEN_REGION;
     }
-    return new AssignRegionHandler(server, regionInfo, tableDesc, masterSystemTime, eventType);
+    return new AssignRegionHandler(server, regionInfo, openProcId, tableDesc, masterSystemTime,
+      eventType);
   }
 }
