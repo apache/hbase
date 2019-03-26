@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -424,6 +425,26 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       } else {
         assertTrue(1 < countAfterSingleFamily);
       }
+    }
+  }
+
+  @Test
+  public void testNonExistentTableCompaction() {
+    testNonExistentTableCompaction(CompactionState.MINOR);
+    testNonExistentTableCompaction(CompactionState.MAJOR);
+  }
+
+  private void testNonExistentTableCompaction(CompactionState compactionState) {
+    try {
+      if (compactionState == CompactionState.MINOR) {
+        admin.compact(TableName.valueOf("NonExistentTable")).get();
+      } else {
+        admin.majorCompact(TableName.valueOf("NonExistentTable")).get();
+      }
+      fail("Expected TableNotFoundException when table doesn't exist");
+    } catch (Exception e) {
+      // expected.
+      assertTrue(e.getCause() instanceof TableNotFoundException);
     }
   }
 
