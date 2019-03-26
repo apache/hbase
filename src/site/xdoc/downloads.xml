@@ -60,7 +60,7 @@ under the License.
       </td>
       <td style="test-align: left">
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.4/hbase-2.1.4-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-src.tar.gz.asc">asc</a>) <br />
-        <a href=4https://www.apache.org/dyn/closer.lua/hbase/2.1.4/hbase-2.1.4-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.4/hbase-2.1.4-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.4/hbase-2.1.4-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.4/hbase-2.1.4-client-bin.tar.gz.asc">asc</a>)
       </td>
     </tr>
