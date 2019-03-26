@@ -687,13 +687,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return isTableAvailable(tableName, Optional.empty());
   }
 
-  @Override
-  public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
-    Preconditions.checkNotNull(splitKeys, "splitKeys is null. If you don't specify splitKeys,"
-        + " use isTableAvailable(TableName) instead");
-    return isTableAvailable(tableName, Optional.of(splitKeys));
-  }
-
   private CompletableFuture<Boolean> isTableAvailable(TableName tableName,
       Optional<byte[][]> splitKeys) {
     if (TableName.isMetaTableName(tableName)) {

@@ -209,16 +209,6 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     }
   }
 
-
-  @Test
-  public void testTableAvailableWithRandomSplitKeys() throws Exception {
-    createTableWithDefaultConf(tableName);
-    byte[][] splitKeys = new byte[1][];
-    splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 } };
-    boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
-    assertFalse("Table should be created with 1 row in META", tableAvailable);
-  }
-
   @Test
   public void testCompactionTimestamps() throws Exception {
     createTableWithDefaultConf(tableName);

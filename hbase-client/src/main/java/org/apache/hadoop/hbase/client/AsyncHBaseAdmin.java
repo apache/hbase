@@ -177,11 +177,6 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
-    return wrap(rawAdmin.isTableAvailable(tableName, splitKeys));
-  }
-
-  @Override
   public CompletableFuture<Void> addColumnFamily(TableName tableName,
       ColumnFamilyDescriptor columnFamily) {
     return wrap(rawAdmin.addColumnFamily(tableName, columnFamily));
