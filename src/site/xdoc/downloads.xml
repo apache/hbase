@@ -81,8 +81,8 @@ under the License.
         <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz">src</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz">bin</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.5/hbase-2.0.5-src.tar.gz">src</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.5/hbase-2.0.5-bin.tar.gz">bin</a> (<a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.sha512">sha512</a> <a href="https://dist.apache.org/repos/dist/release/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.asc">asc</a>)
       </td>
     </tr>
     <tr>
