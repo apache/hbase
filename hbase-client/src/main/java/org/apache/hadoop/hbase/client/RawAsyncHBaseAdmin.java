@@ -696,7 +696,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(isTableEnabled(tableName), (enabled, error) -> {
       if (error != null) {
-        future.completeExceptionally(error);
+        if (error instanceof TableNotFoundException) {
+          future.complete(false);
+        } else {
+          future.completeExceptionally(error);
+        }
         return;
       }
       if (!enabled) {
