@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -115,6 +116,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -4462,5 +4464,23 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
+  }
+
+  @Override
+  public List<UserPermission>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
+    return executeCallable(
+      new MasterCallable<List<UserPermission>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected List<UserPermission> rpcCall() throws Exception {
+          AccessControlProtos.GetUserPermissionsRequest req =
+              ShadedAccessControlUtil.buildGetUserPermissionsRequest(getUserPermissionsRequest);
+          AccessControlProtos.GetUserPermissionsResponse response =
+              this.master.getUserPermissions(getRpcController(), req);
+          return response.getUserPermissionList().stream()
+              .map(userPermission -> ShadedAccessControlUtil.toUserPermission(userPermission))
+              .collect(Collectors.toList());
+        }
+      });
   }
 }

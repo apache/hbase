@@ -93,6 +93,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
@@ -1785,6 +1787,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public AccessControlProtos.RevokeResponse revoke(RpcController controller,
           AccessControlProtos.RevokeRequest request) throws ServiceException {
         return stub.revoke(controller, request);
+      }
+
+      @Override
+      public GetUserPermissionsResponse getUserPermissions(RpcController controller,
+          GetUserPermissionsRequest request) throws ServiceException {
+        return stub.getUserPermissions(controller, request);
       }
     };
   }
