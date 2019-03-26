@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * @deprecated Do not use any more.
  * @see TransitRegionStateProcedure
  */
-// TODO: Add being able to assign a region to open read-only.
 @Deprecated
 @InterfaceAudience.Private
 public class AssignProcedure extends RegionTransitionProcedure {
@@ -121,9 +119,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
   @Override
   public RemoteOperation remoteCallBuild(final MasterProcedureEnv env,
       final ServerName serverName) {
-    assert serverName.equals(getRegionState(env).getRegionLocation());
-    return new RegionOpenOperation(this, getRegionInfo(),
-      env.getAssignmentManager().getFavoredNodes(getRegionInfo()), false);
+    return null;
   }
 
   @Override

@@ -28,6 +28,7 @@ import "HBase.proto";
 import "RPC.proto";
 import "Snapshot.proto";
 import "Replication.proto";
+import "RegionServerStatus.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -548,9 +549,19 @@ message RegionStateTransitionStateData {
   required bool force_new_plan = 3;
 }
 
+enum RegionRemoteProcedureBaseState {
+  REGION_REMOTE_PROCEDURE_DISPATCH = 1;
+  REGION_REMOTE_PROCEDURE_REPORT_SUCCEED = 2;
+  REGION_REMOTE_PROCEDURE_DISPATCH_FAIL = 3;
+  REGION_REMOTE_PROCEDURE_SERVER_CRASH = 4;
+}
+
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
+  required RegionRemoteProcedureBaseState state = 3;
+  optional RegionStateTransition.TransitionCode transition_code = 4;
+  optional int64 seq_id = 5;
 }
 
 message OpenRegionProcedureStateData {
