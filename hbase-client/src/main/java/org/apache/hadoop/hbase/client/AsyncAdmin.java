@@ -303,6 +303,7 @@ public interface AsyncAdmin {
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
    * was sent to HBase and may need some time to finish the compact operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to compact
    */
   default CompletableFuture<Void> compact(TableName tableName) {
@@ -313,6 +314,7 @@ public interface AsyncAdmin {
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to compact
    * @param columnFamily column family within a table. If not present, compact the table's all
    *          column families.
@@ -324,6 +326,8 @@ public interface AsyncAdmin {
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
    * was sent to HBase and may need some time to finish the compact operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * normal compaction type.
    * @param tableName table to compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
@@ -333,6 +337,8 @@ public interface AsyncAdmin {
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * normal compaction type.
    * @param tableName table to compact
    * @param columnFamily column family within a table
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
@@ -360,6 +366,7 @@ public interface AsyncAdmin {
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
    * request was sent to HBase and may need some time to finish the compact operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to major compact
    */
   default CompletableFuture<Void> majorCompact(TableName tableName) {
@@ -370,6 +377,8 @@ public interface AsyncAdmin {
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * normal compaction. type.
    * @param tableName table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
    *          column families.
@@ -381,6 +390,8 @@ public interface AsyncAdmin {
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
    * request was sent to HBase and may need some time to finish the compact operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * normal compaction type.
    * @param tableName table to major compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
@@ -390,6 +401,7 @@ public interface AsyncAdmin {
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
+   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
    *          column families.
