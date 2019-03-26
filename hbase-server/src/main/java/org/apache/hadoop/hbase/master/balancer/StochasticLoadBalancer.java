@@ -388,10 +388,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       computedMaxSteps = Math.min(this.maxSteps, calculatedMaxSteps);
       if (calculatedMaxSteps > maxSteps) {
         LOG.warn(String.format("calculatedMaxSteps:%d for loadbalancer's stochastic walk is larger "
-                + "than maxSteps:%dß. Hence load balancing may not work well. Setting parameter "
+                + "than maxSteps:%d. Hence load balancing may not work well. Setting parameter "
                 + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true to overcome this issue."
                 + "(This config change does not require service restart)", calculatedMaxSteps,
-            maxRunningTime));
+            maxSteps));
 
       }
     }
