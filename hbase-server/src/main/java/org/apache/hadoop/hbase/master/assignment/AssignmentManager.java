@@ -835,8 +835,10 @@ public class AssignmentManager {
         case CLOSED:
           assert transition.getRegionInfoCount() == 1 : transition;
           final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+          long procId =
+            transition.getProcIdCount() > 0 ? transition.getProcId(0) : Procedure.NO_PROC_ID;
           updateRegionTransition(serverName, transition.getTransitionCode(), hri,
-            transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM);
+            transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM, procId);
           break;
         case READY_TO_SPLIT:
         case SPLIT:
@@ -903,7 +905,7 @@ public class AssignmentManager {
   }
 
   private void updateRegionTransition(ServerName serverName, TransitionCode state,
-      RegionInfo regionInfo, long seqId) throws IOException {
+      RegionInfo regionInfo, long seqId, long procId) throws IOException {
     checkMetaLoaded(regionInfo);
 
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
@@ -919,7 +921,7 @@ public class AssignmentManager {
     ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
     regionNode.lock();
     try {
-      if (!reportTransition(regionNode, serverNode, state, seqId)) {
+      if (!reportTransition(regionNode, serverNode, state, seqId, procId)) {
         // Don't log WARN if shutting down cluster; during shutdown. Avoid the below messages:
         // 2018-08-13 10:45:10,551 WARN ...AssignmentManager: No matching procedure found for
         // rit=OPEN, location=ve0538.halxg.cloudera.com,16020,1533493000958,
@@ -941,14 +943,14 @@ public class AssignmentManager {
   }
 
   private boolean reportTransition(RegionStateNode regionNode, ServerStateNode serverNode,
-      TransitionCode state, long seqId) throws IOException {
+      TransitionCode state, long seqId, long procId) throws IOException {
     ServerName serverName = serverNode.getServerName();
     TransitRegionStateProcedure proc = regionNode.getProcedure();
     if (proc == null) {
       return false;
     }
     proc.reportTransition(master.getMasterProcedureExecutor().getEnvironment(), regionNode,
-      serverName, state, seqId);
+      serverName, state, seqId, procId);
     return true;
   }
 

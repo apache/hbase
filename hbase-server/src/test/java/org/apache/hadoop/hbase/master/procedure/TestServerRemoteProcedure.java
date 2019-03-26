@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SWITCH_RPC_THROTTLE;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.NavigableMap;
@@ -31,7 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.master.assignment.OpenRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
@@ -62,6 +63,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @Category({ MasterTests.class, MediumTests.class })
@@ -134,19 +136,21 @@ public class TestServerRemoteProcedure {
   }
 
   @Test
-  public void testRegionOpenProcedureIsNotHandledByDisPatcher() throws Exception {
+  public void testRegionOpenProcedureIsNotHandledByDispatcher() throws Exception {
     TableName tableName = TableName.valueOf("testRegionOpenProcedureIsNotHandledByDisPatcher");
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(1))
-        .setEndKey(Bytes.toBytes(2)).setSplit(false).setRegionId(0).build();
-    master.getMasterProcedureExecutor().getEnvironment().getAssignmentManager().getRegionStates()
-        .getOrCreateRegionStateNode(hri);
+      .setEndKey(Bytes.toBytes(2)).setSplit(false).setRegionId(0).build();
+    MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
+    env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(hri);
+    TransitRegionStateProcedure proc = TransitRegionStateProcedure.assign(env, hri, null);
     ServerName worker = master.getServerManager().getOnlineServersList().get(0);
-    OpenRegionProcedure openRegionProcedure = new OpenRegionProcedure(hri, worker);
+    OpenRegionProcedure openRegionProcedure = new OpenRegionProcedure(proc, hri, worker);
     Future<byte[]> future = submitProcedure(openRegionProcedure);
     Thread.sleep(2000);
     rsDispatcher.removeNode(worker);
     try {
       future.get(2000, TimeUnit.MILLISECONDS);
+      fail();
     } catch (TimeoutException e) {
       LOG.info("timeout is expected");
     }

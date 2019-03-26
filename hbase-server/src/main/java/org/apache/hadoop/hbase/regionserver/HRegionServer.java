@@ -2199,9 +2199,11 @@ public class HRegionServer extends HasThread implements
   @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context) throws IOException {
     HRegion r = context.getRegion();
+    long openProcId = context.getOpenProcId();
     long masterSystemTime = context.getMasterSystemTime();
     rpcServices.checkOpen();
-    LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
+    LOG.info("Post open deploy tasks for {}, openProcId={}, masterSystemTime={}",
+      r.getRegionInfo().getRegionNameAsString(), openProcId, masterSystemTime);
     // Do checks to see if we need to compact (references or too many files)
     for (HStore s : r.stores.values()) {
       if (s.hasReferences() || s.needsCompaction()) {
@@ -2218,7 +2220,7 @@ public class HRegionServer extends HasThread implements
 
     // Notify master
     if (!reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.OPENED,
-      openSeqNum, masterSystemTime, r.getRegionInfo()))) {
+      openSeqNum, openProcId, masterSystemTime, r.getRegionInfo()))) {
       throw new IOException(
         "Failed to report opened region to master: " + r.getRegionInfo().getRegionNameAsString());
     }
@@ -2234,6 +2236,7 @@ public class HRegionServer extends HasThread implements
     long openSeqNum = context.getOpenSeqNum();
     long masterSystemTime = context.getMasterSystemTime();
     RegionInfo[] hris = context.getHris();
+    long[] procIds = context.getProcIds();
 
     if (TEST_SKIP_REPORTING_TRANSITION) {
       // This is for testing only in case there is no master
@@ -2271,6 +2274,9 @@ public class HRegionServer extends HasThread implements
     }
     for (RegionInfo hri: hris) {
       transition.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
+    }
+    for (long procId: procIds) {
+      transition.addProcId(procId);
     }
     ReportRegionStateTransitionRequest request = builder.build();
     int tries = 0;
