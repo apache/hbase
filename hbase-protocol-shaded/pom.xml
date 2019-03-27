@@ -127,6 +127,15 @@
                 <token>([^\.])com.google.protobuf</token>
                 <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
               </replacement>
+              <replacement>
+                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+              </replacement>
+              <!-- replacer doesn't support anchoring or negative lookbehind -->
+              <replacement>
+                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+                <value>$1</value>
+              </replacement>
             </replacements>
         </configuration>
       </plugin>
