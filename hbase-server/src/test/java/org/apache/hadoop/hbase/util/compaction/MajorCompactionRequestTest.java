@@ -59,10 +59,10 @@ import static org.mockito.Mockito.when;
 @Category({SmallTests.class})
 public class MajorCompactionRequestTest {
 
-  private static final HBaseTestingUtility UTILITY = new HBaseTestingUtility();
-  private static final String FAMILY = "a";
-  private Path rootRegionDir;
-  private Path regionStoreDir;
+  protected static final HBaseTestingUtility UTILITY = new HBaseTestingUtility();
+  protected static final String FAMILY = "a";
+  protected Path rootRegionDir;
+  protected Path regionStoreDir;
 
   @Before public void setUp() throws Exception {
     rootRegionDir = UTILITY.getDataTestDirOnTestFS("MajorCompactionRequestTest");
@@ -72,15 +72,15 @@ public class MajorCompactionRequestTest {
   @Test public void testStoresNeedingCompaction() throws Exception {
     // store files older than timestamp
     List<StoreFileInfo> storeFiles = mockStoreFiles(regionStoreDir, 5, 10);
-    MajorCompactionRequest request = makeMockRequest(100, storeFiles, false);
+    MajorCompactionRequest request = makeMockRequest(storeFiles, false);
     Optional<MajorCompactionRequest> result =
-        request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY));
+        request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 100);
     assertTrue(result.isPresent());
 
     // store files newer than timestamp
     storeFiles = mockStoreFiles(regionStoreDir, 5, 101);
-    request = makeMockRequest(100, storeFiles, false);
-    result = request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY));
+    request = makeMockRequest(storeFiles, false);
+    result = request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 100);
     assertFalse(result.isPresent());
   }
 
@@ -106,12 +106,13 @@ public class MajorCompactionRequestTest {
     HRegionFileSystem fileSystem =
         mockFileSystem(region.getRegionInfo(), true, storeFiles, 50);
     MajorCompactionRequest majorCompactionRequest = spy(new MajorCompactionRequest(configuration,
-        region.getRegionInfo(), Sets.newHashSet(FAMILY), 100));
+        region.getRegionInfo()));
     doReturn(mock(Connection.class)).when(majorCompactionRequest).getConnection(eq(configuration));
     doReturn(paths).when(majorCompactionRequest).getReferenceFilePaths(any(FileSystem.class),
         any(Path.class));
     doReturn(fileSystem).when(majorCompactionRequest).getFileSystem(any(Connection.class));
-    Set<String> result = majorCompactionRequest.getStoresRequiringCompaction(Sets.newHashSet("a"));
+    Set<String> result = majorCompactionRequest
+        .getStoresRequiringCompaction(Sets.newHashSet("a"), 100);
     assertEquals(FAMILY, Iterables.getOnlyElement(result));
   }
 
@@ -143,7 +144,7 @@ public class MajorCompactionRequestTest {
     return mockSystem;
   }
 
-  private List<StoreFileInfo> mockStoreFiles(Path regionStoreDir, int howMany, long timestamp)
+  List<StoreFileInfo> mockStoreFiles(Path regionStoreDir, int howMany, long timestamp)
       throws IOException {
     List<StoreFileInfo> infos = Lists.newArrayList();
     int i = 0;
@@ -158,14 +159,14 @@ public class MajorCompactionRequestTest {
     return infos;
   }
 
-  private MajorCompactionRequest makeMockRequest(long timestamp, List<StoreFileInfo> storeFiles,
+  private MajorCompactionRequest makeMockRequest(List<StoreFileInfo> storeFiles,
       boolean references) throws IOException {
     Configuration configuration = mock(Configuration.class);
     HRegionInfo regionInfo = mock(HRegionInfo.class);
     when(regionInfo.getEncodedName()).thenReturn("HBase");
     when(regionInfo.getTable()).thenReturn(TableName.valueOf("foo"));
     MajorCompactionRequest request =
-        new MajorCompactionRequest(configuration, regionInfo, Sets.newHashSet("a"), timestamp);
+        new MajorCompactionRequest(configuration, regionInfo, Sets.newHashSet("a"));
     MajorCompactionRequest spy = spy(request);
     HRegionFileSystem fileSystem = mockFileSystem(regionInfo, references, storeFiles);
     doReturn(fileSystem).when(spy).getFileSystem(isA(Connection.class));

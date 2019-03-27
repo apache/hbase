@@ -17,45 +17,84 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import java.util.Random;
-import com.google.common.collect.Sets;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.junit.rules.TestName;
 
 @Category({ MiscTests.class, MediumTests.class })
-public class MajorCompactorTest {
+public class TestMajorCompactorTTL extends MajorCompactorTest {
 
-  public static final byte[] FAMILY = Bytes.toBytes("a");
-  protected HBaseTestingUtility utility;
-  protected HBaseAdmin admin;
+  @Rule
+  public TestName name = new TestName();
 
-  @Before public void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     utility = new HBaseTestingUtility();
     utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster();
+    admin = utility.getHBaseAdmin();
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     utility.shutdownMiniCluster();
   }
 
-  @Test public void testCompactingATable() throws Exception {
-    TableName tableName = TableName.valueOf("MajorCompactorTest");
+  @Test
+  public void testCompactingATable() throws Exception {
+    TableName tableName = createTable(name.getMethodName());
+
+    // Delay a bit, so we can set the table TTL to 5 seconds
+    Thread.sleep(10 * 1000);
+
+    int numberOfRegions = utility.getHBaseAdmin().getTableRegions(tableName).size();
+    int numHFiles = utility.getNumHFiles(tableName, FAMILY);
+    // we should have a table with more store files than we would before we major compacted.
+    assertTrue(numberOfRegions < numHFiles);
+    modifyTTL(tableName);
+
+    MajorCompactorTTL compactor = new MajorCompactorTTL(utility.getConfiguration(),
+        admin.getTableDescriptor(tableName), 1, 200);
+    compactor.initializeWorkQueues();
+    compactor.compactAllRegions();
+    compactor.shutdown();
+
+    // verify that the store has been completely major compacted.
+    numberOfRegions = utility.getHBaseAdmin().getTableRegions(tableName).size();
+    numHFiles = utility.getNumHFiles(tableName, FAMILY);
+    assertEquals(numberOfRegions, numHFiles);
+  }
+
+  protected void modifyTTL(TableName tableName) throws IOException, InterruptedException {
+    // Set the TTL to 5 secs, so all the files just written above will get cleaned up on compact.
+    admin.disableTable(tableName);
+    utility.waitTableDisabled(tableName.getName());
+    HTableDescriptor descriptor = admin.getTableDescriptor(tableName);
+    HColumnDescriptor colDesc = descriptor.getFamily(FAMILY);
+    colDesc.setTimeToLive(5);
+    admin.modifyColumn(tableName, colDesc);
+    admin.enableTable(tableName);
+    utility.waitTableEnabled(tableName);
+  }
+
+  protected TableName createTable(String name) throws IOException, InterruptedException {
+    TableName tableName = TableName.valueOf(name);
     utility.createMultiRegionTable(tableName, FAMILY, 5);
     utility.waitTableAvailable(tableName);
     Connection connection = utility.getConnection();
@@ -66,33 +105,6 @@ public class MajorCompactorTest {
       utility.flush(tableName);
     }
     table.close();
-    int numberOfRegions = utility.getHBaseAdmin().getTableRegions(tableName).size();
-    int numHFiles = utility.getNumHFiles(tableName, FAMILY);
-    // we should have a table with more store files than we would before we major compacted.
-    assertTrue(numberOfRegions < numHFiles);
-
-    MajorCompactor compactor =
-        new MajorCompactor(utility.getConfiguration(), tableName,
-            Sets.newHashSet(Bytes.toString(FAMILY)), 1, System.currentTimeMillis(), 200);
-    compactor.initializeWorkQueues();
-    compactor.compactAllRegions();
-    compactor.shutdown();
-
-    // verify that the store has been completely major compacted.
-    numberOfRegions = utility.getHBaseAdmin().getTableRegions(tableName).size();
-    numHFiles = utility.getNumHFiles(tableName, FAMILY);
-    assertEquals(numHFiles, numberOfRegions);
-  }
-
-  protected void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
-      throws IOException {
-    Random r = new Random();
-    byte[] row = new byte[rowSize];
-    for (int i = 0; i < totalRows; i++) {
-      r.nextBytes(row);
-      Put put = new Put(row);
-      put.addColumn(f, new byte[]{0}, new byte[]{0});
-      t.put(put);
-    }
+    return tableName;
   }
 }
