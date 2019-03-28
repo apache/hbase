@@ -134,6 +134,11 @@ public class TestMultiTableSnapshotInputFormatImpl {
     }
 
     @Override
+    public int hashCode() {
+      return Objects.hash(startRow, stopRow);
+    }
+
+    @Override
     public String toString() {
       return org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.
         toStringHelper(this).add("startRow", startRow)
