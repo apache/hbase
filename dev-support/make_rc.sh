@@ -49,6 +49,7 @@ mvnopts="-Xmx3g"
 if [ "$MAVEN_OPTS" != "" ]; then
   mvnopts="${MAVEN_OPTS}"
 fi
+mvnopts="${mvnopts} -Dhttps.protocols=TLSv1.2"
 
 # Ensure we are inside a git repo before making progress
 # The below will fail if outside git.
@@ -59,7 +60,7 @@ git checkout "${git_tag}"
 
 # Get mvn protject version
 #shellcheck disable=SC2016
-version=$(${mvn} -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec)
+version=$(MAVEN_OPTS="${mvnopts}" ${mvn} -q -N -Dexec.executable="echo" -Dexec.args='${project.version}' exec:exec)
 hbase_name="hbase-${version}"
 
 # Make a dir to save tgzs into.
@@ -76,9 +77,9 @@ function build_src {
 # Build bin tgz
 function build_bin {
   MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Papache-release -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
+    -Dmaven.repo.local=${output_dir}/repository
   MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests site assembly:single -Papache-release -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
+    -Dmaven.repo.local=${output_dir}/repository
   mv ./hbase-assembly/target/hbase-*.tar.gz "${output_dir}"
 }
 
@@ -88,7 +89,7 @@ MAVEN_OPTS="${mvnopts}" ${mvn} clean
 
 # Now do the two builds,  one for hadoop1, then hadoop2
 # Run a rat check.
-${mvn} apache-rat:check
+MAVEN_OPTS="${mvnopts}" ${mvn} apache-rat:check
 
 #Build src.
 build_src
@@ -102,7 +103,7 @@ build_bin
 # upload from repository.apache.org by 'drop'ping it from the staging
 # repository before restart.
 MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${output_dir}/repository
+    -Dmaven.repo.local=${output_dir}/repository
 
 # Do sha512 and md5
 cd ${output_dir}
