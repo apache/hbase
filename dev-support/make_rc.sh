@@ -40,6 +40,7 @@ mvnopts="-Xmx3g"
 if [ "$MAVEN_OPTS" != "" ]; then
   mvnopts="${MAVEN_OPTS}"
 fi
+mvnopts="${mvnopts} -Dhttps.protocols=TLSv1.2"
 
 # Make a dir to save tgzs in.
 d=`date -u +"%Y%m%dT%H%M%SZ"`
@@ -53,12 +54,12 @@ function tgz_mover {
 
 function deploy {
   MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
+    -Dmaven.repo.local=${archivedir}/repository
   MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests post-site assembly:single -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
+    -Dmaven.repo.local=${archivedir}/repository
   tgz_mover
   MAVEN_OPTS="${mvnopts}" ${mvn} deploy -DskipTests -Papache-release -Prelease \
-    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
+    -Dmaven.repo.local=${archivedir}/repository
 }
 
 # Build src tarball
@@ -66,7 +67,7 @@ function deploy {
 MAVEN_OPTS="${mvnopts}" ${mvn} clean
 MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests assembly:single \
   -Dassembly.file="$(pwd)/hbase-assembly/src/main/assembly/src.xml" \
-  -Prelease -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=${archivedir}/repository
+  -Prelease -Dmaven.repo.local=${archivedir}/repository
 
 tgz_mover
 
