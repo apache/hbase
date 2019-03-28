@@ -53,6 +53,7 @@ Release Notes - HBase - Version 1.5.0 4/5/2019
     * [HBASE-21740] - Fix NPE while shutting down RS
     * [HBASE-21749] - RS UI may throw NPE and make rs-status page inaccessible with multiwal and replication
     * [HBASE-21766] - TestSimpleRpcScheduler is flaky (branch-1)
+    * [HBASE-21781] - list_deadservers elapsed time is incorrect
     * [HBASE-21796] - Recover a ZK client from the AUTH_FAILED state
     * [HBASE-21800] - RegionServer aborted due to NPE from MetaTableMetrics coprocessor
     * [HBASE-21866] - Do not move the table to null rsgroup when creating an existing table
@@ -62,6 +63,7 @@ Release Notes - HBase - Version 1.5.0 4/5/2019
     * [HBASE-21991] - Fix MetaMetrics issues - [Race condition, Faulty remove logic], few improvements
     * [HBASE-22045] - Mutable range histogram reports incorrect outliers
     * [HBASE-22067] - Fix log in StochasticLoadBalancer when balancer
+    * [HBASE-22125] - Fix more instances in make_rc.sh where we need -Dhttps.protocols=TLSv1.2
 
 ** New Feature
     * [HBASE-19528] - Major Compaction Tool 
