@@ -448,7 +448,6 @@ public class TestMultipleTimestamps {
       Integer[] rowIndexes, Integer[] columnIndexes,
       Long[] versions, int maxVersions)
   throws IOException {
-    Arrays.asList(rowIndexes);
     byte startRow[] = Bytes.toBytes("row:" +
         Collections.min( Arrays.asList(rowIndexes)));
     byte endRow[] = Bytes.toBytes("row:" +

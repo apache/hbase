@@ -65,6 +65,11 @@ public final class DelayedUtil {
     }
 
     @Override
+    public int hashCode() {
+      return Objects.hash(this);
+    }
+
+    @Override
     public String toString() {
       return getClass().getSimpleName() + "(POISON)";
     }
