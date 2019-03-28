@@ -815,7 +815,9 @@ public class AccessControlUtil {
    * @param actions Actions
    * @return true if access allowed, otherwise false
    * @throws ServiceException
+   * @deprecated Use {@link Admin#hasUserPermissions(String, List)} instead.
    */
+  @Deprecated
   public static boolean hasPermission(RpcController controller,
       AccessControlService.BlockingInterface protocol, TableName tableName, byte[] columnFamily,
       byte[] columnQualifier, String userName, Permission.Action[] actions)

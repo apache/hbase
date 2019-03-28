@@ -119,6 +119,15 @@ message CheckPermissionsRequest {
 message CheckPermissionsResponse {
 }
 
+message HasUserPermissionsRequest {
+    optional bytes user_name = 1;
+    repeated Permission permission = 2;
+}
+
+message HasUserPermissionsResponse {
+    repeated bool has_user_permission = 1;
+}
+
 service AccessControlService {
     rpc Grant(GrantRequest)
       returns (GrantResponse);

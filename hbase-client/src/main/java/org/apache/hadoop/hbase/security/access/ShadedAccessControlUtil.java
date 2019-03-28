@@ -31,6 +31,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -315,6 +316,18 @@ public class ShadedAccessControlUtil {
     GetUserPermissionsResponse.Builder builder = GetUserPermissionsResponse.newBuilder();
     for (UserPermission perm : permissions) {
       builder.addUserPermission(toUserPermission(perm));
+    }
+    return builder.build();
+  }
+
+  public static HasUserPermissionsRequest buildHasUserPermissionsRequest(String userName,
+      List<Permission> permissions) {
+    HasUserPermissionsRequest.Builder builder = HasUserPermissionsRequest.newBuilder();
+    if (userName != null && !userName.isEmpty()) {
+      builder.setUserName(ByteString.copyFromUtf8(userName));
+    }
+    for (Permission permission : permissions) {
+      builder.addPermission(toPermission(permission));
     }
     return builder.build();
   }

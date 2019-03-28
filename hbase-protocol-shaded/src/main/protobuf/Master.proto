@@ -1033,6 +1033,8 @@ service MasterService {
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
 
   rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+  rpc HasUserPermissions (HasUserPermissionsRequest) returns (HasUserPermissionsResponse);
 }
 
 // HBCK Service definitions.

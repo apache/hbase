@@ -392,19 +392,9 @@ public class AccessControlClient {
     if (StringUtils.isEmpty(tableName) || StringUtils.isEmpty(userName)) {
       throw new IllegalArgumentException("Table and user name can't be null or empty.");
     }
-    boolean hasPermission = false;
-    /**
-     * todo: pass an rpccontroller hbaserpccontroller controller = ((clusterconnection)
-     * connection).getrpccontrollerfactory().newcontroller();
-     */
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
-      BlockingInterface protocol =
-          AccessControlProtos.AccessControlService.newBlockingStub(service);
-      // Check whether user has permission
-      hasPermission = AccessControlUtil.hasPermission(null, protocol, TableName.valueOf(tableName),
-        columnFamily, columnQualifier, userName, actions);
-    }
-    return hasPermission;
+    List<Permission> permissions = new ArrayList<>(1);
+    permissions.add(Permission.newBuilder(TableName.valueOf(tableName)).withFamily(columnFamily)
+        .withQualifier(columnQualifier).withActions(actions).build());
+    return connection.getAdmin().hasUserPermissions(userName, permissions).get(0);
   }
 }

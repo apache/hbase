@@ -1844,7 +1844,7 @@ public class TestAccessController extends SecureTestUtil {
       AccessTestAction multiQualifierRead = new AccessTestAction() {
         @Override
         public Void run() throws Exception {
-          checkTablePerms(TEST_UTIL, TEST_TABLE,
+          checkTablePerms(TEST_UTIL,
             new Permission[] {
                 Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_Q1)
                     .withActions(Permission.Action.READ).build(),
@@ -1857,8 +1857,7 @@ public class TestAccessController extends SecureTestUtil {
       AccessTestAction globalAndTableRead = new AccessTestAction() {
         @Override
         public Void run() throws Exception {
-          checkTablePerms(TEST_UTIL, TEST_TABLE, new Permission[] {
-              new Permission(Permission.Action.READ),
+          checkTablePerms(TEST_UTIL, new Permission[] { new Permission(Permission.Action.READ),
               Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build() });
           return null;
         }
@@ -1867,7 +1866,7 @@ public class TestAccessController extends SecureTestUtil {
       AccessTestAction noCheck = new AccessTestAction() {
         @Override
         public Void run() throws Exception {
-          checkTablePerms(TEST_UTIL, TEST_TABLE, new Permission[0]);
+          checkTablePerms(TEST_UTIL, new Permission[0]);
           return null;
         }
       };
@@ -3333,7 +3332,7 @@ public class TestAccessController extends SecureTestUtil {
         TEST_FAMILY, TEST_QUALIFIER, Permission.Action.READ, Permission.Action.WRITE);
 
       // Verify action privilege
-      AccessTestAction hasPermissionAction = new AccessTestAction() {
+      AccessTestAction hasPermissionActionCP = new AccessTestAction() {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(conf);
@@ -3348,6 +3347,21 @@ public class TestAccessController extends SecureTestUtil {
           return null;
         }
       };
+      AccessTestAction hasPermissionAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            Permission.Action[] actions = { Permission.Action.READ, Permission.Action.WRITE };
+            conn.getAdmin().hasUserPermissions("dummy",
+              Arrays.asList(Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+                  .withQualifier(HConstants.EMPTY_BYTE_ARRAY).withActions(actions).build()));
+          }
+          return null;
+        }
+      };
+      verifyAllowed(hasPermissionActionCP, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER,
+        USER_ADMIN_CF, user1);
+      verifyDenied(hasPermissionActionCP, USER_CREATE, USER_RW, USER_RO, USER_NONE, user2);
       verifyAllowed(hasPermissionAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER,
         USER_ADMIN_CF, user1);
       verifyDenied(hasPermissionAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, user2);

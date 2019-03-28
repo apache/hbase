@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -112,6 +113,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -3822,6 +3825,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               resp -> resp.getUserPermissionList().stream()
                 .map(uPerm -> ShadedAccessControlUtil.toUserPermission(uPerm))
                 .collect(Collectors.toList())))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<Boolean>> hasUserPermissions(String userName,
+      List<Permission> permissions) {
+    return this.<List<Boolean>> newMasterCaller()
+        .action((controller, stub) -> this
+            .<HasUserPermissionsRequest, HasUserPermissionsResponse, List<Boolean>> call(controller,
+              stub, ShadedAccessControlUtil.buildHasUserPermissionsRequest(userName, permissions),
+              (s, c, req, done) -> s.hasUserPermissions(c, req, done),
+              resp -> resp.getHasUserPermissionList()))
         .call();
   }
 }
