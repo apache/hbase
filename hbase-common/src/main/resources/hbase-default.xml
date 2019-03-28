@@ -419,14 +419,14 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.zookeeper.peerport</name>
     <value>2888</value>
     <description>Port used by ZooKeeper peers to talk to each other.
-    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.4.10/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.</description>
   </property>
   <property>
     <name>hbase.zookeeper.leaderport</name>
     <value>3888</value>
     <description>Port used by ZooKeeper for leader election.
-    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.4.10/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.</description>
   </property>
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
