@@ -523,7 +523,7 @@ The host name or IP address of the name server (DNS)
 +
 .Description
 Port used by ZooKeeper peers to talk to each other.
-    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.4.10/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
@@ -535,7 +535,7 @@ Port used by ZooKeeper peers to talk to each other.
 +
 .Description
 Port used by ZooKeeper for leader election.
-    See https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://zookeeper.apache.org/doc/r3.4.10/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
