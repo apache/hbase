@@ -637,11 +637,11 @@ For more about ZooKeeper configuration, including using an external ZooKeeper in
 . Browse to the Web UI.
 +
 .Web UI Port Changes
-NOTE: Web UI Port Changes
-+
+[NOTE]
+====
 In HBase newer than 0.98.x, the HTTP ports used by the HBase Web UI changed from 60010 for the
 Master and 60030 for each RegionServer to 16010 for the Master and 16030 for the RegionServer.
-
+====
 +
 If everything is set up correctly, you should be able to connect to the UI for the Master
 `http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/`
