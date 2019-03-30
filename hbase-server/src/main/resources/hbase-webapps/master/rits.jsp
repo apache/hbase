@@ -22,11 +22,10 @@
          import="java.util.Collections"
          import="java.util.Comparator"
          import="java.util.List"
-         import="java.util.stream.Collectors"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
-         import="org.apache.hadoop.hbase.master.assignment.RegionTransitionProcedure"
 %>
+<%@ page import="java.util.stream.Collectors" %>
 <%
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     List<RegionStateNode> rit = master.getAssignmentManager().getRegionsInTransition();
@@ -87,17 +86,8 @@
                 <td><%= regionStateNode.getRegionInfo().getEncodedName() %></td>
                 <td><%= regionStateNode.getRegionInfo().getTable() %></td>
                 <td><%= regionStateNode.getState() %></td>
-                <%
-                    RegionTransitionProcedure procedure = regionStateNode.getProcedure();
-
-                    if (procedure == null) {
-                %>
-                    <td></td>
-                    <td></td>
-                <% } else { %>
-                    <td><%= procedure.getProcId() %></td>
-                    <td><%= escapeXml(procedure.getState().toString() + (procedure.isBypass() ? "(Bypassed)" : "")) %></td>
-                <% } %>
+                <td><%= regionStateNode.getProcedure().getProcId() %></td>
+                <td><%= escapeXml(regionStateNode.getProcedure().getState().toString() + (regionStateNode.getProcedure().isBypass() ? "(Bypassed)" : "")) %></td>
             </tr>
             <% } %>
             <p><%= rit.size() %> region(s) in transition.</p>
