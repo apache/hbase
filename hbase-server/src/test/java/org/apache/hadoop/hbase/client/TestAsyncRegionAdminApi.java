@@ -196,7 +196,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
             }
             regionServerCount.incrementAndGet();
           });
-    assertEquals(2, regionServerCount.get());
+    assertEquals(3, regionServerCount.get());
   }
 
   @Test

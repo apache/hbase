@@ -184,7 +184,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testMergeRegionsInvalidRegionCount() throws InterruptedException {
+  public void testMergeRegionsInvalidRegionCount() throws Exception {
     byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
     createTableWithDefaultConf(tableName, splitRows);
     List<RegionInfo> regions = admin.getRegions(tableName).join();
