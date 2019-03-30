@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -83,7 +84,7 @@ public abstract class TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
-    TEST_UTIL.startMiniCluster(2);
+    TEST_UTIL.startMiniCluster(3);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
@@ -103,36 +104,54 @@ public abstract class TestAsyncAdminBase {
   @After
   public void tearDown() throws Exception {
     admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
-        .whenCompleteAsync((tables, err) -> {
-          if (tables != null) {
-            tables.forEach(table -> {
-              try {
-                admin.disableTable(table).join();
-              } catch (Exception e) {
-                LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
-              }
-              admin.deleteTable(table).join();
-            });
-          }
-        }, ForkJoinPool.commonPool()).join();
+      .whenCompleteAsync((tables, err) -> {
+        if (tables != null) {
+          tables.forEach(table -> {
+            try {
+              admin.disableTable(table).join();
+            } catch (Exception e) {
+              LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+            }
+            admin.deleteTable(table).join();
+          });
+        }
+      }, ForkJoinPool.commonPool()).join();
   }
 
-  protected void createTableWithDefaultConf(TableName tableName) {
+  protected void createTableWithDefaultConf(TableName tableName) throws IOException {
     createTableWithDefaultConf(tableName, null);
   }
 
-  protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys) {
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication)
+      throws IOException {
+    createTableWithDefaultConf(tableName, regionReplication, null, FAMILY);
+  }
+
+  protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys)
+      throws IOException {
     createTableWithDefaultConf(tableName, splitKeys, FAMILY);
   }
 
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
+      byte[][] splitKeys) throws IOException {
+    createTableWithDefaultConf(tableName, regionReplication, splitKeys, FAMILY);
+  }
+
   protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys,
-      byte[]... families) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+      byte[]... families) throws IOException {
+    createTableWithDefaultConf(tableName, 1, splitKeys, families);
+  }
+
+  protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
+      byte[][] splitKeys, byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     CompletableFuture<Void> future = splitKeys == null ? admin.createTable(builder.build())
-        : admin.createTable(builder.build(), splitKeys);
+      : admin.createTable(builder.build(), splitKeys);
     future.join();
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
   }
 }
