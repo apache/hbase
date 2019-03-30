@@ -2295,7 +2295,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * Get the region location for the passed region name. The region name may be a full region name
    * or encoded region name. If the region does not found, then it'll throw an
    * UnknownRegionException wrapped by a {@link CompletableFuture}
-   * @param regionNameOrEncodedRegionName
+   * @param regionNameOrEncodedRegionName region name or encoded region name
    * @return region location, wrapped by a {@link CompletableFuture}
    */
   @VisibleForTesting
@@ -2306,10 +2306,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     try {
       CompletableFuture<Optional<HRegionLocation>> future;
       if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
-        future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
-          regionNameOrEncodedRegionName);
+        String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
+        if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
+          // old format encodedName, should be meta region
+          future = connection.registry.getMetaRegionLocation()
+            .thenApply(locs -> Stream.of(locs.getRegionLocations())
+              .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+        } else {
+          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+            regionNameOrEncodedRegionName);
+        }
       } else {
-        future = AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+        RegionInfo regionInfo =
+          MetaTableAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
+        if (regionInfo.isMetaRegion()) {
+          future = connection.registry.getMetaRegionLocation()
+            .thenApply(locs -> Stream.of(locs.getRegionLocations())
+              .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
+              .findFirst());
+        } else {
+          future =
+            AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+        }
       }
 
       CompletableFuture<HRegionLocation> returnedFuture = new CompletableFuture<>();
