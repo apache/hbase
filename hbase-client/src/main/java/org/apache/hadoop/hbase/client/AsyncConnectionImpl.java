@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -49,14 +48,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
@@ -200,86 +196,31 @@ class AsyncConnectionImpl implements AsyncConnection {
       () -> createAdminServerStub(serverName));
   }
 
-  private void makeMasterStub(CompletableFuture<MasterService.Interface> future) {
-    addListener(registry.getMasterAddress(), (sn, error) -> {
-      if (sn == null) {
-        String msg = "ZooKeeper available but no active master location found";
-        LOG.info(msg);
-        this.masterStubMakeFuture.getAndSet(null)
-          .completeExceptionally(new MasterNotRunningException(msg));
-        return;
-      }
-      try {
-        MasterService.Interface stub = createMasterStub(sn);
-        HBaseRpcController controller = getRpcController();
-        stub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
-          new RpcCallback<IsMasterRunningResponse>() {
-            @Override
-            public void run(IsMasterRunningResponse resp) {
-              if (controller.failed() || resp == null ||
-                (resp != null && !resp.getIsMasterRunning())) {
-                masterStubMakeFuture.getAndSet(null).completeExceptionally(
-                  new MasterNotRunningException("Master connection is not running anymore"));
-              } else {
-                masterStub.set(stub);
-                masterStubMakeFuture.set(null);
-                future.complete(stub);
-              }
-            }
-          });
-      } catch (IOException e) {
-        this.masterStubMakeFuture.getAndSet(null)
-          .completeExceptionally(new IOException("Failed to create async master stub", e));
-      }
-    });
-  }
-
   CompletableFuture<MasterService.Interface> getMasterStub() {
-    MasterService.Interface masterStub = this.masterStub.get();
-
-    if (masterStub == null) {
-      for (;;) {
-        if (this.masterStubMakeFuture.compareAndSet(null, new CompletableFuture<>())) {
-          CompletableFuture<MasterService.Interface> future = this.masterStubMakeFuture.get();
-          makeMasterStub(future);
+    return ConnectionUtils.getOrFetch(masterStub, masterStubMakeFuture, false, () -> {
+      CompletableFuture<MasterService.Interface> future = new CompletableFuture<>();
+      addListener(registry.getMasterAddress(), (addr, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else if (addr == null) {
+          future.completeExceptionally(new MasterNotRunningException(
+            "ZooKeeper available but no active master location found"));
         } else {
-          CompletableFuture<MasterService.Interface> future = this.masterStubMakeFuture.get();
-          if (future != null) {
-            return future;
+          LOG.debug("The fetched master address is {}", addr);
+          try {
+            future.complete(createMasterStub(addr));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
           }
         }
-      }
-    }
 
-    for (;;) {
-      if (masterStubMakeFuture.compareAndSet(null, new CompletableFuture<>())) {
-        CompletableFuture<MasterService.Interface> future = masterStubMakeFuture.get();
-        HBaseRpcController controller = getRpcController();
-        masterStub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
-          new RpcCallback<IsMasterRunningResponse>() {
-            @Override
-            public void run(IsMasterRunningResponse resp) {
-              if (controller.failed() || resp == null ||
-                (resp != null && !resp.getIsMasterRunning())) {
-                makeMasterStub(future);
-              } else {
-                future.complete(masterStub);
-              }
-            }
-          });
-      } else {
-        CompletableFuture<MasterService.Interface> future = masterStubMakeFuture.get();
-        if (future != null) {
-          return future;
-        }
-      }
-    }
+      });
+      return future;
+    }, stub -> true, "master stub");
   }
 
-  private HBaseRpcController getRpcController() {
-    HBaseRpcController controller = this.rpcControllerFactory.newController();
-    controller.setCallTimeout((int) TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
-    return controller;
+  void clearMasterStubCache(MasterService.Interface stub) {
+    masterStub.compareAndSet(stub, null);
   }
 
   @Override
