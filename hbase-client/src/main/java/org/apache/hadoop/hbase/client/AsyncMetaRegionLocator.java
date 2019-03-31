@@ -22,23 +22,18 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegi
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceRegionLocation;
-import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The asynchronous locator for meta region.
  */
 @InterfaceAudience.Private
 class AsyncMetaRegionLocator {
-
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncMetaRegionLocator.class);
 
   private final AsyncRegistry registry;
 
@@ -61,45 +56,8 @@ class AsyncMetaRegionLocator {
    * cached region locations and cause an infinite loop.
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
-    for (;;) {
-      if (!reload) {
-        RegionLocations locs = this.metaRegionLocations.get();
-        if (isGood(locs, replicaId)) {
-          return CompletableFuture.completedFuture(locs);
-        }
-      }
-      LOG.trace("Meta region location cache is null, try fetching from registry.");
-      if (metaRelocateFuture.compareAndSet(null, new CompletableFuture<>())) {
-        LOG.debug("Start fetching meta region location from registry.");
-        CompletableFuture<RegionLocations> future = metaRelocateFuture.get();
-        addListener(registry.getMetaRegionLocation(), (locs, error) -> {
-          if (error != null) {
-            LOG.debug("Failed to fetch meta region location from registry", error);
-            metaRelocateFuture.getAndSet(null).completeExceptionally(error);
-            return;
-          }
-          LOG.debug("The fetched meta region location is {}", locs);
-          // Here we update cache before reset future, so it is possible that someone can get a
-          // stale value. Consider this:
-          // 1. update cache
-          // 2. someone clear the cache and relocate again
-          // 3. the metaRelocateFuture is not null so the old future is used.
-          // 4. we clear metaRelocateFuture and complete the future in it with the value being
-          // cleared in step 2.
-          // But we do not think it is a big deal as it rarely happens, and even if it happens, the
-          // caller will retry again later, no correctness problems.
-          this.metaRegionLocations.set(locs);
-          metaRelocateFuture.set(null);
-          future.complete(locs);
-        });
-        return future;
-      } else {
-        CompletableFuture<RegionLocations> future = metaRelocateFuture.get();
-        if (future != null) {
-          return future;
-        }
-      }
-    }
+    return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
+      registry::getMetaRegionLocation, locs -> isGood(locs, replicaId), "meta region location");
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {
