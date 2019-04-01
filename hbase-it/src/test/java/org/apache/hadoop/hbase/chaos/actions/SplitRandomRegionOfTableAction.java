@@ -61,7 +61,7 @@ public class SplitRandomRegionOfTableAction extends Action {
         regions.toArray(new RegionInfo[regions.size()]));
     LOG.debug("Splitting region " + region.getRegionNameAsString());
     try {
-      admin.splitRegionAsync(region.getRegionName(), null).get();
+      admin.splitRegionAsync(region.getRegionName()).get();
     } catch (Exception ex) {
       LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
     }

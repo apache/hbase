@@ -142,7 +142,7 @@ public class TestCatalogJanitorInMemoryStates {
     // Split this table in two.
     Admin admin = TEST_UTIL.getAdmin();
     Connection connection = TEST_UTIL.getConnection();
-    admin.splitRegionAsync(r.getEncodedNameAsBytes(), null).get();
+    admin.splitRegionAsync(r.getEncodedNameAsBytes()).get();
     admin.close();
     PairOfSameType<RegionInfo> regions = waitOnDaughters(r);
     if (regions != null) {

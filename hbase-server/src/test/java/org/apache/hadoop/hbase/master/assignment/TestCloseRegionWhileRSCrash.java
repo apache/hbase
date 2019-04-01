@@ -150,8 +150,7 @@ public class TestCloseRegionWhileRSCrash {
     if (!srcRs.getRegions(TableName.META_TABLE_NAME).isEmpty()) {
       RegionInfo metaRegion = srcRs.getRegions(TableName.META_TABLE_NAME).get(0).getRegionInfo();
       HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
-      UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(),
-        Bytes.toBytes(dstRs.getServerName().getServerName()));
+      UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(), dstRs.getServerName());
       UTIL.waitFor(30000, () -> !dstRs.getRegions(TableName.META_TABLE_NAME).isEmpty());
     }
   }
@@ -175,8 +174,7 @@ public class TestCloseRegionWhileRSCrash {
       () -> procExec.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure));
     Thread t = new Thread(() -> {
       try {
-        UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
-          Bytes.toBytes(dstRs.getServerName().getServerName()));
+        UTIL.getAdmin().move(region.getEncodedNameAsBytes(), dstRs.getServerName());
       } catch (IOException e) {
       }
     });

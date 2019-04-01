@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
-import org.apache.hadoop.hbase.util.Bytes;
 
 final class RegionReplicaTestHelper {
 
@@ -89,8 +88,7 @@ final class RegionReplicaTestHelper {
     ServerName newServerName = util.getHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
       .get();
-    util.getAdmin().move(regionInfo.getEncodedNameAsBytes(),
-      Bytes.toBytes(newServerName.getServerName()));
+    util.getAdmin().move(regionInfo.getEncodedNameAsBytes(), newServerName);
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override

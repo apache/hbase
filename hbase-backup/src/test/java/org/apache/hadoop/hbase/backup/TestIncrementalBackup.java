@@ -133,7 +133,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       long startSplitTime = EnvironmentEdgeManager.currentTime();
 
       try {
-        admin.splitRegionAsync(name, null).get();
+        admin.splitRegionAsync(name).get();
       } catch (Exception e) {
         // although split fail, this may not affect following check in current API,
         // exception will be thrown.

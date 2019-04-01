@@ -76,7 +76,7 @@ public class SplitNormalizationPlan implements NormalizationPlan {
   public void execute(Admin admin) {
     LOG.info("Executing splitting normalization plan: " + this);
     try {
-      admin.splitRegionAsync(regionInfo.getRegionName(), null).get();
+      admin.splitRegionAsync(regionInfo.getRegionName()).get();
     } catch (Exception ex) {
       LOG.error("Error during region split: ", ex);
     }

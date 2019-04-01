@@ -1153,14 +1153,17 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void move(final byte[] encodedRegionName, final byte[] destServerName) throws IOException {
+  public void move(byte[] encodedRegionName) throws IOException {
+    move(encodedRegionName, (ServerName) null);
+  }
+
+  public void move(final byte[] encodedRegionName, ServerName destServerName) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
         setPriority(encodedRegionName);
         MoveRegionRequest request =
-            RequestConverter.buildMoveRegionRequest(encodedRegionName,
-              destServerName != null ? ServerName.valueOf(Bytes.toString(destServerName)) : null);
+          RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
         master.moveRegion(getRpcController(), request);
         return null;
       }
@@ -1528,12 +1531,9 @@ public class HBaseAdmin implements Admin {
    * @param units time units
    * @throws IOException
    */
-  public void splitRegionSync(byte[] regionName, byte[] splitPoint,
-    final long timeout, final TimeUnit units) throws IOException {
-    get(
-        splitRegionAsync(regionName, splitPoint),
-        timeout,
-        units);
+  public void splitRegionSync(byte[] regionName, byte[] splitPoint, final long timeout,
+      final TimeUnit units) throws IOException {
+    get(splitRegionAsync(regionName, splitPoint), timeout, units);
   }
 
   @Override
@@ -3860,5 +3860,10 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void close() {
+  }
+
+  @Override
+  public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
+    return splitRegionAsync(regionName, null);
   }
 }

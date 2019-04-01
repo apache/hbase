@@ -172,8 +172,7 @@ public class TestAsyncTableGetMultiThreaded {
       ServerName newMetaServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
           .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer))
           .findAny().get();
-      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        Bytes.toBytes(newMetaServer.getServerName()));
+      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), newMetaServer);
       Thread.sleep(5000);
     }
     stop.set(true);

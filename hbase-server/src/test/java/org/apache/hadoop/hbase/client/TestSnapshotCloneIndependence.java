@@ -306,7 +306,7 @@ public class TestSnapshotCloneIndependence {
       originalRegionCount, cloneTableRegionCount);
 
     // Split a region on the parent table
-    admin.splitRegionAsync(originalTableHRegions.get(0).getRegionName(), null).get();
+    admin.splitRegionAsync(originalTableHRegions.get(0).getRegionName()).get();
     waitOnSplit(UTIL.getConnection(), originalTable, originalRegionCount);
 
     // Verify that the cloned table region is not split

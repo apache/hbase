@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -671,19 +672,49 @@ public interface Admin extends Abortable, Closeable {
   void majorCompactRegionServer(ServerName serverName) throws IOException;
 
   /**
-   * Move the region <code>r</code> to <code>dest</code>.
-   *
+   * Move the region <code>encodedRegionName</code> to a random server.
    * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
-   * suffix: e.g. if regionname is
-   * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
-   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
-   * @param destServerName The servername of the destination regionserver.  If passed the empty byte
-   * array we'll assign to a random server.  A server name is made of host, port and startcode.
-   * Here is an example: <code> host187.example.com,60020,1289493121758</code>
-   * @throws IOException if we can't find a region named
-   * <code>encodedRegionName</code>
+   *          suffix: e.g. if regionname is
+   *          <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   *          then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @throws IOException if we can't find a region named <code>encodedRegionName</code>
    */
-  void move(byte[] encodedRegionName, byte[] destServerName) throws IOException;
+  void move(byte[] encodedRegionName) throws IOException;
+
+  /**
+   * Move the region <code>rencodedRegionName</code> to <code>destServerName</code>.
+   * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
+   *          suffix: e.g. if regionname is
+   *          <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   *          then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @param destServerName The servername of the destination regionserver. If passed the empty byte
+   *          array we'll assign to a random server. A server name is made of host, port and
+   *          startcode. Here is an example: <code> host187.example.com,60020,1289493121758</code>
+   * @throws IOException if we can't find a region named <code>encodedRegionName</code>
+   * @deprecated Use {@link #move(byte[], ServerName)} instead. And if you want to move the region
+   *             to a random server, please use {@link #move(byte[])}.
+   */
+  @Deprecated
+  default void move(byte[] encodedRegionName, byte[] destServerName) throws IOException {
+    if (destServerName == null || destServerName.length == 0) {
+      move(encodedRegionName);
+    } else {
+      move(encodedRegionName, ServerName.valueOf(Bytes.toString(destServerName)));
+    }
+  }
+
+  /**
+   * Move the region <code>rencodedRegionName</code> to <code>destServerName</code>.
+   * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
+   *          suffix: e.g. if regionname is
+   *          <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   *          then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @param destServerName The servername of the destination regionserver. A server name is made of
+   *          host, port and startcode. Here is an example:
+   *          <code> host187.example.com,60020,1289493121758</code>
+   * @throws IOException if we can't find a region named <code>encodedRegionName</code>
+   */
+  void move(byte[] encodedRegionName, ServerName destServerName) throws IOException;
 
   /**
    * Assign a Region.
@@ -694,7 +725,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Unassign a region from current hosting regionserver.  Region will then be assigned to a
    * regionserver chosen at random.  Region could be reassigned back to the same server.  Use {@link
-   * #move(byte[], byte[])} if you want to control the region movement.
+   * #move(byte[], ServerName)} if you want to control the region movement.
    *
    * @param regionName Region to unassign. Will clear any existing RegionPlan if one found.
    * @param force If <code>true</code>, force unassign (Will remove region from regions-in-transition too if
@@ -873,6 +904,13 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void split(TableName tableName, byte[] splitPoint) throws IOException;
+
+  /**
+   * Split an individual region. Asynchronous operation.
+   * @param regionName region to split
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> splitRegionAsync(byte[] regionName) throws IOException;
 
   /**
    * Split an individual region. Asynchronous operation.

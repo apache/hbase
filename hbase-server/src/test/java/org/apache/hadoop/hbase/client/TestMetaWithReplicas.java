@@ -131,7 +131,7 @@ public class TestMetaWithReplicas {
           TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
       assertNotEquals(destinationServerName, metaServerName);
       TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-          Bytes.toBytes(destinationServerName.toString()));
+        destinationServerName);
     }
     // Disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
@@ -230,7 +230,7 @@ public class TestMetaWithReplicas {
         // If the servers are the same, then move the test table's region out of the server
         // to another random server
         if (hrl.getServerName().equals(primary)) {
-          util.getAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes(), null);
+          util.getAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes());
           // wait for the move to complete
           do {
             Thread.sleep(10);
@@ -462,7 +462,7 @@ public class TestMetaWithReplicas {
     TEST_UTIL.createTable(tableName, "f");
     assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));
     TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        Bytes.toBytes(moveToServer.getServerName()));
+      moveToServer);
     int i = 0;
     assert !moveToServer.equals(currentServer);
     LOG.info("CurrentServer=" + currentServer + ", moveToServer=" + moveToServer);

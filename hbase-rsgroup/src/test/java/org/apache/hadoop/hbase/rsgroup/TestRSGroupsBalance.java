@@ -106,7 +106,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     final ServerName first = assignMap.entrySet().iterator().next().getKey();
     for (RegionInfo region : admin.getRegions(tableName)) {
       if (!assignMap.get(first).contains(region.getRegionNameAsString())) {
-        admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(first.getServerName()));
+        admin.move(region.getEncodedNameAsBytes(), first);
       }
     }
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {

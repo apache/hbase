@@ -185,7 +185,7 @@ public class TestHBaseAdminNoCluster {
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
       public void call(Admin admin) throws Exception {
-        admin.move(new byte[0], null);
+        admin.move(new byte[0]);
       }
       @Override
       public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {

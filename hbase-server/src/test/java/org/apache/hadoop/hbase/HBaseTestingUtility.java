@@ -3483,8 +3483,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       throws InterruptedException, IOException {
     HMaster master = getMiniHBaseCluster().getMaster();
     // TODO: Here we start the move. The move can take a while.
-    getAdmin().move(destRegion.getEncodedNameAsBytes(),
-        Bytes.toBytes(destServer.getServerName()));
+    getAdmin().move(destRegion.getEncodedNameAsBytes(), destServer);
     while (true) {
       ServerName serverName = master.getAssignmentManager().getRegionStates()
           .getRegionServerOfRegion(destRegion);
