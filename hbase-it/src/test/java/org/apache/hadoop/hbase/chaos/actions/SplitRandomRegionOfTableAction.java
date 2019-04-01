@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -62,7 +61,7 @@ public class SplitRandomRegionOfTableAction extends Action {
         regions.toArray(new HRegionInfo[regions.size()]));
     LOG.debug("Splitting region " + region.getRegionNameAsString());
     try {
-      admin.splitRegion(region.getRegionName());
+      admin.splitRegionAsync(region.getRegionName()).get();
     } catch (Exception ex) {
       LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
     }

@@ -457,7 +457,7 @@ public class TestAdmin2 {
     RegionInfo hri = tableRegions.get(0);
     AssignmentManager am = master.getAssignmentManager();
     ServerName server = am.getRegionStates().getRegionServerOfRegion(hri);
-    localAdmin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(server.getServerName()));
+    localAdmin.move(hri.getEncodedNameAsBytes(), server);
     assertEquals("Current region server and region server before move should be same.", server,
       am.getRegionStates().getRegionServerOfRegion(hri));
   }

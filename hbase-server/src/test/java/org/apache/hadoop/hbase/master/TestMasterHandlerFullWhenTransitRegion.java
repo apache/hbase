@@ -69,7 +69,7 @@ public class TestMasterHandlerFullWhenTransitRegion {
     //See HBASE-21754
     //There is Only one handler, if ReportRegionStateTransitionRequest executes in the same kind
     // of thread with moveRegion, it will lock each other. Making the move operation can not finish.
-    UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), null);
+    UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes());
     LOG.info("Region move complete");
   }
 

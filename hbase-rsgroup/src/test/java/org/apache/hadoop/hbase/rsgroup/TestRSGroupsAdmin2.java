@@ -128,9 +128,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
-    TEST_UTIL.getAdmin().move(
-      Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
-      Bytes.toBytes(targetServer.getServerName()));
+    TEST_UTIL.getAdmin()
+      .move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))), targetServer);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -362,7 +361,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     for (String region : regionList) {
       // Lets move this region to the targetServer
       TEST_UTIL.getAdmin().move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(region))),
-        Bytes.toBytes(targetServer.getServerName()));
+        targetServer);
     }
 
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {

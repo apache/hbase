@@ -91,7 +91,7 @@ public class TestCatalogJanitorInMemoryStates {
    * Test clearing a split parent from memory.
    */
   @Test
-  public void testInMemoryParentCleanup() throws IOException, InterruptedException {
+  public void testInMemoryParentCleanup() throws Exception {
     final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     final ServerManager sm = TEST_UTIL.getHBaseCluster().getMaster().getServerManager();
     final CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().getCatalogJanitor();
@@ -136,12 +136,12 @@ public class TestCatalogJanitorInMemoryStates {
  * @throws IOException, InterruptedException
  */
   private List<HRegionLocation> splitRegion(final RegionInfo r)
-      throws IOException, InterruptedException {
+      throws Exception {
     List<HRegionLocation> locations = new ArrayList<>();
     // Split this table in two.
     Admin admin = TEST_UTIL.getAdmin();
     Connection connection = TEST_UTIL.getConnection();
-    admin.splitRegion(r.getEncodedNameAsBytes());
+    admin.splitRegionAsync(r.getEncodedNameAsBytes()).get();
     admin.close();
     PairOfSameType<RegionInfo> regions = waitOnDaughters(r);
     if (regions != null) {

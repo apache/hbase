@@ -5362,8 +5362,7 @@ public class TestFromClientSide {
         HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
         ServerName addr = regionServer.getServerName();
         if (addr.getPort() != addrBefore.getPort()) {
-          admin.move(regionInfo.getEncodedNameAsBytes(),
-              Bytes.toBytes(addr.toString()));
+          admin.move(regionInfo.getEncodedNameAsBytes(), addr);
           // Wait for the region to move.
           Thread.sleep(5000);
           addrAfter = addr;

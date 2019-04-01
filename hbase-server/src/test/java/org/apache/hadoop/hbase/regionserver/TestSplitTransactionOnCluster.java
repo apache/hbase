@@ -328,7 +328,7 @@ public class TestSplitTransactionOnCluster {
       // We don't roll back here anymore. Instead we fail-fast on construction of the
       // split transaction. Catch the exception instead.
       try {
-        this.admin.splitRegionAsync(hri.getRegionName(), null);
+        this.admin.splitRegionAsync(hri.getRegionName());
         fail();
       } catch (DoNotRetryRegionException e) {
         // Expected
@@ -541,7 +541,7 @@ public class TestSplitTransactionOnCluster {
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
       // Call split.
-      this.admin.splitRegionAsync(hri.getRegionName(), null);
+      this.admin.splitRegionAsync(hri.getRegionName());
       List<HRegion> daughters = checkAndGetDaughters(tableName);
 
       // Before cleanup, get a new master.
@@ -837,7 +837,7 @@ public class TestSplitTransactionOnCluster {
 
   private void split(final RegionInfo hri, final HRegionServer server, final int regionCount)
       throws IOException, InterruptedException {
-    admin.splitRegionAsync(hri.getRegionName(), null);
+    admin.splitRegionAsync(hri.getRegionName());
     for (int i = 0; cluster.getRegions(hri.getTable()).size() <= regionCount && i < 60; i++) {
       LOG.debug("Waiting on region " + hri.getRegionNameAsString() + " to split");
       Thread.sleep(2000);
@@ -885,7 +885,7 @@ public class TestSplitTransactionOnCluster {
       LOG.info("Moving " + hri.getRegionNameAsString() + " from " +
         metaRegionServer.getServerName() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
-      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName().toString()));
+      admin.move(hri.getEncodedNameAsBytes(), hrs.getServerName());
     }
     // Wait till table region is up on the server that is NOT carrying hbase:meta.
     for (int i = 0; i < 100; i++) {

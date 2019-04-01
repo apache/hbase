@@ -731,8 +731,7 @@ public abstract class AbstractTestDLS {
           // the RS doesn't have regions of the specified table so we need move one to this RS
           List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
           RegionInfo hri = tableRegions.get(0);
-          TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(),
-            Bytes.toBytes(destRS.getServerName().getServerName()));
+          TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(), destRS.getServerName());
           // wait for region move completes
           RegionStates regionStates =
               TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();

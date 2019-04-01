@@ -711,9 +711,13 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void move(byte[] encodedRegionName, byte[] destServerName) {
+  public void move(byte[] encodedRegionName) {
     throw new NotImplementedException("move not supported in ThriftAdmin");
+  }
 
+  @Override
+  public void move(byte[] encodedRegionName, ServerName destServerName) {
+    throw new NotImplementedException("move not supported in ThriftAdmin");
   }
 
   @Override
@@ -1432,5 +1436,10 @@ public class ThriftAdmin implements Admin {
   public List<UserPermission>
       getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
     throw new NotImplementedException("getUserPermissions not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
+    return splitRegionAsync(regionName, null);
   }
 }
