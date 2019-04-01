@@ -99,8 +99,7 @@ public class TestOpenSeqNumUnexpectedIncrease {
 
     // will fail two times, and then verify that the open sequence number is still openSeqNum + 2
     FAILED_OPEN.set(2);
-    UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(),
-      Bytes.toBytes(dst.getServerName().getServerName()));
+    UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(), dst.getServerName());
     UTIL.waitTableAvailable(TABLE_NAME);
 
     HRegion region1 = UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);

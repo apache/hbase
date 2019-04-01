@@ -152,8 +152,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     RegionStates rst = master.getAssignmentManager().getRegionStates();
     for (int i = 0; i < regionsToMove; i++) {
       final RegionInfo regionInfo = hris.get(i);
-      admin.move(regionInfo.getEncodedNameAsBytes(),
-          Bytes.toBytes(mostLoadedServer.getServerName()));
+      admin.move(regionInfo.getEncodedNameAsBytes(), mostLoadedServer);
       LOG.info("Moving region: " + hris.get(i).getRegionNameAsString() + " to " + mostLoadedServer);
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override

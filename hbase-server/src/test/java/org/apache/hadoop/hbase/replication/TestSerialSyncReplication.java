@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -89,8 +88,7 @@ public class TestSerialSyncReplication extends SyncReplicationTestBase {
     // let's reopen the region
     RegionInfo region = Iterables.getOnlyElement(UTIL2.getAdmin().getRegions(TABLE_NAME));
     HRegionServer target = UTIL2.getOtherRegionServer(UTIL2.getRSForFirstRegionInTable(TABLE_NAME));
-    UTIL2.getAdmin().move(region.getEncodedNameAsBytes(),
-      Bytes.toBytes(target.getServerName().getServerName()));
+    UTIL2.getAdmin().move(region.getEncodedNameAsBytes(), target.getServerName());
     // here we will remove all the pending wals. This is not a normal operation sequence but anyway,
     // user could do this.
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,

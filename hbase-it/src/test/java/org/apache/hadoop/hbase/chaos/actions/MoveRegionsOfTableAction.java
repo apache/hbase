@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
 * Action that tries to move every region of a table.
@@ -96,9 +95,9 @@ public class MoveRegionsOfTableAction extends Action {
 
   static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo) {
     try {
-      String destServerName = servers[RandomUtils.nextInt(0, servers.length)].getServerName();
+      ServerName destServerName = servers[RandomUtils.nextInt(0, servers.length)];
       LOG.debug("Moving {} to {}", regionInfo.getRegionNameAsString(), destServerName);
-      admin.move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(destServerName));
+      admin.move(regionInfo.getEncodedNameAsBytes(), destServerName);
     } catch (Exception ex) {
       LOG.warn("Move failed, might be caused by other chaos: {}", ex.getMessage());
     }

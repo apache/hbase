@@ -828,8 +828,7 @@ public class TestPartialResultsFromClientSide {
     assertEquals(1, regions.size());
     RegionInfo regionInfo = regions.get(0).getFirst();
     ServerName name = TEST_UTIL.getHBaseCluster().getRegionServer(index).getServerName();
-    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(),
-        Bytes.toBytes(name.getServerName()));
+    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), name);
   }
 
   private void assertCell(Cell cell, byte[] row, byte[] cf, byte[] cq) {

@@ -165,11 +165,11 @@ public class TestSeparateClientZKCluster {
       Get get = new Get(row);
       Result result = table.get(get);
       // move meta region and confirm client could detect
-      byte[] destServerName = null;
+      ServerName destServerName = null;
       for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
         ServerName name = rst.getRegionServer().getServerName();
         if (!name.equals(cluster.getServerHoldingMeta())) {
-          destServerName = Bytes.toBytes(name.getServerName());
+          destServerName = name;
           break;
         }
       }
@@ -182,7 +182,7 @@ public class TestSeparateClientZKCluster {
       for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
         ServerName name = rst.getRegionServer().getServerName();
         if (!name.equals(currentServer)) {
-          destServerName = Bytes.toBytes(name.getServerName());
+          destServerName = name;
           break;
         }
       }

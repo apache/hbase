@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -253,7 +252,7 @@ public class Action {
         break;
       }
       int targetIx = RandomUtils.nextInt(0, toServers.size());
-      admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
+      admin.move(victimRegion, toServers.get(targetIx));
     }
   }
 
