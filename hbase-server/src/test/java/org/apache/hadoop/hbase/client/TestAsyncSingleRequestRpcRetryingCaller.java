@@ -87,15 +87,14 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     // This will leave a cached entry in location cache
     HRegionLocation loc = CONN.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
     int index = TEST_UTIL.getHBaseCluster().getServerWith(loc.getRegion().getRegionName());
-    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(), Bytes.toBytes(
-      TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName().getServerName()));
+    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(),
+      TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName());
     AsyncTable<?> table = CONN.getTableBuilder(TABLE_NAME).setRetryPause(100, TimeUnit.MILLISECONDS)
       .setMaxRetries(30).build();
     table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
 
     // move back
-    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(),
-      Bytes.toBytes(loc.getServerName().getServerName()));
+    TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(), loc.getServerName());
     Result result = table.get(new Get(ROW).addColumn(FAMILY, QUALIFIER)).get();
     assertArrayEquals(VALUE, result.getValue(FAMILY, QUALIFIER));
   }

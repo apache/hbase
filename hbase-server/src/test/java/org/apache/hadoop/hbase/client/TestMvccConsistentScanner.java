@@ -92,8 +92,7 @@ public class TestMvccConsistentScanner {
     HRegionServer rs =
         UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
             .filter(r -> !r.getOnlineTables().contains(tableName)).findAny().get();
-    UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
-      Bytes.toBytes(rs.getServerName().getServerName()));
+    UTIL.getAdmin().move(region.getEncodedNameAsBytes(), rs.getServerName());
     while (UTIL.getRSForFirstRegionInTable(tableName) != rs) {
       Thread.sleep(100);
     }

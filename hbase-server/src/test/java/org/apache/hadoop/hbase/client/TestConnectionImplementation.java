@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -232,8 +231,8 @@ public class TestConnectionImplementation {
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
-        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().
-            getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
+        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().getEncodedNameAsBytes(),
+          sn);
         TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tableName);
       }
@@ -604,10 +603,7 @@ public class TestConnectionImplementation {
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depend only on the region we're looking at.
     LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(
-      toMove.getRegionInfo().getEncodedNameAsBytes(),
-      destServerName.getServerName().getBytes()
-    );
+    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
 
     while (destServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -670,10 +666,8 @@ public class TestConnectionImplementation {
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(
-      toMove.getRegionInfo().getEncodedNameAsBytes(),
-      curServer.getServerName().getServerName().getBytes()
-    );
+    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(),
+      curServer.getServerName());
 
     while (curServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -928,10 +922,7 @@ public class TestConnectionImplementation {
        // Moving. It's possible that we don't have all the regions online at this point, so
       //  the test depends only on the region we're looking at.
       LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-      TEST_UTIL.getAdmin().move(
-          toMove.getRegionInfo().getEncodedNameAsBytes(),
-          destServerName.getServerName().getBytes()
-      );
+      TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
 
       while (destServer.getOnlineRegion(regionName) == null ||
           destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||

@@ -249,8 +249,7 @@ public class TestAsyncNonMetaRegionLocator {
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
       .get();
 
-    TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()),
-      Bytes.toBytes(newServerName.getServerName()));
+    TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()), newServerName);
     while (!TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName()
       .equals(newServerName)) {
       Thread.sleep(100);
@@ -326,7 +325,7 @@ public class TestAsyncNonMetaRegionLocator {
       .get();
     Admin admin = TEST_UTIL.getAdmin();
     RegionInfo region = admin.getRegions(TABLE_NAME).stream().findAny().get();
-    admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(newServerName.getServerName()));
+    admin.move(region.getEncodedNameAsBytes(), newServerName);
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
