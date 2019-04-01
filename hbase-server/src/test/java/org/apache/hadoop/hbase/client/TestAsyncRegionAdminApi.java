@@ -180,23 +180,18 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   public void testGetOnlineRegions() throws Exception {
     createTableAndGetOneRegion(tableName);
     AtomicInteger regionServerCount = new AtomicInteger(0);
-    TEST_UTIL
-        .getHBaseCluster()
-        .getLiveRegionServerThreads()
-        .stream()
-        .map(rsThread -> rsThread.getRegionServer())
-        .forEach(
-          rs -> {
-            ServerName serverName = rs.getServerName();
-            try {
-              assertEquals(admin.getRegions(serverName).get().size(), rs
-                  .getRegions().size());
-            } catch (Exception e) {
-              fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
-            }
-            regionServerCount.incrementAndGet();
-          });
-    assertEquals(3, regionServerCount.get());
+    TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+      .map(rsThread -> rsThread.getRegionServer()).forEach(rs -> {
+        ServerName serverName = rs.getServerName();
+        try {
+          assertEquals(admin.getRegions(serverName).get().size(), rs.getRegions().size());
+        } catch (Exception e) {
+          fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
+        }
+        regionServerCount.incrementAndGet();
+      });
+    assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
+      regionServerCount.get());
   }
 
   @Test

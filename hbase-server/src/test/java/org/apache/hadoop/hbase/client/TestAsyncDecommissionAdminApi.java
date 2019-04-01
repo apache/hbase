@@ -46,6 +46,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testAsyncDecommissionRegionServers() throws Exception {
+    admin.balancerSwitch(false, true);
     List<ServerName> decommissionedRegionServers = admin.listDecommissionedRegionServers().get();
     assertTrue(decommissionedRegionServers.isEmpty());
 
@@ -55,7 +56,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
         new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get()
           .getLiveServerMetrics().keySet());
 
-    assertEquals(2, clusterRegionServers.size());
+    assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
+      clusterRegionServers.size());
 
     HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
     // Get a server that has regions. We will decommission one of the servers,
@@ -83,6 +85,11 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
         TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
       }
     }
+
+    // Maybe the TRSP is still not finished at master side, since the reportRegionTransition just
+    // updates the procedure store, and we still need to wake up the procedure and execute it in the
+    // procedure executor, which is asynchronous
+    TEST_UTIL.waitUntilNoRegionsInTransition(10000);
 
     // Recommission and load regions
     for (ServerName server : serversToDecommssion.keySet()) {
