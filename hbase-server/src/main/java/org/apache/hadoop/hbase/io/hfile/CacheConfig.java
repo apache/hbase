@@ -367,6 +367,10 @@ public class CacheConfig {
     return Optional.ofNullable(this.blockCache);
   }
 
+  public boolean isCombinedBlockCache() {
+    return blockCache instanceof CombinedBlockCache;
+  }
+
   public ByteBuffAllocator getByteBuffAllocator() {
     return this.byteBuffAllocator;
   }

@@ -52,6 +52,8 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -562,23 +564,54 @@ public class BucketCache implements BlockCache, HeapSize {
     return evictBlock(cacheKey, true);
   }
 
-  private RAMQueueEntry checkRamCache(BlockCacheKey cacheKey) {
-    RAMQueueEntry removedBlock = ramCache.remove(cacheKey);
-    if (removedBlock != null) {
-      this.blockNumber.decrement();
-      this.heapSize.add(-1 * removedBlock.getData().heapSize());
+  // does not check for the ref count. Just tries to evict it if found in the
+  // bucket map
+  private boolean forceEvict(BlockCacheKey cacheKey) {
+    if (!cacheEnabled) {
+      return false;
     }
-    return removedBlock;
+    boolean existed = removeFromRamCache(cacheKey);
+    BucketEntry bucketEntry = backingMap.get(cacheKey);
+    if (bucketEntry == null) {
+      if (existed) {
+        cacheStats.evicted(0, cacheKey.isPrimary());
+        return true;
+      } else {
+        return false;
+      }
+    }
+    ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
+    try {
+      lock.writeLock().lock();
+      if (backingMap.remove(cacheKey, bucketEntry)) {
+        blockEvicted(cacheKey, bucketEntry, !existed);
+      } else {
+        return false;
+      }
+    } finally {
+      lock.writeLock().unlock();
+    }
+    cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
+    return true;
+  }
+
+  private boolean removeFromRamCache(BlockCacheKey cacheKey) {
+    return ramCache.remove(cacheKey, re -> {
+      if (re != null) {
+        this.blockNumber.decrement();
+        this.heapSize.add(-1 * re.getData().heapSize());
+      }
+    });
   }
 
   public boolean evictBlock(BlockCacheKey cacheKey, boolean deletedBlock) {
     if (!cacheEnabled) {
       return false;
     }
-    RAMQueueEntry removedBlock = checkRamCache(cacheKey);
+    boolean existed = removeFromRamCache(cacheKey);
     BucketEntry bucketEntry = backingMap.get(cacheKey);
     if (bucketEntry == null) {
-      if (removedBlock != null) {
+      if (existed) {
         cacheStats.evicted(0, cacheKey.isPrimary());
         return true;
       } else {
@@ -591,7 +624,7 @@ public class BucketCache implements BlockCache, HeapSize {
       int refCount = bucketEntry.getRefCount();
       if (refCount == 0) {
         if (backingMap.remove(cacheKey, bucketEntry)) {
-          blockEvicted(cacheKey, bucketEntry, removedBlock == null);
+          blockEvicted(cacheKey, bucketEntry, !existed);
         } else {
           return false;
         }
@@ -1015,10 +1048,12 @@ public class BucketCache implements BlockCache, HeapSize {
           putIntoBackingMap(key, bucketEntries[i]);
         }
         // Always remove from ramCache even if we failed adding it to the block cache above.
-        RAMQueueEntry ramCacheEntry = ramCache.remove(key);
-        if (ramCacheEntry != null) {
-          heapSize.add(-1 * entries.get(i).getData().heapSize());
-        } else if (bucketEntries[i] != null){
+        boolean existed = ramCache.remove(key, re -> {
+          if (re != null) {
+            heapSize.add(-1 * re.getData().heapSize());
+          }
+        });
+        if (!existed && bucketEntries[i] != null) {
           // Block should have already been evicted. Remove it and free space.
           ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntries[i].offset());
           try {
@@ -1719,12 +1754,23 @@ public class BucketCache implements BlockCache, HeapSize {
       return previous;
     }
 
-    public RAMQueueEntry remove(BlockCacheKey key) {
+    public boolean remove(BlockCacheKey key) {
+      return remove(key, re->{});
+    }
+
+    /**
+     * Defined an {@link Consumer} here, because once the removed entry release its reference count,
+     * then it's ByteBuffers may be recycled and accessing it outside this method will be thrown an
+     * exception. the consumer will access entry to remove before release its reference count.
+     * Notice, don't change its reference count in the {@link Consumer}
+     */
+    public boolean remove(BlockCacheKey key, Consumer<RAMQueueEntry> action) {
       RAMQueueEntry previous = delegate.remove(key);
+      action.accept(previous);
       if (previous != null) {
         previous.getData().release();
       }
-      return previous;
+      return previous != null;
     }
 
     public boolean isEmpty() {
