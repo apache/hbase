@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import sun.nio.ch.DirectBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -191,7 +191,7 @@ public class ByteBuffAllocator {
     }
     // If disabled the reservoir, just allocate it from on-heap.
     if (!isReservoirEnabled() || size == 0) {
-      return new SingleByteBuff(NONE, ByteBuffer.allocate(size));
+      return allocateOnHeap(size);
     }
     int reminder = size % bufSize;
     int len = size / bufSize + (reminder > 0 ? 1 : 0);
@@ -220,6 +220,22 @@ public class ByteBuffAllocator {
     });
     bb.limit(size);
     return bb;
+  }
+
+  /**
+   * Free all direct buffers if allocated, mainly used for testing.
+   */
+  @VisibleForTesting
+  public void clean() {
+    while (!buffers.isEmpty()) {
+      ByteBuffer b = buffers.poll();
+      if (b instanceof DirectBuffer) {
+        DirectBuffer db = (DirectBuffer) b;
+        if (db.cleaner() != null) {
+          db.cleaner().clean();
+        }
+      }
+    }
   }
 
   public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {

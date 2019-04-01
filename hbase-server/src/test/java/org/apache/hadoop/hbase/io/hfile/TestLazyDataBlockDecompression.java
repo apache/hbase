@@ -160,7 +160,7 @@ public class TestLazyDataBlockDecompression {
     CacheConfig cc = new CacheConfig(lazyCompressDisabled,
         new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled));
     assertFalse(cc.shouldCacheDataCompressed());
-    assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
+    assertFalse(cc.isCombinedBlockCache());
     LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("disabledBlockCache=" + disabledBlockCache);
     assertEquals("test inconsistency detected.", maxSize, disabledBlockCache.getMaxSize());
