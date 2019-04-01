@@ -354,6 +354,32 @@ public class LruBlockCache implements FirstLevelBlockCache {
     }
   }
 
+  /**
+   * The block cached in LRUBlockCache will always be an heap block: on the one side, the heap
+   * access will be more faster then off-heap, the small index block or meta block cached in
+   * CombinedBlockCache will benefit a lot. on other side, the LRUBlockCache size is always
+   * calculated based on the total heap size, if caching an off-heap block in LRUBlockCache, the
+   * heap size will be messed up. Here we will clone the block into an heap block if it's an
+   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
+   * the block (HBASE-22127): <br>
+   * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
+   * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
+   * reservoir, if both RPC and LRUBlockCache release the block, then it can be garbage collected by
+   * JVM, so need a retain here.
+   * @param buf the original block
+   * @return an block with an heap memory backend.
+   */
+  private Cacheable asReferencedHeapBlock(Cacheable buf) {
+    if (buf instanceof HFileBlock) {
+      HFileBlock blk = ((HFileBlock) buf);
+      if (!blk.isOnHeap()) {
+        return blk.deepCloneOnHeap();
+      }
+    }
+    // The block will be referenced by this LRUBlockCache, so should increase its refCnt here.
+    return buf.retain();
+  }
+
   // BlockCache implementation
 
   /**
@@ -402,8 +428,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
       }
       return;
     }
-    // The block will be referenced by the LRUBlockCache, so should increase the refCnt here.
-    buf.retain();
+    // Ensure that the block is an heap one.
+    buf = asReferencedHeapBlock(buf);
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
@@ -503,7 +529,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           if (caching) {
             if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
               Cacheable original = result;
-              result = ((HFileBlock) original).deepClone();
+              result = ((HFileBlock) original).deepCloneOnHeap();
               // deepClone an new one, so need to put the original one back to free it.
               victimHandler.returnBlock(cacheKey, original);
             }

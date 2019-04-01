@@ -272,8 +272,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
-            // TODO: Could we use block iterator in here? Would that get stuff into the cache?
-            HFileBlock prevBlock = null;
+            // Don't use BlockIterator here, because it's designed to read load-on-open section.
+            long onDiskSizeOfNextBlock = -1;
             while (offset < end) {
               if (Thread.interrupted()) {
                 break;
@@ -282,16 +282,17 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // the internal-to-hfileblock thread local which holds the overread that gets the
               // next header, will not have happened...so, pass in the onDiskSize gotten from the
               // cached block. This 'optimization' triggers extremely rarely I'd say.
-              long onDiskSize = prevBlock != null? prevBlock.getNextBlockOnDiskSize(): -1;
-              HFileBlock block = readBlock(offset, onDiskSize, /*cacheBlock=*/true,
-                  /*pread=*/true, false, false, null, null);
-              // Need not update the current block. Ideally here the readBlock won't find the
-              // block in cache. We call this readBlock so that block data is read from FS and
-              // cached in BC. So there is no reference count increment that happens here.
-              // The return will ideally be a noop because the block is not of MemoryType SHARED.
-              returnBlock(block);
-              prevBlock = block;
-              offset += block.getOnDiskSizeWithHeader();
+              HFileBlock block = readBlock(offset, onDiskSizeOfNextBlock, /* cacheBlock= */true,
+                /* pread= */true, false, false, null, null);
+              try {
+                onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
+                offset += block.getOnDiskSizeWithHeader();
+              } finally {
+                // Ideally here the readBlock won't find the block in cache. We call this
+                // readBlock so that block data is read from FS and cached in BC. we must call
+                // returnBlock here to decrease the reference count of block.
+                returnBlock(block);
+              }
             }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
@@ -1419,7 +1420,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // Cache Miss, please load.
 
       HFileBlock compressedBlock =
-          fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false);
+          fsBlockReader.readBlockData(metaBlockOffset, blockSize, true, false, true);
       HFileBlock uncompressedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
       if (compressedBlock != uncompressedBlock) {
         compressedBlock.release();
@@ -1432,6 +1433,24 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
       return uncompressedBlock;
     }
+  }
+
+  /**
+   * If expected block is data block, we'll allocate the ByteBuff of block from
+   * {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} and it's usually an off-heap one,
+   * otherwise it will allocate from heap.
+   * @see org.apache.hadoop.hbase.io.hfile.HFileBlock.FSReader#readBlockData(long, long, boolean,
+   *      boolean, boolean)
+   */
+  private boolean shouldUseHeap(BlockType expectedBlockType) {
+    if (cacheConf.getBlockCache() == null) {
+      return false;
+    } else if (!cacheConf.isCombinedBlockCache()) {
+      // Block to cache in LruBlockCache must be an heap one. So just allocate block memory from
+      // heap for saving an extra off-heap to heap copying.
+      return true;
+    }
+    return expectedBlockType != null && !expectedBlockType.isData();
   }
 
   @Override
@@ -1505,8 +1524,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
         TraceUtil.addTimelineAnnotation("blockCacheMiss");
         // Load block from filesystem.
-        HFileBlock hfileBlock =
-            fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread, !isCompaction);
+        HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
+          !isCompaction, shouldUseHeap(expectedBlockType));
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();

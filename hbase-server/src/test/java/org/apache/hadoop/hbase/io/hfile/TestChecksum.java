@@ -100,7 +100,8 @@ public class TestChecksum {
     meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
     HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
         meta, ByteBuffAllocator.HEAP);
-    HFileBlock b = hbr.readBlockData(0, -1, false, false);
+    HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
+    assertTrue(b.isOnHeap());
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
   }
 
@@ -146,7 +147,8 @@ public class TestChecksum {
       meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
           meta, ByteBuffAllocator.HEAP);
-      HFileBlock b = hbr.readBlockData(0, -1, false, false);
+      HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
+      assertTrue(b.isOnHeap());
 
       // verify SingleByteBuff checksum.
       verifySBBCheckSum(b.getBufferReadOnly());
@@ -215,7 +217,7 @@ public class TestChecksum {
               .withHBaseCheckSum(true)
               .build();
         HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(is, totalSize, fs, path, meta);
-        HFileBlock b = hbr.readBlockData(0, -1, pread, false);
+        HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936,
@@ -236,19 +238,19 @@ public class TestChecksum {
         // requests. Verify that this is correct.
         for (int i = 0; i <
              HFileBlock.CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD + 1; i++) {
-          b = hbr.readBlockData(0, -1, pread, false);
+          b = hbr.readBlockData(0, -1, pread, false, true);
           assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
           assertEquals(0, HFile.getAndResetChecksumFailuresCount());
         }
         // The next read should have hbase checksum verification reanabled,
         // we verify this by assertng that there was a hbase-checksum failure.
-        b = hbr.readBlockData(0, -1, pread, false);
+        b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         assertEquals(1, HFile.getAndResetChecksumFailuresCount());
 
         // Since the above encountered a checksum failure, we switch
         // back to not checking hbase checksums.
-        b = hbr.readBlockData(0, -1, pread, false);
+        b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
         is.close();
@@ -260,7 +262,7 @@ public class TestChecksum {
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
         hbr = new CorruptedFSReaderImpl(is, totalSize, newfs, path, meta);
-        b = hbr.readBlockData(0, -1, pread, false);
+        b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         b.sanityCheck();
         b = b.unpack(meta, hbr);
@@ -343,7 +345,7 @@ public class TestChecksum {
         HFileBlock.FSReader hbr =
             new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is, nochecksum), totalSize,
                 hfs, path, meta, ByteBuffAllocator.HEAP);
-        HFileBlock b = hbr.readBlockData(0, -1, pread, false);
+        HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
         b.sanityCheck();
@@ -389,13 +391,13 @@ public class TestChecksum {
 
     @Override
     protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
-        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics)
-        throws IOException {
+        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics,
+        boolean useHeap) throws IOException {
       if (verifyChecksum) {
         corruptDataStream = true;
       }
       HFileBlock b = super.readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
-          verifyChecksum, updateMetrics);
+        verifyChecksum, updateMetrics, useHeap);
       corruptDataStream = false;
       return b;
     }

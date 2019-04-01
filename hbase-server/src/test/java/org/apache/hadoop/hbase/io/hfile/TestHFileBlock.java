@@ -40,6 +40,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -68,6 +71,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -93,10 +97,12 @@ public class TestHFileBlock {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
-  static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, GZ };
+  // TODO let uncomment the GZ algorithm in HBASE-21937, because no support BB unpack yet.
+  static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, /* GZ */ };
 
   private static final int NUM_TEST_BLOCKS = 1000;
   private static final int NUM_READER_THREADS = 26;
+  private static final int MAX_BUFFER_COUNT = 2048;
 
   // Used to generate KeyValues
   private static int NUM_KEYVALUES = 50;
@@ -108,19 +114,62 @@ public class TestHFileBlock {
 
   private final boolean includesMemstoreTS;
   private final boolean includesTag;
-  public TestHFileBlock(boolean includesMemstoreTS, boolean includesTag) {
+  private final boolean useHeapAllocator;
+  private final ByteBuffAllocator alloc;
+
+  public TestHFileBlock(boolean includesMemstoreTS, boolean includesTag, boolean useHeapAllocator) {
     this.includesMemstoreTS = includesMemstoreTS;
     this.includesTag = includesTag;
+    this.useHeapAllocator = useHeapAllocator;
+    this.alloc = useHeapAllocator ? ByteBuffAllocator.HEAP : createOffHeapAlloc();
+    assertAllocator();
   }
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.MEMSTORETS_TAGS_PARAMETRIZED;
+    List<Object[]> params = new ArrayList<>();
+    // Generate boolean triples from 000 to 111
+    for (int i = 0; i < (1 << 3); i++) {
+      Object[] flags = new Boolean[3];
+      for (int k = 0; k < 3; k++) {
+        flags[k] = (i & (1 << k)) != 0;
+      }
+      params.add(flags);
+    }
+    return params;
+  }
+
+  private ByteBuffAllocator createOffHeapAlloc() {
+    Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    conf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, MAX_BUFFER_COUNT);
+    conf.setInt(ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY, 0);
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(conf, true);
+    // Fill the allocator
+    List<ByteBuff> bufs = new ArrayList<>();
+    for (int i = 0; i < MAX_BUFFER_COUNT; i++) {
+      ByteBuff bb = alloc.allocateOneBuffer();
+      assertTrue(!bb.hasArray());
+      bufs.add(bb);
+    }
+    bufs.forEach(ByteBuff::release);
+    return alloc;
+  }
+
+  private void assertAllocator() {
+    if (!useHeapAllocator) {
+      assertEquals(MAX_BUFFER_COUNT, alloc.getQueueSize());
+    }
   }
 
   @Before
   public void setUp() throws IOException {
     fs = HFileSystem.get(TEST_UTIL.getConfiguration());
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    assertAllocator();
+    alloc.clean();
   }
 
   static void writeTestBlockContents(DataOutputStream dos) throws IOException {
@@ -327,9 +376,8 @@ public class TestHFileBlock {
         .withIncludesMvcc(includesMemstoreTS)
         .withIncludesTags(includesTag)
         .withCompression(algo).build();
-        HFileBlock.FSReader hbr =
-            new HFileBlock.FSReaderImpl(is, totalSize, meta, ByteBuffAllocator.HEAP);
-        HFileBlock b = hbr.readBlockData(0, -1, pread, false);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+        HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
 
@@ -341,14 +389,14 @@ public class TestHFileBlock {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta, ByteBuffAllocator.HEAP);
-          b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE +
-                                b.totalChecksumBytes(), pread, false);
+          hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
+          b = hbr.readBlockData(0,
+            2173 + HConstants.HFILEBLOCK_HEADER_SIZE + b.totalChecksumBytes(), pread, false, true);
           assertEquals(expected, b);
           int wrongCompressedSize = 2172;
           try {
-            b = hbr.readBlockData(0, wrongCompressedSize
-                + HConstants.HFILEBLOCK_HEADER_SIZE, pread, false);
+            hbr.readBlockData(0, wrongCompressedSize + HConstants.HFILEBLOCK_HEADER_SIZE, pread,
+              false, true);
             fail("Exception expected");
           } catch (IOException ex) {
             String expectedPrefix = "Passed in onDiskSizeWithHeader=";
@@ -356,8 +404,10 @@ public class TestHFileBlock {
                 + "'.\nMessage is expected to start with: '" + expectedPrefix
                 + "'", ex.getMessage().startsWith(expectedPrefix));
           }
+          assertTrue(b.release());
           is.close();
         }
+        assertTrue(expected.release());
       }
     }
   }
@@ -428,13 +478,13 @@ public class TestHFileBlock {
                 .withIncludesTags(includesTag)
                 .build();
           HFileBlock.FSReaderImpl hbr =
-              new HFileBlock.FSReaderImpl(is, totalSize, meta, ByteBuffAllocator.HEAP);
+              new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemStoreTS(includesMemstoreTS);
           HFileBlock blockFromHFile, blockUnpacked;
           int pos = 0;
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
-            blockFromHFile = hbr.readBlockData(pos, -1, pread, false);
+            blockFromHFile = hbr.readBlockData(pos, -1, pread, false, true);
             assertEquals(0, HFile.getAndResetChecksumFailuresCount());
             blockFromHFile.sanityCheck();
             pos += blockFromHFile.getOnDiskSizeWithHeader();
@@ -486,6 +536,10 @@ public class TestHFileBlock {
                 assertEquals("Deserializaed block cannot be unpacked correctly.",
                   blockUnpacked, deserialized.unpack(meta, hbr));
               }
+            }
+            assertTrue(blockUnpacked.release());
+            if (blockFromHFile != blockUnpacked) {
+              blockFromHFile.release();
             }
           }
           is.close();
@@ -557,7 +611,7 @@ public class TestHFileBlock {
                               .withIncludesTags(includesTag)
                               .withCompression(algo).build();
           HFileBlock.FSReader hbr =
-              new HFileBlock.FSReaderImpl(is, totalSize, meta, ByteBuffAllocator.HEAP);
+              new HFileBlock.FSReaderImpl(is, totalSize, meta, alloc);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
@@ -569,7 +623,7 @@ public class TestHFileBlock {
             if (detailedLogging) {
               LOG.info("Reading block #" + i + " at offset " + curOffset);
             }
-            HFileBlock b = hbr.readBlockData(curOffset, -1, pread, false);
+            HFileBlock b = hbr.readBlockData(curOffset, -1, pread, false, true);
             if (detailedLogging) {
               LOG.info("Block #" + i + ": " + b);
             }
@@ -583,7 +637,8 @@ public class TestHFileBlock {
 
             // Now re-load this block knowing the on-disk size. This tests a
             // different branch in the loader.
-            HFileBlock b2 = hbr.readBlockData(curOffset, b.getOnDiskSizeWithHeader(), pread, false);
+            HFileBlock b2 =
+                hbr.readBlockData(curOffset, b.getOnDiskSizeWithHeader(), pread, false, true);
             b2.sanityCheck();
 
             assertEquals(b.getBlockType(), b2.getBlockType());
@@ -599,6 +654,7 @@ public class TestHFileBlock {
             assertEquals(b.getOnDiskDataSizeWithHeader(),
                          b2.getOnDiskDataSizeWithHeader());
             assertEquals(0, HFile.getAndResetChecksumFailuresCount());
+            assertTrue(b2.release());
 
             curOffset += b.getOnDiskSizeWithHeader();
 
@@ -606,14 +662,14 @@ public class TestHFileBlock {
               // NOTE: cache-on-write testing doesn't actually involve a BlockCache. It simply
               // verifies that the unpacked value read back off disk matches the unpacked value
               // generated before writing to disk.
-              b = b.unpack(meta, hbr);
+              HFileBlock newBlock = b.unpack(meta, hbr);
               // b's buffer has header + data + checksum while
               // expectedContents have header + data only
-              ByteBuff bufRead = b.getBufferReadOnly();
+              ByteBuff bufRead = newBlock.getBufferReadOnly();
               ByteBuffer bufExpected = expectedContents.get(i);
               boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
                   bufRead.arrayOffset(),
-                  bufRead.limit() - b.totalChecksumBytes(),
+                  bufRead.limit() - newBlock.totalChecksumBytes(),
                   bufExpected.array(), bufExpected.arrayOffset(),
                   bufExpected.limit()) == 0;
               String wrongBytesMsg = "";
@@ -642,9 +698,12 @@ public class TestHFileBlock {
                 }
               }
               assertTrue(wrongBytesMsg, bytesAreCorrect);
+              assertTrue(newBlock.release());
+              if (newBlock != b) {
+                assertTrue(b.release());
+              }
             }
           }
-
           assertEquals(curOffset, fs.getFileStatus(path).getLen());
           is.close();
         }
@@ -687,29 +746,37 @@ public class TestHFileBlock {
         boolean pread = true;
         boolean withOnDiskSize = rand.nextBoolean();
         long expectedSize =
-          (blockId == NUM_TEST_BLOCKS - 1 ? fileSize
-              : offsets.get(blockId + 1)) - offset;
-
-        HFileBlock b;
+            (blockId == NUM_TEST_BLOCKS - 1 ? fileSize : offsets.get(blockId + 1)) - offset;
+        HFileBlock b = null;
         try {
           long onDiskSizeArg = withOnDiskSize ? expectedSize : -1;
-          b = hbr.readBlockData(offset, onDiskSizeArg, pread, false);
+          b = hbr.readBlockData(offset, onDiskSizeArg, pread, false, false);
+          if (useHeapAllocator) {
+            assertTrue(b.isOnHeap());
+          } else {
+            assertTrue(!b.getBlockType().isData() || !b.isOnHeap());
+          }
+          assertEquals(types.get(blockId), b.getBlockType());
+          assertEquals(expectedSize, b.getOnDiskSizeWithHeader());
+          assertEquals(offset, b.getOffset());
         } catch (IOException ex) {
-          LOG.error("Error in client " + clientId + " trying to read block at "
-              + offset + ", pread=" + pread + ", withOnDiskSize=" +
-              withOnDiskSize, ex);
+          LOG.error("Error in client " + clientId + " trying to read block at " + offset
+              + ", pread=" + pread + ", withOnDiskSize=" + withOnDiskSize,
+            ex);
           return false;
+        } finally {
+          if (b != null) {
+            b.release();
+          }
+        }
+        ++numBlocksRead;
+        if (pread) {
+          ++numPositionalRead;
         }
 
-        assertEquals(types.get(blockId), b.getBlockType());
-        assertEquals(expectedSize, b.getOnDiskSizeWithHeader());
-        assertEquals(offset, b.getOffset());
-
-        ++numBlocksRead;
-        if (pread)
-          ++numPositionalRead;
-        if (withOnDiskSize)
+        if (withOnDiskSize) {
           ++numWithOnDiskSize;
+        }
       }
       LOG.info("Client " + clientId + " successfully read " + numBlocksRead +
         " blocks (with pread: " + numPositionalRead + ", with onDiskSize " +
@@ -717,7 +784,6 @@ public class TestHFileBlock {
 
       return true;
     }
-
   }
 
   @Test
@@ -742,7 +808,7 @@ public class TestHFileBlock {
                           .withCompression(compressAlgo)
                           .build();
       HFileBlock.FSReader hbr =
-          new HFileBlock.FSReaderImpl(is, fileSize, meta, ByteBuffAllocator.HEAP);
+          new HFileBlock.FSReaderImpl(is, fileSize, meta, alloc);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
@@ -761,7 +827,6 @@ public class TestHFileBlock {
             + ")");
         }
       }
-
       is.close();
     }
   }
@@ -874,9 +939,9 @@ public class TestHFileBlock {
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
     HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta, alloc);
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta, alloc);
     ByteBuffer buff1 = ByteBuffer.allocate(length);
     ByteBuffer buff2 = ByteBuffer.allocate(length);
     blockWithNextBlockMetadata.serialize(buff1, true);
