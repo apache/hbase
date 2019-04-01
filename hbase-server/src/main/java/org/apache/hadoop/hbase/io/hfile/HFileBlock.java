@@ -763,6 +763,13 @@ public class HFileBlock implements Cacheable {
   }
 
   /**
+   * @return true to indicate the block is allocated from JVM heap, otherwise from off-heap.
+   */
+  boolean isOnHeap() {
+    return buf.hasArray();
+  }
+
+  /**
    * Unified version 2 {@link HFile} block writer. The intended usage pattern
    * is as follows:
    * <ol>
@@ -1300,16 +1307,29 @@ public class HFileBlock implements Cacheable {
   /** An HFile block reader with iteration ability. */
   interface FSReader {
     /**
-     * Reads the block at the given offset in the file with the given on-disk
-     * size and uncompressed size.
-     *
-     * @param offset
-     * @param onDiskSize the on-disk size of the entire block, including all
-     *          applicable headers, or -1 if unknown
+     * Reads the block at the given offset in the file with the given on-disk size and uncompressed
+     * size.
+     * @param offset of the file to read
+     * @param onDiskSize the on-disk size of the entire block, including all applicable headers, or
+     *          -1 if unknown
+     * @param pread true to use pread, otherwise use the stream read.
+     * @param updateMetrics update the metrics or not.
+     * @param intoHeap allocate the block's ByteBuff by {@link ByteBuffAllocator} or JVM heap. For
+     *          LRUBlockCache, we must ensure that the block to cache is an heap one, because the
+     *          memory occupation is based on heap now, also for {@link CombinedBlockCache}, we use
+     *          the heap LRUBlockCache as L1 cache to cache small blocks such as IndexBlock or
+     *          MetaBlock for faster access. So introduce an flag here to decide whether allocate
+     *          from JVM heap or not so that we can avoid an extra off-heap to heap memory copy when
+     *          using LRUBlockCache. For most cases, we known what's the expected block type we'll
+     *          read, while for some special case (Example: HFileReaderImpl#readNextDataBlock()), we
+     *          cannot pre-decide what's the expected block type, then we can only allocate block's
+     *          ByteBuff from {@link ByteBuffAllocator} firstly, and then when caching it in
+     *          {@link LruBlockCache} we'll check whether the ByteBuff is from heap or not, if not
+     *          then we'll clone it to an heap one and cache it.
      * @return the newly read block
      */
-    HFileBlock readBlockData(long offset, long onDiskSize, boolean pread, boolean updateMetrics)
-        throws IOException;
+    HFileBlock readBlockData(long offset, long onDiskSize, boolean pread, boolean updateMetrics,
+        boolean intoHeap) throws IOException;
 
     /**
      * Creates a block iterator over the given portion of the {@link HFile}.
@@ -1444,7 +1464,7 @@ public class HFileBlock implements Cacheable {
           if (offset >= endOffset) {
             return null;
           }
-          HFileBlock b = readBlockData(offset, length, false, false);
+          HFileBlock b = readBlockData(offset, length, false, false, true);
           offset += b.getOnDiskSizeWithHeader();
           length = b.getNextBlockOnDiskSize();
           HFileBlock uncompressed = b.unpack(fileContext, owner);
@@ -1526,16 +1546,18 @@ public class HFileBlock implements Cacheable {
     /**
      * Reads a version 2 block (version 1 blocks not supported and not expected). Tries to do as
      * little memory allocation as possible, using the provided on-disk size.
-     *
      * @param offset the offset in the stream to read at
-     * @param onDiskSizeWithHeaderL the on-disk size of the block, including
-     *          the header, or -1 if unknown; i.e. when iterating over blocks reading
-     *          in the file metadata info.
+     * @param onDiskSizeWithHeaderL the on-disk size of the block, including the header, or -1 if
+     *          unknown; i.e. when iterating over blocks reading in the file metadata info.
      * @param pread whether to use a positional read
+     * @param updateMetrics whether to update the metrics
+     * @param intoHeap allocate ByteBuff of block from heap or off-heap.
+     * @see FSReader#readBlockData(long, long, boolean, boolean, boolean) for more details about the
+     *      useHeap.
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL, boolean pread,
-                                    boolean updateMetrics) throws IOException {
+        boolean updateMetrics, boolean intoHeap) throws IOException {
       // Get a copy of the current state of whether to validate
       // hbase checksums or not for this read call. This is not
       // thread-safe but the one constaint is that if we decide
@@ -1544,9 +1566,8 @@ public class HFileBlock implements Cacheable {
       boolean doVerificationThruHBaseChecksum = streamWrapper.shouldUseHBaseChecksum();
       FSDataInputStream is = streamWrapper.getStream(doVerificationThruHBaseChecksum);
 
-      HFileBlock blk = readBlockDataInternal(is, offset,
-                         onDiskSizeWithHeaderL, pread,
-                         doVerificationThruHBaseChecksum, updateMetrics);
+      HFileBlock blk = readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
+        doVerificationThruHBaseChecksum, updateMetrics, intoHeap);
       if (blk == null) {
         HFile.LOG.warn("HBase checksum verification failed for file " +
                        pathName + " at offset " +
@@ -1573,7 +1594,7 @@ public class HFileBlock implements Cacheable {
         is = this.streamWrapper.fallbackToFsChecksum(CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD);
         doVerificationThruHBaseChecksum = false;
         blk = readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
-                                    doVerificationThruHBaseChecksum, updateMetrics);
+          doVerificationThruHBaseChecksum, updateMetrics, intoHeap);
         if (blk != null) {
           HFile.LOG.warn("HDFS checksum verification succeeded for file " +
                          pathName + " at offset " +
@@ -1669,24 +1690,29 @@ public class HFileBlock implements Cacheable {
       return nextBlockOnDiskSize;
     }
 
+    private ByteBuff allocate(int size, boolean intoHeap) {
+      return intoHeap ? ByteBuffAllocator.HEAP.allocate(size) : allocator.allocate(size);
+    }
+
     /**
      * Reads a version 2 block.
-     *
      * @param offset the offset in the stream to read at.
-     * @param onDiskSizeWithHeaderL the on-disk size of the block, including
-     *          the header and checksums if present or -1 if unknown (as a long). Can be -1
-     *          if we are doing raw iteration of blocks as when loading up file metadata; i.e.
-     *          the first read of a new file. Usually non-null gotten from the file index.
+     * @param onDiskSizeWithHeaderL the on-disk size of the block, including the header and
+     *          checksums if present or -1 if unknown (as a long). Can be -1 if we are doing raw
+     *          iteration of blocks as when loading up file metadata; i.e. the first read of a new
+     *          file. Usually non-null gotten from the file index.
      * @param pread whether to use a positional read
-     * @param verifyChecksum Whether to use HBase checksums.
-     *        If HBase checksum is switched off, then use HDFS checksum. Can also flip on/off
-     *        reading same file if we hit a troublesome patch in an hfile.
+     * @param verifyChecksum Whether to use HBase checksums. If HBase checksum is switched off, then
+     *          use HDFS checksum. Can also flip on/off reading same file if we hit a troublesome
+     *          patch in an hfile.
+     * @param updateMetrics whether need to update the metrics.
+     * @param intoHeap allocate the ByteBuff of block from heap or off-heap.
      * @return the HFileBlock or null if there is a HBase checksum mismatch
      */
     @VisibleForTesting
     protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
-        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics)
-     throws IOException {
+        long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics,
+        boolean intoHeap) throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL + ")");
@@ -1728,7 +1754,7 @@ public class HFileBlock implements Cacheable {
       // says where to start reading. If we have the header cached, then we don't need to read
       // it again and we can likely read from last place we left off w/o need to backup and reread
       // the header we read last time through here.
-      ByteBuff onDiskBlock = allocator.allocate(onDiskSizeWithHeader + hdrSize);
+      ByteBuff onDiskBlock = this.allocate(onDiskSizeWithHeader + hdrSize, intoHeap);
       boolean initHFileBlockSuccess = false;
       try {
         if (headerBuf != null) {
@@ -2072,7 +2098,7 @@ public class HFileBlock implements Cacheable {
                    " onDiskDataSizeWithHeader " + onDiskDataSizeWithHeader;
   }
 
-  public HFileBlock deepClone() {
+  public HFileBlock deepCloneOnHeap() {
     return new HFileBlock(this, true);
   }
 }

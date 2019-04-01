@@ -59,10 +59,10 @@ public class TestBucketWriterThread {
   private static class MockBucketCache extends BucketCache {
 
     public MockBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
-      throws FileNotFoundException, IOException {
+        int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
+        throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-        persistencePath, ioErrorsTolerationDuration, HBaseConfiguration.create());
+          persistencePath, ioErrorsTolerationDuration, HBaseConfiguration.create());
     }
 
     @Override
