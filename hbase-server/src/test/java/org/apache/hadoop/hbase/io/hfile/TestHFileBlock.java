@@ -97,8 +97,7 @@ public class TestHFileBlock {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
-  // TODO let uncomment the GZ algorithm in HBASE-21937, because no support BB unpack yet.
-  static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, /* GZ */ };
+  static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, GZ };
 
   private static final int NUM_TEST_BLOCKS = 1000;
   private static final int NUM_READER_THREADS = 26;
@@ -623,7 +622,7 @@ public class TestHFileBlock {
             if (detailedLogging) {
               LOG.info("Reading block #" + i + " at offset " + curOffset);
             }
-            HFileBlock b = hbr.readBlockData(curOffset, -1, pread, false, true);
+            HFileBlock b = hbr.readBlockData(curOffset, -1, pread, false, false);
             if (detailedLogging) {
               LOG.info("Block #" + i + ": " + b);
             }
@@ -638,7 +637,7 @@ public class TestHFileBlock {
             // Now re-load this block knowing the on-disk size. This tests a
             // different branch in the loader.
             HFileBlock b2 =
-                hbr.readBlockData(curOffset, b.getOnDiskSizeWithHeader(), pread, false, true);
+                hbr.readBlockData(curOffset, b.getOnDiskSizeWithHeader(), pread, false, false);
             b2.sanityCheck();
 
             assertEquals(b.getBlockType(), b2.getBlockType());
@@ -667,11 +666,10 @@ public class TestHFileBlock {
               // expectedContents have header + data only
               ByteBuff bufRead = newBlock.getBufferReadOnly();
               ByteBuffer bufExpected = expectedContents.get(i);
-              boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
-                  bufRead.arrayOffset(),
-                  bufRead.limit() - newBlock.totalChecksumBytes(),
-                  bufExpected.array(), bufExpected.arrayOffset(),
-                  bufExpected.limit()) == 0;
+              byte[] tmp = new byte[bufRead.limit() - newBlock.totalChecksumBytes()];
+              bufRead.get(tmp, 0, tmp.length);
+              boolean bytesAreCorrect = Bytes.compareTo(tmp, 0, tmp.length, bufExpected.array(),
+                bufExpected.arrayOffset(), bufExpected.limit()) == 0;
               String wrongBytesMsg = "";
 
               if (!bytesAreCorrect) {
@@ -702,6 +700,8 @@ public class TestHFileBlock {
               if (newBlock != b) {
                 assertTrue(b.release());
               }
+            } else {
+              assertTrue(b.release());
             }
           }
           assertEquals(curOffset, fs.getFileStatus(path).getLen());
