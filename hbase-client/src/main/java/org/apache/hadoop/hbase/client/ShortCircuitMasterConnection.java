@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Get
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -686,5 +688,11 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public GetUserPermissionsResponse getUserPermissions(RpcController controller,
       GetUserPermissionsRequest request) throws ServiceException {
     return stub.getUserPermissions(controller, request);
+  }
+
+  @Override
+  public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
+      HasUserPermissionsRequest request) throws ServiceException {
+    return stub.hasUserPermissions(controller, request);
   }
 }

@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -118,6 +119,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -4492,5 +4494,20 @@ public class HBaseAdmin implements Admin {
   @Override
   public Future<Void> createTableAsync(TableDescriptor desc) throws IOException {
     return createTableAsync(desc, null);
+  }
+
+  @Override
+  public List<Boolean> hasUserPermissions(String userName, List<Permission> permissions)
+      throws IOException {
+    return executeCallable(
+      new MasterCallable<List<Boolean>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected List<Boolean> rpcCall() throws Exception {
+          HasUserPermissionsRequest request =
+              ShadedAccessControlUtil.buildHasUserPermissionsRequest(userName, permissions);
+          return this.master.hasUserPermissions(getRpcController(), request)
+              .getHasUserPermissionList();
+        }
+      });
   }
 }

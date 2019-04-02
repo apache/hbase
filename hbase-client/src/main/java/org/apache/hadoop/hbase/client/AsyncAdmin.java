@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -1436,4 +1437,22 @@ public interface AsyncAdmin {
    */
   CompletableFuture<List<UserPermission>>
       getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest);
+
+  /**
+   * Check if the user has specific permissions
+   * @param userName the user name
+   * @param permissions the specific permission list
+   * @return True if user has the specific permissions
+   */
+  CompletableFuture<List<Boolean>> hasUserPermissions(String userName,
+      List<Permission> permissions);
+
+  /**
+   * Check if call user has specific permissions
+   * @param permissions the specific permission list
+   * @return True if user has the specific permissions
+   */
+  default CompletableFuture<List<Boolean>> hasUserPermissions(List<Permission> permissions) {
+    return hasUserPermissions(null, permissions);
+  }
 }

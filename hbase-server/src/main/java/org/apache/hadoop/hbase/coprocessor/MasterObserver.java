@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -1574,5 +1575,25 @@ public interface MasterObserver {
   default void postGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier)
       throws IOException {
+  }
+
+  /*
+   * Called before checking if user has permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userName the user name
+   * @param permissions the permission list
+   */
+  default void preHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String userName, List<Permission> permissions) throws IOException {
+  }
+
+  /**
+   * Called after checking if user has permissions.
+   * @param ctx the coprocessor instance's environment
+   * @param userName the user name
+   * @param permissions the permission list
+   */
+  default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String userName, List<Permission> permissions) throws IOException {
   }
 }

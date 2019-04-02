@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedActionException;
@@ -27,9 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -54,14 +52,9 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -137,36 +130,6 @@ public class SecureTestUtil {
     if (!conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, false)) {
       throw new RuntimeException("Post 2.0.0 security features require set "
           + User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY + " to true");
-    }
-  }
-
-  public static void checkTablePerms(Configuration conf, TableName table, byte[] family, byte[] column,
-      Permission.Action... actions) throws IOException {
-    Permission[] perms = new Permission[actions.length];
-    for (int i = 0; i < actions.length; i++) {
-      perms[i] = Permission.newBuilder(table).withFamily(family).withQualifier(column)
-          .withActions(actions[i]).build();
-    }
-
-    checkTablePerms(conf, table, perms);
-  }
-
-  public static void checkTablePerms(Configuration conf, TableName table, Permission... perms)
-  throws IOException {
-    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
-    for (Permission p : perms) {
-      request.addPermission(AccessControlUtil.toPermission(p));
-    }
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table acl = connection.getTable(table)) {
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
-        try {
-          protocol.checkPermissions(null, request.build());
-        } catch (ServiceException se) {
-          ProtobufUtil.toIOException(se);
-        }
-      }
     }
   }
 
@@ -854,25 +817,7 @@ public class SecureTestUtil {
     for (int i = 0; i < actions.length; i++) {
       perms[i] = new Permission(actions[i]);
     }
-    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
-    for (Action a : actions) {
-      request.addPermission(AccessControlProtos.Permission.newBuilder()
-          .setType(AccessControlProtos.Permission.Type.Global)
-          .setGlobalPermission(
-              AccessControlProtos.GlobalPermission.newBuilder()
-                  .addAction(AccessControlUtil.toPermissionAction(a)).build()));
-    }
-    try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
-        Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(channel);
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
-      }
-    }
+    checkPermissions(testUtil.getConfiguration(), perms);
   }
 
   public static void checkTablePerms(HBaseTestingUtility testUtil, TableName table, byte[] family,
@@ -882,26 +827,23 @@ public class SecureTestUtil {
       perms[i] = Permission.newBuilder(table).withFamily(family).withQualifier(column)
           .withActions(actions[i]).build();
     }
-    checkTablePerms(testUtil, table, perms);
+    checkTablePerms(testUtil, perms);
   }
 
-  public static void checkTablePerms(HBaseTestingUtility testUtil, TableName table,
-      Permission... perms) throws IOException {
-    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
-    for (Permission p : perms) {
-      request.addPermission(AccessControlUtil.toPermission(p));
-    }
+  public static void checkTablePerms(HBaseTestingUtility testUtil, Permission... perms)
+      throws IOException {
+    checkPermissions(testUtil.getConfiguration(), perms);
+  }
 
-    try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
-        Table acl = conn.getTable(table)) {
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
+  private static void checkPermissions(Configuration conf, Permission... perms) throws IOException {
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      List<Boolean> hasUserPermissions =
+          conn.getAdmin().hasUserPermissions(Lists.newArrayList(perms));
+      for (int i = 0; i < hasUserPermissions.size(); i++) {
+        if (!hasUserPermissions.get(i).booleanValue()) {
+          throw new AccessDeniedException("Insufficient permissions " + perms[i]);
+        }
       }
     }
   }
-
 }

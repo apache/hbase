@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AccessChecker.InputUser;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -125,6 +126,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Get
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
@@ -2589,6 +2592,47 @@ public class MasterRpcServices extends RSRpcServices
       AccessControlProtos.GetUserPermissionsResponse response =
           ShadedAccessControlUtil.buildGetUserPermissionsResponse(perms);
       return response;
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
+      HasUserPermissionsRequest request) throws ServiceException {
+    try {
+      User caller = RpcServer.getRequestUser().orElse(null);
+      String userName =
+          request.hasUserName() ? request.getUserName().toStringUtf8() : caller.getShortName();
+      List<Permission> permissions = new ArrayList<>();
+      for (int i = 0; i < request.getPermissionCount(); i++) {
+        permissions.add(ShadedAccessControlUtil.toPermission(request.getPermission(i)));
+      }
+      if (master.cpHost != null) {
+        master.getMasterCoprocessorHost().preHasUserPermissions(userName, permissions);
+      }
+      if (!caller.getShortName().equals(userName)) {
+        List<String> groups = AccessChecker.getUserGroups(userName);
+        caller = new InputUser(userName, groups.toArray(new String[groups.size()]));
+      }
+      List<Boolean> hasUserPermissions = new ArrayList<>();
+      if (accessChecker != null) {
+        for (Permission permission : permissions) {
+          boolean hasUserPermission =
+              accessChecker.hasUserPermission(caller, "hasUserPermissions", permission);
+          hasUserPermissions.add(hasUserPermission);
+        }
+      } else {
+        for (int i = 0; i < permissions.size(); i++) {
+          hasUserPermissions.add(true);
+        }
+      }
+      if (master.cpHost != null) {
+        master.getMasterCoprocessorHost().postHasUserPermissions(userName, permissions);
+      }
+      HasUserPermissionsResponse.Builder builder =
+          HasUserPermissionsResponse.newBuilder().addAllHasUserPermission(hasUserPermissions);
+      return builder.build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

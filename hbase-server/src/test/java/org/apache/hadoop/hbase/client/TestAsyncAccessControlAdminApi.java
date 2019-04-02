@@ -12,14 +12,19 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil.AccessTestAction;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -29,6 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, SmallTests.class })
@@ -47,12 +53,16 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testGrant() throws Exception {
+  public void test() throws Exception {
     TableName tableName = TableName.valueOf("test-table");
-    String user = "test-user";
-    UserPermission userPermission = new UserPermission(user,
-        Permission.newBuilder(tableName).withActions(Permission.Action.READ).build());
-    // grant user table permission
+    String userName1 = "user1";
+    String userName2 = "user2";
+    User user2 = User.createUserForTesting(TEST_UTIL.getConfiguration(), userName2, new String[0]);
+    Permission permission =
+        Permission.newBuilder(tableName).withActions(Permission.Action.READ).build();
+    UserPermission userPermission = new UserPermission(userName1, permission);
+
+    // grant user1 table permission
     admin.grant(userPermission, false).get();
 
     // get table permissions
@@ -61,14 +71,57 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
     assertEquals(1, userPermissions.size());
     assertEquals(userPermission, userPermissions.get(0));
 
-    // get user table permissions
-    userPermissions = admin.getUserPermissions(
-      GetUserPermissionsRequest.newBuilder(tableName).withUserName(user).build()).get();
+    // get table permissions
+    userPermissions =
+        admin
+            .getUserPermissions(
+              GetUserPermissionsRequest.newBuilder(tableName).withUserName(userName1).build())
+            .get();
     assertEquals(1, userPermissions.size());
     assertEquals(userPermission, userPermissions.get(0));
 
-    userPermissions = admin.getUserPermissions(
-      GetUserPermissionsRequest.newBuilder(tableName).withUserName("u").build()).get();
+    userPermissions =
+        admin
+            .getUserPermissions(
+              GetUserPermissionsRequest.newBuilder(tableName).withUserName(userName2).build())
+            .get();
     assertEquals(0, userPermissions.size());
+
+    // has user permission
+    List<Permission> permissions = Lists.newArrayList(permission);
+    boolean hasPermission =
+        admin.hasUserPermissions(userName1, permissions).get().get(0).booleanValue();
+    assertTrue(hasPermission);
+    hasPermission = admin.hasUserPermissions(userName2, permissions).get().get(0).booleanValue();
+    assertFalse(hasPermission);
+
+    AccessTestAction hasPermissionAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (AsyncConnection conn =
+            ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+          return conn.getAdmin().hasUserPermissions(userName1, permissions).get().get(0);
+        }
+      }
+    };
+    try {
+      user2.runAs(hasPermissionAction);
+      fail("Should not come here");
+    } catch (Exception e) {
+      LOG.error("Call has permission error", e);
+    }
+
+    // check permission
+    admin.hasUserPermissions(permissions);
+    AccessTestAction checkPermissionsAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (AsyncConnection conn =
+            ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+          return conn.getAdmin().hasUserPermissions(permissions).get().get(0);
+        }
+      }
+    };
+    assertFalse((Boolean) user2.runAs(checkPermissionsAction));
   }
 }

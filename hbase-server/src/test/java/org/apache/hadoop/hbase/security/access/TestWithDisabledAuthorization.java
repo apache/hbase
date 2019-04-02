@@ -250,9 +250,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkGlobalAdmin, SUPERUSER, USER_ADMIN);
-    verifyDenied(checkGlobalAdmin, USER_OWNER, USER_CREATE, USER_RW, USER_RO, USER_QUAL,
-      USER_NONE);
+    verifyAllowed(checkGlobalAdmin, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkGlobalRead = new AccessTestAction() {
       @Override
@@ -262,9 +261,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkGlobalRead, SUPERUSER, USER_ADMIN);
-    verifyDenied(checkGlobalRead, USER_OWNER, USER_CREATE, USER_RW, USER_RO, USER_QUAL,
-      USER_NONE);
+    verifyAllowed(checkGlobalRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO,
+      USER_QUAL, USER_NONE);
 
     AccessTestAction checkGlobalReadWrite = new AccessTestAction() {
       @Override
@@ -274,9 +272,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkGlobalReadWrite, SUPERUSER, USER_ADMIN);
-    verifyDenied(checkGlobalReadWrite, USER_OWNER, USER_CREATE, USER_RW, USER_RO, USER_QUAL,
-      USER_NONE);
+    verifyAllowed(checkGlobalReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkTableAdmin = new AccessTestAction() {
       @Override
@@ -287,8 +284,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkTableAdmin, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(checkTableAdmin, USER_CREATE, USER_RW, USER_RO, USER_QUAL, USER_NONE);
+    verifyAllowed(checkTableAdmin, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO,
+      USER_QUAL, USER_NONE);
 
     AccessTestAction checkTableCreate = new AccessTestAction() {
       @Override
@@ -299,8 +296,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkTableCreate, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-    verifyDenied(checkTableCreate, USER_RW, USER_RO, USER_QUAL, USER_NONE);
+    verifyAllowed(checkTableCreate, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkTableRead = new AccessTestAction() {
       @Override
@@ -311,8 +308,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkTableRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-    verifyDenied(checkTableRead, USER_RW, USER_RO, USER_QUAL, USER_NONE);
+    verifyAllowed(checkTableRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO,
+      USER_QUAL, USER_NONE);
 
     AccessTestAction checkTableReadWrite = new AccessTestAction() {
       @Override
@@ -323,8 +320,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkTableReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-    verifyDenied(checkTableReadWrite, USER_RW, USER_RO, USER_QUAL, USER_NONE);
+    verifyAllowed(checkTableReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkColumnRead = new AccessTestAction() {
       @Override
@@ -335,9 +332,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkColumnRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
-      USER_RO);
-    verifyDenied(checkColumnRead, USER_QUAL, USER_NONE);
+    verifyAllowed(checkColumnRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO,
+      USER_QUAL, USER_NONE);
 
     AccessTestAction checkColumnReadWrite = new AccessTestAction() {
       @Override
@@ -348,9 +344,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkColumnReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
-      USER_RW);
-    verifyDenied(checkColumnReadWrite, USER_RO, USER_QUAL, USER_NONE);
+    verifyAllowed(checkColumnReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkQualifierRead = new AccessTestAction() {
       @Override
@@ -362,8 +357,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     };
 
     verifyAllowed(checkQualifierRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
-      USER_RO, USER_QUAL);
-    verifyDenied(checkQualifierRead, USER_NONE);
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkQualifierReadWrite = new AccessTestAction() {
       @Override
@@ -374,14 +368,13 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkQualifierReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
-      USER_RW, USER_QUAL);
-    verifyDenied(checkQualifierReadWrite, USER_RO, USER_NONE);
+    verifyAllowed(checkQualifierReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_QUAL, USER_RO, USER_NONE);
 
     AccessTestAction checkMultiQualifierRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(),
+        checkTablePerms(TEST_UTIL,
           new Permission[] {
               Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
                   .withQualifier(TEST_Q1).withActions(Action.READ).build(),
@@ -391,14 +384,13 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(checkMultiQualifierRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
-      USER_RW, USER_RO);
-    verifyDenied(checkMultiQualifierRead, USER_QUAL, USER_NONE);
+    verifyAllowed(checkMultiQualifierRead, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_RO, USER_QUAL, USER_NONE);
 
     AccessTestAction checkMultiQualifierReadWrite = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(),
+        checkTablePerms(TEST_UTIL,
           new Permission[] {
               Permission.newBuilder(TEST_TABLE.getTableName()).withFamily(TEST_FAMILY)
                   .withQualifier(TEST_Q1)
@@ -411,8 +403,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     };
 
     verifyAllowed(checkMultiQualifierReadWrite, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
-      USER_RW);
-    verifyDenied(checkMultiQualifierReadWrite, USER_RO, USER_QUAL, USER_NONE);
+      USER_RW, USER_RO, USER_QUAL, USER_NONE);
   }
 
   /** Test grants and revocations with authorization disabled */
@@ -424,7 +415,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     User tblUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "tbluser",
       new String[0]);
 
-    // If we check now, the test user won't have permissions
+    // If we check now, the test user have permissions because authorization is disabled
 
     AccessTestAction checkTableRead = new AccessTestAction() {
       @Override
@@ -435,7 +426,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     };
 
-    verifyDenied(tblUser, checkTableRead);
+    verifyAllowed(tblUser, checkTableRead);
 
     // An actual read won't be denied
 
@@ -469,7 +460,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
 
     // Now the permission check will indicate revocation but the actual op will still succeed
 
-    verifyDenied(tblUser, checkTableRead);
+    verifyAllowed(tblUser, checkTableRead);
     verifyAllowed(tblUser, tableRead);
   }
 

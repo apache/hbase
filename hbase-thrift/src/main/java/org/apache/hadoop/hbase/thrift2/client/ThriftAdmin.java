@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
@@ -1441,6 +1442,11 @@ public class ThriftAdmin implements Admin {
   public List<UserPermission>
       getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
     throw new NotImplementedException("getUserPermissions not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<Boolean> hasUserPermissions(String userName, List<Permission> permissions) {
+    throw new NotImplementedException("hasUserPermissions not supported in ThriftAdmin");
   }
 
   @Override
