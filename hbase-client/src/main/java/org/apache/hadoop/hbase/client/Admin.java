@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -2983,4 +2984,24 @@ public interface Admin extends Abortable, Closeable {
    */
   List<UserPermission> getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest)
       throws IOException;
+
+  /**
+   * Check if the user has specific permissions
+   * @param userName the user name
+   * @param permissions the specific permission list
+   * @return True if user has the specific permissions
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<Boolean> hasUserPermissions(String userName, List<Permission> permissions)
+      throws IOException;
+
+  /**
+   * Check if call user has specific permissions
+   * @param permissions the specific permission list
+   * @return True if user has the specific permissions
+   * @throws IOException if a remote or network exception occurs
+   */
+  default List<Boolean> hasUserPermissions(List<Permission> permissions) throws IOException {
+    return hasUserPermissions(null, permissions);
+  }
 }

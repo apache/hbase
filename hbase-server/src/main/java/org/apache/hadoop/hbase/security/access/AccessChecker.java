@@ -26,9 +26,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -39,12 +43,14 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @InterfaceAudience.Private
 public final class AccessChecker {
@@ -525,5 +531,163 @@ public final class AccessChecker {
       LOG.error("Error occured while retrieving group for " + user, e);
       return new ArrayList<>();
     }
+  }
+
+  /**
+   * Authorizes that if the current user has the given permissions.
+   * @param user Active user to which authorization checks should be applied
+   * @param request Request type
+   * @param permission Actions being requested
+   * @return True if the user has the specific permission
+   */
+  public boolean hasUserPermission(User user, String request, Permission permission) {
+    if (!authorizationEnabled) {
+      return true;
+    }
+    if (permission instanceof TablePermission) {
+      TablePermission tPerm = (TablePermission) permission;
+      for (Permission.Action action : permission.getActions()) {
+        AuthResult authResult = permissionGranted(request, user, action, tPerm.getTableName(),
+          tPerm.getFamily(), tPerm.getQualifier());
+        AccessChecker.logResult(authResult);
+        if (!authResult.isAllowed()) {
+          return false;
+        }
+      }
+    } else if (permission instanceof NamespacePermission) {
+      NamespacePermission nsPerm = (NamespacePermission) permission;
+      AuthResult authResult;
+      for (Action action : nsPerm.getActions()) {
+        if (getAuthManager().authorizeUserNamespace(user, nsPerm.getNamespace(), action)) {
+          authResult =
+              AuthResult.allow(request, "Namespace action allowed", user, action, null, null);
+        } else {
+          authResult =
+              AuthResult.deny(request, "Namespace action denied", user, action, null, null);
+        }
+        AccessChecker.logResult(authResult);
+        if (!authResult.isAllowed()) {
+          return false;
+        }
+      }
+    } else {
+      AuthResult authResult;
+      for (Permission.Action action : permission.getActions()) {
+        if (getAuthManager().authorizeUserGlobal(user, action)) {
+          authResult = AuthResult.allow(request, "Global action allowed", user, action, null, null);
+        } else {
+          authResult = AuthResult.deny(request, "Global action denied", user, action, null, null);
+        }
+        AccessChecker.logResult(authResult);
+        if (!authResult.isAllowed()) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private AuthResult permissionGranted(String request, User user, Action permRequest,
+      TableName tableName, byte[] family, byte[] qualifier) {
+    Map<byte[], ? extends Collection<byte[]>> map = makeFamilyMap(family, qualifier);
+    return permissionGranted(request, user, permRequest, tableName, map);
+  }
+
+  /**
+   * Check the current user for authorization to perform a specific action against the given set of
+   * row data.
+   * <p>
+   * Note: Ordering of the authorization checks has been carefully optimized to short-circuit the
+   * most common requests and minimize the amount of processing required.
+   * </p>
+   * @param request User request
+   * @param user User name
+   * @param permRequest the action being requested
+   * @param tableName Table name
+   * @param families the map of column families to qualifiers present in the request
+   * @return an authorization result
+   */
+  public AuthResult permissionGranted(String request, User user, Action permRequest,
+      TableName tableName, Map<byte[], ? extends Collection<?>> families) {
+    if (!authorizationEnabled) {
+      return AuthResult.allow(request, "All users allowed because authorization is disabled", user,
+        permRequest, tableName, families);
+    }
+    // 1. All users need read access to hbase:meta table.
+    // this is a very common operation, so deal with it quickly.
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      if (permRequest == Action.READ) {
+        return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
+          families);
+      }
+    }
+
+    if (user == null) {
+      return AuthResult.deny(request, "No user associated with request!", null, permRequest,
+        tableName, families);
+    }
+
+    // 2. check for the table-level, if successful we can short-circuit
+    if (getAuthManager().authorizeUserTable(user, tableName, permRequest)) {
+      return AuthResult.allow(request, "Table permission granted", user, permRequest, tableName,
+        families);
+    }
+
+    // 3. check permissions against the requested families
+    if (families != null && families.size() > 0) {
+      // all families must pass
+      for (Map.Entry<byte[], ? extends Collection<?>> family : families.entrySet()) {
+        // a) check for family level access
+        if (getAuthManager().authorizeUserTable(user, tableName, family.getKey(), permRequest)) {
+          continue; // family-level permission overrides per-qualifier
+        }
+
+        // b) qualifier level access can still succeed
+        if ((family.getValue() != null) && (family.getValue().size() > 0)) {
+          if (family.getValue() instanceof Set) {
+            // for each qualifier of the family
+            Set<byte[]> familySet = (Set<byte[]>) family.getValue();
+            for (byte[] qualifier : familySet) {
+              if (!getAuthManager().authorizeUserTable(user, tableName, family.getKey(), qualifier,
+                permRequest)) {
+                return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
+                  tableName, makeFamilyMap(family.getKey(), qualifier));
+              }
+            }
+          } else if (family.getValue() instanceof List) { // List<Cell>
+            List<Cell> cellList = (List<Cell>) family.getValue();
+            for (Cell cell : cellList) {
+              if (!getAuthManager().authorizeUserTable(user, tableName, family.getKey(),
+                CellUtil.cloneQualifier(cell), permRequest)) {
+                return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
+                  tableName, makeFamilyMap(family.getKey(), CellUtil.cloneQualifier(cell)));
+              }
+            }
+          }
+        } else {
+          // no qualifiers and family-level check already failed
+          return AuthResult.deny(request, "Failed family check", user, permRequest, tableName,
+            makeFamilyMap(family.getKey(), null));
+        }
+      }
+
+      // all family checks passed
+      return AuthResult.allow(request, "All family checks passed", user, permRequest, tableName,
+        families);
+    }
+
+    // 4. no families to check and table level access failed
+    return AuthResult.deny(request, "No families to check and table permission failed", user,
+      permRequest, tableName, families);
+  }
+
+  private Map<byte[], ? extends Collection<byte[]>> makeFamilyMap(byte[] family, byte[] qualifier) {
+    if (family == null) {
+      return null;
+    }
+
+    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    familyMap.put(family, qualifier != null ? ImmutableSet.of(qualifier) : null);
+    return familyMap;
   }
 }

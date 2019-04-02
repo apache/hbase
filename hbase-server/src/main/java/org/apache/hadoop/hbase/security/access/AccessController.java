@@ -140,7 +140,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -298,93 +297,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * Check the current user for authorization to perform a specific action against the given set of
-   * row data.
-   * <p>
-   * Note: Ordering of the authorization checks has been carefully optimized to short-circuit the
-   * most common requests and minimize the amount of processing required.
-   * </p>
-   * @param request User request
-   * @param user User name
-   * @param permRequest the action being requested
-   * @param e the coprocessor environment
-   * @param tableName Table name
-   * @param families the map of column families to qualifiers present in the request
-   * @return an authorization result
-   */
-  private AuthResult permissionGranted(String request, User user, Action permRequest,
-      RegionCoprocessorEnvironment e, TableName tableName,
-      Map<byte[], ? extends Collection<?>> families) {
-    // 1. All users need read access to hbase:meta table.
-    // this is a very common operation, so deal with it quickly.
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      if (permRequest == Action.READ) {
-        return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
-          families);
-      }
-    }
-
-    if (user == null) {
-      return AuthResult.deny(request, "No user associated with request!", null,
-        permRequest, tableName, families);
-    }
-
-    // 2. check for the table-level, if successful we can short-circuit
-    if (getAuthManager().authorizeUserTable(user, tableName, permRequest)) {
-      return AuthResult.allow(request, "Table permission granted", user,
-        permRequest, tableName, families);
-    }
-
-    // 3. check permissions against the requested families
-    if (families != null && families.size() > 0) {
-      // all families must pass
-      for (Map.Entry<byte [], ? extends Collection<?>> family : families.entrySet()) {
-        // a) check for family level access
-        if (getAuthManager().authorizeUserTable(user, tableName, family.getKey(),
-            permRequest)) {
-          continue;  // family-level permission overrides per-qualifier
-        }
-
-        // b) qualifier level access can still succeed
-        if ((family.getValue() != null) && (family.getValue().size() > 0)) {
-          if (family.getValue() instanceof Set) {
-            // for each qualifier of the family
-            Set<byte[]> familySet = (Set<byte[]>)family.getValue();
-            for (byte[] qualifier : familySet) {
-              if (!getAuthManager().authorizeUserTable(user, tableName,
-                    family.getKey(), qualifier, permRequest)) {
-                return AuthResult.deny(request, "Failed qualifier check", user,
-                  permRequest, tableName, makeFamilyMap(family.getKey(), qualifier));
-              }
-            }
-          } else if (family.getValue() instanceof List) { // List<Cell>
-            List<Cell> cellList = (List<Cell>)family.getValue();
-            for (Cell cell : cellList) {
-              if (!getAuthManager().authorizeUserTable(user, tableName, family.getKey(),
-                  CellUtil.cloneQualifier(cell), permRequest)) {
-                return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
-                  tableName, makeFamilyMap(family.getKey(), CellUtil.cloneQualifier(cell)));
-              }
-            }
-          }
-        } else {
-          // no qualifiers and family-level check already failed
-          return AuthResult.deny(request, "Failed family check", user, permRequest,
-            tableName, makeFamilyMap(family.getKey(), null));
-        }
-      }
-
-      // all family checks passed
-      return AuthResult.allow(request, "All family checks passed", user, permRequest,
-          tableName, families);
-    }
-
-    // 4. no families to check and table level access failed
-    return AuthResult.deny(request, "No families to check and table permission failed",
-        user, permRequest, tableName, families);
-  }
-
-  /**
    * Check the current user for authorization to perform a specific action
    * against the given set of row data.
    * @param opType the operation type
@@ -399,7 +311,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       Map<byte [], ? extends Collection<?>> families, Action... actions) {
     AuthResult result = null;
     for (Action action: actions) {
-      result = permissionGranted(opType.toString(), user, action, e,
+      result = accessChecker.permissionGranted(opType.toString(), user, action,
         e.getRegion().getRegionInfo().getTable(), families);
       if (!result.isAllowed()) {
         return result;
@@ -2187,74 +2099,38 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     done.run(response);
   }
 
+  /**
+   * @deprecated Use {@link Admin#hasUserPermissions(List)} instead.
+   */
+  @Deprecated
   @Override
   public void checkPermissions(RpcController controller,
-                               AccessControlProtos.CheckPermissionsRequest request,
-                               RpcCallback<AccessControlProtos.CheckPermissionsResponse> done) {
-    Permission[] permissions = new Permission[request.getPermissionCount()];
-    for (int i=0; i < request.getPermissionCount(); i++) {
-      permissions[i] = AccessControlUtil.toPermission(request.getPermission(i));
-    }
+      AccessControlProtos.CheckPermissionsRequest request,
+      RpcCallback<AccessControlProtos.CheckPermissionsResponse> done) {
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
       User user = RpcServer.getRequestUser().orElse(null);
       TableName tableName = regionEnv.getRegion().getTableDescriptor().getTableName();
-      for (Permission permission : permissions) {
+      List<Permission> permissions = new ArrayList<>();
+      for (int i = 0; i < request.getPermissionCount(); i++) {
+        Permission permission = AccessControlUtil.toPermission(request.getPermission(i));
+        permissions.add(permission);
         if (permission instanceof TablePermission) {
-          // Check table permissions
-
           TablePermission tperm = (TablePermission) permission;
-          for (Action action : permission.getActions()) {
-            if (!tperm.getTableName().equals(tableName)) {
-              throw new CoprocessorException(AccessController.class, String.format("This method "
-                  + "can only execute at the table specified in TablePermission. " +
-                  "Table of the region:%s , requested table:%s", tableName,
-                  tperm.getTableName()));
-            }
-
-            Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-            if (tperm.getFamily() != null) {
-              if (tperm.getQualifier() != null) {
-                Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
-                qualifiers.add(tperm.getQualifier());
-                familyMap.put(tperm.getFamily(), qualifiers);
-              } else {
-                familyMap.put(tperm.getFamily(), null);
-              }
-            }
-
-            AuthResult result = permissionGranted("checkPermissions", user, action, regionEnv,
-              regionEnv.getRegion().getRegionInfo().getTable(), familyMap);
-            AccessChecker.logResult(result);
-            if (!result.isAllowed()) {
-              // Even if passive we need to throw an exception here, we support checking
-              // effective permissions, so throw unconditionally
-              throw new AccessDeniedException("Insufficient permissions (table=" + tableName +
-                (familyMap.size() > 0 ? ", family: " + result.toFamilyString() : "") +
-                ", action=" + action.toString() + ")");
-            }
+          if (!tperm.getTableName().equals(tableName)) {
+            throw new CoprocessorException(AccessController.class,
+                String.format(
+                  "This method can only execute at the table specified in "
+                      + "TablePermission. Table of the region:%s , requested table:%s",
+                  tableName, tperm.getTableName()));
           }
-
-        } else {
-          // Check global permissions
-
-          for (Action action : permission.getActions()) {
-            AuthResult result;
-            if (getAuthManager().authorizeUserGlobal(user, action)) {
-              result = AuthResult.allow("checkPermissions", "Global action allowed", user,
-                action, null, null);
-            } else {
-              result = AuthResult.deny("checkPermissions", "Global action denied", user, action,
-                null, null);
-            }
-            AccessChecker.logResult(result);
-            if (!result.isAllowed()) {
-              // Even if passive we need to throw an exception here, we support checking
-              // effective permissions, so throw unconditionally
-              throw new AccessDeniedException("Insufficient permissions (action=" +
-                action.toString() + ")");
-            }
-          }
+        }
+      }
+      for (Permission permission : permissions) {
+        boolean hasPermission =
+            accessChecker.hasUserPermission(user, "checkPermissions", permission);
+        if (!hasPermission) {
+          throw new AccessDeniedException("Insufficient permissions " + permission.toString());
         }
       }
       response = AccessControlProtos.CheckPermissionsResponse.getDefaultInstance();
@@ -2549,6 +2425,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     return userProvider.getCurrent();
   }
 
+  /**
+   * @deprecated Use {@link Admin#hasUserPermissions(String, List)} instead.
+   */
+  @Deprecated
   @Override
   public void hasPermission(RpcController controller, HasPermissionRequest request,
       RpcCallback<HasPermissionResponse> done) {
@@ -2562,33 +2442,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     AccessControlProtos.HasPermissionResponse response = null;
     try {
       User caller = RpcServer.getRequestUser().orElse(null);
-      // User instance for the input user name
-      User filterUser = accessChecker.validateCallerWithFilterUser(caller, tPerm, inputUserName);
-
-      // Initialize family and qualifier map
-      Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
-      if (tPerm.getFamily() != null) {
-        if (tPerm.getQualifier() != null) {
-          Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
-          qualifiers.add(tPerm.getQualifier());
-          familyMap.put(tPerm.getFamily(), qualifiers);
-        } else {
-          familyMap.put(tPerm.getFamily(), null);
-        }
-      }
-
-      // Iterate each action and check whether permission granted
-      boolean hasPermission = false;
-      for (Action action : tPerm.getActions()) {
-        AuthResult result = permissionGranted("hasPermission", filterUser, action, regionEnv,
-          tPerm.getTableName(), familyMap);
-        if (!result.isAllowed()) {
-          hasPermission = false;
-          // Break the loop is any action is not allowed
-          break;
-        }
-        hasPermission = true;
-      }
+      List<Permission> permissions = Lists.newArrayList(tPerm);
+      preHasUserPermissions(caller, inputUserName, permissions);
+      boolean hasPermission = regionEnv.getConnection().getAdmin()
+          .hasUserPermissions(inputUserName, permissions).get(0);
       response = ResponseConverter.buildHasPermissionResponse(hasPermission);
     } catch (IOException ioe) {
       ResponseConverter.setControllerException(controller, ioe);
@@ -2648,6 +2505,50 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         Action.ADMIN);
     } else {
       accessChecker.requirePermission(caller, "getUserPermissions", userName, Action.ADMIN);
+    }
+  }
+
+  @Override
+  public void preHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String userName, List<Permission> permissions) throws IOException {
+    preHasUserPermissions(getActiveUser(ctx), userName, permissions);
+  }
+
+  private void preHasUserPermissions(User caller, String userName, List<Permission> permissions)
+      throws IOException {
+    String request = "hasUserPermissions";
+    for (Permission permission : permissions) {
+      if (!caller.getShortName().equals(userName)) {
+        // User should have admin privilege if checking permission for other users
+        if (permission instanceof TablePermission) {
+          TablePermission tPerm = (TablePermission) permission;
+          accessChecker.requirePermission(caller, request, tPerm.getTableName(), tPerm.getFamily(),
+            tPerm.getQualifier(), userName, Action.ADMIN);
+        } else if (permission instanceof NamespacePermission) {
+          NamespacePermission nsPerm = (NamespacePermission) permission;
+          accessChecker.requireNamespacePermission(caller, request, nsPerm.getNamespace(), userName,
+            Action.ADMIN);
+        } else {
+          accessChecker.requirePermission(caller, request, userName, Action.ADMIN);
+        }
+      } else {
+        // User don't need ADMIN privilege for self check.
+        // Setting action as null in AuthResult to display empty action in audit log
+        AuthResult result;
+        if (permission instanceof TablePermission) {
+          TablePermission tPerm = (TablePermission) permission;
+          result = AuthResult.allow(request, "Self user validation allowed", caller, null,
+            tPerm.getTableName(), tPerm.getFamily(), tPerm.getQualifier());
+        } else if (permission instanceof NamespacePermission) {
+          NamespacePermission nsPerm = (NamespacePermission) permission;
+          result = AuthResult.allow(request, "Self user validation allowed", caller, null,
+            nsPerm.getNamespace());
+        } else {
+          result = AuthResult.allow(request, "Self user validation allowed", caller, null, null,
+            null, null);
+        }
+        accessChecker.logResult(result);
+      }
     }
   }
 }
