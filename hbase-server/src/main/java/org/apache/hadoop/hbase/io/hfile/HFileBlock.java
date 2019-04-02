@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.util.BlockIOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -528,14 +529,22 @@ public class HFileBlock implements Cacheable {
   }
 
   /**
-   * Returns a buffer that does not include the header or checksum.
-   *
+   * Returns a buffer that does not include the header and checksum.
    * @return the buffer with header skipped and checksum omitted.
    */
   public ByteBuff getBufferWithoutHeader() {
+    return this.getBufferWithoutHeader(false);
+  }
+
+  /**
+   * Returns a buffer that does not include the header or checksum.
+   * @param withChecksum to indicate whether include the checksum or not.
+   * @return the buffer with header skipped and checksum omitted.
+   */
+  public ByteBuff getBufferWithoutHeader(boolean withChecksum) {
     ByteBuff dup = getBufferReadOnly();
-    // Now set it up so Buffer spans content only -- no header or no checksums.
-    return dup.position(headerSize()).limit(buf.limit() - totalChecksumBytes()).slice();
+    int delta = withChecksum ? 0 : totalChecksumBytes();
+    return dup.position(headerSize()).limit(buf.limit() - delta).slice();
   }
 
   /**
@@ -609,8 +618,9 @@ public class HFileBlock implements Cacheable {
     // We might optionally allocate HFILEBLOCK_HEADER_SIZE more bytes to read the next
     // block's header, so there are two sensible values for buffer capacity.
     int hdrSize = headerSize();
-    if (dup.capacity() != expectedBufLimit && dup.capacity() != expectedBufLimit + hdrSize) {
-      throw new AssertionError("Invalid buffer capacity: " + dup.capacity() +
+    dup.rewind();
+    if (dup.remaining() != expectedBufLimit && dup.remaining() != expectedBufLimit + hdrSize) {
+      throw new AssertionError("Invalid buffer capacity: " + dup.remaining() +
           ", expected " + expectedBufLimit + " or " + (expectedBufLimit + hdrSize));
     }
   }
@@ -672,15 +682,15 @@ public class HFileBlock implements Cacheable {
     HFileBlock unpacked = new HFileBlock(this);
     unpacked.allocateBuffer(); // allocates space for the decompressed block
 
-    HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA ?
-      reader.getBlockDecodingContext() : reader.getDefaultBlockDecodingContext();
+    HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
+        ? reader.getBlockDecodingContext() : reader.getDefaultBlockDecodingContext();
 
     ByteBuff dup = this.buf.duplicate();
     dup.position(this.headerSize());
     dup = dup.slice();
 
     ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-      unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(), dup);
+      unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
 
     return unpacked;
   }
@@ -698,7 +708,6 @@ public class HFileBlock implements Cacheable {
     ByteBuff newBuf = allocator.allocate(capacityNeeded);
 
     // Copy header bytes into newBuf.
-    // newBuf is HBB so no issue in calling array()
     buf.position(0);
     newBuf.put(0, buf, 0, headerSize);
 

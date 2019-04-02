@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.TestMiniClusterLoadSequential;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameters;
@@ -74,7 +73,6 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
 
   @Override
   @Test
-  @Ignore("TODO Ignore this UT temporarily, will fix this in the critical HBASE-21937.")
   public void loadTest() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 
