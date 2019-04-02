@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.util.BlockIOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -608,8 +609,9 @@ public class HFileBlock implements Cacheable {
     // We might optionally allocate HFILEBLOCK_HEADER_SIZE more bytes to read the next
     // block's header, so there are two sensible values for buffer capacity.
     int hdrSize = headerSize();
-    if (dup.capacity() != expectedBufLimit && dup.capacity() != expectedBufLimit + hdrSize) {
-      throw new AssertionError("Invalid buffer capacity: " + dup.capacity() +
+    dup.rewind();
+    if (dup.remaining() != expectedBufLimit && dup.remaining() != expectedBufLimit + hdrSize) {
+      throw new AssertionError("Invalid buffer capacity: " + dup.remaining() +
           ", expected " + expectedBufLimit + " or " + (expectedBufLimit + hdrSize));
     }
   }

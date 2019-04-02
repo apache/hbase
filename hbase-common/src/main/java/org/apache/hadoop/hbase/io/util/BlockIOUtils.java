@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io.hfile;
+package org.apache.hadoop.hbase.io.util;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,9 +29,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-class BlockIOUtils {
+public class BlockIOUtils {
 
-  static boolean isByteBufferReadable(FSDataInputStream is) {
+  public static boolean isByteBufferReadable(FSDataInputStream is) {
     InputStream cur = is.getWrappedStream();
     for (;;) {
       if ((cur instanceof FSDataInputStream)) {
@@ -50,7 +50,7 @@ class BlockIOUtils {
    * @param length bytes to read.
    * @throws IOException exception to throw if any error happen
    */
-  static void readFully(ByteBuff buf, FSDataInputStream dis, int length) throws IOException {
+  public static void readFully(ByteBuff buf, FSDataInputStream dis, int length) throws IOException {
     if (!isByteBufferReadable(dis)) {
       // If InputStream does not support the ByteBuffer read, just read to heap and copy bytes to
       // the destination ByteBuff.
@@ -78,6 +78,33 @@ class BlockIOUtils {
             "Premature EOF from inputStream, but still need " + remain + " " + "bytes");
       }
       remain -= bytesRead;
+    }
+  }
+
+  /**
+   * Copying bytes from InputStream to {@link ByteBuff} by using an temporary heap byte[] (default
+   * size is 1024 now).
+   * @param in the InputStream to read
+   * @param out the destination {@link ByteBuff}
+   * @param length to read
+   * @throws IOException if any io error encountered.
+   */
+  public static void heapReadFully(InputStream in, ByteBuff out, int length) throws IOException {
+    byte[] buffer = new byte[1024];
+    if (length < 0) {
+      throw new IllegalArgumentException("Length must not be negative: " + length);
+    }
+    int remain = length, count;
+    while (remain > 0) {
+      count = in.read(buffer, 0, Math.min(remain, buffer.length));
+      if (count < 0) { // EOF
+        break;
+      }
+      out.put(buffer, 0, count);
+      remain -= count;
+    }
+    if (remain != 0) {
+      throw new IOException("Premature EOF from inputStream, but still need " + remain + " bytes");
     }
   }
 
@@ -125,8 +152,8 @@ class BlockIOUtils {
    *         ByteBuffers, otherwise we've not read the extraLen bytes yet.
    * @throws IOException if failed to read the necessary bytes.
    */
-  static boolean readWithExtra(ByteBuff buf, FSDataInputStream dis, int necessaryLen, int extraLen)
-      throws IOException {
+  public static boolean readWithExtra(ByteBuff buf, FSDataInputStream dis, int necessaryLen,
+      int extraLen) throws IOException {
     if (!isByteBufferReadable(dis)) {
       // If InputStream does not support the ByteBuffer read, just read to heap and copy bytes to
       // the destination ByteBuff.
@@ -174,7 +201,7 @@ class BlockIOUtils {
    * @return true if and only if extraLen is > 0 and reading those extra bytes was successful
    * @throws IOException if failed to read the necessary bytes
    */
-  static boolean preadWithExtra(ByteBuff buff, FSDataInputStream dis, long position,
+  public static boolean preadWithExtra(ByteBuff buff, FSDataInputStream dis, long position,
       int necessaryLen, int extraLen) throws IOException {
     int remain = necessaryLen + extraLen;
     byte[] buf = new byte[remain];
