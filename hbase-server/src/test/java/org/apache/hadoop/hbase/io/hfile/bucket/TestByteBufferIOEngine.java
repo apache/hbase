@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -28,6 +26,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,12 +55,10 @@ public class TestByteBufferIOEngine {
       if (blockSize == 0) {
         blockSize = 1;
       }
-      byte[] byteArray = new byte[blockSize];
-      for (int j = 0; j < byteArray.length; ++j) {
-        byteArray[j] = val;
-      }
-      ByteBuffer srcBuffer = ByteBuffer.wrap(byteArray);
-      int offset = 0;
+
+      ByteBuff src = createByteBuffer(blockSize, val, i % 2 == 0);
+      int pos = src.position(), lim = src.limit();
+      int offset;
       if (testOffsetAtStartNum > 0) {
         testOffsetAtStartNum--;
         offset = 0;
@@ -71,13 +68,16 @@ public class TestByteBufferIOEngine {
       } else {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
-      ioEngine.write(srcBuffer, offset);
+      ioEngine.write(src, offset);
+      src.position(pos).limit(lim);
+
       BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
       ioEngine.read(offset, blockSize, deserializer);
-      ByteBuff dstBuffer = deserializer.buf;
-      for (int j = 0; j < byteArray.length; ++j) {
-        assertTrue(byteArray[j] == dstBuffer.get(j));
-      }
+      ByteBuff dst = deserializer.buf;
+      Assert.assertEquals(src.remaining(), blockSize);
+      Assert.assertEquals(dst.remaining(), blockSize);
+      Assert.assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst,
+        dst.position(), dst.remaining()));
     }
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
@@ -112,6 +112,16 @@ public class TestByteBufferIOEngine {
     }
   }
 
+  static ByteBuff createByteBuffer(int len, int val, boolean useHeap) {
+    ByteBuffer b = useHeap ? ByteBuffer.allocate(2 * len) : ByteBuffer.allocateDirect(2 * len);
+    int pos = (int) (Math.random() * len);
+    b.position(pos).limit(pos + len);
+    for (int i = pos; i < pos + len; i++) {
+      b.put(i, (byte) val);
+    }
+    return ByteBuff.wrap(b);
+  }
+
   @Test
   public void testByteBufferIOEngineWithMBB() throws Exception {
     int capacity = 32 * 1024 * 1024; // 32 MB
@@ -126,12 +136,9 @@ public class TestByteBufferIOEngine {
       if (blockSize == 0) {
         blockSize = 1;
       }
-      byte[] byteArray = new byte[blockSize];
-      for (int j = 0; j < byteArray.length; ++j) {
-        byteArray[j] = val;
-      }
-      ByteBuffer srcBuffer = ByteBuffer.wrap(byteArray);
-      int offset = 0;
+      ByteBuff src = createByteBuffer(blockSize, val, i % 2 == 0);
+      int pos = src.position(), lim = src.limit();
+      int offset;
       if (testOffsetAtStartNum > 0) {
         testOffsetAtStartNum--;
         offset = 0;
@@ -141,13 +148,16 @@ public class TestByteBufferIOEngine {
       } else {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
-      ioEngine.write(srcBuffer, offset);
+      ioEngine.write(src, offset);
+      src.position(pos).limit(lim);
+
       BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
       ioEngine.read(offset, blockSize, deserializer);
-      ByteBuff dstBuffer = deserializer.buf;
-      for (int j = 0; j < byteArray.length; ++j) {
-        assertTrue(srcBuffer.get(j) == dstBuffer.get(j));
-      }
+      ByteBuff dst = deserializer.buf;
+      Assert.assertEquals(src.remaining(), blockSize);
+      Assert.assertEquals(dst.remaining(), blockSize);
+      Assert.assertEquals(0, ByteBuff.compareTo(src, src.position(), src.remaining(), dst,
+        dst.position(), dst.remaining()));
     }
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
