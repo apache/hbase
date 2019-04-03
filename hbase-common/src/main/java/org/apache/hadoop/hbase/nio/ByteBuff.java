@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.nio;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.util.List;
 
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
@@ -556,5 +559,35 @@ public abstract class ByteBuff implements ReferenceCounted {
   public String toString() {
     return this.getClass().getSimpleName() + "[pos=" + position() + ", lim=" + limit() +
         ", cap= " + capacity() + "]";
+  }
+
+  /********************************* ByteBuff wrapper methods ***********************************/
+
+  public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {
+    if (buffers == null || buffers.length == 0) {
+      throw new IllegalArgumentException("buffers shouldn't be null or empty");
+    }
+    return buffers.length == 1 ? new SingleByteBuff(recycler, buffers[0])
+        : new MultiByteBuff(recycler, buffers);
+  }
+
+  public static ByteBuff wrap(ByteBuffer[] buffers) {
+    return wrap(buffers, ByteBuffAllocator.NONE);
+  }
+
+  public static ByteBuff wrap(List<ByteBuffer> buffers, Recycler recycler) {
+    if (buffers == null || buffers.size() == 0) {
+      throw new IllegalArgumentException("buffers shouldn't be null or empty");
+    }
+    return buffers.size() == 1 ? new SingleByteBuff(recycler, buffers.get(0))
+        : new MultiByteBuff(recycler, buffers.toArray(new ByteBuffer[0]));
+  }
+
+  public static ByteBuff wrap(List<ByteBuffer> buffers) {
+    return wrap(buffers, ByteBuffAllocator.NONE);
+  }
+
+  public static ByteBuff wrap(ByteBuffer buffer) {
+    return new SingleByteBuff(ByteBuffAllocator.NONE, buffer);
   }
 }

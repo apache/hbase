@@ -112,17 +112,12 @@ public abstract class FileMmapIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
-    assert srcBuffer.hasArray();
-    bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
+    bufferArray.write(offset, ByteBuff.wrap(srcBuffer));
   }
 
   @Override
   public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    // This singleByteBuff can be considered to be array backed
-    assert srcBuffer.hasArray();
-    bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
+    bufferArray.write(offset, srcBuffer);
   }
 
   /**
