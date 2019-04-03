@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Assert;
@@ -164,8 +164,8 @@ public abstract class AbstractTestLogRolling  {
   @Test
   public void testLogRollOnNothingWritten() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
-    final WALFactory wals =
-      new WALFactory(conf, ServerName.valueOf("test.com", 8080, 1).toString());
+    final WALProviderFactory wals =
+      new WALProviderFactory(conf, ServerName.valueOf("test.com", 8080, 1).toString());
     final WAL newLog = wals.getWAL(null);
     try {
       // Now roll the log before we write anything.

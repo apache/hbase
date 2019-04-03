@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -75,8 +76,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
@@ -179,7 +180,7 @@ public class TestHRegionReplayEvents {
     secondaryHri =
         RegionInfoBuilder.newBuilder(htd.getTableName()).setRegionId(time).setReplicaId(1).build();
 
-    WALFactory wals = TestHRegion.createWALFactory(CONF, rootDir);
+    WALProviderFactory wals = TestHRegion.createWALFactory(CONF, rootDir);
     walPrimary = wals.getWAL(primaryHri);
     walSecondary = wals.getWAL(secondaryHri);
 
@@ -317,9 +318,9 @@ public class TestHRegionReplayEvents {
   }
 
   WAL.Reader createWALReaderForPrimary() throws FileNotFoundException, IOException {
-    return WALFactory.createReader(TEST_UTIL.getTestFileSystem(),
-      AbstractFSWALProvider.getCurrentFileName(walPrimary),
-      TEST_UTIL.getConfiguration());
+    return WALProviderFactory.getInstance(TEST_UTIL.getConfiguration()).createReader(
+      TEST_UTIL.getTestFileSystem(), AbstractFSWALProvider.getCurrentFileName(walPrimary), null,
+      true);
   }
 
   @Test

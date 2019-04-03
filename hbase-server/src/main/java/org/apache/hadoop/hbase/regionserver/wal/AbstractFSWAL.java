@@ -68,9 +68,9 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -97,7 +97,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * (smaller) than the most-recent flush.
  * <p>
  * To read an WAL, call
- * {@link WALFactory#createReader(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.fs.Path)}. *
+ * {@link WALProviderFactory#createReader(FileSystem, Path)}
  * <h2>Failure Semantic</h2> If an exception on append or sync, roll the WAL because the current WAL
  * is now a lame duck; any more appends or syncs will fail also with the same original exception. If
  * we have made successful appends to the WAL and we then are unable to sync them, our current
@@ -1084,7 +1084,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
       archiveDir = new Path(archiveDir, p.getName());
     }
-    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
+    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALProviderFactory.getInstance(conf));
   }
 
   private static void usage() {

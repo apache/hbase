@@ -104,7 +104,7 @@ public class TestSecureWAL {
 
   @Before
   public void setUp() {
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
+    TEST_UTIL.getConfiguration().set(WALProviderFactory.WAL_PROVIDER, walProvider);
   }
 
   @Test
@@ -118,8 +118,8 @@ public class TestSecureWAL {
     final byte[] family = Bytes.toBytes("family");
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    final WALFactory wals =
-        new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
+    final WALProviderFactory wals =
+        new WALProviderFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
     // Write the WAL
     final WAL wal = wals.getWAL(regionInfo);

@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -54,8 +55,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.BeforeClass;
@@ -91,7 +92,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     conf.setInt("dfs.client.block.write.retries", 30);
     conf.setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
     conf.setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
-    conf.set(WALFactory.WAL_PROVIDER, "filesystem");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "filesystem");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
@@ -242,7 +243,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
     Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     try {
       this.server = cluster.getRegionServer(0);
-
       // Create the test table and open it
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
@@ -258,7 +258,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
       walIds.add(new FSWALIdentity(AbstractFSWALProvider.getCurrentFileName(log)));
       log.registerWALActionsListener(new WALActionsListener() {
-
         @Override
         public void preLogRoll(WALIdentity oldFile, WALIdentity newFile) {
           LOG.debug("preLogRoll: oldFile=" + oldFile + " newFile=" + newFile);
@@ -326,7 +325,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
         LOG.debug("Reading WAL " + FSUtils.getPath(p));
         WAL.Reader reader = null;
         try {
-          reader = WALFactory.createReader(fs, p, TEST_UTIL.getConfiguration());
+          reader = WALProviderFactory.getInstance(TEST_UTIL.getConfiguration())
+              .createReader(fs, p, null, true);
           WAL.Entry entry;
           while ((entry = reader.next()) != null) {
             LOG.debug("#" + entry.getKey().getSequenceId() + ": " + entry.getEdit().getCells());

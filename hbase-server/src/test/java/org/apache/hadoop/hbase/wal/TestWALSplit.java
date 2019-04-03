@@ -181,7 +181,7 @@ public class TestWALSplit {
 
   @Rule
   public TestName name = new TestName();
-  private WALFactory wals = null;
+  private WALProviderFactory wals = null;
 
   @Before
   public void setUp() throws Exception {
@@ -197,7 +197,7 @@ public class TestWALSplit {
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
     InstrumentedLogWriter.activateFailure = false;
-    wals = new WALFactory(conf, name.getMethodName());
+    wals = new WALProviderFactory(conf, name.getMethodName());
     WALDIR = new Path(HBASELOGDIR,
         AbstractFSWALProvider.getWALDirectoryName(ServerName.valueOf(name.getMethodName(),
             16010, System.currentTimeMillis()).toString()));
@@ -423,7 +423,7 @@ public class TestWALSplit {
         FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
-    WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
+    wals.createWALWriter(fs, p, false).close();
   }
 
   private void useDifferentDFSClient() throws IOException {
@@ -632,7 +632,7 @@ public class TestWALSplit {
         LOG.debug("no previous CORRUPTDIR to clean.");
       }
       // change to the faulty reader
-      wals = new WALFactory(conf, name.getMethodName());
+      wals = new WALProviderFactory(conf, name.getMethodName());
       generateWALs(-1);
       // Our reader will render all of these files corrupt.
       final Set<String> walDirContents = new HashSet<>();
@@ -687,7 +687,7 @@ public class TestWALSplit {
     assertEquals(1, splitLog.length);
 
     int actualCount = 0;
-    Reader in = wals.createReader(fs, splitLog[0]);
+    Reader in = wals.createReader(fs, splitLog[0], null, true);
     @SuppressWarnings("unused")
     Entry entry;
     while ((entry = in.next()) != null) ++actualCount;
@@ -1151,7 +1151,7 @@ public class TestWALSplit {
       @Override
       protected Writer createWriter(Path logfile)
           throws IOException {
-        Writer writer = wals.createRecoveredEditsWriter(this.walFS, logfile);
+        Writer writer = wals.createWALWriter(this.walFS, logfile, false);
         // After creating writer, simulate region's
         // replayRecoveredEditsIfAny() which gets SplitEditFiles of this
         // region and delete them, excluding files with '.temp' suffix.
@@ -1210,7 +1210,7 @@ public class TestWALSplit {
     int seq = 0;
     int numRegionEventsAdded = 0;
     for (int i = 0; i < writers; i++) {
-      ws[i] = wals.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + i));
+      ws[i] = wals.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + i), false);
       for (int j = 0; j < entries; j++) {
         int prefix = 0;
         for (String region : REGIONS) {
@@ -1339,7 +1339,7 @@ public class TestWALSplit {
 
   private int countWAL(Path log) throws IOException {
     int count = 0;
-    Reader in = wals.createReader(fs, log);
+    Reader in = wals.createReader(fs, log, null, true);
     while (in.next() != null) {
       count++;
     }
@@ -1409,8 +1409,7 @@ public class TestWALSplit {
   }
 
   private void injectEmptyFile(String suffix, boolean closeFile) throws IOException {
-    Writer writer =
-        WALFactory.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + suffix), conf);
+    Writer writer = wals.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + suffix), false);
     if (closeFile) {
       writer.close();
     }
@@ -1418,8 +1417,8 @@ public class TestWALSplit {
 
   private boolean logsAreEqual(Path p1, Path p2) throws IOException {
     Reader in1, in2;
-    in1 = wals.createReader(fs, p1);
-    in2 = wals.createReader(fs, p2);
+    in1 = wals.createReader(fs, p1, null, true);
+    in2 = wals.createReader(fs, p2, null, true);
     Entry entry1;
     Entry entry2;
     while ((entry1 = in1.next()) != null) {

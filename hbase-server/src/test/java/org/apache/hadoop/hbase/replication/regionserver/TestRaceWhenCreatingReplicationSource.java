@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.UUID;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -44,8 +45,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -131,14 +132,15 @@ public class TestRaceWhenCreatingReplicationSource {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "multiwal");
+    UTIL.getConfiguration().set(WALProviderFactory.WAL_PROVIDER, "multiwal");
     // make sure that we will create a new group for the table
     UTIL.getConfiguration().setInt("hbase.wal.regiongrouping.numgroups", 8);
     UTIL.startMiniCluster(3);
     Path dir = UTIL.getDataTestDirOnTestFS();
     FS = UTIL.getTestFileSystem();
     LOG_PATH = new Path(dir, "replicated");
-    WRITER = WALFactory.createWALWriter(FS, LOG_PATH, UTIL.getConfiguration());
+    WRITER = WALProviderFactory.getInstance(UTIL.getConfiguration())
+        .createWALWriter(FS, LOG_PATH, false);
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
         .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build(),
@@ -184,7 +186,8 @@ public class TestRaceWhenCreatingReplicationSource {
 
       @Override
       public boolean evaluate() throws Exception {
-        try (WAL.Reader reader = WALFactory.createReader(FS, LOG_PATH, UTIL.getConfiguration())) {
+        try (WAL.Reader reader = WALProviderFactory.getInstance(UTIL.getConfiguration())
+            .createReader(FS, LOG_PATH, null, true)) {
           return reader.next() != null;
         } catch (IOException e) {
           return false;
@@ -196,7 +199,8 @@ public class TestRaceWhenCreatingReplicationSource {
         return "Replication has not catched up";
       }
     });
-    try (WAL.Reader reader = WALFactory.createReader(FS, LOG_PATH, UTIL.getConfiguration())) {
+    try (WAL.Reader reader = WALProviderFactory.getInstance(UTIL.getConfiguration())
+        .createReader(FS, LOG_PATH, null, true)) {
       Cell cell = reader.next().getEdit().getCells().get(0);
       assertEquals(1, Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
       assertArrayEquals(CF, CellUtil.cloneFamily(cell));

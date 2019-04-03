@@ -37,6 +37,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
@@ -59,10 +60,10 @@ import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -128,7 +129,7 @@ public class TestWALEntryStream {
   public void setUp() throws Exception {
     walQueue = new PriorityBlockingQueue<>();
     pathWatcher = new PathWatcher();
-    WALFactory wals = new WALFactory(CONF, tn.getMethodName());
+    WALProviderFactory wals = new WALProviderFactory(CONF, tn.getMethodName());
     walProvider = wals.getWALProvider();
     walProvider.addWALActionsListener(pathWatcher);
     log = wals.getWAL(info);

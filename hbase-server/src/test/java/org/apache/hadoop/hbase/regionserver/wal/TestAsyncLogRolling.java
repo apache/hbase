@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.junit.BeforeClass;
@@ -47,7 +47,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TestAsyncLogRolling.TEST_UTIL.getConfiguration();
     conf.setInt(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES, 100);
-    conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 

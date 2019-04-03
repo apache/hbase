@@ -90,7 +90,8 @@ public class TestWALReaderOnSecureWAL {
     FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
-  private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap) throws IOException {
+  private Path writeWAL(final WALProviderFactory wals, final String tblName, boolean offheap)
+      throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, SecureWALCellCodec.class,
@@ -152,7 +153,7 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.AsyncWriter.class);
     conf.setBoolean(WAL_ENCRYPTION, true);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, currentTest.getMethodName());
+    final WALProviderFactory wals = new WALProviderFactory(conf, currentTest.getMethodName());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), offheap);
 
     // Insure edits are not plaintext
@@ -195,7 +196,7 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.Writer.class);
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, ServerName
+    final WALProviderFactory wals = new WALProviderFactory(conf, ServerName
         .valueOf(currentTest.getMethodName(), 16010, System.currentTimeMillis()).toString());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
 

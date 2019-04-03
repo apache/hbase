@@ -30,6 +30,8 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,8 +43,10 @@ import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +69,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class RegionGroupingProvider implements WALProvider {
+
   private static final Logger LOG = LoggerFactory.getLogger(RegionGroupingProvider.class);
 
   /**
@@ -129,8 +134,8 @@ public class RegionGroupingProvider implements WALProvider {
 
   /** delegate provider for WAL creation/roll/close */
   public static final String DELEGATE_PROVIDER = "hbase.wal.regiongrouping.delegate.provider";
-  public static final String DEFAULT_DELEGATE_PROVIDER = WALFactory.Providers.defaultProvider
-      .name();
+  public static final String DEFAULT_DELEGATE_PROVIDER =
+      WALProviderFactory.Providers.defaultProvider.name();
 
   private static final String META_WAL_GROUP_NAME = "meta";
 
@@ -140,7 +145,7 @@ public class RegionGroupingProvider implements WALProvider {
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
   private RegionGroupingStrategy strategy;
-  private WALFactory factory;
+  private WALProviderFactory factory;
   private Configuration conf;
   private List<WALActionsListener> listeners = new ArrayList<>();
   private String providerId;
@@ -148,7 +153,8 @@ public class RegionGroupingProvider implements WALProvider {
   private WALProvider delegateProvider;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALProviderFactory factory, Configuration conf, String providerId)
+      throws IOException {
     if (null != strategy) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -165,12 +171,12 @@ public class RegionGroupingProvider implements WALProvider {
     this.providerId = sb.toString();
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
     this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
-    delegateProvider = WALFactory.createProvider(providerClass);
+    delegateProvider = WALProviderFactory.createProvider(providerClass);
     delegateProvider.init(factory, conf, providerId);
   }
 
   private WALProvider createProvider(String group) throws IOException {
-    WALProvider provider = WALFactory.createProvider(providerClass);
+    WALProvider provider = WALProviderFactory.createProvider(this.providerClass);
     provider.init(factory, conf,
       META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : group);
     provider.addWALActionsListener(new MetricsWAL());
@@ -314,6 +320,18 @@ public class RegionGroupingProvider implements WALProvider {
   public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
       throws IOException {
     return delegateProvider.locateWalId(wal, server, deadRegionServers);
+  }
+
+  @Override
+  public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+      throws IOException {
+    return delegateProvider.createWriter(conf, fs, path, overwritable);
+  }
+
+  @Override
+  public Reader createReader(FileSystem fs, Path path, CancelableProgressable reporter,
+      boolean allowCustom) throws IOException {
+    return delegateProvider.createReader(fs, path, reporter, allowCustom);
   }
 
 }

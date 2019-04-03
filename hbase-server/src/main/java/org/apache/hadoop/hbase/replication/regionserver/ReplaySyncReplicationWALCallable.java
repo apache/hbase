@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,7 +141,9 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     long length = rs.getWALFileSystem().getFileStatus(path).getLen();
     try {
       FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf);
-      return WALFactory.createReader(rs.getWALFileSystem(), path, rs.getConfiguration());
+      Reader reader = WALProviderFactory.getInstance(conf)
+          .createReader(rs.getWALFileSystem(), path, null, true);
+      return reader;
     } catch (EOFException e) {
       if (length <= 0) {
         LOG.warn("File is empty. Could not open {} for reading because {}", path, e);

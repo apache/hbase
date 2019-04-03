@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -90,7 +94,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   protected volatile T wal;
-  protected WALFactory factory;
+  protected WALProviderFactory factory;
   protected Configuration conf;
   protected List<WALActionsListener> listeners = new ArrayList<>();
   protected String providerId;
@@ -108,6 +112,16 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   private Path oldLogDir;
 
+  /**
+   * How long to attempt opening in-recovery wals
+   */
+  private int timeoutMillis;
+
+  /**
+   * Configuration-specified WAL Reader used when a custom reader is requested
+   */
+  private Class<? extends AbstractFSWALProvider.Reader> logReaderClass;
+
   private FileSystem fs;
 
   /**
@@ -117,7 +131,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALProviderFactory factory, Configuration conf, String providerId)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -137,6 +152,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     rootDir = FSUtils.getRootDir(conf);
     oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     this.fs = CommonFSUtils.getWALFileSystem(conf);
+    timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
+    /* TODO Both of these are probably specific to the fs wal provider */
+    logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
+      AbstractFSWALProvider.Reader.class);
     doInit(conf);
   }
 
@@ -493,7 +512,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       try {
         // Detect if this is a new file, if so get a new reader else
         // reset the current reader so that we see the new data
-        reader = WALFactory.createReader(path.getFileSystem(conf), path, conf);
+        reader = WALProviderFactory.getInstance(conf).getWALProvider()
+            .createReader(path.getFileSystem(conf), path, null, true);
         return reader;
       } catch (FileNotFoundException fnfe) {
         // If the log was archived, continue reading from there
@@ -655,5 +675,70 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     LOG.error("Didn't find path for: " + path.getName());
     return path;
+  }
+
+  @Override
+  public org.apache.hadoop.hbase.wal.WAL.Reader createReader(FileSystem fs, Path path,
+      CancelableProgressable reporter, boolean allowCustom) throws IOException {
+    Class<? extends AbstractFSWALProvider.Reader> lrClass =
+        allowCustom ? logReaderClass : ProtobufLogReader.class;
+    try {
+      // A wal file could be under recovery, so it may take several
+      // tries to get it open. Instead of claiming it is corrupted, retry
+      // to open it up to 5 minutes by default.
+      long startWaiting = EnvironmentEdgeManager.currentTime();
+      long openTimeout = timeoutMillis + startWaiting;
+      int nbAttempt = 0;
+      AbstractFSWALProvider.Reader reader = null;
+      while (true) {
+        try {
+          reader = lrClass.getDeclaredConstructor().newInstance();
+          reader.init(fs, path, conf, null);
+          return reader;
+        } catch (IOException e) {
+          if (reader != null) {
+            try {
+              reader.close();
+            } catch (IOException exception) {
+              LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
+              LOG.debug("exception details", exception);
+            }
+          }
+
+          String msg = e.getMessage();
+          if (msg != null
+              && (msg.contains("Cannot obtain block length")
+                  || msg.contains("Could not obtain the last block") || msg
+                    .matches("Blocklist for [^ ]* has changed.*"))) {
+            if (++nbAttempt == 1) {
+              LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
+            }
+            if (reporter != null && !reporter.progress()) {
+              throw new InterruptedIOException("Operation is cancelled");
+            }
+            if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
+              LOG.error("Can't open after " + nbAttempt + " attempts and "
+                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
+            } else {
+              try {
+                Thread.sleep(nbAttempt < 3 ? 500 : 1000);
+                continue; // retry
+              } catch (InterruptedException ie) {
+                InterruptedIOException iioe = new InterruptedIOException();
+                iioe.initCause(ie);
+                throw iioe;
+              }
+            }
+            throw new LeaseNotRecoveredException(e);
+          } else {
+            throw e;
+          }
+        }
+      }
+    } catch (IOException ie) {
+      throw ie;
+    } catch (Exception e) {
+      throw new IOException("Cannot get log reader", e);
+    }
   }
 }

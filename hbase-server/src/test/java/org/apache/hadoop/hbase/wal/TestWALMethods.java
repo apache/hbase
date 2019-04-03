@@ -106,7 +106,7 @@ public class TestWALMethods {
 
     final Configuration walConf = new Configuration(util.getConfiguration());
     FSUtils.setRootDir(walConf, regiondir);
-    (new WALFactory(walConf, "dummyLogName")).getWAL(null);
+    (new WALProviderFactory(walConf, "dummyLogName")).getWAL(null);
 
     NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regiondir);
     assertEquals(7, files.size());

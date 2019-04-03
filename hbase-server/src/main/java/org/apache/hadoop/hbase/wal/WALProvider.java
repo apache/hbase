@@ -23,13 +23,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.PriorityBlockingQueue;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -48,7 +53,7 @@ public interface WALProvider {
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory. may be null
    */
-  void init(WALFactory factory, Configuration conf, String providerId) throws IOException;
+  void init(WALProviderFactory factory, Configuration conf, String providerId) throws IOException;
 
   /**
    * @param region the region which we want to get a WAL for it. Could be null.
@@ -145,4 +150,28 @@ public interface WALProvider {
    */
   WALIdentity locateWalId(WALIdentity wal, Server server,
       List<ServerName> deadRegionServers) throws IOException;
+
+  /**
+   * Create a writer
+   * @param conf configuration
+   * @param fs WAL FileSystem
+   * @param path Path of the wal
+   * @param overwritable is overwritable
+   * @return Writer
+   * @throws IOException IOException
+   */
+  Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+      throws IOException;
+
+  /**
+   * Create a reader
+   * @param fs WAL filesystem
+   * @param path Path of the wal
+   * @param reporter CancelableProgressable
+   * @param allowCustom allow custom reader class
+   * @return Reader
+   * @throws IOException IOException
+   */
+  Reader createReader(final FileSystem fs, final Path path, CancelableProgressable reporter,
+      boolean allowCustom) throws IOException;
 }

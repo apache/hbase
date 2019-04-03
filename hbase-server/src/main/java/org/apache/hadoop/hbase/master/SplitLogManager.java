@@ -159,7 +159,7 @@ public class SplitLogManager {
    *
    * Should be package-private, but is needed by
    * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
-   *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.
+   *     Configuration, org.apache.hadoop.hbase.wal.WALProviderFactory)} for tests.
    */
   @VisibleForTesting
   public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,

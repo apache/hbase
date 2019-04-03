@@ -160,8 +160,8 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -378,7 +378,7 @@ public class HRegionServer extends HasThread implements
    */
   ScheduledChore periodicFlusher;
 
-  protected volatile WALFactory walFactory;
+  protected volatile WALProviderFactory walFactory;
 
   // WAL roller. log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
@@ -1833,8 +1833,8 @@ public class HRegionServer extends HasThread implements
   private void setupWALAndReplication() throws IOException {
     boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
         !LoadBalancer.isMasterCanHostUserRegions(conf);
-    WALFactory factory =
-        new WALFactory(conf, serverName.toString(), !isMasterNoTableOrSystemTableOnly);
+    WALProviderFactory factory =
+        new WALProviderFactory(conf, serverName.toString(), !isMasterNoTableOrSystemTableOnly);
     if (!isMasterNoTableOrSystemTableOnly) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -2136,7 +2136,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public List<WAL> getWALs() throws IOException {
-    return walFactory.getWALs();
+    return walFactory.getWALProvider().getWALs();
   }
 
   @Override

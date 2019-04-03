@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -94,8 +95,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.junit.After;
@@ -124,7 +125,7 @@ public abstract class AbstractTestWALReplay {
   private Path logDir;
   private FileSystem fs;
   private Configuration conf;
-  private WALFactory wals;
+  private WALProviderFactory wals;
 
   @Rule
   public final TestName currentTest = new TestName();
@@ -161,7 +162,7 @@ public abstract class AbstractTestWALReplay {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
     }
-    this.wals = new WALFactory(conf, currentTest.getMethodName());
+    this.wals = new WALProviderFactory(conf, currentTest.getMethodName());
   }
 
   @After

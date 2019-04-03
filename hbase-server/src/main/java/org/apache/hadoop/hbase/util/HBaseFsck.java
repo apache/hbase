@@ -132,7 +132,7 @@ import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -1542,7 +1542,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(c);
     confForWAL.set(HConstants.HBASE_DIR, rootdir.toString());
-    WAL wal = new WALFactory(confForWAL, walFactoryID).getWAL(metaHRI);
+    WAL wal = new WALProviderFactory(confForWAL, walFactoryID).getWAL(metaHRI);
     HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;

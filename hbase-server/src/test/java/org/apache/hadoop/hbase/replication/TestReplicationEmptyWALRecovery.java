@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.Waiter;
@@ -34,8 +35,8 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -101,7 +102,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       emptyWalPaths.add(emptyWalPath);
     }
 
-    WALFactory factory = new WALFactory(conf1, "empty-wal-recovery");
+    WALProviderFactory factory = new WALProviderFactory(conf1, "empty-wal-recovery");
     // inject our empty wal into the replication queue, and then roll the original wal, which
     // enqueues a new wal behind our empty wal. We must roll the wal here as now we use the WAL to
     // determine if the file being replicated currently is still opened for write, so just inject a

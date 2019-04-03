@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.util.Progressable;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -217,7 +217,7 @@ public class TestHStore {
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
-    WALFactory wals = new WALFactory(walConf, methodName);
+    WALProviderFactory wals = new WALProviderFactory(walConf, methodName);
     region = new HRegion(new HRegionFileSystem(conf, fs, tableDir, info), wals.getWAL(info), conf,
         htd, null);
   }

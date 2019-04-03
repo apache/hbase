@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,9 +39,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -98,7 +99,7 @@ public class TestWALActionsListener {
   @Test
   public void testActionListener() throws Exception {
     DummyWALActionsListener observer = new DummyWALActionsListener();
-    final WALFactory wals = new WALFactory(conf, "testActionListener");
+    final WALProviderFactory wals = new WALProviderFactory(conf, "testActionListener");
     wals.getWALProvider().addWALActionsListener(observer);
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(SOME_BYTES))

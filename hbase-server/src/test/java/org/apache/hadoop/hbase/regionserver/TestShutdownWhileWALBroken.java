@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
 import org.junit.After;
 import org.junit.Before;
@@ -115,7 +115,7 @@ public class TestShutdownWhileWALBroken {
   public void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.REGION_SERVER_IMPL, MyRegionServer.class,
       HRegionServer.class);
-    UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walType);
+    UTIL.getConfiguration().set(WALProviderFactory.WAL_PROVIDER, walType);
     UTIL.startMiniCluster(2);
   }
 

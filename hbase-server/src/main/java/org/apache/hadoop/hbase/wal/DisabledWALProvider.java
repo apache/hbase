@@ -26,7 +26,9 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -86,7 +89,8 @@ class DisabledWALProvider implements WALProvider {
   WAL disabled;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALProviderFactory factory, Configuration conf, String providerId)
+      throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -373,6 +377,70 @@ class DisabledWALProvider implements WALProvider {
   public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
       throws IOException {
     return wal;
+  }
+
+  @Override
+  public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+      throws IOException {
+    return new Writer() {
+
+      @Override
+      public void close() throws IOException {
+
+      }
+
+      @Override
+      public long getLength() {
+        return 0;
+      }
+
+      @Override
+      public void sync(boolean forceSync) throws IOException {
+
+      }
+
+      @Override
+      public void append(Entry entry) throws IOException {
+
+      }
+    };
+  }
+
+  @Override
+  public WAL.Reader createReader(FileSystem fs, Path path, CancelableProgressable reporter,
+                                 boolean allowCustom) throws IOException {
+    return new WAL.Reader() {
+
+      @Override
+      public void close() throws IOException {
+
+      }
+
+      @Override
+      public void seek(long pos) throws IOException {
+
+      }
+
+      @Override
+      public void reset() throws IOException {
+
+      }
+
+      @Override
+      public Entry next(Entry reuse) throws IOException {
+        return null;
+      }
+
+      @Override
+      public Entry next() throws IOException {
+        return null;
+      }
+
+      @Override
+      public long getPosition() throws IOException {
+        return 0;
+      }
+    };
   }
 
 }

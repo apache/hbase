@@ -34,8 +34,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 
 /**
  * A set of static functions for running our custom WAL compression/decompression.
@@ -72,7 +72,7 @@ public class Compressor {
     FileSystem inFS = input.getFileSystem(conf);
     FileSystem outFS = output.getFileSystem(conf);
 
-    WAL.Reader in = WALFactory.createReaderIgnoreCustomClass(inFS, input, conf);
+    WAL.Reader in = WALProviderFactory.getInstance(conf).createReader(inFS, input, null, false);
     WALProvider.Writer out = null;
 
     try {
@@ -82,7 +82,7 @@ public class Compressor {
       }
       boolean compress = ((ReaderBase)in).hasCompression();
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
-      out = WALFactory.createWALWriter(outFS, output, conf);
+      out = WALProviderFactory.getInstance(conf).createWALWriter(outFS, output, false);
 
       WAL.Entry e = null;
       while ((e = in.next()) != null) out.append(e);

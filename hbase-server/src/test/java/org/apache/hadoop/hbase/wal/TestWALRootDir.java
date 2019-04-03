@@ -64,7 +64,7 @@ public class TestWALRootDir {
   private static final byte [] family = Bytes.toBytes("column");
   private static Path walRootDir;
   private static Path rootDir;
-  private static WALFactory wals;
+  private static WALProviderFactory wals;
 
   @Before
   public void setUp() throws Exception {
@@ -90,7 +90,7 @@ public class TestWALRootDir {
   @Test
   public void testWALRootDir() throws Exception {
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
-    wals = new WALFactory(conf, "testWALRootDir");
+    wals = new WALProviderFactory(conf, "testWALRootDir");
     WAL log = wals.getWAL(regionInfo);
 
     assertEquals(1, getWALFiles(walFs, walRootDir).size());

@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,8 +47,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -174,7 +175,7 @@ public class TestRecoveredEdits {
     // Based on HRegion#replayRecoveredEdits
     WAL.Reader reader = null;
     try {
-      reader = WALFactory.createReader(fs, edits, conf);
+      reader = WALProviderFactory.getInstance(conf).createReader(fs, edits, null, true);
       WAL.Entry entry;
       while ((entry = reader.next()) != null) {
         WALKey key = entry.getKey();

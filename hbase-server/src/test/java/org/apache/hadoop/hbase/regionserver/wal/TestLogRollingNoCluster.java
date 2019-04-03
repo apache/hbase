@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,8 +42,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -88,10 +89,11 @@ public class TestLogRollingNoCluster {
     // The implementation needs to know the 'handler' count.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, NUM_THREADS);
     final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.set(WALFactory.WAL_PROVIDER, "filesystem");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "filesystem");
     FSUtils.setRootDir(conf, dir);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
-    final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
+    final WALProviderFactory wals =
+        new WALProviderFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);
 
     Appender [] appenders = null;

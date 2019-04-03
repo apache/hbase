@@ -317,7 +317,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
       FSUtils.setRootDir(getConf(), rootRegionDir);
-      final WALFactory wals = new WALFactory(getConf(), "wals");
+      final WALProviderFactory wals = new WALProviderFactory(getConf(), "wals");
       final HRegion[] regions = new HRegion[numRegions];
       final Runnable[] benchmarks = new Runnable[numRegions];
       final MockRegionServerServices mockServices = new MockRegionServerServices(getConf());
@@ -413,7 +413,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
    * @return Count of edits.
    * @throws IOException
    */
-  private long verify(final WALFactory wals, final Path wal, final boolean verbose)
+  private long verify(final WALProviderFactory wals, final Path wal, final boolean verbose)
       throws IOException {
     WAL.Reader reader = wals.createReader(wal.getFileSystem(getConf()), wal);
     long count = 0;
@@ -490,7 +490,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private final Set<WAL> walsListenedTo = new HashSet<>();
 
   private HRegion openRegion(final FileSystem fs, final Path dir, final TableDescriptor htd,
-      final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
+      final WALProviderFactory wals, final long whenToRoll, final LogRoller roller)
+      throws IOException {
     // Initialize HRegion
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     // Initialize WAL

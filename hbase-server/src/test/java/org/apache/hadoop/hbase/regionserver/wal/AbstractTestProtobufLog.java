@@ -19,14 +19,15 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,7 +44,7 @@ public abstract class AbstractTestProtobufLog {
 
   protected FileSystem fs;
   protected Path dir;
-  protected WALFactory wals;
+  protected WALProviderFactory wals;
 
   @Rule
   public final TestName currentTest = new TestName();
@@ -52,7 +53,7 @@ public abstract class AbstractTestProtobufLog {
   public void setUp() throws Exception {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
     dir = new Path(TEST_UTIL.createRootDir(), currentTest.getMethodName());
-    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
+    wals = new WALProviderFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
   }
 
   @After

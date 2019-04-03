@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -157,10 +158,10 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.Assert;
@@ -382,7 +383,7 @@ public class TestHRegion {
     final Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, logDir);
-    return new WALFactory(walConf, callingMethod)
+    return new WALProviderFactory(walConf, callingMethod)
         .getWAL(RegionInfoBuilder.newBuilder(tableName).build());
   }
 
@@ -435,7 +436,7 @@ public class TestHRegion {
   public void testFlushAndMemstoreSizeCounting() throws Exception {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       for (byte[] row : HBaseTestingUtility.ROWS) {
         Put put = new Put(row);
@@ -675,7 +676,7 @@ public class TestHRegion {
   public void testSkipRecoveredEditsReplay() throws Exception {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -689,7 +690,7 @@ public class TestHRegion {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+        WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -726,7 +727,7 @@ public class TestHRegion {
   public void testSkipRecoveredEditsReplaySomeIgnored() throws Exception {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -740,7 +741,7 @@ public class TestHRegion {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+        WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -809,7 +810,7 @@ public class TestHRegion {
   public void testSkipRecoveredEditsReplayTheLastFileIgnored() throws Exception {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -826,7 +827,7 @@ public class TestHRegion {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+        WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
 
         long time = System.nanoTime();
         WALEdit edit = null;
@@ -878,7 +879,7 @@ public class TestHRegion {
     CONF.setClass(HConstants.REGION_IMPL, HRegionForTesting.class, Region.class);
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -938,7 +939,7 @@ public class TestHRegion {
 
       Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
       fs.create(recoveredEdits);
-      WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+      WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
 
       long time = System.nanoTime();
 
@@ -989,7 +990,7 @@ public class TestHRegion {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, logDir);
-    final WALFactory wals = new WALFactory(walConf, method);
+    final WALProviderFactory wals = new WALProviderFactory(walConf, method);
     final WAL wal = wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build());
 
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
@@ -1018,8 +1019,8 @@ public class TestHRegion {
 
       // now verify that the flush markers are written
       wal.shutdown();
-      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
-        TEST_UTIL.getConfiguration());
+      WAL.Reader reader = WALProviderFactory.getInstance(TEST_UTIL.getConfiguration())
+          .createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal), null, true);
       try {
         List<WAL.Entry> flushDescriptors = new ArrayList<>();
         long lastFlushSeqId = -1;
@@ -1063,7 +1064,7 @@ public class TestHRegion {
 
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
         fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+        WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
 
         for (WAL.Entry entry : flushDescriptors) {
           writer.append(entry);
@@ -4477,8 +4478,9 @@ public class TestHRegion {
     FSUtils.setRootDir(walConf, logDir);
     // XXX: The spied AsyncFSWAL can not work properly because of a Mockito defect that can not
     // deal with classes which have a field of an inner class. See discussions in HBASE-15536.
-    walConf.set(WALFactory.WAL_PROVIDER, "filesystem");
-    final WALFactory wals = new WALFactory(walConf, TEST_UTIL.getRandomUUID().toString());
+    walConf.set(WALProviderFactory.WAL_PROVIDER, "filesystem");
+    final WALProviderFactory wals =
+        new WALProviderFactory(walConf, TEST_UTIL.getRandomUUID().toString());
     final WAL wal = spy(wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build()));
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
         HConstants.EMPTY_END_ROW, false, tableDurability, wal,
@@ -4625,10 +4627,10 @@ public class TestHRegion {
     }
   }
 
-  static WALFactory createWALFactory(Configuration conf, Path rootDir) throws IOException {
+  static WALProviderFactory createWALFactory(Configuration conf, Path rootDir) throws IOException {
     Configuration confForWAL = new Configuration(conf);
     confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8));
+    return new WALProviderFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8));
   }
 
   @Test

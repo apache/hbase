@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -133,7 +133,7 @@ public class TestCacheOnWriteInSchema {
   private final String testDescription;
   private HRegion region;
   private HStore store;
-  private WALFactory walFactory;
+  private WALProviderFactory walFactory;
   private FileSystem fs;
 
   public TestCacheOnWriteInSchema(CacheOnWriteType cowType) {
@@ -179,7 +179,7 @@ public class TestCacheOnWriteInSchema {
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    walFactory = new WALFactory(conf, id);
+    walFactory = new WALProviderFactory(conf, id);
 
     region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
     store = new HStore(region, hcd, conf);

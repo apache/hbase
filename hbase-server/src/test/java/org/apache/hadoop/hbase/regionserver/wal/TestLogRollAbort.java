@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,8 +50,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -104,7 +105,7 @@ public class TestLogRollAbort {
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 10);
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
+    TEST_UTIL.getConfiguration().set(WALProviderFactory.WAL_PROVIDER, "filesystem");
   }
 
   private Configuration conf;
@@ -191,7 +192,7 @@ public class TestLogRollAbort {
     String logName = ServerName.valueOf("testLogRollAfterSplitStart",
         16010, System.currentTimeMillis()).toString();
     Path thisTestsDir = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(logName));
-    final WALFactory wals = new WALFactory(conf, logName);
+    final WALProviderFactory wals = new WALProviderFactory(conf, logName);
 
     try {
       // put some entries in an WAL

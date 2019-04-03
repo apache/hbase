@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -41,7 +41,7 @@ public class TestWALReplay extends AbstractTestWALReplay {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
-    conf.set(WALFactory.WAL_PROVIDER, "filesystem");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "filesystem");
     AbstractTestWALReplay.setUpBeforeClass();
   }
 

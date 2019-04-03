@@ -170,9 +170,9 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.io.MultipleIOException;
@@ -4698,7 +4698,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Opening recovered edits");
     WAL.Reader reader = null;
     try {
-      reader = WALFactory.createReader(fs, edits, conf);
+      reader = WALProviderFactory.getInstance(conf).createReader(fs, edits, null, true);
       long currentEditSeqId = -1;
       long currentReplaySeqId = -1;
       long firstSeqIdInLog = -1;

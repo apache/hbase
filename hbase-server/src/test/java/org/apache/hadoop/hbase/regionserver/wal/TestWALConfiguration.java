@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -25,8 +31,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -37,13 +43,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 /**
  * Ensure configuration changes are having an effect on WAL.
@@ -71,7 +70,7 @@ public class TestWALConfiguration {
 
   @Before
   public void before() {
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
+    TEST_UTIL.getConfiguration().set(WALProviderFactory.WAL_PROVIDER, walProvider);
   }
 
   /**
@@ -82,7 +81,8 @@ public class TestWALConfiguration {
   @Test
   public void testBlocksizeDefaultsToTwiceHDFSBlockSize() throws IOException {
     TableName tableName = TableName.valueOf("test");
-    final WALFactory walFactory = new WALFactory(TEST_UTIL.getConfiguration(), this.walProvider);
+    final WALProviderFactory walFactory =
+        new WALProviderFactory(TEST_UTIL.getConfiguration(), this.walProvider);
     Configuration conf = TEST_UTIL.getConfiguration();
     WALProvider provider = walFactory.getWALProvider();
     // Get a WAL instance from the provider. Check its blocksize.

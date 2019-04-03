@@ -126,7 +126,7 @@ public class WALSplitter {
   private EntryBuffers entryBuffers;
 
   private SplitLogWorkerCoordination splitLogWorkerCoordination;
-  private final WALFactory walFactory;
+  private final WALProviderFactory walFactory;
 
   private MonitoredTask status;
 
@@ -149,7 +149,7 @@ public class WALSplitter {
 
 
   @VisibleForTesting
-  WALSplitter(final WALFactory factory, Configuration conf, Path walDir,
+  WALSplitter(final WALProviderFactory factory, Configuration conf, Path walDir,
       FileSystem walFS, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination) {
     this.conf = HBaseConfiguration.create(conf);
@@ -189,7 +189,7 @@ public class WALSplitter {
    */
   public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      SplitLogWorkerCoordination splitLogWorkerCoordination, final WALFactory factory)
+      SplitLogWorkerCoordination splitLogWorkerCoordination, final WALProviderFactory factory)
       throws IOException {
     WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, idChecker,
         splitLogWorkerCoordination);
@@ -202,7 +202,7 @@ public class WALSplitter {
   // which uses this method to do log splitting.
   @VisibleForTesting
   public static List<Path> split(Path rootDir, Path logDir, Path oldLogDir,
-      FileSystem walFS, Configuration conf, final WALFactory factory) throws IOException {
+      FileSystem walFS, Configuration conf, final WALProviderFactory factory) throws IOException {
     final FileStatus[] logfiles = SplitLogManager.getFileList(conf,
         Collections.singletonList(logDir), null);
     List<Path> splits = new ArrayList<>();
@@ -796,7 +796,7 @@ public class WALSplitter {
    */
   protected Writer createWriter(Path logfile)
       throws IOException {
-    return walFactory.createRecoveredEditsWriter(walFS, logfile);
+    return walFactory.createWALWriter(walFS, logfile, true);
   }
 
   /**
@@ -804,7 +804,7 @@ public class WALSplitter {
    * @return new Reader instance, caller should close
    */
   protected Reader getReader(Path curLogFile, CancelableProgressable reporter) throws IOException {
-    return walFactory.createReader(walFS, curLogFile, reporter);
+    return walFactory.createReader(walFS, curLogFile, reporter, true);
   }
 
   /**
@@ -1282,7 +1282,7 @@ public class WALSplitter {
     private void deleteOneWithFewerEntries(WriterAndPath wap, Path dst)
         throws IOException {
       long dstMinLogSeqNum = -1L;
-      try (WAL.Reader reader = walFactory.createReader(walFS, dst)) {
+      try (WAL.Reader reader = walFactory.createReader(walFS, dst, null, true)) {
         WAL.Entry entry = reader.next();
         if (entry != null) {
           dstMinLogSeqNum = entry.getKey().getSequenceId();

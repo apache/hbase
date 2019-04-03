@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
   public void testFlushAndMemstoreSizeCounting() throws Exception {
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     int count = 0;
     try {
       for (byte[] row : HBaseTestingUtility.ROWS) {

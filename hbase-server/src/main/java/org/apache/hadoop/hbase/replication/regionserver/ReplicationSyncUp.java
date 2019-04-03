@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -75,8 +75,8 @@ public class ReplicationSyncUp extends Configured implements Tool {
       new ZKWatcher(conf, "syncupReplication" + System.currentTimeMillis(), abortable, true)) {
       System.out.println("Start Replication Server start");
       DummyServer dummyServer = new DummyServer(zkw);
-      WALFactory factory =
-          new WALFactory(conf, dummyServer.getServerName().toString());
+      WALProviderFactory factory =
+          new WALProviderFactory(conf, dummyServer.getServerName().toString());
       Replication replication = new Replication();
       replication.initialize(dummyServer, factory.getWALProvider());
       ReplicationSourceManager manager = replication.getReplicationManager();

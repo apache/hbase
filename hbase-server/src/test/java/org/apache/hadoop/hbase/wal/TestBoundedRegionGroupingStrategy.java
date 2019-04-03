@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.DEFAULT_NUM_RE
 import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.NUM_REGION_GROUPS;
 import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.DELEGATE_PROVIDER;
 import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.REGION_GROUPING_STRATEGY;
-import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
+import static org.apache.hadoop.hbase.wal.WALProviderFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -179,13 +179,13 @@ public class TestBoundedRegionGroupingStrategy {
   @Test
   public void setMembershipDedups() throws IOException {
     final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
-    WALFactory wals = null;
+    WALProviderFactory wals = null;
     try {
       CONF.setInt(NUM_REGION_GROUPS, temp * 4);
       // Set HDFS root directory for storing WAL
       FSUtils.setRootDir(CONF, TEST_UTIL.getDataTestDirOnTestFS());
 
-      wals = new WALFactory(CONF, "setMembershipDedups");
+      wals = new WALProviderFactory(CONF, "setMembershipDedups");
       Set<WAL> seen = new HashSet<>(temp * 4);
       int count = 0;
       // we know that this should see one of the wals more than once

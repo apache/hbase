@@ -42,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -78,8 +79,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -639,7 +640,7 @@ public abstract class AbstractTestDLS {
 
   private int countWAL(Path log, FileSystem fs, Configuration conf) throws IOException {
     int count = 0;
-    try (WAL.Reader in = WALFactory.createReader(fs, log, conf)) {
+    try (WAL.Reader in = WALProviderFactory.getInstance(conf).createReader(fs, log, null, true)) {
       WAL.Entry e;
       while ((e = in.next()) != null) {
         if (!WALEdit.isMetaEditFamily(e.getEdit().getCells().get(0))) {

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -54,7 +54,7 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
     GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncWALReplay"));
     CHANNEL_CLASS = NioSocketChannel.class;
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
-    conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestWALReplay.setUpBeforeClass();
   }
 

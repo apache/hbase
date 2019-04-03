@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.ipc.RemoteException;
@@ -458,7 +457,7 @@ public class FSWALEntryStream implements WALEntryStream {
 
   private Reader createReader(WALIdentity walId, Configuration conf) throws IOException {
     Path path = ((FSWALIdentity) walId).getPath();
-    return WALFactory.createReader(fs, path, conf);
+    return walProvider.createReader(fs, path, null, true);
   }
 
   /**

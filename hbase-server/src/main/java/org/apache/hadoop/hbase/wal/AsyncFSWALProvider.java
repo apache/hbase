@@ -132,4 +132,11 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       return false;
     }
   }
+
+  @Override
+  public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+      throws IOException {
+    return FSHLogProvider.createWriter(conf, fs, path, overwritable,
+      WALUtil.getWALBlockSize(conf, fs, path, overwritable));
+  }
 }

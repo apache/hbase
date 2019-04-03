@@ -132,7 +132,7 @@ import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -2509,7 +2509,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
     confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8)).getWAL(hri);
+    return new WALProviderFactory(confForWAL, "hregion-" + RandomStringUtils.randomNumeric(8))
+        .getWAL(hri);
   }
 
   /**

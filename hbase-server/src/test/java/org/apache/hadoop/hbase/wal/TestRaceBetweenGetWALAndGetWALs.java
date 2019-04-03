@@ -26,8 +26,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -64,6 +67,13 @@ public class TestRaceBetweenGetWALAndGetWALs {
 
     @Override
     protected void doInit(Configuration conf) throws IOException {
+    }
+
+    @Override
+    public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+        throws IOException {
+      return FSHLogProvider.createWriter(conf, fs, path, overwritable,
+        WALUtil.getWALBlockSize(conf, fs, path));
     }
   }
 

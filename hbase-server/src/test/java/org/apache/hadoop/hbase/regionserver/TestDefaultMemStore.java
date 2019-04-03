@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -947,7 +947,7 @@ public class TestDefaultMemStore {
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
-    WALFactory wFactory = new WALFactory(conf, "1234");
+    WALProviderFactory wFactory = new WALProviderFactory(conf, "1234");
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
         wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));

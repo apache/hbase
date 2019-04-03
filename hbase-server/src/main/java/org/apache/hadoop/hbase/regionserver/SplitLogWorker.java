@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -86,7 +86,7 @@ public class SplitLogWorker implements Runnable {
   }
 
   public SplitLogWorker(Configuration conf, RegionServerServices server,
-      LastSequenceId sequenceIdChecker, WALFactory factory) {
+      LastSequenceId sequenceIdChecker, WALProviderFactory factory) {
     this(server, conf, server, (f, p) -> splitLog(f, p, conf, server, sequenceIdChecker, factory));
   }
 
@@ -153,7 +153,7 @@ public class SplitLogWorker implements Runnable {
   }
 
   private static Status splitLog(String name, CancelableProgressable p, Configuration conf,
-      RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
+      RegionServerServices server, LastSequenceId sequenceIdChecker, WALProviderFactory factory) {
     Path walDir;
     FileSystem fs;
     try {

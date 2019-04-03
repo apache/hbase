@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.UUID;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -38,8 +39,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -184,7 +185,8 @@ public class SerialReplicationTestBase {
 
   protected final void setupWALWriter() throws IOException {
     logPath = new Path(LOG_DIR, name.getMethodName());
-    WRITER = WALFactory.createWALWriter(FS, logPath, UTIL.getConfiguration());
+    WRITER =
+        WALProviderFactory.getInstance(UTIL.getConfiguration()).createWALWriter(FS, logPath, false);
   }
 
   protected final void waitUntilReplicationDone(int expectedEntries) throws Exception {
@@ -192,7 +194,8 @@ public class SerialReplicationTestBase {
 
       @Override
       public boolean evaluate() throws Exception {
-        try (WAL.Reader reader = WALFactory.createReader(FS, logPath, UTIL.getConfiguration())) {
+        try (WAL.Reader reader = WALProviderFactory.getInstance(UTIL.getConfiguration())
+            .createReader(FS, logPath, null, true)) {
           int count = 0;
           while (reader.next() != null) {
             count++;
@@ -224,8 +227,8 @@ public class SerialReplicationTestBase {
   }
 
   protected final void checkOrder(int expectedEntries) throws IOException {
-    try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
+    try (WAL.Reader reader = WALProviderFactory.getInstance(UTIL.getConfiguration())
+        .createReader(UTIL.getTestFileSystem(), logPath, null, true)) {
       long seqId = -1L;
       int count = 0;
       for (Entry entry;;) {

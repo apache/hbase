@@ -70,7 +70,7 @@ public class TestSyncReplicationWALProvider {
 
   private static RegionInfo REGION_NO_REP = RegionInfoBuilder.newBuilder(TABLE_NO_REP).build();
 
-  private static WALFactory FACTORY;
+  private static WALProviderFactory FACTORY;
 
   public static final class InfoProvider implements SyncReplicationPeerInfoProvider {
 
@@ -93,7 +93,7 @@ public class TestSyncReplicationWALProvider {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniDFSCluster(3);
-    FACTORY = new WALFactory(UTIL.getConfiguration(), "test");
+    FACTORY = new WALProviderFactory(UTIL.getConfiguration(), "test");
     ((SyncReplicationWALProvider) FACTORY.getWALProvider()).setPeerInfoProvider(new InfoProvider());
     UTIL.getTestFileSystem().mkdirs(new Path(REMOTE_WAL_DIR, PEER_ID));
   }
@@ -162,11 +162,11 @@ public class TestSyncReplicationWALProvider {
     WAL walNoRep = FACTORY.getWAL(REGION_NO_REP);
     assertThat(walNoRep, not(instanceOf(DualAsyncFSWAL.class)));
     DualAsyncFSWAL wal = (DualAsyncFSWAL) FACTORY.getWAL(REGION);
-    assertEquals(2, FACTORY.getWALs().size());
+    assertEquals(2, FACTORY.getWALProvider().getWALs().size());
     testReadWrite(wal);
     SyncReplicationWALProvider walProvider = (SyncReplicationWALProvider) FACTORY.getWALProvider();
     walProvider.peerSyncReplicationStateChange(PEER_ID, SyncReplicationState.ACTIVE,
       SyncReplicationState.DOWNGRADE_ACTIVE, 1);
-    assertEquals(1, FACTORY.getWALs().size());
+    assertEquals(1, FACTORY.getWALProvider().getWALs().size());
   }
 }

@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -56,7 +56,7 @@ public class TestCombinedAsyncWriter {
 
   private static Class<? extends Channel> CHANNEL_CLASS;
 
-  private static WALFactory WALS;
+  private static WALProviderFactory WALS;
 
   @Rule
   public final TestName name = new TestName();
@@ -67,7 +67,8 @@ public class TestCombinedAsyncWriter {
     CHANNEL_CLASS = NioSocketChannel.class;
     UTIL.startMiniDFSCluster(3);
     UTIL.getTestFileSystem().mkdirs(UTIL.getDataTestDirOnTestFS());
-    WALS = new WALFactory(UTIL.getConfiguration(), TestCombinedAsyncWriter.class.getSimpleName());
+    WALS = new WALProviderFactory(UTIL.getConfiguration(),
+        TestCombinedAsyncWriter.class.getSimpleName());
   }
 
   @AfterClass

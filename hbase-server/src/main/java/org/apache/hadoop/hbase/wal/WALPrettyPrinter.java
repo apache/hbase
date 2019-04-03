@@ -259,7 +259,7 @@ public class WALPrettyPrinter {
       throw new IOException(p + " is not a file");
     }
 
-    WAL.Reader log = WALFactory.createReader(fs, p, conf);
+    WAL.Reader log = WALProviderFactory.getInstance(conf).createReader(fs, p, null, false);
 
     if (log instanceof ProtobufLogReader) {
       List<String> writerClsNames = ((ProtobufLogReader) log).getWriterClsNames();

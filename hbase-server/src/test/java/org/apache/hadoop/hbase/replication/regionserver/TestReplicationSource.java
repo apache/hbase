@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,10 +54,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -113,8 +114,8 @@ public class TestReplicationSource {
     Path logPath = new Path(logDir, "log");
     if (!FS.exists(logDir)) FS.mkdirs(logDir);
     if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
-    WALProvider.Writer writer = WALFactory.createWALWriter(FS, logPath,
-        TEST_UTIL.getConfiguration());
+    WALProvider.Writer writer = WALProviderFactory.getInstance(TEST_UTIL.getConfiguration())
+        .createWALWriter(FS, logPath, false);
     for(int i = 0; i < 3; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
@@ -127,7 +128,8 @@ public class TestReplicationSource {
     }
     writer.close();
 
-    WAL.Reader reader = WALFactory.createReader(FS, logPath, TEST_UTIL.getConfiguration());
+    WAL.Reader reader = WALProviderFactory.getInstance(TEST_UTIL.getConfiguration())
+        .createReader(FS, logPath, null, true);
     WAL.Entry entry = reader.next();
     assertNotNull(entry);
 

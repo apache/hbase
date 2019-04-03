@@ -122,8 +122,8 @@ public class TestWALOpenAfterDNRollingStart {
       currentFile = new Path(oldLogDir, currentFile.getName());
     }
     // if the log is not rolled, then we can never open this wal forever.
-    try (WAL.Reader reader = WALFactory.createReader(TEST_UTIL.getTestFileSystem(), currentFile,
-      TEST_UTIL.getConfiguration())) {
+    try (WAL.Reader reader = WALProviderFactory.getInstance(TEST_UTIL.getConfiguration())
+        .createReader(TEST_UTIL.getTestFileSystem(), currentFile, null, true)) {
       reader.next();
     }
   }

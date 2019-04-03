@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,19 +37,21 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.FSWALEntryStream;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+// imports for things that haven't moved from regionserver.wal yet.
 
 /**
  * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our normal
@@ -77,7 +80,9 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class IOTestProvider implements WALProvider {
+
   private static final Logger LOG = LoggerFactory.getLogger(IOTestProvider.class);
+  /** delegate provider for WAL creation/roll/close */
 
   private static final String ALLOWED_OPERATIONS = "hbase.wal.iotestprovider.operations";
   private enum AllowedOperations {
@@ -88,7 +93,7 @@ public class IOTestProvider implements WALProvider {
     none
   }
 
-  private WALFactory factory;
+  private WALProviderFactory factory;
 
   private Configuration conf;
 
@@ -98,10 +103,7 @@ public class IOTestProvider implements WALProvider {
   protected AtomicBoolean initialized = new AtomicBoolean(false);
 
   private List<WALActionsListener> listeners = new ArrayList<>();
-
-  private Path oldLogDir;
-
-  private Path rootDir;
+  private WALProvider delegateProvider;
 
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
@@ -110,15 +112,16 @@ public class IOTestProvider implements WALProvider {
    *                   null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALProviderFactory factory, Configuration conf, String providerId)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;
     this.conf = conf;
     this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
-    rootDir = FSUtils.getRootDir(conf);
-    oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.delegateProvider =
+        WALProviderFactory.createProvider(WALProviderFactory.Providers.defaultProvider.clazz);
   }
 
   @Override
@@ -312,21 +315,25 @@ public class IOTestProvider implements WALProvider {
 
   @Override
   public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
-    Path walPath;
-    if (isArchive) {
-      walPath = new Path(oldLogDir, walName);
-    } else {
-      Path logDir =
-          new Path(rootDir, AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
-      walPath = new Path(logDir, walName);
-    }
-    return new FSWALIdentity(walPath);
+    return delegateProvider.createWalIdentity(serverName, walName, isArchive);
   }
 
   @Override
   public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
       throws IOException {
-    return wal;
+    return delegateProvider.locateWalId(wal, server, deadRegionServers);
+  }
+
+  @Override
+  public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+      throws IOException {
+    return delegateProvider.createWriter(conf, fs, path, overwritable);
+  }
+
+  @Override
+  public Reader createReader(FileSystem fs, Path path, CancelableProgressable reporter,
+      boolean allowCustom) throws IOException {
+    return delegateProvider.createReader(fs, path, reporter, allowCustom);
   }
 
 }

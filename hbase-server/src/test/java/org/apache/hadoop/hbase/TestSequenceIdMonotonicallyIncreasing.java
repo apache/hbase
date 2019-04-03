@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -93,8 +93,8 @@ public class TestSequenceIdMonotonicallyIncreasing {
   private long getMaxSeqId(HRegionServer rs, RegionInfo region) throws IOException {
     Path walFile = ((AbstractFSWAL<?>) rs.getWAL(null)).getCurrentFileName();
     long maxSeqId = -1L;
-    try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), walFile, UTIL.getConfiguration())) {
+    try (WAL.Reader reader = WALProviderFactory.getInstance(UTIL.getConfiguration())
+        .createReader(UTIL.getTestFileSystem(), walFile, null, true)) {
       for (;;) {
         WAL.Entry entry = reader.next();
         if (entry == null) {

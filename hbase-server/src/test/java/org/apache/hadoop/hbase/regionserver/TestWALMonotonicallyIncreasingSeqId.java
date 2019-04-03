@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -84,7 +84,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
   private final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Path testDir = TEST_UTIL.getDataTestDir("TestWALMonotonicallyIncreasingSeqId");
-  private WALFactory wals;
+  private WALProviderFactory wals;
   private FileSystem fileSystem;
   private Configuration walConf;
   private HRegion region;
@@ -121,7 +121,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
     this.walConf = walConf;
-    wals = new WALFactory(walConf, "log_" + replicaId);
+    wals = new WALProviderFactory(walConf, "log_" + replicaId);
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDefaultRootDirPath(), conf, htd,
       wals.getWAL(info));

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,8 +62,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -109,7 +110,7 @@ public class TestWALObserver {
   private Path hbaseWALRootDir;
   private Path oldLogDir;
   private Path logDir;
-  private WALFactory wals;
+  private WALProviderFactory wals;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -155,7 +156,7 @@ public class TestWALObserver {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseWALRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseWALRootDir, true);
     }
-    this.wals = new WALFactory(conf, serverName);
+    this.wals = new WALProviderFactory(conf, serverName);
   }
 
   @After
@@ -353,7 +354,7 @@ public class TestWALObserver {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf,
+        final WALProviderFactory wals2 = new WALProviderFactory(conf,
             ServerName.valueOf(currentTest.getMethodName() + "2", 16010, System.currentTimeMillis())
                 .toString());
         WAL wal2 = wals2.getWAL(null);

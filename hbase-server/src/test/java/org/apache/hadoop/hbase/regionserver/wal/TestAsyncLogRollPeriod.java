@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -36,7 +36,7 @@ public class TestAsyncLogRollPeriod extends AbstractTestLogRollPeriod {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestLogRollPeriod.TEST_UTIL.getConfiguration();
-    conf.set(WALFactory.WAL_PROVIDER, "asyncfs");
+    conf.set(WALProviderFactory.WAL_PROVIDER, "asyncfs");
     AbstractTestLogRollPeriod.setUpBeforeClass();
   }
 }

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,9 +46,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.junit.AfterClass;
@@ -128,7 +129,7 @@ public class TestWALRecordReader {
    */
   @Test
   public void testPartialRead() throws Exception {
-    final WALFactory walfactory = new WALFactory(conf, getName());
+    final WALProviderFactory walfactory = new WALProviderFactory(conf, getName());
     WAL log = walfactory.getWAL(info);
     // This test depends on timestamp being millisecond based and the filename of the WAL also
     // being millisecond based.
@@ -187,7 +188,7 @@ public class TestWALRecordReader {
    */
   @Test
   public void testWALRecordReader() throws Exception {
-    final WALFactory walfactory = new WALFactory(conf, getName());
+    final WALProviderFactory walfactory = new WALProviderFactory(conf, getName());
     WAL log = walfactory.getWAL(info);
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
@@ -249,7 +250,7 @@ public class TestWALRecordReader {
    */
   @Test
   public void testWALRecordReaderActiveArchiveTolerance() throws Exception {
-    final WALFactory walfactory = new WALFactory(conf, getName());
+    final WALProviderFactory walfactory = new WALProviderFactory(conf, getName());
     WAL log = walfactory.getWAL(info);
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();

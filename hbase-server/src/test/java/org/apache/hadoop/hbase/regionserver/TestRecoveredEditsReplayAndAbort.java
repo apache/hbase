@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.Assert;
@@ -139,7 +139,7 @@ public class TestRecoveredEditsReplayAndAbort {
     region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info,
         htd, rs);
     //create some recovered.edits
-    final WALFactory wals = new WALFactory(CONF, method);
+    final WALProviderFactory wals = new WALProviderFactory(CONF, method);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -155,8 +155,7 @@ public class TestRecoveredEditsReplayAndAbort {
             String.format("%019d", i));
         LOG.info("Begin to write recovered.edits : " + recoveredEdits);
         fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals
-            .createRecoveredEditsWriter(fs, recoveredEdits);
+        WALProvider.Writer writer = wals.createWALWriter(fs, recoveredEdits, true);
         for (long j = i; j < i + 100; j++) {
           long time = System.nanoTime();
           WALEdit edit = new WALEdit();

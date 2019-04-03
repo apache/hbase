@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -297,7 +297,7 @@ public class TestBackupBase {
     conf1.setLong(LogCleaner.OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC, 1000);
 
     // Set MultiWAL (with 2 default WAL files per RS)
-    conf1.set(WALFactory.WAL_PROVIDER, provider);
+    conf1.set(WALProviderFactory.WAL_PROVIDER, provider);
     TEST_UTIL.startMiniCluster();
 
     if (useSecondCluster) {

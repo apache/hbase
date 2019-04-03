@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -165,7 +165,7 @@ public class TestHMobStore {
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
-    final WALFactory wals = new WALFactory(walConf, methodName);
+    final WALProviderFactory wals = new WALProviderFactory(walConf, methodName);
     region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, htd, null);
     store = new HMobStore(region, hcd, conf);
     if(testStore) {

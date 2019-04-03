@@ -42,6 +42,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -77,7 +78,6 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp.DummyServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -88,10 +88,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.FSWALIdentity;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALIdentity;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -199,8 +199,8 @@ public abstract class TestReplicationSourceManager {
     remoteLogDir = utility.getDataTestDir(ReplicationUtils.REMOTE_WAL_DIR_NAME);
     replication = new Replication();
     DummyServer dummyServer = new DummyServer();
-    WALFactory factory =
-        new WALFactory(conf, dummyServer.getServerName().toString());
+    WALProviderFactory factory =
+        new WALProviderFactory(conf, dummyServer.getServerName().toString());
     replication.initialize(dummyServer, factory.getWALProvider());
     managerOfCluster = getManagerFromCluster();
     if (managerOfCluster != null) {
@@ -288,8 +288,8 @@ public abstract class TestReplicationSourceManager {
     WALEdit edit = new WALEdit();
     edit.add(kv);
 
-    WALFactory wals =
-      new WALFactory(utility.getConfiguration(), URLEncoder.encode("regionserver:60020", "UTF8"));
+    WALProviderFactory wals = new WALProviderFactory(utility.getConfiguration(),
+        URLEncoder.encode("regionserver:60020", "UTF8"));
     ReplicationSourceManager replicationManager = replication.getReplicationManager();
     wals.getWALProvider()
       .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));

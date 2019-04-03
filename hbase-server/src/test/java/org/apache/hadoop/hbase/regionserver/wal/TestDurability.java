@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProviderFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -113,7 +113,7 @@ public class TestDurability {
 
   @Before
   public void setUp() {
-    CONF.set(WALFactory.WAL_PROVIDER, walProvider);
+    CONF.set(WALProviderFactory.WAL_PROVIDER, walProvider);
   }
 
   @After
@@ -123,7 +123,7 @@ public class TestDurability {
 
   @Test
   public void testDurability() throws Exception {
-    WALFactory wals = new WALFactory(CONF,
+    WALProviderFactory wals = new WALProviderFactory(CONF,
         ServerName.valueOf("TestDurability", 16010, System.currentTimeMillis()).toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
@@ -187,7 +187,7 @@ public class TestDurability {
     byte[] col3 = Bytes.toBytes("col3");
 
     // Setting up region
-    WALFactory wals = new WALFactory(CONF,
+    WALProviderFactory wals = new WALProviderFactory(CONF,
         ServerName.valueOf("TestIncrement", 16010, System.currentTimeMillis()).toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
@@ -253,7 +253,7 @@ public class TestDurability {
     byte[] col1 = Bytes.toBytes("col1");
 
     // Setting up region
-    WALFactory wals = new WALFactory(CONF,
+    WALProviderFactory wals = new WALProviderFactory(CONF,
         ServerName
             .valueOf("testIncrementWithReturnResultsSetToFalse", 16010, System.currentTimeMillis())
             .toString());
@@ -275,7 +275,7 @@ public class TestDurability {
     return p;
   }
 
-  private void verifyWALCount(WALFactory wals, WAL log, int expected) throws Exception {
+  private void verifyWALCount(WALProviderFactory wals, WAL log, int expected) throws Exception {
     Path walPath = AbstractFSWALProvider.getCurrentFileName(log);
     WAL.Reader reader = wals.createReader(FS, walPath);
     int count = 0;
@@ -288,7 +288,7 @@ public class TestDurability {
   }
 
   // lifted from TestAtomicOperation
-  private HRegion createHRegion(WALFactory wals, Durability durability) throws IOException {
+  private HRegion createHRegion(WALProviderFactory wals, Durability durability) throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^A-Za-z0-9-_]", "_"));
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();

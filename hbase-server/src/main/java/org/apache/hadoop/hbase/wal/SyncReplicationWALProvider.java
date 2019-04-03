@@ -37,6 +37,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -50,10 +52,12 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,12 +84,10 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @VisibleForTesting
   public static final String DUAL_WAL_IMPL = "hbase.wal.sync.impl";
 
-  private final WALProvider provider;
-
   private SyncReplicationPeerInfoProvider peerInfoProvider =
     new DefaultSyncReplicationPeerInfoProvider();
 
-  private WALFactory factory;
+  private WALProviderFactory factory;
 
   private Configuration conf;
 
@@ -105,8 +107,10 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
+  private WALProvider delegateProvider;
+
   SyncReplicationWALProvider(WALProvider provider) {
-    this.provider = provider;
+    this.delegateProvider = provider;
   }
 
   public void setPeerInfoProvider(SyncReplicationPeerInfoProvider peerInfoProvider) {
@@ -114,11 +118,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALProviderFactory factory, Configuration conf, String providerId)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    provider.init(factory, conf, providerId);
+    delegateProvider.init(factory, conf, providerId);
     this.conf = conf;
     this.factory = factory;
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
@@ -198,7 +203,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public WAL getWAL(RegionInfo region) throws IOException {
     if (region == null) {
-      return provider.getWAL(null);
+      return delegateProvider.getWAL(null);
     }
     WAL wal = null;
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
@@ -207,13 +212,13 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
       wal = getWAL(pair.getFirst(), pair.getSecond());
     }
-    return wal != null ? wal : provider.getWAL(region);
+    return wal != null ? wal : delegateProvider.getWAL(region);
   }
 
   private Stream<WAL> getWALStream() {
     return Streams.concat(
       peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get),
-      provider.getWALs().stream());
+      delegateProvider.getWALs().stream());
   }
 
   @Override
@@ -235,7 +240,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
         }
       }
     }
-    provider.shutdown();
+    delegateProvider.shutdown();
     if (failure != null) {
       throw failure;
     }
@@ -255,7 +260,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
         }
       }
     }
-    provider.close();
+    delegateProvider.close();
     if (failure != null) {
       throw failure;
     }
@@ -263,13 +268,13 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @Override
   public long getNumLogFiles() {
-    return peerId2WAL.size() + provider.getNumLogFiles();
+    return peerId2WAL.size() + delegateProvider.getNumLogFiles();
   }
 
   @Override
   public long getLogFileSize() {
     return peerId2WAL.values().stream().filter(Optional::isPresent).map(Optional::get)
-      .mapToLong(DualAsyncFSWAL::getLogFileSize).sum() + provider.getLogFileSize();
+      .mapToLong(DualAsyncFSWAL::getLogFileSize).sum() + delegateProvider.getLogFileSize();
   }
 
   private void safeClose(WAL wal) {
@@ -285,7 +290,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public void addWALActionsListener(WALActionsListener listener) {
     listeners.add(listener);
-    provider.addWALActionsListener(listener);
+    delegateProvider.addWALActionsListener(listener);
   }
 
   @Override
@@ -352,7 +357,18 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @VisibleForTesting
   WALProvider getWrappedProvider() {
-    return provider;
+    return delegateProvider;
+  }
+
+  @Override
+  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
+    return delegateProvider.createWalIdentity(serverName, walName, isArchive);
+  }
+
+  @Override
+  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
+      throws IOException {
+    return delegateProvider.locateWalId(wal, server, deadRegionServers);
   }
 
   @Override
@@ -364,14 +380,15 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   @Override
-  public WALIdentity createWalIdentity(ServerName serverName, String walName, boolean isArchive) {
-    return provider.createWalIdentity(serverName, walName, isArchive);
+  public Writer createWriter(Configuration conf, FileSystem fs, Path path, boolean overwritable)
+          throws IOException {
+    return delegateProvider.createWriter(conf, fs, path, overwritable);
   }
 
   @Override
-  public WALIdentity locateWalId(WALIdentity wal, Server server, List<ServerName> deadRegionServers)
-      throws IOException {
-    return provider.locateWalId(wal, server, deadRegionServers);
+  public Reader createReader(FileSystem fs, Path path, CancelableProgressable reporter,
+                             boolean allowCustom) throws IOException {
+    return delegateProvider.createReader(fs, path, reporter, allowCustom);
   }
 
 }
