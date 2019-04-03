@@ -2522,6 +2522,7 @@ take when the quota subject's usage exceeds the `LIMIT`. The following are valid
 * `NO_INSERTS` - No new data may be written (e.g. `Put`, `Increment`, `Append`).
 * `NO_WRITES` - Same as `NO_INSERTS` but `Deletes` are also disallowed.
 * `NO_WRITES_COMPACTIONS` - Same as `NO_WRITES` but compactions are also disallowed.
+** This policy only prevents user-submitted compactions. System can still run compactions.
 * `DISABLE` - The table(s) are disabled, preventing all read/write access.
 
 .Setting simple space quotas
