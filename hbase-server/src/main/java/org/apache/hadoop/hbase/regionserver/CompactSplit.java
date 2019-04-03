@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.StealJobQueue;
@@ -309,8 +310,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
     RegionServerSpaceQuotaManager spaceQuotaManager =
         this.server.getRegionServerSpaceQuotaManager();
-    if (spaceQuotaManager != null &&
-        spaceQuotaManager.areCompactionsDisabled(region.getTableDescriptor().getTableName())) {
+
+    if (user != null && !Superusers.isSuperUser(user) && spaceQuotaManager != null
+        && spaceQuotaManager.areCompactionsDisabled(region.getTableDescriptor().getTableName())) {
+      // Enter here only when:
+      // It's a user generated req, the user is super user, quotas enabled, compactions disabled.
       String reason = "Ignoring compaction request for " + region +
           " as an active space quota violation " + " policy disallows compactions.";
       tracker.notExecuted(store, reason);

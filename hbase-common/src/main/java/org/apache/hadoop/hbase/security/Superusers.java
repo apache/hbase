@@ -90,6 +90,9 @@ public final class Superusers {
       throw new IllegalStateException("Super users/super groups lists"
         + " have not been initialized properly.");
     }
+    if (user == null){
+      throw new IllegalArgumentException("Null user passed for super user check");
+    }
     if (superUsers.contains(user.getShortName())) {
       return true;
     }
