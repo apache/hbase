@@ -65,7 +65,7 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
    * @param message description of what caused the failure
    * @param e root cause
    */
-  public HBaseSnapshotException(String message, Exception e) {
+  public HBaseSnapshotException(String message, Throwable e) {
     super(message, e);
   }
 

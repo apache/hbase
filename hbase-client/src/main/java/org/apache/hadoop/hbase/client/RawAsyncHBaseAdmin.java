@@ -1936,7 +1936,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                       String msg =
                         "Restore snapshot=" + snapshotName + " failed. Rollback to snapshot=" +
                           failSafeSnapshotSnapshotName + " succeeded.";
-                      future.completeExceptionally(new RestoreSnapshotException(msg));
+                      future.completeExceptionally(new RestoreSnapshotException(msg, err2));
                     }
                   });
               } else {
