@@ -838,12 +838,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<RegionInfo>> getRegions(TableName tableName) {
     if (tableName.equals(META_TABLE_NAME)) {
-      return connection.getLocator().getRegionLocation(tableName, null, null, operationTimeoutNs)
-          .thenApply(loc -> Collections.singletonList(loc.getRegion()));
+      return connection.registry.getMetaRegionLocation()
+        .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
+          .collect(Collectors.toList()));
     } else {
       return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName))
-          .thenApply(
-            locs -> locs.stream().map(loc -> loc.getRegion()).collect(Collectors.toList()));
+        .thenApply(
+          locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
   }
 
@@ -3418,21 +3419,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<byte[][]> getTableSplits(TableName tableName) {
     CompletableFuture<byte[][]> future = new CompletableFuture<>();
-    addListener(getRegions(tableName), (regions, err2) -> {
-      if (err2 != null) {
-        future.completeExceptionally(err2);
-        return;
-      }
-      if (regions.size() == 1) {
-        future.complete(null);
-      } else {
-        byte[][] splits = new byte[regions.size() - 1][];
-        for (int i = 1; i < regions.size(); i++) {
-          splits[i - 1] = regions.get(i).getStartKey();
+    addListener(
+      getRegions(tableName).thenApply(regions -> regions.stream()
+        .filter(RegionReplicaUtil::isDefaultReplica).collect(Collectors.toList())),
+      (regions, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+          return;
         }
-        future.complete(splits);
-      }
-    });
+        if (regions.size() == 1) {
+          future.complete(null);
+        } else {
+          byte[][] splits = new byte[regions.size() - 1][];
+          for (int i = 1; i < regions.size(); i++) {
+            splits[i - 1] = regions.get(i).getStartKey();
+          }
+          future.complete(splits);
+        }
+      });
     return future;
   }
 
@@ -3661,13 +3665,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               if (err3 != null) {
                 future.completeExceptionally(err3);
               } else {
-                addListener(createTable(newTableDesc, splits), (result, err4) -> {
-                  if (err4 != null) {
-                    future.completeExceptionally(err4);
-                  } else {
-                    future.complete(result);
-                  }
-                });
+                addListener(
+                  splits != null ? createTable(newTableDesc, splits) : createTable(newTableDesc),
+                  (result, err4) -> {
+                    if (err4 != null) {
+                      future.completeExceptionally(err4);
+                    } else {
+                      future.complete(result);
+                    }
+                  });
               }
             });
           } else {
