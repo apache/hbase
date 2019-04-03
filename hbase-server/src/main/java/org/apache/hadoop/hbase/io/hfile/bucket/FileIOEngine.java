@@ -143,6 +143,7 @@ public class FileIOEngine implements IOEngine {
             + " expected");
       }
     }
+    dstBuffer.rewind();
     return deserializer.deserialize(new SingleByteBuff(dstBuffer), true, MemoryType.EXCLUSIVE);
   }
 
@@ -210,10 +211,8 @@ public class FileIOEngine implements IOEngine {
 
   @Override
   public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    // When caching block into BucketCache there will be single buffer backing for this HFileBlock.
-    assert srcBuffer.hasArray();
-    write(ByteBuffer.wrap(srcBuffer.array(), srcBuffer.arrayOffset(),
-            srcBuffer.remaining()), offset);
+    ByteBuffer dup = srcBuffer.asSubByteBuffer(srcBuffer.remaining()).duplicate();
+    write(dup, offset);
   }
 
   private void accessFile(FileAccessor accessor, ByteBuffer buffer,
@@ -229,8 +228,7 @@ public class FileIOEngine implements IOEngine {
       int accessLen = 0;
       if (endFileNum > accessFileNum) {
         // short the limit;
-        buffer.limit((int) (buffer.limit() - remainingAccessDataLen
-            + sizePerFile - accessOffset));
+        buffer.limit((int) (buffer.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
       }
       try {
         accessLen = accessor.access(fileChannel, buffer, accessOffset);
@@ -307,7 +305,7 @@ public class FileIOEngine implements IOEngine {
     }
   }
 
-  private static interface FileAccessor {
+  private interface FileAccessor {
     int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
         throws IOException;
   }
