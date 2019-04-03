@@ -43,11 +43,11 @@ import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
-public class TestAsyncRegionAdminApiWithRegionReplicas extends TestAsyncAdminBase {
+public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionAdminApiWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestAsyncAdminWithRegionReplicas.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -123,6 +123,32 @@ public class TestAsyncRegionAdminApiWithRegionReplicas extends TestAsyncAdminBas
         .get();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
+    }
+  }
+
+  @Test
+  public void testCloneTableSchema() throws IOException, InterruptedException, ExecutionException {
+    createTableWithDefaultConf(tableName, 3);
+    admin.cloneTableSchema(tableName, TableName.valueOf(tableName.getNameAsString() + "_new"), true)
+      .get();
+  }
+
+  @Test
+  public void testGetTableRegions() throws InterruptedException, ExecutionException, IOException {
+    List<RegionInfo> metaRegions = admin.getRegions(TableName.META_TABLE_NAME).get();
+    assertEquals(3, metaRegions.size());
+    for (int i = 0; i < 3; i++) {
+      RegionInfo metaRegion = metaRegions.get(i);
+      assertEquals(TableName.META_TABLE_NAME, metaRegion.getTable());
+      assertEquals(i, metaRegion.getReplicaId());
+    }
+    createTableWithDefaultConf(tableName, 3);
+    List<RegionInfo> regions = admin.getRegions(tableName).get();
+    assertEquals(3, metaRegions.size());
+    for (int i = 0; i < 3; i++) {
+      RegionInfo region = regions.get(i);
+      assertEquals(tableName, region.getTable());
+      assertEquals(i, region.getReplicaId());
     }
   }
 }
