@@ -29,7 +29,6 @@ import sun.nio.ch.DirectBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -175,7 +174,7 @@ public class ByteBuffAllocator {
     return allocateOnHeap(this.bufSize);
   }
 
-  private SingleByteBuff allocateOnHeap(int size) {
+  private static SingleByteBuff allocateOnHeap(int size) {
     return new SingleByteBuff(NONE, ByteBuffer.allocate(size));
   }
 
@@ -213,7 +212,7 @@ public class ByteBuffAllocator {
       // just allocate the ByteBuffer from on-heap.
       bbs.add(ByteBuffer.allocate(remain));
     }
-    ByteBuff bb = wrap(bbs, () -> {
+    ByteBuff bb = ByteBuff.wrap(bbs, () -> {
       for (int i = 0; i < lenFromReservoir; i++) {
         this.putbackBuffer(bbs.get(i));
       }
@@ -236,30 +235,6 @@ public class ByteBuffAllocator {
         }
       }
     }
-  }
-
-  public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {
-    if (buffers == null || buffers.length == 0) {
-      throw new IllegalArgumentException("buffers shouldn't be null or empty");
-    }
-    return buffers.length == 1 ? new SingleByteBuff(recycler, buffers[0])
-        : new MultiByteBuff(recycler, buffers);
-  }
-
-  public static ByteBuff wrap(ByteBuffer[] buffers) {
-    return wrap(buffers, NONE);
-  }
-
-  public static ByteBuff wrap(List<ByteBuffer> buffers, Recycler recycler) {
-    if (buffers == null || buffers.size() == 0) {
-      throw new IllegalArgumentException("buffers shouldn't be null or empty");
-    }
-    return buffers.size() == 1 ? new SingleByteBuff(recycler, buffers.get(0))
-        : new MultiByteBuff(recycler, buffers.toArray(new ByteBuffer[0]));
-  }
-
-  public static ByteBuff wrap(List<ByteBuffer> buffers) {
-    return wrap(buffers, NONE);
   }
 
   /**

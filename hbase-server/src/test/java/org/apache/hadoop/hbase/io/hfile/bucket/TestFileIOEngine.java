@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -132,15 +133,22 @@ public class TestFileIOEngine {
     fileIOEngine.closeFileChannels();
     int len = 5;
     long offset = 0L;
-    byte[] data1 = new byte[len];
-    for (int j = 0; j < data1.length; ++j) {
-      data1[j] = (byte) (Math.random() * 255);
+    int val = (int) (Math.random() * 255);
+    for (int i = 0; i < 2; i++) {
+      ByteBuff src = TestByteBufferIOEngine.createByteBuffer(len, val, i % 2 == 0);
+      int pos = src.position(), lim = src.limit();
+      fileIOEngine.write(src, offset);
+      src.position(pos).limit(lim);
+
+      BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+      fileIOEngine.read(offset, len, deserializer);
+      ByteBuff dst = deserializer.getDeserializedByteBuff();
+
+      Assert.assertEquals(src.remaining(), len);
+      Assert.assertEquals(dst.remaining(), len);
+      Assert.assertEquals(0,
+        ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
     }
-    fileIOEngine.write(ByteBuffer.wrap(data1), offset);
-    BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-    fileIOEngine.read(offset, len, deserializer);
-    ByteBuff data2 = deserializer.getDeserializedByteBuff();
-    assertArrayEquals(data1, data2.array());
   }
 
   @Test
