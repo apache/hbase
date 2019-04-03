@@ -2115,7 +2115,9 @@ public class HBaseAdmin implements Admin {
       // TODO: how long should we wait? Spin forever?
       return future.get(timeout, units);
     } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupt while waiting on " + future);
+      IOException ioe = new InterruptedIOException("Interrupt while waiting on " + future);
+      ioe.initCause(e);
+      throw ioe;
     } catch (TimeoutException e) {
       throw new TimeoutIOException(e);
     } catch (ExecutionException e) {
