@@ -39,7 +39,7 @@ public class RestoreSnapshotException extends HBaseSnapshotException {
     super(msg);
   }
 
-  public RestoreSnapshotException(String message, Exception e) {
+  public RestoreSnapshotException(String message, Throwable e) {
     super(message, e);
   }
 }
