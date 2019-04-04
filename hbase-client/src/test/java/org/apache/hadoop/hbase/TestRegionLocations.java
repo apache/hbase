@@ -29,6 +29,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+/**
+ * For test
+ */
 @Category({ClientTests.class, SmallTests.class})
 public class TestRegionLocations {
 
