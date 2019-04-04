@@ -191,7 +191,7 @@ public class CompactionTool extends Configured implements Tool {
         }
       };
       HRegion region = new HRegion(regionFs, null, conf, htd, null);
-      return new HStore(region, htd.getColumnFamily(Bytes.toBytes(familyName)), conf);
+      return new HStore(region, htd.getColumnFamily(Bytes.toBytes(familyName)), conf, false);
     }
   }
 

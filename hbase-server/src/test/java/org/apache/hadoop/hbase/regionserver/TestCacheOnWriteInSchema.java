@@ -182,7 +182,7 @@ public class TestCacheOnWriteInSchema {
 
     region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
     region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
-    store = new HStore(region, hcd, conf);
+    store = new HStore(region, hcd, conf, false);
   }
 
   @After

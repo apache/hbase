@@ -230,7 +230,7 @@ public class TestHStore {
       ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
     initHRegion(methodName, conf, builder, hcd, hook, switchToPread);
     if (hook == null) {
-      store = new HStore(region, hcd, conf);
+      store = new HStore(region, hcd, conf, false);
     } else {
       store = new MyStore(region, hcd, conf, hook, switchToPread);
     }
@@ -495,7 +495,8 @@ public class TestHStore {
     w.close();
     this.store.close();
     // Reopen it... should pick up two files
-    this.store = new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c);
+    this.store =
+        new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c, false);
     assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,
@@ -1525,7 +1526,7 @@ public class TestHStore {
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(family);
     initHRegion(name.getMethodName(), conf,
       TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd, null, false);
-    HStore store = new HStore(region, hcd, conf) {
+    HStore store = new HStore(region, hcd, conf, false) {
 
       @Override
       protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
@@ -1567,7 +1568,7 @@ public class TestHStore {
 
     MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration
         confParam, MyStoreHook hook, boolean switchToPread) throws IOException {
-      super(region, family, confParam);
+      super(region, family, confParam, false);
       this.hook = hook;
     }
 

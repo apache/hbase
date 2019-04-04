@@ -107,7 +107,7 @@ public class TestCompactionPolicy {
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
-    store = new HStore(region, hcd, conf);
+    store = new HStore(region, hcd, conf, false);
 
     TEST_FILE = region.getRegionFileSystem().createTempName();
     fs.createNewFile(TEST_FILE);

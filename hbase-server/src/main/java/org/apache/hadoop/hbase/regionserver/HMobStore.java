@@ -104,8 +104,8 @@ public class HMobStore extends HStore {
   private final byte[] refCellTags;
 
   public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
-      final Configuration confParam) throws IOException {
-    super(region, family, confParam);
+      final Configuration confParam, boolean warmup) throws IOException {
+    super(region, family, confParam, warmup);
     this.family = family;
     this.mobFileCache = region.getMobFileCache();
     this.homePath = MobUtils.getMobHome(conf);
