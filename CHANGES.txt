@@ -1,6 +1,28 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.12
+
+** Sub-task
+    * [HBASE-22152] - Create a jenkins file for yetus to processing GitHub PR
+
+** Bug
+    * [HBASE-20911] - correct Swtich/case indentation in formatter template for eclipse
+    * [HBASE-21135] - Build fails on windows as it fails to parse windows path during license check
+    * [HBASE-21990] - puppycrawl checkstyle dtds 404... moved to sourceforge
+    * [HBASE-22058] - upgrade thrift dependency to 0.9.3.1 on  branches 1.4, 1.3 and 1.2
+    * [HBASE-22125] - Fix more instances in make_rc.sh where we need -Dhttps.protocols=TLSv1.2
+
+** New Feature
+    * [HBASE-21926] - Profiler servlet
+
+** Test
+    * [HBASE-21963] - Add a script for building and verifying release candidate
+
+** Task
+    * [HBASE-22171] - Release 1.2.12
+
+
 Release Notes - HBase - Version 1.2.11 2019/02/25
 
 ** Sub-task
