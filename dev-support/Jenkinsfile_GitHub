@@ -60,7 +60,7 @@ pipeline {
         stage ('precommit-run') {
             steps {
                 withCredentials(
-                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                    [usernamePassword(credentialsId: 'apache-hbase-at-github.com',
                                   passwordVariable: 'GITHUB_PASSWORD',
                                   usernameVariable: 'GITHUB_USER'),
                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
