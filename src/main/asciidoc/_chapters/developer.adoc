@@ -1386,21 +1386,40 @@ mvn verify
 ----
 
 If you just want to run the integration tests in top-level, you need to run two commands.
-First: +mvn failsafe:integration-test+ This actually runs ALL the integration tests.
+First:
+----
+mvn failsafe:integration-test
+----
+
+This actually runs ALL the integration tests.
 
 NOTE: This command will always output `BUILD SUCCESS` even if there are test failures.
 
 At this point, you could grep the output by hand looking for failed tests.
-However, maven will do this for us; just use: +mvn
-                        failsafe:verify+ The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.
+However, maven will do this for us; just use:
+----
+mvn failsafe:verify
+----
+
+The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.
 
 [[maven.build.commands.integration.tests2]]
 ===== Running a subset of Integration tests
 
 This is very similar to how you specify running a subset of unit tests (see above), but use the property `it.test` instead of `test`.
-To just run `IntegrationTestClassXYZ.java`, use: +mvn
-                            failsafe:integration-test -Dit.test=IntegrationTestClassXYZ+                        The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java: +mvn failsafe:integration-test -Dit.test=*ClassX*+ This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like: +mvn
-                            failsafe:integration-test -Dit.test=*ClassX*, *ClassY+
+To just run `IntegrationTestClassXYZ.java`, use:
+----
+mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ -DfailIfNoTests=false
+----
+The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
+----
+mvn failsafe:integration-test -Dit.test=*ClassX* -DfailIfNoTests=false
+----
+
+This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like:
+----
+mvn failsafe:integration-test -Dit.test=*ClassX*,*ClassY -DfailIfNoTests=false
+----
 
 [[maven.build.commands.integration.tests.distributed]]
 ==== Running integration tests against distributed cluster
