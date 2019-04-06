@@ -406,7 +406,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       @Override
       public void run(PRESP resp) {
         if (controller.failed()) {
-          future.completeExceptionally(new IOException(controller.errorText()));
+          future.completeExceptionally(controller.getFailed());
         } else {
           try {
             future.complete(respConverter.convert(resp));
