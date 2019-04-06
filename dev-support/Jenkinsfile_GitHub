@@ -153,6 +153,7 @@ pipeline {
                         YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
                         YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
                         YETUS_ARGS+=("--quick-hadoopcheck")
+                        YETUS_ARGS+=("--skip-errorprone")
                         # effectively treat dev-support as a custom maven module
                         YETUS_ARGS+=("--skip-dir=dev-support")
                         # help keep the ASF boxes clean

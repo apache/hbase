@@ -94,6 +94,9 @@ function personality_parse_args
       --hadoop-profile=*)
         HADOOP_PROFILE=${i#*=}
       ;;
+      --skip-errorprone)
+        SKIP_ERRORPRONE=true
+      ;;
     esac
   done
 }
@@ -166,7 +169,7 @@ function personality_modules
     return
   fi
 
-  if [[ ${testtype} == compile ]]; then
+  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]]; then
     extra="${extra} -PerrorProne"
   fi
 
