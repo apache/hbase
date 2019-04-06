@@ -598,11 +598,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createTable(TableDescriptor desc) throws IOException {
-    createTable(desc, null);
-  }
-
-  @Override
   public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
       throws IOException {
     if (numRegions < 3) {
@@ -4280,5 +4275,10 @@ public class HBaseAdmin implements Admin {
   @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
+  }
+
+  @Override
+  public Future<Void> createTableAsync(TableDescriptor desc) throws IOException {
+    return createTableAsync(desc, null);
   }
 }
