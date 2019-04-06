@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -71,6 +70,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
@@ -577,7 +578,7 @@ public class TestBlockEvictionFromClient {
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -601,19 +602,12 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
+      ServerName rs = Iterables.getOnlyElement(TEST_UTIL.getAdmin().getRegionServers());
+      int regionCount = TEST_UTIL.getAdmin().getRegions(rs).size();
       LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
       // Wait for splits
-      Collection<ServerName> regionServers = TEST_UTIL.getAdmin().getRegionServers();
-      Iterator<ServerName> serverItr = regionServers.iterator();
-      serverItr.hasNext();
-      ServerName rs = serverItr.next();
-      List<RegionInfo> onlineRegions = TEST_UTIL.getAdmin().getRegions(rs);
-      while (onlineRegions.size() != 2) {
-        onlineRegions = TEST_UTIL.getAdmin().getRegions(rs);
-        Thread.sleep(100);
-        LOG.info("Waiting on SPLIT to complete...");
-      }
+      TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
       region.compact(true);
       Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
