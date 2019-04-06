@@ -196,7 +196,9 @@ public interface Admin extends Abortable, Closeable {
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
    * @throws IOException if a remote or network exception occurs
    */
-  void createTable(TableDescriptor desc) throws IOException;
+  default void createTable(TableDescriptor desc) throws IOException {
+    get(createTableAsync(desc), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
 
   /**
    * Creates a new table with the specified number of regions.  The start key specified will become
@@ -213,7 +215,6 @@ public interface Admin extends Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
-   * @throws IOException
    */
   void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
       throws IOException;
@@ -237,22 +238,35 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Creates a new table but does not block and wait for it to come online.
-   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
-   * It may throw ExecutionException if there was an error while executing the operation
-   * or TimeoutException in case the wait timeout was not long enough to allow the
-   * operation to complete.
-   * Throws IllegalArgumentException Bad table name, if the split keys
-   *    are repeated and if the split key has empty byte array.
-   *
+   * Creates a new table but does not block and wait for it to come online. You can use
+   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
+   * ExecutionException if there was an error while executing the operation or TimeoutException in
+   * case the wait timeout was not long enough to allow the operation to complete.
+   * <p/>
+   * Throws IllegalArgumentException Bad table name, if the split keys are repeated and if the split
+   * key has empty byte array.
+   * @param desc table descriptor for table
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  Future<Void> createTableAsync(TableDescriptor desc) throws IOException;
+
+  /**
+   * Creates a new table but does not block and wait for it to come online. You can use
+   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
+   * ExecutionException if there was an error while executing the operation or TimeoutException in
+   * case the wait timeout was not long enough to allow the operation to complete.
+   * <p/>
+   * Throws IllegalArgumentException Bad table name, if the split keys are repeated and if the split
+   * key has empty byte array.
    * @param desc table descriptor for table
    * @param splitKeys keys to check if the table has been created with all split keys
    * @throws IOException if a remote or network exception occurs
-   * @return the result of the async creation. You can use Future.get(long, TimeUnit)
-   *    to wait on the operation to complete.
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
    */
-  Future<Void> createTableAsync(TableDescriptor desc, byte[][] splitKeys)
-      throws IOException;
+  Future<Void> createTableAsync(TableDescriptor desc, byte[][] splitKeys) throws IOException;
 
   /**
    * Deletes a table. Synchronous operation.
