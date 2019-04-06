@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Test setting values in the descriptor
+ * for test
  */
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
