@@ -1344,6 +1344,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> createTableAsync(TableDescriptor desc) {
+    throw new NotImplementedException("createTableAsync not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> createTableAsync(TableDescriptor desc, byte[][] splitKeys) {
     throw new NotImplementedException("createTableAsync not supported in ThriftAdmin");
   }
