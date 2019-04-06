@@ -30,7 +30,7 @@ pipeline {
     skipDefaultCheckout()
   }
   environment {
-    YETUS_RELEASE = '0.6.0'
+    YETUS_RELEASE = '0.9.0'
     // where we'll write everything from different steps. Need a copy here so the final step can check for success/failure.
     OUTPUT_DIR_RELATIVE_GENERAL = 'output-general'
     OUTPUT_DIR_RELATIVE_JDK7 = 'output-jdk7'
@@ -76,11 +76,11 @@ if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
     gpg --homedir "${WORKSPACE}/.gpg" --import "${WORKSPACE}/KEYS_YETUS"
 
     echo "download yetus release ${YETUS_RELEASE}"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz"
-    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
+    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz"
+    curl -L --fail -O "https://dist.apache.org/repos/dist/release/yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
     echo "verifying yetus release"
-    gpg --homedir "${WORKSPACE}/.gpg" --verify "yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
-    mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
+    gpg --homedir "${WORKSPACE}/.gpg" --verify "apache-yetus-${YETUS_RELEASE}-bin.tar.gz.asc"
+    mv "apache-yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
   else
     echo "Reusing cached download of Apache Yetus version ${YETUS_RELEASE}."
   fi
