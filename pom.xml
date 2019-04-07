@@ -1437,7 +1437,7 @@
     <disruptor.version>3.3.6</disruptor.version>
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
-    <metrics-core.version>3.2.1</metrics-core.version>
+    <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.9.2</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.25.v20180904</jetty.version>
