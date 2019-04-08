@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
@@ -47,7 +48,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-@Category({LargeTests.class})
+@Category({ LargeTests.class, RegionServerTests.class })
 public class TestNotCleanupCompactedFileWhenRegionWarmup {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestNotCleanupCompactedFileWhenRegionWarmup.class);
