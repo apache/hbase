@@ -27,12 +27,14 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -66,7 +69,10 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
@@ -86,6 +92,7 @@ import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -106,8 +113,10 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -2467,6 +2476,163 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public MasterProtos.GetFailedSplitMergeLegacyRegionsResponse getFailedSplitMergeLegacyRegions(
+      RpcController controller, MasterProtos.GetFailedSplitMergeLegacyRegionsRequest request)
+      throws ServiceException {
+    List<HBaseProtos.TableName> tables = request.getTableList();
+
+    Map<String, MasterProtos.RegionErrorType> errorRegions = new HashMap<>();
+    try {
+      for (HBaseProtos.TableName tableName : tables) {
+        errorRegions.putAll(getFailedSplitMergeLegacyRegions(ProtobufUtil.toTableName(tableName)));
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return MasterProtos.GetFailedSplitMergeLegacyRegionsResponse.newBuilder()
+        .putAllErrors(errorRegions).build();
+  }
+
+  private Map<String, MasterProtos.RegionErrorType>
+      getFailedSplitMergeLegacyRegions(TableName tableName) throws IOException {
+    if (!MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
+      throw new IOException("table " + tableName.getNameAsString() + " doesn't exist");
+    }
+    if (!MetaTableAccessor.getTableState(master.getConnection(), tableName).isEnabled()) {
+      throw new IOException(
+          "table " + tableName.getNameAsString() + " is not enabled yet");
+    }
+    final Map<String, MasterProtos.RegionErrorType> problemRegions = new HashMap<>();
+
+    // Case 1. find orphan region on fs
+    // orphan regions may due to a failed split region procedure, which daughter regions are created
+    // then the procedure is aborted. Or merged region is created then the procedure is aborted.
+    List<String> orphanRegions = findOrphanRegionOnFS(tableName);
+    orphanRegions.stream().forEach(
+      region -> problemRegions.put(region, MasterProtos.RegionErrorType.ORPHAN_REGION_ON_FS));
+
+    // Case 2. find unassigned daughter regions or merged regions
+    List<String> unassignedDaughterOrMergedRegions =
+        findUnassignedDaughterOrMergedRegions(tableName);
+    unassignedDaughterOrMergedRegions.stream().forEach(region -> problemRegions.put(region,
+      MasterProtos.RegionErrorType.DAUGHTER_MERGED_REGION_NOT_ONLINE));
+
+    // if these regions in problemRegions are currently handled by SplitTableRegionProcedure or
+    // MergeTableRegionsProcedure, we should remove them from this map
+    master.getProcedures().stream().filter(p -> !(p.isFinished() || p.isBypass())).forEach(p -> {
+      if (p instanceof SplitTableRegionProcedure) {
+        problemRegions
+            .remove(((SplitTableRegionProcedure) p).getDaughterOneRI().getRegionNameAsString());
+        problemRegions
+            .remove(((SplitTableRegionProcedure) p).getDaughterTwoRI().getRegionNameAsString());
+      } else if (p instanceof MergeTableRegionsProcedure) {
+        problemRegions
+            .remove(((MergeTableRegionsProcedure) p).getMergedRegion().getRegionNameAsString());
+      }
+    });
+
+    // check if regions are still problematic now
+    checkRegionStillProblematic(problemRegions, tableName);
+    return problemRegions;
+  }
+
+
+  private void checkRegionStillProblematic(
+      Map<String, MasterProtos.RegionErrorType> problemRegions, TableName tableName)
+      throws IOException {
+    Iterator<Map.Entry<String, MasterProtos.RegionErrorType>> iterator =
+        problemRegions.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<String, MasterProtos.RegionErrorType> entry = iterator.next();
+      Result r = MetaTableAccessor.getRegionResult(master.getConnection(),
+        Bytes.toBytesBinary(entry.getKey()));
+      switch (entry.getValue()) {
+        case ORPHAN_REGION_ON_FS:
+          // region is build for this directory, it is not a problematic region any more
+          if (r != null) {
+            iterator.remove();
+          }
+          break;
+        case DAUGHTER_MERGED_REGION_NOT_ONLINE:
+          RegionState.State state = RegionStateStore.getRegionState(r, 0);
+          if (!state.matches(RegionState.State.CLOSED, RegionState.State.SPLITTING_NEW,
+            RegionState.State.MERGED)) {
+            iterator.remove();
+          }
+          break;
+        default:
+          throw new IOException("there should be no problematic region of this type");
+      }
+    }
+  }
+
+  private List<String> findUnassignedDaughterOrMergedRegions(TableName tableName)
+      throws IOException {
+    Set<String> checkRegions = new HashSet<>();
+    Map<String, RegionState.State> regionStates = new HashMap<>();
+    Map<String, RegionInfo> regionInfos = new HashMap<>();
+
+    MetaTableAccessor.scanMeta(master.getConnection(), tableName,
+      MetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, r -> {
+        RegionInfo regionInfo = MetaTableAccessor.getRegionInfo(r);
+        regionInfos.put(regionInfo.getRegionNameAsString(), regionInfo);
+        RegionState.State state = RegionStateStore.getRegionState(r, 0);
+        regionStates.put(regionInfo.getEncodedName(), state);
+        if (regionInfo.isSplitParent()) {
+          PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(r);
+          checkRegions.add(daughters.getFirst().getRegionNameAsString());
+          checkRegions.add(daughters.getSecond().getRegionNameAsString());
+        } else if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null
+            || r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER) != null) {
+          checkRegions.add(regionInfo.getRegionNameAsString());
+        }
+        return true;
+      });
+
+    // find unassigned merged or split daughter region
+    return checkRegions.stream().map(regionName -> regionInfos.get(regionName))
+        .filter(regionInfo -> !regionInfo.isSplitParent())
+        .filter(regionInfo -> !regionStates.get(regionInfo.getEncodedName())
+            .matches(RegionState.State.OPEN))
+        .map(regionInfo -> regionInfo.getRegionNameAsString()).collect(Collectors.toList());
+  }
+
+  private List<String> findOrphanRegionOnFS(TableName tableName) throws IOException {
+    // get available regions from meta, merged region should be consider available
+    HashSet<String> regionsInMeta = new HashSet<>();
+    MetaTableAccessor.scanMeta(master.getConnection(), tableName,
+      MetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, r -> {
+        RegionInfo regionInfo = MetaTableAccessor.getRegionInfo(r);
+        regionsInMeta.add(regionInfo.getEncodedName());
+        if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null
+            || r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER) != null) {
+          PairOfSameType<RegionInfo> mergedRegions = MetaTableAccessor.getMergeRegions(r);
+          regionsInMeta.add(mergedRegions.getFirst().getEncodedName());
+          regionsInMeta.add(mergedRegions.getSecond().getEncodedName());
+        }
+        return true;
+      });
+    // get regionInfo from fs
+    Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    FileStatus[] regions =
+        master.getFileSystem().listStatus(tableDir, path -> !path.getName().startsWith("."));
+    HashMap<String, String> regionNames = new HashMap<>();
+    for (FileStatus region : regions) {
+      RegionInfo regionInfo =
+          HRegionFileSystem.loadRegionInfoFileContent(master.getFileSystem(), region.getPath());
+      regionNames.put(regionInfo.getEncodedName(), regionInfo.getRegionNameAsString());
+    }
+    Iterator<Map.Entry<String, String>> regionIterator = regionNames.entrySet().iterator();
+    while (regionIterator.hasNext()) {
+      Map.Entry<String, String> region = regionIterator.next();
+      if (regionsInMeta.contains(region.getKey())) {
+        regionIterator.remove();
+      }
+    }
+    return new ArrayList<>(regionNames.values());
   }
 
   @Override
