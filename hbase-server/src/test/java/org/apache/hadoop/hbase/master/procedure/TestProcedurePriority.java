@@ -115,8 +115,7 @@ public class TestProcedurePriority {
     for (int i = 0; i < TABLE_COUNT; i++) {
       futures.add(UTIL.getAdmin().createTableAsync(
         TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build(),
-        null));
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build()));
     }
     for (Future<?> future : futures) {
       future.get(1, TimeUnit.MINUTES);
