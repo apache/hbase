@@ -1531,29 +1531,36 @@ public class BucketCache implements BlockCache, HeapSize {
       this.accessCounter = accessCounter;
     }
 
-    public BucketEntry writeToCache(final IOEngine ioEngine,
-        final BucketAllocator bucketAllocator,
-        final LongAdder realCacheSize) throws CacheFullException, IOException,
-        BucketAllocatorException {
+    private BucketEntry getBucketEntry(IOEngine ioEngine, long offset, int len) {
+      if (ioEngine.usesSharedMemory()) {
+        if (UnsafeAvailChecker.isAvailable()) {
+          return new UnsafeSharedMemoryBucketEntry(offset, len, accessCounter, inMemory);
+        } else {
+          return new SharedMemoryBucketEntry(offset, len, accessCounter, inMemory);
+        }
+      } else {
+        return new BucketEntry(offset, len, accessCounter, inMemory);
+      }
+    }
+
+    public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator bucketAllocator,
+        final LongAdder realCacheSize) throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
-      if (len == 0) return null;
+      if (len == 0) {
+        return null;
+      }
       long offset = bucketAllocator.allocateBlock(len);
-      BucketEntry bucketEntry = ioEngine.usesSharedMemory()
-          ? UnsafeAvailChecker.isAvailable()
-              ? new UnsafeSharedMemoryBucketEntry(offset, len, accessCounter, inMemory)
-              : new SharedMemoryBucketEntry(offset, len, accessCounter, inMemory)
-          : new BucketEntry(offset, len, accessCounter, inMemory);
-      bucketEntry.setDeserialiserReference(data.getDeserializer());
+      boolean succ = false;
+      BucketEntry bucketEntry;
       try {
+        bucketEntry = getBucketEntry(ioEngine, offset, len);
+        bucketEntry.setDeserialiserReference(data.getDeserializer());
         if (data instanceof HFileBlock) {
           // If an instance of HFileBlock, save on some allocations.
-          HFileBlock block = (HFileBlock)data;
+          HFileBlock block = (HFileBlock) data;
           ByteBuff sliceBuf = block.getBufferReadOnly();
           ByteBuffer metadata = block.getMetaData();
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Write offset=" + offset + ", len=" + len);
-          }
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
@@ -1561,12 +1568,12 @@ public class BucketCache implements BlockCache, HeapSize {
           data.serialize(bb, true);
           ioEngine.write(bb, offset);
         }
-      } catch (IOException ioe) {
-        // free it in bucket allocator
-        bucketAllocator.freeBlock(offset);
-        throw ioe;
+        succ = true;
+      } finally {
+        if (!succ) {
+          bucketAllocator.freeBlock(offset);
+        }
       }
-
       realCacheSize.add(len);
       return bucketEntry;
     }
