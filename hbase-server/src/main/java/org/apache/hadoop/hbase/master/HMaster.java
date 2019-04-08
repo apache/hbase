@@ -714,7 +714,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * <li>Set cluster as UP in ZooKeeper</li>
    * <li>Wait for RegionServers to check-in</li>
    * <li>Split logs and perform data recovery, if necessary</li>
-   * <li>Ensure assignment of meta/namespace regions<li>
+   * <li>Ensure assignment of meta/namespace regions</li>
    * <li>Handle either fresh cluster start or master failover</li>
    * </ol>
    *
