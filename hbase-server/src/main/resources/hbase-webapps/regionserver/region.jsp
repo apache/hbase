@@ -69,7 +69,7 @@
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getPath() %>"><%= sf.getPath() %></a></td>
            <td><%= (int) (rs.getFileSystem().getLength(sf.getPath()) / 1024 / 1024) %></td>
-           <td><%= new Date(sf.getModificationTimeStamp()) %></td>
+           <td><%= new Date(sf.getModificationTimestamp()) %></td>
          </tr>
          <% } %>
 
