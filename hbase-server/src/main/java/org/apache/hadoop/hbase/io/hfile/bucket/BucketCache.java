@@ -1533,8 +1533,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
     public BucketEntry writeToCache(final IOEngine ioEngine,
         final BucketAllocator bucketAllocator,
-        final LongAdder realCacheSize) throws CacheFullException, IOException,
-        BucketAllocatorException {
+        final LongAdder realCacheSize) throws  IOException{
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) return null;
@@ -1561,10 +1560,10 @@ public class BucketCache implements BlockCache, HeapSize {
           data.serialize(bb, true);
           ioEngine.write(bb, offset);
         }
-      } catch (IOException ioe) {
+      } catch (Exception e) {
         // free it in bucket allocator
         bucketAllocator.freeBlock(offset);
-        throw ioe;
+        throw e;
       }
 
       realCacheSize.add(len);
