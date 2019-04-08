@@ -707,7 +707,7 @@ public class RegionSplitter {
     Path tableDir = tableDirAndSplitFile.getFirst();
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
     // Clear the cache to forcibly refresh region information
-    ((ClusterConnection)connection).clearRegionCache();
+    ((ClusterConnection)connection).clearRegionLocationCache();
     TableDescriptor htd = null;
     try (Table table = connection.getTable(tableName)) {
       htd = table.getDescriptor();
@@ -768,7 +768,7 @@ public class RegionSplitter {
         } catch (NoServerForRegionException nsfre) {
           LOG.debug("No Server Exception thrown for: " + splitAlgo.rowToStr(start));
           physicalSplitting.add(region);
-          ((ClusterConnection)connection).clearRegionCache();
+          ((ClusterConnection)connection).clearRegionLocationCache();
         }
       }
 
