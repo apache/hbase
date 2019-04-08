@@ -218,7 +218,7 @@ public class TestSeparateClientZKCluster {
       put.addColumn(family, qualifier, value);
       table.put(put);
       // invalid connection cache
-      conn.clearRegionCache();
+      conn.clearRegionLocationCache();
       // stop client zk cluster
       clientZkCluster.shutdown();
       // stop current meta server and confirm the server shutdown process
