@@ -109,9 +109,9 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
   }
 
   public static class HStoreWithFaultyRefreshHFilesAPI extends HStore {
-    public HStoreWithFaultyRefreshHFilesAPI(final HRegion region, final ColumnFamilyDescriptor family,
-                                            final Configuration confParam) throws IOException {
-      super(region, family, confParam);
+    public HStoreWithFaultyRefreshHFilesAPI(final HRegion region,
+        final ColumnFamilyDescriptor family, final Configuration confParam) throws IOException {
+      super(region, family, confParam, false);
     }
 
     @Override

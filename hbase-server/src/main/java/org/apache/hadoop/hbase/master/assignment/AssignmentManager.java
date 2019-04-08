@@ -592,7 +592,7 @@ public class AssignmentManager {
     return proc.getProcId();
   }
 
-  private TransitRegionStateProcedure createMoveRegionProcedure(RegionInfo regionInfo,
+  public TransitRegionStateProcedure createMoveRegionProcedure(RegionInfo regionInfo,
       ServerName targetServer) throws HBaseIOException {
     RegionStateNode regionNode = this.regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {

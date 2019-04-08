@@ -134,6 +134,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
@@ -2002,13 +2003,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (this.cpHost != null) {
         this.cpHost.preMove(hri, rp.getSource(), rp.getDestination());
       }
+
+      TransitRegionStateProcedure proc =
+          this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
       // Warmup the region on the destination before initiating the move. this call
       // is synchronous and takes some time. doing it before the source region gets
       // closed
       serverManager.sendRegionWarmup(rp.getDestination(), hri);
-
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
-      Future<byte []> future = this.assignmentManager.moveAsync(rp);
+      Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
         // Is this going to work? Will we throw exception on error?
         // TODO: CompletableFuture rather than this stunted Future.
