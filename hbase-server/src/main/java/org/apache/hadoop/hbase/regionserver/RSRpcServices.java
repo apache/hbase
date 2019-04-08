@@ -2142,10 +2142,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return response;
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Warming up Region " + region.getRegionNameAsString());
-      }
-
       htd = regionServer.tableDescriptors.get(region.getTable());
 
       if (regionServer.getRegionsInTransitionInRS().containsKey(encodedNameBytes)) {
@@ -2153,6 +2149,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return response;
       }
 
+      LOG.info("Warming up region " + region.getRegionNameAsString());
       HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
           regionServer.getConfiguration(), regionServer, null);
 

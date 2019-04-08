@@ -166,7 +166,7 @@ public class TestHMobStore {
     final WALFactory wals = new WALFactory(walConf, methodName);
     region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, td, null);
     region.setMobFileCache(new MobFileCache(conf));
-    store = new HMobStore(region, cfd, conf);
+    store = new HMobStore(region, cfd, conf, false);
     if (testStore) {
       init(conf, cfd);
     }

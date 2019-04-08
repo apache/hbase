@@ -241,7 +241,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @throws IOException
    */
   protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
-      final Configuration confParam) throws IOException {
+      final Configuration confParam, boolean warmup) throws IOException {
 
     this.fs = region.getRegionFileSystem();
 
@@ -303,7 +303,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
 
     this.storeEngine = createStoreEngine(this, this.conf, this.comparator);
-    List<HStoreFile> hStoreFiles = loadStoreFiles();
+    List<HStoreFile> hStoreFiles = loadStoreFiles(warmup);
     // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
     // replica's refreshStoreFiles() will also use loadStoreFiles() to refresh its store files and
     // update the storeSize in the completeCompaction(..) finally (just like compaction) , so
@@ -555,12 +555,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * from the given directory.
    * @throws IOException
    */
-  private List<HStoreFile> loadStoreFiles() throws IOException {
+  private List<HStoreFile> loadStoreFiles(boolean warmup) throws IOException {
     Collection<StoreFileInfo> files = fs.getStoreFiles(getColumnFamilyName());
-    return openStoreFiles(files);
+    return openStoreFiles(files, warmup);
   }
 
-  private List<HStoreFile> openStoreFiles(Collection<StoreFileInfo> files) throws IOException {
+  private List<HStoreFile> openStoreFiles(Collection<StoreFileInfo> files, boolean warmup)
+      throws IOException {
     if (CollectionUtils.isEmpty(files)) {
       return Collections.emptyList();
     }
@@ -614,19 +615,22 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       throw ioe;
     }
 
-    // Remove the compacted files from result
-    List<HStoreFile> filesToRemove = new ArrayList<>(compactedStoreFiles.size());
-    for (HStoreFile storeFile : results) {
-      if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
-        LOG.warn("Clearing the compacted storefile {} from this store", storeFile);
-        storeFile.getReader().close(true);
-        filesToRemove.add(storeFile);
+    // Should not archive the compacted store files when region warmup. See HBASE-22163.
+    if (!warmup) {
+      // Remove the compacted files from result
+      List<HStoreFile> filesToRemove = new ArrayList<>(compactedStoreFiles.size());
+      for (HStoreFile storeFile : results) {
+        if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
+          LOG.warn("Clearing the compacted storefile {} from this store", storeFile);
+          storeFile.getReader().close(true);
+          filesToRemove.add(storeFile);
+        }
       }
-    }
-    results.removeAll(filesToRemove);
-    if (!filesToRemove.isEmpty() && this.isPrimaryReplicaStore()) {
-      LOG.debug("Moving the files {} to archive", filesToRemove);
-      this.fs.removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(), filesToRemove);
+      results.removeAll(filesToRemove);
+      if (!filesToRemove.isEmpty() && this.isPrimaryReplicaStore()) {
+        LOG.debug("Moving the files {} to archive", filesToRemove);
+        this.fs.removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(), filesToRemove);
+      }
     }
 
     return results;
@@ -694,7 +698,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
 
     // try to open the files
-    List<HStoreFile> openedFiles = openStoreFiles(toBeAddedFiles);
+    List<HStoreFile> openedFiles = openStoreFiles(toBeAddedFiles, false);
 
     // propogate the file changes to the underlying store file manager
     replaceStoreFiles(toBeRemovedStoreFiles, openedFiles); //won't throw an exception

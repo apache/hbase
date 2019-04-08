@@ -1052,6 +1052,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private long initializeStores(CancelableProgressable reporter, MonitoredTask status)
       throws IOException {
+    return initializeStores(reporter, status, false);
+  }
+
+  private long initializeStores(CancelableProgressable reporter, MonitoredTask status,
+      boolean warmup) throws IOException {
     // Load in all the HStores.
     long maxSeqId = -1;
     // initialized to -1 so that we pick up MemstoreTS from column families
@@ -1069,7 +1074,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         completionService.submit(new Callable<HStore>() {
           @Override
           public HStore call() throws IOException {
-            return instantiateHStore(family);
+            return instantiateHStore(family, warmup);
           }
         });
       }
@@ -1129,7 +1134,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Initialize all the HStores
     status.setStatus("Warming up all the Stores");
     try {
-      initializeStores(reporter, status);
+      initializeStores(reporter, status, true);
     } finally {
       status.markComplete("Done warming up.");
     }
@@ -5814,17 +5819,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return true;
   }
 
-  protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
+  protected HStore instantiateHStore(final ColumnFamilyDescriptor family, boolean warmup)
+      throws IOException {
     if (family.isMobEnabled()) {
       if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-        throw new IOException("A minimum HFile version of "
-            + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-            + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
-            + " accordingly.");
+        throw new IOException("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS +
+            " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY +
+            " accordingly.");
       }
-      return new HMobStore(this, family, this.conf);
+      return new HMobStore(this, family, this.conf, warmup);
     }
-    return new HStore(this, family, this.conf);
+    return new HStore(this, family, this.conf, warmup);
   }
 
   @Override
