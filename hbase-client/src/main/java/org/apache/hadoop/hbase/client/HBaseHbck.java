@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -169,6 +171,20 @@ public class HBaseHbck implements Hbck {
         serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
             .collect(Collectors.toList())),
         se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public Map<String, MasterProtos.RegionErrorType>
+      getFailedSplitMergeLegacyRegions(List<TableName> tableNames) throws IOException {
+    try {
+      MasterProtos.GetFailedSplitMergeLegacyRegionsResponse response =
+          this.hbck.getFailedSplitMergeLegacyRegions(rpcControllerFactory.newController(),
+            RequestConverter.toGetFailedSplitMergeLegacyRegionsRequest(tableNames));
+      return response.getErrorsMap();
+    } catch (ServiceException se) {
+      LOG.debug("get failed split/merge legacy regions failed", se);
       throw new IOException(se);
     }
   }

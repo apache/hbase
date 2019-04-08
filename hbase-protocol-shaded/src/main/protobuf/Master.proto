@@ -1097,6 +1097,19 @@ message ScheduleServerCrashProcedureResponse {
   repeated uint64 pid = 1;
 }
 
+message GetFailedSplitMergeLegacyRegionsRequest {
+  repeated TableName table = 1;
+}
+
+enum RegionErrorType {
+  DAUGHTER_MERGED_REGION_NOT_ONLINE = 0;
+  ORPHAN_REGION_ON_FS = 1;
+}
+
+message GetFailedSplitMergeLegacyRegionsResponse {
+  map<string, RegionErrorType> errors = 1;
+}
+
 service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
@@ -1127,4 +1140,7 @@ service HbckService {
   /** Schedule a ServerCrashProcedure to help recover a crash server */
   rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
     returns(ScheduleServerCrashProcedureResponse);
+
+  rpc getFailedSplitMergeLegacyRegions(GetFailedSplitMergeLegacyRegionsRequest)
+    returns(GetFailedSplitMergeLegacyRegionsResponse);
 }
