@@ -936,7 +936,7 @@ public class HTable implements Table {
    * This is a power user function: avoid unless you know the ramifications.
    */
   public void clearRegionCache() {
-    this.connection.clearRegionCache();
+    this.connection.clearRegionLocationCache();
   }
 
   @Override

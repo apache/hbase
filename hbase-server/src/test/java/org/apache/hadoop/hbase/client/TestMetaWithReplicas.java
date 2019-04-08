@@ -253,7 +253,7 @@ public class TestMetaWithReplicas {
           util.getHBaseClusterInterface().killRegionServer(primary);
           util.getHBaseClusterInterface().waitForRegionServerToStop(primary, 60000);
         }
-        ((ClusterConnection)c).clearRegionCache();
+        ((ClusterConnection)c).clearRegionLocationCache();
       }
       LOG.info("Running GETs");
       Get get = null;
@@ -276,7 +276,7 @@ public class TestMetaWithReplicas {
         util.getHBaseClusterInterface().startRegionServer(primary.getHostname(), 0);
         util.getHBaseClusterInterface().waitForActiveAndReadyMaster();
         LOG.info("Master active!");
-        ((ClusterConnection)c).clearRegionCache();
+        ((ClusterConnection)c).clearRegionLocationCache();
       }
       conf.setBoolean(HConstants.USE_META_REPLICAS, false);
       LOG.info("Running GETs no replicas");
