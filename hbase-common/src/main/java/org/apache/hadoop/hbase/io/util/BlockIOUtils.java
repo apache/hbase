@@ -31,6 +31,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class BlockIOUtils {
 
+  // Disallow instantiation
+  private BlockIOUtils() {
+
+  }
+
   public static boolean isByteBufferReadable(FSDataInputStream is) {
     InputStream cur = is.getWrappedStream();
     for (;;) {
@@ -97,14 +102,12 @@ public class BlockIOUtils {
     int remain = length, count;
     while (remain > 0) {
       count = in.read(buffer, 0, Math.min(remain, buffer.length));
-      if (count < 0) { // EOF
-        break;
+      if (count < 0) {
+        throw new IOException(
+            "Premature EOF from inputStream, but still need " + remain + " bytes");
       }
       out.put(buffer, 0, count);
       remain -= count;
-    }
-    if (remain != 0) {
-      throw new IOException("Premature EOF from inputStream, but still need " + remain + " bytes");
     }
   }
 
