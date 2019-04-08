@@ -79,6 +79,7 @@ public class TestSplitMerge {
         return "Split has not finished yet";
       }
     });
+    UTIL.waitUntilNoRegionsInTransition();
     RegionInfo regionA = null;
     RegionInfo regionB = null;
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
