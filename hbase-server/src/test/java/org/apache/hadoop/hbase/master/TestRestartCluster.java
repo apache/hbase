@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -86,21 +84,27 @@ public class TestRestartCluster {
       splitWALCoordinatedByZK);
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
+  }
+
+  private ServerStateNode getServerStateNode(ServerName serverName) {
+    return UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+      .getServerNode(serverName);
   }
 
   @Test
   public void testClusterRestartFailOver() throws Exception {
     UTIL.startMiniCluster(3);
     UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());
-    //wait for all SCPs finished
-    UTIL.waitFor(20000, () -> UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .noneMatch(p -> p instanceof ServerCrashProcedure));
+    // wait for all SCPs finished
+    UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().getProcedures().stream()
+      .noneMatch(p -> p instanceof ServerCrashProcedure));
     TableName tableName = TABLES[0];
     ServerName testServer = UTIL.getHBaseCluster().getRegionServer(0).getServerName();
-    ServerStateNode serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getServerNode(testServer);
+    UTIL.waitFor(10000, () -> getServerStateNode(testServer) != null);
+    ServerStateNode serverNode = getServerStateNode(testServer);
     Assert.assertNotNull(serverNode);
     Assert.assertTrue("serverNode should be ONLINE when cluster runs normally",
       serverNode.isInState(ServerState.ONLINE));
@@ -124,7 +128,7 @@ public class TestRestartCluster {
     Assert.assertNotNull("serverNode should not be null when restart whole cluster", serverNode);
     Assert.assertFalse(serverNode.isInState(ServerState.ONLINE));
     LOG.info("start to find the procedure of SCP for the severName we choose");
-    UTIL.waitFor(20000,
+    UTIL.waitFor(60000,
       () -> UTIL.getHBaseCluster().getMaster().getProcedures().stream()
           .anyMatch(procedure -> (procedure instanceof ServerCrashProcedure)
               && ((ServerCrashProcedure) procedure).getServerName().equals(testServer)));
@@ -133,11 +137,11 @@ public class TestRestartCluster {
     LOG.info("start to submit the SCP for the same serverName {} which should fail", testServer);
     Assert.assertFalse(
       UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(testServer));
-    Procedure procedure = UTIL.getHBaseCluster().getMaster().getProcedures().stream()
+    Procedure<?> procedure = UTIL.getHBaseCluster().getMaster().getProcedures().stream()
         .filter(p -> (p instanceof ServerCrashProcedure)
             && ((ServerCrashProcedure) p).getServerName().equals(testServer))
         .findAny().get();
-    UTIL.waitFor(20000, () -> procedure.isFinished());
+    UTIL.waitFor(60000, () -> procedure.isFinished());
     LOG.info("even when the SCP is finished, the duplicate SCP should not be scheduled for {}",
       testServer);
     Assert.assertFalse(
@@ -150,9 +154,7 @@ public class TestRestartCluster {
   @Test
   public void testClusterRestart() throws Exception {
     UTIL.startMiniCluster(3);
-    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
-      Threads.sleep(1);
-    }
+    UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     LOG.info("\n\nCreating tables");
     for(TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
@@ -319,7 +321,7 @@ public class TestRestartCluster {
   }
 
   @Parameterized.Parameters
-  public static Collection coordinatedByZK() {
+  public static Collection<?> coordinatedByZK() {
     return Arrays.asList(false, true);
   }
 }
