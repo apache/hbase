@@ -118,7 +118,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
-    this.store = new HStore(region, hcd, conf);
+    this.store = new HStore(region, hcd, conf, false);
 
     long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
         .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));

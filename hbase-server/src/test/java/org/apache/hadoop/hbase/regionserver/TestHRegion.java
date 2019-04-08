@@ -6302,17 +6302,17 @@ public class TestHRegion {
      * @return If Mob is enabled, return HMobStore, otherwise return HStoreForTesting.
      */
     @Override
-    protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
+    protected HStore instantiateHStore(final ColumnFamilyDescriptor family, boolean warmup)
+        throws IOException {
       if (family.isMobEnabled()) {
         if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-          throw new IOException("A minimum HFile version of "
-              + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-              + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
-              + " accordingly.");
+          throw new IOException("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS +
+              " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY +
+              " accordingly.");
         }
-        return new HMobStore(this, family, this.conf);
+        return new HMobStore(this, family, this.conf, warmup);
       }
-      return new HStoreForTesting(this, family, this.conf);
+      return new HStoreForTesting(this, family, this.conf, warmup);
     }
   }
 
@@ -6328,8 +6328,8 @@ public class TestHRegion {
 
     protected HStoreForTesting(final HRegion region,
         final ColumnFamilyDescriptor family,
-        final Configuration confParam) throws IOException {
-      super(region, family, confParam);
+        final Configuration confParam, boolean warmup) throws IOException {
+      super(region, family, confParam, warmup);
     }
 
     @Override
