@@ -191,4 +191,22 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
         ProtobufUtil.toServerName(state.getDestinationServer()) : null;
     this.plan = new RegionPlan(regionInfo, sourceServer, destinationServer);
   }
+
+  @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+
+    if (TableName.isMetaTableName(getTableName())) {
+      // only offline state master will try init meta procedure
+      return false;
+    }
+
+    if (getTableName().equals(TableName.NAMESPACE_TABLE_NAME)) {
+      //  after unassign procedure finished, namespace region will be offline
+      //  if master crashed at the same time and reboot
+      //  it will be stuck as master init is block by  waiting namespace table online
+      //  but move region procedure can not go on, break the deadlock by not wait master initialized
+      return false;
+    }
+    return super.waitInitialized(env);
+  }
 }
