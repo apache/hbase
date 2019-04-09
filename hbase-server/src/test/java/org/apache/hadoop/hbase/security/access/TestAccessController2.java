@@ -201,17 +201,17 @@ public class TestAccessController2 extends SecureTestUtil {
     TEST_UTIL.waitTableAvailable(TEST_TABLE.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
-    List<TablePermission> perms =
+    List<UserPermission> perms =
       AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())
        .get(testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());
     // Should be RWXCA
-    assertTrue(perms.get(0).implies(Permission.Action.READ));
-    assertTrue(perms.get(0).implies(Permission.Action.WRITE));
-    assertTrue(perms.get(0).implies(Permission.Action.EXEC));
-    assertTrue(perms.get(0).implies(Permission.Action.CREATE));
-    assertTrue(perms.get(0).implies(Permission.Action.ADMIN));
+    assertTrue(perms.get(0).getPermission().implies(Permission.Action.READ));
+    assertTrue(perms.get(0).getPermission().implies(Permission.Action.WRITE));
+    assertTrue(perms.get(0).getPermission().implies(Permission.Action.EXEC));
+    assertTrue(perms.get(0).getPermission().implies(Permission.Action.CREATE));
+    assertTrue(perms.get(0).getPermission().implies(Permission.Action.ADMIN));
   }
 
   @Test

@@ -43,8 +43,8 @@
     </release>
     <repository>
       <GitRepository>
-        <location rdf:resource="git://git.apache.org/hbase.git"/>
-        <browse rdf:resource="https://git-wip-us.apache.org/repos/asf?p=hbase.git"/>
+        <location rdf:resource="git://gitbox.apache.org/repos/asf/hbase.git"/>
+        <browse rdf:resource="https://gitbox.apache.org/repos/asf?p=hbase.git"/>
       </GitRepository>
     </repository>
     <maintainer>

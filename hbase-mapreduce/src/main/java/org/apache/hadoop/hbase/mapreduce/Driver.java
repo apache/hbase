@@ -19,12 +19,12 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing
@@ -33,10 +33,7 @@ import org.apache.hadoop.util.ProgramDriver;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Stable
 public class Driver {
-  /**
-   * @param args
-   * @throws Throwable
-   */
+
   public static void main(String[] args) throws Throwable {
     ProgramDriver pgd = new ProgramDriver();
 
@@ -47,7 +44,7 @@ public class Driver {
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
     pgd.addClass(ImportTsv.NAME, ImportTsv.class, "Import data in TSV format.");
-    pgd.addClass(LoadIncrementalHFiles.NAME, LoadIncrementalHFiles.class,
+    pgd.addClass(BulkLoadHFilesTool.NAME, BulkLoadHFilesTool.class,
                  "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
         "Export a table from local cluster to peer cluster.");

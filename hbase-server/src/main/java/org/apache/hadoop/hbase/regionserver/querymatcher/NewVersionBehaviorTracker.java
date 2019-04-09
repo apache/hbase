@@ -277,26 +277,26 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
 
   @Override
   public MatchCode checkColumn(Cell cell, byte type) throws IOException {
-    if (done()) {
-      // No more columns left, we are done with this query
-      return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
+    if (columns == null) {
+        return MatchCode.INCLUDE;
     }
-    if (columns != null) {
-      while (columnIndex < columns.length) {
-        int c = Bytes.compareTo(columns[columnIndex], 0, columns[columnIndex].length,
-            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-        if (c < 0) {
-          columnIndex++;
-        } else if (c == 0) {
-          // We drop old version in #isDeleted, so here we must return INCLUDE.
-          return MatchCode.INCLUDE;
-        } else {
-          return MatchCode.SEEK_NEXT_COL;
-        }
+
+    while (!done()) {
+      int c = CellUtil.compareQualifiers(cell,
+        columns[columnIndex], 0, columns[columnIndex].length);
+      if (c < 0) {
+        return MatchCode.SEEK_NEXT_COL;
       }
-      return MatchCode.SEEK_NEXT_ROW;
+
+      if (c == 0) {
+        // We drop old version in #isDeleted, so here we must return INCLUDE.
+        return MatchCode.INCLUDE;
+      }
+
+      columnIndex++;
     }
-    return MatchCode.INCLUDE;
+    // No more columns left, we are done with this query
+    return MatchCode.SEEK_NEXT_ROW;
   }
 
   @Override
@@ -351,10 +351,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
 
   @Override
   public boolean done() {
-    // lastCq* have been updated to this cell.
-    return !(columns == null || lastCqArray == null) && Bytes
-        .compareTo(lastCqArray, lastCqOffset, lastCqLength, columns[columnIndex], 0,
-            columns[columnIndex].length) > 0;
+    return columns != null && columnIndex >= columns.length;
   }
 
   @Override

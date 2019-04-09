@@ -254,9 +254,6 @@ public abstract class AbstractTestLogRolling  {
       final WAL log = server.getWAL(region.getRegionInfo());
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 
-      //have to flush namespace to ensure it doesn't affect wall tests
-      admin.flush(TableName.NAMESPACE_TABLE_NAME);
-
       // Put some stuff into table, to make sure we have some files to compact.
       for (int i = 1; i <= 2; ++i) {
         doPut(table, i);

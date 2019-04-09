@@ -36,6 +36,7 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
                                    String metricsDescription,
                                    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+    updateBalancerStatus(true);
   }
 
   @Override
@@ -52,5 +53,10 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
   @Override
   public void incrMiscInvocations() {
     miscCount.incr();
+  }
+
+  @Override
+  public void updateBalancerStatus(boolean status) {
+    metricsRegistry.tag(BALANCER_STATUS,"", String.valueOf(status), true);
   }
 }

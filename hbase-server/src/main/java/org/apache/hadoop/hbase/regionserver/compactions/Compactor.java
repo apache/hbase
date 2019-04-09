@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -199,12 +198,14 @@ public abstract class Compactor<T extends CellSink> {
       }
       tmp = fileInfo.get(TIMERANGE_KEY);
       fd.latestPutTs = tmp == null ? HConstants.LATEST_TIMESTAMP: TimeRangeTracker.parseFrom(tmp).getMax();
-      LOG.debug("Compacting {}, keycount={}, bloomtype={}, size={}, encoding={}, seqNum={}{}",
+      LOG.debug("Compacting {}, keycount={}, bloomtype={}, size={}, "
+              + "encoding={}, compression={}, seqNum={}{}",
           (file.getPath() == null? null: file.getPath().getName()),
           keyCount,
           r.getBloomFilterType().toString(),
           TraditionalBinaryPrefix.long2String(r.length(), "", 1),
           r.getHFileReader().getDataBlockEncoding(),
+          compactionCompression,
           seqNum,
           (allFiles? ", earliestPutTs=" + earliestPutTs: ""));
     }
@@ -399,7 +400,7 @@ public abstract class Compactor<T extends CellSink> {
             lastCleanCellSeqId = 0;
           }
           writer.append(c);
-          int len = KeyValueUtil.length(c);
+          int len = c.getSerializedSize();
           ++progress.currentCompactedKVs;
           progress.totalCompactedSize += len;
           bytesWrittenProgressForShippedCall += len;

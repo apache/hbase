@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
@@ -49,7 +48,12 @@ public abstract class FilterListBase extends FilterBase {
   }
 
   protected static boolean isInReturnCodes(ReturnCode testRC, ReturnCode... returnCodes) {
-    return Arrays.stream(returnCodes).anyMatch(testRC::equals);
+    for (ReturnCode rc : returnCodes) {
+      if (testRC == rc) {
+        return true;
+      }
+    }
+    return false;
   }
 
   protected static boolean checkAndGetReversed(List<Filter> rowFilters, boolean defaultValue) {
@@ -57,9 +61,10 @@ public abstract class FilterListBase extends FilterBase {
       return defaultValue;
     }
     boolean retValue = rowFilters.get(0).isReversed();
-    boolean allEqual = rowFilters.stream().allMatch(f -> f.isReversed() == retValue);
-    if (!allEqual) {
-      throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
+    for (int i = 1, n = rowFilters.size(); i < n; i++) {
+      if (rowFilters.get(i).isReversed() != retValue) {
+        throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
+      }
     }
     return retValue;
   }

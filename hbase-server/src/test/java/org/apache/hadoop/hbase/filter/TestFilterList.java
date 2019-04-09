@@ -45,6 +45,7 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -604,15 +605,15 @@ public class TestFilterList {
         3, Bytes.toBytes("value"));
 
     assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList01.filterCell(kv1));
-    assertEquals(ReturnCode.SKIP, filterList01.filterCell(kv2));
-    assertEquals(ReturnCode.SKIP, filterList01.filterCell(kv3));
+    assertEquals(ReturnCode.NEXT_COL, filterList01.filterCell(kv2));
+    assertEquals(ReturnCode.NEXT_COL, filterList01.filterCell(kv3));
 
     FilterList filterList11 =
         new FilterList(Operator.MUST_PASS_ONE, new ColumnPaginationFilter(1, 1));
 
     assertEquals(ReturnCode.NEXT_COL, filterList11.filterCell(kv1));
-    assertEquals(ReturnCode.SKIP, filterList11.filterCell(kv2));
-    assertEquals(ReturnCode.SKIP, filterList11.filterCell(kv3));
+    assertEquals(ReturnCode.NEXT_COL, filterList11.filterCell(kv2));
+    assertEquals(ReturnCode.NEXT_COL, filterList11.filterCell(kv3));
   }
 
   @Test
@@ -631,9 +632,9 @@ public class TestFilterList {
         Bytes.toBytes("value"));
 
     assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
-    assertEquals(ReturnCode.SKIP, filterList.filterCell(kv2));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv2));
     assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv3));
-    assertEquals(ReturnCode.SKIP, filterList.filterCell(kv4));
+    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv4));
   }
 
   private static class MockFilter extends FilterBase {
@@ -1071,6 +1072,55 @@ public class TestFilterList {
     Assert.assertEquals(true, filter1.getTransformed());
     Assert.assertEquals(true, filter2.getTransformed());
     Assert.assertEquals(true, filter3.getTransformed());
+  }
+
+  @Test
+  public void testFilterListWithORWhenPassingCellMismatchPreviousRC() throws IOException {
+    // Mainly test FilterListWithOR#calculateReturnCodeByPrevCellAndRC method with two sub-filters.
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("fam"), Bytes.toBytes("a"),
+        100, Bytes.toBytes("value"));
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("fam"), Bytes.toBytes("a"), 99,
+        Bytes.toBytes("value"));
+    KeyValue kv3 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("fam"), Bytes.toBytes("b"), 1,
+        Bytes.toBytes("value"));
+    KeyValue kv4 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("fan"), Bytes.toBytes("a"), 1,
+        Bytes.toBytes("value"));
+    Filter subFilter1 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter1.filterCell(kv1)).thenReturn(ReturnCode.INCLUDE_AND_NEXT_COL);
+    Mockito.when(subFilter1.filterCell(kv2)).thenReturn(ReturnCode.NEXT_COL);
+    Mockito.when(subFilter1.filterCell(kv3)).thenReturn(ReturnCode.INCLUDE_AND_NEXT_COL);
+    Mockito.when(subFilter1.filterCell(kv4)).thenReturn(ReturnCode.INCLUDE_AND_NEXT_COL);
+
+    Filter subFilter2 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter2.filterCell(kv1)).thenReturn(ReturnCode.SKIP);
+    Mockito.when(subFilter2.filterCell(kv2)).thenReturn(ReturnCode.NEXT_ROW);
+    Mockito.when(subFilter2.filterCell(kv3)).thenReturn(ReturnCode.NEXT_ROW);
+    Mockito.when(subFilter2.filterCell(kv4)).thenReturn(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
+
+    Filter filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
+    Assert.assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
+    Assert.assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv2));
+    Assert.assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv3));
+    Assert.assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv4));
+
+    // One sub-filter will filterAllRemaining but other sub-filter will return SEEK_HINT
+    subFilter1 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter1.filterAllRemaining()).thenReturn(true);
+    Mockito.when(subFilter1.filterCell(kv1)).thenReturn(ReturnCode.NEXT_ROW);
+
+    subFilter2 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter2.filterCell(kv1)).thenReturn(ReturnCode.SEEK_NEXT_USING_HINT);
+    filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
+    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+
+    // Two sub-filter returns SEEK_NEXT_USING_HINT, then we should return SEEK_NEXT_USING_HINT.
+    subFilter1 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter1.filterCell(kv1)).thenReturn(ReturnCode.SEEK_NEXT_USING_HINT);
+
+    subFilter2 = Mockito.mock(FilterBase.class);
+    Mockito.when(subFilter2.filterCell(kv1)).thenReturn(ReturnCode.SEEK_NEXT_USING_HINT);
+    filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
+    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
   }
 }
 

@@ -21,12 +21,13 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -139,16 +140,13 @@ public class Action {
       return new ServerName [] {};
     }
     ServerName master = clusterStatus.getMasterName();
-    if (master == null || !regionServers.contains(master)) {
-      return regionServers.toArray(new ServerName[count]);
-    }
-    if (count == 1) {
-      return new ServerName [] {};
-    }
+    Set<ServerName> masters = new HashSet<ServerName>();
+    masters.add(master);
+    masters.addAll(clusterStatus.getBackupMasterNames());
     ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
-    tmp.remove(master);
-    return tmp.toArray(new ServerName[count-1]);
+    tmp.removeAll(masters);
+    return tmp.toArray(new ServerName[tmp.size()]);
   }
 
   protected void killMaster(ServerName server) throws IOException {
@@ -254,7 +252,7 @@ public class Action {
         break;
       }
       int targetIx = RandomUtils.nextInt(0, toServers.size());
-      admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
+      admin.move(victimRegion, toServers.get(targetIx));
     }
   }
 
@@ -262,7 +260,7 @@ public class Action {
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     boolean result = false;
     try {
-      result = admin.balancer();
+      result = admin.balance();
     } catch (Exception e) {
       LOG.warn("Got exception while doing balance ", e);
     }

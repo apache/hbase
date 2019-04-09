@@ -51,7 +51,7 @@ public interface BulkLoadObserver {
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
       * If you need to get the region or table name, get it from the
       * <code>ctx</code> as follows: <code>code>ctx.getEnvironment().getRegion()</code>. Use
-      * getRegionInfo to fetch the encodedName and use getTableDescriptor() to get the tableName.
+      * getRegionInfo to fetch the encodedName and use getDescriptor() to get the tableName.
       * @param ctx the environment to interact with the framework and master
       */
     default void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -62,7 +62,7 @@ public interface BulkLoadObserver {
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
       * If you need to get the region or table name, get it from the
       * <code>ctx</code> as follows: <code>code>ctx.getEnvironment().getRegion()</code>. Use
-      * getRegionInfo to fetch the encodedName and use getTableDescriptor() to get the tableName.
+      * getRegionInfo to fetch the encodedName and use getDescriptor() to get the tableName.
       * @param ctx the environment to interact with the framework and master
       */
     default void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)

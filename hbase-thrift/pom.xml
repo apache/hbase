@@ -367,12 +367,12 @@
                     <requireProperty>
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
-                      <regex>0\.9\.3</regex>
+                      <regex>0\.12\.0</regex>
                       <regexMessage>
 -
 -
 [FATAL] ==========================================================================================
-[FATAL] HBase Thrift requires the thrift generator version 0.9.3.
+[FATAL] HBase Thrift requires the thrift generator version 0.12.0.
 [FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
 [FATAL] ==========================================================================================
 -
@@ -420,7 +420,7 @@
                   <arguments>
                     <argument>-strict</argument>
                     <argument>--gen</argument>
-                    <argument>java:hashcode</argument>
+                    <argument>java</argument>
                     <argument>-out</argument>
                     <argument>${basedir}/src/main/java</argument>
                     <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift</argument>
@@ -439,7 +439,7 @@
                   <arguments>
                     <argument>-strict</argument>
                     <argument>--gen</argument>
-                    <argument>java:hashcode</argument>
+                    <argument>java</argument>
                     <argument>-out</argument>
                     <argument>${basedir}/src/main/java</argument>
                     <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift</argument>

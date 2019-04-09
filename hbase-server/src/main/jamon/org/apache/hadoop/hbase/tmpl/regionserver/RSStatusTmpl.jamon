@@ -29,13 +29,14 @@ org.apache.hadoop.hbase.regionserver.HRegionServer;
 org.apache.hadoop.hbase.client.RegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.io.hfile.CacheConfig;
 org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%doc>If json AND bcn is NOT an empty string presume it a block cache view request.</%doc>
 <%if format.equals("json") && bcn != null && bcn.length() > 0  %>
-  <& BlockCacheViewTmpl; conf = regionServer.getConfiguration(); cacheConfig = regionServer.getCacheConfig(); bcn = bcn; bcv = bcv;  &>
+  <& BlockCacheViewTmpl; conf = regionServer.getConfiguration(); cacheConfig = new CacheConfig(regionServer.getConfiguration()); bcn = bcn; bcv = bcv; blockCache = regionServer.getBlockCache().orElse(null)  &>
   <%java return; %>
 <%elseif format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -50,6 +51,34 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     : masterAddressTracker.getMasterAddress();
   int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
+
+<%class>
+  public String formatZKString() {
+    StringBuilder quorums = new StringBuilder();
+    String zkQuorum = regionServer.getZooKeeper().getQuorum();
+
+    if (null == zkQuorum) {
+      return quorums.toString();
+    }
+
+    String[] zks = zkQuorum.split(",");
+
+    if (zks.length == 0) {
+      return quorums.toString();
+    }
+
+    for(int i = 0; i < zks.length; ++i) {
+      quorums.append(zks[i].trim());
+
+      if (i != (zks.length - 1)) {
+        quorums.append("<br/>");
+      }
+    }
+
+    return quorums.toString();
+  }
+</%class>
+
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
@@ -84,6 +113,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
                 <li><a href="/jmx">Metrics Dump</a></li>
+                <li><a href="/prof">Profiler</a></li>
                 <%if HBaseConfiguration.isShowConfInServlet()%>
                 <li><a href="/conf">HBase Configuration</a></li>
                 </%if>
@@ -109,7 +139,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 
     <section>
     <h2>Block Cache</h2>
-    <& BlockCacheTmpl; cacheConfig = regionServer.getCacheConfig(); config = regionServer.getConfiguration() &>
+    <& BlockCacheTmpl; cacheConfig = new CacheConfig(regionServer.getConfiguration()); config = regionServer.getConfiguration(); bc = regionServer.getBlockCache().orElse(null) &>
     </section>
 
     <section>
@@ -176,7 +206,8 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
         </tr>
         <tr>
             <td>ZooKeeper Quorum</td>
-            <td><% regionServer.getZooKeeper().getQuorum() %></td>
+            <%escape #n>
+            <td><% formatZKString() %></td>
             <td>Addresses of all registered ZK servers</td>
         </tr>
         <tr>

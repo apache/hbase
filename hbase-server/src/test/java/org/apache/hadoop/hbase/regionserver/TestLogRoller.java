@@ -24,9 +24,11 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +51,9 @@ public class TestLogRoller {
   public void setup() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.period", logRollPeriod);
     TEST_UTIL.startMiniCluster(1);
+    TableName name = TableName.valueOf("Test");
+    TEST_UTIL.createTable(name, Bytes.toBytes("cf"));
+    TEST_UTIL.waitTableAvailable(name);
   }
 
   @After

@@ -33,6 +33,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Option;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -67,7 +68,9 @@ public final class ClusterMetricsBuilder {
                 .setRegionState(r.convert())
                 .build())
             .collect(Collectors.toList()))
-        .setMasterInfoPort(metrics.getMasterInfoPort());
+        .setMasterInfoPort(metrics.getMasterInfoPort())
+        .addAllServersName(metrics.getServersName().stream().map(ProtobufUtil::toServerName)
+            .collect(Collectors.toList()));
     if (metrics.getMasterName() != null) {
       builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
     }
@@ -103,6 +106,8 @@ public final class ClusterMetricsBuilder {
             .collect(Collectors.toList()))
         .setMasterCoprocessorNames(proto.getMasterCoprocessorsList().stream()
             .map(HBaseProtos.Coprocessor::getName)
+            .collect(Collectors.toList()))
+        .setServerNames(proto.getServersNameList().stream().map(ProtobufUtil::toServerName)
             .collect(Collectors.toList()));
     if (proto.hasClusterId()) {
       builder.setClusterId(ClusterId.convert(proto.getClusterId()).toString());
@@ -142,6 +147,7 @@ public final class ClusterMetricsBuilder {
       case MASTER: return ClusterMetrics.Option.MASTER;
       case BACKUP_MASTERS: return ClusterMetrics.Option.BACKUP_MASTERS;
       case BALANCER_ON: return ClusterMetrics.Option.BALANCER_ON;
+      case SERVERS_NAME: return ClusterMetrics.Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterMetrics.Option.MASTER_INFO_PORT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
@@ -164,6 +170,7 @@ public final class ClusterMetricsBuilder {
       case MASTER: return ClusterStatusProtos.Option.MASTER;
       case BACKUP_MASTERS: return ClusterStatusProtos.Option.BACKUP_MASTERS;
       case BALANCER_ON: return ClusterStatusProtos.Option.BALANCER_ON;
+      case SERVERS_NAME: return Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
@@ -206,6 +213,7 @@ public final class ClusterMetricsBuilder {
   @Nullable
   private Boolean balancerOn;
   private int masterInfoPort;
+  private List<ServerName> serversName = Collections.emptyList();
 
   private ClusterMetricsBuilder() {
   }
@@ -251,6 +259,10 @@ public final class ClusterMetricsBuilder {
     this.masterInfoPort = value;
     return this;
   }
+  public ClusterMetricsBuilder setServerNames(List<ServerName> serversName) {
+    this.serversName = serversName;
+    return this;
+  }
   public ClusterMetrics build() {
     return new ClusterMetricsImpl(
         hbaseVersion,
@@ -262,7 +274,8 @@ public final class ClusterMetricsBuilder {
         clusterId,
         masterCoprocessorNames,
         balancerOn,
-        masterInfoPort);
+        masterInfoPort,
+        serversName);
   }
   private static class ClusterMetricsImpl implements ClusterMetrics {
     @Nullable
@@ -279,6 +292,7 @@ public final class ClusterMetricsBuilder {
     @Nullable
     private final Boolean balancerOn;
     private final int masterInfoPort;
+    private final List<ServerName> serversName;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
         Map<ServerName, ServerMetrics> liveServerMetrics,
@@ -288,7 +302,8 @@ public final class ClusterMetricsBuilder {
         String clusterId,
         List<String> masterCoprocessorNames,
         Boolean balancerOn,
-        int masterInfoPort) {
+        int masterInfoPort,
+        List<ServerName> serversName) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
@@ -299,6 +314,7 @@ public final class ClusterMetricsBuilder {
       this.masterCoprocessorNames = Preconditions.checkNotNull(masterCoprocessorNames);
       this.balancerOn = balancerOn;
       this.masterInfoPort = masterInfoPort;
+      this.serversName = serversName;
     }
 
     @Override
@@ -352,6 +368,11 @@ public final class ClusterMetricsBuilder {
     }
 
     @Override
+    public List<ServerName> getServersName() {
+      return Collections.unmodifiableList(serversName);
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder(1024);
       sb.append("Master: " + getMasterName());
@@ -365,9 +386,15 @@ public final class ClusterMetricsBuilder {
       }
 
       int serversSize = getLiveServerMetrics().size();
-      sb.append("\nNumber of live region servers: " + serversSize);
+      int serversNameSize = getServersName().size();
+      sb.append("\nNumber of live region servers: "
+          + (serversSize > 0 ? serversSize : serversNameSize));
       if (serversSize > 0) {
         for (ServerName serverName : getLiveServerMetrics().keySet()) {
+          sb.append("\n  " + serverName.getServerName());
+        }
+      } else if (serversNameSize > 0) {
+        for (ServerName serverName : getServersName()) {
           sb.append("\n  " + serverName.getServerName());
         }
       }

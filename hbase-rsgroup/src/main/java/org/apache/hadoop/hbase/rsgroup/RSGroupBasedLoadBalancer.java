@@ -300,7 +300,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       return filterServers(RSGroupInfo.getServers(), onlineServers);
     } else {
       LOG.warn("RSGroup Information found to be null. Some regions might be unassigned.");
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
   }
 
@@ -477,5 +477,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @Override
   public void postMasterStartupInitialize() {
     this.internalBalancer.postMasterStartupInitialize();
+  }
+
+  public void updateBalancerStatus(boolean status) {
+    internalBalancer.updateBalancerStatus(status);
   }
 }

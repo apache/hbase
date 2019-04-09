@@ -145,15 +145,21 @@ public class RegionGroupingProvider implements WALProvider {
     }
     this.conf = conf;
     this.factory = factory;
-    StringBuilder sb = new StringBuilder().append(factory.factoryId);
-    if (providerId != null) {
-      if (providerId.startsWith(WAL_FILE_NAME_DELIMITER)) {
-        sb.append(providerId);
-      } else {
-        sb.append(WAL_FILE_NAME_DELIMITER).append(providerId);
+
+    if (META_WAL_PROVIDER_ID.equals(providerId)) {
+      // do not change the provider id if it is for meta
+      this.providerId = providerId;
+    } else {
+      StringBuilder sb = new StringBuilder().append(factory.factoryId);
+      if (providerId != null) {
+        if (providerId.startsWith(WAL_FILE_NAME_DELIMITER)) {
+          sb.append(providerId);
+        } else {
+          sb.append(WAL_FILE_NAME_DELIMITER).append(providerId);
+        }
       }
+      this.providerId = sb.toString();
     }
-    this.providerId = sb.toString();
     this.strategy = getStrategy(conf, REGION_GROUPING_STRATEGY, DEFAULT_REGION_GROUPING_STRATEGY);
     this.providerClass = factory.getProviderClass(DELEGATE_PROVIDER, DEFAULT_DELEGATE_PROVIDER);
   }

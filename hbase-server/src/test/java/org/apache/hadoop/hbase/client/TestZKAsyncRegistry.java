@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNotSame;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
@@ -52,42 +50,12 @@ public class TestZKAsyncRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKAsyncRegistry.class);
+    HBaseClassTestRule.forClass(TestZKAsyncRegistry.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestZKAsyncRegistry.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final Logger LOG = LoggerFactory.getLogger(TestZKAsyncRegistry.class);
+  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ZKAsyncRegistry REGISTRY;
-
-  // waits for all replicas to have region location
-  static void waitUntilAllReplicasHavingRegionLocation(TableName tbl) throws IOException {
-    TEST_UTIL.waitFor(
-      TEST_UTIL.getConfiguration().getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
-      new ExplainingPredicate<IOException>() {
-        @Override
-        public String explainFailure() throws IOException {
-          return TEST_UTIL.explainTableAvailability(tbl);
-        }
-
-        @Override
-        public boolean evaluate() throws IOException {
-          AtomicBoolean ready = new AtomicBoolean(true);
-          try {
-            RegionLocations locs = REGISTRY.getMetaRegionLocation().get();
-            assertEquals(3, locs.getRegionLocations().length);
-            IntStream.range(0, 3).forEach(i -> {
-              HRegionLocation loc = locs.getRegionLocation(i);
-              if (loc == null) {
-                ready.set(false);
-              }
-            });
-          } catch (Exception e) {
-            ready.set(false);
-          }
-          return ready.get();
-        }
-      });
-  }
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -107,14 +75,14 @@ public class TestZKAsyncRegistry {
     LOG.info("STARTED TEST");
     String clusterId = REGISTRY.getClusterId().get();
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
-    assertEquals("Expected " + expectedClusterId + ", found=" + clusterId,
-        expectedClusterId, clusterId);
+    assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
+      clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getClusterMetrics().getLiveServerMetrics().size(),
       REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getMasterAddress().get());
     assertEquals(-1, REGISTRY.getMasterInfoPort().get().intValue());
-    waitUntilAllReplicasHavingRegionLocation(TableName.META_TABLE_NAME);
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(REGISTRY, 3);
     RegionLocations locs = REGISTRY.getMetaRegionLocation().get();
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {

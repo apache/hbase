@@ -22,11 +22,11 @@ import static org.apache.hadoop.hbase.client.RegionInfoBuilder.FIRST_META_REGION
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForDefaultReplica;
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForReplica;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
@@ -41,7 +41,9 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
@@ -68,7 +70,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    zk.get(path).whenComplete((data, error) -> {
+    addListener(zk.get(path), (data, error) -> {
       if (error != null) {
         future.completeExceptionally(error);
         return;
@@ -139,7 +141,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
     MutableInt remaining = new MutableInt(locs.length);
     znodePaths.metaReplicaZNodes.forEach((replicaId, path) -> {
       if (replicaId == DEFAULT_REPLICA_ID) {
-        getAndConvert(path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
+        addListener(getAndConvert(path, ZKAsyncRegistry::getMetaProto), (proto, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
             return;
@@ -154,13 +156,12 @@ class ZKAsyncRegistry implements AsyncRegistry {
               new IOException("Meta region is in state " + stateAndServerName.getFirst()));
             return;
           }
-          locs[DEFAULT_REPLICA_ID] =
-              new HRegionLocation(getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO),
-                  stateAndServerName.getSecond());
+          locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
+            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
           tryComplete(remaining, locs, future);
         });
       } else {
-        getAndConvert(path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
+        addListener(getAndConvert(path, ZKAsyncRegistry::getMetaProto), (proto, error) -> {
           if (future.isDone()) {
             return;
           }
@@ -174,12 +175,12 @@ class ZKAsyncRegistry implements AsyncRegistry {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
             if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
               LOG.warn("Meta region for replica " + replicaId + " is in state " +
-                  stateAndServerName.getFirst());
+                stateAndServerName.getFirst());
               locs[replicaId] = null;
             } else {
               locs[replicaId] =
-                  new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
-                      stateAndServerName.getSecond());
+                new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
+                  stateAndServerName.getSecond());
             }
           }
           tryComplete(remaining, locs, future);

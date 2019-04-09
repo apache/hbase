@@ -27,6 +27,7 @@ java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
+java_import org.apache.hadoop.hbase.zookeeper.ZNodePaths
 java_import org.slf4j.LoggerFactory
 
 # Name of this script
@@ -50,28 +51,29 @@ optparse.parse!
 def getServers(admin)
   serverInfos = admin.getClusterStatus.getServers
   servers = []
-  for server in serverInfos
+  serverInfos.each do |server|
     servers << server.getServerName
   end
   servers
 end
 
+# rubocop:disable Metrics/AbcSize
 def getServerNames(hostOrServers, config)
   ret = []
   connection = ConnectionFactory.createConnection(config)
 
-  for hostOrServer in hostOrServers
+  hostOrServers.each do |host_or_server|
     # check whether it is already serverName. No need to connect to cluster
-    parts = hostOrServer.split(',')
+    parts = host_or_server.split(',')
     if parts.size == 3
-      ret << hostOrServer
+      ret << host_or_server
     else
-      admin = connection.getAdmin unless admin
+      admin ||= connection.getAdmin
       servers = getServers(admin)
 
-      hostOrServer = hostOrServer.tr(':', ',')
-      for server in servers
-        ret << server if server.start_with?(hostOrServer)
+      host_or_server = host_or_server.tr(':', ',')
+      servers.each do |server|
+        ret << server if server.start_with?(host_or_server)
       end
     end
   end
@@ -86,11 +88,11 @@ def addServers(_options, hostOrServers)
   servers = getServerNames(hostOrServers, config)
 
   zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
-  parentZnode = zkw.znodePaths.drainingZNode
 
   begin
-    for server in servers
-      node = ZKUtil.joinZNode(parentZnode, server)
+    parentZnode = zkw.getZNodePaths.drainingZNode
+    servers.each do |server|
+      node = ZNodePaths.joinZNode(parentZnode, server)
       ZKUtil.createAndFailSilent(zkw, node)
     end
   ensure
@@ -103,27 +105,32 @@ def removeServers(_options, hostOrServers)
   servers = getServerNames(hostOrServers, config)
 
   zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
-  parentZnode = zkw.znodePaths.drainingZNode
 
   begin
-    for server in servers
-      node = ZKUtil.joinZNode(parentZnode, server)
+    parentZnode = zkw.getZNodePaths.drainingZNode
+    servers.each do |server|
+      node = ZNodePaths.joinZNode(parentZnode, server)
       ZKUtil.deleteNodeFailSilent(zkw, node)
     end
   ensure
     zkw.close
   end
 end
+# rubocop:enable Metrics/AbcSize
 
 # list servers in draining mode
 def listServers(_options)
   config = HBaseConfiguration.create
 
   zkw = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(config, 'draining_servers', nil)
-  parentZnode = zkw.znodePaths.drainingZNode
 
-  servers = ZKUtil.listChildrenNoWatch(zkw, parentZnode)
-  servers.each { |server| puts server }
+  begin
+    parentZnode = zkw.getZNodePaths.drainingZNode
+    servers = ZKUtil.listChildrenNoWatch(zkw, parentZnode)
+    servers.each { |server| puts server }
+  ensure
+    zkw.close
+  end
 end
 
 hostOrServers = ARGV[1..ARGV.size]

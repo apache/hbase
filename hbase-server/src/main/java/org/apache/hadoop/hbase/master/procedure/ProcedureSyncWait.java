@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -61,51 +61,61 @@ public final class ProcedureSyncWait {
   }
 
   private static class ProcedureFuture implements Future<byte[]> {
-      private final ProcedureExecutor<MasterProcedureEnv> procExec;
-      private final Procedure<?> proc;
+    private final ProcedureExecutor<MasterProcedureEnv> procExec;
+    private final Procedure<?> proc;
 
-      private boolean hasResult = false;
-      private byte[] result = null;
+    private boolean hasResult = false;
+    private byte[] result = null;
 
-      public ProcedureFuture(ProcedureExecutor<MasterProcedureEnv> procExec, Procedure<?> proc) {
-        this.procExec = procExec;
-        this.proc = proc;
+    public ProcedureFuture(ProcedureExecutor<MasterProcedureEnv> procExec, Procedure<?> proc) {
+      this.procExec = procExec;
+      this.proc = proc;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      return false;
+    }
+
+    @Override
+    public boolean isCancelled() {
+      return false;
+    }
+
+    @Override
+    public boolean isDone() {
+      return hasResult;
+    }
+
+    @Override
+    public byte[] get() throws InterruptedException, ExecutionException {
+      if (hasResult) {
+        return result;
       }
-
-      @Override
-      public boolean cancel(boolean mayInterruptIfRunning) { return false; }
-
-      @Override
-      public boolean isCancelled() { return false; }
-
-      @Override
-      public boolean isDone() { return hasResult; }
-
-      @Override
-      public byte[] get() throws InterruptedException, ExecutionException {
-        if (hasResult) return result;
-        try {
-          return waitForProcedureToComplete(procExec, proc, Long.MAX_VALUE);
-        } catch (Exception e) {
-          throw new ExecutionException(e);
-        }
-      }
-
-      @Override
-      public byte[] get(long timeout, TimeUnit unit)
-          throws InterruptedException, ExecutionException, TimeoutException {
-        if (hasResult) return result;
-        try {
-          result = waitForProcedureToComplete(procExec, proc, unit.toMillis(timeout));
-          hasResult = true;
-          return result;
-        } catch (TimeoutIOException e) {
-          throw new TimeoutException(e.getMessage());
-        } catch (Exception e) {
-          throw new ExecutionException(e);
-        }
+      try {
+        return waitForProcedureToComplete(procExec, proc, Long.MAX_VALUE);
+      } catch (Exception e) {
+        throw new ExecutionException(e);
       }
     }
+
+    @Override
+    public byte[] get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
+      if (hasResult) {
+        return result;
+      }
+      try {
+        result = waitForProcedureToComplete(procExec, proc, unit.toMillis(timeout));
+        hasResult = true;
+        return result;
+      } catch (TimeoutIOException e) {
+        throw new TimeoutException(e.getMessage());
+      } catch (Exception e) {
+        throw new ExecutionException(e);
+      }
+    }
+  }
 
   public static Future<byte[]> submitProcedure(final ProcedureExecutor<MasterProcedureEnv> procExec,
       final Procedure<MasterProcedureEnv> proc) {
@@ -124,9 +134,8 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] waitForProcedureToCompleteIOE(
-      final ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<?> proc, final long timeout)
-  throws IOException {
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
+      final long timeout) throws IOException {
     try {
       return waitForProcedureToComplete(procExec, proc, timeout);
     } catch (IOException e) {
@@ -139,7 +148,7 @@ public final class ProcedureSyncWait {
   public static byte[] waitForProcedureToComplete(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
       final long timeout) throws IOException {
-    waitFor(procExec.getEnvironment(), "pid=" + proc.getProcId(),
+    waitFor(procExec.getEnvironment(), timeout, "pid=" + proc.getProcId(),
       new ProcedureSyncWait.Predicate<Boolean>() {
         @Override
         public Boolean evaluate() throws IOException {
@@ -160,9 +169,10 @@ public final class ProcedureSyncWait {
       throw new IOException("The Master is Aborting");
     }
 
+    // If the procedure fails, we should always have an exception captured. Throw it.
+    // Needs to be an IOE to get out of here.
     if (proc.hasException()) {
-      // If the procedure fails, we should always have an exception captured. Throw it.
-      throw proc.getException().unwrapRemoteIOException();
+      throw MasterProcedureUtil.unwrapRemoteIOException(proc);
     } else {
       return proc.getResult();
     }
@@ -170,15 +180,25 @@ public final class ProcedureSyncWait {
 
   public static <T> T waitFor(MasterProcedureEnv env, String purpose, Predicate<T> predicate)
       throws IOException {
-    final Configuration conf = env.getMasterConfiguration();
-    final long waitTime = conf.getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
-    final long waitingTimeForEvents = conf.getInt("hbase.master.event.waiting.time", 1000);
+    Configuration conf = env.getMasterConfiguration();
+    long waitTime = conf.getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
+    return waitFor(env, waitTime, purpose, predicate);
+  }
+
+  public static <T> T waitFor(MasterProcedureEnv env, long waitTime, String purpose,
+      Predicate<T> predicate) throws IOException {
+    Configuration conf = env.getMasterConfiguration();
+    long waitingTimeForEvents = conf.getInt("hbase.master.event.waiting.time", 1000);
     return waitFor(env, waitTime, waitingTimeForEvents, purpose, predicate);
   }
 
   public static <T> T waitFor(MasterProcedureEnv env, long waitTime, long waitingTimeForEvents,
       String purpose, Predicate<T> predicate) throws IOException {
-    final long done = EnvironmentEdgeManager.currentTime() + waitTime;
+    long done = EnvironmentEdgeManager.currentTime() + waitTime;
+    if (done <= 0) {
+      // long overflow, usually this means we pass Long.MAX_VALUE as waitTime
+      done = Long.MAX_VALUE;
+    }
     boolean logged = false;
     do {
       T result = predicate.evaluate();
@@ -205,12 +225,12 @@ public final class ProcedureSyncWait {
   protected static void waitMetaRegions(final MasterProcedureEnv env) throws IOException {
     int timeout = env.getMasterConfiguration().getInt("hbase.client.catalog.timeout", 10000);
     try {
-      if (env.getMasterServices().getMetaTableLocator().waitMetaRegionLocation(
-            env.getMasterServices().getZooKeeper(), timeout) == null) {
+      if (MetaTableLocator.waitMetaRegionLocation(env.getMasterServices().getZooKeeper(),
+        timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
       }
     } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
   }
 

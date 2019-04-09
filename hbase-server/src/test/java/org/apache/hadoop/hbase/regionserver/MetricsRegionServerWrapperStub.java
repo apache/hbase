@@ -71,6 +71,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public double getStoreFileSizeGrowthRate() {
+    return 50.0;
+  }
+
+  @Override
   public long getMaxStoreFileAge() {
     return 2;
   }
@@ -222,7 +227,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public long getMemStoreLimit() {
-	  return 419;
+    return 419;
   }
 
   @Override

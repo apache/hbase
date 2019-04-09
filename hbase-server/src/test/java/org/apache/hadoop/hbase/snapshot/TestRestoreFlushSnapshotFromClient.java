@@ -61,9 +61,9 @@ public class TestRestoreFlushSnapshotFromClient {
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
 
-  protected byte[] snapshotName0;
-  protected byte[] snapshotName1;
-  protected byte[] snapshotName2;
+  protected String snapshotName0;
+  protected String snapshotName1;
+  protected String snapshotName2;
   protected int snapshot0Rows;
   protected int snapshot1Rows;
   protected TableName tableName;
@@ -108,9 +108,9 @@ public class TestRestoreFlushSnapshotFromClient {
 
     long tid = System.currentTimeMillis();
     tableName = TableName.valueOf("testtb-" + tid);
-    snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
-    snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
+    snapshotName0 = "snaptb0-" + tid;
+    snapshotName1 = "snaptb1-" + tid;
+    snapshotName2 = "snaptb2-" + tid;
 
     // create Table and disable it
     createTable();
@@ -121,7 +121,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // take a snapshot
-    admin.snapshot(Bytes.toString(snapshotName0), tableName, SnapshotType.FLUSH);
+    admin.snapshot(snapshotName0, tableName, SnapshotType.FLUSH);
 
     LOG.info("=== after snapshot with 500 rows");
     logFSTree();
@@ -133,7 +133,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // take a snapshot of the updated table
-    admin.snapshot(Bytes.toString(snapshotName1), tableName, SnapshotType.FLUSH);
+    admin.snapshot(snapshotName1, tableName, SnapshotType.FLUSH);
     LOG.info("=== after snapshot with 1000 rows");
     logFSTree();
     table.close();
@@ -184,7 +184,7 @@ public class TestRestoreFlushSnapshotFromClient {
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
   }
 
-  private void testCloneSnapshot(final TableName tableName, final byte[] snapshotName,
+  private void testCloneSnapshot(final TableName tableName, final String snapshotName,
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
@@ -198,7 +198,7 @@ public class TestRestoreFlushSnapshotFromClient {
     TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
-    admin.snapshot(Bytes.toString(snapshotName2), clonedTableName, SnapshotType.FLUSH);
+    admin.snapshot(snapshotName2, clonedTableName, SnapshotType.FLUSH);
     UTIL.deleteTable(clonedTableName);
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);

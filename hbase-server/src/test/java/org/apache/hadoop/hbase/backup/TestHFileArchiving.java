@@ -19,26 +19,37 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,6 +57,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -121,7 +133,7 @@ public class TestHFileArchiving {
   }
 
   @Test
-  public void testRemovesRegionDirOnArchive() throws Exception {
+  public void testRemoveRegionDirOnArchive() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, TEST_FAM);
 
@@ -152,7 +164,6 @@ public class TestHFileArchiving {
     assertTrue(fs.exists(archiveDir));
 
     // check to make sure the store directory was copied
-    // check to make sure the store directory was copied
     FileStatus[] stores = fs.listStatus(archiveDir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
@@ -177,10 +188,11 @@ public class TestHFileArchiving {
   /**
    * Test that the region directory is removed when we archive a region without store files, but
    * still has hidden files.
-   * @throws Exception
+   * @throws IOException throws an IOException if there's problem creating a table
+   *   or if there's an issue with accessing FileSystem.
    */
   @Test
-  public void testDeleteRegionWithNoStoreFiles() throws Exception {
+  public void testDeleteRegionWithNoStoreFiles() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, TEST_FAM);
 
@@ -209,7 +221,7 @@ public class TestHFileArchiving {
     PathFilter nonHidden = new PathFilter() {
       @Override
       public boolean accept(Path file) {
-        return dirFilter.accept(file) && !file.getName().toString().startsWith(".");
+        return dirFilter.accept(file) && !file.getName().startsWith(".");
       }
     };
     FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
@@ -225,6 +237,100 @@ public class TestHFileArchiving {
     assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
 
     UTIL.deleteTable(tableName);
+  }
+
+  private List<HRegion> initTableForArchivingRegions(TableName tableName) throws IOException {
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
+    };
+
+    UTIL.createTable(tableName, TEST_FAM, splitKeys);
+
+    // get the current store files for the regions
+    List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
+    // make sure we have 4 regions serving this table
+    assertEquals(4, regions.size());
+
+    // and load the table
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      UTIL.loadTable(table, TEST_FAM);
+    }
+
+    // disable the table so that we can manipulate the files
+    UTIL.getAdmin().disableTable(tableName);
+
+    return regions;
+  }
+
+  @Test
+  public void testArchiveRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    List<HRegion> regions = initTableForArchivingRegions(tableName);
+
+    FileSystem fs = UTIL.getTestFileSystem();
+
+    // now attempt to depose the regions
+    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    List<Path> regionDirList = regions.stream()
+      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .collect(Collectors.toList());
+
+    HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
+
+    // check for the existence of the archive directory and some files in it
+    for (HRegion region : regions) {
+      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
+        region);
+      assertTrue(fs.exists(archiveDir));
+
+      // check to make sure the store directory was copied
+      FileStatus[] stores = fs.listStatus(archiveDir,
+        p -> !p.getName().contains(HConstants.RECOVERED_EDITS_DIR));
+      assertTrue(stores.length == 1);
+
+      // make sure we archived the store files
+      FileStatus[] storeFiles = fs.listStatus(stores[0].getPath());
+      assertTrue(storeFiles.length > 0);
+    }
+
+    // then ensure the region's directories aren't present
+    for (Path regionDir: regionDirList) {
+      assertFalse(fs.exists(regionDir));
+    }
+
+    UTIL.deleteTable(tableName);
+  }
+
+  @Test(expected=IOException.class)
+  public void testArchiveRegionsWhenPermissionDenied() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    List<HRegion> regions = initTableForArchivingRegions(tableName);
+
+    // now attempt to depose the regions
+    Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
+    List<Path> regionDirList = regions.stream()
+      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .collect(Collectors.toList());
+
+    // To create a permission denied error, we do archive regions as a non-current user
+    UserGroupInformation
+      ugi = UserGroupInformation.createUserForTesting("foo1234", new String[]{"group1"});
+
+    try {
+      ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+        FileSystem fs = UTIL.getTestFileSystem();
+        HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir,
+          regionDirList);
+        return null;
+      });
+    } catch (IOException e) {
+      assertTrue(e.getCause().getMessage().contains("Permission denied"));
+      throw e;
+    } finally {
+      UTIL.deleteTable(tableName);
+    }
   }
 
   @Test
@@ -271,12 +377,14 @@ public class TestHFileArchiving {
     assertArchiveFiles(fs, storeFiles, 30000);
   }
 
-  private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout) throws IOException {
+  private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout)
+          throws IOException {
     long end = System.currentTimeMillis() + timeout;
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
     List<String> archivedFiles = new ArrayList<>();
 
-    // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX() can return before all files
+    // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX()
+    // can return before all files
     // are archived. We should fix HBASE-5487 and fix synchronous operations from admin.
     while (System.currentTimeMillis() < end) {
       archivedFiles = getAllFileNames(fs, archiveDir);
@@ -304,10 +412,11 @@ public class TestHFileArchiving {
 
   /**
    * Test that the store files are archived when a column family is removed.
-   * @throws Exception
+   * @throws java.io.IOException if there's a problem creating a table.
+   * @throws java.lang.InterruptedException problem getting a RegionServer.
    */
   @Test
-  public void testArchiveOnTableFamilyDelete() throws Exception {
+  public void testArchiveOnTableFamilyDelete() throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.createTable(tableName, new byte[][] {TEST_FAM, Bytes.toBytes("fam2")});
 
@@ -374,11 +483,10 @@ public class TestHFileArchiving {
     Stoppable stoppable = new StoppableImplementation();
 
     // The cleaner should be looping without long pauses to reproduce the race condition.
-    HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
-    assertFalse("cleaner should not be null", cleaner == null);
+    HFileCleaner cleaner = getHFileCleaner(stoppable, conf, fs, archiveDir);
+    assertNotNull("cleaner should not be null", cleaner);
     try {
       choreService.scheduleChore(cleaner);
-
       // Keep creating/archiving new files while the cleaner is running in the other thread
       long startTime = System.currentTimeMillis();
       for (long fid = 0; (System.currentTimeMillis() - startTime) < TEST_TIME; ++fid) {
@@ -418,6 +526,16 @@ public class TestHFileArchiving {
     }
   }
 
+  // Avoid passing a null master to CleanerChore, see HBASE-21175
+  private HFileCleaner getHFileCleaner(Stoppable stoppable, Configuration conf,
+        FileSystem fs, Path archiveDir) throws IOException {
+    Map<String, Object> params = new HashMap<>();
+    params.put(HMaster.MASTER, UTIL.getMiniHBaseCluster().getMaster());
+    HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
+    cleaner.init(params);
+    return Objects.requireNonNull(cleaner);
+  }
+
   private void clearArchiveDirectory() throws IOException {
     UTIL.getTestFileSystem().delete(
       new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
@@ -428,9 +546,9 @@ public class TestHFileArchiving {
    * @param fs the file system to inspect
    * @param archiveDir the directory in which to look
    * @return a list of all files in the directory and sub-directories
-   * @throws IOException
+   * @throws java.io.IOException throws IOException in case FS is unavailable
    */
-  private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException {
+  private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException  {
     FileStatus[] files = FSUtils.listStatus(fs, archiveDir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
@@ -446,12 +564,16 @@ public class TestHFileArchiving {
   /** Recursively lookup all the file names under the file[] array **/
   private List<String> recurseOnFiles(FileSystem fs, FileStatus[] files, List<String> fileNames)
       throws IOException {
-    if (files == null || files.length == 0) return fileNames;
+    if (files == null || files.length == 0) {
+      return fileNames;
+    }
 
     for (FileStatus file : files) {
       if (file.isDirectory()) {
         recurseOnFiles(fs, FSUtils.listStatus(fs, file.getPath(), null), fileNames);
-      } else fileNames.add(file.getPath().getName());
+      } else {
+        fileNames.add(file.getPath().getName());
+      }
     }
     return fileNames;
   }

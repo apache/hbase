@@ -116,16 +116,17 @@ public class TestFromClientSideScanExcpetion {
     }
 
     @Override
-    protected HStore instantiateHStore(ColumnFamilyDescriptor family) throws IOException {
-      return new MyHStore(this, family, conf);
+    protected HStore instantiateHStore(ColumnFamilyDescriptor family, boolean warmup)
+        throws IOException {
+      return new MyHStore(this, family, conf, warmup);
     }
   }
 
   public static final class MyHStore extends HStore {
 
-    public MyHStore(HRegion region, ColumnFamilyDescriptor family, Configuration confParam)
-        throws IOException {
-      super(region, family, confParam);
+    public MyHStore(HRegion region, ColumnFamilyDescriptor family, Configuration confParam,
+        boolean warmup) throws IOException {
+      super(region, family, confParam, warmup);
     }
 
     @Override

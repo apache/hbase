@@ -180,6 +180,6 @@ public class EncodedSeekPerformanceTest {
   }
 
   private void clearBlockCache() {
-    ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
+    ((LruBlockCache) cacheConf.getBlockCache().get()).clearCache();
   }
 }

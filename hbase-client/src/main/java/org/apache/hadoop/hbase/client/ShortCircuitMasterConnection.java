@@ -20,6 +20,13 @@ package org.apache.hadoop.hbase.client;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
@@ -88,6 +95,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormaliz
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -146,6 +155,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -646,5 +659,41 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
     transitReplicationPeerSyncReplicationState(RpcController controller,
       TransitReplicationPeerSyncReplicationStateRequest request) throws ServiceException {
     return stub.transitReplicationPeerSyncReplicationState(controller, request);
+  }
+
+  @Override
+  public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
+      SwitchRpcThrottleRequest request) throws ServiceException {
+    return stub.switchRpcThrottle(controller, request);
+  }
+
+  @Override
+  public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(RpcController controller,
+      IsRpcThrottleEnabledRequest request) throws ServiceException {
+    return stub.isRpcThrottleEnabled(controller, request);
+  }
+
+  @Override
+  public SwitchExceedThrottleQuotaResponse switchExceedThrottleQuota(RpcController controller,
+      SwitchExceedThrottleQuotaRequest request) throws ServiceException {
+    return stub.switchExceedThrottleQuota(controller, request);
+  }
+
+  @Override
+  public GrantResponse grant(RpcController controller, GrantRequest request)
+      throws ServiceException {
+    return stub.grant(controller, request);
+  }
+
+  @Override
+  public RevokeResponse revoke(RpcController controller, RevokeRequest request)
+      throws ServiceException {
+    return stub.revoke(controller, request);
+  }
+
+  @Override
+  public GetUserPermissionsResponse getUserPermissions(RpcController controller,
+      GetUserPermissionsRequest request) throws ServiceException {
+    return stub.getUserPermissions(controller, request);
   }
 }

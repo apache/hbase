@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import static org.apache.hadoop.hbase.thrift.ThriftServerRunner.THRIFT_SPNEGO_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hbase.thrift.ThriftServerRunner.THRIFT_SPNEGO_PRINCIPAL_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_PRINCIPAL_KEY;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -58,7 +58,7 @@ public class ThriftHttpServlet extends TServlet {
   private static final Logger LOG = LoggerFactory.getLogger(ThriftHttpServlet.class.getName());
   private final transient UserGroupInformation serviceUGI;
   private final transient UserGroupInformation httpUGI;
-  private final transient ThriftServerRunner.HBaseHandler hbaseHandler;
+  private final transient HBaseServiceHandler handler;
   private final boolean doAsEnabled;
   private final boolean securityEnabled;
 
@@ -67,11 +67,11 @@ public class ThriftHttpServlet extends TServlet {
 
   public ThriftHttpServlet(TProcessor processor, TProtocolFactory protocolFactory,
       UserGroupInformation serviceUGI, Configuration conf,
-      ThriftServerRunner.HBaseHandler hbaseHandler, boolean securityEnabled, boolean doAsEnabled)
+      HBaseServiceHandler handler, boolean securityEnabled, boolean doAsEnabled)
       throws IOException {
     super(processor, protocolFactory);
     this.serviceUGI = serviceUGI;
-    this.hbaseHandler = hbaseHandler;
+    this.handler = handler;
     this.securityEnabled = securityEnabled;
     this.doAsEnabled = doAsEnabled;
 
@@ -146,7 +146,7 @@ public class ThriftHttpServlet extends TServlet {
       }
       effectiveUser = doAsUserFromQuery;
     }
-    hbaseHandler.setEffectiveUser(effectiveUser);
+    handler.setEffectiveUser(effectiveUser);
     super.doPost(request, response);
   }
 

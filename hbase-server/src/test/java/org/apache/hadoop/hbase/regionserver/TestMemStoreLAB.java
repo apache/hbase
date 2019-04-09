@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -94,7 +93,7 @@ public class TestMemStoreLAB {
     for (int i = 0; i < 100000; i++) {
       int valSize = rand.nextInt(3);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
-      int size = KeyValueUtil.length(kv);
+      int size = kv.getSerializedSize();
       ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
         // since we add the chunkID at the 0th offset of the chunk and the
@@ -145,7 +144,7 @@ public class TestMemStoreLAB {
         public void doAnAction() throws Exception {
           int valSize = r.nextInt(3);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
-          int size = KeyValueUtil.length(kv);
+          int size = kv.getSerializedSize();
           ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);
           totalAllocated.addAndGet(size);
           allocsByThisThread.add(new AllocRecord(newCell.getBuffer(), newCell.getOffset(), size));

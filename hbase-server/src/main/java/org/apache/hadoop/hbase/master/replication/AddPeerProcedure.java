@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -80,11 +81,22 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   }
 
   @Override
+  protected void releaseLatch(MasterProcedureEnv env) {
+    if (peerConfig.isSyncReplication()) {
+      env.getReplicationPeerManager().releaseSyncReplicationPeerLock();
+    }
+    ProcedurePrepareLatch.releaseLatch(latch, this);
+  }
+
+  @Override
   protected void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+      throws IOException, ReplicationException, InterruptedException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
+    }
+    if (peerConfig.isSyncReplication()) {
+      env.getReplicationPeerManager().acquireSyncReplicationPeerLock();
     }
     env.getReplicationPeerManager().preAddPeer(peerId, peerConfig);
   }

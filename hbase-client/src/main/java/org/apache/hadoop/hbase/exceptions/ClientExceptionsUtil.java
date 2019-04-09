@@ -26,6 +26,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hbase.CallDroppedException;
@@ -37,6 +38,10 @@ import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
@@ -131,10 +136,28 @@ public final class ClientExceptionsUtil {
     return (t instanceof CallDroppedException);
   }
 
+  // This list covers most connectivity exceptions but not all.
+  // For example, in SocketOutputStream a plain IOException is thrown at times when the channel is
+  // closed.
+  private static final ImmutableSet<Class<? extends Throwable>> CONNECTION_EXCEPTION_TYPES =
+    ImmutableSet.of(SocketTimeoutException.class, ConnectException.class,
+      ClosedChannelException.class, SyncFailedException.class, EOFException.class,
+      TimeoutException.class, TimeoutIOException.class, CallTimeoutException.class,
+      ConnectionClosingException.class, FailedServerException.class,
+      ConnectionClosedException.class);
+
   /**
-   * Check if the exception is something that indicates that we cannot
-   * contact/communicate with the server.
-   *
+   * For test only. Usually you should use the {@link #isConnectionException(Throwable)} method
+   * below.
+   */
+  @VisibleForTesting
+  public static Set<Class<? extends Throwable>> getConnectionExceptionTypes() {
+    return CONNECTION_EXCEPTION_TYPES;
+  }
+
+  /**
+   * Check if the exception is something that indicates that we cannot contact/communicate with the
+   * server.
    * @param e exception to check
    * @return true when exception indicates that the client wasn't able to make contact with server
    */
@@ -142,14 +165,12 @@ public final class ClientExceptionsUtil {
     if (e == null) {
       return false;
     }
-    // This list covers most connectivity exceptions but not all.
-    // For example, in SocketOutputStream a plain IOException is thrown
-    // at times when the channel is closed.
-    return (e instanceof SocketTimeoutException || e instanceof ConnectException
-      || e instanceof ClosedChannelException || e instanceof SyncFailedException
-      || e instanceof EOFException || e instanceof TimeoutException
-      || e instanceof CallTimeoutException || e instanceof ConnectionClosingException
-      || e instanceof FailedServerException || e instanceof ConnectionClosedException);
+    for (Class<? extends Throwable> clazz : CONNECTION_EXCEPTION_TYPES) {
+      if (clazz.isAssignableFrom(e.getClass())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

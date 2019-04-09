@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
+import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
@@ -65,7 +66,7 @@ public class TestThriftHttpServer {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestThriftHttpServer.class);
 
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Thread httpServerThread;
   private volatile Exception httpServerException;
@@ -97,18 +98,17 @@ public class TestThriftHttpServer {
     conf.set("hbase.thrift.security.qop", "privacy");
     conf.setBoolean("hbase.thrift.ssl.enabled", false);
 
-    ThriftServerRunner runner = null;
+    ThriftServer server = null;
     ExpectedException thrown = ExpectedException.none();
     try {
       thrown.expect(IllegalArgumentException.class);
       thrown.expectMessage("Thrift HTTP Server's QoP is privacy, " +
           "but hbase.thrift.ssl.enabled is false");
-      runner = new ThriftServerRunner(conf);
+      server = new ThriftServer(conf);
+      server.run();
       fail("Thrift HTTP Server starts up even with wrong security configurations.");
     } catch (Exception e) {
     }
-
-    assertNull(runner);
   }
 
   private void startHttpServerThread(final String[] args) {
@@ -117,7 +117,7 @@ public class TestThriftHttpServer {
     httpServerException = null;
     httpServerThread = new Thread(() -> {
       try {
-        thriftServer.doMain(args);
+        thriftServer.run(args);
       } catch (Exception e) {
         httpServerException = e;
       }
@@ -145,6 +145,10 @@ public class TestThriftHttpServer {
     runThriftServer(1024 * 64);
   }
 
+  protected ThriftServer createThriftServer() {
+    return new ThriftServer(TEST_UTIL.getConfiguration());
+  }
+
   @Test
   public void testRunThriftServer() throws Exception {
     runThriftServer(0);
@@ -153,14 +157,14 @@ public class TestThriftHttpServer {
   void runThriftServer(int customHeaderSize) throws Exception {
     List<String> args = new ArrayList<>(3);
     port = HBaseTestingUtility.randomFreePort();
-    args.add("-" + ThriftServer.PORT_OPTION);
+    args.add("-" + PORT_OPTION);
     args.add(String.valueOf(port));
-    args.add("-" + ThriftServer.INFOPORT_OPTION);
+    args.add("-" + INFOPORT_OPTION);
     int infoPort = HBaseTestingUtility.randomFreePort();
     args.add(String.valueOf(infoPort));
     args.add("start");
 
-    thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
+    thriftServer = createThriftServer();
     startHttpServerThread(args.toArray(new String[args.size()]));
 
     // wait up to 10s for the server to start
@@ -195,9 +199,9 @@ public class TestThriftHttpServer {
     Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
 
-  static volatile boolean tableCreated = false;
+  protected static volatile boolean tableCreated = false;
 
-  void talkToThriftServer(String url, int customHeaderSize) throws Exception {
+  protected void talkToThriftServer(String url, int customHeaderSize) throws Exception {
     THttpClient httpClient = new THttpClient(url);
     httpClient.open();
 

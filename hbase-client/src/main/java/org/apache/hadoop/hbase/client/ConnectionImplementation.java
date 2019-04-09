@@ -22,8 +22,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsentEx;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsentEx;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
@@ -89,8 +89,12 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
@@ -101,6 +105,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancer
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
@@ -111,6 +117,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
@@ -434,14 +444,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(masterServer + " is dead.");
     }
     String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
-        masterServer, this.hostnamesCanChange);
+      masterServer, this.hostnamesCanChange);
 
-    return new HBaseHbck(this,
-        (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
-          BlockingRpcChannel channel =
-              this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
-          return MasterProtos.HbckService.newBlockingStub(channel);
-        }));
+    return new HBaseHbck(
+      (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+        BlockingRpcChannel channel =
+          this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
+        return MasterProtos.HbckService.newBlockingStub(channel);
+      }), rpcControllerFactory);
   }
 
   @Override
@@ -626,7 +636,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     checkClosed();
     try {
       if (!isTableEnabled(tableName)) {
-        LOG.debug("Table " + tableName + " not enabled");
+        LOG.debug("Table {} not enabled", tableName);
         return false;
       }
       List<Pair<RegionInfo, ServerName>> locations =
@@ -637,10 +647,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       for (Pair<RegionInfo, ServerName> pair : locations) {
         RegionInfo info = pair.getFirst();
         if (pair.getSecond() == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Table " + tableName + " has not deployed region " + pair.getFirst()
-                .getEncodedName());
-          }
+          LOG.debug("Table {} has not deployed region {}", tableName,
+              pair.getFirst().getEncodedName());
           notDeployed++;
         } else if (splitKeys != null
             && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
@@ -658,23 +666,21 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       if (notDeployed > 0) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
+          LOG.debug("Table {} has {} regions not deployed", tableName, notDeployed);
         }
         return false;
       } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " expected to have " + (splitKeys.length + 1)
-              + " regions, but only " + regionCount + " available");
+          LOG.debug("Table {} expected to have {} regions, but only {} available", tableName,
+              splitKeys.length + 1, regionCount);
         }
         return false;
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Table " + tableName + " should be available");
-        }
+        LOG.trace("Table {} should be available", tableName);
         return true;
       }
     } catch (TableNotFoundException tnfe) {
-      LOG.warn("Table " + tableName + " not enabled, it is not exists");
+      LOG.warn("Table {} does not exist", tableName);
       return false;
     }
   }
@@ -993,7 +999,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public void clearRegionCache() {
+  public void clearRegionLocationCache() {
     metaCache.clearCache();
   }
 
@@ -1760,6 +1766,42 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         transitReplicationPeerSyncReplicationState(RpcController controller,
           TransitReplicationPeerSyncReplicationStateRequest request) throws ServiceException {
         return stub.transitReplicationPeerSyncReplicationState(controller, request);
+      }
+
+      @Override
+      public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
+          SwitchRpcThrottleRequest request) throws ServiceException {
+        return stub.switchRpcThrottle(controller, request);
+      }
+
+      @Override
+      public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(RpcController controller,
+          IsRpcThrottleEnabledRequest request) throws ServiceException {
+        return stub.isRpcThrottleEnabled(controller, request);
+      }
+
+      @Override
+      public SwitchExceedThrottleQuotaResponse switchExceedThrottleQuota(RpcController controller,
+          SwitchExceedThrottleQuotaRequest request) throws ServiceException {
+        return stub.switchExceedThrottleQuota(controller, request);
+      }
+
+      @Override
+      public AccessControlProtos.GrantResponse grant(RpcController controller,
+          AccessControlProtos.GrantRequest request) throws ServiceException {
+        return stub.grant(controller, request);
+      }
+
+      @Override
+      public AccessControlProtos.RevokeResponse revoke(RpcController controller,
+          AccessControlProtos.RevokeRequest request) throws ServiceException {
+        return stub.revoke(controller, request);
+      }
+
+      @Override
+      public GetUserPermissionsResponse getUserPermissions(RpcController controller,
+          GetUserPermissionsRequest request) throws ServiceException {
+        return stub.getUserPermissions(controller, request);
       }
     };
   }

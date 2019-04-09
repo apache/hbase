@@ -140,6 +140,12 @@ public enum EventType {
    * Master asking RS to open a  priority region.
    */
   M_RS_OPEN_PRIORITY_REGION          (26, ExecutorType.RS_OPEN_PRIORITY_REGION),
+  /**
+   * Messages originating from Master to RS.<br>
+   * M_RS_SWITCH_RPC_THROTTLE<br>
+   * Master asking RS to switch rpc throttle state.
+   */
+  M_RS_SWITCH_RPC_THROTTLE(27, ExecutorType.RS_SWITCH_RPC_THROTTLE),
 
   /**
    * Messages originating from Client to Master.<br>

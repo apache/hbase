@@ -110,8 +110,12 @@ public class MasterProcedureTestingUtility {
         @Override
         public Void call() throws Exception {
           AssignmentManager am = env.getAssignmentManager();
-          am.joinCluster();
-          master.setInitialized(true);
+          try {
+            am.joinCluster();
+            master.setInitialized(true);
+          } catch (Exception e) {
+            LOG.warn("Failed to load meta", e);
+          }
           return null;
         }
       });
@@ -285,7 +289,7 @@ public class MasterProcedureTestingUtility {
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    assertTrue(htd.hasColumnFamily(family.getBytes()));
+    assertTrue(htd.hasColumnFamily(Bytes.toBytes(family)));
   }
 
   public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
@@ -293,7 +297,7 @@ public class MasterProcedureTestingUtility {
     // verify htd
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
-    assertFalse(htd.hasColumnFamily(family.getBytes()));
+    assertFalse(htd.hasColumnFamily(Bytes.toBytes(family)));
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -310,7 +314,7 @@ public class MasterProcedureTestingUtility {
     TableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
 
-    ColumnFamilyDescriptor hcfd = htd.getColumnFamily(family.getBytes());
+    ColumnFamilyDescriptor hcfd = htd.getColumnFamily(Bytes.toBytes(family));
     assertEquals(0, ColumnFamilyDescriptor.COMPARATOR.compare(hcfd, columnDescriptor));
   }
 
@@ -379,7 +383,7 @@ public class MasterProcedureTestingUtility {
    */
   public static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int numSteps, final boolean expectExecRunning) throws Exception {
+      final int lastStep, final boolean expectExecRunning) throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
 
@@ -397,10 +401,13 @@ public class MasterProcedureTestingUtility {
     // fix would be get all visited states by the procedure and then check if user speccified
     // state is in that list. Current assumption of sequential proregression of steps/ states is
     // made at multiple places so we can keep while condition below for simplicity.
-    Procedure proc = procExec.getProcedure(procId);
+    Procedure<?> proc = procExec.getProcedure(procId);
     int stepNum = proc instanceof StateMachineProcedure ?
         ((StateMachineProcedure) proc).getCurrentStateId() : 0;
-    while (stepNum < numSteps) {
+    for (;;) {
+      if (stepNum == lastStep) {
+        break;
+      }
       LOG.info("Restart " + stepNum + " exec state=" + proc);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
       restartMasterProcedureExecutor(procExec);
@@ -507,13 +514,18 @@ public class MasterProcedureTestingUtility {
       // Sometimes there are other procedures still executing (including asynchronously spawned by
       // procId) and due to KillAndToggleBeforeStoreUpdate flag ProcedureExecutor is stopped before
       // store update. Let all pending procedures finish normally.
-      if (!procExec.isRunning()) {
-        LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due to"
-            + " KillAndToggleBeforeStoreUpdate flag.");
-        ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-        restartMasterProcedureExecutor(procExec);
-        ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+      // check 3 times to confirm that the procedure executor has not been killed
+      for (int i = 0; i < 3; i++) {
+        if (!procExec.isRunning()) {
+          LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due" +
+            " to KillAndToggleBeforeStoreUpdate flag.");
+          restartMasterProcedureExecutor(procExec);
+          break;
+        }
+        Thread.sleep(1000);
       }
+      ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     }
 
     assertEquals(true, procExec.isRunning());

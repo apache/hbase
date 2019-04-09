@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
@@ -146,12 +147,36 @@ public final class ZKConfig {
   public static String buildZKQuorumServerString(String[] serverHosts, String clientPort) {
     StringBuilder quorumStringBuilder = new StringBuilder();
     String serverHost;
+    InetAddressValidator validator = new InetAddressValidator();
     for (int i = 0; i < serverHosts.length; ++i) {
-      if (serverHosts[i].contains(":")) {
-        serverHost = serverHosts[i]; // just use the port specified from the input
+      if (serverHosts[i].startsWith("[")) {
+        int index = serverHosts[i].indexOf("]");
+        if (index < 0) {
+          throw new IllegalArgumentException(serverHosts[i]
+                  + " starts with '[' but has no matching ']:'");
+        }
+        if (index + 2 == serverHosts[i].length()) {
+          throw new IllegalArgumentException(serverHosts[i]
+                  + " doesn't have a port after colon");
+        }
+        //check the IPv6 address e.g. [2001:db8::1]
+        String serverHostWithoutBracket = serverHosts[i].substring(1, index);
+        if (!validator.isValidInet6Address(serverHostWithoutBracket)) {
+          throw new IllegalArgumentException(serverHosts[i]
+                  + " is not a valid IPv6 address");
+        }
+        serverHost = serverHosts[i];
+        if ((index + 1 == serverHosts[i].length())) {
+          serverHost = serverHosts[i] + ":" + clientPort;
+        }
       } else {
-        serverHost = serverHosts[i] + ":" + clientPort;
+        if (serverHosts[i].contains(":")) {
+          serverHost = serverHosts[i]; // just use the port specified from the input
+        } else {
+          serverHost = serverHosts[i] + ":" + clientPort;
+        }
       }
+
       if (i > 0) {
         quorumStringBuilder.append(',');
       }

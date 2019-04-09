@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -47,8 +48,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -171,6 +174,7 @@ public class TestQuotaAdmin {
             assertEquals(userName, throttle.getUserName());
             assertEquals(null, throttle.getTableName());
             assertEquals(null, throttle.getNamespace());
+            assertEquals(null, throttle.getRegionServer());
             assertEquals(6, throttle.getSoftLimit());
             assertEquals(TimeUnit.MINUTES, throttle.getTimeUnit());
             countThrottle++;
@@ -455,17 +459,22 @@ public class TestQuotaAdmin {
 
   @Test
   public void testSetGetRemoveRPCQuota() throws Exception {
+    testSetGetRemoveRPCQuota(ThrottleType.REQUEST_SIZE);
+    testSetGetRemoveRPCQuota(ThrottleType.REQUEST_CAPACITY_UNIT);
+  }
+
+  private void testSetGetRemoveRPCQuota(ThrottleType throttleType) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("sq_table1");
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+        QuotaSettingsFactory.throttleTable(tn, throttleType, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     // Verify the Quota in the table
-    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    verifyRecordPresentInQuotaTable(throttleType, 2L, TimeUnit.HOURS);
 
     // Verify we can retrieve it via the QuotaRetriever API
-    verifyFetchableViaAPI(admin, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+    verifyFetchableViaAPI(admin, throttleType, 2L, TimeUnit.HOURS);
 
     // Now, remove the quota
     QuotaSettings removeQuota = QuotaSettingsFactory.unthrottleTable(tn);
@@ -515,15 +524,196 @@ public class TestQuotaAdmin {
 
   }
 
+  @Test
+  public void testSetAndRemoveRegionServerQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    String regionServer = QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY;
+    QuotaFilter rsFilter = new QuotaFilter().setRegionServerFilter(regionServer);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES));
+    assertNumResults(1, rsFilter);
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.REQUEST_NUMBER, 20, TimeUnit.MINUTES));
+    assertNumResults(1, rsFilter);
+    // Verify the Quota in the table
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 20, TimeUnit.MINUTES);
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      30, TimeUnit.SECONDS));
+    int count = 0;
+    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration(), rsFilter);
+    try {
+      for (QuotaSettings settings : scanner) {
+        assertTrue(settings.getQuotaType() == QuotaType.THROTTLE);
+        ThrottleSettings throttleSettings = (ThrottleSettings) settings;
+        assertEquals(regionServer, throttleSettings.getRegionServer());
+        count++;
+        if (throttleSettings.getThrottleType() == ThrottleType.REQUEST_NUMBER) {
+          assertEquals(20, throttleSettings.getSoftLimit());
+          assertEquals(TimeUnit.MINUTES, throttleSettings.getTimeUnit());
+        } else if (throttleSettings.getThrottleType() == ThrottleType.READ_NUMBER) {
+          assertEquals(30, throttleSettings.getSoftLimit());
+          assertEquals(TimeUnit.SECONDS, throttleSettings.getTimeUnit());
+        }
+      }
+    } finally {
+      scanner.close();
+    }
+    assertEquals(2, count);
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(regionServer));
+    assertNumResults(0, new QuotaFilter().setRegionServerFilter(regionServer));
+  }
+
+  @Test
+  public void testRpcThrottleWhenStartup() throws IOException, InterruptedException {
+    TEST_UTIL.getAdmin().switchRpcThrottle(false);
+    assertFalse(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+    TEST_UTIL.killMiniHBaseCluster();
+
+    TEST_UTIL.startMiniHBaseCluster();
+    assertFalse(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+    for (JVMClusterUtil.RegionServerThread rs : TEST_UTIL.getHBaseCluster()
+        .getRegionServerThreads()) {
+      RegionServerRpcQuotaManager quotaManager =
+          rs.getRegionServer().getRegionServerRpcQuotaManager();
+      assertFalse(quotaManager.isRpcThrottleEnabled());
+    }
+    // enable rpc throttle
+    TEST_UTIL.getAdmin().switchRpcThrottle(true);
+    assertTrue(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
+  }
+
+  @Test
+  public void testSwitchRpcThrottle() throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    testSwitchRpcThrottle(admin, true, true);
+    testSwitchRpcThrottle(admin, true, false);
+    testSwitchRpcThrottle(admin, false, false);
+    testSwitchRpcThrottle(admin, false, true);
+  }
+
+  @Test
+  public void testSwitchExceedThrottleQuota() throws IOException {
+    String regionServer = QuotaTableUtil.QUOTA_REGION_SERVER_ROW_KEY;
+    Admin admin = TEST_UTIL.getAdmin();
+
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "if there is no region server quota");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer,
+      ThrottleType.WRITE_NUMBER, 100, TimeUnit.SECONDS));
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "if there is no read region server quota");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      20, TimeUnit.MINUTES));
+    try {
+      admin.exceedThrottleQuotaSwitch(true);
+      fail("should not come here, because can't enable exceed throttle quota "
+          + "because not all region server quota are in seconds time unit");
+    } catch (IOException e) {
+      LOG.warn("Expected exception", e);
+    }
+    admin.setQuota(QuotaSettingsFactory.throttleRegionServer(regionServer, ThrottleType.READ_NUMBER,
+      20, TimeUnit.SECONDS));
+
+    assertFalse(admin.exceedThrottleQuotaSwitch(true));
+    assertTrue(admin.exceedThrottleQuotaSwitch(true));
+    assertTrue(admin.exceedThrottleQuotaSwitch(false));
+    assertFalse(admin.exceedThrottleQuotaSwitch(false));
+    admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(regionServer));
+  }
+
+  @Test
+  public void testQuotaScope() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    String user = "user1";
+    String namespace = "testQuotaScope_ns";
+    TableName tableName = TableName.valueOf("testQuotaScope");
+    QuotaFilter filter = new QuotaFilter();
+
+    // set CLUSTER quota scope for namespace
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(namespace, ThrottleType.REQUEST_NUMBER,
+      10, TimeUnit.MINUTES, QuotaScope.CLUSTER));
+    assertNumResults(1, filter);
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.CLUSTER);
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(namespace, ThrottleType.REQUEST_NUMBER,
+      10, TimeUnit.MINUTES, QuotaScope.MACHINE));
+    assertNumResults(1, filter);
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.MACHINE);
+    admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(namespace));
+    assertNumResults(0, filter);
+
+    // set CLUSTER quota scope for table
+    admin.setQuota(QuotaSettingsFactory.throttleTable(tableName, ThrottleType.REQUEST_NUMBER, 10,
+      TimeUnit.MINUTES, QuotaScope.CLUSTER));
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.CLUSTER);
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(tableName));
+
+    // set CLUSTER quota scope for user
+    admin.setQuota(QuotaSettingsFactory.throttleUser(user, ThrottleType.REQUEST_NUMBER, 10,
+      TimeUnit.MINUTES, QuotaScope.CLUSTER));
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.CLUSTER);
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
+
+      // set CLUSTER quota scope for user and table
+    admin.setQuota(QuotaSettingsFactory.throttleUser(user, tableName, ThrottleType.REQUEST_NUMBER,
+      10, TimeUnit.MINUTES, QuotaScope.CLUSTER));
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.CLUSTER);
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
+
+      // set CLUSTER quota scope for user and namespace
+    admin.setQuota(QuotaSettingsFactory.throttleUser(user, namespace, ThrottleType.REQUEST_NUMBER,
+      10, TimeUnit.MINUTES, QuotaScope.CLUSTER));
+    verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
+      QuotaScope.CLUSTER);
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
+  }
+
+  private void testSwitchRpcThrottle(Admin admin, boolean oldRpcThrottle, boolean newRpcThrottle)
+      throws IOException {
+    boolean state = admin.switchRpcThrottle(newRpcThrottle);
+    Assert.assertEquals(oldRpcThrottle, state);
+    Assert.assertEquals(newRpcThrottle, admin.isRpcThrottleEnabled());
+    TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
+        .forEach(rs -> Assert.assertEquals(newRpcThrottle,
+          rs.getRegionServer().getRegionServerRpcQuotaManager().isRpcThrottleEnabled()));
+  }
+
   private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu)
       throws Exception {
+    verifyRecordPresentInQuotaTable(type, limit, tu, QuotaScope.MACHINE);
+  }
+
+  private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu,
+      QuotaScope scope) throws Exception {
     // Verify the RPC Quotas in the table
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
         ResultScanner scanner = quotaTable.getScanner(new Scan())) {
       Result r = Iterables.getOnlyElement(scanner);
       CellScanner cells = r.cellScanner();
       assertTrue("Expected to find a cell", cells.advance());
-      assertRPCQuota(type, limit, tu, cells.current());
+      assertRPCQuota(type, limit, tu, scope, cells.current());
     }
   }
 
@@ -550,8 +740,8 @@ public class TestQuotaAdmin {
     }
   }
 
-  private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu, Cell cell)
-      throws Exception {
+  private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu, QuotaScope scope,
+      Cell cell) throws Exception {
     Quotas q = QuotaTableUtil
         .quotasFromData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     assertTrue("Quota should have rpc quota defined", q.hasThrottle());
@@ -584,8 +774,22 @@ public class TestQuotaAdmin {
         assertTrue(rpcQuota.hasWriteSize());
         t = rpcQuota.getWriteSize();
         break;
+      case REQUEST_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasReqCapacityUnit());
+        t = rpcQuota.getReqCapacityUnit();
+        break;
+      case READ_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasReadCapacityUnit());
+        t = rpcQuota.getReadCapacityUnit();
+        break;
+      case WRITE_CAPACITY_UNIT:
+        assertTrue(rpcQuota.hasWriteCapacityUnit());
+        t = rpcQuota.getWriteCapacityUnit();
+        break;
+      default:
     }
 
+    assertEquals(scope, ProtobufUtil.toQuotaScope(t.getScope()));
     assertEquals(t.getSoftLimit(), limit);
     assertEquals(t.getTimeUnit(), ProtobufUtil.toProtoTimeUnit(tu));
   }

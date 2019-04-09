@@ -56,7 +56,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ScanPerformanceEvaluation extends AbstractHBaseTool {
 
-  private static final String HBASE_COUNTER_GROUP_NAME = "HBase Counters";
+  private static final String HBASE_COUNTER_GROUP_NAME = "HBaseCounters";
 
   private String type;
   private String file;
@@ -175,7 +175,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     table.close();
     connection.close();
 
-    ScanMetrics metrics = scan.getScanMetrics();
+    ScanMetrics metrics = scanner.getScanMetrics();
     long totalBytes = metrics.countOfBytesInResults.get();
     double throughput = (double)totalBytes / scanTimer.elapsed(TimeUnit.SECONDS);
     double throughputRows = (double)numRows / scanTimer.elapsed(TimeUnit.SECONDS);

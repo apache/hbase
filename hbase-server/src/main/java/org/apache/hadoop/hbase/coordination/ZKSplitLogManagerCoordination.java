@@ -24,7 +24,7 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.D
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.util.List;

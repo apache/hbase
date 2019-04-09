@@ -180,6 +180,11 @@ public class TestCellUtil {
     }
 
     @Override
+    public int getSerializedSize() {
+      return 0;
+    }
+
+    @Override
     public byte[] getTagsArray() {
       // TODO Auto-generated method stub
       return null;
@@ -200,6 +205,11 @@ public class TestCellUtil {
     @Override
     public int getTagsLength() {
       // TODO Auto-generated method stub
+      return 0;
+    }
+
+    @Override
+    public long heapSize() {
       return 0;
     }
   }
@@ -631,6 +641,11 @@ public class TestCellUtil {
     }
 
     @Override
+    public int getSerializedSize() {
+      return this.kv.getSerializedSize();
+    }
+
+    @Override
     public byte[] getTagsArray() {
       return this.kv.getTagsArray();
     }
@@ -643,6 +658,11 @@ public class TestCellUtil {
     @Override
     public int getTagsLength() {
       return this.kv.getTagsLength();
+    }
+
+    @Override
+    public long heapSize() {
+      return this.kv.heapSize();
     }
   }
 }

@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -246,7 +247,7 @@ public class TestHFileBlock {
   @Test
   public void testNoCompression() throws IOException {
     CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
-    Mockito.when(cacheConf.isBlockCacheEnabled()).thenReturn(false);
+    Mockito.when(cacheConf.getBlockCache()).thenReturn(Optional.empty());
 
     HFileBlock block =
       createTestV2Block(NONE, includesMemstoreTS, false).getBlockForCaching(cacheConf);
@@ -376,6 +377,8 @@ public class TestHFileBlock {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
         for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+          LOG.info("testDataBlockEncoding: Compression algorithm={}, pread={}, dataBlockEncoder={}",
+              algo.toString(), pread, encoding);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
@@ -534,9 +537,8 @@ public class TestHFileBlock {
       for (boolean pread : BOOLEAN_VALUES) {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
           Random rand = defaultRandom();
-          LOG.info("testPreviousOffset:Compression algorithm: " + algo +
-                   ", pread=" + pread +
-                   ", cacheOnWrite=" + cacheOnWrite);
+          LOG.info("testPreviousOffset: Compression algorithm={}, pread={}, cacheOnWrite={}",
+              algo.toString(), pread, cacheOnWrite);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "prev_offset");
           List<Long> expectedOffsets = new ArrayList<>();
           List<Long> expectedPrevOffsets = new ArrayList<>();

@@ -19,11 +19,7 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.HashMap;
-import java.util.Map;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -32,15 +28,15 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
@@ -52,11 +48,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.P
 public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModificationState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyPeerProcedure.class);
-
-  protected static final int UPDATE_LAST_SEQ_ID_BATCH_SIZE = 1000;
-
-  // The sleep interval when waiting table to be enabled or disabled.
-  protected static final int SLEEP_INTERVAL_MS = 1000;
 
   protected ModifyPeerProcedure() {
   }
@@ -73,7 +64,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * all checks passes then the procedure can not be rolled back any more.
    */
   protected abstract void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException;
+      throws IOException, ReplicationException, InterruptedException;
 
   protected abstract void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException;
 
@@ -89,7 +80,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   protected abstract void postPeerModification(MasterProcedureEnv env)
       throws IOException, ReplicationException;
 
-  private void releaseLatch() {
+  protected void releaseLatch(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(latch, this);
   }
 
@@ -143,7 +134,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     }
   }
 
-  private void reopenRegions(MasterProcedureEnv env) throws IOException {
+  // will be override in test to simulate error
+  @VisibleForTesting
+  protected void reopenRegions(MasterProcedureEnv env) throws IOException {
     ReplicationPeerConfig peerConfig = getNewPeerConfig();
     ReplicationPeerConfig oldPeerConfig = getOldPeerConfig();
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
@@ -165,79 +158,9 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     }
   }
 
-  private void addToMap(Map<String, Long> lastSeqIds, String encodedRegionName, long barrier,
-      ReplicationQueueStorage queueStorage) throws ReplicationException {
-    if (barrier >= 0) {
-      lastSeqIds.put(encodedRegionName, barrier);
-      if (lastSeqIds.size() >= UPDATE_LAST_SEQ_ID_BATCH_SIZE) {
-        queueStorage.setLastSequenceIds(peerId, lastSeqIds);
-        lastSeqIds.clear();
-      }
-    }
-  }
-
-  protected final void setLastPushedSequenceId(MasterProcedureEnv env,
-      ReplicationPeerConfig peerConfig) throws IOException, ReplicationException {
-    Map<String, Long> lastSeqIds = new HashMap<String, Long>();
-    for (TableDescriptor td : env.getMasterServices().getTableDescriptors().getAll().values()) {
-      if (!td.hasGlobalReplicationScope()) {
-        continue;
-      }
-      TableName tn = td.getTableName();
-      if (!ReplicationUtils.contains(peerConfig, tn)) {
-        continue;
-      }
-      setLastPushedSequenceIdForTable(env, tn, lastSeqIds);
-    }
-    if (!lastSeqIds.isEmpty()) {
-      env.getReplicationPeerManager().getQueueStorage().setLastSequenceIds(peerId, lastSeqIds);
-    }
-  }
-
-  // If the table is currently disabling, then we need to wait until it is disabled.We will write
-  // replication barrier for a disabled table. And return whether we need to update the last pushed
-  // sequence id, if the table has been deleted already, i.e, we hit TableStateNotFoundException,
-  // then we do not need to update last pushed sequence id for this table.
-  private boolean needSetLastPushedSequenceId(TableStateManager tsm, TableName tn)
-      throws IOException {
-    for (;;) {
-      try {
-        if (!tsm.getTableState(tn).isDisabling()) {
-          return true;
-        }
-        Thread.sleep(SLEEP_INTERVAL_MS);
-      } catch (TableStateNotFoundException e) {
-        return false;
-      } catch (InterruptedException e) {
-        throw (IOException) new InterruptedIOException(e.getMessage()).initCause(e);
-      }
-    }
-  }
-
-  // Will put the encodedRegionName->lastPushedSeqId pair into the map passed in, if the map is
-  // large enough we will call queueStorage.setLastSequenceIds and clear the map. So the caller
-  // should not forget to check whether the map is empty at last, if not you should call
-  // queueStorage.setLastSequenceIds to write out the remaining entries in the map.
-  protected final void setLastPushedSequenceIdForTable(MasterProcedureEnv env, TableName tableName,
-      Map<String, Long> lastSeqIds) throws IOException, ReplicationException {
-    TableStateManager tsm = env.getMasterServices().getTableStateManager();
-    ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
-    Connection conn = env.getMasterServices().getConnection();
-    if (!needSetLastPushedSequenceId(tsm, tableName)) {
-      LOG.debug("Skip settting last pushed sequence id for {}", tableName);
-      return;
-    }
-    for (Pair<String, Long> name2Barrier : MetaTableAccessor
-      .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
-      LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
-      addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,
-        queueStorage);
-    }
-  }
-
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, PeerModificationState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, InterruptedException {
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
@@ -246,23 +169,27 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
             "mark the procedure as failure and give up", getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
-          releaseLatch();
+          releaseLatch(env);
           return Flow.NO_MORE_STATE;
         } catch (ReplicationException e) {
-          LOG.warn("{} failed to call prePeerModification for peer {}, retry", getClass().getName(),
-            peerId, e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} failed to call prePeerModification for peer {}, sleep {} secs",
+            getClass().getName(), peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         setNextState(PeerModificationState.UPDATE_PEER_STORAGE);
         return Flow.HAS_MORE_STATE;
       case UPDATE_PEER_STORAGE:
         try {
           updatePeerStorage(env);
         } catch (ReplicationException e) {
-          LOG.warn("{} update peer storage for peer {} failed, retry", getClass().getName(), peerId,
-            e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} update peer storage for peer {} failed, sleep {} secs", getClass().getName(),
+            peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         setNextState(PeerModificationState.REFRESH_PEER_ON_RS);
         return Flow.HAS_MORE_STATE;
       case REFRESH_PEER_ON_RS:
@@ -273,30 +200,37 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           reopenRegions(env);
         } catch (Exception e) {
-          LOG.warn("{} reopen regions for peer {} failed, retry", getClass().getName(), peerId, e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} reopen regions for peer {} failed,  sleep {} secs", getClass().getName(),
+            peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         setNextState(PeerModificationState.SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID:
         try {
           updateLastPushedSequenceIdForSerialPeer(env);
         } catch (Exception e) {
-          LOG.warn("{} set last sequence id for peer {} failed, retry", getClass().getName(),
-            peerId, e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} set last sequence id for peer {} failed,  sleep {} secs",
+            getClass().getName(), peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
           : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_SET_PEER_ENABLED:
         try {
-          env.getReplicationPeerManager().enablePeer(peerId);
+          enablePeer(env);
         } catch (ReplicationException e) {
-          LOG.warn("{} enable peer before finish for peer {} failed, retry", getClass().getName(),
-            peerId, e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} enable peer before finish for peer {} failed,  sleep {} secs",
+            getClass().getName(), peerId, backoff / 1000, e);
+          throw suspend(backoff);
         }
+        attempts = 0;
         setNextState(PeerModificationState.SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS:
@@ -307,14 +241,15 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           postPeerModification(env);
         } catch (ReplicationException e) {
-          LOG.warn("{} failed to call postPeerModification for peer {}, retry",
-            getClass().getName(), peerId, e);
-          throw new ProcedureYieldException();
+          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
+          LOG.warn("{} failed to call postPeerModification for peer {},  sleep {} secs",
+            getClass().getName(), peerId, backoff / 1000, e);
+          throw suspend(backoff);
         } catch (IOException e) {
           LOG.warn("{} failed to call post CP hook for peer {}, " +
             "ignore since the procedure has already done", getClass().getName(), peerId, e);
         }
-        releaseLatch();
+        releaseLatch(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);

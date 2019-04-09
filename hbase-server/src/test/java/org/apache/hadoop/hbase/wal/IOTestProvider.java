@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -87,6 +89,7 @@ public class IOTestProvider implements WALProvider {
   private volatile FSHLog log;
 
   private String providerId;
+  protected AtomicBoolean initialized = new AtomicBoolean(false);
 
   private List<WALActionsListener> listeners = new ArrayList<>();
   /**
@@ -97,7 +100,7 @@ public class IOTestProvider implements WALProvider {
    */
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
-    if (factory != null) {
+    if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;

@@ -206,11 +206,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
     String userTestNamespace = "userTestNsp";
     Table acl = UTIL.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME);
     try {
-      ListMultimap<String, TablePermission> perms =
-          AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-
-      perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
-      for (Map.Entry<String, TablePermission> entry : perms.entries()) {
+      ListMultimap<String, UserPermission> perms =
+        AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
+      for (Map.Entry<String, UserPermission> entry : perms.entries()) {
         LOG.debug(Objects.toString(entry));
       }
       assertEquals(6, perms.size());
@@ -223,15 +221,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
       assertTrue(result != null);
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       assertEquals(7, perms.size());
-      List<TablePermission> namespacePerms = perms.get(userTestNamespace);
+      List<UserPermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
       assertEquals(1, namespacePerms.size());
       assertEquals(TEST_NAMESPACE,
-        namespacePerms.get(0).getNamespace());
-      assertEquals(null, namespacePerms.get(0).getFamily());
-      assertEquals(null, namespacePerms.get(0).getQualifier());
-      assertEquals(1, namespacePerms.get(0).getActions().length);
-      assertEquals(Permission.Action.WRITE, namespacePerms.get(0).getActions()[0]);
+        ((NamespacePermission) namespacePerms.get(0).getPermission()).getNamespace());
+      assertEquals(1, namespacePerms.get(0).getPermission().getActions().length);
+      assertEquals(Permission.Action.WRITE, namespacePerms.get(0).getPermission().getActions()[0]);
 
       // Revoke and check state in ACL table
       revokeFromNamespace(UTIL, userTestNamespace, TEST_NAMESPACE,
@@ -360,40 +356,27 @@ public class TestNamespaceCommands extends SecureTestUtil {
   }
 
   @Test
-  public void testGrantRevoke() throws Exception{
+  public void testGrantRevoke() throws Exception {
     final String testUser = "testUser";
-
     // Test if client API actions are authorized
-
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service =
-              acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.grant(null, protocol, testUser, TEST_NAMESPACE, false, Action.WRITE);
-        } finally {
-          acl.close();
-          connection.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          connection.getAdmin().grant(new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()),
+            false);
         }
         return null;
       }
     };
-
     AccessTestAction grantNamespaceAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
-            TEST_NAMESPACE, false, Action.READ);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          conn.getAdmin().grant(new UserPermission(USER_GROUP_NS_ADMIN.getShortName(),
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.READ).build()),
+            false);
         }
         return null;
       }
@@ -402,37 +385,19 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction revokeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service =
-              acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.revoke(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
-        } finally {
-          acl.close();
-          connection.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          connection.getAdmin().revoke(new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()));
         }
         return null;
       }
     };
-
     AccessTestAction revokeNamespaceAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service =
-              acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.revoke(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
-            TEST_NAMESPACE, Action.READ);
-        } finally {
-          acl.close();
-          connection.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          connection.getAdmin().revoke(new UserPermission(USER_GROUP_NS_ADMIN.getShortName(),
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.READ).build()));
         }
         return null;
       }
@@ -441,16 +406,56 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction getPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          connection.getAdmin()
+              .getUserPermissions(GetUserPermissionsRequest.newBuilder(TEST_NAMESPACE).build());
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction preGrantAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGrant(ObserverContextImpl.createAndPrepare(CP_ENV),
+          new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()),
+          false);
+        return null;
+      }
+    };
+    AccessTestAction preRevokeAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRevoke(ObserverContextImpl.createAndPrepare(CP_ENV),
+          new UserPermission(testUser,
+              Permission.newBuilder(TEST_NAMESPACE).withActions(Action.WRITE).build()));
+        return null;
+      }
+    };
+
+    AccessTestAction grantCPAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+            Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-          AccessControlUtil.getUserPermissions(null, protocol, Bytes.toBytes(TEST_NAMESPACE));
-        } finally {
-          acl.close();
-          connection.close();
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.grant(null, protocol, testUser, TEST_NAMESPACE, false, Action.WRITE);
+        }
+        return null;
+      }
+    };
+    AccessTestAction revokeCPAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+            Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.revoke(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         }
         return null;
       }
@@ -460,7 +465,6 @@ public class TestNamespaceCommands extends SecureTestUtil {
     verifyDenied(grantAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
       USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
       USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
-
     verifyAllowed(grantNamespaceAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN,
       USER_NS_ADMIN, USER_GROUP_NS_ADMIN);
     verifyDenied(grantNamespaceAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
@@ -471,7 +475,6 @@ public class TestNamespaceCommands extends SecureTestUtil {
     verifyDenied(revokeAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
       USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
       USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
-
     verifyAllowed(revokeNamespaceAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN,
       USER_NS_ADMIN, USER_GROUP_NS_ADMIN);
     verifyDenied(revokeNamespaceAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
@@ -481,6 +484,24 @@ public class TestNamespaceCommands extends SecureTestUtil {
     verifyAllowed(getPermissionsAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_NS_ADMIN,
       USER_GROUP_ADMIN);
     verifyDenied(getPermissionsAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    verifyAllowed(preGrantAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
+    verifyDenied(preGrantAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyAllowed(preRevokeAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
+    verifyDenied(preRevokeAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    verifyAllowed(grantCPAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
+    verifyDenied(grantCPAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
+      USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
+      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyAllowed(revokeCPAction, SUPERUSER, USER_GLOBAL_ADMIN, USER_GROUP_ADMIN, USER_NS_ADMIN);
+    verifyDenied(revokeCPAction, USER_GLOBAL_CREATE, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
       USER_GLOBAL_EXEC, USER_NS_CREATE, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
       USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }

@@ -74,6 +74,9 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   public static final String USER_COPROCESSORS_ENABLED_CONF_KEY =
     "hbase.coprocessor.user.enabled";
   public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
+  public static final String SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR =
+      "hbase.skip.load.duplicate.table.coprocessor";
+  public static final boolean DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR = false;
 
   private static final Logger LOG = LoggerFactory.getLogger(CoprocessorHost.class);
   protected Abortable abortable;
@@ -199,6 +202,14 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     Class<?> implClass;
     LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
+
+    boolean skipLoadDuplicateCoprocessor = conf.getBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR,
+      DEFAULT_SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR);
+    if (skipLoadDuplicateCoprocessor && findCoprocessor(className) != null) {
+      // If already loaded will just continue
+      LOG.warn("Attempted duplicate loading of {}; skipped", className);
+      return null;
+    }
 
     ClassLoader cl = null;
     if (path == null) {

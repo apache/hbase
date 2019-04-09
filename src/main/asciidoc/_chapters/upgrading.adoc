@@ -314,6 +314,20 @@ Quitting...
 
 == Upgrade Paths
 
+[[upgrade2.2]]
+=== Upgrade from 2.0 or 2.1 to 2.2+
+
+HBase 2.2+ uses a new Procedure form assiging/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
+
+And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
+
+. Shutdown both active and standby Masters (Your cluster will continue to server reads and writes without interruption).
+. Set the property hbase.procedure.upgrade-to-2-2 to true in hbase-site.xml for the Master, and start only one Master, still using the 2.1.1+ (or 2.0.3+) version.
+. Wait until the Master quits. Confirm that there is a 'READY TO ROLLING UPGRADE' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
+. Start new Masters with the new 2.2+ version.
+
+Then you can rolling upgrade RegionServers one by one. See link:https://issues.apache.org/jira/browse/HBASE-21075[HBASE-21075] for more details.
+
 [[upgrade2.0]]
 === Upgrading from 1.x to 2.x
 
@@ -331,7 +345,10 @@ As noted in the section <<basic.prerequisites>>, HBase 2.0+ requires a minimum o
 .HBCK must match HBase server version
 You *must not* use an HBase 1.x version of HBCK against an HBase 2.0+ cluster. HBCK is strongly tied to the HBase server version. Using the HBCK tool from an earlier release against an HBase 2.0+ cluster will destructively alter said cluster in unrecoverable ways.
 
-As of HBase 2.0, HBCK is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+As of HBase 2.0, HBCK (A.K.A _HBCK1_ or _hbck1_) is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+
+To read about HBCK's replacement, see <<HBCK2>> in <<ops_mgt>>.
+
 
 ////
 Link to a ref guide section on HBCK in 2.0 that explains use and calls out the inability of clients and server sides to detect version of each other.

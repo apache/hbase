@@ -19,11 +19,18 @@ package org.apache.hadoop.hbase.backup;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -37,6 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -66,6 +74,8 @@ public class HFileArchiver {
           return file == null ? null : file.getPath();
         }
       };
+
+  private static ThreadPoolExecutor archiveExecutor;
 
   private HFileArchiver() {
     // hidden ctor since this is just a util
@@ -103,14 +113,12 @@ public class HFileArchiver {
    *          the archive path)
    * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
    * @param regionDir {@link Path} to where a region is being stored (for building the archive path)
-   * @return <tt>true</tt> if the region was sucessfully deleted. <tt>false</tt> if the filesystem
+   * @return <tt>true</tt> if the region was successfully deleted. <tt>false</tt> if the filesystem
    *         operations could not complete.
    * @throws IOException if the request cannot be completed
    */
   public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
-    LOG.debug("ARCHIVING {}", rootdir.toString());
-
     // otherwise, we archive the files
     // make sure we can archive
     if (tableDir == null || regionDir == null) {
@@ -121,6 +129,8 @@ public class HFileArchiver {
       // the archived files correctly or not.
       return false;
     }
+
+    LOG.debug("ARCHIVING {}", regionDir);
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
@@ -137,7 +147,7 @@ public class HFileArchiver {
     PathFilter nonHidden = new PathFilter() {
       @Override
       public boolean accept(Path file) {
-        return dirFilter.accept(file) && !file.getName().toString().startsWith(".");
+        return dirFilter.accept(file) && !file.getName().startsWith(".");
       }
     };
     FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
@@ -160,6 +170,67 @@ public class HFileArchiver {
     }
     // if that was successful, then we delete the region
     return deleteRegionWithoutArchiving(fs, regionDir);
+  }
+
+  /**
+   * Archive the specified regions in parallel.
+   * @param conf the configuration to use
+   * @param fs {@link FileSystem} from which to remove the region
+   * @param rootDir {@link Path} to the root directory where hbase files are stored (for building
+   *                            the archive path)
+   * @param tableDir {@link Path} to where the table is being stored (for building the archive
+   *                             path)
+   * @param regionDirList {@link Path} to where regions are being stored (for building the archive
+   *                                  path)
+   * @throws IOException if the request cannot be completed
+   */
+  public static void archiveRegions(Configuration conf, FileSystem fs, Path rootDir, Path tableDir,
+    List<Path> regionDirList) throws IOException {
+    List<Future<Void>> futures = new ArrayList<>(regionDirList.size());
+    for (Path regionDir: regionDirList) {
+      Future<Void> future = getArchiveExecutor(conf).submit(() -> {
+        archiveRegion(fs, rootDir, tableDir, regionDir);
+        return null;
+      });
+      futures.add(future);
+    }
+    try {
+      for (Future<Void> future: futures) {
+        future.get();
+      }
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
+    }
+  }
+
+  private static synchronized ThreadPoolExecutor getArchiveExecutor(final Configuration conf) {
+    if (archiveExecutor == null) {
+      int maxThreads = conf.getInt("hbase.hfilearchiver.thread.pool.max", 8);
+      archiveExecutor = Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+        getThreadFactory());
+
+      // Shutdown this ThreadPool in a shutdown hook
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> archiveExecutor.shutdown()));
+    }
+    return archiveExecutor;
+  }
+
+  // We need this method instead of Threads.getNamedThreadFactory() to pass some tests.
+  // The difference from Threads.getNamedThreadFactory() is that it doesn't fix ThreadGroup for
+  // new threads. If we use Threads.getNamedThreadFactory(), we will face ThreadGroup related
+  // issues in some tests.
+  private static ThreadFactory getThreadFactory() {
+    return new ThreadFactory() {
+      final AtomicInteger threadNumber = new AtomicInteger(1);
+
+      @Override
+      public Thread newThread(Runnable r) {
+        final String name = "HFileArchiver-" + threadNumber.getAndIncrement();
+        return new Thread(r, name);
+      }
+    };
   }
 
   /**

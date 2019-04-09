@@ -38,7 +38,7 @@ ENV MAVEN_HOME /usr/local/apache-maven
 ENV PATH /usr/java/bin:/usr/local/apache-maven/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Pull down HBase and build it into /root/hbase-bin.
-RUN git clone http://git.apache.org/hbase.git -b master
+RUN git clone https://gitbox.apache.org/repos/asf/hbase.git -b master
 RUN mvn clean install -DskipTests assembly:single -f ./hbase/pom.xml
 RUN mkdir -p hbase-bin
 RUN tar xzf /root/hbase/hbase-assembly/target/*tar.gz --strip-components 1 -C /root/hbase-bin

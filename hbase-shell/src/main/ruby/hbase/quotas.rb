@@ -24,6 +24,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.quotas.ThrottleType
 java_import org.apache.hadoop.hbase.quotas.QuotaFilter
 java_import org.apache.hadoop.hbase.quotas.QuotaRetriever
+java_import org.apache.hadoop.hbase.quotas.QuotaScope
 java_import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory
 java_import org.apache.hadoop.hbase.quotas.QuotaTableUtil
 java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
@@ -36,15 +37,28 @@ module HBaseQuotasConstants
   REQUEST = 'REQUEST'.freeze
   WRITE = 'WRITE'.freeze
   READ = 'READ'.freeze
+  SCOPE = 'SCOPE'.freeze
+  CLUSTER = 'CLUSTER'.freeze
+  MACHINE = 'MACHINE'.freeze
   # Space quota constants
   SPACE = 'SPACE'.freeze
   NO_INSERTS = 'NO_INSERTS'.freeze
   NO_WRITES = 'NO_WRITES'.freeze
   NO_WRITES_COMPACTIONS = 'NO_WRITES_COMPACTIONS'.freeze
   DISABLE = 'DISABLE'.freeze
+  READ_NUMBER = 'READ_NUMBER'.freeze
+  READ_SIZE = 'READ_SIZE'.freeze
+  WRITE_NUMBER = 'WRITE_NUMBER'.freeze
+  WRITE_SIZE = 'WRITE_SIZE'.freeze
+  REQUEST_NUMBER = 'REQUEST_NUMBER'.freeze
+  REQUEST_SIZE = 'REQUEST_SIZE'.freeze
+  REQUEST_CAPACITY_UNIT = 'REQUEST_CAPACITY_UNIT'.freeze
+  WRITE_CAPACITY_UNIT = 'WRITE_CAPACITY_UNIT'.freeze
+  READ_CAPACITY_UNIT = 'READ_CAPACITY_UNIT'.freeze
 end
 
 module Hbase
+  # rubocop:disable Metrics/ClassLength
   class QuotasAdmin
     def initialize(admin)
       @admin = admin
@@ -59,64 +73,164 @@ module Hbase
       type = args.fetch(THROTTLE_TYPE, REQUEST)
       args.delete(THROTTLE_TYPE)
       type, limit, time_unit = _parse_limit(args.delete(LIMIT), ThrottleType, type)
+      scope = _parse_scope(args.fetch(SCOPE, MACHINE))
+      args.delete(SCOPE)
       if args.key?(USER)
         user = args.delete(USER)
         if args.key?(TABLE)
           table = TableName.valueOf(args.delete(TABLE))
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, table, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, table, type, limit, time_unit, scope)
         elsif args.key?(NAMESPACE)
           namespace = args.delete(NAMESPACE)
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, namespace, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, namespace, type, limit, time_unit, scope)
         else
           raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.throttleUser(user, type, limit, time_unit)
+          settings = QuotaSettingsFactory.throttleUser(user, type, limit, time_unit, scope)
         end
       elsif args.key?(TABLE)
         table = TableName.valueOf(args.delete(TABLE))
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.throttleTable(table, type, limit, time_unit)
+        settings = QuotaSettingsFactory.throttleTable(table, type, limit, time_unit, scope)
       elsif args.key?(NAMESPACE)
         namespace = args.delete(NAMESPACE)
         raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit)
+        settings = QuotaSettingsFactory.throttleNamespace(namespace, type, limit, time_unit, scope)
+      elsif args.key?(REGIONSERVER)
+        # TODO: Setting specified region server quota isn't supported currently and using 'all' for all RS
+        if scope == QuotaScope.valueOf(CLUSTER)
+          raise(ArgumentError, 'Invalid region server throttle scope, must be MACHINE')
+        end
+        settings = QuotaSettingsFactory.throttleRegionServer('all', type, limit, time_unit)
       else
-        raise 'One of USER, TABLE or NAMESPACE must be specified'
+        raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
       end
       @admin.setQuota(settings)
     end
 
     def unthrottle(args)
       raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
-      if args.key?(USER)
-        user = args.delete(USER)
-        if args.key?(TABLE)
-          table = TableName.valueOf(args.delete(TABLE))
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user, table)
-        elsif args.key?(NAMESPACE)
-          namespace = args.delete(NAMESPACE)
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user, namespace)
-        else
-          raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-          settings = QuotaSettingsFactory.unthrottleUser(user)
-        end
-      elsif args.key?(TABLE)
-        table = TableName.valueOf(args.delete(TABLE))
-        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.unthrottleTable(table)
-      elsif args.key?(NAMESPACE)
-        namespace = args.delete(NAMESPACE)
-        raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
-        settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
+
+      if args.key?(USER) then settings = unthrottle_user_table_namespace(args)
+      elsif args.key?(TABLE) then settings = unthrottle_table(args)
+      elsif args.key?(NAMESPACE) then settings = unthrottle_namespace(args)
+      elsif args.key?(REGIONSERVER)
+        settings = unthrottle_regionserver(args)
       else
-        raise 'One of USER, TABLE or NAMESPACE must be specified'
+        raise 'One of USER, TABLE, NAMESPACE or REGIONSERVER must be specified'
       end
       @admin.setQuota(settings)
     end
 
+    def _parse_throttle_type(type_cls, throttle_type)
+      type_cls.valueOf(throttle_type)
+    end
+
+    def get_throttle_type(args)
+      throttle_type_str = args.delete(THROTTLE_TYPE)
+      throttle_type = _parse_throttle_type(ThrottleType, throttle_type_str)
+      throttle_type
+    end
+
+    def unthrottle_user_table_namespace(args)
+      user = args.delete(USER)
+      settings = if args.key?(TABLE)
+                   unthrottle_user_table(args, user)
+                 elsif args.key?(NAMESPACE)
+                   unthrottle_user_namespace(args, user)
+                 else
+                   unthrottle_user(args, user)
+                 end
+      settings
+    end
+
+    def args_empty(args)
+      return if args.empty?
+
+      raise(ArgumentError,
+            'Unexpected arguments: ' + args.inspect)
+    end
+
+    def unthrottle_user_table(args, user)
+      table = TableName.valueOf(args.delete(TABLE))
+      if args.key?(THROTTLE_TYPE)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user,
+                                                 table, get_throttle_type(args))
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user, table)
+      end
+      settings
+    end
+
+    def unthrottle_user_namespace(args, user)
+      namespace = args.delete(NAMESPACE)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user, namespace, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user, namespace)
+      end
+      settings
+    end
+
+    def unthrottle_user(args, user)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleUserByThrottleType(user, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleUser(user)
+      end
+      settings
+    end
+
+    def unthrottle_table(args)
+      table = TableName.valueOf(args.delete(TABLE))
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleTableByThrottleType(table, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleTable(table)
+      end
+      settings
+    end
+
+    def unthrottle_namespace(args)
+      namespace = args.delete(NAMESPACE)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleNamespaceByThrottleType(namespace, throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleNamespace(namespace)
+      end
+      settings
+    end
+
+    def unthrottle_regionserver(args)
+      _region_server = args.delete(REGIONSERVER)
+      if args.key?(THROTTLE_TYPE)
+        throttle_type = get_throttle_type(args)
+        settings = QuotaSettingsFactory
+                   .unthrottleRegionServerByThrottleType('all', throttle_type)
+      else
+        args_empty(args)
+        settings = QuotaSettingsFactory.unthrottleRegionServer('all')
+      end
+      settings
+    end
+
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity
     def limit_space(args)
       raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
       # Let the user provide a raw number
@@ -126,6 +240,10 @@ module Hbase
                 # Parse a string a 1K, 2G, etc.
                 _parse_size(args[LIMIT])
               end
+      if limit <= 0
+        raise(ArgumentError, 'Invalid space limit, must be greater than 0')
+      end
+
       # Extract the policy, failing if something bogus was provided
       policy = SpaceViolationPolicy.valueOf(args[POLICY])
       # Create a table or namespace quota
@@ -145,6 +263,8 @@ module Hbase
       # Apply the quota
       @admin.setQuota(settings)
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
 
     def remove_space_limit(args)
       raise(ArgumentError, 'Argument should be a Hash') unless !args.nil? && args.is_a?(Hash)
@@ -166,7 +286,7 @@ module Hbase
     end
 
     def get_master_table_sizes
-      QuotaTableUtil.getMasterReportedTableSizes(@admin.getConnection)
+      @admin.getSpaceQuotaTableSizes
     end
 
     def get_quota_snapshots(regionserver = nil)
@@ -183,8 +303,7 @@ module Hbase
 
     def get_rs_quota_snapshots(rs)
       # Reads the snapshots from a specific regionserver
-      QuotaTableUtil.getRegionServerQuotaSnapshots(@admin.getConnection,
-                                                   ServerName.valueOf(rs))
+      @admin.getRegionServerSpaceQuotaSnapshots(ServerName.valueOf(rs))
     end
 
     def set_global_bypass(bypass, args)
@@ -213,29 +332,25 @@ module Hbase
       raise(ArgumentError, 'Unexpected arguments: ' + args.inspect) unless args.empty?
 
       # Start the scanner
-      scanner = @admin.getQuotaRetriever(filter)
-      begin
-        iter = scanner.iterator
+      quotas = @admin.getQuota(filter)
+      iter = quotas.iterator
 
-        # Iterate results
-        while iter.hasNext
-          break if limit > 0 && count >= limit
+      # Iterate results
+      while iter.hasNext
+        break if limit > 0 && count >= limit
 
-          settings = iter.next
-          owner = {
-            USER => settings.getUserName,
-            TABLE => settings.getTableName,
-            NAMESPACE => settings.getNamespace
-          }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
+        settings = iter.next
+        owner = {
+          USER => settings.getUserName,
+          TABLE => settings.getTableName,
+          NAMESPACE => settings.getNamespace,
+          REGIONSERVER => settings.getRegionServer
+        }.delete_if { |_k, v| v.nil? }.map { |k, v| k.to_s + ' => ' + v.to_s } * ', '
 
-          yield owner, settings.to_s
+        yield owner, settings.to_s
 
-          count += 1
-        end
-      ensure
-        scanner.close
+        count += 1
       end
-
       count
     end
 
@@ -243,9 +358,17 @@ module Hbase
       QuotaTableUtil.getObservedSnapshotSizes(@admin.getConnection)
     end
 
+    def switch_rpc_throttle(enabled)
+      @admin.switchRpcThrottle(java.lang.Boolean.valueOf(enabled))
+    end
+
+    def switch_exceed_throttle_quota(enabled)
+      @admin.exceedThrottleQuotaSwitch(java.lang.Boolean.valueOf(enabled))
+    end
+
     def _parse_size(str_limit)
       str_limit = str_limit.downcase
-      match = /(\d+)([bkmgtp%]*)/.match(str_limit)
+      match = /^(\d+)([bkmgtp%]?)$/.match(str_limit)
       if match
         if match[2] == '%'
           return match[1].to_i
@@ -257,20 +380,23 @@ module Hbase
       end
     end
 
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def _parse_limit(str_limit, type_cls, type)
       str_limit = str_limit.downcase
-      match = /(\d+)(req|[bkmgtp])\/(sec|min|hour|day)/.match(str_limit)
+      match = /^(\d+)(req|cu|[bkmgtp])\/(sec|min|hour|day)$/.match(str_limit)
       if match
+        limit = match[1].to_i
         if match[2] == 'req'
-          limit = match[1].to_i
           type = type_cls.valueOf(type + '_NUMBER')
+        elsif match[2] == 'cu'
+          type = type_cls.valueOf(type + '_CAPACITY_UNIT')
         else
-          limit = _size_from_str(match[1].to_i, match[2])
+          limit = _size_from_str(limit, match[2])
           type = type_cls.valueOf(type + '_SIZE')
         end
 
         if limit <= 0
-          raise(ArgumentError, 'Invalid throttle limit, must be greater then 0')
+          raise(ArgumentError, 'Invalid throttle limit, must be greater than 0')
         end
 
         case match[3]
@@ -285,6 +411,7 @@ module Hbase
         raise(ArgumentError, 'Invalid throttle limit syntax')
       end
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def _size_from_str(value, suffix)
       case suffix
@@ -296,5 +423,13 @@ module Hbase
       end
       value
     end
+
+    def _parse_scope(scope_str)
+      scope_str = scope_str.upcase
+      return QuotaScope.valueOf(scope_str) if [CLUSTER, MACHINE].include?(scope_str)
+      unless raise(ArgumentError, 'Invalid throttle scope, must be either CLUSTER or MACHINE')
+      end
+    end
   end
+  # rubocop:enable Metrics/ClassLength
 end

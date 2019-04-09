@@ -700,8 +700,8 @@ public class TestHFileOutputFormat2  {
       // Perform the actual load
       for (HFileOutputFormat2.TableInfo singleTableInfo : tableInfo) {
         Path tableDir = testDir;
-        String tableNameStr = singleTableInfo.getHTableDescriptor().getNameAsString();
-        LOG.info("Running LoadIncrementalHFiles on table" + tableNameStr);
+        String tableNameStr = singleTableInfo.getTableDescriptor().getTableName().getNameAsString();
+        LOG.info("Running BulkLoadHFiles on table" + tableNameStr);
         if (writeMultipleTables) {
           tableDir = new Path(testDir, tableNameStr);
         }
@@ -1237,7 +1237,7 @@ public class TestHFileOutputFormat2  {
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
         FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
-          new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
+          new Path(admin.getRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
 
@@ -1318,7 +1318,7 @@ public class TestHFileOutputFormat2  {
       // deep inspection: get the StoreFile dir
       final Path storePath = new Path(
         FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAMES[0]),
-          new Path(admin.getTableRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
+          new Path(admin.getRegions(TABLE_NAMES[0]).get(0).getEncodedName(),
             Bytes.toString(FAMILIES[0])));
       assertEquals(0, fs.listStatus(storePath).length);
 
@@ -1411,8 +1411,10 @@ public class TestHFileOutputFormat2  {
           Admin admin = c.getAdmin();
           RegionLocator regionLocator = c.getRegionLocator(tname)) {
         Path outDir = new Path("incremental-out");
-        runIncrementalPELoad(conf, Arrays.asList(new HFileOutputFormat2.TableInfo(admin
-                .getTableDescriptor(tname), regionLocator)), outDir, false);
+        runIncrementalPELoad(conf,
+          Arrays
+            .asList(new HFileOutputFormat2.TableInfo(admin.getDescriptor(tname), regionLocator)),
+          outDir, false);
       }
     } else {
       throw new RuntimeException(
@@ -1551,5 +1553,48 @@ public class TestHFileOutputFormat2  {
     Assert.assertTrue(partitionPathString.startsWith(fooHomeDirectory.toString()));
     Assert.assertTrue(fs.exists(new Path(partitionPathString)));
   }
+
+  @Test
+  public void TestConfigureCompression() throws Exception {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, Cell> writer = null;
+    TaskAttemptContext context = null;
+    Path dir = util.getDataTestDir("TestConfigureCompression");
+    String hfileoutputformatCompression = "gz";
+
+    try {
+      conf.set(HFileOutputFormat2.OUTPUT_TABLE_NAME_CONF_KEY, TABLE_NAMES[0].getNameAsString());
+      conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
+
+      conf.set(HFileOutputFormat2.COMPRESSION_OVERRIDE_CONF_KEY, hfileoutputformatCompression);
+
+      Job job = Job.getInstance(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = createTestTaskAttemptContext(job);
+      HFileOutputFormat2 hof = new HFileOutputFormat2();
+      writer = hof.getRecordWriter(context);
+      final byte[] b = Bytes.toBytes("b");
+
+      KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b);
+      writer.write(new ImmutableBytesWritable(), kv);
+      writer.close(context);
+      writer = null;
+      FileSystem fs = dir.getFileSystem(conf);
+      RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(dir, true);
+      while (iterator.hasNext()) {
+        LocatedFileStatus keyFileStatus = iterator.next();
+        HFile.Reader reader =
+            HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
+        assertEquals(reader.getCompressionAlgorithm().getName(), hfileoutputformatCompression);
+      }
+    } finally {
+      if (writer != null && context != null) {
+        writer.close(context);
+      }
+      dir.getFileSystem(conf).delete(dir, true);
+    }
+
+  }
+
 }
 

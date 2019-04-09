@@ -121,11 +121,12 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         if (tries > startLogErrorsCnt) {
           if (LOG.isInfoEnabled()) {
             StringBuilder builder = new StringBuilder("Call exception, tries=").append(tries)
-              .append(", retries=").append(maxAttempts).append(", started=")
-              .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
-              .append(" ms ago, ").append("cancelled=").append(cancelled.get())
-              .append(", msg=").append(t.getMessage())
-              .append(", details=").append(callable.getExceptionMessageAdditionalDetail());
+                .append(", retries=").append(maxAttempts).append(", started=")
+                .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
+                .append(" ms ago, ").append("cancelled=").append(cancelled.get())
+                .append(", msg=").append(t.getMessage())
+                .append(", details=").append(callable.getExceptionMessageAdditionalDetail())
+                .append(", see https://s.apache.org/timeout");
             if (LOG.isDebugEnabled()) {
               builder.append(", exception=").append(StringUtils.stringifyException(t));
               LOG.debug(builder.toString());

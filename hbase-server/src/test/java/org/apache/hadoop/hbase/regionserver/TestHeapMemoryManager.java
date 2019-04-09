@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -758,14 +757,15 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void requestFlush(HRegion region, boolean forceFlushAllStores,
+    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
         FlushLifeCycleTracker tracker) {
       this.listener.flushRequested(flushType, region);
+      return true;
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
-
+    public boolean requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override
@@ -829,11 +829,6 @@ public class TestHeapMemoryManager {
 
     @Override
     public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
       return null;
     }
 

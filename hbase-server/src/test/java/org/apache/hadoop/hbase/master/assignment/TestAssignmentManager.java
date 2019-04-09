@@ -27,14 +27,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -48,14 +46,6 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     HBaseClassTestRule.forClass(TestAssignmentManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManager.class);
-
-  @Test(expected = NullPointerException.class)
-  public void testWaitServerReportEventWithNullServer() throws UnexpectedStateException {
-    // Test what happens if we pass in null server. I'd expect it throws NPE.
-    if (this.am.waitServerReportEvent(null, null)) {
-      throw new UnexpectedStateException();
-    }
-  }
 
   @Test
   public void testAssignWithGoodExec() throws Exception {
@@ -91,27 +81,53 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     }
   }
 
-  // Disabled for now. Since HBASE-18551, this mock is insufficient.
-  @Ignore
   @Test
-  public void testSocketTimeout() throws Exception {
+  public void testAssignSocketTimeout() throws Exception {
     TableName tableName = TableName.valueOf(this.name.getMethodName());
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
 
-    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 3));
+    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20));
     waitOnFuture(submitProcedure(createAssignProcedure(hri)));
 
-    rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 1));
-    // exception.expect(ServerCrashException.class);
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testAssignQueueFullOnce() throws Exception {
+    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    rsDispatcher.setMockRsExecutor(new CallQueueTooBigOnceRsExecutor());
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+
+    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testTimeoutThenQueueFull() throws Exception {
+    TableName tableName = TableName.valueOf(this.name.getMethodName());
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    rsDispatcher.setMockRsExecutor(new TimeoutThenCallQueueTooBigRsExecutor(10));
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+    rsDispatcher.setMockRsExecutor(new TimeoutThenCallQueueTooBigRsExecutor(15));
     waitOnFuture(submitProcedure(createUnassignProcedure(hri)));
 
     assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
     assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
-    assertEquals(unassignFailedCount + 1, unassignProcMetrics.getFailedCounter().getCount());
+    assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
   private void testAssign(final MockRSExecutor executor) throws Exception {
@@ -222,5 +238,49 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     // set it back as default, see setUpMeta()
     am.wakeMetaLoadedEvent();
+  }
+
+  private void assertCloseThenOpen() {
+    assertEquals(closeSubmittedCount + 1, closeProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(closeFailedCount, closeProcMetrics.getFailedCounter().getCount());
+    assertEquals(openSubmittedCount + 1, openProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(openFailedCount, openProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testMove() throws Exception {
+    TableName tableName = TableName.valueOf("testMove");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    am.assign(hri);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    am.move(hri);
+
+    assertEquals(moveSubmittedCount + 1, moveProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(moveFailedCount, moveProcMetrics.getFailedCounter().getCount());
+    assertCloseThenOpen();
+  }
+
+  @Test
+  public void testReopen() throws Exception {
+    TableName tableName = TableName.valueOf("testReopen");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    am.assign(hri);
+
+    // collect AM metrics before test
+    collectAssignmentManagerMetrics();
+
+    TransitRegionStateProcedure proc =
+      TransitRegionStateProcedure.reopen(master.getMasterProcedureExecutor().getEnvironment(), hri);
+    am.getRegionStates().getRegionStateNode(hri).setProcedure(proc);
+    waitOnFuture(submitProcedure(proc));
+
+    assertEquals(reopenSubmittedCount + 1, reopenProcMetrics.getSubmittedCounter().getCount());
+    assertEquals(reopenFailedCount, reopenProcMetrics.getFailedCounter().getCount());
+    assertCloseThenOpen();
   }
 }

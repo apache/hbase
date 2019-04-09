@@ -38,9 +38,5 @@ public enum BloomType {
   /**
    * Bloom enabled with Table row prefix as Key, specify the length of the prefix
    */
-  ROWPREFIX_FIXED_LENGTH,
-  /**
-   * Bloom enabled with Table row prefix as Key, specify the delimiter of the prefix
-   */
-  ROWPREFIX_DELIMITED
+  ROWPREFIX_FIXED_LENGTH
 }

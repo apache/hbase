@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -28,6 +30,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.AbstractProcedureScheduler;
 import org.apache.hadoop.hbase.procedure2.LockAndQueue;
+import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.LockedResourceType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -113,11 +116,15 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private PeerQueue peerMap = null;
   private MetaQueue metaMap = null;
 
-  private final SchemaLocking locking = new SchemaLocking();
+  private final SchemaLocking locking;
+
+  public MasterProcedureScheduler(Function<Long, Procedure<?>> procedureRetriever) {
+    locking = new SchemaLocking(procedureRetriever);
+  }
 
   @Override
   public void yield(final Procedure proc) {
-    push(proc, isTableProcedure(proc), true);
+    push(proc, false, true);
   }
 
   @Override
@@ -141,18 +148,26 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
   }
 
-  private <T extends Comparable<T>> void doAdd(final FairQueue<T> fairq,
-      final Queue<T> queue, final Procedure<?> proc, final boolean addFront) {
-    if (!queue.getLockStatus().hasExclusiveLock()) {
-      // if the queue was not remove for an xlock execution,put the queue back into execution
-      queue.add(proc, addFront);
-      addToRunQueue(fairq, queue);
+  private <T extends Comparable<T>> void doAdd(FairQueue<T> fairq, Queue<T> queue,
+      Procedure<?> proc, boolean addFront) {
+    queue.add(proc, addFront);
+    // For the following conditions, we will put the queue back into execution
+    // 1. The procedure has already held the lock, or the lock has been restored when restarting,
+    // which means it can be executed immediately.
+    // 2. The exclusive lock for this queue has not been held.
+    // 3. The given procedure has the exclusive lock permission for this queue.
+    Supplier<String> reason = null;
+    if (proc.hasLock()) {
+      reason = () -> proc + " has lock";
+    } else if (proc.isLockedWhenLoading()) {
+      reason = () -> proc + " restores lock when restarting";
+    } else if (!queue.getLockStatus().hasExclusiveLock()) {
+      reason = () -> "the exclusive lock is not held by anyone when adding " + proc;
     } else if (queue.getLockStatus().hasLockAccess(proc)) {
-      // always add it to front as the have the lock access.
-      queue.add(proc, true);
-      addToRunQueue(fairq, queue);
-    } else {
-      queue.add(proc, addFront);
+      reason = () -> proc + " has the excusive lock access";
+    }
+    if (reason != null) {
+      addToRunQueue(fairq, queue, reason);
     }
   }
 
@@ -181,38 +196,40 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     return pollResult;
   }
 
+  private <T extends Comparable<T>> boolean isLockReady(Procedure<?> proc, Queue<T> rq) {
+    LockStatus s = rq.getLockStatus();
+    // if we have the lock access, we are ready
+    if (s.hasLockAccess(proc)) {
+      return true;
+    }
+    boolean xlockReq = rq.requireExclusiveLock(proc);
+    // if we need to hold the xlock, then we need to make sure that no one holds any lock, including
+    // the shared lock, otherwise, we just need to make sure that no one holds the xlock
+    return xlockReq ? !s.isLocked() : !s.hasExclusiveLock();
+  }
+
   private <T extends Comparable<T>> Procedure<?> doPoll(final FairQueue<T> fairq) {
-    final Queue<T> rq = fairq.poll();
+    Queue<T> rq = fairq.poll();
     if (rq == null || !rq.isAvailable()) {
       return null;
     }
-
-    final Procedure<?> pollResult = rq.peek();
-    if (pollResult == null) {
-      return null;
-    }
-    final boolean xlockReq = rq.requireExclusiveLock(pollResult);
-    if (xlockReq && rq.getLockStatus().isLocked() && !rq.getLockStatus().hasLockAccess(pollResult)) {
-      // someone is already holding the lock (e.g. shared lock). avoid a yield
-      removeFromRunQueue(fairq, rq);
-      return null;
-    }
-
-    rq.poll();
-    if (rq.isEmpty() || xlockReq) {
-      removeFromRunQueue(fairq, rq);
-    } else if (rq.getLockStatus().hasParentLock(pollResult)) {
-      // if the rq is in the fairq because of runnable child
-      // check if the next procedure is still a child.
-      // if not, remove the rq from the fairq and go back to the xlock state
-      Procedure<?> nextProc = rq.peek();
-      if (nextProc != null && !Procedure.haveSameParent(nextProc, pollResult)
-          && nextProc.getRootProcId() != pollResult.getRootProcId()) {
-        removeFromRunQueue(fairq, rq);
+    // loop until we find out a procedure which is ready to run, or if we have checked all the
+    // procedures, then we give up and remove the queue from run queue.
+    for (int i = 0, n = rq.size(); i < n; i++) {
+      Procedure<?> proc = rq.poll();
+      if (isLockReady(proc, rq)) {
+        // the queue is empty, remove from run queue
+        if (rq.isEmpty()) {
+          removeFromRunQueue(fairq, rq, () -> "queue is empty after polling out " + proc);
+        }
+        return proc;
       }
+      // we are not ready to run, add back and try the next procedure
+      rq.add(proc, false);
     }
-
-    return pollResult;
+    // no procedure is ready for execution, remove from run queue
+    removeFromRunQueue(fairq, rq, () -> "no procedure can be executed");
+    return null;
   }
 
   @Override
@@ -265,11 +282,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   private <T extends Comparable<T>, TNode extends Queue<T>> void clear(TNode treeMap,
-      final FairQueue<T> fairq, final AvlKeyComparator<TNode> comparator) {
+      FairQueue<T> fairq, AvlKeyComparator<TNode> comparator) {
     while (treeMap != null) {
       Queue<T> node = AvlTree.getFirst(treeMap);
       treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
-      if (fairq != null) removeFromRunQueue(fairq, node);
+      if (fairq != null) {
+        removeFromRunQueue(fairq, node, () -> "clear all queues");
+      }
     }
   }
 
@@ -326,14 +345,21 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
   }
 
-  private static <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue) {
+  private static <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue,
+      Supplier<String> reason) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Add {} to run queue because: {}", queue, reason.get());
+    }
     if (!AvlIterableList.isLinked(queue) && !queue.isEmpty()) {
       fairq.add(queue);
     }
   }
 
-  private static <T extends Comparable<T>> void removeFromRunQueue(
-      FairQueue<T> fairq, Queue<T> queue) {
+  private static <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq,
+      Queue<T> queue, Supplier<String> reason) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Remove {} from run queue because: {}", queue, reason.get());
+    }
     if (AvlIterableList.isLinked(queue)) {
       fairq.remove(queue);
     }
@@ -403,7 +429,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
       LockAndQueue lock = locking.getServerLock(serverName);
       if (node.isEmpty() && lock.tryExclusiveLock(proc)) {
-        removeFromRunQueue(serverRunQueue, node);
+        removeFromRunQueue(serverRunQueue, node,
+          () -> "clean up server queue after " + proc + " completed");
         removeServerQueue(serverName);
       }
     } finally {
@@ -451,7 +478,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
       final LockAndQueue lock = locking.getPeerLock(peerId);
       if (queue.isEmpty() && lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(peerRunQueue, queue);
+        removeFromRunQueue(peerRunQueue, queue,
+          () -> "clean up peer queue after " + procedure + " completed");
         removePeerQueue(peerId);
       }
     } finally {
@@ -531,7 +559,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         logLockedResource(LockedResourceType.TABLE, table.getNameAsString());
         return true;
       }
-      removeFromRunQueue(tableRunQueue, getTableQueue(table));
+      removeFromRunQueue(tableRunQueue, getTableQueue(table),
+        () -> procedure + " held the exclusive lock");
       return false;
     } finally {
       schedUnlock();
@@ -555,7 +584,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (namespaceLock.releaseSharedLock()) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
-      addToRunQueue(tableRunQueue, getTableQueue(table));
+      addToRunQueue(tableRunQueue, getTableQueue(table),
+        () -> procedure + " released the exclusive lock");
       wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
@@ -607,7 +637,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue tableLock = locking.getTableLock(table);
       int waitingCount = 0;
       if (tableLock.releaseSharedLock()) {
-        addToRunQueue(tableRunQueue, getTableQueue(table));
+        addToRunQueue(tableRunQueue, getTableQueue(table),
+          () -> procedure + " released the shared lock");
         waitingCount += wakeWaitingProcedures(tableLock);
       }
       if (namespaceLock.releaseSharedLock()) {
@@ -686,7 +717,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       boolean hasLock = true;
       final LockAndQueue[] regionLocks = new LockAndQueue[regionInfo.length];
       for (int i = 0; i < regionInfo.length; ++i) {
-        LOG.info("{} checking lock on {}", procedure, regionInfo[i].getEncodedName());
         assert regionInfo[i] != null;
         assert regionInfo[i].getTable() != null;
         assert regionInfo[i].getTable().equals(table): regionInfo[i] + " " + procedure;
@@ -694,12 +724,16 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
         regionLocks[i] = locking.getRegionLock(regionInfo[i].getEncodedName());
         if (!regionLocks[i].tryExclusiveLock(procedure)) {
+          LOG.info("Waiting on xlock for {} held by pid={}", procedure,
+              regionLocks[i].getExclusiveLockProcIdOwner());
           waitProcedure(regionLocks[i], procedure);
           hasLock = false;
           while (i-- > 0) {
             regionLocks[i].releaseExclusiveLock(procedure);
           }
           break;
+        } else {
+          LOG.info("Took xlock for {}", procedure);
         }
       }
 
@@ -774,11 +808,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     schedLock();
     try {
       final LockAndQueue systemNamespaceTableLock =
-        locking.getTableLock(TableName.NAMESPACE_TABLE_NAME);
+        locking.getTableLock(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       if (!systemNamespaceTableLock.trySharedLock(procedure)) {
         waitProcedure(systemNamespaceTableLock, procedure);
         logLockedResource(LockedResourceType.TABLE,
-          TableName.NAMESPACE_TABLE_NAME.getNameAsString());
+          TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME.getNameAsString());
         return true;
       }
 
@@ -806,13 +840,15 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue namespaceLock = locking.getNamespaceLock(namespace);
       final LockAndQueue systemNamespaceTableLock =
-          locking.getTableLock(TableName.NAMESPACE_TABLE_NAME);
+        locking.getTableLock(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       int waitingCount = 0;
       if (namespaceLock.releaseExclusiveLock(procedure)) {
         waitingCount += wakeWaitingProcedures(namespaceLock);
       }
       if (systemNamespaceTableLock.releaseSharedLock()) {
-        addToRunQueue(tableRunQueue, getTableQueue(TableName.NAMESPACE_TABLE_NAME));
+        addToRunQueue(tableRunQueue,
+          getTableQueue(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME),
+          () -> procedure + " released namespace exclusive lock");
         waitingCount += wakeWaitingProcedures(systemNamespaceTableLock);
       }
       wakePollIfNeeded(waitingCount);
@@ -842,7 +878,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         removeFromRunQueue(serverRunQueue,
           getServerQueue(serverName,
             procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-              : null));
+              : null),
+          () -> procedure + " held exclusive lock");
         return false;
       }
       waitProcedure(lock, procedure);
@@ -870,7 +907,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       addToRunQueue(serverRunQueue,
         getServerQueue(serverName,
           procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-            : null));
+            : null), () -> procedure + " released exclusive lock");
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {
@@ -893,7 +930,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getPeerLock(peerId);
       if (lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(peerRunQueue, getPeerQueue(peerId));
+        removeFromRunQueue(peerRunQueue, getPeerQueue(peerId),
+          () -> procedure + " held exclusive lock");
         return false;
       }
       waitProcedure(lock, procedure);
@@ -915,7 +953,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getPeerLock(peerId);
       if (lock.releaseExclusiveLock(procedure)) {
-        addToRunQueue(peerRunQueue, getPeerQueue(peerId));
+        addToRunQueue(peerRunQueue, getPeerQueue(peerId),
+          () -> procedure + " released exclusive lock");
         int waitingCount = wakeWaitingProcedures(lock);
         wakePollIfNeeded(waitingCount);
       }
@@ -941,7 +980,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getMetaLock();
       if (lock.tryExclusiveLock(procedure)) {
-        removeFromRunQueue(metaRunQueue, getMetaQueue());
+        removeFromRunQueue(metaRunQueue, getMetaQueue(), () -> procedure + " held exclusive lock");
         return false;
       }
       waitProcedure(lock, procedure);
@@ -965,7 +1004,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getMetaLock();
       lock.releaseExclusiveLock(procedure);
-      addToRunQueue(metaRunQueue, getMetaQueue());
+      addToRunQueue(metaRunQueue, getMetaQueue(), () -> procedure + " released exclusive lock");
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {

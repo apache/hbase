@@ -175,7 +175,7 @@ public class TestHTableDescriptor {
    * @throws Exception
    */
   @Test
-  public void testRemoveString() throws Exception {
+  public void testAddGetRemoveString() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     String key = "Some";
     String value = "value";
@@ -183,6 +183,12 @@ public class TestHTableDescriptor {
     assertEquals(value, desc.getValue(key));
     desc.remove(key);
     assertEquals(null, desc.getValue(key));
+    String keyShouldNotNull = "Some2";
+    String valueIsNull = null;
+    desc.setValue(keyShouldNotNull, valueIsNull);
+    assertEquals(valueIsNull, desc.getValue(keyShouldNotNull));
+    desc.remove(keyShouldNotNull);
+    assertEquals(null, desc.getValue(keyShouldNotNull));
   }
 
   String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",

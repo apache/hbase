@@ -443,7 +443,6 @@ public class TestPerColumnFamilyFlush {
    * When a log roll is about to happen, we do a flush of the regions who will be affected by the
    * log roll. These flushes cannot be a selective flushes, otherwise we cannot roll the logs. This
    * test ensures that we do a full-flush in that scenario.
-   * @throws IOException
    */
   @Test
   public void testFlushingWhenLogRolling() throws Exception {
@@ -467,12 +466,6 @@ public class TestPerColumnFamilyFlush {
     TEST_UTIL.startMiniCluster(numRegionServers);
     try {
       Table table = TEST_UTIL.createTable(tableName, FAMILIES);
-      // Force flush the namespace table so edits to it are not hanging around as oldest
-      // edits. Otherwise, below, when we make maximum number of WAL files, then it will be
-      // the namespace region that is flushed and not the below 'desiredRegion'.
-      try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
-        admin.flush(TableName.NAMESPACE_TABLE_NAME);
-      }
       Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(tableName);
       final HRegion desiredRegion = desiredRegionAndServer.getFirst();
       assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);

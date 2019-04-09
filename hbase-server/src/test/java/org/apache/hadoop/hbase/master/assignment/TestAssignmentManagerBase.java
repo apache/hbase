@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.NavigableMap;
@@ -36,12 +38,16 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
@@ -63,6 +69,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -104,15 +112,29 @@ public abstract class TestAssignmentManagerBase {
 
   protected ProcedureMetrics assignProcMetrics;
   protected ProcedureMetrics unassignProcMetrics;
+  protected ProcedureMetrics moveProcMetrics;
+  protected ProcedureMetrics reopenProcMetrics;
+  protected ProcedureMetrics openProcMetrics;
+  protected ProcedureMetrics closeProcMetrics;
 
   protected long assignSubmittedCount = 0;
   protected long assignFailedCount = 0;
   protected long unassignSubmittedCount = 0;
   protected long unassignFailedCount = 0;
+  protected long moveSubmittedCount = 0;
+  protected long moveFailedCount = 0;
+  protected long reopenSubmittedCount = 0;
+  protected long reopenFailedCount = 0;
+  protected long openSubmittedCount = 0;
+  protected long openFailedCount = 0;
+  protected long closeSubmittedCount = 0;
+  protected long closeFailedCount = 0;
+
+  protected int newRsAdded;
 
   protected int getAssignMaxAttempts() {
     // Have many so we succeed eventually.
-    return 100;
+    return 1000;
   }
 
   protected void setupConfiguration(Configuration conf) throws Exception {
@@ -127,14 +149,20 @@ public abstract class TestAssignmentManagerBase {
   @Before
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
-    this.executor = Executors.newSingleThreadScheduledExecutor();
+    this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
+    newRsAdded = 0;
     am = master.getAssignmentManager();
     assignProcMetrics = am.getAssignmentManagerMetrics().getAssignProcMetrics();
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
+    moveProcMetrics = am.getAssignmentManagerMetrics().getMoveProcMetrics();
+    reopenProcMetrics = am.getAssignmentManagerMetrics().getReopenProcMetrics();
+    openProcMetrics = am.getAssignmentManagerMetrics().getOpenProcMetrics();
+    closeProcMetrics = am.getAssignmentManagerMetrics().getCloseProcMetrics();
     setUpMeta();
   }
 
@@ -186,7 +214,7 @@ public abstract class TestAssignmentManagerBase {
 
   protected byte[] waitOnFuture(final Future<byte[]> future) throws Exception {
     try {
-      return future.get(5, TimeUnit.SECONDS);
+      return future.get(3, TimeUnit.MINUTES);
     } catch (ExecutionException e) {
       LOG.info("ExecutionException", e);
       Exception ee = (Exception) e.getCause();
@@ -261,17 +289,27 @@ public abstract class TestAssignmentManagerBase {
 
   protected void sendTransitionReport(final ServerName serverName,
       final org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo regionInfo,
-      final TransitionCode state) throws IOException {
+      final TransitionCode state, long seqId) throws IOException {
     ReportRegionStateTransitionRequest.Builder req =
       ReportRegionStateTransitionRequest.newBuilder();
     req.setServer(ProtobufUtil.toServerName(serverName));
     req.addTransition(RegionStateTransition.newBuilder().addRegionInfo(regionInfo)
-      .setTransitionCode(state).setOpenSeqNum(1).build());
+      .setTransitionCode(state).setOpenSeqNum(seqId).build());
     am.reportRegionStateTransition(req.build());
   }
 
   protected void doCrash(final ServerName serverName) {
+    this.master.getServerManager().moveFromOnlineToDeadServers(serverName);
     this.am.submitServerCrash(serverName, false/* No WALs here */);
+    // add a new server to avoid killing all the region servers which may hang the UTs
+    ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
+    newRsAdded++;
+    try {
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+    } catch (YouAreDeadException e) {
+      // should not happen
+      throw new UncheckedIOException(e);
+    }
   }
 
   protected void doRestart(final ServerName serverName) {
@@ -286,7 +324,11 @@ public abstract class TestAssignmentManagerBase {
     @Override
     protected RegionOpeningState execOpenRegion(ServerName server, RegionOpenInfo openReq)
         throws IOException {
-      sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
+      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
+      long previousOpenSeqNum =
+        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+      sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
+        previousOpenSeqNum + 2);
       // Concurrency?
       // Now update the state of our cluster in regionsToRegionServers.
       SortedSet<byte[]> regions = regionsToRegionServers.get(server);
@@ -294,7 +336,6 @@ public abstract class TestAssignmentManagerBase {
         regions = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
         regionsToRegionServers.put(server, regions);
       }
-      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       if (regions.contains(hri.getRegionName())) {
         throw new UnsupportedOperationException(hri.getRegionNameAsString());
       }
@@ -306,7 +347,7 @@ public abstract class TestAssignmentManagerBase {
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
       RegionInfo hri = am.getRegionInfo(regionName);
-      sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
+      sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);
       return CloseRegionResponse.newBuilder().setClosed(true).build();
     }
   }
@@ -334,16 +375,13 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected class SocketTimeoutRsExecutor extends GoodRsExecutor {
-    private final int maxSocketTimeoutRetries;
-    private final int maxServerRetries;
+    private final int timeoutTimes;
 
     private ServerName lastServer;
-    private int sockTimeoutRetries;
-    private int serverRetries;
+    private int retries;
 
-    public SocketTimeoutRsExecutor(int maxSocketTimeoutRetries, int maxServerRetries) {
-      this.maxServerRetries = maxServerRetries;
-      this.maxSocketTimeoutRetries = maxSocketTimeoutRetries;
+    public SocketTimeoutRsExecutor(int timeoutTimes) {
+      this.timeoutTimes = timeoutTimes;
     }
 
     @Override
@@ -351,21 +389,83 @@ public abstract class TestAssignmentManagerBase {
         throws IOException {
       // SocketTimeoutException should be a temporary problem
       // unless the server will be declared dead.
-      if (sockTimeoutRetries++ < maxSocketTimeoutRetries) {
-        if (sockTimeoutRetries == 1) {
-          assertNotEquals(lastServer, server);
-        }
+      retries++;
+      if (retries == 1) {
         lastServer = server;
-        LOG.debug("Socket timeout for server=" + server + " retries=" + sockTimeoutRetries);
-        throw new SocketTimeoutException("simulate socket timeout");
-      } else if (serverRetries++ < maxServerRetries) {
-        LOG.info("Mark server=" + server + " as dead. serverRetries=" + serverRetries);
-        master.getServerManager().moveFromOnlineToDeadServers(server);
-        sockTimeoutRetries = 0;
+      }
+      if (retries <= timeoutTimes) {
+        LOG.debug("Socket timeout for server=" + server + " retries=" + retries);
+        // should not change the server if the server is not dead yet.
+        assertEquals(lastServer, server);
+        if (retries == timeoutTimes) {
+          LOG.info("Mark server=" + server + " as dead. retries=" + retries);
+          master.getServerManager().moveFromOnlineToDeadServers(server);
+          executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+              LOG.info("Sending in CRASH of " + server);
+              doCrash(server);
+            }
+          }, 1, TimeUnit.SECONDS);
+        }
         throw new SocketTimeoutException("simulate socket timeout");
       } else {
+        // should select another server
+        assertNotEquals(lastServer, server);
         return super.sendRequest(server, req);
       }
+    }
+  }
+
+  protected class CallQueueTooBigOnceRsExecutor extends GoodRsExecutor {
+
+    private boolean invoked = false;
+
+    private ServerName lastServer;
+
+    @Override
+    public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
+        throws IOException {
+      if (!invoked) {
+        lastServer = server;
+        invoked = true;
+        throw new CallQueueTooBigException("simulate queue full");
+      }
+      // better select another server since the server is over loaded, but anyway, it is fine to
+      // still select the same server since it is not dead yet...
+      if (lastServer.equals(server)) {
+        LOG.warn("We still select the same server, which is not good.");
+      }
+      return super.sendRequest(server, req);
+    }
+  }
+
+  protected class TimeoutThenCallQueueTooBigRsExecutor extends GoodRsExecutor {
+
+    private final int queueFullTimes;
+
+    private int retries;
+
+    private ServerName lastServer;
+
+    public TimeoutThenCallQueueTooBigRsExecutor(int queueFullTimes) {
+      this.queueFullTimes = queueFullTimes;
+    }
+
+    @Override
+    public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
+        throws IOException {
+      retries++;
+      if (retries == 1) {
+        lastServer = server;
+        throw new CallTimeoutException("simulate call timeout");
+      }
+      // should always retry on the same server
+      assertEquals(lastServer, server);
+      if (retries < queueFullTimes) {
+        throw new CallQueueTooBigException("simulate queue full");
+      }
+      return super.sendRequest(server, req);
     }
   }
 
@@ -497,18 +597,18 @@ public abstract class TestAssignmentManagerBase {
     @Override
     protected RegionOpeningState execOpenRegion(final ServerName server, RegionOpenInfo openReq)
         throws IOException {
-      switch (rand.nextInt(6)) {
+      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
+      long previousOpenSeqNum =
+        am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
+      switch (rand.nextInt(3)) {
         case 0:
           LOG.info("Return OPENED response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
+          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
+            previousOpenSeqNum + 2);
           return OpenRegionResponse.RegionOpeningState.OPENED;
         case 1:
-          LOG.info("Return transition report that OPENED/ALREADY_OPENED response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED);
-          return OpenRegionResponse.RegionOpeningState.ALREADY_OPENED;
-        case 2:
           LOG.info("Return transition report that FAILED_OPEN/FAILED_OPENING response");
-          sendTransitionReport(server, openReq.getRegion(), TransitionCode.FAILED_OPEN);
+          sendTransitionReport(server, openReq.getRegion(), TransitionCode.FAILED_OPEN, -1);
           return OpenRegionResponse.RegionOpeningState.FAILED_OPENING;
         default:
           // fall out
@@ -534,7 +634,7 @@ public abstract class TestAssignmentManagerBase {
       boolean closed = rand.nextBoolean();
       if (closed) {
         RegionInfo hri = am.getRegionInfo(regionName);
-        sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
+        sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);
       }
       resp.setClosed(closed);
       return resp.build();
@@ -577,10 +677,18 @@ public abstract class TestAssignmentManagerBase {
     }
   }
 
-  protected void collectAssignmentManagerMetrics() {
+  protected final void collectAssignmentManagerMetrics() {
     assignSubmittedCount = assignProcMetrics.getSubmittedCounter().getCount();
     assignFailedCount = assignProcMetrics.getFailedCounter().getCount();
     unassignSubmittedCount = unassignProcMetrics.getSubmittedCounter().getCount();
     unassignFailedCount = unassignProcMetrics.getFailedCounter().getCount();
+    moveSubmittedCount = moveProcMetrics.getSubmittedCounter().getCount();
+    moveFailedCount = moveProcMetrics.getFailedCounter().getCount();
+    reopenSubmittedCount = reopenProcMetrics.getSubmittedCounter().getCount();
+    reopenFailedCount = reopenProcMetrics.getFailedCounter().getCount();
+    openSubmittedCount = openProcMetrics.getSubmittedCounter().getCount();
+    openFailedCount = openProcMetrics.getFailedCounter().getCount();
+    closeSubmittedCount = closeProcMetrics.getSubmittedCounter().getCount();
+    closeFailedCount = closeProcMetrics.getFailedCounter().getCount();
   }
 }

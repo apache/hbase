@@ -27,14 +27,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -42,7 +41,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -182,24 +180,34 @@ public class SnapshotFileCache implements Stoppable {
       final SnapshotManager snapshotManager)
       throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
-    List<String> snapshotsInProgress = null;
     boolean refreshed = false;
-    for (FileStatus file : files) {
-      String fileName = file.getPath().getName();
-      if (!refreshed && !cache.contains(fileName)) {
-        refreshCache();
-        refreshed = true;
+    Lock lock = null;
+    if (snapshotManager != null) {
+      lock = snapshotManager.getTakingSnapshotLock().writeLock();
+    }
+    if (lock == null || lock.tryLock()) {
+      try {
+        if (snapshotManager != null && snapshotManager.isTakingAnySnapshot()) {
+          LOG.warn("Not checking unreferenced files since snapshot is running, it will "
+              + "skip to clean the HFiles this time");
+          return unReferencedFiles;
+        }
+        for (FileStatus file : files) {
+          String fileName = file.getPath().getName();
+          if (!refreshed && !cache.contains(fileName)) {
+            refreshCache();
+            refreshed = true;
+          }
+          if (cache.contains(fileName)) {
+            continue;
+          }
+          unReferencedFiles.add(file);
+        }
+      } finally {
+        if (lock != null) {
+          lock.unlock();
+        }
       }
-      if (cache.contains(fileName)) {
-        continue;
-      }
-      if (snapshotsInProgress == null) {
-        snapshotsInProgress = getSnapshotsInProgress(snapshotManager);
-      }
-      if (snapshotsInProgress.contains(fileName)) {
-        continue;
-      }
-      unReferencedFiles.add(file);
     }
     return unReferencedFiles;
   }
@@ -267,40 +275,6 @@ public class SnapshotFileCache implements Stoppable {
     // 4. set the snapshots we are tracking
     this.snapshots.clear();
     this.snapshots.putAll(known);
-  }
-
-  @VisibleForTesting List<String> getSnapshotsInProgress(
-    final SnapshotManager snapshotManager) throws IOException {
-    List<String> snapshotInProgress = Lists.newArrayList();
-    // only add those files to the cache, but not to the known snapshots
-    Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
-    // only add those files to the cache, but not to the known snapshots
-    FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
-    if (running != null) {
-      for (FileStatus run : running) {
-        ReentrantLock lock = null;
-        if (snapshotManager != null) {
-          lock = snapshotManager.getLocks().acquireLock(run.getPath().getName());
-        }
-        try {
-          snapshotInProgress.addAll(fileInspector.filesUnderSnapshot(run.getPath()));
-        } catch (CorruptedSnapshotException e) {
-          // See HBASE-16464
-          if (e.getCause() instanceof FileNotFoundException) {
-            // If the snapshot is corrupt, we will delete it
-            fs.delete(run.getPath(), true);
-            LOG.warn("delete the " + run.getPath() + " due to exception:", e.getCause());
-          } else {
-            throw e;
-          }
-        } finally {
-          if (lock != null) {
-            lock.unlock();
-          }
-        }
-      }
-    }
-    return snapshotInProgress;
   }
 
   /**

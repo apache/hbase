@@ -28,6 +28,7 @@ import "HBase.proto";
 import "RPC.proto";
 import "Snapshot.proto";
 import "Replication.proto";
+import "RegionServerStatus.proto";
 
 // ============================================================================
 //  WARNING - Compatibility rules
@@ -78,6 +79,7 @@ message ModifyTableStateData {
   optional TableSchema unmodified_table_schema = 2;
   required TableSchema modified_table_schema = 3;
   required bool delete_column_family_in_modify = 4;
+  optional bool should_check_descriptor = 5;
 }
 
 enum TruncateTableState {
@@ -117,7 +119,7 @@ enum CreateNamespaceState {
   CREATE_NAMESPACE_PREPARE = 1;
   CREATE_NAMESPACE_CREATE_DIRECTORY = 2;
   CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;
-  CREATE_NAMESPACE_UPDATE_ZK = 4;
+  CREATE_NAMESPACE_UPDATE_ZK = 4[deprecated=true];
   CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;
 }
 
@@ -128,7 +130,7 @@ message CreateNamespaceStateData {
 enum ModifyNamespaceState {
   MODIFY_NAMESPACE_PREPARE = 1;
   MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;
-  MODIFY_NAMESPACE_UPDATE_ZK = 3;
+  MODIFY_NAMESPACE_UPDATE_ZK = 3[deprecated=true];
 }
 
 message ModifyNamespaceStateData {
@@ -139,7 +141,7 @@ message ModifyNamespaceStateData {
 enum DeleteNamespaceState {
   DELETE_NAMESPACE_PREPARE = 1;
   DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;
-  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;
+  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3[deprecated=true];
   DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;
   DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;
 }
@@ -161,7 +163,8 @@ enum EnableTableState {
 message EnableTableStateData {
   required UserInformation user_info = 1;
   required TableName table_name = 2;
-  required bool skip_table_state_check = 3;
+  // not used any more, always false
+  required bool skip_table_state_check = 3[deprecated=true];
 }
 
 enum DisableTableState {
@@ -307,6 +310,8 @@ enum ServerCrashState {
   SERVER_CRASH_WAIT_ON_ASSIGN = 9;
   SERVER_CRASH_SPLIT_META_LOGS = 10;
   SERVER_CRASH_ASSIGN_META = 11;
+  SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR=12;
+  SERVER_CRASH_DELETE_SPLIT_WALS_DIR=13;
   SERVER_CRASH_HANDLE_RIT2 = 20[deprecated=true];
   SERVER_CRASH_FINISH = 100;
 }
@@ -397,15 +402,16 @@ enum PeerSyncReplicationStateTransitionState {
   PRE_PEER_SYNC_REPLICATION_STATE_TRANSITION = 1;
   SET_PEER_NEW_SYNC_REPLICATION_STATE = 2;
   REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_BEGIN = 3;
-  REPLAY_REMOTE_WAL_IN_PEER = 4;
-  REMOVE_ALL_REPLICATION_QUEUES_IN_PEER = 5;
-  REOPEN_ALL_REGIONS_IN_PEER = 6;
-  TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE = 7;
-  REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_END = 8;
-  SYNC_REPLICATION_SET_PEER_ENABLED = 9;
-  SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS = 10;
-  CREATE_DIR_FOR_REMOTE_WAL = 11;
-  POST_PEER_SYNC_REPLICATION_STATE_TRANSITION = 12;
+  REOPEN_ALL_REGIONS_IN_PEER = 4;
+  SYNC_REPLICATION_UPDATE_LAST_PUSHED_SEQ_ID_FOR_SERIAL_PEER = 5;
+  REPLAY_REMOTE_WAL_IN_PEER = 6;
+  REMOVE_ALL_REPLICATION_QUEUES_IN_PEER = 7;
+  TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE = 8;
+  REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_END = 9;
+  SYNC_REPLICATION_SET_PEER_ENABLED = 10;
+  SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS = 11;
+  CREATE_DIR_FOR_REMOTE_WAL = 12;
+  POST_PEER_SYNC_REPLICATION_STATE_TRANSITION = 13;
 }
 
 message PeerModificationStateData {
@@ -474,7 +480,8 @@ message ReopenTableRegionsStateData {
 }
 
 enum InitMetaState {
-   INIT_META_ASSIGN_META = 1;
+  INIT_META_ASSIGN_META = 1;
+  INIT_META_CREATE_NAMESPACES = 2;
 }
 
 message InitMetaStateData {
@@ -507,6 +514,7 @@ message RecoverStandbyStateData {
 message SyncReplicationReplayWALStateData {
   required string peer_id = 1;
   repeated string wal = 2;
+  optional ServerName worker = 3;
 }
 
 message SyncReplicationReplayWALRemoteStateData {
@@ -528,17 +536,32 @@ enum RegionStateTransitionState {
   REGION_STATE_TRANSITION_CONFIRM_CLOSED = 5;
 }
 
+enum RegionTransitionType {
+  ASSIGN = 1;
+  UNASSIGN = 2;
+  MOVE = 3;
+  REOPEN = 4;
+}
+
 message RegionStateTransitionStateData {
-  required RegionStateTransitionState initialState = 1;
-  required RegionStateTransitionState lastState = 2;
-  optional ServerName assign_candidate = 3;
-  required bool force_new_plan = 4;
+  required RegionTransitionType type = 1;
+  optional ServerName assign_candidate = 2;
+  required bool force_new_plan = 3;
+}
+
+enum RegionRemoteProcedureBaseState {
+  REGION_REMOTE_PROCEDURE_DISPATCH = 1;
+  REGION_REMOTE_PROCEDURE_REPORT_SUCCEED = 2;
+  REGION_REMOTE_PROCEDURE_DISPATCH_FAIL = 3;
+  REGION_REMOTE_PROCEDURE_SERVER_CRASH = 4;
 }
 
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
-  required bool dispatched = 3;
+  required RegionRemoteProcedureBaseState state = 3;
+  optional RegionStateTransition.TransitionCode transition_code = 4;
+  optional int64 seq_id = 5;
 }
 
 message OpenRegionProcedureStateData {
@@ -546,4 +569,42 @@ message OpenRegionProcedureStateData {
 
 message CloseRegionProcedureStateData {
   optional ServerName assign_candidate = 1;
+}
+
+enum SwitchRpcThrottleState {
+  UPDATE_SWITCH_RPC_THROTTLE_STORAGE = 1;
+  SWITCH_RPC_THROTTLE_ON_RS = 2;
+  POST_SWITCH_RPC_THROTTLE = 3;
+}
+
+message SwitchRpcThrottleStateData {
+  required bool rpc_throttle_enabled = 1;
+}
+
+message SwitchRpcThrottleRemoteStateData {
+  required ServerName target_server = 1;
+  required bool rpc_throttle_enabled = 2;
+}
+
+message SplitWALParameter {
+  required string wal_path = 1;
+}
+
+
+message SplitWALData{
+  required string wal_path = 1;
+  required ServerName crashed_server=2;
+  optional ServerName worker = 3;
+}
+
+message SplitWALRemoteData{
+  required string wal_path = 1;
+  required ServerName crashed_server=2;
+  required ServerName worker = 3;
+}
+
+enum SplitWALState{
+  ACQUIRE_SPLIT_WAL_WORKER = 1;
+  DISPATCH_WAL_TO_WORKER = 2;
+  RELEASE_SPLIT_WORKER = 3;
 }

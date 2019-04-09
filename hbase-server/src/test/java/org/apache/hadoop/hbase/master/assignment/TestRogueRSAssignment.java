@@ -26,13 +26,13 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -45,6 +45,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -124,7 +125,7 @@ public class TestRogueRSAssignment {
   @Before
   public void setup() throws IOException {
     // Turn off balancer
-    admin.setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
   }
 
   @After
@@ -134,14 +135,18 @@ public class TestRogueRSAssignment {
       UTIL.deleteTable(td.getTableName());
     }
     // Turn on balancer
-    admin.setBalancerRunning(true, false);
+    admin.balancerSwitch(true, false);
   }
 
+  /**
+   * Ignore this test, see HBASE-21421
+   */
   @Test
+  @Ignore
   public void testReportRSWithWrongRegion() throws Exception {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
 
-    List<HRegionInfo> tableRegions = createTable(tableName);
+    List<RegionInfo> tableRegions = createTable(tableName);
 
     final ServerName sn = ServerName.parseVersionedServerName(
         ServerName.valueOf("1.example.org", 1, System.currentTimeMillis()).getVersionedBytes());
@@ -159,7 +164,7 @@ public class TestRogueRSAssignment {
   }
 
   private RegionServerStatusProtos.RegionServerReportRequest.Builder
-      makeRSReportRequestWithRegions(final ServerName sn, HRegionInfo... regions) {
+      makeRSReportRequestWithRegions(final ServerName sn, RegionInfo... regions) {
     ClusterStatusProtos.ServerLoad.Builder sl = ClusterStatusProtos.ServerLoad.newBuilder();
     for (int i = 0; i < regions.length; i++) {
       HBaseProtos.RegionSpecifier.Builder rs = HBaseProtos.RegionSpecifier.newBuilder();
@@ -177,7 +182,7 @@ public class TestRogueRSAssignment {
               .setLoad(sl);
   }
 
-  private List<HRegionInfo> createTable(final TableName tableName) throws Exception {
+  private List<RegionInfo> createTable(final TableName tableName) throws Exception {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     tdBuilder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build());
 
@@ -189,10 +194,10 @@ public class TestRogueRSAssignment {
     return assertRegionCount(tableName, initialRegionCount);
   }
 
-  private List<HRegionInfo> assertRegionCount(final TableName tableName, final int nregions)
+  private List<RegionInfo> assertRegionCount(final TableName tableName, final int nregions)
       throws Exception {
     UTIL.waitUntilNoRegionsInTransition();
-    List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
+    List<RegionInfo> tableRegions = admin.getRegions(tableName);
     assertEquals(nregions, tableRegions.size());
     return tableRegions;
   }

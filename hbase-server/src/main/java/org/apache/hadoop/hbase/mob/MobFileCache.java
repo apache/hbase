@@ -34,10 +34,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.IdLock;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -201,7 +202,7 @@ public class MobFileCache {
    * @return A opened mob file.
    * @throws IOException
    */
-  public MobFile openFile(FileSystem fs, Path path, MobCacheConfig cacheConf) throws IOException {
+  public MobFile openFile(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
     if (!isCacheEnabled) {
       MobFile mobFile = MobFile.create(fs, path, conf, cacheConf);
       mobFile.open();

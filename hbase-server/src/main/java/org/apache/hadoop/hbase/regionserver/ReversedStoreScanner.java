@@ -59,10 +59,9 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   }
 
   @Override
-  protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
+  protected KeyValueHeap newKVHeap(List<? extends KeyValueScanner> scanners,
       CellComparator comparator) throws IOException {
-    // Combine all seeked scanners with a heap
-    heap = new ReversedKeyValueHeap(scanners, comparator);
+    return new ReversedKeyValueHeap(scanners, comparator);
   }
 
   @Override

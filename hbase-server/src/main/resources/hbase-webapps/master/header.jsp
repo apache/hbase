@@ -18,7 +18,11 @@
 */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
+    import="org.apache.hadoop.hbase.master.HMaster"
+    import="org.apache.hadoop.hbase.HBaseConfiguration"
+%>
+<%
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -52,12 +56,15 @@
           <ul class="nav navbar-nav">
             <li><a href="/master-status">Home</a></li>
             <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-            <li><a href="/procedures.jsp">Procedures</a></li>
+            <% if (master.isActiveMaster()){ %>
+            <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
+            <% }%>
             <li><a href="/processMaster.jsp">Process Metrics</a></li>
             <li><a href="/logs/">Local Logs</a></li>
             <li><a href="/logLevel">Log Level</a></li>
             <li><a href="/dump">Debug Dump</a></li>
             <li><a href="/jmx">Metrics Dump</a></li>
+            <li><a href="/prof">Profiler</a></li>
             <% if (HBaseConfiguration.isShowConfInServlet()) { %>
             <li><a href="/conf">HBase Configuration</a></li>
             <% } %>

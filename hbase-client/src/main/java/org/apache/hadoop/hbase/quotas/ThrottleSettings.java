@@ -25,19 +25,19 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class ThrottleSettings extends QuotaSettings {
   final QuotaProtos.ThrottleRequest proto;
 
-  ThrottleSettings(final String userName, final TableName tableName,
-      final String namespace, final QuotaProtos.ThrottleRequest proto) {
-    super(userName, tableName, namespace);
+  ThrottleSettings(final String userName, final TableName tableName, final String namespace,
+      final String regionServer, final QuotaProtos.ThrottleRequest proto) {
+    super(userName, tableName, namespace, regionServer);
     this.proto = proto;
   }
 
@@ -95,6 +95,12 @@ class ThrottleSettings extends QuotaSettings {
           case READ_SIZE:
             builder.append(sizeToString(timedQuota.getSoftLimit()));
             break;
+          case REQUEST_CAPACITY_UNIT:
+          case READ_CAPACITY_UNIT:
+          case WRITE_CAPACITY_UNIT:
+            builder.append(String.format("%dCU", timedQuota.getSoftLimit()));
+            break;
+          default:
         }
       } else if (timedQuota.hasShare()) {
         builder.append(String.format("%.2f%%", timedQuota.getShare()));
@@ -140,7 +146,8 @@ class ThrottleSettings extends QuotaSettings {
 
         QuotaProtos.ThrottleRequest mergedReq = builder.setTimedQuota(
             timedQuotaBuilder.build()).build();
-        return new ThrottleSettings(getUserName(), getTableName(), getNamespace(), mergedReq);
+        return new ThrottleSettings(getUserName(), getTableName(), getNamespace(),
+            getRegionServer(), mergedReq);
       }
     }
     return this;
@@ -153,12 +160,12 @@ class ThrottleSettings extends QuotaSettings {
     }
   }
 
-  static ThrottleSettings fromTimedQuota(final String userName,
-      final TableName tableName, final String namespace,
-      ThrottleType type, QuotaProtos.TimedQuota timedQuota) {
+  static ThrottleSettings fromTimedQuota(final String userName, final TableName tableName,
+      final String namespace, final String regionServer, ThrottleType type,
+      QuotaProtos.TimedQuota timedQuota) {
     QuotaProtos.ThrottleRequest.Builder builder = QuotaProtos.ThrottleRequest.newBuilder();
     builder.setType(ProtobufUtil.toProtoThrottleType(type));
     builder.setTimedQuota(timedQuota);
-    return new ThrottleSettings(userName, tableName, namespace, builder.build());
+    return new ThrottleSettings(userName, tableName, namespace, regionServer, builder.build());
   }
 }

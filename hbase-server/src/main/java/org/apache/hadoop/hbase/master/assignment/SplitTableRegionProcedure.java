@@ -137,6 +137,26 @@ public class SplitTableRegionProcedure
     }
   }
 
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (env.getProcedureScheduler().waitRegions(this, getTableName(), getParentRegion(),
+      daughter_1_RI, daughter_2_RI)) {
+      try {
+        LOG.debug(LockState.LOCK_EVENT_WAIT + " " + env.getProcedureScheduler().dumpLocks());
+      } catch (IOException e) {
+        // Ignore, just for logging
+      }
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
+  }
+
+  @Override
+  protected void releaseLock(final MasterProcedureEnv env) {
+    env.getProcedureScheduler().wakeRegions(this, getTableName(), getParentRegion(), daughter_1_RI,
+      daughter_2_RI);
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
@@ -454,6 +474,13 @@ public class SplitTableRegionProcedure
    */
   @VisibleForTesting
   public boolean prepareSplitRegion(final MasterProcedureEnv env) throws IOException {
+    // Fail if we are taking snapshot for the given table
+    if (env.getMasterServices().getSnapshotManager()
+      .isTakingSnapshot(getParentRegion().getTable())) {
+      setFailure(new IOException("Skip splitting region " + getParentRegion().getShortNameToLog() +
+        ", because we are taking snapshot for the table " + getParentRegion().getTable()));
+      return false;
+    }
     // Check whether the region is splittable
     RegionStateNode node =
         env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
@@ -494,6 +521,14 @@ public class SplitTableRegionProcedure
       LOG.warn("pid=" + getProcId() + " split switch is off! skip split of " + parentHRI);
       setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString() +
           " failed due to split switch off"));
+      return false;
+    }
+
+    if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isSplitEnabled()) {
+      LOG.warn("pid={}, split is disabled for the table! Skipping split of {}", getProcId(),
+        parentHRI);
+      setFailure(new IOException("Split region " + parentHRI.getRegionNameAsString()
+          + " failed as region split is disabled for the table"));
       return false;
     }
 
@@ -631,16 +666,17 @@ public class SplitTableRegionProcedure
 
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // Split each store file.
-    for (Map.Entry<String, Collection<StoreFileInfo>>e: files.entrySet()) {
-      byte [] familyName = Bytes.toBytes(e.getKey());
+    for (Map.Entry<String, Collection<StoreFileInfo>> e : files.entrySet()) {
+      byte[] familyName = Bytes.toBytes(e.getKey());
       final ColumnFamilyDescriptor hcd = htd.getColumnFamily(familyName);
       final Collection<StoreFileInfo> storeFiles = e.getValue();
       if (storeFiles != null && storeFiles.size() > 0) {
-        final CacheConfig cacheConf = new CacheConfig(conf, hcd);
-        for (StoreFileInfo storeFileInfo: storeFiles) {
-          StoreFileSplitter sfs =
-              new StoreFileSplitter(regionFs, familyName, new HStoreFile(mfs.getFileSystem(),
-                  storeFileInfo, conf, cacheConf, hcd.getBloomFilterType(), true));
+        for (StoreFileInfo storeFileInfo : storeFiles) {
+          // As this procedure is running on master, use CacheConfig.DISABLED means
+          // don't cache any block.
+          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, familyName,
+              new HStoreFile(mfs.getFileSystem(), storeFileInfo, conf, CacheConfig.DISABLED,
+                  hcd.getBloomFilterType(), true));
           futures.add(threadPool.submit(sfs));
         }
       }

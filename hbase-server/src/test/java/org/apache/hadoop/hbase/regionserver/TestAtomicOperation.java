@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -114,14 +115,17 @@ public class TestAtomicOperation {
   @After
   public void teardown() throws IOException {
     if (region != null) {
-      BlockCache bc = region.getStores().get(0).getCacheConfig().getBlockCache();
+      CacheConfig cacheConfig = region.getStores().get(0).getCacheConfig();
       region.close();
       WAL wal = region.getWAL();
-      if (wal != null) wal.close();
-      if (bc != null) bc.shutdown();
+      if (wal != null) {
+        wal.close();
+      }
+      cacheConfig.getBlockCache().ifPresent(BlockCache::shutdown);
       region = null;
     }
   }
+
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion.

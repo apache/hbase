@@ -135,13 +135,16 @@ public class SpaceQuotaHelperForTests {
         for (QuotaSettings quotaSettings : scanner) {
           final String namespace = quotaSettings.getNamespace();
           final TableName tableName = quotaSettings.getTableName();
+          final String userName = quotaSettings.getUserName();
           if (namespace != null) {
             LOG.debug("Deleting quota for namespace: " + namespace);
             QuotaUtil.deleteNamespaceQuota(conn, namespace);
-          } else {
-            assert tableName != null;
-            LOG.debug("Deleting quota for table: "+ tableName);
+          } else if (tableName != null) {
+            LOG.debug("Deleting quota for table: " + tableName);
             QuotaUtil.deleteTableQuota(conn, tableName);
+          } else if (userName != null) {
+            LOG.debug("Deleting quota for user: " + userName);
+            QuotaUtil.deleteUserQuota(conn, userName);
           }
         }
       } finally {
@@ -443,9 +446,9 @@ public class SpaceQuotaHelperForTests {
     public boolean evaluate() throws Exception {
       SpaceQuotaSnapshot snapshot;
       if (null == ns) {
-        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+        snapshot = (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn);
       } else {
-        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, ns);
+        snapshot = (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(ns);
       }
 
       LOG.debug("Saw quota snapshot for " + (null == tn ? ns : tn) + ": " + snapshot);

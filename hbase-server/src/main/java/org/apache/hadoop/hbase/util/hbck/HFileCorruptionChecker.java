@@ -82,7 +82,7 @@ public class HFileCorruptionChecker {
       boolean quarantine) throws IOException {
     this.conf = conf;
     this.fs = FileSystem.get(conf);
-    this.cacheConf = new CacheConfig(conf);
+    this.cacheConf = CacheConfig.DISABLED;
     this.executor = executor;
     this.inQuarantineMode = quarantine;
   }

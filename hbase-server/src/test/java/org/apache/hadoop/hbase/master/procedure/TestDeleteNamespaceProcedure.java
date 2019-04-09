@@ -25,10 +25,10 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -88,7 +88,7 @@ public class TestDeleteNamespaceProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd: UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -200,8 +200,8 @@ public class TestDeleteNamespaceProcedure {
     long procId = procExec.submitProcedure(
       new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 2; // failing before DELETE_NAMESPACE_DELETE_FROM_NS_TABLE
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // Validate the namespace still exists
     NamespaceDescriptor createdNsDescriptor=

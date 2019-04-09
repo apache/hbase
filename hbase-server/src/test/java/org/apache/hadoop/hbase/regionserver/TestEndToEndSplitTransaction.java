@@ -262,10 +262,9 @@ public class TestEndToEndSplitTransaction {
 
           log("Initiating region split for:" + region.getRegionNameAsString());
           try {
-            admin.splitRegion(region.getRegionName(), splitPoint);
+            admin.splitRegionAsync(region.getRegionName(), splitPoint).get();
             // wait until the split is complete
             blockUntilRegionSplit(CONF, 50000, region.getRegionName(), true);
-
           } catch (NotServingRegionException ex) {
             // ignore
           }
@@ -296,7 +295,7 @@ public class TestEndToEndSplitTransaction {
     Throwable ex;
 
     RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) throws IOException {
-      super("RegionChecker", stopper, 10);
+      super("RegionChecker", stopper, 100);
       this.conf = conf;
       this.tableName = tableName;
 
@@ -509,7 +508,7 @@ public class TestEndToEndSplitTransaction {
         log("found region in META: " + hri.getRegionNameAsString());
         break;
       }
-      Threads.sleep(10);
+      Threads.sleep(100);
     }
   }
 
@@ -532,7 +531,7 @@ public class TestEndToEndSplitTransaction {
         } catch (IOException ex) {
           // wait some more
         }
-        Threads.sleep(10);
+        Threads.sleep(100);
       }
     }
   }

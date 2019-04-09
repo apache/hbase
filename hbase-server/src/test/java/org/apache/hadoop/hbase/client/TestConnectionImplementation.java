@@ -218,8 +218,8 @@ public class TestConnectionImplementation {
   // dead servers is broke"
   public void testClusterStatus() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    byte[] cf = "cf".getBytes();
-    byte[] rk = "rk1".getBytes();
+    byte[] cf = Bytes.toBytes("cf");
+    byte[] rk = Bytes.toBytes("rk1");
 
     JVMClusterUtil.RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     rs.waitForServerOnline();
@@ -232,8 +232,8 @@ public class TestConnectionImplementation {
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
-        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().
-            getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
+        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().getEncodedNameAsBytes(),
+          sn);
         TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tableName);
       }
@@ -242,7 +242,7 @@ public class TestConnectionImplementation {
     }
 
     Put p1 = new Put(rk);
-    p1.addColumn(cf, "qual".getBytes(), "val".getBytes());
+    p1.addColumn(cf, Bytes.toBytes("qual"), Bytes.toBytes("val"));
     t.put(p1);
 
     rs.getRegionServer().abort("I'm dead");
@@ -284,7 +284,7 @@ public class TestConnectionImplementation {
     TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -366,7 +366,7 @@ public class TestConnectionImplementation {
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
-    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
   /**
@@ -377,7 +377,7 @@ public class TestConnectionImplementation {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime =  20000;
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -425,7 +425,7 @@ public class TestConnectionImplementation {
 
     connection.close();
     EnvironmentEdgeManager.reset();
-    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
     /**
@@ -438,7 +438,7 @@ public class TestConnectionImplementation {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
-    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -493,7 +493,7 @@ public class TestConnectionImplementation {
     } finally {
       syncBlockingFilter.set(true);
       t.join();
-      TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
+      TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
     }
 
     table.close();
@@ -572,7 +572,7 @@ public class TestConnectionImplementation {
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     assertNotNull(conn.getCachedLocation(TableName.valueOf(TABLE_NAME.getName()), ROW.clone()));
 
-    TEST_UTIL.getAdmin().setBalancerRunning(false, false);
+    TEST_UTIL.getAdmin().balancerSwitch(false, false);
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
@@ -604,10 +604,7 @@ public class TestConnectionImplementation {
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depend only on the region we're looking at.
     LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(
-      toMove.getRegionInfo().getEncodedNameAsBytes(),
-      destServerName.getServerName().getBytes()
-    );
+    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
 
     while (destServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -670,10 +667,8 @@ public class TestConnectionImplementation {
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(
-      toMove.getRegionInfo().getEncodedNameAsBytes(),
-      curServer.getServerName().getServerName().getBytes()
-    );
+    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(),
+      curServer.getServerName());
 
     while (curServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -874,7 +869,7 @@ public class TestConnectionImplementation {
       conn.clearRegionCache(TABLE_NAME3);
       Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
 
-      TEST_UTIL.getAdmin().setBalancerRunning(false, false);
+      TEST_UTIL.getAdmin().balancerSwitch(false, false);
       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
       // We can wait for all regions to be online, that makes log reading easier when debugging
@@ -928,10 +923,7 @@ public class TestConnectionImplementation {
        // Moving. It's possible that we don't have all the regions online at this point, so
       //  the test depends only on the region we're looking at.
       LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-      TEST_UTIL.getAdmin().move(
-          toMove.getRegionInfo().getEncodedNameAsBytes(),
-          destServerName.getServerName().getBytes()
-      );
+      TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
 
       while (destServer.getOnlineRegion(regionName) == null ||
           destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||

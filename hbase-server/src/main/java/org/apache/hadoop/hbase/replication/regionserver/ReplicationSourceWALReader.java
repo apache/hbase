@@ -124,7 +124,7 @@ class ReplicationSourceWALReader extends Thread {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       try (WALEntryStream entryStream =
-          new WALEntryStream(logQueue, fs, conf, currentPosition,
+          new WALEntryStream(logQueue, conf, currentPosition,
               source.getWALFileLengthProvider(), source.getServerWALsBelongTo(),
               source.getSourceMetrics())) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
@@ -140,7 +140,7 @@ class ReplicationSourceWALReader extends Thread {
           if (batch != null) {
             // need to propagate the batch even it has no entries since it may carry the last
             // sequence id information for serial replication.
-            LOG.trace("Read {} WAL entries eligible for replication", batch.getNbEntries());
+            LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
             entryBatchQueue.put(batch);
             sleepMultiplier = 1;
           } else { // got no entries and didn't advance position in WAL
@@ -168,8 +168,11 @@ class ReplicationSourceWALReader extends Thread {
   protected final boolean addEntryToBatch(WALEntryBatch batch, Entry entry) {
     WALEdit edit = entry.getEdit();
     if (edit == null || edit.isEmpty()) {
+      LOG.debug("Edit null or empty for entry {} ", entry);
       return false;
     }
+    LOG.debug("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
+        entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry);
@@ -285,7 +288,8 @@ class ReplicationSourceWALReader extends Thread {
 
   protected final Entry filterEntry(Entry entry) {
     Entry filtered = filter.filter(entry);
-    if (entry != null && filtered == null) {
+    if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
+      LOG.debug("Filtered entry for replication: {}", entry);
       source.getSourceMetrics().incrLogEditsFiltered();
     }
     return filtered;

@@ -188,7 +188,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
     int toAddCount = 0;
     for (Mutation m : ms) {
       if (m instanceof Put) {
-        HTable.validatePut((Put) m, maxKeyValueSize);
+        ConnectionUtils.validatePut((Put) m, maxKeyValueSize);
       }
       toAddSize += m.heapSize();
       ++toAddCount;

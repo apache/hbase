@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -40,22 +39,6 @@ public class TestSyncReplicationRemoveRemoteWAL extends SyncReplicationTestBase 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSyncReplicationRemoveRemoteWAL.class);
-
-  private void waitUntilDeleted(Path remoteWAL) throws Exception {
-    MasterFileSystem mfs = UTIL2.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    UTIL1.waitFor(30000, new ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        return !mfs.getWALFileSystem().exists(remoteWAL);
-      }
-
-      @Override
-      public String explainFailure() throws Exception {
-        return remoteWAL + " has not been deleted yet";
-      }
-    });
-  }
 
   @Test
   public void testRemoveRemoteWAL() throws Exception {
@@ -76,7 +59,7 @@ public class TestSyncReplicationRemoveRemoteWAL extends SyncReplicationTestBase 
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
     rs.getWalRoller().requestRollAll();
     // The replicated wal file should be deleted finally
-    waitUntilDeleted(remoteWAL);
+    waitUntilDeleted(UTIL2, remoteWAL);
     remoteWALStatus = mfs.getWALFileSystem().listStatus(remoteWALDir);
     assertEquals(1, remoteWALStatus.length);
     remoteWAL = remoteWALStatus[0].getPath();
@@ -95,6 +78,6 @@ public class TestSyncReplicationRemoveRemoteWAL extends SyncReplicationTestBase 
     verifyThroughRegion(UTIL2, 100, 200);
 
     // Confirm that we will also remove the remote wal files in DA state
-    waitUntilDeleted(remoteWAL);
+    waitUntilDeleted(UTIL2, remoteWAL);
   }
 }

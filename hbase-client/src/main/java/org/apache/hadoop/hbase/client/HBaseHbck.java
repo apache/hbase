@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
@@ -66,9 +67,9 @@ public class HBaseHbck implements Hbck {
 
   private RpcControllerFactory rpcControllerFactory;
 
-  HBaseHbck(ClusterConnection connection, BlockingInterface hbck) throws IOException {
+  HBaseHbck(BlockingInterface hbck, RpcControllerFactory rpcControllerFactory) {
     this.hbck = hbck;
-    this.rpcControllerFactory = connection.getRpcControllerFactory();
+    this.rpcControllerFactory = rpcControllerFactory;
   }
 
   @Override
@@ -102,11 +103,12 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> assigns(List<String> encodedRegionNames) throws IOException {
+  public List<Long> assigns(List<String> encodedRegionNames, boolean override)
+      throws IOException {
     try {
       MasterProtos.AssignsResponse response =
           this.hbck.assigns(rpcControllerFactory.newController(),
-              RequestConverter.toAssignRegionsRequest(encodedRegionNames));
+              RequestConverter.toAssignRegionsRequest(encodedRegionNames, override));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -115,11 +117,12 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> unassigns(List<String> encodedRegionNames) throws IOException {
+  public List<Long> unassigns(List<String> encodedRegionNames, boolean override)
+      throws IOException {
     try {
       MasterProtos.UnassignsResponse response =
           this.hbck.unassigns(rpcControllerFactory.newController(),
-              RequestConverter.toUnassignRegionsRequest(encodedRegionNames));
+              RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -132,7 +135,8 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean force)
+  public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override,
+      boolean recursive)
       throws IOException {
     MasterProtos.BypassProcedureResponse response = ProtobufUtil.call(
         new Callable<MasterProtos.BypassProcedureResponse>() {
@@ -141,7 +145,7 @@ public class HBaseHbck implements Hbck {
             try {
               return hbck.bypassProcedure(rpcControllerFactory.newController(),
                   MasterProtos.BypassProcedureRequest.newBuilder().addAllProcId(pids).
-                      setWaitTime(waitTime).setForce(force).build());
+                      setWaitTime(waitTime).setOverride(override).setRecursive(recursive).build());
             } catch (Throwable t) {
               LOG.error(pids.stream().map(i -> i.toString()).
                   collect(Collectors.joining(", ")), t);
@@ -150,5 +154,22 @@ public class HBaseHbck implements Hbck {
           }
         });
     return response.getBypassedList();
+  }
+
+  @Override
+  public List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
+      throws IOException {
+    try {
+      MasterProtos.ScheduleServerCrashProcedureResponse response =
+          this.hbck.scheduleServerCrashProcedure(rpcControllerFactory.newController(),
+            RequestConverter.toScheduleServerCrashProcedureRequest(serverNames));
+      return response.getPidList();
+    } catch (ServiceException se) {
+      LOG.debug(toCommaDelimitedString(
+        serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
+            .collect(Collectors.toList())),
+        se);
+      throw new IOException(se);
+    }
   }
 }

@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
@@ -155,6 +154,7 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FaultyFSLog;
+import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -181,6 +181,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -213,6 +216,7 @@ public class TestHRegion {
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
+  private static final EventLoopGroup GROUP = new NioEventLoopGroup();
 
   HRegion region = null;
   // Do not run unit tests in parallel (? Why not?  It don't work?  Why not?  St.Ack)
@@ -241,6 +245,7 @@ public class TestHRegion {
   public void setup() throws IOException {
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
+    NettyAsyncFSWALConfigHelper.setEventLoopConfig(CONF, GROUP, NioSocketChannel.class);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     method = name.getMethodName();
     tableName = TableName.valueOf(method);
@@ -2365,11 +2370,11 @@ public class TestHRegion {
 
     Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
       System.currentTimeMillis(), KeyValue.Type.Put.getCode(), value1);
-    final long originalSize = KeyValueUtil.length(originalCell);
+    final long originalSize = originalCell.getSerializedSize();
 
     Cell addCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
       System.currentTimeMillis(), KeyValue.Type.Put.getCode(), Bytes.toBytes("xxxxxxxxxx"));
-    final long addSize = KeyValueUtil.length(addCell);
+    final long addSize = addCell.getSerializedSize();
 
     LOG.info("originalSize:" + originalSize
       + ", addSize:" + addSize);
@@ -5534,6 +5539,46 @@ public class TestHRegion {
   }
 
   @Test
+  public void testReverseScanWhenPutCellsAfterOpenReverseScan() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    byte[] col = Bytes.toBytes("C");
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+    this.region = initHRegion(tableName, method, conf, families);
+
+    Put put = new Put(Bytes.toBytes("199996"));
+    put.addColumn(cf1, col, Bytes.toBytes("val"));
+    region.put(put);
+    Put put2 = new Put(Bytes.toBytes("199995"));
+    put2.addColumn(cf1, col, Bytes.toBytes("val"));
+    region.put(put2);
+
+    // Create a reverse scan
+    Scan scan = new Scan(Bytes.toBytes("199996"));
+    scan.setReversed(true);
+    RegionScannerImpl scanner = region.getScanner(scan);
+
+    // Put a lot of cells that have sequenceIDs grater than the readPt of the reverse scan
+    for (int i = 100000; i < 200000; i++) {
+      Put p = new Put(Bytes.toBytes("" + i));
+      p.addColumn(cf1, col, Bytes.toBytes("" + i));
+      region.put(p);
+    }
+    List<Cell> currRow = new ArrayList<>();
+    boolean hasNext;
+    do {
+      hasNext = scanner.next(currRow);
+    } while (hasNext);
+
+    assertEquals(2, currRow.size());
+    assertEquals("199996", Bytes.toString(currRow.get(0).getRowArray(),
+      currRow.get(0).getRowOffset(), currRow.get(0).getRowLength()));
+    assertEquals("199995", Bytes.toString(currRow.get(1).getRowArray(),
+      currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
+  }
+
+  @Test
   public void testWriteRequestsCounter() throws IOException {
     byte[] fam = Bytes.toBytes("info");
     byte[][] families = { fam };
@@ -6261,17 +6306,17 @@ public class TestHRegion {
      * @return If Mob is enabled, return HMobStore, otherwise return HStoreForTesting.
      */
     @Override
-    protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
+    protected HStore instantiateHStore(final ColumnFamilyDescriptor family, boolean warmup)
+        throws IOException {
       if (family.isMobEnabled()) {
         if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
-          throw new IOException("A minimum HFile version of "
-              + HFile.MIN_FORMAT_VERSION_WITH_TAGS
-              + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
-              + " accordingly.");
+          throw new IOException("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS +
+              " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY +
+              " accordingly.");
         }
-        return new HMobStore(this, family, this.conf);
+        return new HMobStore(this, family, this.conf, warmup);
       }
-      return new HStoreForTesting(this, family, this.conf);
+      return new HStoreForTesting(this, family, this.conf, warmup);
     }
   }
 
@@ -6287,8 +6332,8 @@ public class TestHRegion {
 
     protected HStoreForTesting(final HRegion region,
         final ColumnFamilyDescriptor family,
-        final Configuration confParam) throws IOException {
-      super(region, family, confParam);
+        final Configuration confParam, boolean warmup) throws IOException {
+      super(region, family, confParam, warmup);
     }
 
     @Override

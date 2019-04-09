@@ -48,4 +48,8 @@ public class MetricsBalancer {
   public void incrMiscInvocations() {
     source.incrMiscInvocations();
   }
+
+  public void balancerStatus(boolean status) {
+    source.updateBalancerStatus(status);
+  }
 }

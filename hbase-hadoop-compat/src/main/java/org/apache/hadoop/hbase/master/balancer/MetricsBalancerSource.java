@@ -41,6 +41,7 @@ public interface MetricsBalancerSource extends BaseSource  {
 
   String BALANCE_CLUSTER = "balancerCluster";
   String MISC_INVOATION_COUNT = "miscInvocationCount";
+  String BALANCER_STATUS = "isBalancerActive";
 
   /**
    * Description
@@ -50,4 +51,6 @@ public interface MetricsBalancerSource extends BaseSource  {
   void updateBalanceCluster(long time);
 
   void incrMiscInvocations();
+
+  void updateBalancerStatus(boolean status);
 }

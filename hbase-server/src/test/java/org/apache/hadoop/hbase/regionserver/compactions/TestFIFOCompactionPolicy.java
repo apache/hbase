@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TimeOffsetEnvironmentEdge;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -190,5 +193,65 @@ public class TestFIFOCompactionPolicy {
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
     TEST_UTIL.getAdmin().createTable(desc);
+  }
+
+  /**
+   * Unit test for HBASE-21504
+   */
+  @Test
+  public void testFIFOCompactionPolicyExpiredEmptyHFiles() throws Exception {
+    TableName tableName = TableName.valueOf("testFIFOCompactionPolicyExpiredEmptyHFiles");
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
+    Table table = TEST_UTIL.createTable(desc, null);
+    long ts = System.currentTimeMillis() - 10 * 1000;
+    Put put =
+        new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
+    table.put(put);
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-0
+    put = new Put(Bytes.toBytes("row2")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
+    table.put(put);
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-1
+
+    HStore store = getStoreWithName(tableName);
+    Assert.assertNotNull(store);
+    Assert.assertEquals(2, store.getStorefilesCount());
+
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    for (int i = 0; i < 100; i++) {
+      if (store.getStorefilesCount() > 1) {
+        Thread.sleep(100);
+      } else {
+        break;
+      }
+    }
+    Assert.assertEquals(1, store.getStorefilesCount());
+    HStoreFile sf = store.getStorefiles().iterator().next();
+    Assert.assertNotNull(sf);
+    Assert.assertEquals(0, sf.getReader().getEntries());
+
+    put = new Put(Bytes.toBytes("row3")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
+    table.put(put);
+    TEST_UTIL.getAdmin().flush(tableName); // HFile-2
+    Assert.assertEquals(2, store.getStorefilesCount());
+
+    TEST_UTIL.getAdmin().majorCompact(tableName);
+    for (int i = 0; i < 100; i++) {
+      if (store.getStorefilesCount() > 1) {
+        Thread.sleep(100);
+      } else {
+        break;
+      }
+    }
+
+    Assert.assertEquals(1, store.getStorefilesCount());
+    sf = store.getStorefiles().iterator().next();
+    Assert.assertNotNull(sf);
+    Assert.assertEquals(0, sf.getReader().getEntries());
   }
 }

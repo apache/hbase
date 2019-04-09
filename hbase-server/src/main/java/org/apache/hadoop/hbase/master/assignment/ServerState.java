@@ -23,11 +23,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Server State.
  */
 @InterfaceAudience.Private
-enum ServerState {
+public enum ServerState {
   /**
    * Initial state. Available.
    */
   ONLINE,
+
+  /**
+   * Indicate that the server has crashed, i.e., we have already scheduled a SCP for it.
+   */
+  CRASHED,
 
   /**
    * Only server which carries meta can have this state. We will split wal for meta and then

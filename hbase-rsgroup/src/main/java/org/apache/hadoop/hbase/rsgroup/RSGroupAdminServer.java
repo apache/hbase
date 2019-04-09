@@ -27,7 +27,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -450,11 +449,11 @@ public class RSGroupAdminServer implements RSGroupAdmin {
             " servers; you must remove these servers from the RSGroup before" +
             "the RSGroup can be removed.");
       }
-      for (NamespaceDescriptor ns: master.getClusterSchema().getNamespaces()) {
-        String nsGroup = ns.getConfigurationValue(rsGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-        if (nsGroup != null &&  nsGroup.equals(name)) {
-          throw new ConstraintException("RSGroup " + name + " is referenced by namespace: " +
-              ns.getName());
+      for (NamespaceDescriptor ns : master.getClusterSchema().getNamespaces()) {
+        String nsGroup = ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+        if (nsGroup != null && nsGroup.equals(name)) {
+          throw new ConstraintException(
+            "RSGroup " + name + " is referenced by namespace: " + ns.getName());
         }
       }
       rsGroupInfoManager.removeRSGroup(name);

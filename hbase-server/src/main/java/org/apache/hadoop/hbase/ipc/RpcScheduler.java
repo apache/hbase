@@ -76,6 +76,9 @@ public abstract class RpcScheduler {
   /** Retrieves length of the priority queue for metrics. */
   public abstract int getPriorityQueueLength();
 
+  /** Retrieves length of the meta priority queue for metrics. */
+  public abstract int getMetaPriorityQueueLength();
+
   /** Retrieves length of the replication queue for metrics. */
   public abstract int getReplicationQueueLength();
 
@@ -87,6 +90,9 @@ public abstract class RpcScheduler {
 
   /** Retrieves the number of active priority handler. */
   public abstract int getActivePriorityRpcHandlerCount();
+
+  /** Retrieves the number of active meta priority handler. */
+  public abstract int getActiveMetaPriorityRpcHandlerCount();
 
   /** Retrieves the number of active replication handler. */
   public abstract int getActiveReplicationRpcHandlerCount();

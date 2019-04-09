@@ -328,7 +328,7 @@ public class TestSplitTransactionOnCluster {
       // We don't roll back here anymore. Instead we fail-fast on construction of the
       // split transaction. Catch the exception instead.
       try {
-        this.admin.splitRegionAsync(hri.getRegionName(), null);
+        this.admin.splitRegionAsync(hri.getRegionName());
         fail();
       } catch (DoNotRetryRegionException e) {
         // Expected
@@ -455,12 +455,12 @@ public class TestSplitTransactionOnCluster {
     try {
       for (int i = 0; i <= 5; i++) {
         String row = "row" + i;
-        Put p = new Put(row.getBytes());
+        Put p = new Put(Bytes.toBytes(row));
         String val = "Val" + i;
-        p.addColumn("col".getBytes(), "ql".getBytes(), val.getBytes());
+        p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes(val));
         table.put(p);
         admin.flush(userTableName);
-        Delete d = new Delete(row.getBytes());
+        Delete d = new Delete(Bytes.toBytes(row));
         // Do a normal delete
         table.delete(d);
         admin.flush(userTableName);
@@ -471,17 +471,17 @@ public class TestSplitTransactionOnCluster {
           .getRegionsOfTable(userTableName);
       assertEquals(1, regionsOfTable.size());
       RegionInfo hRegionInfo = regionsOfTable.get(0);
-      Put p = new Put("row6".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      Put p = new Put(Bytes.toBytes("row6"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
-      p = new Put("row7".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p = new Put(Bytes.toBytes("row7"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
-      p = new Put("row8".getBytes());
-      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p = new Put(Bytes.toBytes("row8"));
+      p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("val"));
       table.put(p);
       admin.flush(userTableName);
-      admin.splitRegionAsync(hRegionInfo.getRegionName(), "row7".getBytes());
+      admin.splitRegionAsync(hRegionInfo.getRegionName(), Bytes.toBytes("row7"));
       regionsOfTable = cluster.getMaster()
           .getAssignmentManager().getRegionStates()
           .getRegionsOfTable(userTableName);
@@ -541,7 +541,7 @@ public class TestSplitTransactionOnCluster {
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
       // Call split.
-      this.admin.splitRegionAsync(hri.getRegionName(), null);
+      this.admin.splitRegionAsync(hri.getRegionName());
       List<HRegion> daughters = checkAndGetDaughters(tableName);
 
       // Before cleanup, get a new master.
@@ -630,7 +630,7 @@ public class TestSplitTransactionOnCluster {
           tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       // exists works on stale and we see the put after the flush
-      byte[] b1 = "row1".getBytes();
+      byte[] b1 = Bytes.toBytes("row1");
       Get g = new Get(b1);
       g.setConsistency(Consistency.STRONG);
       // The following GET will make a trip to the meta to get the new location of the 1st daughter
@@ -837,7 +837,7 @@ public class TestSplitTransactionOnCluster {
 
   private void split(final RegionInfo hri, final HRegionServer server, final int regionCount)
       throws IOException, InterruptedException {
-    admin.splitRegionAsync(hri.getRegionName(), null);
+    admin.splitRegionAsync(hri.getRegionName());
     for (int i = 0; cluster.getRegions(hri.getTable()).size() <= regionCount && i < 60; i++) {
       LOG.debug("Waiting on region " + hri.getRegionNameAsString() + " to split");
       Thread.sleep(2000);
@@ -885,7 +885,7 @@ public class TestSplitTransactionOnCluster {
       LOG.info("Moving " + hri.getRegionNameAsString() + " from " +
         metaRegionServer.getServerName() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
-      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName().toString()));
+      admin.move(hri.getEncodedNameAsBytes(), hrs.getServerName());
     }
     // Wait till table region is up on the server that is NOT carrying hbase:meta.
     for (int i = 0; i < 100; i++) {

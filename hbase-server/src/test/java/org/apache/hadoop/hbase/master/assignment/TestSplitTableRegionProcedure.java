@@ -348,7 +348,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     int splitRowNum = startRowNum + rowCount / 2;
@@ -366,18 +366,19 @@ public class TestSplitTableRegionProcedure {
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
 
-    // Failing before SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS we should trigger the
+    // Failing before SPLIT_TABLE_REGION_UPDATE_META we should trigger the
     // rollback
-    // NOTE: the 3 (number before SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS step) is
+    // NOTE: the 7 (number of SPLIT_TABLE_REGION_UPDATE_META step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 3;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
+    int lastStep = 7;
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep,
         true);
     // check that we have only 1 region
     assertEquals(1, UTIL.getAdmin().getRegions(tableName).size());
-    List<HRegion> daughters = UTIL.getMiniHBaseCluster().getRegions(tableName);
-    assertEquals(1, daughters.size());
-    verifyData(daughters.get(0), startRowNum, rowCount,
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+    List<HRegion> newRegions = UTIL.getMiniHBaseCluster().getRegions(tableName);
+    assertEquals(1, newRegions.size());
+    verifyData(newRegions.get(0), startRowNum, rowCount,
     Bytes.toBytes(ColumnFamilyName1), Bytes.toBytes(ColumnFamilyName2));
 
     assertEquals(splitSubmittedCount + 1, splitProcMetrics.getSubmittedCounter().getCount());

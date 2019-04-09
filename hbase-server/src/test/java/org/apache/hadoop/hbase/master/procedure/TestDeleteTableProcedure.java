@@ -17,19 +17,32 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.util.List;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,6 +50,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
@@ -154,5 +168,60 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
+  }
+
+  @Test
+  public void testDeleteWhenTempDirIsNotEmpty() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String FAM = "fam";
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
+    };
+
+    // create the table
+    MasterProcedureTestingUtility.createTable(
+      getMasterProcedureExecutor(), tableName, splitKeys, FAM);
+
+    // get the current store files for the regions
+    List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
+    // make sure we have 4 regions serving this table
+    assertEquals(4, regions.size());
+
+    // load the table
+    try (Table table = UTIL.getConnection().getTable(tableName)) {
+      UTIL.loadTable(table, Bytes.toBytes(FAM));
+    }
+
+    // disable the table so that we can manipulate the files
+    UTIL.getAdmin().disableTable(tableName);
+
+    final MasterFileSystem masterFileSystem =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    final Path tableDir = FSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
+    final Path tempDir = masterFileSystem.getTempDir();
+    final Path tempTableDir = FSUtils.getTableDir(tempDir, tableName);
+    final FileSystem fs = masterFileSystem.getFileSystem();
+
+    // copy the table to the temporary directory to make sure the temp directory is not empty
+    if (!FileUtil.copy(fs, tableDir, fs, tempTableDir, false, UTIL.getConfiguration())) {
+      fail();
+    }
+
+    // delete the table
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new DeleteTableProcedure(procExec.getEnvironment(), tableName));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
+
+    // check if the temporary directory is deleted
+    assertFalse(fs.exists(tempTableDir));
+
+    // check for the existence of the archive directory
+    for (HRegion region : regions) {
+      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
+        region);
+      assertTrue(fs.exists(archiveDir));
+    }
   }
 }

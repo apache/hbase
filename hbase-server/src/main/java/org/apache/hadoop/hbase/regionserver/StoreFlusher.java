@@ -22,13 +22,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalInt;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -110,7 +108,7 @@ abstract class StoreFlusher {
   protected void performFlush(InternalScanner scanner, CellSink sink,
       long smallestReadPoint, ThroughputController throughputController) throws IOException {
     int compactionKVMax =
-      conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
+        conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
 
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
@@ -119,7 +117,8 @@ abstract class StoreFlusher {
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush
-    boolean control = throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
+    boolean control =
+        throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }
@@ -132,17 +131,16 @@ abstract class StoreFlusher {
             // set its memstoreTS to 0. This will help us save space when writing to
             // disk.
             sink.append(c);
-            int len = KeyValueUtil.length(c);
             if (control) {
-              throughputController.control(flushName, len);
+              throughputController.control(flushName, c.getSerializedSize());
             }
           }
           kvs.clear();
         }
       } while (hasMore);
     } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted while control throughput of flushing "
-          + flushName);
+      throw new InterruptedIOException(
+          "Interrupted while control throughput of flushing " + flushName);
     } finally {
       if (control) {
         throughputController.finish(flushName);

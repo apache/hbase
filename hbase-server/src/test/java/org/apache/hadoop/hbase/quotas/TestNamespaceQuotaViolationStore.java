@@ -154,8 +154,8 @@ public class TestNamespaceQuotaViolationStore {
 
     // Exceeds the quota, should be in violation
     assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
-    assertEquals(
-        SpaceViolationPolicy.DISABLE, store.getTargetState(NS, quota).getQuotaStatus().getPolicy());
+    assertEquals(SpaceViolationPolicy.DISABLE,
+      store.getTargetState(NS, quota).getQuotaStatus().getPolicy().get());
   }
 
   @Test

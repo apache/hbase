@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -212,9 +211,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
                   this.mobStore.getRefCellTags());
               writer.append(reference);
             }
-            int len = KeyValueUtil.length(c);
             if (control) {
-              throughputController.control(flushName, len);
+              throughputController.control(flushName, c.getSerializedSize());
             }
           }
           cells.clear();

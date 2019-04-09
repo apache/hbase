@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Base class of a WAL Provider that returns a single thread safe WAL that writes to Hadoop FS. By
@@ -86,9 +89,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   protected String logPrefix;
 
   /**
-   * we synchronized on walCreateLock to prevent wal recreation in different threads
+   * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
+   * missing the newly created WAL, see HBASE-21503 for more details.
    */
-  private final Object walCreateLock = new Object();
+  private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
@@ -119,38 +123,48 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   @Override
   public List<WAL> getWALs() {
-    if (wal == null) {
-      return Collections.emptyList();
+    if (wal != null) {
+      return Lists.newArrayList(wal);
     }
-    List<WAL> wals = new ArrayList<>(1);
-    wals.add(wal);
-    return wals;
+    walCreateLock.readLock().lock();
+    try {
+      if (wal == null) {
+        return Collections.emptyList();
+      } else {
+        return Lists.newArrayList(wal);
+      }
+    } finally {
+      walCreateLock.readLock().unlock();
+    }
   }
 
   @Override
   public T getWAL(RegionInfo region) throws IOException {
     T walCopy = wal;
-    if (walCopy == null) {
-      // only lock when need to create wal, and need to lock since
-      // creating hlog on fs is time consuming
-      synchronized (walCreateLock) {
-        walCopy = wal;
-        if (walCopy == null) {
-          walCopy = createWAL();
-          boolean succ = false;
-          try {
-            walCopy.init();
-            succ = true;
-          } finally {
-            if (!succ) {
-              walCopy.close();
-            }
-          }
-          wal = walCopy;
+    if (walCopy != null) {
+      return walCopy;
+    }
+    walCreateLock.writeLock().lock();
+    try {
+      walCopy = wal;
+      if (walCopy != null) {
+        return walCopy;
+      }
+      walCopy = createWAL();
+      boolean succ = false;
+      try {
+        walCopy.init();
+        succ = true;
+      } finally {
+        if (!succ) {
+          walCopy.close();
         }
       }
+      wal = walCopy;
+      return walCopy;
+    } finally {
+      walCreateLock.writeLock().unlock();
     }
-    return walCopy;
   }
 
   protected abstract T createWAL() throws IOException;
@@ -418,7 +432,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = FSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
       ServerName serverName = getServerNameFromWALDirectoryName(path);
@@ -429,7 +443,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       oldLogDir = new Path(oldLogDir, serverName.getServerName());
     }
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+    final FileSystem fs = FSUtils.getWALFileSystem(conf);
 
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);

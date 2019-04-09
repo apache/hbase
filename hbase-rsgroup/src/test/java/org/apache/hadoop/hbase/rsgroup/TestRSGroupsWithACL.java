@@ -35,12 +35,13 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.AuthManager;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
-import org.apache.hadoop.hbase.security.access.TableAuthManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -177,9 +178,10 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     try {
       assertEquals(4, AccessControlClient.getUserPermissions(systemUserConnection,
           TEST_TABLE.toString()).size());
+    } catch (AssertionError e) {
+      fail(e.getMessage());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
-      fail("error during call of AccessControlClient.getUserPermissions.");
     }
   }
 
@@ -201,7 +203,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
-    int total = TableAuthManager.getTotalRefCount();
+    int total = AuthManager.getTotalRefCount();
     assertTrue("Unexpected reference count: " + total, total == 0);
   }
 

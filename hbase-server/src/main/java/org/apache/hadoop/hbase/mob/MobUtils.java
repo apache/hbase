@@ -367,7 +367,17 @@ public final class MobUtils {
    */
   public static Path getMobHome(Configuration conf) {
     Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
-    return new Path(hbaseDir, MobConstants.MOB_DIR_NAME);
+    return getMobHome(hbaseDir);
+  }
+
+  /**
+   * Gets the root dir of the mob files under the qualified HBase root dir.
+   * It's {rootDir}/mobdir.
+   * @param rootDir The qualified path of HBase root directory.
+   * @return The root dir of the mob file.
+   */
+  public static Path getMobHome(Path rootDir) {
+    return new Path(rootDir, MobConstants.MOB_DIR_NAME);
   }
 
   /**
@@ -384,14 +394,36 @@ public final class MobUtils {
   }
 
   /**
+   * Gets the table dir of the mob files under the qualified HBase root dir.
+   * It's {rootDir}/mobdir/data/${namespace}/${tableName}
+   * @param rootDir The qualified path of HBase root directory.
+   * @param tableName The name of table.
+   * @return The table dir of the mob file.
+   */
+  public static Path getMobTableDir(Path rootDir, TableName tableName) {
+    return FSUtils.getTableDir(getMobHome(rootDir), tableName);
+  }
+
+  /**
    * Gets the region dir of the mob files.
-   * It's {HBASE_DIR}/mobdir/{namespace}/{tableName}/{regionEncodedName}.
+   * It's {HBASE_DIR}/mobdir/data/{namespace}/{tableName}/{regionEncodedName}.
    * @param conf The current configuration.
    * @param tableName The current table name.
    * @return The region dir of the mob files.
    */
   public static Path getMobRegionPath(Configuration conf, TableName tableName) {
-    Path tablePath = FSUtils.getTableDir(getMobHome(conf), tableName);
+    return getMobRegionPath(new Path(conf.get(HConstants.HBASE_DIR)), tableName);
+  }
+
+  /**
+   * Gets the region dir of the mob files under the specified root dir.
+   * It's {rootDir}/mobdir/data/{namespace}/{tableName}/{regionEncodedName}.
+   * @param rootDir The qualified path of HBase root directory.
+   * @param tableName The current table name.
+   * @return The region dir of the mob files.
+   */
+  public static Path getMobRegionPath(Path rootDir, TableName tableName) {
+    Path tablePath = FSUtils.getTableDir(getMobHome(rootDir), tableName);
     RegionInfo regionInfo = getMobRegionInfo(tableName);
     return new Path(tablePath, regionInfo.getEncodedName());
   }

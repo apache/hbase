@@ -29,6 +29,7 @@ module Shell
       end
 
       def command
+        now = Time.now
         formatter.header(['SERVERNAME'])
 
         servers = admin.list_deadservers
@@ -36,7 +37,7 @@ module Shell
           formatter.row([server.toString])
         end
 
-        formatter.footer(servers.size)
+        formatter.footer(now, servers.size)
       end
     end
   end

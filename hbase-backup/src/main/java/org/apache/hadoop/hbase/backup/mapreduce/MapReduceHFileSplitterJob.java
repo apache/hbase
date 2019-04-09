@@ -164,7 +164,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     if (args.length < 2) {
       usage("Wrong number of arguments: " + args.length);
-      System.exit(-1);
+      return -1;
     }
     Job job = createSubmittableJob(args);
     int result = job.waitForCompletion(true) ? 0 : 1;

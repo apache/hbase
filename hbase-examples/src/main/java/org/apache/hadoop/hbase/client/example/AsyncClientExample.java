@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -78,7 +80,7 @@ public class AsyncClientExample extends Configured implements Tool {
     for (;;) {
       if (future.compareAndSet(null, new CompletableFuture<>())) {
         CompletableFuture<AsyncConnection> toComplete = future.get();
-        ConnectionFactory.createAsyncConnection(getConf()).whenComplete((conn, error) -> {
+        addListener(ConnectionFactory.createAsyncConnection(getConf()),(conn, error) -> {
           if (error != null) {
             toComplete.completeExceptionally(error);
             // we need to reset the future holder so we will get a chance to recreate an async
@@ -98,15 +100,15 @@ public class AsyncClientExample extends Configured implements Tool {
     }
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NONNULL_PARAM_VIOLATION",
-      justification="it is valid to pass NULL to CompletableFuture#completedFuture")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",
+      justification = "it is valid to pass NULL to CompletableFuture#completedFuture")
   private CompletableFuture<Void> closeConn() {
     CompletableFuture<AsyncConnection> f = future.get();
     if (f == null) {
       return CompletableFuture.completedFuture(null);
     }
     CompletableFuture<Void> closeFuture = new CompletableFuture<>();
-    f.whenComplete((conn, error) -> {
+    addListener(f, (conn, error) -> {
       if (error == null) {
         IOUtils.closeQuietly(conn);
       }
@@ -136,44 +138,44 @@ public class AsyncClientExample extends Configured implements Tool {
     CountDownLatch latch = new CountDownLatch(numOps);
     IntStream.range(0, numOps).forEach(i -> {
       CompletableFuture<AsyncConnection> future = getConn();
-      future.whenComplete((conn, error) -> {
+      addListener(future, (conn, error) -> {
         if (error != null) {
           LOG.warn("failed to get async connection for " + i, error);
           latch.countDown();
           return;
         }
         AsyncTable<?> table = conn.getTable(tableName, threadPool);
-        table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)))
-            .whenComplete((putResp, putErr) -> {
-              if (putErr != null) {
-                LOG.warn("put failed for " + i, putErr);
+        addListener(table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i))),
+          (putResp, putErr) -> {
+            if (putErr != null) {
+              LOG.warn("put failed for " + i, putErr);
+              latch.countDown();
+              return;
+            }
+            LOG.info("put for " + i + " succeeded, try getting");
+            addListener(table.get(new Get(getKey(i))), (result, getErr) -> {
+              if (getErr != null) {
+                LOG.warn("get failed for " + i);
                 latch.countDown();
                 return;
               }
-              LOG.info("put for " + i + " succeeded, try getting");
-              table.get(new Get(getKey(i))).whenComplete((result, getErr) -> {
-                if (getErr != null) {
-                  LOG.warn("get failed for " + i);
-                  latch.countDown();
-                  return;
-                }
-                if (result.isEmpty()) {
-                  LOG.warn("get failed for " + i + ", server returns empty result");
-                } else if (!result.containsColumn(FAMILY, QUAL)) {
-                  LOG.warn("get failed for " + i + ", the result does not contain " +
-                      Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
+              if (result.isEmpty()) {
+                LOG.warn("get failed for " + i + ", server returns empty result");
+              } else if (!result.containsColumn(FAMILY, QUAL)) {
+                LOG.warn("get failed for " + i + ", the result does not contain " +
+                  Bytes.toString(FAMILY) + ":" + Bytes.toString(QUAL));
+              } else {
+                int v = Bytes.toInt(result.getValue(FAMILY, QUAL));
+                if (v != i) {
+                  LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) +
+                    ":" + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
                 } else {
-                  int v = Bytes.toInt(result.getValue(FAMILY, QUAL));
-                  if (v != i) {
-                    LOG.warn("get failed for " + i + ", the value of " + Bytes.toString(FAMILY) +
-                        ":" + Bytes.toString(QUAL) + " is " + v + ", exected " + i);
-                  } else {
-                    LOG.info("get for " + i + " succeeded");
-                  }
+                  LOG.info("get for " + i + " succeeded");
                 }
-                latch.countDown();
-              });
+              }
+              latch.countDown();
             });
+          });
       });
     });
     latch.await();

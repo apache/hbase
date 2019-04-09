@@ -279,13 +279,11 @@ public class ReplicationSink {
 
         // Build hfile relative path from its namespace
         String pathToHfileFromNS = getHFilePath(table, bld, storeFileList.get(k), family);
-
         String tableName = table.getNameWithNamespaceInclAsString();
-        if (bulkLoadHFileMap.containsKey(tableName)) {
-          List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+        List<Pair<byte[], List<String>>> familyHFilePathsList = bulkLoadHFileMap.get(tableName);
+        if (familyHFilePathsList != null) {
           boolean foundFamily = false;
-          for (int i = 0; i < familyHFilePathsList.size(); i++) {
-            Pair<byte[], List<String>> familyHFilePathsPair = familyHFilePathsList.get(i);
+          for (Pair<byte[], List<String>> familyHFilePathsPair :  familyHFilePathsList) {
             if (Bytes.equals(familyHFilePathsPair.getFirst(), family)) {
               // Found family already present, just add the path to the existing list
               familyHFilePathsPair.getSecond().add(pathToHfileFromNS);

@@ -39,5 +39,4 @@ public class TestShell extends AbstractTestShell {
     // Start all ruby tests
     jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
-
 }

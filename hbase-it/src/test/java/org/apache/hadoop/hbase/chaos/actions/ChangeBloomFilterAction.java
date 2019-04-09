@@ -56,8 +56,6 @@ public class ChangeBloomFilterAction extends Action {
       columnBuilder.setBloomFilterType(bloomType);
       if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
         columnBuilder.setConfiguration(BloomFilterUtil.PREFIX_LENGTH_KEY, "10");
-      } else if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
-        columnBuilder.setConfiguration(BloomFilterUtil.DELIMITER_KEY, "#");
       }
     });
 

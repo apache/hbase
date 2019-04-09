@@ -21,9 +21,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
@@ -100,13 +99,13 @@ public class CacheStats {
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
   /** Hit counts for each period in window */
-  private final long [] hitCounts;
+  private final long[] hitCounts;
   /** Caching hit counts for each period in window */
-  private final long [] hitCachingCounts;
+  private final long[] hitCachingCounts;
   /** Access counts for each period in window */
-  private final long [] requestCounts;
+  private final long[] requestCounts;
   /** Caching access counts for each period in window */
-  private final long [] requestCachingCounts;
+  private final long[] requestCachingCounts;
   /** Last hit count read */
   private long lastHitCount = 0;
   /** Last hit caching count read */

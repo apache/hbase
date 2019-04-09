@@ -72,6 +72,8 @@ public abstract class ProcedurePrepareLatch {
   }
 
   private static boolean hasProcedureSupport(int major, int minor) {
+    // Note: this won't work if the shortcut similar to the one in HRegionServer is used
+    //       without the corresponding version handling.
     return VersionInfoUtil.currentClientHasMinimumVersion(major, minor);
   }
 
@@ -99,7 +101,7 @@ public abstract class ProcedurePrepareLatch {
     @Override
     protected void countDown(final Procedure proc) {
       if (proc.hasException()) {
-        exception = proc.getException().unwrapRemoteIOException();
+        exception = MasterProcedureUtil.unwrapRemoteIOException(proc);
       }
       latch.countDown();
     }

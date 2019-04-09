@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -42,20 +44,24 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class IdLock {
 
+  private static final Logger LOG = LoggerFactory.getLogger(IdLock.class);
+
   /** An entry returned to the client as a lock object */
   public static final class Entry {
     private final long id;
     private int numWaiters;
     private boolean locked = true;
+    private Thread holder;
 
-    private Entry(long id) {
+    private Entry(long id, Thread holder) {
       this.id = id;
+      this.holder = holder;
     }
 
     @Override
     public String toString() {
       return "id=" + id + ", numWaiter=" + numWaiters + ", isLocked="
-          + locked;
+          + locked + ", holder=" + holder;
     }
   }
 
@@ -70,7 +76,8 @@ public class IdLock {
    * @throws IOException if interrupted
    */
   public Entry getLockEntry(long id) throws IOException {
-    Entry entry = new Entry(id);
+    Thread currentThread = Thread.currentThread();
+    Entry entry = new Entry(id, currentThread);
     Entry existing;
     while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
       synchronized (existing) {
@@ -81,6 +88,17 @@ public class IdLock {
               existing.wait();
             } catch (InterruptedException e) {
               --existing.numWaiters;  // Remove ourselves from waiters.
+              // HBASE-21292
+              // There is a rare case that interrupting and the lock owner thread call
+              // releaseLockEntry at the same time. Since the owner thread found there
+              // still one waiting, it won't remove the entry from the map. If the interrupted
+              // thread is the last one waiting on the lock, and since an exception is thrown,
+              // the 'existing' entry will stay in the map forever. Later threads which try to
+              // get this lock will stuck in a infinite loop because
+              // existing = map.putIfAbsent(entry.id, entry)) != null and existing.locked=false.
+              if (!existing.locked && existing.numWaiters == 0) {
+                map.remove(existing.id);
+              }
               throw new InterruptedIOException(
                   "Interrupted waiting to acquire sparse lock");
             }
@@ -88,6 +106,7 @@ public class IdLock {
 
           --existing.numWaiters;  // Remove ourselves from waiters.
           existing.locked = true;
+          existing.holder = currentThread;
           return existing;
         }
         // If the entry is not locked, it might already be deleted from the
@@ -109,7 +128,8 @@ public class IdLock {
    */
   public Entry tryLockEntry(long id, long time) throws IOException {
     Preconditions.checkArgument(time >= 0);
-    Entry entry = new Entry(id);
+    Thread currentThread = Thread.currentThread();
+    Entry entry = new Entry(id, currentThread);
     Entry existing;
     long waitUtilTS = System.currentTimeMillis() + time;
     long remaining = time;
@@ -135,12 +155,19 @@ public class IdLock {
 
             }
           } catch (InterruptedException e) {
+            // HBASE-21292
+            // Please refer to the comments in getLockEntry()
+            // the difference here is that we decrease numWaiters in finally block
+            if (!existing.locked && existing.numWaiters == 1) {
+              map.remove(existing.id);
+            }
             throw new InterruptedIOException(
                 "Interrupted waiting to acquire sparse lock");
           } finally {
             --existing.numWaiters;  // Remove ourselves from waiters.
           }
           existing.locked = true;
+          existing.holder = currentThread;
           return existing;
         }
         // If the entry is not locked, it might already be deleted from the
@@ -152,14 +179,17 @@ public class IdLock {
   }
 
   /**
-   * Must be called in a finally block to decrease the internal counter and
-   * remove the monitor object for the given id if the caller is the last
-   * client.
-   *
+   * Must be called in a finally block to decrease the internal counter and remove the monitor
+   * object for the given id if the caller is the last client.
    * @param entry the return value of {@link #getLockEntry(long)}
    */
   public void releaseLockEntry(Entry entry) {
+    Thread currentThread = Thread.currentThread();
     synchronized (entry) {
+      if (entry.holder != currentThread) {
+        LOG.warn("{} is trying to release lock entry {}, but it is not the holder.", currentThread,
+          entry);
+      }
       entry.locked = false;
       if (entry.numWaiters > 0) {
         entry.notify();
@@ -169,7 +199,21 @@ public class IdLock {
     }
   }
 
-  /** For testing */
+  /**
+   * Test whether the given id is already locked by the current thread.
+   */
+  public boolean isHeldByCurrentThread(long id) {
+    Thread currentThread = Thread.currentThread();
+    Entry entry = map.get(id);
+    if (entry == null) {
+      return false;
+    }
+    synchronized (entry) {
+      return currentThread.equals(entry.holder);
+    }
+  }
+
+  @VisibleForTesting
   void assertMapEmpty() {
     assert map.isEmpty();
   }

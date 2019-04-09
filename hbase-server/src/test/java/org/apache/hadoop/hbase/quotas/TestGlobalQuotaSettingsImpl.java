@@ -58,9 +58,9 @@ public class TestGlobalQuotaSettingsImpl {
     QuotaProtos.ThrottleRequest writeThrottle = QuotaProtos.ThrottleRequest.newBuilder()
         .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
 
-    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl("joe", null, null, quota);
+    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl("joe", null, null, null, quota);
     GlobalQuotaSettingsImpl merged = settings.merge(
-        new ThrottleSettings("joe", null, null, writeThrottle));
+      new ThrottleSettings("joe", null, null, null, writeThrottle));
 
     QuotaProtos.Throttle mergedThrottle = merged.getThrottleProto();
     // Verify the request throttle is in place
@@ -80,7 +80,7 @@ public class TestGlobalQuotaSettingsImpl {
     QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder()
         .setSpace(SPACE_QUOTA).build();
 
-    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, tn, null, quota);
+    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, tn, null, null, quota);
     // Switch the violation policy to DISABLE
     GlobalQuotaSettingsImpl merged = settings.merge(
         new SpaceLimitSettings(tn, SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.DISABLE));
@@ -96,7 +96,7 @@ public class TestGlobalQuotaSettingsImpl {
     final String ns = "org1";
     QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder()
         .setThrottle(THROTTLE).setSpace(SPACE_QUOTA).build();
-    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, null, ns, quota);
+    GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, null, ns, null, quota);
 
     QuotaProtos.TimedQuota writeQuota = REQUEST_THROTTLE.toBuilder()
         .setSoftLimit(500).build();
@@ -105,7 +105,7 @@ public class TestGlobalQuotaSettingsImpl {
         .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
 
     GlobalQuotaSettingsImpl merged = settings.merge(
-        new ThrottleSettings(null, null, ns, writeThrottle));
+      new ThrottleSettings(null, null, ns, null, writeThrottle));
     GlobalQuotaSettingsImpl finalQuota = merged.merge(new SpaceLimitSettings(
         ns, SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.NO_WRITES_COMPACTIONS));
 

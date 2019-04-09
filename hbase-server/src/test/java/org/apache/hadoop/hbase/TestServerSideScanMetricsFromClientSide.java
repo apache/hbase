@@ -155,7 +155,7 @@ public class TestServerSideScanMetricsFromClientSide {
       assertTrue(result.rawCells() != null);
       assertTrue(result.rawCells().length == 1);
 
-      CELL_HEAP_SIZE = PrivateCellUtil.estimatedSizeOfCell(result.rawCells()[0]);
+      CELL_HEAP_SIZE = result.rawCells()[0].heapSize();
       scanner.close();
     }
 

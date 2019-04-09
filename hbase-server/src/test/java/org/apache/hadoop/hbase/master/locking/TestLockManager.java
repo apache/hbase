@@ -25,9 +25,9 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -66,7 +67,7 @@ public class TestLockManager {
 
   private static String namespace = "namespace";
   private static TableName tableName = TableName.valueOf(namespace, "table");
-  private static HRegionInfo[] tableRegions;
+  private static RegionInfo[] tableRegions;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -80,10 +81,11 @@ public class TestLockManager {
     UTIL.startMiniCluster(1);
     masterServices = UTIL.getMiniHBaseCluster().getMaster();
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    UTIL.createTable(tableName, new byte[][]{"fam".getBytes()}, new byte[][] {"1".getBytes()});
-    List<HRegionInfo> regions = UTIL.getAdmin().getTableRegions(tableName);
+    UTIL.createTable(tableName, new byte[][]{Bytes.toBytes("fam")},
+        new byte[][] {Bytes.toBytes("1")});
+    List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
     assert regions.size() > 0;
-    tableRegions = new HRegionInfo[regions.size()];
+    tableRegions = new RegionInfo[regions.size()];
     regions.toArray(tableRegions);
   }
 

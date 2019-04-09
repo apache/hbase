@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Semaphore;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -74,6 +77,9 @@ public class ReplicationPeerManager {
       SyncReplicationState.STANDBY, EnumSet.of(SyncReplicationState.DOWNGRADE_ACTIVE),
       SyncReplicationState.DOWNGRADE_ACTIVE,
       EnumSet.of(SyncReplicationState.STANDBY, SyncReplicationState.ACTIVE)));
+
+  // Only allow to add one sync replication peer concurrently
+  private final Semaphore syncReplicationPeerLock = new Semaphore(1);
 
   ReplicationPeerManager(ReplicationPeerStorage peerStorage, ReplicationQueueStorage queueStorage,
       ConcurrentMap<String, ReplicationPeerDescription> peers) {
@@ -105,6 +111,9 @@ public class ReplicationPeerManager {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
     checkPeerConfig(peerConfig);
+    if (peerConfig.isSyncReplication()) {
+      checkSyncReplicationPeerConfigConflict(peerConfig);
+    }
     if (peers.containsKey(peerId)) {
       throw new DoNotRetryIOException("Replication peer " + peerId + " already exists");
     }
@@ -327,7 +336,27 @@ public class ReplicationPeerManager {
   }
 
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
-    checkClusterKey(peerConfig.getClusterKey());
+    String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
+    boolean checkClusterKey = true;
+    if (!StringUtils.isBlank(replicationEndpointImpl)) {
+      // try creating a instance
+      ReplicationEndpoint endpoint;
+      try {
+        endpoint = Class.forName(replicationEndpointImpl)
+          .asSubclass(ReplicationEndpoint.class).getDeclaredConstructor().newInstance();
+      } catch (Throwable e) {
+        throw new DoNotRetryIOException(
+          "Can not instantiate configured replication endpoint class=" + replicationEndpointImpl,
+          e);
+      }
+      // do not check cluster key if we are not HBaseInterClusterReplicationEndpoint
+      if (!(endpoint instanceof HBaseInterClusterReplicationEndpoint)) {
+        checkClusterKey = false;
+      }
+    }
+    if (checkClusterKey) {
+      checkClusterKey(peerConfig.getClusterKey());
+    }
 
     if (peerConfig.replicateAllUserTables()) {
       // If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
@@ -385,6 +414,7 @@ public class ReplicationPeerManager {
           "Only support replicated table config for sync replication peer");
       }
     }
+
     Path remoteWALDir = new Path(peerConfig.getRemoteWALDir());
     if (!remoteWALDir.isAbsolute()) {
       throw new DoNotRetryIOException(
@@ -394,6 +424,19 @@ public class ReplicationPeerManager {
     if (remoteWALDirUri.getScheme() == null || remoteWALDirUri.getAuthority() == null) {
       throw new DoNotRetryIOException("The remote WAL directory " + peerConfig.getRemoteWALDir() +
         " is not qualified, you must provide scheme and authority");
+    }
+  }
+
+  private void checkSyncReplicationPeerConfigConflict(ReplicationPeerConfig peerConfig)
+      throws DoNotRetryIOException {
+    for (TableName tableName : peerConfig.getTableCFsMap().keySet()) {
+      for (Map.Entry<String, ReplicationPeerDescription> entry : peers.entrySet()) {
+        ReplicationPeerConfig rpc = entry.getValue().getPeerConfig();
+        if (rpc.isSyncReplication() && rpc.getTableCFsMap().containsKey(tableName)) {
+          throw new DoNotRetryIOException(
+              "Table " + tableName + " has been replicated by peer " + entry.getKey());
+        }
+      }
     }
   }
 
@@ -492,5 +535,13 @@ public class ReplicationPeerManager {
       return StringUtils.isBlank(s2);
     }
     return s1.equals(s2);
+  }
+
+  public void acquireSyncReplicationPeerLock() throws InterruptedException {
+    syncReplicationPeerLock.acquire();
+  }
+
+  public void releaseSyncReplicationPeerLock() {
+    syncReplicationPeerLock.release();
   }
 }

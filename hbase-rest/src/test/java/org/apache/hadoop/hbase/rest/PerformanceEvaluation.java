@@ -524,7 +524,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * @throws IOException
    */
   private boolean checkTable(RemoteAdmin admin) throws IOException {
-    HTableDescriptor tableDescriptor = getTableDescriptor();
+    HTableDescriptor tableDescriptor = getDescriptor();
     if (this.presplitRegions > 0) {
       // presplit requested
       if (admin.isTableAvailable(tableDescriptor.getTableName().getName())) {
@@ -548,7 +548,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return tableExists;
   }
 
-  protected HTableDescriptor getTableDescriptor() {
+  protected HTableDescriptor getDescriptor() {
     if (TABLE_DESCRIPTOR == null) {
       TABLE_DESCRIPTOR = new HTableDescriptor(tableName);
       HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);

@@ -45,7 +45,7 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
   protected CellArrayImmutableSegment(CellComparator comparator, MemStoreSegmentsIterator iterator,
       MemStoreLAB memStoreLAB, int numOfCells, MemStoreCompactionStrategy.Action action) {
     super(null, comparator, memStoreLAB); // initiailize the CellSet with NULL
-    incMemStoreSize(0, DEEP_OVERHEAD_CAM, 0); // CAM is always on-heap
+    incMemStoreSize(0, DEEP_OVERHEAD_CAM, 0, 0); // CAM is always on-heap
     // build the new CellSet based on CellArrayMap and update the CellSet of the new Segment
     initializeCellSet(numOfCells, iterator, action);
   }
@@ -59,17 +59,18 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
       MemStoreCompactionStrategy.Action action) {
     super(segment); // initiailize the upper class
     long indexOverhead = DEEP_OVERHEAD_CAM - CSLMImmutableSegment.DEEP_OVERHEAD_CSLM;
-    incMemStoreSize(0, indexOverhead, 0); // CAM is always on-heap
-    mss.incMemStoreSize(0, indexOverhead, 0);
+    incMemStoreSize(0, indexOverhead, 0, 0); // CAM is always on-heap
+    mss.incMemStoreSize(0, indexOverhead, 0, 0);
     int numOfCells = segment.getCellsCount();
     // build the new CellSet based on CellChunkMap and update the CellSet of this Segment
     reinitializeCellSet(numOfCells, segment.getScanner(Long.MAX_VALUE), segment.getCellSet(),
-        action);
+      action);
     // arrange the meta-data size, decrease all meta-data sizes related to SkipList;
     // add sizes of CellArrayMap entry (reinitializeCellSet doesn't take the care for the sizes)
-    long newSegmentSizeDelta = numOfCells*(indexEntrySize()-ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
-    incMemStoreSize(0, newSegmentSizeDelta, 0);
-    mss.incMemStoreSize(0, newSegmentSizeDelta, 0);
+    long newSegmentSizeDelta =
+        numOfCells * (indexEntrySize() - ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
+    incMemStoreSize(0, newSegmentSizeDelta, 0, 0);
+    mss.incMemStoreSize(0, newSegmentSizeDelta, 0, 0);
   }
 
   @Override

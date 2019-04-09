@@ -96,18 +96,26 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
           LOG.trace(tableName + ": current=" + currentSnapshot + ", new=" + newSnapshot);
         }
         if (!newSnapshot.equals(currentSnapshot)) {
-          // We have a new snapshot. We might need to enforce it or disable the enforcement
-          if (!isInViolation(currentSnapshot) && newSnapshot.getQuotaStatus().isInViolation()) {
+          // We have a new snapshot.
+          // We might need to enforce it or disable the enforcement or switch policy
+          boolean currInViolation = isInViolation(currentSnapshot);
+          boolean newInViolation = newSnapshot.getQuotaStatus().isInViolation();
+          if (!currInViolation && newInViolation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Enabling " + newSnapshot + " on " + tableName);
             }
             getManager().enforceViolationPolicy(tableName, newSnapshot);
-          }
-          if (isInViolation(currentSnapshot) && !newSnapshot.getQuotaStatus().isInViolation()) {
+          } else if (currInViolation && !newInViolation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Removing quota violation policy on " + tableName);
             }
             getManager().disableViolationPolicyEnforcement(tableName);
+          } else if (currInViolation && newInViolation) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Switching quota violation policy on " + tableName + " from "
+                  + currentSnapshot + " to " + newSnapshot);
+            }
+            getManager().enforceViolationPolicy(tableName, newSnapshot);
           }
         }
       }

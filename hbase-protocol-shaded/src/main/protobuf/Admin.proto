@@ -88,6 +88,7 @@ message OpenRegionRequest {
     repeated ServerName favored_nodes = 3;
     // open region for distributedLogReplay
     // optional bool DEPRECATED_openForDistributedLogReplay = 4;
+    optional int64 open_proc_id = 5 [default = -1];
   }
 }
 
@@ -102,7 +103,6 @@ message OpenRegionResponse {
 }
 
 message WarmupRegionRequest {
-
     required RegionInfo regionInfo = 1;
 }
 
@@ -120,6 +120,7 @@ message CloseRegionRequest {
   optional ServerName destination_server = 4;
   // the intended server for this RPC.
   optional uint64 serverStartCode = 5;
+  optional int64 close_proc_id = 6 [default = -1];
 }
 
 message CloseRegionResponse {

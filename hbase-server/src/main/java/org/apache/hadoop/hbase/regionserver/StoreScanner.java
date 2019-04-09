@@ -403,10 +403,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
   }
 
+  @VisibleForTesting
   protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
       CellComparator comparator) throws IOException {
     // Combine all seeked scanners with a heap
-    heap = new KeyValueHeap(scanners, comparator);
+    heap = newKVHeap(scanners, comparator);
+  }
+
+  protected KeyValueHeap newKVHeap(List<? extends KeyValueScanner> scanners,
+      CellComparator comparator) throws IOException {
+    return new KeyValueHeap(scanners, comparator);
   }
 
   /**
@@ -616,8 +622,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             totalBytesRead += cellSize;
 
             // Update the progress of the scanner context
-            scannerContext.incrementSizeProgress(cellSize,
-              PrivateCellUtil.estimatedSizeOfCell(cell));
+            scannerContext.incrementSizeProgress(cellSize, cell.heapSize());
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
@@ -690,7 +695,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         case SEEK_NEXT_USING_HINT:
           Cell nextKV = matcher.getNextKeyHint(cell);
-          if (nextKV != null) {
+          if (nextKV != null && comparator.compare(nextKV, cell) > 0) {
             seekAsDirection(nextKV);
             NextState stateAfterSeekByHint = needToReturn(outResult);
             if (stateAfterSeekByHint != null) {
@@ -802,12 +807,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @VisibleForTesting
   protected boolean trySkipToNextRow(Cell cell) throws IOException {
     Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
     do {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY &&
+          (nextIndexedKey == previousIndexedKey ||
+          matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0)) {
         this.heap.next();
         ++kvsScanned;
+        previousIndexedKey = nextIndexedKey;
       } else {
         return false;
       }
@@ -823,12 +833,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @VisibleForTesting
   protected boolean trySkipToNextColumn(Cell cell) throws IOException {
     Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
     do {
       Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY &&
+          (nextIndexedKey == previousIndexedKey ||
+          matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0)) {
         this.heap.next();
         ++kvsScanned;
+        previousIndexedKey = nextIndexedKey;
       } else {
         return false;
       }
@@ -1027,7 +1042,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       newCurrentScanners = new ArrayList<>(fileScanners.size() + memstoreScanners.size());
       newCurrentScanners.addAll(fileScanners);
       newCurrentScanners.addAll(memstoreScanners);
-      newHeap = new KeyValueHeap(newCurrentScanners, comparator);
+      newHeap = newKVHeap(newCurrentScanners, comparator);
     } catch (Exception e) {
       LOG.warn("failed to switch to stream read", e);
       if (fileScanners != null) {

@@ -144,8 +144,8 @@ module Hbase
       split_point_bytes = nil
       split_point_bytes = split_point.to_java_bytes unless split_point.nil?
       begin
-        @admin.splitRegion(table_or_region_name.to_java_bytes, split_point_bytes)
-      rescue java.lang.IllegalArgumentException => e
+        @admin.splitRegionAsync(table_or_region_name.to_java_bytes, split_point_bytes).get
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException => e
         @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
       end
     end
@@ -154,33 +154,26 @@ module Hbase
     # Enable/disable one split or merge switch
     # Returns previous switch setting.
     def splitormerge_switch(type, enabled)
-      switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
+        @admin.splitSwitch(java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false))
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
+        @admin.mergeSwitch(java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false))
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
-      @admin.setSplitOrMergeEnabled(
-        java.lang.Boolean.valueOf(enabled), java.lang.Boolean.valueOf(false),
-        switch_type
-      )[0]
     end
 
     #----------------------------------------------------------------------------------------------
     # Query the current state of the split or merge switch.
     # Returns the switch's state (true is enabled).
     def splitormerge_enabled(type)
-      switch_type = nil
       if type == 'SPLIT'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::SPLIT
+        @admin.isSplitEnabled
       elsif type == 'MERGE'
-        switch_type = org.apache.hadoop.hbase.client::MasterSwitchType::MERGE
+        @admin.isMergeEnabled
       else
         raise ArgumentError, 'only SPLIT or MERGE accepted for type!'
       end
-      @admin.isSplitOrMergeEnabled(switch_type)
     end
 
     def locate_region(table_name, row_key)
@@ -203,7 +196,7 @@ module Hbase
     # Enable/disable balancer
     # Returns previous balancer switch setting.
     def balance_switch(enableDisable)
-      @admin.setBalancerRunning(
+      @admin.balancerSwitch(
         java.lang.Boolean.valueOf(enableDisable), java.lang.Boolean.valueOf(false)
       )
     end
@@ -232,7 +225,7 @@ module Hbase
     # Enable/disable region normalizer
     # Returns previous normalizer switch setting.
     def normalizer_switch(enableDisable)
-      @admin.setNormalizerRunning(java.lang.Boolean.valueOf(enableDisable))
+      @admin.normalizerSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -253,14 +246,14 @@ module Hbase
     # Request a scan of the catalog table (for garbage collection)
     # Returns an int signifying the number of entries cleaned
     def catalogjanitor_run
-      @admin.runCatalogScan
+      @admin.runCatalogJanitor
     end
 
     #----------------------------------------------------------------------------------------------
     # Enable/disable the catalog janitor
     # Returns previous catalog janitor switch setting.
     def catalogjanitor_switch(enableDisable)
-      @admin.enableCatalogJanitor(java.lang.Boolean.valueOf(enableDisable))
+      @admin.catalogJanitorSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -280,7 +273,7 @@ module Hbase
     # Enable/disable the cleaner chore
     # Returns previous cleaner switch setting.
     def cleaner_chore_switch(enableDisable)
-      @admin.setCleanerChoreRunning(java.lang.Boolean.valueOf(enableDisable))
+      @admin.cleanerChoreSwitch(java.lang.Boolean.valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -301,8 +294,17 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Enables all tables matching the given regex
     def enable_all(regex)
-      regex = regex.to_s
-      @admin.enableTables(Pattern.compile(regex))
+      pattern = Pattern.compile(regex.to_s)
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.enableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -317,7 +319,16 @@ module Hbase
     # Disables all tables matching the given regex
     def disable_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      @admin.disableTables(pattern).map { |t| t.getTableName.getNameAsString }
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.disableTable(table_name)
+        rescue java.io.IOException => e
+          puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #---------------------------------------------------------------------------------------------
@@ -347,8 +358,16 @@ module Hbase
     # Drops a table
     def drop_all(regex)
       pattern = Pattern.compile(regex.to_s)
-      failed = @admin.deleteTables(pattern).map { |t| t.getTableName.getNameAsString }
-      failed
+      failed = java.util.ArrayList.new
+      admin.listTableNames(pattern).each do |table_name|
+        begin
+          admin.deleteTable(table_name)
+        rescue java.io.IOException => e
+          puts puts "table:#{table_name}, error:#{e.toString}"
+          failed.add(table_name)
+        end
+      end
+      @failed
     end
 
     #----------------------------------------------------------------------------------------------
@@ -492,17 +511,17 @@ module Hbase
     # Returns table's structure description
     def describe(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).to_s
+      @admin.getDescriptor(TableName.valueOf(table_name)).to_s
     end
 
     def get_column_families(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).getColumnFamilies
+      @admin.getDescriptor(TableName.valueOf(table_name)).getColumnFamilies
     end
 
     def get_table_attributes(table_name)
       tableExists(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+      @admin.getDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
     end
 
     #----------------------------------------------------------------------------------------------
@@ -510,7 +529,7 @@ module Hbase
     def truncate(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getDescriptor(table_name)
       raise ArgumentError, "Table #{table_name_str} is not enabled. Enable it first." unless
           enabled?(table_name_str)
       puts 'Disabling table...'
@@ -551,7 +570,7 @@ module Hbase
         locator.close
       end
 
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getDescriptor(table_name)
       puts 'Disabling table...'
       disable(table_name_str)
 
@@ -627,7 +646,7 @@ module Hbase
       table_name = TableName.valueOf(table_name_str)
 
       # Get table descriptor
-      htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getTableDescriptor(table_name))
+      htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(table_name))
       hasTableUpdate = false
 
       # Process all args
@@ -742,17 +761,17 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        @admin.modifyTable(table_name, htd)
+        future = @admin.modifyTableAsync(htd)
 
         if wait == true
           puts 'Updating all regions with the new schema...'
-          alter_status(table_name_str)
+          future.get
         end
       end
     end
 
     def status(format, type)
-      status = @admin.getClusterStatus
+      status = org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
       if format == 'detailed'
         puts(format('version %s', status.getHBaseVersion))
         # Put regions in transition first because usually empty
@@ -767,7 +786,7 @@ module Hbase
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
 
-        master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors)
+        master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
         end
@@ -785,37 +804,30 @@ module Hbase
           puts(format('    %s', server))
         end
       elsif format == 'replication'
-        puts(format('version %s', status.getHBaseVersion))
-        puts(format('%d live servers', status.getServersSize))
-        for server in status.getServers
-          sl = status.getLoad(server)
-          rSinkString   = '       SINK  :'
-          rSourceString = '       SOURCE:'
-          rLoadSink = sl.getReplicationLoadSink
-          next if rLoadSink.nil?
-          rSinkString << ' AgeOfLastAppliedOp=' + rLoadSink.getAgeOfLastAppliedOp.to_s
-          rSinkString << ', TimeStampsOfLastAppliedOp=' +
-                         java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp).toString
-          rLoadSourceList = sl.getReplicationLoadSourceList
-          index = 0
-          while index < rLoadSourceList.size
-            rLoadSource = rLoadSourceList.get(index)
-            rSourceString << ' PeerID=' + rLoadSource.getPeerID
-            rSourceString << ', AgeOfLastShippedOp=' + rLoadSource.getAgeOfLastShippedOp.to_s
-            rSourceString << ', SizeOfLogQueue=' + rLoadSource.getSizeOfLogQueue.to_s
-            rSourceString << ', TimeStampsOfLastShippedOp=' +
-                             java.util.Date.new(rLoadSource.getTimeStampOfLastShippedOp).toString
-            rSourceString << ', Replication Lag=' + rLoadSource.getReplicationLag.to_s
-            index += 1
-          end
-          puts(format('    %s:', server.getHostname))
-          if type.casecmp('SOURCE') == 0
-            puts(format('%s', rSourceString))
-          elsif type.casecmp('SINK') == 0
-            puts(format('%s', rSinkString))
+        puts(format('version %<version>s', version: status.getHBaseVersion))
+        puts(format('%<servers>d live servers', servers: status.getServersSize))
+        status.getServers.each do |server_status|
+          sl = status.getLoad(server_status)
+          r_sink_string   = '      SINK:'
+          r_source_string = '       SOURCE:'
+          r_load_sink = sl.getReplicationLoadSink
+          next if r_load_sink.nil?
+
+          r_sink_string << ' AgeOfLastAppliedOp=' +
+                           r_load_sink.getAgeOfLastAppliedOp.to_s
+          r_sink_string << ', TimeStampsOfLastAppliedOp=' +
+                           java.util.Date.new(r_load_sink
+                             .getTimeStampsOfLastAppliedOp).toString
+          r_load_source_map = sl.getReplicationLoadSourceMap
+          build_source_string(r_load_source_map, r_source_string)
+          puts(format('    %<host>s:', host: server_status.getHostname))
+          if type.casecmp('SOURCE').zero?
+            puts(format('%<source>s', source: r_source_string))
+          elsif type.casecmp('SINK').zero?
+            puts(format('%<sink>s', sink: r_sink_string))
           else
-            puts(format('%s', rSourceString))
-            puts(format('%s', rSinkString))
+            puts(format('%<source>s', source: r_source_string))
+            puts(format('%<sink>s', sink: r_sink_string))
           end
         end
       elsif format == 'simple'
@@ -841,6 +853,71 @@ module Hbase
         puts(format('Aggregate load: %d, regions: %d', load, regions))
       else
         puts "1 active master, #{status.getBackupMastersSize} backup masters, #{status.getServersSize} servers, #{status.getDeadServers} dead, #{format('%.4f', status.getAverageLoad)} average load"
+      end
+    end
+
+    def build_source_string(r_load_source_map, r_source_string)
+      r_load_source_map.each do |peer, sources|
+        r_source_string << ' PeerID=' + peer
+        sources.each do |source_load|
+          build_queue_title(source_load, r_source_string)
+          build_running_source_stats(source_load, r_source_string)
+        end
+      end
+    end
+
+    def build_queue_title(source_load, r_source_string)
+      r_source_string << if source_load.isRecovered
+                           "\n         Recovered Queue: "
+                         else
+                           "\n         Normal Queue: "
+                         end
+      r_source_string << source_load.getQueueId
+    end
+
+    def build_running_source_stats(source_load, r_source_string)
+      if source_load.isRunning
+        build_shipped_stats(source_load, r_source_string)
+        build_load_general_stats(source_load, r_source_string)
+        r_source_string << ', Replication Lag=' +
+                           source_load.getReplicationLag.to_s
+      else
+        r_source_string << "\n           "
+        r_source_string << 'No Reader/Shipper threads runnning yet.'
+      end
+    end
+
+    def build_shipped_stats(source_load, r_source_string)
+      r_source_string << if source_load.getTimeStampOfLastShippedOp.zero?
+                           "\n           " \
+                           'No Ops shipped since last restart'
+                         else
+                           "\n           AgeOfLastShippedOp=" +
+                           source_load.getAgeOfLastShippedOp.to_s +
+                           ', TimeStampOfLastShippedOp=' +
+                           java.util.Date.new(source_load
+                             .getTimeStampOfLastShippedOp).toString
+                         end
+    end
+
+    def build_load_general_stats(source_load, r_source_string)
+      r_source_string << ', SizeOfLogQueue=' +
+                         source_load.getSizeOfLogQueue.to_s
+      r_source_string << ', EditsReadFromLogQueue=' +
+                         source_load.getEditsRead.to_s
+      r_source_string << ', OpsShippedToTarget=' +
+                         source_load.getOPsShipped.to_s
+      build_edits_for_source(source_load, r_source_string)
+    end
+
+    def build_edits_for_source(source_load, r_source_string)
+      if source_load.hasEditsSinceRestart
+        r_source_string << ', TimeStampOfNextToReplicate=' +
+                           java.util.Date.new(source_load
+                             .getTimeStampOfNextToReplicate).toString
+      else
+        r_source_string << ', No edits for this source'
+        r_source_string << ' since it started'
       end
     end
 
@@ -1064,20 +1141,48 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Returns the ClusterStatus of the cluster
+    def getClusterStatus
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers
-      @admin.getClusterStatus.getServers.map { |serverName| serverName }
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.map { |serverName| serverName }
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns servername corresponding to passed server_name_string
+    def getServerName(server_name_string)
+      regionservers = getRegionServers
+
+      if ServerName.isFullServerName(server_name_string)
+        return ServerName.valueOf(server_name_string)
+      else
+        name_list = server_name_string.split(',')
+
+        regionservers.each do|sn|
+          if name_list[0] == sn.hostname && (name_list[1].nil? ? true : (name_list[1] == sn.port.to_s))
+            return sn
+          end
+        end
+      end
+
+      return nil
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of servernames
-    def getServerNames(servers)
+    def getServerNames(servers, should_return_all_if_servers_empty)
       regionservers = getRegionServers
       servernames = []
 
       if servers.empty?
         # if no servers were specified as arguments, get a list of all servers
-        servernames = regionservers
+        if should_return_all_if_servers_empty
+          servernames = regionservers
+        end
       else
         # Strings replace with ServerName objects in servers array
         i = 0
@@ -1240,6 +1345,8 @@ module Hbase
       htd.setMaxFileSize(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MAX_FILESIZE)
       htd.setReadOnly(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::READONLY))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::READONLY)
       htd.setCompactionEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::COMPACTION_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::COMPACTION_ENABLED)
+      htd.setSplitEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::SPLIT_ENABLED)
+      htd.setMergeEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::MERGE_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::MERGE_ENABLED)
       htd.setNormalizationEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZATION_ENABLED))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZATION_ENABLED)
       htd.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_COUNT)
       htd.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_SIZE))) if arg.include?(org.apache.hadoop.hbase.HTableDescriptor::NORMALIZER_TARGET_REGION_SIZE)
@@ -1305,7 +1412,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # List live region servers
     def list_liveservers
-      @admin.getClusterStatus.getServers.to_a
+      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.to_a
     end
 
     #---------------------------------------------------------------------------
@@ -1316,6 +1423,77 @@ module Hbase
                               preserve_splits)
     end
 
+    #----------------------------------------------------------------------------------------------
+    # List decommissioned RegionServers
+    def list_decommissioned_regionservers
+      @admin.listDecommissionedRegionServers
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Decommission a list of region servers, optionally offload corresponding regions
+    def decommission_regionservers(host_or_servers, should_offload)
+      # Fail if host_or_servers is neither a string nor an array
+      unless host_or_servers.is_a?(Array) || host_or_servers.is_a?(String)
+        raise(ArgumentError,
+             "#{host_or_servers.class} of #{host_or_servers.inspect} is not of Array/String type")
+      end
+
+      # Fail if should_offload is neither a TrueClass/FalseClass nor a string
+      unless (!!should_offload == should_offload) || should_offload.is_a?(String)
+        raise(ArgumentError, "#{should_offload} is not a boolean value")
+      end
+
+      # If a string is passed, convert  it to an array
+      _host_or_servers =  host_or_servers.is_a?(Array) ?
+                          host_or_servers :
+                          java.util.Arrays.asList(host_or_servers)
+
+      # Retrieve the server names corresponding to passed _host_or_servers list
+      server_names = getServerNames(_host_or_servers, false)
+
+      # Fail, if we can not find any server(s) corresponding to the passed host_or_servers
+      if server_names.empty?
+        raise(ArgumentError,
+             "Could not find any server(s) with specified name(s): #{host_or_servers}")
+      end
+
+      @admin.decommissionRegionServers(server_names,
+                                       java.lang.Boolean.valueOf(should_offload))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Recommission a region server, optionally load a list of passed regions
+    def recommission_regionserver(server_name_string, encoded_region_names)
+      # Fail if server_name_string is not a string
+      unless server_name_string.is_a?(String)
+        raise(ArgumentError,
+             "#{server_name_string.class} of #{server_name_string.inspect} is not of String type")
+      end
+
+      # Fail if encoded_region_names is not an array
+      unless encoded_region_names.is_a?(Array)
+        raise(ArgumentError,
+             "#{encoded_region_names.class} of #{encoded_region_names.inspect} is not of Array type")
+      end
+
+      # Convert encoded_region_names from string to bytes (element-wise)
+      region_names_in_bytes = encoded_region_names
+                              .map {|region_name| region_name.to_java_bytes}
+                              .compact
+
+      # Retrieve the server name corresponding to the passed server_name_string
+      server_name = getServerName(server_name_string)
+
+      # Fail if we can not find a server corresponding to the passed server_name_string
+      if server_name.nil?
+        raise(ArgumentError,
+             "Could not find any server with name #{server_name_string}")
+      end
+
+      @admin.recommissionRegionServer(server_name, region_names_in_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Stop the active Master
     def stop_master
       @admin.stopMaster

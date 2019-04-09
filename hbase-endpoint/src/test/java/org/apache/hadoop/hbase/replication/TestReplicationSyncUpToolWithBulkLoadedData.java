@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -61,12 +60,6 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     conf1.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
     conf1.set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
-    String classes = conf1.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    if (!classes.contains("org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint")) {
-      classes = classes + ",org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint";
-      conf1.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, classes);
-    }
-
     TestReplicationBase.setUpBeforeClass();
   }
 

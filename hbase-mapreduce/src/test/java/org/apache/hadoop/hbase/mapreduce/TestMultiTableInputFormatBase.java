@@ -236,5 +236,9 @@ public class TestMultiTableInputFormatBase {
     public TableBuilder getTableBuilder(TableName tableName, ExecutorService pool) {
       return Mockito.mock(TableBuilder.class);
     }
+
+    @Override
+    public void clearRegionLocationCache() {
+    }
   }
 }

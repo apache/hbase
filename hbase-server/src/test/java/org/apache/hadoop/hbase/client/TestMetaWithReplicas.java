@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -100,8 +101,7 @@ public class TestMetaWithReplicas {
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
     ServerName hbaseMetaServerName =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMetaTableLocator().
-            getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
+      MetaTableLocator.getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {
@@ -131,7 +131,7 @@ public class TestMetaWithReplicas {
           TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
       assertNotEquals(destinationServerName, metaServerName);
       TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-          Bytes.toBytes(destinationServerName.toString()));
+        destinationServerName);
     }
     // Disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
@@ -157,7 +157,7 @@ public class TestMetaWithReplicas {
 
   @Test
   public void testMetaHTDReplicaCount() throws Exception {
-    assertTrue(TEST_UTIL.getAdmin().getTableDescriptor(TableName.META_TABLE_NAME)
+    assertTrue(TEST_UTIL.getAdmin().getDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication() == 3);
   }
 
@@ -230,7 +230,7 @@ public class TestMetaWithReplicas {
         // If the servers are the same, then move the test table's region out of the server
         // to another random server
         if (hrl.getServerName().equals(primary)) {
-          util.getAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes(), null);
+          util.getAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes());
           // wait for the move to complete
           do {
             Thread.sleep(10);
@@ -258,10 +258,10 @@ public class TestMetaWithReplicas {
       LOG.info("Running GETs");
       Get get = null;
       Result r = null;
-      byte[] row = "test".getBytes();
+      byte[] row = Bytes.toBytes("test");
       try (Table htable = c.getTable(TABLE)) {
         Put put = new Put(row);
-        put.addColumn("foo".getBytes(), row, row);
+        put.addColumn(Bytes.toBytes("foo"), row, row);
         BufferedMutator m = c.getBufferedMutator(TABLE);
         m.mutate(put);
         m.flush();
@@ -296,7 +296,7 @@ public class TestMetaWithReplicas {
       TEST_UTIL.getAdmin().deleteTable(tableName);
     }
     try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES)) {
-      byte[] row = "test".getBytes();
+      byte[] row = Bytes.toBytes("test");
       ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
       // check that metalookup pool would get created
       c.relocateRegion(tableName, row);
@@ -462,7 +462,7 @@ public class TestMetaWithReplicas {
     TEST_UTIL.createTable(tableName, "f");
     assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));
     TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        Bytes.toBytes(moveToServer.getServerName()));
+      moveToServer);
     int i = 0;
     assert !moveToServer.equals(currentServer);
     LOG.info("CurrentServer=" + currentServer + ", moveToServer=" + moveToServer);

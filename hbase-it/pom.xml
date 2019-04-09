@@ -162,6 +162,16 @@
   </build>
 
   <dependencies>
+    <!--This one is upfront to get in front of
+         any dependency that pulls in jersey-core.
+         Jersey-core has implemented version 1
+         Interfaces of what is in this dependency
+         which does version 2.-->
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <scope>test</scope>
+    </dependency>
 	<!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -218,11 +228,19 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-testing-util</artifactId>
+      <exclusions>
+        <!--This dependency pulls in hadoop-minicluster
+             which pulls in the below. It messes up
+             this build at assembly time. See HBASE-22029-->
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-backup</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
@@ -247,11 +265,6 @@
     <dependency>
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
@@ -279,10 +292,6 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
   </dependencies>
 
   <profiles>
@@ -298,8 +307,19 @@
         <skipTests>true</skipTests>
       </properties>
     </profile>
-
-
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.sun.xml.ws</groupId>
+          <artifactId>jaxws-ri</artifactId>
+          <type>pom</type>
+        </dependency>
+      </dependencies>
+    </profile>
     <!-- profile for building against Hadoop 2.x.  This is the default -->
     <profile>
       <id>hadoop-2.0</id>

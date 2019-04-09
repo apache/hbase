@@ -32,11 +32,11 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -67,8 +67,8 @@ public class TestHFileSeek extends TestCase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileSeek.class);
 
-  private static final byte[] CF = "f1".getBytes();
-  private static final byte[] QUAL = "q1".getBytes();
+  private static final byte[] CF = Bytes.toBytes("f1");
+  private static final byte[] QUAL = Bytes.toBytes("q1");
   private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;
@@ -200,15 +200,15 @@ public class TestHFileSeek extends TestCase {
     timer.start();
     for (int i = 0; i < options.seekCount; ++i) {
       kSampler.next(key);
-      byte [] k = new byte [key.getLength()];
+      byte[] k = new byte[key.getLength()];
       System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
-      if (scanner.seekTo(KeyValueUtil.createKeyValueFromKey(k)) >= 0) {
+      KeyValue kv = new KeyValue(k, CF, QUAL);
+      if (scanner.seekTo(kv) >= 0) {
         ByteBuffer bbkey = ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey());
         ByteBuffer bbval = scanner.getValue();
         totalBytes += bbkey.limit();
         totalBytes += bbval.limit();
-      }
-      else {
+      } else {
         ++miss;
       }
     }

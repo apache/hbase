@@ -94,6 +94,9 @@ function personality_parse_args
       --hadoop-profile=*)
         HADOOP_PROFILE=${i#*=}
       ;;
+      --skip-errorprone)
+        SKIP_ERRORPRONE=true
+      ;;
     esac
   done
 }
@@ -166,7 +169,7 @@ function personality_modules
     return
   fi
 
-  if [[ ${testtype} == compile ]]; then
+  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]]; then
     extra="${extra} -PerrorProne"
   fi
 
@@ -271,6 +274,20 @@ function get_include_exclude_tests_arg
       else
         yetus_error "Wget error $? in fetching includes file from url" \
              "${INCLUDE_TESTS_URL}. Ignoring and proceeding."
+      fi
+  else
+    # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
+    FLAKY_URL="https://builds.apache.org/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/excludes/"
+    if wget "${FLAKY_URL}" -O "excludes"; then
+      excludes=$(cat excludes)
+        yetus_debug "excludes=${excludes}"
+        if [[ -n "${excludes}" ]]; then
+          eval "${__resultvar}='-Dtest.exclude.pattern=${excludes}'"
+        fi
+        rm excludes
+      else
+        yetus_error "Wget error $? in fetching excludes file from url" \
+             "${FLAKY_URL}. Ignoring and proceeding."
       fi
   fi
 }
@@ -690,6 +707,24 @@ function hbaseanti_patchfile
 
   add_vote_table +1 hbaseanti "" "Patch does not have any anti-patterns."
   return 0
+}
+
+## @description  process the javac output for generating WARNING/ERROR
+## @audience     private
+## @stability    evolving
+## @param        input filename
+## @param        output filename
+# Override the default javac_logfilter so that we can do a sort before outputing the WARNING/ERROR.
+# This is because that the output order of the error prone warnings is not stable, so the diff
+# method will report unexpected errors if we do not sort it. Notice that a simple sort will cause
+# line number being sorted by lexicographical so the output maybe a bit strange to human but it is
+# really hard to sort by file name first and then line number and column number in shell...
+function hbase_javac_logfilter
+{
+  declare input=$1
+  declare output=$2
+
+  ${GREP} -E '\[(ERROR|WARNING)\] /.*\.java:' "${input}" | sort > "${output}"
 }
 
 ## This is named so that yetus will check us right after running tests.

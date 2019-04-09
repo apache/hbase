@@ -53,7 +53,7 @@ public class TableRecordReaderImpl {
 
   // HBASE_COUNTER_GROUP_NAME is the name of mapreduce counter group for HBase
   @VisibleForTesting
-  static final String HBASE_COUNTER_GROUP_NAME = "HBase Counters";
+  static final String HBASE_COUNTER_GROUP_NAME = "HBaseCounters";
   private ResultScanner scanner = null;
   private Scan scan = null;
   private Scan currentScan = null;

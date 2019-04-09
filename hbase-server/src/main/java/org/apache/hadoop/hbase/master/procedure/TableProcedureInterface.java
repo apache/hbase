@@ -26,6 +26,13 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface TableProcedureInterface {
+
+  /**
+   * Used for acquire/release lock for namespace related operations, just a place holder as we do
+   * not have namespace table any more.
+   */
+  public static final TableName DUMMY_NAMESPACE_TABLE_NAME = TableName.NAMESPACE_TABLE_NAME;
+
   public enum TableOperationType {
     CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
     REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,

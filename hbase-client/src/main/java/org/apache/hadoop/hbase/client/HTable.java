@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
+
 // DO NOT MAKE USE OF THESE IMPORTS! THEY ARE HERE FOR COPROCESSOR ENDPOINTS ONLY.
 // Internally, we use shaded protobuf. This below are part of our public API.
 //SEE ABOVE NOTE!
@@ -25,42 +27,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -75,8 +41,39 @@ import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 
 /**
  * An implementation of {@link Table}. Used to communicate with a single HBase table.
@@ -158,7 +155,7 @@ public class HTable implements Table {
    * @param pool ExecutorService to be used.
    */
   @InterfaceAudience.Private
-  protected HTable(final ClusterConnection connection,
+  protected HTable(final ConnectionImplementation connection,
       final TableBuilderBase builder,
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,
@@ -223,17 +220,6 @@ public class HTable implements Table {
   @VisibleForTesting
   protected Connection getConnection() {
     return this.connection;
-  }
-
-  @Override
-  @Deprecated
-  public HTableDescriptor getTableDescriptor() throws IOException {
-    HTableDescriptor htd = HBaseAdmin.getHTableDescriptor(tableName, connection, rpcCallerFactory,
-      rpcControllerFactory, operationTimeoutMs, readRpcTimeoutMs);
-    if (htd != null) {
-      return new ImmutableHTableDescriptor(htd);
-    }
-    return null;
   }
 
   @Override
@@ -487,35 +473,20 @@ public class HTable implements Table {
   }
 
   @Override
-  public void delete(final Delete delete)
-  throws IOException {
-    CancellableRegionServerCallable<SingleResponse> callable =
-        new CancellableRegionServerCallable<SingleResponse>(
-            connection, getName(), delete.getRow(), this.rpcControllerFactory.newController(),
-            writeRpcTimeoutMs, new RetryingTimeTracker().start(), delete.getPriority()) {
+  public void delete(final Delete delete) throws IOException {
+    ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
+            this.rpcControllerFactory.newController(), delete.getPriority()) {
       @Override
-      protected SingleResponse rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), delete);
-        MutateResponse response = doMutate(request);
-        return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
+      protected Void rpcCall() throws Exception {
+        MutateRequest request = RequestConverter
+            .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
+        doMutate(request);
+        return null;
       }
     };
-    List<Delete> rows = Collections.singletonList(delete);
-    AsyncProcessTask task = AsyncProcessTask.newBuilder()
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(rows)
-            .setCallable(callable)
-            .setRpcTimeout(writeRpcTimeoutMs)
-            .setOperationTimeout(operationTimeoutMs)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .build();
-    AsyncRequestFuture ars = multiAp.submit(task);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
-    }
+    rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
+        .callWithRetries(callable, this.operationTimeoutMs);
   }
 
   @Override
@@ -936,24 +907,8 @@ public class HTable implements Table {
   }
 
   // validate for well-formedness
-  public void validatePut(final Put put) throws IllegalArgumentException {
-    validatePut(put, connConfiguration.getMaxKeyValueSize());
-  }
-
-  // validate for well-formedness
-  public static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
-    if (put.isEmpty()) {
-      throw new IllegalArgumentException("No columns to insert");
-    }
-    if (maxKeyValueSize > 0) {
-      for (List<Cell> list : put.getFamilyCellMap().values()) {
-        for (Cell cell : list) {
-          if (KeyValueUtil.length(cell) > maxKeyValueSize) {
-            throw new IllegalArgumentException("KeyValue size too large");
-          }
-        }
-      }
-    }
+  private void validatePut(final Put put) throws IllegalArgumentException {
+    ConnectionUtils.validatePut(put, connConfiguration.getMaxKeyValueSize());
   }
 
   /**
@@ -1277,6 +1232,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
+      validatePut(put);
       preCheck();
       return doCheckAndPut(row, family, qualifier, op.name(), value, timeRange, put);
     }

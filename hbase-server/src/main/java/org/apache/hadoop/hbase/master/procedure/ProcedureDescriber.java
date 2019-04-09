@@ -69,7 +69,8 @@ public class ProcedureDescriber {
     description.put("LAST_UPDATE", new Date(proc.getLastUpdate()));
 
     if (proc.isFailed()) {
-      description.put("ERRORS", proc.getException().unwrapRemoteIOException().getMessage());
+      description.put("ERRORS",
+          MasterProcedureUtil.unwrapRemoteIOException(proc).getMessage());
     }
     description.put("PARAMETERS", parametersToObject(proc));
 

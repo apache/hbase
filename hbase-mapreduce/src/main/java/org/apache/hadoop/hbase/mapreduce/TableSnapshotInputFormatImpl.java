@@ -538,9 +538,7 @@ public class TableSnapshotInputFormatImpl {
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
 
-    // TODO: restore from record readers to parallelize.
     RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
-
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }
 }

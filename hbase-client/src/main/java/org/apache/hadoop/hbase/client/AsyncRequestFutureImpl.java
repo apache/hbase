@@ -826,7 +826,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       byte[] regionName = regionEntry.getKey();
 
       Throwable regionException = responses.getExceptions().get(regionName);
-      cleanServerCache(server, regionException);
+      if (regionException != null) {
+        cleanServerCache(server, regionException);
+      }
 
       Map<Integer, Object> regionResults =
         results.containsKey(regionName) ? results.get(regionName).result : Collections.emptyMap();
@@ -916,10 +918,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   private void cleanServerCache(ServerName server, Throwable regionException) {
-    if (tableName == null && ClientExceptionsUtil.isMetaClearingException(regionException)) {
-      // For multi-actions, we don't have a table name, but we want to make sure to clear the
-      // cache in case there were location-related exceptions. We don't to clear the cache
-      // for every possible exception that comes through, however.
+    if (ClientExceptionsUtil.isMetaClearingException(regionException)) {
+      // We want to make sure to clear the cache in case there were location-related exceptions.
+      // We don't to clear the cache for every possible exception that comes through, however.
       asyncProcess.connection.clearCaches(server);
     }
   }

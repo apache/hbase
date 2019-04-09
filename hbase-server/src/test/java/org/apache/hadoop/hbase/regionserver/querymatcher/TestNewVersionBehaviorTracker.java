@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import java.util.TreeSet;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -33,6 +34,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestNewVersionBehaviorTracker {
 
@@ -40,12 +42,46 @@ public class TestNewVersionBehaviorTracker {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestNewVersionBehaviorTracker.class);
 
+  private final byte[] col0 = Bytes.toBytes("col0");
   private final byte[] col1 = Bytes.toBytes("col1");
   private final byte[] col2 = Bytes.toBytes("col2");
+  private final byte[] col3 = Bytes.toBytes("col3");
+  private final byte[] col4 = Bytes.toBytes("col4");
   private final byte[] row = Bytes.toBytes("row");
   private final byte[] family = Bytes.toBytes("family");
   private final byte[] value = Bytes.toBytes("value");
   private final CellComparator comparator = CellComparatorImpl.COMPARATOR;
+
+  @Test
+  public void testColumns() throws IOException {
+    TreeSet<byte[]> trackedColumns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    trackedColumns.add(col1);
+    trackedColumns.add(col3);
+
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(trackedColumns, comparator, 1, 3, 3, 10000);
+
+    KeyValue keyValue = new KeyValue(row, family, col0, 20000, KeyValue.Type.Put, value);
+    assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
+    assertEquals(MatchCode.SEEK_NEXT_COL, tracker.checkColumn(keyValue, keyValue.getTypeByte()));
+
+    keyValue = new KeyValue(row, family, col1, 20000, KeyValue.Type.Put, value);
+    assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
+    assertEquals(MatchCode.INCLUDE, tracker.checkColumn(keyValue, keyValue.getTypeByte()));
+
+    keyValue = new KeyValue(row, family, col2, 20000, KeyValue.Type.Put, value);
+    assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
+    assertEquals(MatchCode.SEEK_NEXT_COL, tracker.checkColumn(keyValue, keyValue.getTypeByte()));
+
+    keyValue = new KeyValue(row, family, col3, 20000, KeyValue.Type.Put, value);
+    assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
+    assertEquals(MatchCode.INCLUDE, tracker.checkColumn(keyValue, keyValue.getTypeByte()));
+
+    keyValue = new KeyValue(row, family, col4, 20000, KeyValue.Type.Put, value);
+    assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
+    assertEquals(MatchCode.SEEK_NEXT_ROW, tracker.checkColumn(keyValue, keyValue.getTypeByte()));
+  }
+
   @Test
   public void testMaxVersionMask() {
     NewVersionBehaviorTracker tracker =

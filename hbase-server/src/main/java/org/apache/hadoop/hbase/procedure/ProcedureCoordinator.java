@@ -136,6 +136,7 @@ public class ProcedureCoordinator {
    *         of IO problem.  On errors, the procedure's monitor holds a reference to the exception
    *         that caused the failure.
    */
+  @SuppressWarnings("FutureReturnValueIgnored")
   boolean submitProcedure(Procedure proc) {
     // if the submitted procedure was null, then we don't want to run it
     if (proc == null) {

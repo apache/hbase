@@ -77,9 +77,8 @@ public class CompactionPipeline {
     ImmutableSegment immutableSegment = SegmentFactory.instance().
         createImmutableSegment(segment, memstoreAccounting);
     if (region != null) {
-      region.addMemStoreSize(memstoreAccounting.getDataSize(),
-          memstoreAccounting.getHeapSize(),
-          memstoreAccounting.getOffHeapSize());
+      region.addMemStoreSize(memstoreAccounting.getDataSize(), memstoreAccounting.getHeapSize(),
+        memstoreAccounting.getOffHeapSize(), memstoreAccounting.getCellsCount());
     }
     synchronized (pipeline){
       boolean res = addFirst(immutableSegment);
@@ -141,26 +140,30 @@ public class CompactionPipeline {
     if (updateRegionSize && region != null) {
       // update the global memstore size counter
       long suffixDataSize = getSegmentsKeySize(suffix);
-      long newDataSize = 0;
-      if(segment != null) {
-        newDataSize = segment.getDataSize();
-      }
-      long dataSizeDelta = suffixDataSize - newDataSize;
       long suffixHeapSize = getSegmentsHeapSize(suffix);
       long suffixOffHeapSize = getSegmentsOffHeapSize(suffix);
+      int suffixCellsCount = getSegmentsCellsCount(suffix);
+      long newDataSize = 0;
       long newHeapSize = 0;
       long newOffHeapSize = 0;
-      if(segment != null) {
+      int newCellsCount = 0;
+      if (segment != null) {
+        newDataSize = segment.getDataSize();
         newHeapSize = segment.getHeapSize();
         newOffHeapSize = segment.getOffHeapSize();
+        newCellsCount = segment.getCellsCount();
       }
-      long offHeapSizeDelta = suffixOffHeapSize - newOffHeapSize;
+      long dataSizeDelta = suffixDataSize - newDataSize;
       long heapSizeDelta = suffixHeapSize - newHeapSize;
-      region.addMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta);
-      LOG.debug("Suffix data size={}, new segment data size={}, " + "suffix heap size={},"
-              + "new segment heap size={}" + "suffix off heap size={},"
-              + "new segment off heap size={}", suffixDataSize, newDataSize, suffixHeapSize,
-          newHeapSize, suffixOffHeapSize, newOffHeapSize);
+      long offHeapSizeDelta = suffixOffHeapSize - newOffHeapSize;
+      int cellsCountDelta = suffixCellsCount - newCellsCount;
+      region.addMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta, -cellsCountDelta);
+      LOG.debug(
+        "Suffix data size={}, new segment data size={}, suffix heap size={},new segment heap "
+            + "size={} 　suffix off heap size={}, new segment off heap size={}, suffix cells "
+            + "count={}, new segment cells count={}",
+        suffixDataSize, newDataSize, suffixHeapSize, newHeapSize, suffixOffHeapSize, newOffHeapSize,
+        suffixCellsCount, newCellsCount);
     }
     return true;
   }
@@ -185,6 +188,14 @@ public class CompactionPipeline {
     long res = 0;
     for (Segment segment : list) {
       res += segment.getDataSize();
+    }
+    return res;
+  }
+
+  private static int getSegmentsCellsCount(List<? extends Segment> list) {
+    int res = 0;
+    for (Segment segment : list) {
+      res += segment.getCellsCount();
     }
     return res;
   }
@@ -221,11 +232,12 @@ public class CompactionPipeline {
           ImmutableSegment newS = SegmentFactory.instance().createImmutableSegmentByFlattening(
               (CSLMImmutableSegment)s,idxType,newMemstoreAccounting,action);
           replaceAtIndex(i,newS);
-          if(region != null) {
+          if (region != null) {
             // Update the global memstore size counter upon flattening there is no change in the
             // data size
             MemStoreSize mss = newMemstoreAccounting.getMemStoreSize();
-            region.addMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize());
+            region.addMemStoreSize(mss.getDataSize(), mss.getHeapSize(), mss.getOffHeapSize(),
+              mss.getCellsCount());
           }
           LOG.debug("Compaction pipeline segment {} flattened", s);
           return true;

@@ -118,7 +118,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
         .get(ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY, ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT));
   }
 
-  private String getRsNode(ServerName serverName) {
+  @Override
+  public String getRsNode(ServerName serverName) {
     return ZNodePaths.joinZNode(queuesZNode, serverName.getServerName());
   }
 

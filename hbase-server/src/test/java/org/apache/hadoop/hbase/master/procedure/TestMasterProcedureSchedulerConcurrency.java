@@ -54,7 +54,7 @@ public class TestMasterProcedureSchedulerConcurrency {
 
   @Before
   public void setUp() throws IOException {
-    queue = new MasterProcedureScheduler();
+    queue = new MasterProcedureScheduler(pid -> null);
     queue.start();
   }
 

@@ -22,7 +22,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -84,24 +82,6 @@ public class TestClientClusterStatus {
   }
 
   @Test
-  public void testDefaults() throws Exception {
-    ClusterStatus origin = ADMIN.getClusterStatus();
-    ClusterStatus defaults
-        = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
-    checkPbObjectNotNull(origin);
-    checkPbObjectNotNull(defaults);
-    Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-    Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-    Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
-    Assert.assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
-    Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
-    Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
-    Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
-    Assert.assertTrue(origin.getMasterInfoPort() == defaults.getMasterInfoPort());
-    Assert.assertTrue(origin.equals(defaults));
-  }
-
-  @Test
   public void testNone() throws Exception {
     ClusterMetrics status0 = ADMIN.getClusterMetrics(EnumSet.allOf(Option.class));
     ClusterMetrics status1 = ADMIN.getClusterMetrics(EnumSet.noneOf(Option.class));
@@ -136,7 +116,8 @@ public class TestClientClusterStatus {
       }
     });
     // Retrieve live servers and dead servers info.
-    EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
+    EnumSet<Option> options =
+        EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS, Option.SERVERS_NAME);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     checkPbObjectNotNull(status);
     Assert.assertNotNull(status);
@@ -152,6 +133,8 @@ public class TestClientClusterStatus {
     Assert.assertEquals(1, status.getDeadServersSize());
     ServerName deadServerName = status.getDeadServerNames().iterator().next();
     Assert.assertEquals(DEAD.getServerName(), deadServerName);
+    Assert.assertNotNull(status.getServersName());
+    Assert.assertEquals(numRs, status.getServersName().size());
   }
 
   @Test
@@ -203,8 +186,8 @@ public class TestClientClusterStatus {
   public void testObserver() throws IOException {
     int preCount = MyObserver.PRE_COUNT.get();
     int postCount = MyObserver.POST_COUNT.get();
-    Assert.assertTrue(Stream.of(ADMIN.getClusterStatus().getMasterCoprocessors())
-        .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
+    Assert.assertTrue(ADMIN.getClusterMetrics().getMasterCoprocessorNames().stream()
+      .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
     Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
     Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
   }

@@ -116,6 +116,7 @@ while iter.hasNext
     # Gone too far, break
     break
   end
+
   region = MetaTableAccessor.getHRegionInfo(result)
   unless region.isOffline
     # only include regions that should be online

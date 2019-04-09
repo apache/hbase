@@ -174,4 +174,5 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
     // should not be called for region operation until we modified the open/close region procedure
     throw new UnsupportedOperationException();
   }
+
 }

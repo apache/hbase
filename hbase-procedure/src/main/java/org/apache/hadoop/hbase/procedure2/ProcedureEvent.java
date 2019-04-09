@@ -71,6 +71,22 @@ public class ProcedureEvent<T> {
   }
 
   /**
+   * Wakes up the suspended procedures only if the given {@code proc} is waiting on this event.
+   * <p/>
+   * Mainly used by region assignment to reject stale OpenRegionProcedure/CloseRegionProcedure. Use
+   * with caution as it will cause performance issue if there are lots of procedures waiting on the
+   * event.
+   */
+  public synchronized boolean wakeIfSuspended(AbstractProcedureScheduler procedureScheduler,
+      Procedure<?> proc) {
+    if (suspendedProcedures.stream().anyMatch(p -> p.getProcId() == proc.getProcId())) {
+      wake(procedureScheduler);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Wakes up all the given events and puts the procedures waiting on them back into
    * ProcedureScheduler queues.
    */
@@ -91,7 +107,8 @@ public class ProcedureEvent<T> {
    * when waking up multiple events.
    * Access should remain package-private.
    */
-  synchronized void wakeInternal(AbstractProcedureScheduler procedureScheduler) {
+  @VisibleForTesting
+  public synchronized void wakeInternal(AbstractProcedureScheduler procedureScheduler) {
     if (ready && !suspendedProcedures.isEmpty()) {
       LOG.warn("Found procedures suspended in a ready event! Size=" + suspendedProcedures.size());
     }

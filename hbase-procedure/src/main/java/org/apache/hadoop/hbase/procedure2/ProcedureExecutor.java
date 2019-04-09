@@ -18,19 +18,19 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure.LockState;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -56,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
@@ -83,34 +85,40 @@ public class ProcedureExecutor<TEnvironment> {
       "hbase.procedure.worker.keep.alive.time.msec";
   private static final long DEFAULT_WORKER_KEEP_ALIVE_TIME = TimeUnit.MINUTES.toMillis(1);
 
+  public static final String EVICT_TTL_CONF_KEY = "hbase.procedure.cleaner.evict.ttl";
+  static final int DEFAULT_EVICT_TTL = 15 * 60000; // 15min
+
+  public static final String EVICT_ACKED_TTL_CONF_KEY ="hbase.procedure.cleaner.acked.evict.ttl";
+  static final int DEFAULT_ACKED_EVICT_TTL = 5 * 60000; // 5min
+
   /**
    * {@link #testing} is non-null when ProcedureExecutor is being tested. Tests will try to
    * break PE having it fail at various junctures. When non-null, testing is set to an instance of
    * the below internal {@link Testing} class with flags set for the particular test.
    */
-  Testing testing = null;
+  volatile Testing testing = null;
 
   /**
    * Class with parameters describing how to fail/die when in testing-context.
    */
   public static class Testing {
-    protected boolean killIfHasParent = true;
-    protected boolean killIfSuspended = false;
+    protected volatile boolean killIfHasParent = true;
+    protected volatile boolean killIfSuspended = false;
 
     /**
      * Kill the PE BEFORE we store state to the WAL. Good for figuring out if a Procedure is
      * persisting all the state it needs to recover after a crash.
      */
-    protected boolean killBeforeStoreUpdate = false;
-    protected boolean toggleKillBeforeStoreUpdate = false;
+    protected volatile boolean killBeforeStoreUpdate = false;
+    protected volatile boolean toggleKillBeforeStoreUpdate = false;
 
     /**
      * Set when we want to fail AFTER state has been stored into the WAL. Rarely used. HBASE-20978
      * is about a case where memory-state was being set after store to WAL where a crash could
      * cause us to get stuck. This flag allows killing at what was a vulnerable time.
      */
-    protected boolean killAfterStoreUpdate = false;
-    protected boolean toggleKillAfterStoreUpdate = false;
+    protected volatile boolean killAfterStoreUpdate = false;
+    protected volatile boolean toggleKillAfterStoreUpdate = false;
 
     protected boolean shouldKillBeforeStoreUpdate() {
       final boolean kill = this.killBeforeStoreUpdate;
@@ -151,134 +159,6 @@ public class ProcedureExecutor<TEnvironment> {
     void procedureFinished(long procId);
   }
 
-  private static final class CompletedProcedureRetainer<TEnvironment> {
-    private final Procedure<TEnvironment> procedure;
-    private long clientAckTime;
-
-    public CompletedProcedureRetainer(Procedure<TEnvironment> procedure) {
-      this.procedure = procedure;
-      clientAckTime = -1;
-    }
-
-    public Procedure<TEnvironment> getProcedure() {
-      return procedure;
-    }
-
-    public boolean hasClientAckTime() {
-      return clientAckTime != -1;
-    }
-
-    public long getClientAckTime() {
-      return clientAckTime;
-    }
-
-    public void setClientAckTime(long clientAckTime) {
-      this.clientAckTime = clientAckTime;
-    }
-
-    public boolean isExpired(long now, long evictTtl, long evictAckTtl) {
-      return (hasClientAckTime() && (now - getClientAckTime()) >= evictAckTtl) ||
-        (now - procedure.getLastUpdate()) >= evictTtl;
-    }
-  }
-
-  /**
-   * Internal cleaner that removes the completed procedure results after a TTL.
-   * NOTE: This is a special case handled in timeoutLoop().
-   *
-   * <p>Since the client code looks more or less like:
-   * <pre>
-   *   procId = master.doOperation()
-   *   while (master.getProcResult(procId) == ProcInProgress);
-   * </pre>
-   * The master should not throw away the proc result as soon as the procedure is done
-   * but should wait a result request from the client (see executor.removeResult(procId))
-   * The client will call something like master.isProcDone() or master.getProcResult()
-   * which will return the result/state to the client, and it will mark the completed
-   * proc as ready to delete. note that the client may not receive the response from
-   * the master (e.g. master failover) so, if we delay a bit the real deletion of
-   * the proc result the client will be able to get the result the next try.
-   */
-  private static class CompletedProcedureCleaner<TEnvironment>
-      extends ProcedureInMemoryChore<TEnvironment> {
-    private static final Logger LOG = LoggerFactory.getLogger(CompletedProcedureCleaner.class);
-
-    private static final String CLEANER_INTERVAL_CONF_KEY = "hbase.procedure.cleaner.interval";
-    private static final int DEFAULT_CLEANER_INTERVAL = 30 * 1000; // 30sec
-
-    private static final String EVICT_TTL_CONF_KEY = "hbase.procedure.cleaner.evict.ttl";
-    private static final int DEFAULT_EVICT_TTL = 15 * 60000; // 15min
-
-    private static final String EVICT_ACKED_TTL_CONF_KEY ="hbase.procedure.cleaner.acked.evict.ttl";
-    private static final int DEFAULT_ACKED_EVICT_TTL = 5 * 60000; // 5min
-
-    private static final String BATCH_SIZE_CONF_KEY = "hbase.procedure.cleaner.evict.batch.size";
-    private static final int DEFAULT_BATCH_SIZE = 32;
-
-    private final Map<Long, CompletedProcedureRetainer<TEnvironment>> completed;
-    private final Map<NonceKey, Long> nonceKeysToProcIdsMap;
-    private final ProcedureStore store;
-    private Configuration conf;
-
-    public CompletedProcedureCleaner(Configuration conf, final ProcedureStore store,
-        final Map<Long, CompletedProcedureRetainer<TEnvironment>> completedMap,
-        final Map<NonceKey, Long> nonceKeysToProcIdsMap) {
-      // set the timeout interval that triggers the periodic-procedure
-      super(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
-      this.completed = completedMap;
-      this.nonceKeysToProcIdsMap = nonceKeysToProcIdsMap;
-      this.store = store;
-      this.conf = conf;
-    }
-
-    @Override
-    protected void periodicExecute(final TEnvironment env) {
-      if (completed.isEmpty()) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("No completed procedures to cleanup.");
-        }
-        return;
-      }
-
-      final long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
-      final long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
-      final int batchSize = conf.getInt(BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
-
-      final long[] batchIds = new long[batchSize];
-      int batchCount = 0;
-
-      final long now = EnvironmentEdgeManager.currentTime();
-      final Iterator<Map.Entry<Long, CompletedProcedureRetainer<TEnvironment>>> it =
-        completed.entrySet().iterator();
-      while (it.hasNext() && store.isRunning()) {
-        final Map.Entry<Long, CompletedProcedureRetainer<TEnvironment>> entry = it.next();
-        final CompletedProcedureRetainer<TEnvironment> retainer = entry.getValue();
-        final Procedure<?> proc = retainer.getProcedure();
-
-        // TODO: Select TTL based on Procedure type
-        if (retainer.isExpired(now, evictTtl, evictAckTtl)) {
-          // Failed procedures aren't persisted in WAL.
-          if (!(proc instanceof FailedProcedure)) {
-            batchIds[batchCount++] = entry.getKey();
-            if (batchCount == batchIds.length) {
-              store.delete(batchIds, 0, batchCount);
-              batchCount = 0;
-            }
-          }
-          final NonceKey nonceKey = proc.getNonceKey();
-          if (nonceKey != null) {
-            nonceKeysToProcIdsMap.remove(nonceKey);
-          }
-          it.remove();
-          LOG.trace("Evict completed {}", proc);
-        }
-      }
-      if (batchCount > 0) {
-        store.delete(batchIds, 0, batchCount);
-      }
-    }
-  }
-
   /**
    * Map the the procId returned by submitProcedure(), the Root-ProcID, to the Procedure.
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
@@ -314,7 +194,7 @@ public class ProcedureExecutor<TEnvironment> {
   private Configuration conf;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Destroyed in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)} method. Destroyed in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -322,7 +202,7 @@ public class ProcedureExecutor<TEnvironment> {
   private ThreadGroup threadGroup;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)}  method. Terminated in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -330,7 +210,7 @@ public class ProcedureExecutor<TEnvironment> {
   private CopyOnWriteArrayList<WorkerThread> workerThreads;
 
   /**
-   * Created in the {@link #start(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
+   * Created in the {@link #init(int, boolean)} method. Terminated in {@link #join()} (FIX! Doing
    * resource handling rather than observing in a #join is unexpected).
    * Overridden when we do the ProcedureTestingUtility.testRecoveryAndDoubleExecution trickery
    * (Should be ok).
@@ -346,6 +226,9 @@ public class ProcedureExecutor<TEnvironment> {
    * Scheduler/Queue that contains runnable procedures.
    */
   private final ProcedureScheduler scheduler;
+
+  private final Executor forceUpdateExecutor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Force-Update-PEWorker-%d").build());
 
   private final AtomicLong lastProcId = new AtomicLong(-1);
   private final AtomicLong workerId = new AtomicLong(0);
@@ -369,6 +252,43 @@ public class ProcedureExecutor<TEnvironment> {
     this(conf, environment, store, new SimpleProcedureScheduler());
   }
 
+  private boolean isRootFinished(Procedure<?> proc) {
+    Procedure<?> rootProc = procedures.get(proc.getRootProcId());
+    return rootProc == null || rootProc.isFinished();
+  }
+
+  private void forceUpdateProcedure(long procId) throws IOException {
+    IdLock.Entry lockEntry = procExecutionLock.getLockEntry(procId);
+    try {
+      Procedure<TEnvironment> proc = procedures.get(procId);
+      if (proc != null) {
+        if (proc.isFinished() && proc.hasParent() && isRootFinished(proc)) {
+          LOG.debug("Procedure {} has already been finished and parent is succeeded," +
+            " skip force updating", proc);
+          return;
+        }
+      } else {
+        CompletedProcedureRetainer<TEnvironment> retainer = completed.get(procId);
+        if (retainer == null || retainer.getProcedure() instanceof FailedProcedure) {
+          LOG.debug("No pending procedure with id = {}, skip force updating.", procId);
+          return;
+        }
+        long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
+        long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
+        if (retainer.isExpired(System.currentTimeMillis(), evictTtl, evictAckTtl)) {
+          LOG.debug("Procedure {} has already been finished and expired, skip force updating",
+            procId);
+          return;
+        }
+        proc = retainer.getProcedure();
+      }
+      LOG.debug("Force update procedure {}", proc);
+      store.update(proc);
+    } finally {
+      procExecutionLock.releaseLockEntry(lockEntry);
+    }
+  }
+
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
       final ProcedureStore store, final ProcedureScheduler scheduler) {
     this.environment = environment;
@@ -377,7 +297,19 @@ public class ProcedureExecutor<TEnvironment> {
     this.conf = conf;
     this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, DEFAULT_CHECK_OWNER_SET);
     refreshConfiguration(conf);
+    store.registerListener(new ProcedureStoreListener() {
 
+      @Override
+      public void forceUpdate(long[] procIds) {
+        Arrays.stream(procIds).forEach(procId -> forceUpdateExecutor.execute(() -> {
+          try {
+            forceUpdateProcedure(procId);
+          } catch (IOException e) {
+            LOG.warn("Failed to force update procedure with pid={}", procId);
+          }
+        }));
+      }
+    });
   }
 
   private void load(final boolean abortOnCorruption) throws IOException {
@@ -460,8 +392,10 @@ public class ProcedureExecutor<TEnvironment> {
   private void loadProcedures(ProcedureIterator procIter, boolean abortOnCorruption)
       throws IOException {
     // 1. Build the rollback stack
-    int runnablesCount = 0;
+    int runnableCount = 0;
     int failedCount = 0;
+    int waitingCount = 0;
+    int waitingTimeoutCount = 0;
     while (procIter.hasNext()) {
       boolean finished = procIter.isNextFinished();
       @SuppressWarnings("unchecked")
@@ -481,11 +415,21 @@ public class ProcedureExecutor<TEnvironment> {
         // add the procedure to the map
         proc.beforeReplay(getEnvironment());
         procedures.put(proc.getProcId(), proc);
-
-        if (proc.getState() == ProcedureState.RUNNABLE) {
-          runnablesCount++;
-        } else if (proc.getState() == ProcedureState.FAILED) {
-          failedCount++;
+        switch (proc.getState()) {
+          case RUNNABLE:
+            runnableCount++;
+            break;
+          case FAILED:
+            failedCount++;
+            break;
+          case WAITING:
+            waitingCount++;
+            break;
+          case WAITING_TIMEOUT:
+            waitingTimeoutCount++;
+            break;
+          default:
+            break;
         }
       }
 
@@ -506,9 +450,10 @@ public class ProcedureExecutor<TEnvironment> {
     // have been polled out already, so when loading we can not add the procedure to scheduler first
     // and then call acquireLock, since the procedure is still in the queue, and since we will
     // remove the queue from runQueue, then no one can poll it out, then there is a dead lock
-    List<Procedure<TEnvironment>> runnableList = new ArrayList<>(runnablesCount);
+    List<Procedure<TEnvironment>> runnableList = new ArrayList<>(runnableCount);
     List<Procedure<TEnvironment>> failedList = new ArrayList<>(failedCount);
-    Set<Procedure<TEnvironment>> waitingSet = null;
+    List<Procedure<TEnvironment>> waitingList = new ArrayList<>(waitingCount);
+    List<Procedure<TEnvironment>> waitingTimeoutList = new ArrayList<>(waitingTimeoutCount);
     procIter.reset();
     while (procIter.hasNext()) {
       if (procIter.isNextFinished()) {
@@ -523,15 +468,11 @@ public class ProcedureExecutor<TEnvironment> {
       LOG.debug("Loading {}", proc);
 
       Long rootProcId = getRootProcedureId(proc);
-      if (rootProcId == null) {
-        // The 'proc' was ready to run but the root procedure was rolledback?
-        scheduler.addBack(proc);
-        continue;
-      }
+      // The orphan procedures will be passed to handleCorrupted, so add an assert here
+      assert rootProcId != null;
 
       if (proc.hasParent()) {
         Procedure<TEnvironment> parent = procedures.get(proc.getParentProcId());
-        // corrupted procedures are handled later at step 3
         if (parent != null && !proc.isFinished()) {
           parent.incChildrenLatch();
         }
@@ -546,26 +487,10 @@ public class ProcedureExecutor<TEnvironment> {
           runnableList.add(proc);
           break;
         case WAITING:
-          if (!proc.hasChildren()) {
-            // Normally, WAITING procedures should be waken by its children.
-            // But, there is a case that, all the children are successful and before
-            // they can wake up their parent procedure, the master was killed.
-            // So, during recovering the procedures from ProcedureWal, its children
-            // are not loaded because of their SUCCESS state.
-            // So we need to continue to run this WAITING procedure. But before
-            // executing, we need to set its state to RUNNABLE, otherwise, a exception
-            // will throw:
-            // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
-            // "NOT RUNNABLE! " + procedure.toString());
-            proc.setState(ProcedureState.RUNNABLE);
-            runnableList.add(proc);
-          }
+          waitingList.add(proc);
           break;
         case WAITING_TIMEOUT:
-          if (waitingSet == null) {
-            waitingSet = new HashSet<>();
-          }
-          waitingSet.add(proc);
+          waitingTimeoutList.add(proc);
           break;
         case FAILED:
           failedList.add(proc);
@@ -580,38 +505,34 @@ public class ProcedureExecutor<TEnvironment> {
       }
     }
 
-    // 3. Validate the stacks
-    int corruptedCount = 0;
-    Iterator<Map.Entry<Long, RootProcedureState<TEnvironment>>> itStack =
-      rollbackStack.entrySet().iterator();
-    while (itStack.hasNext()) {
-      Map.Entry<Long, RootProcedureState<TEnvironment>> entry = itStack.next();
-      RootProcedureState<TEnvironment> procStack = entry.getValue();
-      if (procStack.isValid()) continue;
-
-      for (Procedure<TEnvironment> proc : procStack.getSubproceduresStack()) {
-        LOG.error("Corrupted " + proc);
-        procedures.remove(proc.getProcId());
-        runnableList.remove(proc);
-        if (waitingSet != null) waitingSet.remove(proc);
-        corruptedCount++;
-      }
-      itStack.remove();
-    }
-
-    if (abortOnCorruption && corruptedCount > 0) {
-      throw new IOException("found " + corruptedCount + " procedures on replay");
-    }
-
-    // 4. Push the procedures to the timeout executor
-    if (waitingSet != null && !waitingSet.isEmpty()) {
-      for (Procedure<TEnvironment> proc: waitingSet) {
+    // 3. Check the waiting procedures to see if some of them can be added to runnable.
+    waitingList.forEach(proc -> {
+      if (!proc.hasChildren()) {
+        // Normally, WAITING procedures should be waken by its children.
+        // But, there is a case that, all the children are successful and before
+        // they can wake up their parent procedure, the master was killed.
+        // So, during recovering the procedures from ProcedureWal, its children
+        // are not loaded because of their SUCCESS state.
+        // So we need to continue to run this WAITING procedure. But before
+        // executing, we need to set its state to RUNNABLE, otherwise, a exception
+        // will throw:
+        // Preconditions.checkArgument(procedure.getState() == ProcedureState.RUNNABLE,
+        // "NOT RUNNABLE! " + procedure.toString());
+        proc.setState(ProcedureState.RUNNABLE);
+        runnableList.add(proc);
+      } else {
         proc.afterReplay(getEnvironment());
-        timeoutExecutor.add(proc);
       }
-    }
-    // 5. restore locks
+    });
+    // 4. restore locks
     restoreLocks();
+
+    // 5. Push the procedures to the timeout executor
+    waitingTimeoutList.forEach(proc -> {
+      proc.afterReplay(getEnvironment());
+      timeoutExecutor.add(proc);
+    });
+
     // 6. Push the procedure to the scheduler
     failedList.forEach(scheduler::addBack);
     runnableList.forEach(p -> {
@@ -621,6 +542,9 @@ public class ProcedureExecutor<TEnvironment> {
       }
       scheduler.addBack(p);
     });
+    // After all procedures put into the queue, signal the worker threads.
+    // Otherwise, there is a race condition. See HBASE-21364.
+    scheduler.signalAll();
   }
 
   /**
@@ -694,7 +618,8 @@ public class ProcedureExecutor<TEnvironment> {
     timeoutExecutor.add(new WorkerMonitor());
 
     // Add completed cleaner chore
-    addChore(new CompletedProcedureCleaner<>(conf, store, completed, nonceKeysToProcIdsMap));
+    addChore(new CompletedProcedureCleaner<>(conf, store, procExecutionLock, completed,
+      nonceKeysToProcIdsMap));
   }
 
   public void stop() {
@@ -881,59 +806,6 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
-  public static class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
-    private String procName;
-
-    public FailedProcedure() {
-    }
-
-    public FailedProcedure(long procId, String procName, User owner,
-        NonceKey nonceKey, IOException exception) {
-      this.procName = procName;
-      setProcId(procId);
-      setState(ProcedureState.ROLLEDBACK);
-      setOwner(owner);
-      setNonceKey(nonceKey);
-      long currentTime = EnvironmentEdgeManager.currentTime();
-      setSubmittedTime(currentTime);
-      setLastUpdate(currentTime);
-      setFailure(Objects.toString(exception.getMessage(), ""), exception);
-    }
-
-    @Override
-    public String getProcName() {
-      return procName;
-    }
-
-    @Override
-    protected Procedure<TEnvironment>[] execute(TEnvironment env)
-        throws ProcedureYieldException, ProcedureSuspendedException,
-        InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void rollback(TEnvironment env)
-        throws IOException, InterruptedException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected boolean abort(TEnvironment env) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
-    }
-  }
-
   /**
    * If the failure failed before submitting it, we may want to give back the
    * same error to the requests with the same nonceKey.
@@ -976,7 +848,7 @@ public class ProcedureExecutor<TEnvironment> {
    * Bypass a procedure. If the procedure is set to bypass, all the logic in
    * execute/rollback will be ignored and it will return success, whatever.
    * It is used to recover buggy stuck procedures, releasing the lock resources
-   * and letting other procedures to run. Bypassing one procedure (and its ancestors will
+   * and letting other procedures run. Bypassing one procedure (and its ancestors will
    * be bypassed automatically) may leave the cluster in a middle state, e.g. region
    * not assigned, or some hdfs files left behind. After getting rid of those stuck procedures,
    * the operators may have to do some clean up on hdfs or schedule some assign procedures
@@ -1003,34 +875,39 @@ public class ProcedureExecutor<TEnvironment> {
    *              there. We need to restart the master after bypassing, and letting the problematic
    *              procedure to execute wth bypass=true, so in that condition, the procedure can be
    *              successfully bypassed.
+   * @param recursive We will do an expensive search for children of each pid. EXPENSIVE!
    * @return true if bypass success
    * @throws IOException IOException
    */
-  public List<Boolean> bypassProcedure(List<Long> pids, long lockWait, boolean force)
+  public List<Boolean> bypassProcedure(List<Long> pids, long lockWait, boolean force,
+      boolean recursive)
       throws IOException {
     List<Boolean> result = new ArrayList<Boolean>(pids.size());
     for(long pid: pids) {
-      result.add(bypassProcedure(pid, lockWait, force));
+      result.add(bypassProcedure(pid, lockWait, force, recursive));
     }
     return result;
   }
 
-  boolean bypassProcedure(long pid, long lockWait, boolean force) throws IOException {
-    Procedure<TEnvironment> procedure = getProcedure(pid);
+  boolean bypassProcedure(long pid, long lockWait, boolean override, boolean recursive)
+      throws IOException {
+    Preconditions.checkArgument(lockWait > 0, "lockWait should be positive");
+    final Procedure<TEnvironment> procedure = getProcedure(pid);
     if (procedure == null) {
-      LOG.debug("Procedure with id={} does not exist, skipping bypass", pid);
+      LOG.debug("Procedure pid={} does not exist, skipping bypass", pid);
       return false;
     }
 
-    LOG.debug("Begin bypass {} with lockWait={}, force={}", procedure, lockWait, force);
+    LOG.debug("Begin bypass {} with lockWait={}, override={}, recursive={}",
+        procedure, lockWait, override, recursive);
     IdLock.Entry lockEntry = procExecutionLock.tryLockEntry(procedure.getProcId(), lockWait);
-    if (lockEntry == null && !force) {
+    if (lockEntry == null && !override) {
       LOG.debug("Waited {} ms, but {} is still running, skipping bypass with force={}",
-          lockWait, procedure, force);
+          lockWait, procedure, override);
       return false;
     } else if (lockEntry == null) {
       LOG.debug("Waited {} ms, but {} is still running, begin bypass with force={}",
-          lockWait, procedure, force);
+          lockWait, procedure, override);
     }
     try {
       // check whether the procedure is already finished
@@ -1040,8 +917,25 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       if (procedure.hasChildren()) {
-        LOG.debug("{} has children, skipping bypass", procedure);
-        return false;
+        if (recursive) {
+          // EXPENSIVE. Checks each live procedure of which there could be many!!!
+          // Is there another way to get children of a procedure?
+          LOG.info("Recursive bypass on children of pid={}", procedure.getProcId());
+          this.procedures.forEachValue(1 /*Single-threaded*/,
+            // Transformer
+            v -> v.getParentProcId() == procedure.getProcId()? v: null,
+            // Consumer
+            v -> {
+              try {
+                bypassProcedure(v.getProcId(), lockWait, override, recursive);
+              } catch (IOException e) {
+                LOG.warn("Recursive bypass of pid={}", v.getProcId(), e);
+              }
+            });
+        } else {
+          LOG.debug("{} has children, skipping bypass", procedure);
+          return false;
+        }
       }
 
       // If the procedure has no parent or no child, we are safe to bypass it in whatever state
@@ -1051,16 +945,17 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.debug("Bypassing procedures in RUNNABLE, WAITING and WAITING_TIMEOUT states "
                 + "(with no parent), {}",
             procedure);
+        // Question: how is the bypass done here?
         return false;
       }
 
       // Now, the procedure is not finished, and no one can execute it since we take the lock now
       // And we can be sure that its ancestor is not running too, since their child has not
       // finished yet
-      Procedure current = procedure;
+      Procedure<TEnvironment> current = procedure;
       while (current != null) {
         LOG.debug("Bypassing {}", current);
-        current.bypass();
+        current.bypass(getEnvironment());
         store.update(procedure);
         long parentID = current.getParentProcId();
         current = getProcedure(parentID);
@@ -1072,17 +967,25 @@ public class ProcedureExecutor<TEnvironment> {
         store.update(procedure);
       }
 
-      // If we don't have the lock, we can't re-submit the queue,
-      // since it is already executing. To get rid of the stuck situation, we
-      // need to restart the master. With the procedure set to bypass, the procedureExecutor
-      // will bypass it and won't get stuck again.
-      if (lockEntry != null) {
-        // add the procedure to run queue,
+      // If state of procedure is WAITING_TIMEOUT, we can directly submit it to the scheduler.
+      // Instead we should remove it from timeout Executor queue and tranfer its state to RUNNABLE
+      if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
+        LOG.debug("transform procedure {} from WAITING_TIMEOUT to RUNNABLE", procedure);
+        if (timeoutExecutor.remove(procedure)) {
+          LOG.debug("removed procedure {} from timeoutExecutor", procedure);
+          timeoutExecutor.executeTimedoutProcedure(procedure);
+        }
+      } else if (lockEntry != null) {
         scheduler.addFront(procedure);
         LOG.debug("Bypassing {} and its ancestors successfully, adding to queue", procedure);
       } else {
+        // If we don't have the lock, we can't re-submit the queue,
+        // since it is already executing. To get rid of the stuck situation, we
+        // need to restart the master. With the procedure set to bypass, the procedureExecutor
+        // will bypass it and won't get stuck again.
         LOG.debug("Bypassing {} and its ancestors successfully, but since it is already running, "
-            + "skipping add to queue", procedure);
+            + "skipping add to queue",
+          procedure);
       }
       return true;
 
@@ -1556,43 +1459,101 @@ public class ProcedureExecutor<TEnvironment> {
     int stackTail = subprocStack.size();
     while (stackTail-- > 0) {
       Procedure<TEnvironment> proc = subprocStack.get(stackTail);
-
-      LockState lockState = acquireLock(proc);
-      if (lockState != LockState.LOCK_ACQUIRED) {
-        // can't take a lock on the procedure, add the root-proc back on the
-        // queue waiting for the lock availability
-        return lockState;
+      IdLock.Entry lockEntry = null;
+      // Hold the execution lock if it is not held by us. The IdLock is not reentrant so we need
+      // this check, as the worker will hold the lock before executing a procedure. This is the only
+      // place where we may hold two procedure execution locks, and there is a fence in the
+      // RootProcedureState where we can make sure that only one worker can execute the rollback of
+      // a RootProcedureState, so there is no dead lock problem. And the lock here is necessary to
+      // prevent race between us and the force update thread.
+      if (!procExecutionLock.isHeldByCurrentThread(proc.getProcId())) {
+        try {
+          lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
+        } catch (IOException e) {
+          // can only happen if interrupted, so not a big deal to propagate it
+          throw new UncheckedIOException(e);
+        }
       }
+      try {
+        // For the sub procedures which are successfully finished, we do not rollback them.
+        // Typically, if we want to rollback a procedure, we first need to rollback it, and then
+        // recursively rollback its ancestors. The state changes which are done by sub procedures
+        // should be handled by parent procedures when rolling back. For example, when rolling back
+        // a MergeTableProcedure, we will schedule new procedures to bring the offline regions
+        // online, instead of rolling back the original procedures which offlined the regions(in
+        // fact these procedures can not be rolled back...).
+        if (proc.isSuccess()) {
+          // Just do the cleanup work, without actually executing the rollback
+          subprocStack.remove(stackTail);
+          cleanupAfterRollbackOneStep(proc);
+          continue;
+        }
+        LockState lockState = acquireLock(proc);
+        if (lockState != LockState.LOCK_ACQUIRED) {
+          // can't take a lock on the procedure, add the root-proc back on the
+          // queue waiting for the lock availability
+          return lockState;
+        }
 
-      lockState = executeRollback(proc);
-      releaseLock(proc, false);
-      boolean abortRollback = lockState != LockState.LOCK_ACQUIRED;
-      abortRollback |= !isRunning() || !store.isRunning();
+        lockState = executeRollback(proc);
+        releaseLock(proc, false);
+        boolean abortRollback = lockState != LockState.LOCK_ACQUIRED;
+        abortRollback |= !isRunning() || !store.isRunning();
 
-      // allows to kill the executor before something is stored to the wal.
-      // useful to test the procedure recovery.
-      if (abortRollback) {
-        return lockState;
-      }
+        // allows to kill the executor before something is stored to the wal.
+        // useful to test the procedure recovery.
+        if (abortRollback) {
+          return lockState;
+        }
 
-      subprocStack.remove(stackTail);
+        subprocStack.remove(stackTail);
 
-      // if the procedure is kind enough to pass the slot to someone else, yield
-      // if the proc is already finished, do not yield
-      if (!proc.isFinished() && proc.isYieldAfterExecutionStep(getEnvironment())) {
-        return LockState.LOCK_YIELD_WAIT;
-      }
+        // if the procedure is kind enough to pass the slot to someone else, yield
+        // if the proc is already finished, do not yield
+        if (!proc.isFinished() && proc.isYieldAfterExecutionStep(getEnvironment())) {
+          return LockState.LOCK_YIELD_WAIT;
+        }
 
-      if (proc != rootProc) {
-        execCompletionCleanup(proc);
+        if (proc != rootProc) {
+          execCompletionCleanup(proc);
+        }
+      } finally {
+        if (lockEntry != null) {
+          procExecutionLock.releaseLockEntry(lockEntry);
+        }
       }
     }
 
     // Finalize the procedure state
-    LOG.info("Rolled back " + rootProc +
-             " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()));
+    LOG.info("Rolled back {} exec-time={}", rootProc,
+      StringUtils.humanTimeDiff(rootProc.elapsedTime()));
     procedureFinished(rootProc);
     return LockState.LOCK_ACQUIRED;
+  }
+
+  private void cleanupAfterRollbackOneStep(Procedure<TEnvironment> proc) {
+    if (proc.removeStackIndex()) {
+      if (!proc.isSuccess()) {
+        proc.setState(ProcedureState.ROLLEDBACK);
+      }
+
+      // update metrics on finishing the procedure (fail)
+      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
+
+      if (proc.hasParent()) {
+        store.delete(proc.getProcId());
+        procedures.remove(proc.getProcId());
+      } else {
+        final long[] childProcIds = rollbackStack.get(proc.getProcId()).getSubprocedureIds();
+        if (childProcIds != null) {
+          store.delete(proc, childProcIds);
+        } else {
+          store.update(proc);
+        }
+      }
+    } else {
+      store.update(proc);
+    }
   }
 
   /**
@@ -1623,26 +1584,7 @@ public class ProcedureExecutor<TEnvironment> {
       throw new RuntimeException(msg);
     }
 
-    if (proc.removeStackIndex()) {
-      proc.setState(ProcedureState.ROLLEDBACK);
-
-      // update metrics on finishing the procedure (fail)
-      proc.updateMetricsOnFinish(getEnvironment(), proc.elapsedTime(), false);
-
-      if (proc.hasParent()) {
-        store.delete(proc.getProcId());
-        procedures.remove(proc.getProcId());
-      } else {
-        final long[] childProcIds = rollbackStack.get(proc.getProcId()).getSubprocedureIds();
-        if (childProcIds != null) {
-          store.delete(proc, childProcIds);
-        } else {
-          store.update(proc);
-        }
-      }
-    } else {
-      store.update(proc);
-    }
+    cleanupAfterRollbackOneStep(proc);
 
     return LockState.LOCK_ACQUIRED;
   }
@@ -1968,6 +1910,16 @@ public class ProcedureExecutor<TEnvironment> {
     return scheduler;
   }
 
+  @VisibleForTesting
+  int getCompletedSize() {
+    return completed.size();
+  }
+
+  @VisibleForTesting
+  public IdLock getProcExecutionLock() {
+    return procExecutionLock;
+  }
+
   // ==========================================================================
   //  Worker Thread
   // ==========================================================================
@@ -1988,7 +1940,6 @@ public class ProcedureExecutor<TEnvironment> {
     public void sendStopSignal() {
       scheduler.signalAll();
     }
-
     @Override
     public void run() {
       long lastUpdate = EnvironmentEdgeManager.currentTime();

@@ -18,18 +18,25 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import java.io.IOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * Base class for all the Namespace procedures that want to use a StateMachineProcedure.
- * It provide some basic helpers like basic locking and basic toStringClassDetails().
+ * Base class for all the Namespace procedures that want to use a StateMachineProcedure. It provide
+ * some basic helpers like basic locking and basic toStringClassDetails().
  */
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineNamespaceProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState>
-    implements TableProcedureInterface {
+    extends StateMachineProcedure<MasterProcedureEnv, TState> implements TableProcedureInterface {
 
   private final ProcedurePrepareLatch syncLatch;
 
@@ -52,7 +59,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
 
   @Override
   public TableName getTableName() {
-    return TableName.NAMESPACE_TABLE_NAME;
+    return DUMMY_NAMESPACE_TABLE_NAME;
   }
 
   @Override
@@ -81,6 +88,35 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureScheduler().wakeNamespaceExclusiveLock(this, getNamespaceName());
+  }
+
+  /**
+   * Insert/update the row into the ns family of meta table.
+   * @param env MasterProcedureEnv
+   */
+  protected static void addOrUpdateNamespace(MasterProcedureEnv env, NamespaceDescriptor ns)
+      throws IOException {
+    getTableNamespaceManager(env).addOrUpdateNamespace(ns);
+  }
+
+  protected static TableNamespaceManager getTableNamespaceManager(MasterProcedureEnv env) {
+    return env.getMasterServices().getClusterSchema().getTableNamespaceManager();
+  }
+
+  /**
+   * Create the namespace directory
+   * @param env MasterProcedureEnv
+   * @param nsDescriptor NamespaceDescriptor
+   */
+  protected static void createDirectory(MasterProcedureEnv env, NamespaceDescriptor nsDescriptor)
+      throws IOException {
+    createDirectory(env.getMasterServices().getMasterFileSystem(), nsDescriptor);
+  }
+
+  @VisibleForTesting
+  public static void createDirectory(MasterFileSystem mfs, NamespaceDescriptor nsDescriptor)
+      throws IOException {
+    mfs.getFileSystem().mkdirs(FSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
   }
 
   protected void releaseSyncLatch() {

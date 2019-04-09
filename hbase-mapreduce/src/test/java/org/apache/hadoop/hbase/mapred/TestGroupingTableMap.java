@@ -72,9 +72,12 @@ public class TestGroupingTableMap {
 
       byte[] row = {};
       List<Cell> keyValues = ImmutableList.<Cell>of(
-          new KeyValue(row, "familyA".getBytes(), "qualifierA".getBytes(), Bytes.toBytes("1111")),
-          new KeyValue(row, "familyA".getBytes(), "qualifierA".getBytes(), Bytes.toBytes("2222")),
-          new KeyValue(row, "familyB".getBytes(), "qualifierB".getBytes(), Bytes.toBytes("3333")));
+          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+              Bytes.toBytes("1111")),
+          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+              Bytes.toBytes("2222")),
+          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+              Bytes.toBytes("3333")));
       when(result.listCells()).thenReturn(keyValues);
       OutputCollector<ImmutableBytesWritable, Result> outputCollectorMock =
           mock(OutputCollector.class);
@@ -102,9 +105,12 @@ public class TestGroupingTableMap {
 
       byte[] row = {};
       List<Cell> keyValues = ImmutableList.<Cell>of(
-          new KeyValue(row, "familyA".getBytes(), "qualifierA".getBytes(), Bytes.toBytes("1111")),
-          new KeyValue(row, "familyB".getBytes(), "qualifierB".getBytes(), Bytes.toBytes("2222")),
-          new KeyValue(row, "familyC".getBytes(), "qualifierC".getBytes(), Bytes.toBytes("3333")));
+          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+              Bytes.toBytes("1111")),
+          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+              Bytes.toBytes("2222")),
+          new KeyValue(row, Bytes.toBytes("familyC"), Bytes.toBytes("qualifierC"),
+              Bytes.toBytes("3333")));
       when(result.listCells()).thenReturn(keyValues);
       OutputCollector<ImmutableBytesWritable, Result> outputCollectorMock =
           mock(OutputCollector.class);
@@ -137,8 +143,10 @@ public class TestGroupingTableMap {
       final byte[] secondPartKeyValue = Bytes.toBytes("35245142671437");
       byte[] row = {};
       List<Cell> cells = ImmutableList.<Cell>of(
-          new KeyValue(row, "familyA".getBytes(), "qualifierA".getBytes(), firstPartKeyValue),
-          new KeyValue(row, "familyB".getBytes(), "qualifierB".getBytes(), secondPartKeyValue));
+          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+              firstPartKeyValue),
+          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+              secondPartKeyValue));
       when(result.listCells()).thenReturn(cells);
 
       final AtomicBoolean outputCollected = new AtomicBoolean();

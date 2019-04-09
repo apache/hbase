@@ -183,15 +183,6 @@ public class CreateRandomStoreFile {
       }
     }
 
-    if (bloomType == BloomType.ROWPREFIX_DELIMITED) {
-      if (!cmdLine.hasOption(BLOOM_FILTER_PARAM_OPTION)) {
-        LOG.error("the parameter of bloom filter is not specified");
-        return false;
-      } else {
-        conf.set(BloomFilterUtil.DELIMITER_KEY, cmdLine.getOptionValue(BLOOM_FILTER_PARAM_OPTION));
-      }
-    }
-
     int blockSize = HConstants.DEFAULT_BLOCKSIZE;
     if (cmdLine.hasOption(BLOCK_SIZE_OPTION))
       blockSize = Integer.valueOf(cmdLine.getOptionValue(BLOCK_SIZE_OPTION));
@@ -232,7 +223,7 @@ public class CreateRandomStoreFile {
 
     Path storeFilePath = sfw.getPath();
     long fileSize = fs.getFileStatus(storeFilePath).getLen();
-    LOG.info("Created " + storeFilePath + ", " + fileSize + " bytes");
+    LOG.info("Created {}, {} bytes, compression={}", storeFilePath, fileSize, compr.toString());
 
     return true;
   }

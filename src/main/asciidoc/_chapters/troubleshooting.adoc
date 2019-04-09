@@ -311,6 +311,24 @@ The commands (and arguments) are:
   setquota -n|-b val path
 ----
 
+[[trouble.tools.maintenancemode]]
+==== Maintenance Mode
+If the cluster has gotten stuck in some state and the standard techniques aren't making progress,
+ it is possible to restart the cluster in "maintenance mode." This mode features drastically
+ reduced capabilities and surface area, making it easier to enact very low-level changes such
+ as repairing/recovering the `hbase:meta` table.
+
+To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your
+`hbase-site.xml` or via system propery when starting the master process (`-D...=true`). Entering
+and exiting this mode requires a service restart, however the typical use will be when HBase Master
+is already facing startup difficulties.
+
+When maintenance mode is enabled, the master will host all system tables - ensure that it has
+enough memory to do so. RegionServers will not be assigned any regions from user-space tables;
+in fact, they will go completely unused while in maintenance mode. Additionally, the master will
+not load any coprocessors, will not run any normalization or merge/split operations, and will not
+enforce quotas.
+
 [[trouble.tools.external]]
 === External Tools
 
@@ -590,7 +608,7 @@ See also Jesse Andersen's link:http://blog.cloudera.com/blog/2014/04/how-to-use-
 
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual <<trouble.client.scantimeout>>.
 Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call.
-It can be prevented by having `hbase.rpc.timeout` > `hbase.regionserver.lease.period`.
+It can be prevented by having `hbase.rpc.timeout` > `hbase.client.scanner.timeout.period`.
 Harsh J investigated the issue as part of the mailing list thread link:https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
 
 [[trouble.client.scarylogs]]

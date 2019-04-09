@@ -125,7 +125,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
 
           Put p = new Put(rk);
           p.setDurability(Durability.SKIP_WAL);
-          p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
+          p.addColumn(Bytes.toBytes(cf), cq, Bytes.toBytes(c));
           ht.put(p);
           LOG.info("Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: "
                   + Bytes.toStringBinary(cq));
@@ -167,7 +167,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
   private void runScanner(Table hTable, int expectedSize, Filter... filters) throws IOException {
     String cf = "f";
     Scan scan = new Scan();
-    scan.addFamily(cf.getBytes());
+    scan.addFamily(Bytes.toBytes(cf));
     FilterList filterList = new FilterList(filters);
     scan.setFilter(filterList);
 

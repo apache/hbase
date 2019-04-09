@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -316,11 +318,17 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationSourceImpl globalRms = mock(MetricsReplicationSourceImpl.class);
     when(globalRms.getMetricsRegistry()).thenReturn(mockRegistry);
 
+
     MetricsReplicationSourceSource singleSourceSource = new MetricsReplicationSourceSourceImpl(singleRms, id);
     MetricsReplicationSourceSource globalSourceSource = new MetricsReplicationGlobalSourceSource(globalRms);
+    MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
+
     Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable = new HashMap<>();
-    MetricsSource source = new MetricsSource(id, singleSourceSource, globalSourceSource,
+    MetricsSource source = new MetricsSource(id, singleSourceSource, spyglobalSourceSource,
         singleSourceSourceByTable);
+
+
     String gaugeName = "gauge";
     String singleGaugeName = "source.id." + gaugeName;
     String globalGaugeName = "source." + gaugeName;
@@ -340,6 +348,8 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     source.removeMetric(gaugeName);
     source.setGauge(gaugeName, delta);
     source.updateHistogram(counterName, count);
+    source.incrFailedRecoveryQueue();
+
 
     verify(singleRms).decGauge(singleGaugeName, delta);
     verify(globalRms).decGauge(globalGaugeName, delta);
@@ -357,6 +367,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     verify(globalRms).setGauge(globalGaugeName, delta);
     verify(singleRms).updateHistogram(singleCounterName, count);
     verify(globalRms).updateHistogram(globalCounterName, count);
+    verify(spyglobalSourceSource).incrFailedRecoveryQueue();
 
     //check singleSourceSourceByTable metrics.
     // singleSourceSourceByTable map entry will be created only
@@ -373,6 +384,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     // cannot put more concreate value here to verify because the age is arbitrary.
     // as long as it's greater than 0, we see it as correct answer.
     Assert.assertTrue(msr.getLastShippedAge() > 0);
+
   }
 
   private void doPut(byte[] row) throws IOException {

@@ -86,6 +86,11 @@ You can also set REGION_REPLICATION:
 
   hbase> alter 't1', {REGION_REPLICATION => 2}
 
+You can disable/enable table split and/or merge:
+
+  hbase> alter 't1', {SPLIT_ENABLED => false}
+  hbase> alter 't1', {MERGE_ENABLED => false}
+
 There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 },

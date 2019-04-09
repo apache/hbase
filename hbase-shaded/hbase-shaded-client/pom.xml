@@ -54,6 +54,8 @@
                         <configuration>
                             <artifactSet>
                                 <excludes>
+                                    <!-- exclude J2EE modules that come in for JDK11+ -->
+                                    <exclude>javax.annotation:javax.annotation-api</exclude>
                                     <!--
                                       Tell the shade plugin that in this case we want to include hadoop
                                       by leaving out the exclude.

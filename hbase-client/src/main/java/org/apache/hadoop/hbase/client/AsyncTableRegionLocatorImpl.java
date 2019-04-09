@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
+import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,11 +34,11 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
 
   private final TableName tableName;
 
-  private final AsyncRegionLocator locator;
+  private final AsyncConnectionImpl conn;
 
-  public AsyncTableRegionLocatorImpl(TableName tableName, AsyncRegionLocator locator) {
+  public AsyncTableRegionLocatorImpl(TableName tableName, AsyncConnectionImpl conn) {
     this.tableName = tableName;
-    this.locator = locator;
+    this.conn = conn;
   }
 
   @Override
@@ -44,7 +47,31 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
   }
 
   @Override
-  public CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload) {
-    return locator.getRegionLocation(tableName, row, RegionLocateType.CURRENT, reload, -1L);
+  public CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId,
+      boolean reload) {
+    return conn.getLocator().getRegionLocation(tableName, row, replicaId, RegionLocateType.CURRENT,
+      reload, -1L);
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>> getAllRegionLocations() {
+    if (TableName.isMetaTableName(tableName)) {
+      return conn.registry.getMetaRegionLocation()
+        .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+    }
+    return AsyncMetaTableAccessor.getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME),
+      Optional.of(tableName));
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] row, boolean reload) {
+    return conn.getLocator()
+      .getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L)
+      .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+  }
+
+  @Override
+  public void clearRegionLocationCache() {
+    conn.getLocator().clearCache(tableName);
   }
 }

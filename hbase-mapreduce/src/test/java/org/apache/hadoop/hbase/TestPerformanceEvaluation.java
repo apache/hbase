@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.UniformReservoir;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -43,10 +44,12 @@ import org.apache.hadoop.hbase.PerformanceEvaluation.TestOptions;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.GsonUtil;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestPerformanceEvaluation {
@@ -71,23 +74,21 @@ public class TestPerformanceEvaluation {
   }
 
   @Test
-  public void testSerialization()
-  throws JsonGenerationException, JsonMappingException, IOException {
+  public void testSerialization() throws IOException {
     PerformanceEvaluation.TestOptions options = new PerformanceEvaluation.TestOptions();
     assertTrue(!options.isAutoFlush());
     options.setAutoFlush(true);
-    ObjectMapper mapper = new ObjectMapper();
-    String optionsString = mapper.writeValueAsString(options);
+    Gson gson = GsonUtil.createGson().create();
+    String optionsString = gson.toJson(options);
     PerformanceEvaluation.TestOptions optionsDeserialized =
-        mapper.readValue(optionsString, PerformanceEvaluation.TestOptions.class);
+      gson.fromJson(optionsString, PerformanceEvaluation.TestOptions.class);
     assertTrue(optionsDeserialized.isAutoFlush());
   }
 
   /**
-   * Exercise the mr spec writing.  Simple assertions to make sure it is basically working.
-   * @throws IOException
+   * Exercise the mr spec writing. Simple assertions to make sure it is basically working.
    */
-  @Ignore @Test
+  @Test
   public void testWriteInputFile() throws IOException {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
     final int clients = 10;
@@ -99,12 +100,12 @@ public class TestPerformanceEvaluation {
     Path p = new Path(dir, PerformanceEvaluation.JOB_INPUT_FILENAME);
     long len = fs.getFileStatus(p).getLen();
     assertTrue(len > 0);
-    byte [] content = new byte[(int)len];
+    byte[] content = new byte[(int) len];
     FSDataInputStream dis = fs.open(p);
     try {
       dis.readFully(content);
-      BufferedReader br =
-        new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content)));
+      BufferedReader br = new BufferedReader(
+        new InputStreamReader(new ByteArrayInputStream(content), StandardCharsets.UTF_8));
       int count = 0;
       while (br.readLine() != null) {
         count++;

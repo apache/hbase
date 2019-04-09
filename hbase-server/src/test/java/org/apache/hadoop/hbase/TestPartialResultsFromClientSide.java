@@ -118,7 +118,7 @@ public class TestPartialResultsFromClientSide {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, timeout);
     TEST_UTIL.startMiniCluster(MINICLUSTER_SIZE);
-    TEST_UTIL.getAdmin().setBalancerRunning(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
   }
 
@@ -391,8 +391,7 @@ public class TestPartialResultsFromClientSide {
       // Estimate the cell heap size. One difference is that on server side, the KV Heap size is
       // estimated differently in case the cell is backed up by MSLAB byte[] (no overhead for
       // backing array). Thus below calculation is a bit brittle.
-      CELL_HEAP_SIZE = PrivateCellUtil.estimatedSizeOfCell(result.rawCells()[0])
-          - (ClassSize.ARRAY+3);
+      CELL_HEAP_SIZE = result.rawCells()[0].heapSize() - (ClassSize.ARRAY + 3);
       if (LOG.isInfoEnabled()) LOG.info("Cell heap size: " + CELL_HEAP_SIZE);
       scanner.close();
     }
@@ -829,8 +828,7 @@ public class TestPartialResultsFromClientSide {
     assertEquals(1, regions.size());
     RegionInfo regionInfo = regions.get(0).getFirst();
     ServerName name = TEST_UTIL.getHBaseCluster().getRegionServer(index).getServerName();
-    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(),
-        Bytes.toBytes(name.getServerName()));
+    TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), name);
   }
 
   private void assertCell(Cell cell, byte[] row, byte[] cf, byte[] cq) {

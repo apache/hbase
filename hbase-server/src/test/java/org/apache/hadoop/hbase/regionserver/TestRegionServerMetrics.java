@@ -112,6 +112,7 @@ public class TestRegionServerMetrics {
     // testMobMetrics creates few hfiles and manages compaction manually.
     conf.setInt("hbase.hstore.compactionThreshold", 100);
     conf.setInt("hbase.hstore.compaction.max", 100);
+    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4*60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
     TEST_UTIL.startMiniCluster();
@@ -151,20 +152,6 @@ public class TestRegionServerMetrics {
   public void afterTestMethod() throws Exception {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
-  }
-
-  public void waitTableDeleted(TableName name, long timeoutInMillis) throws Exception {
-    long start = System.currentTimeMillis();
-    while (true) {
-      HTableDescriptor[] tables = admin.listTables();
-      for (HTableDescriptor htd : tables) {
-        if (htd.getNameAsString() == name.getNameAsString())
-          return;
-      }
-      if (System.currentTimeMillis() - start > timeoutInMillis)
-        return;
-      Thread.sleep(1000);
-    }
   }
 
   public void assertCounter(String metric, long expectedValue) {
@@ -238,7 +225,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 3, serverSource);
+    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER ? 1 : 2, serverSource);
   }
 
   @Test

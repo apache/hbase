@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
-import org.apache.hadoop.hbase.security.access.TablePermission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -120,8 +120,6 @@ public final class SnapshotDescriptionUtils {
    */
   public static final String SNAPSHOT_WORKING_DIR = "hbase.snapshot.working.dir";
 
-  /** This tag will be created in in-progess snapshots */
-  public static final String SNAPSHOT_IN_PROGRESS = ".inprogress";
   // snapshot operation values
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
@@ -273,9 +271,11 @@ public final class SnapshotDescriptionUtils {
    * @param conf configuration for the HBase cluster
    * @return true if the given workingDir is a subdirectory of the default working directory for
    *   snapshots, false otherwise
+   * @throws IOException if we can't get the root dir
    */
-  public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf) {
-    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(new Path(conf.get(HConstants.HBASE_DIR)));
+  public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf)
+    throws IOException {
+    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(FSUtils.getRootDir(conf));
     return workingDir.equals(defaultWorkingDir) || isSubDirectoryOf(workingDir, defaultWorkingDir);
   }
 
@@ -355,16 +355,6 @@ public final class SnapshotDescriptionUtils {
   }
 
   /**
-   * Create in-progress tag under .tmp of in-progress snapshot
-   * */
-  public static void createInProgressTag(Path workingDir, FileSystem fs) throws IOException {
-    FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
-      HConstants.DATA_FILE_UMASK_KEY);
-    Path snapshot_in_progress = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOT_IN_PROGRESS);
-    FSUtils.create(fs, snapshot_in_progress, perms, true);
-  }
-
-  /**
    * Read in the {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} stored for the snapshot in the passed directory
    * @param fs filesystem where the snapshot was taken
    * @param snapshotDir directory where the snapshot was stored
@@ -435,10 +425,10 @@ public final class SnapshotDescriptionUtils {
 
   private static SnapshotDescription writeAclToSnapshotDescription(SnapshotDescription snapshot,
       Configuration conf) throws IOException {
-    ListMultimap<String, TablePermission> perms =
-        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, TablePermission>>() {
+    ListMultimap<String, UserPermission> perms =
+        User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, UserPermission>>() {
           @Override
-          public ListMultimap<String, TablePermission> run() throws Exception {
+          public ListMultimap<String, UserPermission> run() throws Exception {
             return AccessControlLists.getTablePermissions(conf,
               TableName.valueOf(snapshot.getTable()));
           }

@@ -66,13 +66,11 @@ The client will send setup information on connection establish.
 Thereafter, the client invokes methods against the remote server sending a protobuf Message and receiving a protobuf Message in response.
 Communication is synchronous.
 All back and forth is preceded by an int that has the total length of the request/response.
-Optionally, Cells(KeyValues) can be passed outside of protobufs in follow-behind Cell blocks (because link:https://docs.google.com/document/d/1WEtrq-JTIUhlnlnvA0oYRLp0F8MKpEBeBSCFcQiacdw/edit#[we
-                can't protobuf megabytes of KeyValues] or Cells). These CellBlocks are encoded and optionally compressed.
-
-
+Optionally, Cells(KeyValues) can be passed outside of protobufs in follow-behind Cell blocks
+(because link:https://docs.google.com/document/d/1WEtrq-JTIUhlnlnvA0oYRLp0F8MKpEBeBSCFcQiacdw/edit#[we can't protobuf megabytes of KeyValues] or Cells). These CellBlocks are encoded and optionally compressed.
 
 For more detail on the protobufs involved, see the
-link:https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=hbase-protocol/src/main/protobuf/RPC.proto;hb=HEAD[RPC.proto]            file in master.
+link:https://github.com/apache/hbase/blob/master/hbase-protocol/src/main/protobuf/RPC.proto[RPC.proto] file in master.
 
 ==== Connection Setup
 

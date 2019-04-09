@@ -80,9 +80,14 @@ public final class TableName implements Comparable<TableName> {
   public static final TableName META_TABLE_NAME =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
 
-  /** The Namespace table's name. */
+  /**
+   * The Namespace table's name.
+   * @deprecated We have folded the data in namespace table into meta table, so do not use it any
+   *             more.
+   */
+  @Deprecated
   public static final TableName NAMESPACE_TABLE_NAME =
-      valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "namespace");
+    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "namespace");
 
   public static final String OLD_META_STR = ".META.";
   public static final String OLD_ROOT_STR = "-ROOT-";

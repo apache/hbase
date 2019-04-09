@@ -135,7 +135,7 @@ public class TestRegionReplicasWithRestartScenarios {
     checkDuplicates(onlineRegions3);
     assertFalse(res);
     int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-    assertEquals(62, totalRegions);
+    assertEquals(61, totalRegions);
   }
 
   private boolean checkDuplicates(Collection<HRegion> onlineRegions3) throws Exception {

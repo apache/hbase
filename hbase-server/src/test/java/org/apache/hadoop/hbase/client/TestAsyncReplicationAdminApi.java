@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,6 +47,8 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.replication.VerifyWALEntriesReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.After;
@@ -56,12 +63,12 @@ import org.junit.runners.Parameterized;
  * Class to test asynchronous replication admin operations.
  */
 @RunWith(Parameterized.class)
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncReplicationAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncReplicationAdminApi.class);
 
   private final String ID_ONE = "1";
   private final String KEY_ONE = "127.0.0.1:2181:/hbase";
@@ -89,7 +96,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     } catch (Exception e) {
     }
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
-        .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
+      .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
     for (ServerName serverName : queueStorage.getListOfReplicators()) {
       for (String queue : queueStorage.getAllQueues(serverName)) {
         queueStorage.removeQueue(serverName, queue);
@@ -186,8 +193,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     // append table t1 to replication
     tableCFs.put(tableName1, null);
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
-    Map<TableName, List<String>> result = admin.getReplicationPeerConfig(ID_ONE).get()
-        .getTableCFsMap();
+    Map<TableName, List<String>> result =
+      admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(1, result.size());
     assertEquals(true, result.containsKey(tableName1));
     assertNull(result.get(tableName1));
@@ -301,12 +308,13 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
       tableCFs.clear();
       tableCFs.put(tableName3, null);
       admin.removeReplicationPeerTableCFs(ID_ONE, tableCFs).join();
-      fail("Test case should fail as removing table-cfs from a peer whose table-cfs didn't contain t3");
+      fail("Test case should fail as removing table-cfs from a peer whose" +
+        " table-cfs didn't contain t3");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof ReplicationException);
     }
-    Map<TableName, List<String>> result = admin.getReplicationPeerConfig(ID_ONE).get()
-        .getTableCFsMap();
+    Map<TableName, List<String>> result =
+      admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(2, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -414,7 +422,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     rpc.setTableCFsMap(tableCfs);
     try {
       admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
-      fail("Test case should fail, because table " + tableName1 + " conflict with namespace " + ns1);
+      fail(
+        "Test case should fail, because table " + tableName1 + " conflict with namespace " + ns1);
     } catch (CompletionException e) {
       // OK
     }
@@ -430,7 +439,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     rpc.setNamespaces(namespaces);
     try {
       admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
-      fail("Test case should fail, because namespace " + ns2 + " conflict with table " + tableName2);
+      fail(
+        "Test case should fail, because namespace " + ns2 + " conflict with table " + tableName2);
     } catch (CompletionException e) {
       // OK
     }
@@ -452,5 +462,49 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     assertEquals(2097152, admin.getReplicationPeerConfig(ID_ONE).join().getBandwidth());
 
     admin.removeReplicationPeer(ID_ONE).join();
+  }
+
+  @Test
+  public void testInvalidClusterKey() throws InterruptedException {
+    try {
+      admin.addReplicationPeer(ID_ONE,
+        ReplicationPeerConfig.newBuilder().setClusterKey("whatever").build()).get();
+      fail();
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
+    }
+  }
+
+  @Test
+  public void testInvalidReplicationEndpoint() throws InterruptedException {
+    try {
+      admin.addReplicationPeer(ID_ONE,
+        ReplicationPeerConfig.newBuilder().setReplicationEndpointImpl("whatever").build()).get();
+      fail();
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
+      assertThat(e.getCause().getMessage(), startsWith("Can not instantiate"));
+    }
+  }
+
+  @Test
+  public void testSetReplicationEndpoint() throws InterruptedException, ExecutionException {
+    // make sure that we do not need to set cluster key when we use customized ReplicationEndpoint
+    admin
+      .addReplicationPeer(ID_ONE,
+        ReplicationPeerConfig.newBuilder()
+          .setReplicationEndpointImpl(VerifyWALEntriesReplicationEndpoint.class.getName()).build())
+      .get();
+
+    // but we still need to check cluster key if we specify the default ReplicationEndpoint
+    try {
+      admin
+        .addReplicationPeer(ID_TWO, ReplicationPeerConfig.newBuilder()
+          .setReplicationEndpointImpl(HBaseInterClusterReplicationEndpoint.class.getName()).build())
+        .get();
+      fail();
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
+    }
   }
 }

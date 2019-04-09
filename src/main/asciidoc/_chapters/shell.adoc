@@ -58,6 +58,7 @@ To run one of these files, do as follows:
 $ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT
 ----
 
+
 == Running the Shell in Non-Interactive Mode
 
 A new non-interactive mode has been added to the HBase Shell (link:https://issues.apache.org/jira/browse/HBASE-11658[HBASE-11658)].
@@ -211,6 +212,21 @@ The command should be run all on a single line, but is broken by the `\` charact
 ----
 $ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \
   -XX:+PrintGCDetails -Xloggc:$HBASE_HOME/logs/gc-hbase.log" ./bin/hbase shell
+----
+
+== Overriding configuration starting the HBase Shell
+
+As of hbase-2.0.5/hbase-2.1.3/hbase-2.2.0/hbase-1.4.10/hbase-1.5.0, you can
+pass or override hbase configuration as specified in `hbase-*.xml` by passing
+your key/values prefixed with `-D` on the command-line as follows:
+[source,bash]
+----
+$ ./bin/hbase shell -Dhbase.zookeeper.quorum=ZK0.remote.cluster.example.org,ZK1.remote.cluster.example.org,ZK2.remote.cluster.example.org -Draining=false
+...
+hbase(main):001:0> @shell.hbase.configuration.get("hbase.zookeeper.quorum")
+=> "ZK0.remote.cluster.example.org,ZK1.remote.cluster.example.org,ZK2.remote.cluster.example.org"
+hbase(main):002:0> @shell.hbase.configuration.get("raining")
+=> "false"
 ----
 
 == Shell Tricks

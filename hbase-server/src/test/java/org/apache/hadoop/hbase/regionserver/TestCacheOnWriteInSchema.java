@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -161,7 +162,6 @@ public class TestCacheOnWriteInSchema {
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, false);
-
     fs = HFileSystem.get(conf);
 
     // Create the schema
@@ -181,7 +181,8 @@ public class TestCacheOnWriteInSchema {
     walFactory = new WALFactory(conf, id);
 
     region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
-    store = new HStore(region, hcd, conf);
+    region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
+    store = new HStore(region, hcd, conf, false);
   }
 
   @After
@@ -223,7 +224,7 @@ public class TestCacheOnWriteInSchema {
 
   private void readStoreFile(Path path) throws IOException {
     CacheConfig cacheConf = store.getCacheConfig();
-    BlockCache cache = cacheConf.getBlockCache();
+    BlockCache cache = cacheConf.getBlockCache().get();
     HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.ROWCOL, true);
     sf.initReader();
     HFile.Reader reader = sf.getReader().getHFileReader();

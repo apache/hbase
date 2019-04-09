@@ -172,6 +172,15 @@
     </pluginManagement>
   </build>
   <dependencies>
+    <!--This one is upfront to get in front of
+         any dependency that pulls in jersey-core.
+         Jersey-core has implemented version 1
+         Interfaces of what is in this dependency
+         which does version 2.-->
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+    </dependency>
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -227,10 +236,25 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-testing-util</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <!--This dependency pulls in hadoop-minicluster
+             which pulls in the below. It messes up
+             this build at assembly time. See HBASE-22029-->
+        <exclusion>
+         <groupId>com.sun.jersey</groupId>
+         <artifactId>jersey-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-http</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -268,10 +292,6 @@
       <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
     </dependency>
@@ -300,6 +320,18 @@
       <artifactId>jackson-jaxrs-json-provider</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
       <!-- We *might* need this for XMLStreamReader use in RemoteAdmin
            TODO figure out if we can remove it.
         -->
@@ -325,6 +357,26 @@
       <artifactId>javax.el</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-simplekdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -338,6 +390,12 @@
        <groupId>com.github.stephenc.findbugs</groupId>
        <artifactId>findbugs-annotations</artifactId>
        <optional>true</optional>
+    </dependency>
+    <!--Test-->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <profiles>
@@ -382,7 +440,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop-two.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -411,7 +468,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -422,7 +478,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -433,7 +488,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-server-timelineservice</artifactId>
-            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
@@ -444,7 +498,6 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-yarn-common</artifactId>
-            <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
@@ -463,7 +516,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop-three.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

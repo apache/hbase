@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delete;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_final_transition_failed;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_preempt_task;
@@ -143,7 +144,7 @@ public abstract class AbstractTestDLS {
     conf.setInt("zookeeper.recovery.retry", 0);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
-    conf.setInt("hbase.regionserver.wal.max.splitters", 3);
+    conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
     StartMiniClusterOption option = StartMiniClusterOption.builder()
@@ -419,8 +420,8 @@ public abstract class AbstractTestDLS {
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path logDir = new Path(new Path(FSUtils.getRootDir(conf), HConstants.HREGION_LOGDIR_NAME),
-        ServerName.valueOf("x", 1, 1).toString());
+    final Path rootLogDir = new Path(FSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+    final Path logDir = new Path(rootLogDir, ServerName.valueOf("x", 1, 1).toString());
     fs.mkdirs(logDir);
     ExecutorService executor = null;
     try {
@@ -505,19 +506,19 @@ public abstract class AbstractTestDLS {
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    LOG.debug("Verifying only catalog and namespace regions are assigned\n");
-    if (regions.size() != 2) {
+    LOG.debug("Verifying only catalog region is assigned\n");
+    if (regions.size() != 1) {
       for (String oregion : regions)
         LOG.debug("Region still online: " + oregion);
     }
-    assertEquals(2 + existingRegions, regions.size());
+    assertEquals(1 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
     TEST_UTIL.getAdmin().enableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    assertEquals(numRegions + 2 + existingRegions, regions.size());
+    assertEquals(numRegions + 1 + existingRegions, regions.size());
     return table;
   }
 
@@ -730,8 +731,7 @@ public abstract class AbstractTestDLS {
           // the RS doesn't have regions of the specified table so we need move one to this RS
           List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
           RegionInfo hri = tableRegions.get(0);
-          TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(),
-            Bytes.toBytes(destRS.getServerName().getServerName()));
+          TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(), destRS.getServerName());
           // wait for region move completes
           RegionStates regionStates =
               TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();

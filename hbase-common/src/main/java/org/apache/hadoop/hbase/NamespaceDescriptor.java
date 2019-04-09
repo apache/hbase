@@ -166,7 +166,7 @@ public class NamespaceDescriptor {
 
     private Builder(NamespaceDescriptor ns) {
       this.bName = ns.name;
-      this.bConfiguration = ns.configuration;
+      this.bConfiguration.putAll(ns.configuration);
     }
 
     private Builder(String name) {

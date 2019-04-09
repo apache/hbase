@@ -460,8 +460,8 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public void requestFlush(HRegion r, boolean forceFlushAllStores, FlushLifeCycleTracker tracker) {
-    r.incrementFlushesQueuedCount();
+  public boolean requestFlush(HRegion r, boolean forceFlushAllStores,
+                              FlushLifeCycleTracker tracker) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
@@ -469,15 +469,17 @@ class MemStoreFlusher implements FlushRequester {
         FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores, tracker);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
+        r.incrementFlushesQueuedCount();
+        return true;
       } else {
         tracker.notExecuted("Flush already requested on " + r);
+        return false;
       }
     }
   }
 
   @Override
-  public void requestDelayedFlush(HRegion r, long delay, boolean forceFlushAllStores) {
-    r.incrementFlushesQueuedCount();
+  public boolean requestDelayedFlush(HRegion r, long delay, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
@@ -486,7 +488,10 @@ class MemStoreFlusher implements FlushRequester {
         fqe.requeue(delay);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
+        r.incrementFlushesQueuedCount();
+        return true;
       }
+      return false;
     }
   }
 
@@ -693,79 +698,81 @@ class MemStoreFlusher implements FlushRequester {
    * amount of memstore consumption.
    */
   public void reclaimMemStoreMemory() {
-    TraceScope scope = TraceUtil.createTrace("MemStoreFluser.reclaimMemStoreMemory");
-    FlushType flushType = isAboveHighWaterMark();
-    if (flushType != FlushType.NORMAL) {
-      TraceUtil.addTimelineAnnotation("Force Flush. We're above high water mark.");
-      long start = EnvironmentEdgeManager.currentTime();
-      synchronized (this.blockSignal) {
-        boolean blocked = false;
-        long startTime = 0;
-        boolean interrupted = false;
-        try {
-          flushType = isAboveHighWaterMark();
-          while (flushType != FlushType.NORMAL && !server.isStopped()) {
-            server.cacheFlusher.setFlushType(flushType);
-            if (!blocked) {
-              startTime = EnvironmentEdgeManager.currentTime();
-              if (!server.getRegionServerAccounting().isOffheap()) {
-                logMsg("global memstore heapsize",
-                    server.getRegionServerAccounting().getGlobalMemStoreHeapSize(),
-                    server.getRegionServerAccounting().getGlobalMemStoreLimit());
-              } else {
-                switch (flushType) {
-                case ABOVE_OFFHEAP_HIGHER_MARK:
-                  logMsg("the global offheap memstore datasize",
-                      server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(),
-                      server.getRegionServerAccounting().getGlobalMemStoreLimit());
-                  break;
-                case ABOVE_ONHEAP_HIGHER_MARK:
+    try (TraceScope scope = TraceUtil.createTrace("MemStoreFluser.reclaimMemStoreMemory")) {
+      FlushType flushType = isAboveHighWaterMark();
+      if (flushType != FlushType.NORMAL) {
+        TraceUtil.addTimelineAnnotation("Force Flush. We're above high water mark.");
+        long start = EnvironmentEdgeManager.currentTime();
+        long nextLogTimeMs = start;
+        synchronized (this.blockSignal) {
+          boolean blocked = false;
+          long startTime = 0;
+          boolean interrupted = false;
+          try {
+            flushType = isAboveHighWaterMark();
+            while (flushType != FlushType.NORMAL && !server.isStopped()) {
+              server.cacheFlusher.setFlushType(flushType);
+              if (!blocked) {
+                startTime = EnvironmentEdgeManager.currentTime();
+                if (!server.getRegionServerAccounting().isOffheap()) {
                   logMsg("global memstore heapsize",
                       server.getRegionServerAccounting().getGlobalMemStoreHeapSize(),
-                      server.getRegionServerAccounting().getGlobalOnHeapMemStoreLimit());
-                  break;
-                default:
-                  break;
+                      server.getRegionServerAccounting().getGlobalMemStoreLimit());
+                } else {
+                  switch (flushType) {
+                    case ABOVE_OFFHEAP_HIGHER_MARK:
+                      logMsg("the global offheap memstore datasize",
+                          server.getRegionServerAccounting().getGlobalMemStoreOffHeapSize(),
+                          server.getRegionServerAccounting().getGlobalMemStoreLimit());
+                      break;
+                    case ABOVE_ONHEAP_HIGHER_MARK:
+                      logMsg("global memstore heapsize",
+                          server.getRegionServerAccounting().getGlobalMemStoreHeapSize(),
+                          server.getRegionServerAccounting().getGlobalOnHeapMemStoreLimit());
+                      break;
+                    default:
+                      break;
+                  }
                 }
               }
+              blocked = true;
+              wakeupFlushThread();
+              try {
+                // we should be able to wait forever, but we've seen a bug where
+                // we miss a notify, so put a 5 second bound on it at least.
+                blockSignal.wait(5 * 1000);
+              } catch (InterruptedException ie) {
+                LOG.warn("Interrupted while waiting");
+                interrupted = true;
+              }
+              long nowMs = EnvironmentEdgeManager.currentTime();
+              if (nowMs >= nextLogTimeMs) {
+                LOG.warn("Memstore is above high water mark and block {} ms", nowMs - start);
+                nextLogTimeMs = nowMs + 1000;
+              }
+              flushType = isAboveHighWaterMark();
             }
-            blocked = true;
-            wakeupFlushThread();
-            try {
-              // we should be able to wait forever, but we've seen a bug where
-              // we miss a notify, so put a 5 second bound on it at least.
-              blockSignal.wait(5 * 1000);
-            } catch (InterruptedException ie) {
-              LOG.warn("Interrupted while waiting");
-              interrupted = true;
+          } finally {
+            if (interrupted) {
+              Thread.currentThread().interrupt();
             }
-            long took = EnvironmentEdgeManager.currentTime() - start;
-            LOG.warn("Memstore is above high water mark and block " + took + "ms");
-            flushType = isAboveHighWaterMark();
           }
-        } finally {
-          if (interrupted) {
-            Thread.currentThread().interrupt();
-          }
-        }
 
-        if(blocked){
-          final long totalTime = EnvironmentEdgeManager.currentTime() - startTime;
-          if(totalTime > 0){
-            this.updatesBlockedMsHighWater.add(totalTime);
+          if(blocked){
+            final long totalTime = EnvironmentEdgeManager.currentTime() - startTime;
+            if(totalTime > 0){
+              this.updatesBlockedMsHighWater.add(totalTime);
+            }
+            LOG.info("Unblocking updates for server " + server.toString());
           }
-          LOG.info("Unblocking updates for server " + server.toString());
+        }
+      } else {
+        flushType = isAboveLowWaterMark();
+        if (flushType != FlushType.NORMAL) {
+          server.cacheFlusher.setFlushType(flushType);
+          wakeupFlushThread();
         }
       }
-    } else {
-      flushType = isAboveLowWaterMark();
-      if (flushType != FlushType.NORMAL) {
-        server.cacheFlusher.setFlushType(flushType);
-        wakeupFlushThread();
-      }
-    }
-    if(scope!= null) {
-      scope.close();
     }
   }
 

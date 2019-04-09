@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
@@ -59,7 +60,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Public
-public interface Cell {
+public interface Cell extends HeapSize {
 
   //1) Row
 
@@ -170,6 +171,11 @@ public interface Cell {
    * @return Number of value bytes.  Must be &lt; valueArray.length - offset.
    */
   int getValueLength();
+
+  /**
+   * @return Serialized size (defaults to include tag length if has some tags).
+   */
+  int getSerializedSize();
 
   /**
    * Contiguous raw bytes representing tags that may start at any index in the containing array.

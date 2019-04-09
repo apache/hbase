@@ -473,4 +473,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       }
     }
   }
+
+  @Test
+  public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
+    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
+  }
 }

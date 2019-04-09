@@ -366,7 +366,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   private LockInterface setupNamespaceLock() throws IllegalArgumentException {
-    this.tableName = TableName.NAMESPACE_TABLE_NAME;
+    this.tableName = TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME;
     switch (type) {
       case EXCLUSIVE:
         this.opType = TableOperationType.EDIT;

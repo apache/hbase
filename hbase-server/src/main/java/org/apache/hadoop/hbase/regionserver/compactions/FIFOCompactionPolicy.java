@@ -96,16 +96,29 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     return hasExpiredStores(storeFiles);
   }
 
+  /**
+   * The FIFOCompactionPolicy only choose those TTL expired HFiles as the compaction candidates. So
+   * if all HFiles are TTL expired, then the compaction will generate a new empty HFile. While its
+   * max timestamp will be Long.MAX_VALUE. If not considered separately, the HFile will never be
+   * archived because its TTL will be never expired. So we'll check the empty store file separately.
+   * (See HBASE-21504)
+   */
+  private boolean isEmptyStoreFile(HStoreFile sf) {
+    return sf.getReader().getEntries() == 0;
+  }
+
   private boolean hasExpiredStores(Collection<HStoreFile> files) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    for(HStoreFile sf: files){
+    for (HStoreFile sf : files) {
+      if (isEmptyStoreFile(sf)) {
+        return true;
+      }
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if (maxTtl == Long.MAX_VALUE
-          || (currentTime - maxTtl < maxTs)){
-        continue; 
-      } else{
+      if (maxTtl == Long.MAX_VALUE || (currentTime - maxTtl < maxTs)) {
+        continue;
+      } else {
         return true;
       }
     }
@@ -116,14 +129,17 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
       Collection<HStoreFile> filesCompacting) {
     long currentTime = EnvironmentEdgeManager.currentTime();
     Collection<HStoreFile> expiredStores = new ArrayList<>();
-    for(HStoreFile sf: files){
+    for (HStoreFile sf : files) {
+      if (isEmptyStoreFile(sf)) {
+        expiredStores.add(sf);
+        continue;
+      }
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       long maxTs = sf.getReader().getMaxTimestamp();
       long maxTtl = storeConfigInfo.getStoreFileTtl();
-      if (maxTtl == Long.MAX_VALUE
-          || (currentTime - maxTtl < maxTs)){
-        continue; 
-      } else if(filesCompacting == null || !filesCompacting.contains(sf)){
+      if (maxTtl == Long.MAX_VALUE || (currentTime - maxTtl < maxTs)) {
+        continue;
+      } else if (filesCompacting == null || !filesCompacting.contains(sf)) {
         expiredStores.add(sf);
       }
     }

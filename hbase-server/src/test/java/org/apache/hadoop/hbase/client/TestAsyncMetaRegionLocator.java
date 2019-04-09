@@ -17,20 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 
-import java.util.Optional;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -42,7 +41,7 @@ public class TestAsyncMetaRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
+    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -53,10 +52,11 @@ public class TestAsyncMetaRegionLocator {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
+    TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.waitUntilAllSystemRegionsAssigned();
-    TEST_UTIL.getAdmin().setBalancerRunning(false, true);
     REGISTRY = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(REGISTRY, 3);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
   }
 
@@ -66,42 +66,21 @@ public class TestAsyncMetaRegionLocator {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private Optional<ServerName> getRSCarryingMeta() {
-    return TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .map(t -> t.getRegionServer())
-        .filter(rs -> !rs.getRegions(TableName.META_TABLE_NAME).isEmpty()).findAny()
-        .map(rs -> rs.getServerName());
-  }
-
   @Test
-  public void testReload() throws Exception {
-    ServerName serverName = getRSCarryingMeta().get();
-    assertEquals(serverName, LOCATOR.getRegionLocation(false).get().getServerName());
-
-    ServerName newServerName = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
-        .findAny().get();
-    TEST_UTIL.getAdmin().move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-      Bytes.toBytes(newServerName.getServerName()));
-    TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
+  public void test() throws Exception {
+    testLocator(TEST_UTIL, TableName.META_TABLE_NAME, new Locator() {
 
       @Override
-      public boolean evaluate() throws Exception {
-        Optional<ServerName> newServerName = getRSCarryingMeta();
-        return newServerName.isPresent() && !newServerName.get().equals(serverName);
+      public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
+          throws Exception {
+        LOCATOR.updateCachedLocationOnError(loc, error);
       }
 
       @Override
-      public String explainFailure() throws Exception {
-        return HRegionInfo.FIRST_META_REGIONINFO.getRegionNameAsString() + " is still on " +
-            serverName;
+      public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
+          throws Exception {
+        return LOCATOR.getRegionLocations(replicaId, reload).get();
       }
     });
-    // The cached location will not change
-    assertEquals(serverName, LOCATOR.getRegionLocation(false).get().getServerName());
-    // should get the new location when reload = true
-    assertEquals(newServerName, LOCATOR.getRegionLocation(true).get().getServerName());
-    // the cached location should be replaced
-    assertEquals(newServerName, LOCATOR.getRegionLocation(false).get().getServerName());
   }
 }

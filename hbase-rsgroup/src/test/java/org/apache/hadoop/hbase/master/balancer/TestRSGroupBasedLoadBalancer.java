@@ -29,7 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -43,8 +42,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -57,7 +55,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 /**
  * Test RSGroupBasedLoadBalancer with SimpleLoadBalancer as internal balancer
  */
-@Category(SmallTests.class)
+@Category(LargeTests.class)
 public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -112,8 +110,7 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         .roundRobinAssignment(regions, servers);
     //test empty region/servers scenario
     //this should not throw an NPE
-    loadBalancer.roundRobinAssignment(regions,
-        Collections.EMPTY_LIST);
+    loadBalancer.roundRobinAssignment(regions, Collections.emptyList());
     //test regular scenario
     assertTrue(assignments.keySet().size() == servers.size());
     for (ServerName sn : assignments.keySet()) {

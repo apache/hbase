@@ -68,7 +68,7 @@ import org.slf4j.LoggerFactory;
  * an example of configuring a user of this Auth Chore to run on a secure cluster.
  * <pre>
  * </pre>
- * This class will be internal use only from 2.2.0 version, and will transparently work
+ * This class will be internal used only from 2.2.0 version, and will transparently work
  * for kerberized applications. For more, please refer
  * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration for Secure Operation</a>
  *

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -28,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -45,6 +48,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +58,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 /**
  * Tests the restarting of everything as done during rolling restarts.
  */
+@RunWith(Parameterized.class)
 @Category({MasterTests.class, LargeTests.class})
 public class TestRollingRestart {
 
@@ -64,6 +70,9 @@ public class TestRollingRestart {
 
   @Rule
   public TestName name = new TestName();
+
+  @Parameterized.Parameter
+  public boolean splitWALCoordinatedByZK;
 
   @Test
   public void testBasicRollingRestart() throws Exception {
@@ -78,6 +87,8 @@ public class TestRollingRestart {
     // Start the cluster
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+        splitWALCoordinatedByZK);
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     StartMiniClusterOption option = StartMiniClusterOption.builder()
         .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
@@ -87,7 +98,8 @@ public class TestRollingRestart {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName =
+        TableName.valueOf(name.getMethodName().replaceAll("[\\[|\\]]", "-"));
     byte [] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
@@ -103,11 +115,13 @@ public class TestRollingRestart {
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    log("Verifying only catalog and namespace regions are assigned\n");
-    if (regions.size() != 2) {
-      for (String oregion : regions) log("Region still online: " + oregion);
+    log("Verifying only catalog region is assigned\n");
+    if (regions.size() != 1) {
+      for (String oregion : regions) {
+        log("Region still online: " + oregion);
+      }
     }
-    assertEquals(2, regions.size());
+    assertEquals(1, regions.size());
     log("Enabling table\n");
     TEST_UTIL.getAdmin().enableTable(tableName);
     log("Waiting for no more RIT\n");
@@ -282,5 +296,9 @@ public class TestRollingRestart {
   }
 
 
+  @Parameterized.Parameters
+  public static Collection coordinatedByZK() {
+    return Arrays.asList(false, true);
+  }
 }
 

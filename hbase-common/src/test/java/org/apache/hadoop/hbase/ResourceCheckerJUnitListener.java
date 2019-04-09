@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.hbase;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ResourceChecker.Phase;
 import org.apache.hadoop.hbase.util.JVM;
 import org.junit.runner.notification.RunListener;
@@ -142,41 +139,6 @@ public class ResourceCheckerJUnitListener extends RunListener {
     }
   }
 
-  static class MaxHeapMemoryMBResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-
-    @Override
-    public int getVal(Phase phase) {
-      MemoryUsage usage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-      return (int) (usage.getMax() / (1024 * 1024));
-    }
-  }
-
-  static class UsedHeapMemoryMBResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-
-    @Override
-    public int getVal(Phase phase) {
-      MemoryUsage usage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-      return (int) (usage.getUsed() / (1024 * 1024));
-    }
-  }
-
-  static class GCCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-
-    @Override
-    public int getVal(Phase phase) {
-      return Math.toIntExact(ManagementFactory.getGarbageCollectorMXBeans().stream()
-        .mapToLong(b -> b.getCollectionCount()).sum());
-    }
-  }
-
-  static class GCTimeSecondResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-
-    @Override
-    public int getVal(Phase phase) {
-      return Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(ManagementFactory
-        .getGarbageCollectorMXBeans().stream().mapToLong(b -> b.getCollectionTime()).sum()));
-    }
-  }
 
   /**
    * To be implemented by sub classes if they want to add specific ResourceAnalyzer.
@@ -193,10 +155,6 @@ public class ResourceCheckerJUnitListener extends RunListener {
     rc.addResourceAnalyzer(new SystemLoadAverageResourceAnalyzer());
     rc.addResourceAnalyzer(new ProcessCountResourceAnalyzer());
     rc.addResourceAnalyzer(new AvailableMemoryMBResourceAnalyzer());
-    rc.addResourceAnalyzer(new MaxHeapMemoryMBResourceAnalyzer());
-    rc.addResourceAnalyzer(new UsedHeapMemoryMBResourceAnalyzer());
-    rc.addResourceAnalyzer(new GCCountResourceAnalyzer());
-    rc.addResourceAnalyzer(new GCTimeSecondResourceAnalyzer());
 
     addResourceAnalyzer(rc);
 

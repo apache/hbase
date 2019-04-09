@@ -51,7 +51,8 @@ Options:
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
-  hbck            Run the hbase 'fsck' tool
+  hbck            Run the HBase 'fsck' tool. Defaults read-only hbck1.
+                  Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2.
   snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
@@ -82,45 +83,54 @@ Others, such as `hbase shell` (<<shell>>), `hbase upgrade` (<<upgrading>>), and 
 
 === Canary
 
-There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or RegionServer's granularity.
-To see the usage, use the `-help` parameter.
+The Canary tool can help users "canary-test" the HBase cluster status.
+The default "region mode" fetches a row from every column-family of every regions.
+In "regionserver mode", the Canary tool will fetch a row from a random
+region on each of the cluster's RegionServers. In "zookeeper mode", the
+Canary will read the root znode on each member of the zookeeper ensemble.
+
+To see usage, pass the `-help` parameter (if you pass no
+parameters, the Canary tool starts executing in the default
+region "mode" fetching a row from every region in the cluster).
 
 ----
-$ ${HBASE_HOME}/bin/hbase canary -help
+2018-10-16 13:11:27,037 INFO  [main] tool.Canary: Execution thread count=16
+Usage: canary [OPTIONS] [<TABLE1> [<TABLE2]...] | [<REGIONSERVER1> [<REGIONSERVER2]..]
+Where [OPTIONS] are:
+ -h,-help        show this help and exit.
+ -regionserver   set 'regionserver mode'; gets row from random region on server
+ -allRegions     get from ALL regions when 'regionserver mode', not just random one.
+ -zookeeper      set 'zookeeper mode'; grab zookeeper.znode.parent on each ensemble member
+ -daemon         continuous check at defined intervals.
+ -interval <N>   interval between checks in seconds
+ -e              consider table/regionserver argument as regular expression
+ -f <B>          exit on first error; default=true
+ -failureAsError treat read/write failure as error
+ -t <N>          timeout for canary-test run; default=600000ms
+ -writeSniffing  enable write sniffing
+ -writeTable     the table used for write sniffing; default=hbase:canary
+ -writeTableTimeout <N>  timeout for writeTable; default=600000ms
+ -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>,...
+                comma-separated list of table read timeouts (no spaces);
+                logs 'ERROR' if takes longer. default=600000ms
+ -permittedZookeeperFailures <N>  Ignore first N failures attempting to
+                connect to individual zookeeper nodes in ensemble
 
-Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
- where [opts] are:
-   -help          Show this help and exit.
-   -regionserver  replace the table argument to regionserver,
-      which means to enable regionserver mode
-   -allRegions    Tries all regions on a regionserver,
-      only works in regionserver mode.
-   -zookeeper    Tries to grab zookeeper.znode.parent
-      on each zookeeper instance
-   -daemon        Continuous check at defined intervals.
-   -interval <N>  Interval between checks (sec)
-   -e             Use table/regionserver as regular expression
-      which means the table/regionserver is regular expression pattern
-   -f <B>         stop whole program if first error occurs, default is true
-   -t <N>         timeout for a check, default is 600000 (millisecs)
-   -writeTableTimeout <N>         write timeout for the writeTable, default is 600000 (millisecs)
-   -readTableTimeouts <tableName>=<read timeout>,<tableName>=<read timeout>, ...    comma-separated list of read timeouts per table (no spaces), default is 600000 (millisecs)
-   -writeSniffing enable the write sniffing in canary
-   -treatFailureAsError treats read / write failure as error
-   -writeTable    The table used for write sniffing. Default is hbase:canary
-   -Dhbase.canary.read.raw.enabled=<true/false> Use this flag to enable or disable raw scan during read canary test Default is false and raw is not enabled during scan
-   -D<configProperty>=<value> assigning or override the configuration params
+ -D<configProperty>=<value> to assign or override configuration params
+ -Dhbase.canary.read.raw.enabled=<true/false> Set to enable/disable raw scan; default=false
+
+Canary runs in one of three modes: region (default), regionserver, or zookeeper.
+To sniff/probe all regions, pass no arguments.
+To sniff/probe all regions of a table, pass tablename.
+To sniff/probe regionservers, pass -regionserver, etc.
+See http://hbase.apache.org/book.html#_canary for Canary documentation.
 ----
 
 [NOTE]
-The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property which
-will also determine the used Monitor class. In the absence of this property RegionServerStdOutSink
-will be used. You need to use the Sink according to the passed parameters to the _canary_ command.
-As an example you have to set `hbase.canary.sink.class` property to
-`org.apache.hadoop.hbase.tool.Canary$RegionStdOutSink` for using table parameters.
+The `Sink` class is instantiated using the `hbase.canary.sink.class` configuration property.
 
-This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
-The error code definitions are:
+This tool will return non zero error codes to user for collaborating with other monitoring tools,
+such as Nagios.  The error code definitions are:
 
 [source,java]
 ----
@@ -131,9 +141,9 @@ private static final int ERROR_EXIT_CODE = 4;
 private static final int FAILURE_EXIT_CODE = 5;
 ----
 
-Here are some examples based on the following given case.
-There are two Table objects called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 RegionServers.
-see following table.
+Here are some examples based on the following given case: given two Table objects called test-01
+and test-02 each with two column family cf1 and cf2 respectively, deployed on 3 RegionServers.
+See the following table.
 
 [cols="1,1,1", options="header"]
 |===
@@ -145,7 +155,7 @@ see following table.
 | rs3 | r2 | r1
 |===
 
-Following are some examples based on the previous given case.
+Following are some example outputs based on the previous given case.
 
 ==== Canary test for every column family (store) of every region of every table
 
@@ -163,12 +173,13 @@ $ ${HBASE_HOME}/bin/hbase canary
 13/12/09 03:26:32 INFO tool.Canary: read from region test-02,0004883,1386559511167.cbda32d5e2e276520712d84eaaa29d84. column family cf2 in 8ms
 ----
 
-So you can see, table test-01 has two regions and two column families, so the Canary tool will pick 4 small piece of data from 4 (2 region * 2 store) different stores.
-This is a default behavior of the this tool does.
+So you can see, table test-01 has two regions and two column families, so the Canary tool in the
+default "region mode" will pick 4 small piece of data from 4 (2 region * 2 store) different stores.
+This is a default behavior.
 
-==== Canary test for every column family (store) of every region of specific table(s)
+==== Canary test for every column family (store) of every region of a specific table(s)
 
-You can also test one or more specific tables.
+You can also test one or more specific tables by passing table names.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary test-01 test-02
@@ -176,7 +187,9 @@ $ ${HBASE_HOME}/bin/hbase canary test-01 test-02
 
 ==== Canary test with RegionServer granularity
 
-This will pick one small piece of data from each RegionServer, and can also put your RegionServer name as input options for canary-test specific RegionServer.
+In "regionserver mode", the Canary tool will pick one small piece of data
+from each RegionServer (You can also pass one or more RegionServer names as arguments
+to the canary-test when in "regionserver mode").
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -regionserver
@@ -188,22 +201,25 @@ $ ${HBASE_HOME}/bin/hbase canary -regionserver
 
 ==== Canary test with regular expression pattern
 
-This will test both table test-01 and test-02.
+You can pass regexes for table names when in "region mode" or for servernames when
+in "regionserver mode". The below will test both table test-01 and test-02.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -e test-0[1-2]
 ----
 
-==== Run canary test as daemon mode
+==== Run canary test as a "daemon"
 
-Run repeatedly with interval defined in option `-interval` whose default value is 60 seconds.
-This daemon will stop itself and return non-zero error code if any error occurs, due to the default value of option -f is true.
+Run repeatedly with an interval defined via the option `-interval` (default value is 60 seconds).
+This daemon will stop itself and return non-zero error code if any error occur. To have
+the daemon keep running across errors, pass the -f flag with its value set to false
+(see usage above).
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -daemon
 ----
 
-Run repeatedly with 5 second intervals and will not stop itself even if errors occur in the test.
+To run repeatedly with 5 second intervals and not stop on errors, do the following.
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
@@ -211,9 +227,11 @@ $ ${HBASE_HOME}/bin/hbase canary -daemon -interval 5 -f false
 
 ==== Force timeout if canary test stuck
 
-In some cases the request is stuck and no response is sent back to the client. This can happen with dead RegionServers which the master has not yet noticed.
-Because of this we provide a timeout option to kill the canary test and return a non-zero error code.
-This run sets the timeout value to 60 seconds, the default value is 600 seconds.
+In some cases the request is stuck and no response is sent back to the client. This
+can happen with dead RegionServers which the master has not yet noticed.
+Because of this we provide a timeout option to kill the canary test and return a
+non-zero error code. The below sets the timeout value to 60 seconds (the default value
+is 600 seconds).
 
 ----
 $ ${HBASE_HOME}/bin/hbase canary -t 60000
@@ -221,36 +239,37 @@ $ ${HBASE_HOME}/bin/hbase canary -t 60000
 
 ==== Enable write sniffing in canary
 
-By default, the canary tool only check the read operations, it's hard to find the problem in the
-write path. To enable the write sniffing, you can run canary with the `-writeSniffing` option.
-When the write sniffing is enabled, the canary tool will create an hbase table and make sure the
-regions of the table distributed on all region servers. In each sniffing period, the canary will
-try to put data to these regions to check the write availability of each region server.
+By default, the canary tool only checks read operations. To enable the write sniffing,
+you can run the canary with the `-writeSniffing` option set.  When write sniffing is
+enabled, the canary tool will create an hbase table and make sure the
+regions of the table are distributed to all region servers. In each sniffing period,
+the canary will try to put data to these regions to check the write availability of
+each region server.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -writeSniffing
 ----
 
-The default write table is `hbase:canary` and can be specified by the option `-writeTable`.
+The default write table is `hbase:canary` and can be specified with the option `-writeTable`.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -writeSniffing -writeTable ns:canary
 ----
 
-The default value size of each put is 10 bytes and you can set it by the config key:
+The default value size of each put is 10 bytes. You can set it via the config key:
 `hbase.canary.write.value.size`.
 
 ==== Treat read / write failure as error
 
-By default, the canary tool only logs read failure, due to e.g. RetriesExhaustedException,
-while returning normal exit code. To treat read / write failure as error, you can run canary
-with the `-treatFailureAsError` option. When enabled, read / write failure would result in error
-exit code.
+By default, the canary tool only logs read failures -- due to e.g. RetriesExhaustedException, etc. --
+and will return the 'normal' exit code. To treat read/write failure as errors, you can run canary
+with the `-treatFailureAsError` option. When enabled, read/write failures will result in an
+error exit code.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -treatFailureAsError
 ----
 
 ==== Running Canary in a Kerberos-enabled Cluster
 
-To run Canary in a Kerberos-enabled cluster, configure the following two properties in _hbase-site.xml_:
+To run the Canary in a Kerberos-enabled cluster, configure the following two properties in _hbase-site.xml_:
 
 * `hbase.client.keytab.file`
 * `hbase.client.kerberos.principal`
@@ -368,12 +387,33 @@ Each command except `RowCounter` and `CellCounter` accept a single `--help` argu
 [[hbck]]
 === HBase `hbck`
 
-To run `hbck` against your HBase cluster run `$./bin/hbase hbck`. At the end of the command's output it prints `OK` or `INCONSISTENCY`.
-If your cluster reports inconsistencies, pass `-details` to see more detail emitted.
-If inconsistencies, run `hbck` a few times because the inconsistency may be transient (e.g. cluster is starting up or a region is splitting).
- Passing `-fix` may correct the inconsistency (This is an experimental feature).
+The `hbck` tool that shipped with hbase-1.x has been made read-only in hbase-2.x. It is not able to repair
+hbase-2.x clusters as hbase internals have changed. Nor should its assessments in read-only mode be
+trusted as it does not understand hbase-2.x operation.
 
-For more information, see <<hbck.in.depth>>.
+A new tool, <<HBCK2>>, described in the next section, replaces `hbck`.
+
+[[HBCK2]]
+=== HBase `HBCK2`
+
+`HBCK2` is the successor to <<hbck>>, the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1`
+making repairs against hbase-2.x installs.
+
+`HBCK2` does not ship as part of hbase. It can be found as a subproject of the companion
+link:https://github.com/apache/hbase-operator-tools[hbase-operator-tools] repository at
+link:https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2[Apache HBase HBCK2 Tool].
+`HBCK2` was moved out of hbase so it could evolve at a cadence apart from that of hbase core.
+
+See the [https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2](HBCK2) Home Page
+for how `HBCK2` differs from `hbck1`, and for how to build and use it.
+
+Once built, you can run `HBCK2` as follows:
+
+```
+$ hbase hbck -j /path/to/HBCK2.jar
+```
+
+This will generate `HBCK2` usage describing commands and options.
 
 [[hfile_tool2]]
 === HFile Tool
@@ -490,6 +530,124 @@ By default, CopyTable utility only copies the latest version of row cells unless
 
 See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
           HBase Backups with CopyTable] blog post for more on `CopyTable`.
+
+[[hashtable.synctable]]
+=== HashTable/SyncTable
+
+HashTable/SyncTable is a two steps tool for synchronizing table data, where each of the steps are implemented as MapReduce jobs.
+Similarly to CopyTable, it can be used for partial or entire table data syncing, under same or remote cluster.
+However, it performs the sync in a more efficient way than CopyTable. Instead of copying all cells
+in specified row key/time period range, HashTable (the first step) creates hashed indexes for batch of cells on source table and output those as results.
+On the next stage, SyncTable scans the source table and now calculates hash indexes for table cells,
+compares these hashes with the outputs of HashTable, then it just scans (and compares) cells for diverging hashes, only updating
+mismatching cells. This results in less network traffic/data transfers, which can be impacting when syncing large tables on remote clusters.
+
+==== Step 1, HashTable
+
+First, run HashTable on the source table cluster (this is the table whose state will be copied to its counterpart).
+
+Usage:
+
+----
+$ ./bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --help
+Usage: HashTable [options] <tablename> <outputpath>
+
+Options:
+ batchsize     the target amount of bytes to hash in each batch
+               rows are added to the batch until this size is reached
+               (defaults to 8000 bytes)
+ numhashfiles  the number of hash files to create
+               if set to fewer than number of regions then
+               the job will create this number of reducers
+               (defaults to 1/100 of regions -- at least 1)
+ startrow      the start row
+ stoprow       the stop row
+ starttime     beginning of the time range (unixtime in millis)
+               without endtime means from starttime to forever
+ endtime       end of the time range.  Ignored if no starttime specified.
+ scanbatch     scanner batch size to support intra row scans
+ versions      number of cell versions to include
+ families      comma-separated list of families to include
+
+Args:
+ tablename     Name of the table to hash
+ outputpath    Filesystem path to put the output data
+
+Examples:
+ To hash 'TestTable' in 32kB batches for a 1 hour window into 50 files:
+ $ bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --batchsize=32000 --numhashfiles=50 --starttime=1265875194289 --endtime=1265878794289 --families=cf2,cf3 TestTable /hashes/testTable
+----
+
+The *batchsize* property defines how much cell data for a given region will be hashed together in a single hash value.
+Sizing this properly has a direct impact on the sync efficiency, as it may lead to less scans executed by mapper tasks
+of SyncTable (the next step in the process). The rule of thumb is that, the smaller the number of cells out of sync
+(lower probability of finding a diff), larger batch size values can be determined.
+
+==== Step 2, SyncTable
+
+Once HashTable has completed on source cluster, SyncTable can be ran on target cluster.
+Just like replication and other synchronization jobs, it requires that all RegionServers/DataNodes
+on source cluster be accessible by NodeManagers on the target cluster (where SyncTable job tasks will be running).
+
+Usage:
+
+----
+$ ./bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --help
+Usage: SyncTable [options] <sourcehashdir> <sourcetable> <targettable>
+
+Options:
+ sourcezkcluster  ZK cluster key of the source table
+                  (defaults to cluster in classpath's config)
+ targetzkcluster  ZK cluster key of the target table
+                  (defaults to cluster in classpath's config)
+ dryrun           if true, output counters but no writes
+                  (defaults to false)
+ doDeletes        if false, does not perform deletes
+                  (defaults to true)
+ doPuts           if false, does not perform puts
+                  (defaults to true)
+
+Args:
+ sourcehashdir    path to HashTable output dir for source table
+                  (see org.apache.hadoop.hbase.mapreduce.HashTable)
+ sourcetable      Name of the source table to sync from
+ targettable      Name of the target table to sync to
+
+Examples:
+ For a dry run SyncTable of tableA from a remote source cluster
+ to a local target cluster:
+ $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
+----
+
+The *dryrun* option is useful when a read only, diff report is wanted, as it will produce only COUNTERS indicating the differences, but will not perform
+any actual changes. It can be used as an alternative to VerifyReplication tool.
+
+By default, SyncTable will cause target table to become an exact copy of source table (at least, for the specified startrow/stoprow or/and starttime/endtime).
+
+Setting doDeletes to false modifies default behaviour to not delete target cells that are missing on source.
+Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
+and doPuts to false would give same effect as setting dryrun to true.
+
+.Set doDeletes to false on Two-Way Replication scenarios
+[NOTE]
+====
+On Two-Way Replication or other scenarios where both source and target clusters can have data ingested, it's advisable to always set doDeletes option to false,
+as any additional cell inserted on SyncTable target cluster and not yet replicated to source would be deleted, and potentially lost permanently.
+====
+
+.Set sourcezkcluster to the actual source cluster ZK quorum
+[NOTE]
+====
+Although not required, if sourcezkcluster is not set, SyncTable will connect to local HBase cluster for both source and target,
+which does not give any meaningful result.
+====
+
+.Remote Clusters on different Kerberos Realms
+[NOTE]
+====
+Currently, SyncTable can't be ran for remote clusters on different Kerberos realms.
+There's some work in progress to resolve this on link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586]
+====
 
 [[export]]
 === Export
@@ -801,14 +959,84 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 [[compaction.tool]]
 === Offline Compaction Tool
 
-See the usage for the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
-Run it like:
+*CompactionTool* provides a way of running compactions (either minor or major) as an independent
+process from the RegionServer. It reuses same internal implementation classes executed by RegionServer
+compaction feature. However, since this runs on a complete separate independent java process, it
+releases RegionServers from the overhead involved in rewrite a set of hfiles, which can be critical
+for latency sensitive use cases.
 
-[source, bash]
+Usage:
 ----
 $ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+
+Usage: java org.apache.hadoop.hbase.regionserver.CompactionTool \
+  [-compactOnce] [-major] [-mapred] [-D<property=value>]* files...
+
+Options:
+ mapred         Use MapReduce to run compaction.
+ compactOnce    Execute just one compaction step. (default: while needed)
+ major          Trigger major compaction.
+
+Note: -D properties will be applied to the conf used.
+For example:
+ To stop delete of compacted file, pass -Dhbase.compactiontool.delete=false
+ To set tmp dir, pass -Dhbase.tmp.dir=ALTERNATE_DIR
+
+Examples:
+ To compact the full 'TestTable' using MapReduce:
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool -mapred hdfs://hbase/data/default/TestTable
+
+ To compact column family 'x' of the table 'TestTable' region 'abc':
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool hdfs://hbase/data/default/TestTable/abc/x
 ----
+
+As shown by usage options above, *CompactionTool* can run as a standalone client or a mapreduce job.
+When running as mapreduce job, each family dir is handled as an input split, and is processed
+by a separate map task.
+
+The *compactionOnce* parameter controls how many compaction cycles will be performed until
+*CompactionTool* program decides to finish its work. If omitted, it will assume it should keep
+running compactions on each specified family as determined by the given compaction policy
+configured. For more info on compaction policy, see <<compaction,compaction>>.
+
+If a major compaction is desired, *major* flag can be specified. If omitted, *CompactionTool* will
+assume minor compaction is wanted by default.
+
+It also allows for configuration overrides with `-D` flag. In the usage section above, for example,
+`-Dhbase.compactiontool.delete=false` option will instruct compaction engine to not delete original
+files from temp folder.
+
+Files targeted for compaction must be specified as parent hdfs dirs. It allows for multiple dirs
+definition, as long as each for these dirs are either a *family*, a *region*, or a *table* dir. If a
+table or region dir is passed, the program will recursively iterate through related sub-folders,
+effectively running compaction for each family found below the table/region level.
+
+Since these dirs are nested under *hbase* hdfs directory tree, *CompactionTool* requires hbase super
+user permissions in order to have access to required hfiles.
+
+.Running in MapReduce mode
+[NOTE]
+====
+MapReduce mode offers the ability to process each family dir in parallel, as a separate map task.
+Generally, it would make sense to run in this mode when specifying one or more table dirs as targets
+for compactions. The caveat, though, is that if number of families to be compacted become too large,
+the related mapreduce job may have indirect impacts on *RegionServers* performance .
+Since *NodeManagers* are normally co-located with RegionServers, such large jobs could
+compete for IO/Bandwidth resources with the *RegionServers*.
+====
+
+.MajorCompaction completely disabled on RegionServers due performance impacts
+[NOTE]
+====
+*Major compactions* can be a costly operation (see <<compaction,compaction>>), and can indeed
+impact performance on RegionServers, leading operators to completely disable it for critical
+low latency application. *CompactionTool* could be used as an alternative in such scenarios,
+although, additional custom application logic would need to be implemented, such as deciding
+scheduling and selection of tables/regions/families target for a given compaction run.
+====
+
+For additional details about CompactionTool, see also
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
 
 === `hbase clean`
 
@@ -1254,15 +1482,6 @@ Monitor the output of the _/tmp/log.txt_ file to follow the progress of the scri
 Use the following guidelines if you want to create your own rolling restart script.
 
 . Extract the new release, verify its configuration, and synchronize it to all nodes of your cluster using `rsync`, `scp`, or another secure synchronization mechanism.
-. Use the hbck utility to ensure that the cluster is consistent.
-+
-----
-
-$ ./bin/hbck
-----
-+
-Perform repairs if required.
-See <<hbck,hbck>> for details.
 
 . Restart the master first.
   You may need to modify these commands if your new HBase directory is different from the old one, such as for an upgrade.
@@ -1294,7 +1513,6 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 ----
 
 . Restart the Master again, to clear out the dead servers list and re-enable the load balancer.
-. Run the `hbck` utility again, to be sure the cluster is consistent.
 
 [[adding.new.node]]
 === Adding a New Node
@@ -1576,23 +1794,45 @@ This particular example, for example, would indicate that the likely cause of sl
 === Block Cache Monitoring
 
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache.
-To view the block cache reports, click .
+To view the block cache reports, see the Block Cache section of the region server UI.
 Following are a few examples of the reporting capabilities.
 
-.Basic Info
+.Basic Info shows the cache implementation.
 image::bc_basic.png[]
 
-.Config
+.Config shows all cache configuration options.
 image::bc_config.png[]
 
-.Stats
+.Stats shows statistics about the performance of the cache.
 image::bc_stats.png[]
 
-.L1 and L2
+.L1 and L2 show information about the L1 and L2 caches.
 image::bc_l1.png[]
 
 This is not an exhaustive list of all the screens and reports available.
 Have a look in the Web UI.
+
+=== Snapshot Space Usage Monitoring
+
+Starting with HBase 0.95, Snapshot usage information on individual snapshots was shown in the HBase Master Web UI. This was further enhanced starting with HBase 1.3 to show the total Storefile size of the Snapshot Set. The following metrics are shown in the Master Web UI with HBase 1.3 and later.
+
+* Shared Storefile Size is the Storefile size shared between snapshots and active tables.
+* Mob Storefile Size is the Mob Storefile size shared between snapshots and active tables.
+* Archived Storefile Size is the Storefile size in Archive.
+
+The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile size in Archive, MMM is the total Storefile size in Archive that is specific to the snapshot (not shared with other snapshots and tables).
+
+.Master Snapshot Overview
+image::master-snapshot.png[]
+
+.Snapshot Storefile Stats Example 1
+image::1-snapshot.png[]
+
+.Snapshot Storefile Stats Example 2
+image::2-snapshots.png[]
+
+.Empty Snapshot Storfile Stats Example
+image::empty-snapshots.png[]
 
 == Cluster Replication
 
@@ -1728,7 +1968,28 @@ This treatment can possibly lead to data inconsistency between source and destin
 
 .Serial replication configuration
 
-. Set the serial flag to true for a repliation peer. You can either set it to true when creating a replication peer, or change it to true later.
+Set the serial flag to true for a repliation peer. And the default serial flag is false.
+
+* Add a new replication peer which serial flag is true
+
+[source,ruby]
+----
+hbase> add_peer '1', CLUSTER_KEY => "server1.cie.com:2181:/hbase", SERIAL => true
+----
+
+* Set a replication peer's serial flag to false
+
+[source,ruby]
+----
+hbase> set_peer_serial '1', false
+----
+
+* Set a replication peer's serial flag to true
+
+[source,ruby]
+----
+hbase> set_peer_serial '1', true
+----
 
 The serial replication feature had been done firstly in link:https://issues.apache.org/jira/browse/HBASE-9465[HBASE-9465] and then reverted and redone in link:https://issues.apache.org/jira/browse/HBASE-20046[HBASE-20046]. You can find more details in these issues.
 
@@ -2686,8 +2947,6 @@ HDFS replication factor only affects your disk usage and is invisible to most HB
 You can view the current number of regions for a given table using the HMaster UI.
 In the [label]#Tables# section, the number of online regions for each table is listed in the [label]#Online Regions# column.
 This total only includes the in-memory state and does not include disabled or offline regions.
-If you do not want to use the HMaster UI, you can determine the number of regions by counting the number of subdirectories of the /hbase/<table>/ subdirectories in HDFS, or by running the `bin/hbase hbck` command.
-Each of these methods may return a slightly different number, depending on the status of each region.
 
 [[ops.capacity.regions.count]]
 ==== Number of regions per RS - upper bound

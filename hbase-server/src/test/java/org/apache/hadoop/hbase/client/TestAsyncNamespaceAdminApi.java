@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,14 +27,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ZKNamespaceManager;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
@@ -58,8 +52,6 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
       HBaseClassTestRule.forClass(TestAsyncNamespaceAdminApi.class);
 
   private String prefix = "TestNamespace";
-  private static HMaster master;
-  private static ZKNamespaceManager zkNamespaceManager;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -69,9 +61,6 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.startMiniCluster(1);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    master = TEST_UTIL.getHBaseCluster().getMaster();
-    zkNamespaceManager = new ZKNamespaceManager(master.getZooKeeper());
-    zkNamespaceManager.start();
     LOG.info("Done initializing cluster");
   }
 
@@ -83,18 +72,9 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     // create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build()).join();
     assertEquals(3, admin.listNamespaceDescriptors().get().size());
-    TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return zkNamespaceManager.list().size() == 3;
-      }
-    });
-    assertNotNull(zkNamespaceManager.get(nsName));
     // delete namespace and verify
     admin.deleteNamespace(nsName).join();
     assertEquals(2, admin.listNamespaceDescriptors().get().size());
-    assertEquals(2, zkNamespaceManager.list().size());
-    assertNull(zkNamespaceManager.get(nsName));
   }
 
   @Test

@@ -681,6 +681,7 @@ public abstract class AbstractTestWALReplay {
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("foo", 10, 10));
+    when(rsServices.getConfiguration()).thenReturn(conf);
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         CustomStoreFlusher.class.getName());
@@ -1110,16 +1111,18 @@ public abstract class AbstractTestWALReplay {
     private HRegion r;
 
     @Override
-    public void requestFlush(HRegion region, boolean force, FlushLifeCycleTracker tracker) {
+    public boolean requestFlush(HRegion region, boolean force, FlushLifeCycleTracker tracker) {
       try {
         r.flush(force);
+        return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
       }
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
+    public boolean requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
+      return true;
     }
 
     @Override

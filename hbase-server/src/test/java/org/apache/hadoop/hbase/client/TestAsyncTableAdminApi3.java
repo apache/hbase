@@ -17,7 +17,22 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -30,16 +45,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.regex.Pattern;
-
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Class to test asynchronous table admin operations.
@@ -57,12 +62,15 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
   public void testTableExist() throws Exception {
     boolean exist;
     exist = admin.tableExists(tableName).get();
-    assertEquals(false, exist);
+    assertFalse(exist);
     TEST_UTIL.createTable(tableName, FAMILY);
     exist = admin.tableExists(tableName).get();
-    assertEquals(true, exist);
+    assertTrue(exist);
     exist = admin.tableExists(TableName.META_TABLE_NAME).get();
-    assertEquals(true, exist);
+    assertTrue(exist);
+    // meta table already exists
+    exist = admin.tableExists(TableName.META_TABLE_NAME).get();
+    assertTrue(exist);
   }
 
   @Test
@@ -103,6 +111,22 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       }
       assertTrue("Not found: " + tables[i], found);
     }
+
+    tableNames = new ArrayList<TableName>(tables.length + 1);
+    tableDescs = admin.listTableDescriptors(tableNames).get();
+    size = tableDescs.size();
+    assertEquals(0, size);
+
+    Collections.addAll(tableNames, tables);
+    tableNames.add(TableName.META_TABLE_NAME);
+    tableDescs = admin.listTableDescriptors(tableNames).get();
+    size = tableDescs.size();
+    assertEquals(tables.length + 1, size);
+    for (int i = 0, j = 0; i < tables.length && j < size; i++, j++) {
+      assertTrue("tableName should be equal in order",
+          tableDescs.get(j).getTableName().equals(tables[i]));
+    }
+    assertTrue(tableDescs.get(size - 1).getTableName().equals(TableName.META_TABLE_NAME));
 
     for (int i = 0; i < tables.length; i++) {
       admin.disableTable(tables[i]).join();
@@ -177,6 +201,14 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
       ok = false;
     }
     assertTrue(ok);
+    // meta table can not be disabled.
+    try {
+      admin.disableTable(TableName.META_TABLE_NAME).get();
+      fail("meta table can not be disabled");
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      assertThat(cause, instanceOf(DoNotRetryIOException.class));
+    }
   }
 
   @Test
@@ -278,5 +310,17 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     admin.disableTable(tableName).join();
     assertFalse(admin.isTableEnabled(tableName).get());
     assertTrue(admin.isTableDisabled(tableName).get());
+
+    // meta table is always enabled
+    assertTrue(admin.isTableEnabled(TableName.META_TABLE_NAME).get());
+    assertFalse(admin.isTableDisabled(TableName.META_TABLE_NAME).get());
+  }
+
+  @Test
+  public void testIsTableAvailable() throws Exception {
+    createTableWithDefaultConf(tableName);
+    TEST_UTIL.waitTableAvailable(tableName);
+    assertTrue(admin.isTableAvailable(tableName).get());
+    assertTrue(admin.isTableAvailable(TableName.META_TABLE_NAME).get());
   }
 }

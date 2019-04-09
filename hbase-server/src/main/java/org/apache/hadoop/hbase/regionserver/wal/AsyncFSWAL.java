@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
@@ -328,13 +330,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         break;
       }
     }
-    postSync(System.nanoTime() - startTimeNs, finishSync(true));
+
+    boolean doRequestRoll = postSync(System.nanoTime() - startTimeNs, finishSync(true));
     if (trySetReadyForRolling()) {
       // we have just finished a roll, then do not need to check for log rolling, the writer will be
       // closed soon.
       return;
     }
-    if (writer.getLength() < logrollsize || rollRequested) {
+    if ((!doRequestRoll && writer.getLength() < logrollsize) || rollRequested) {
       return;
     }
     rollRequested = true;
@@ -347,7 +350,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
     final long epoch = (long) epochAndState >>> 2L;
-    writer.sync().whenCompleteAsync((result, error) -> {
+    addListener(writer.sync(), (result, error) -> {
       if (error != null) {
         syncFailed(epoch, error);
       } else {

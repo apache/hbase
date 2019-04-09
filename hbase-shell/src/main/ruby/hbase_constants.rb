@@ -43,8 +43,10 @@ module HBaseConstants
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
   STOPROW = 'STOPROW'.freeze
   STARTROW = 'STARTROW'.freeze
+  STARTKEY = STARTROW
   ROWPREFIXFILTER = 'ROWPREFIXFILTER'.freeze
   ENDROW = STOPROW
+  ENDKEY = STOPROW
   RAW = 'RAW'.freeze
   LIMIT = 'LIMIT'.freeze
   METHOD = 'METHOD'.freeze
@@ -63,6 +65,11 @@ module HBaseConstants
   NUMREGIONS = 'NUMREGIONS'.freeze
   REGION_REPLICATION = 'REGION_REPLICATION'.freeze
   REGION_REPLICA_ID = 'REGION_REPLICA_ID'.freeze
+  ISOLATION_LEVEL = 'ISOLATION_LEVEL'.freeze
+  READ_TYPE = 'READ_TYPE'.freeze
+  ALLOW_PARTIAL_RESULTS = 'ALLOW_PARTIAL_RESULTS'.freeze
+  BATCH = 'BATCH'.freeze
+  MAX_RESULT_SIZE = 'MAX_RESULT_SIZE'.freeze
   CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
   ATTRIBUTES = 'ATTRIBUTES'.freeze
   VISIBILITY = 'VISIBILITY'.freeze
@@ -78,6 +85,7 @@ module HBaseConstants
   ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'.freeze
   CLUSTER_KEY = 'CLUSTER_KEY'.freeze
   REMOTE_WAL_DIR = 'REMOTE_WAL_DIR'.freeze
+  SERIAL = 'SERIAL'.freeze
   TABLE_CFS = 'TABLE_CFS'.freeze
   NAMESPACES = 'NAMESPACES'.freeze
   STATE = 'STATE'.freeze

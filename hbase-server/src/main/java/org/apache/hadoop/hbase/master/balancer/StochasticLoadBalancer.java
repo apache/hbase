@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -374,9 +373,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     for (int i = 0; i < this.curFunctionCosts.length; i++) {
       curFunctionCosts[i] = tempFunctionCosts[i];
     }
-    LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost + ", functionCost="
-        + functionCost());
-
     double initCost = currentCost;
     double newCost = currentCost;
 
@@ -385,9 +381,20 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       computedMaxSteps = Math.max(this.maxSteps,
           ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
     } else {
-      computedMaxSteps = Math.min(this.maxSteps,
-          ((long)cluster.numRegions * (long)this.stepsPerRegion * (long)cluster.numServers));
+      long calculatedMaxSteps = (long)cluster.numRegions * (long)this.stepsPerRegion *
+          (long)cluster.numServers;
+      computedMaxSteps = Math.min(this.maxSteps, calculatedMaxSteps);
+      if (calculatedMaxSteps > maxSteps) {
+        LOG.warn("calculatedMaxSteps:{} for loadbalancer's stochastic walk is larger than "
+            + "maxSteps:{}. Hence load balancing may not work well. Setting parameter "
+            + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true can overcome this issue."
+            + "(This config change does not require service restart)", calculatedMaxSteps,
+            maxSteps);
+      }
     }
+    LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost + ", functionCost="
+        + functionCost() + " computedMaxSteps: " + computedMaxSteps);
+
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
@@ -433,21 +440,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
       plans = createRegionPlans(cluster);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished computing new load balance plan.  Computation took "
-            + (endTime - startTime) + "ms to try " + step
-            + " different iterations.  Found a solution that moves "
-            + plans.size() + " regions; Going from a computed cost of "
-            + initCost + " to a new cost of " + currentCost);
-      }
-
+      LOG.info("Finished computing new load balance plan. Computation took {}" +
+        " to try {} different iterations.  Found a solution that moves " +
+        "{} regions; Going from a computed cost of {}" +
+        " to a new cost of {}", java.time.Duration.ofMillis(endTime - startTime),
+        step, plans.size(), initCost, currentCost);
       return plans;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Could not find a better load balance plan.  Tried "
-          + step + " different configurations in " + (endTime - startTime)
-          + "ms, and did not find anything with a computed cost less than " + initCost);
-    }
+    LOG.info("Could not find a better load balance plan.  Tried {} different configurations in " +
+      "{}, and did not find anything with a computed cost less than {}", step,
+      java.time.Duration.ofMillis(endTime - startTime), initCost);
     return null;
   }
 
@@ -530,14 +532,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     clusterStatus.getLiveServerMetrics().forEach((ServerName sn, ServerMetrics sm) -> {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
-        Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(regionName));
+        String regionNameAsString = RegionInfo.getRegionNameAsString(regionName);
+        Deque<BalancerRegionLoad> rLoads = oldLoads.get(regionNameAsString);
         if (rLoads == null) {
           rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }
         rLoads.add(new BalancerRegionLoad(rm));
-        loads.put(Bytes.toString(regionName), rLoads);
+        loads.put(regionNameAsString, rLoads);
       });
     });
 

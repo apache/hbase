@@ -819,9 +819,7 @@ public class TableMapReduceUtil {
       org.apache.htrace.core.Tracer.class,
       com.codahale.metrics.MetricRegistry.class,
       org.apache.commons.lang3.ArrayUtils.class,
-      com.fasterxml.jackson.databind.ObjectMapper.class,
-      com.fasterxml.jackson.core.Versioned.class,
-      com.fasterxml.jackson.annotation.JsonView.class,
+      org.apache.hbase.thirdparty.com.google.gson.Gson.class,
       org.apache.hadoop.hbase.zookeeper.ZKWatcher.class);
   }
 

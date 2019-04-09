@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -136,8 +137,9 @@ public final class ZKUtil {
     int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
     zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
         1000);
+    int multiMaxSize = conf.getInt("zookeeper.multi.max.size", 1024*1024);
     return new RecoverableZooKeeper(ensemble, timeout, watcher,
-        retry, retryIntervalMillis, maxSleepTime, identifier);
+        retry, retryIntervalMillis, maxSleepTime, identifier, multiMaxSize);
   }
 
   /**
@@ -1334,10 +1336,7 @@ public final class ZKUtil {
         ops.add(ZKUtilOp.deleteNodeFailSilent(children.get(i)));
       }
     }
-    // atleast one element should exist
-    if (ops.size() > 0) {
-      multiOrSequential(zkw, ops, runSequentialOnMultiFailure);
-    }
+    submitBatchedMultiOrSequential(zkw, runSequentialOnMultiFailure, ops);
   }
 
   /**
@@ -1393,10 +1392,61 @@ public final class ZKUtil {
         zkw.interruptedException(e);
       }
     }
-    // atleast one element should exist
-    if (ops.size() > 0) {
-      multiOrSequential(zkw, ops, runSequentialOnMultiFailure);
+    submitBatchedMultiOrSequential(zkw, runSequentialOnMultiFailure, ops);
+  }
+
+  /**
+   * Chunks the provided {@code ops} when their approximate size exceeds the the configured limit.
+   * Take caution that this can ONLY be used for operations where atomicity is not important,
+   * e.g. deletions. It must not be used when atomicity of the operations is critical.
+   */
+  static void submitBatchedMultiOrSequential(ZKWatcher zkw, boolean runSequentialOnMultiFailure,
+      List<ZKUtilOp> ops) throws KeeperException {
+    // at least one element should exist
+    if (ops.isEmpty()) {
+      return;
     }
+    final int maxMultiSize = zkw.getRecoverableZooKeeper().getMaxMultiSizeLimit();
+    // Batch up the items to over smashing through jute.maxbuffer with too many Ops.
+    final List<List<ZKUtilOp>> batchedOps = partitionOps(ops, maxMultiSize);
+    // Would use forEach() but have to handle KeeperException
+    for (List<ZKUtilOp> batch : batchedOps) {
+      multiOrSequential(zkw, batch, runSequentialOnMultiFailure);
+    }
+  }
+
+  /**
+   * Partition the list of {@code ops} by size (using {@link #estimateSize(ZKUtilOp)}).
+   */
+  static List<List<ZKUtilOp>> partitionOps(List<ZKUtilOp> ops, int maxPartitionSize) {
+    List<List<ZKUtilOp>> partitionedOps = new ArrayList<>();
+    List<ZKUtilOp> currentPartition = new ArrayList<>();
+    int currentPartitionSize = 0;
+    partitionedOps.add(currentPartition);
+    Iterator<ZKUtilOp> iter = ops.iterator();
+    while (iter.hasNext()) {
+      ZKUtilOp currentOp = iter.next();
+      int currentOpSize = estimateSize(currentOp);
+
+      // Roll a new partition if necessary
+      // If the current partition is empty, put the element in there anyways.
+      // We can roll a new partition if we get another element
+      if (!currentPartition.isEmpty() && currentOpSize + currentPartitionSize > maxPartitionSize) {
+        currentPartition = new ArrayList<>();
+        partitionedOps.add(currentPartition);
+        currentPartitionSize = 0;
+      }
+
+      // Add the current op to the partition
+      currentPartition.add(currentOp);
+      // And record its size
+      currentPartitionSize += currentOpSize;
+    }
+    return partitionedOps;
+  }
+
+  static int estimateSize(ZKUtilOp op) {
+    return Bytes.toBytes(op.getPath()).length;
   }
 
   /**
@@ -1748,13 +1798,13 @@ public final class ZKUtil {
         sb.append("\n ").append(child);
       }
       sb.append("\nRegion server holding hbase:meta: "
-        + new MetaTableLocator().getMetaRegionLocation(zkw));
+        + MetaTableLocator.getMetaRegionLocation(zkw));
       Configuration conf = HBaseConfiguration.create();
       int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
                HConstants.DEFAULT_META_REPLICA_NUM);
       for (int i = 1; i < numMetaReplicas; i++) {
         sb.append("\nRegion server holding hbase:meta, replicaId " + i + " "
-                    + new MetaTableLocator().getMetaRegionLocation(zkw, i));
+                    + MetaTableLocator.getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
       for (String child : listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode)) {

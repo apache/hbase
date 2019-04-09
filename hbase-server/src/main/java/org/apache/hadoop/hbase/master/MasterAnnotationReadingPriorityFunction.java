@@ -43,9 +43,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * processing of the request to online meta. To accomplish this this priority function makes sure
  * that all requests to transition meta are handled in different threads from other report region
  * in transition calls.
+ * After HBASE-21754, ReportRegionStateTransitionRequest for meta region will be assigned a META_QOS
+ * , a separate executor called metaTransitionExecutor will execute it. Other transition request
+ * will be executed in priorityExecutor to prevent being mixed with normal requests
  */
 @InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction {
+
+  public static final int META_TRANSITION_QOS = 300;
+
   public MasterAnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     this(rpcServices, rpcServices.getClass());
   }
@@ -63,28 +69,37 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
     // every single RPC request.
     int priorityByAnnotation = getAnnotatedPriority(header);
     if (priorityByAnnotation >= 0) {
-      return priorityByAnnotation;
+      // no one can have higher priority than meta transition.
+      if (priorityByAnnotation >= META_TRANSITION_QOS) {
+        return META_TRANSITION_QOS - 1;
+      } else {
+        return priorityByAnnotation;
+      }
     }
 
     // If meta is moving then all the other of reports of state transitions will be
     // un able to edit meta. Those blocked reports should not keep the report that opens meta from
-    // running. Hence all reports of meta transitioning should always be in a different thread.
+    // running. Hence all reports of meta transition should always be in a different thread.
     // This keeps from deadlocking the cluster.
     if (param instanceof RegionServerStatusProtos.ReportRegionStateTransitionRequest) {
       // Regions are moving. Lets see which ones.
-      RegionServerStatusProtos.ReportRegionStateTransitionRequest
-          tRequest = (RegionServerStatusProtos.ReportRegionStateTransitionRequest) param;
+      RegionServerStatusProtos.ReportRegionStateTransitionRequest tRequest =
+        (RegionServerStatusProtos.ReportRegionStateTransitionRequest) param;
       for (RegionServerStatusProtos.RegionStateTransition rst : tRequest.getTransitionList()) {
         if (rst.getRegionInfoList() != null) {
           for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
             TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (tn.isSystemTable()) {
-              return HConstants.SYSTEMTABLE_QOS;
+            if (TableName.META_TABLE_NAME.equals(tn)) {
+              return META_TRANSITION_QOS;
             }
           }
         }
       }
-      return HConstants.NORMAL_QOS;
+      return HConstants.HIGH_QOS;
+    }
+    // also use HIGH_QOS for region server report
+    if (param instanceof RegionServerStatusProtos.RegionServerReportRequest) {
+      return HConstants.HIGH_QOS;
     }
 
     // Handle the rest of the different reasons to change priority.

@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -646,6 +645,22 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
+  @Test
+  public void testSameWALPrefix() throws IOException {
+    Set<String> latestWalsBefore =
+      manager.getLastestPath().stream().map(Path::getName).collect(Collectors.toSet());
+    String walName1 = "localhost,8080,12345-45678-Peer.34567";
+    String walName2 = "localhost,8080,12345.56789";
+    manager.preLogRoll(new Path(walName1));
+    manager.preLogRoll(new Path(walName2));
+
+    Set<String> latestWals = manager.getLastestPath().stream().map(Path::getName)
+      .filter(n -> !latestWalsBefore.contains(n)).collect(Collectors.toSet());
+    assertEquals(2, latestWals.size());
+    assertTrue(latestWals.contains(walName1));
+    assertTrue(latestWals.contains(walName2));
+  }
+
   /**
    * Add a peer and wait for it to initialize
    * @param waitForSource Whether to wait for replication source to initialize
@@ -838,11 +853,6 @@ public abstract class TestReplicationSourceManager {
     }
     @Override
     public ClusterConnection getConnection() {
-      return null;
-    }
-
-    @Override
-    public MetaTableLocator getMetaTableLocator() {
       return null;
     }
 

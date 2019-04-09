@@ -46,6 +46,25 @@ public interface AsyncBufferedMutatorBuilder {
   AsyncBufferedMutatorBuilder setRetryPause(long pause, TimeUnit unit);
 
   /**
+   * Set the periodical flush interval. If the data in the buffer has not been flush for a long
+   * time, i.e, reach this timeout limit, we will flush it automatically.
+   * <p/>
+   * Notice that, set the timeout to 0 or a negative value means disable periodical flush, not
+   * 'flush immediately'. If you want to flush immediately then you should not use this class, as it
+   * is designed to be 'buffered'.
+   */
+  default AsyncBufferedMutatorBuilder setWriteBufferPeriodicFlush(long timeout, TimeUnit unit) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  /**
+   * Disable the periodical flush, i.e, set the timeout to 0.
+   */
+  default AsyncBufferedMutatorBuilder disableWriteBufferPeriodicFlush() {
+    return setWriteBufferPeriodicFlush(0, TimeUnit.NANOSECONDS);
+  }
+
+  /**
    * Set the max retry times for an operation. Usually it is the max attempt times minus 1.
    * <p>
    * Operation timeout and max attempt times(or max retry times) are both limitations for retrying,
@@ -77,6 +96,13 @@ public interface AsyncBufferedMutatorBuilder {
    * {@code hbase.client.write.buffer}.
    */
   AsyncBufferedMutatorBuilder setWriteBufferSize(long writeBufferSize);
+
+  /**
+   * Override the maximum key-value size specified by the provided {@link AsyncConnection}'s
+   * {@link org.apache.hadoop.conf.Configuration} instance, via the configuration key
+   * {@code hbase.client.keyvalue.maxsize}.
+   */
+  AsyncBufferedMutatorBuilder setMaxKeyValueSize(int maxKeyValueSize);
 
   /**
    * Create the {@link AsyncBufferedMutator} instance.

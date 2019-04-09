@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
@@ -129,8 +128,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   @Override
   public RemoteOperation remoteCallBuild(final MasterProcedureEnv env,
       final ServerName serverName) {
-    assert serverName.equals(getRegionState(env).getRegionLocation());
-    return new RegionCloseOperation(this, getRegionInfo(), this.destinationServer);
+    return null;
   }
 
   @Override

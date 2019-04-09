@@ -31,7 +31,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -250,7 +249,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long heapSize() {
-      long sum = HEAP_SIZE_OVERHEAD + estimatedSizeOfCell(cell);
+      long sum = HEAP_SIZE_OVERHEAD + cell.heapSize();
       if (this.tags != null) {
         sum += ClassSize.sizeOf(this.tags);
       }
@@ -446,7 +445,7 @@ public final class PrivateCellUtil {
 
     @Override
     public long heapSize() {
-      long sum = HEAP_SIZE_OVERHEAD + estimatedSizeOfCell(cell);
+      long sum = HEAP_SIZE_OVERHEAD + cell.heapSize();
       // this.tags is on heap byte[]
       if (this.tags != null) {
         sum += ClassSize.sizeOf(this.tags);
@@ -705,7 +704,7 @@ public final class PrivateCellUtil {
 
     @Override
     public ExtendedCell deepClone() {
-      Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
+      Cell clonedBaseCell = this.cell.deepClone();
       if (clonedBaseCell instanceof ByteBufferExtendedCell) {
         return new ValueAndTagRewriteByteBufferExtendedCell(
             (ByteBufferExtendedCell) clonedBaseCell, this.value, this.tags);
@@ -2737,34 +2736,7 @@ public final class PrivateCellUtil {
    *         actual cell length.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
-    if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell) cell).getSerializedSize(true) + Bytes.SIZEOF_INT;
-    }
-
-    return getSumOfCellElementLengths(cell) +
-    // Use the KeyValue's infrastructure size presuming that another implementation would have
-    // same basic cost.
-        KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE +
-        // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
-        Bytes.SIZEOF_INT;
-  }
-
-  /**
-   * @param cell
-   * @return Sum of the lengths of all the elements in a Cell; does not count in any infrastructure
-   */
-  private static int getSumOfCellElementLengths(final Cell cell) {
-    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength() + cell.getTagsLength();
-  }
-
-  /**
-   * @param cell
-   * @return Sum of all elements that make up a key; does not include infrastructure, tags or
-   *         values.
-   */
-  private static int getSumOfCellKeyElementLengths(final Cell cell) {
-    return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
-        + KeyValue.TIMESTAMP_TYPE_SIZE;
+    return cell.getSerializedSize() + Bytes.SIZEOF_INT;
   }
 
   /**
@@ -2776,23 +2748,6 @@ public final class PrivateCellUtil {
     if (cell instanceof KeyValue) return ((KeyValue) cell).getKeyLength();
     return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
         + KeyValue.KEY_INFRASTRUCTURE_SIZE;
-  }
-
-  /**
-   * This is an estimate of the heap space occupied by a cell. When the cell is of type
-   * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
-   * cases we just consider the bytes occupied by the cell components ie. row, CF, qualifier,
-   * timestamp, type, value and tags.
-   * Note that this can be the JVM heap space (on-heap) or the OS heap (off-heap)
-   * @param cell
-   * @return estimate of the heap space
-   */
-  public static long estimatedSizeOfCell(final Cell cell) {
-    if (cell instanceof HeapSize) {
-      return ((HeapSize) cell).heapSize();
-    }
-    // TODO: Add sizing of references that hold the row, family, etc., arrays.
-    return estimatedSerializedSizeOf(cell);
   }
 
   /**

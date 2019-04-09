@@ -205,7 +205,7 @@ public class TestMasterFailoverWithProcedures {
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
-    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new RegionInfo[0]);
+    regions = UTIL.getAdmin().getRegions(tableName).toArray(new RegionInfo[0]);
     if (preserveSplits) {
       assertEquals(1 + splitKeys.length, regions.length);
     } else {
@@ -289,7 +289,7 @@ public class TestMasterFailoverWithProcedures {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
+        new EnableTableProcedure(procExec.getEnvironment(), tableName));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(

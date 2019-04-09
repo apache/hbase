@@ -147,8 +147,7 @@ public class SerialReplicationTestBase {
   }
 
   protected static void moveRegion(RegionInfo region, HRegionServer rs) throws Exception {
-    UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
-      Bytes.toBytes(rs.getServerName().getServerName()));
+    UTIL.getAdmin().move(region.getEncodedNameAsBytes(), rs.getServerName());
     UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override

@@ -20,17 +20,12 @@ Template for rendering Block Cache tabs in RegionServer Status page.
 <%args>
 CacheConfig cacheConfig;
 Configuration config;
+BlockCache bc;
 </%args>
 <%java>
-  BlockCache bc = cacheConfig == null? null: cacheConfig.getBlockCache();
-  String bcUrl = null;
-  String bcName = null;
-  if (bc != null) {
-    bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
-    bcName = bc.getClass().getSimpleName();
-  }
-  BlockCache [] bcs = cacheConfig == null? null: cacheConfig.getBlockCache() == null? null: cacheConfig.getBlockCache().getBlockCaches();
-  // If more than one bc, show evictions in each bc listing so can compare
+  String bcUrl = bc == null ? null : "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
+  String bcName = bc == null ? null : bc.getClass().getSimpleName();
+  BlockCache [] bcs = bc == null ? null : bc.getBlockCaches();
   boolean evictions = bcs != null && bcs.length > 1;
 </%java>
 <%import>
@@ -57,13 +52,13 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_bc_baseInfo">
-            <& bc_baseInfo; cacheConfig = cacheConfig; bcUrl = bcUrl; bcName = bcName;  &>
+            <& bc_baseInfo; bc = bc; bcUrl = bcUrl; bcName = bcName;  &>
         </div>
         <div class="tab-pane" id="tab_bc_config">
             <& bc_config; cacheConfig = cacheConfig &>
         </div>
         <div class="tab-pane" id="tab_bc_stats">
-            <& bc_stats; cacheConfig = cacheConfig &>
+            <& bc_stats; bc = bc &>
         </div>
         <div class="tab-pane" id="tab_bc_l1">
             <& bc_l; bc = bcs == null? bc: bcs[0]; name = "L1"; evictions = evictions; &>
@@ -76,12 +71,11 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 <%def bc_baseInfo>
 <%args>
-    CacheConfig cacheConfig;
+    BlockCache bc;
     String bcUrl;
     String bcName;
 </%args>
 <%java>
-  BlockCache bc = cacheConfig == null? null: cacheConfig.getBlockCache();
   BlockCache [] bcs = bc == null? null: bc.getBlockCaches();
   String bcl1Url = null;
   String bcl1Name = null;
@@ -229,10 +223,10 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 <%def bc_stats>
 <%args>
-    CacheConfig cacheConfig;
+    BlockCache bc;
 </%args>
-<%if cacheConfig == null || cacheConfig.getBlockCache() == null %>
-<p>CacheConfig is null</p>
+<%if bc == null %>
+<p>BlockCache is null</p>
 <%else>
 <table class="table table-striped">
     <tr>
@@ -242,23 +236,23 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
     </tr>
     <tr>
         <td>Size</td>
-        <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getCurrentSize(),
+        <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentSize(),
             "B", 1) %></td>
         <td>Current size of block cache in use</td>
     </tr>
     <tr>
         <td>Free</td>
-        <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getFreeSize(),
+        <td><% TraditionalBinaryPrefix.long2String(bc.getFreeSize(),
             "B", 1) %></td>
         <td>The total free memory currently available to store more cache entries</td>
     </tr>
     <tr>
         <td>Count</td>
-        <td><% String.format("%,d", cacheConfig.getBlockCache().getBlockCount()) %></td>
+        <td><% String.format("%,d", bc.getBlockCount()) %></td>
         <td>Number of blocks in block cache</td>
     </tr>
-    <& evictions_tmpl; bc = cacheConfig.getBlockCache(); &>
-    <& hits_tmpl; bc = cacheConfig.getBlockCache(); &>
+    <& evictions_tmpl; bc = bc; &>
+    <& hits_tmpl; bc = bc; &>
 </table>
 <p>If block cache is made up of more than one cache -- i.e. a L1 and a L2 -- then the above
 are combined counts. Request count is sum of hits and misses.</p>

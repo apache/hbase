@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -63,9 +64,17 @@ public class TestProcedureUtil {
     for (int i = 30; i < 1000; i++) {
       assertEquals(TimeUnit.MINUTES.toMillis(10), ProcedureUtil.getBackoffTimeMs(30));
     }
-    assertEquals(1000, ProcedureUtil.getBackoffTimeMs(0));
-    assertEquals(2000, ProcedureUtil.getBackoffTimeMs(1));
-    assertEquals(32000, ProcedureUtil.getBackoffTimeMs(5));
+    long backoffTimeMs = ProcedureUtil.getBackoffTimeMs(0);
+    assertTrue(backoffTimeMs >= 1000);
+    assertTrue(backoffTimeMs <= 1000 * 1.01f);
+
+    backoffTimeMs = ProcedureUtil.getBackoffTimeMs(1);
+    assertTrue(backoffTimeMs >= 2000);
+    assertTrue(backoffTimeMs <= 2000 * 1.01f);
+
+    backoffTimeMs = ProcedureUtil.getBackoffTimeMs(5);
+    assertTrue(backoffTimeMs >= 32000);
+    assertTrue(backoffTimeMs <= 32000 * 1.01f);
   }
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {

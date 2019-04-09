@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,11 +67,11 @@ public class TestRegionSizeCalculator {
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
 
-    assertEquals(123 * megabyte, calculator.getRegionSize("region1".getBytes()));
-    assertEquals(54321 * megabyte, calculator.getRegionSize("region2".getBytes()));
-    assertEquals(1232 * megabyte, calculator.getRegionSize("region3".getBytes()));
+    assertEquals(123 * megabyte, calculator.getRegionSize(Bytes.toBytes("region1")));
+    assertEquals(54321 * megabyte, calculator.getRegionSize(Bytes.toBytes("region2")));
+    assertEquals(1232 * megabyte, calculator.getRegionSize(Bytes.toBytes("region3")));
     // if regionCalculator does not know about a region, it should return 0
-    assertEquals(0 * megabyte, calculator.getRegionSize("otherTableRegion".getBytes()));
+    assertEquals(0 * megabyte, calculator.getRegionSize(Bytes.toBytes("otherTableRegion")));
 
     assertEquals(3, calculator.getRegionSizeMap().size());
   }
@@ -91,7 +92,8 @@ public class TestRegionSizeCalculator {
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
 
-    assertEquals(((long) Integer.MAX_VALUE) * megabyte, calculator.getRegionSize("largeRegion".getBytes()));
+    assertEquals(((long) Integer.MAX_VALUE) * megabyte,
+        calculator.getRegionSize(Bytes.toBytes("largeRegion")));
   }
 
   /** When calculator is disabled, it should return 0 for each request.*/
@@ -106,12 +108,12 @@ public class TestRegionSizeCalculator {
 
     //first request on enabled calculator
     RegionSizeCalculator calculator = new RegionSizeCalculator(table, admin);
-    assertEquals(999 * megabyte, calculator.getRegionSize(regionName.getBytes()));
+    assertEquals(999 * megabyte, calculator.getRegionSize(Bytes.toBytes(regionName)));
 
     //then disabled calculator.
     configuration.setBoolean(RegionSizeCalculator.ENABLE_REGIONSIZECALCULATOR, false);
     RegionSizeCalculator disabledCalculator = new RegionSizeCalculator(table, admin);
-    assertEquals(0 * megabyte, disabledCalculator.getRegionSize(regionName.getBytes()));
+    assertEquals(0 * megabyte, disabledCalculator.getRegionSize(Bytes.toBytes(regionName)));
 
     assertEquals(0, disabledCalculator.getRegionSizeMap().size());
   }
@@ -127,7 +129,7 @@ public class TestRegionSizeCalculator {
 
     for (String regionName : regionNames) {
       HRegionInfo info = Mockito.mock(HRegionInfo.class);
-      when(info.getRegionName()).thenReturn(regionName.getBytes());
+      when(info.getRegionName()).thenReturn(Bytes.toBytes(regionName));
       regionLocations.add(new HRegionLocation(info, sn));
     }
 
@@ -156,7 +158,7 @@ public class TestRegionSizeCalculator {
    * */
   private RegionMetrics mockRegion(String regionName, int fileSizeMb) {
     RegionMetrics region = Mockito.mock(RegionMetrics.class);
-    when(region.getRegionName()).thenReturn(regionName.getBytes());
+    when(region.getRegionName()).thenReturn(Bytes.toBytes(regionName));
     when(region.getNameAsString()).thenReturn(regionName);
     when(region.getStoreFileSize()).thenReturn(new Size(fileSizeMb, Size.Unit.MEGABYTE));
     return region;

@@ -39,7 +39,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.SwitchRpcThrottleProcedure;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -52,8 +55,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest.FileWithSize;
 
@@ -76,9 +85,12 @@ public class MasterQuotaManager implements RegionStateListener {
   private NamedLock<String> namespaceLocks;
   private NamedLock<TableName> tableLocks;
   private NamedLock<String> userLocks;
+  private NamedLock<String> regionServerLocks;
   private boolean initialized = false;
   private NamespaceAuditor namespaceQuotaManager;
   private ConcurrentHashMap<RegionInfo, SizeSnapshotWithTimestamp> regionSizes;
+  // Storage for quota rpc throttle
+  private RpcThrottleStorage rpcThrottleStorage;
 
   public MasterQuotaManager(final MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -102,11 +114,15 @@ public class MasterQuotaManager implements RegionStateListener {
     namespaceLocks = new NamedLock<>();
     tableLocks = new NamedLock<>();
     userLocks = new NamedLock<>();
+    regionServerLocks = new NamedLock<>();
     regionSizes = new ConcurrentHashMap<>();
 
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
     namespaceQuotaManager.start();
     initialized = true;
+
+    rpcThrottleStorage =
+        new RpcThrottleStorage(masterServices.getZooKeeper(), masterServices.getConfiguration());
   }
 
   public void stop() {
@@ -151,9 +167,16 @@ public class MasterQuotaManager implements RegionStateListener {
       } finally {
         namespaceLocks.unlock(req.getNamespace());
       }
+    } else if (req.hasRegionServer()) {
+      regionServerLocks.lock(req.getRegionServer());
+      try {
+        setRegionServerQuota(req.getRegionServer(), req);
+      } finally {
+        regionServerLocks.unlock(req.getRegionServer());
+      }
     } else {
-      throw new DoNotRetryIOException(
-        new UnsupportedOperationException("a user, a table or a namespace must be specified"));
+      throw new DoNotRetryIOException(new UnsupportedOperationException(
+          "a user, a table, a namespace or region server must be specified"));
     }
     return SetQuotaResponse.newBuilder().build();
   }
@@ -163,8 +186,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(req.getUserName(), null, null, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName));
+        return new GlobalQuotaSettingsImpl(req.getUserName(), null, null, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -190,8 +213,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(userName, table, null, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName, table));
+        return new GlobalQuotaSettingsImpl(userName, table, null, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName, table));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -218,8 +241,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(userName, null, namespace, QuotaUtil.getUserQuota(
-            masterServices.getConnection(), userName, namespace));
+        return new GlobalQuotaSettingsImpl(userName, null, namespace, null,
+            QuotaUtil.getUserQuota(masterServices.getConnection(), userName, namespace));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -248,8 +271,8 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(null, table, null, QuotaUtil.getTableQuota(
-            masterServices.getConnection(), table));
+        return new GlobalQuotaSettingsImpl(null, table, null, null,
+            QuotaUtil.getTableQuota(masterServices.getConnection(), table));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -257,7 +280,16 @@ public class MasterQuotaManager implements RegionStateListener {
       }
       @Override
       public void delete() throws IOException {
+        SpaceQuotaSnapshot currSnapshotOfTable =
+            QuotaTableUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), table);
         QuotaUtil.deleteTableQuota(masterServices.getConnection(), table);
+        if (currSnapshotOfTable != null) {
+          SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
+          if (SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)
+              && quotaStatus.isInViolation()) {
+            QuotaUtil.enableTableIfNotEnabled(masterServices.getConnection(), table);
+          }
+        }
       }
       @Override
       public void preApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
@@ -275,13 +307,13 @@ public class MasterQuotaManager implements RegionStateListener {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public GlobalQuotaSettingsImpl fetch() throws IOException {
-        return new GlobalQuotaSettingsImpl(null, null, namespace, QuotaUtil.getNamespaceQuota(
-                masterServices.getConnection(), namespace));
+        return new GlobalQuotaSettingsImpl(null, null, namespace, null,
+            QuotaUtil.getNamespaceQuota(masterServices.getConnection(), namespace));
       }
       @Override
       public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
         QuotaUtil.addNamespaceQuota(masterServices.getConnection(), namespace,
-            ((GlobalQuotaSettingsImpl) quotaPojo).toQuotas());
+          quotaPojo.toQuotas());
       }
       @Override
       public void delete() throws IOException {
@@ -298,6 +330,38 @@ public class MasterQuotaManager implements RegionStateListener {
     });
   }
 
+  public void setRegionServerQuota(final String regionServer, final SetQuotaRequest req)
+      throws IOException, InterruptedException {
+    setQuota(req, new SetQuotaOperations() {
+      @Override
+      public GlobalQuotaSettingsImpl fetch() throws IOException {
+        return new GlobalQuotaSettingsImpl(null, null, null, regionServer,
+            QuotaUtil.getRegionServerQuota(masterServices.getConnection(), regionServer));
+      }
+
+      @Override
+      public void update(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        QuotaUtil.addRegionServerQuota(masterServices.getConnection(), regionServer,
+          quotaPojo.toQuotas());
+      }
+
+      @Override
+      public void delete() throws IOException {
+        QuotaUtil.deleteRegionServerQuota(masterServices.getConnection(), regionServer);
+      }
+
+      @Override
+      public void preApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        masterServices.getMasterCoprocessorHost().preSetRegionServerQuota(regionServer, quotaPojo);
+      }
+
+      @Override
+      public void postApply(GlobalQuotaSettingsImpl quotaPojo) throws IOException {
+        masterServices.getMasterCoprocessorHost().postSetRegionServerQuota(regionServer, quotaPojo);
+      }
+    });
+  }
+
   public void setNamespaceQuota(NamespaceDescriptor desc) throws IOException {
     if (initialized) {
       this.namespaceQuotaManager.addNamespace(desc);
@@ -307,6 +371,76 @@ public class MasterQuotaManager implements RegionStateListener {
   public void removeNamespaceQuota(String namespace) throws IOException {
     if (initialized) {
       this.namespaceQuotaManager.deleteNamespace(namespace);
+    }
+  }
+
+  public SwitchRpcThrottleResponse switchRpcThrottle(SwitchRpcThrottleRequest request)
+      throws IOException {
+    boolean rpcThrottle = request.getRpcThrottleEnabled();
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preSwitchRpcThrottle(rpcThrottle);
+      boolean oldRpcThrottle = rpcThrottleStorage.isRpcThrottleEnabled();
+      if (rpcThrottle != oldRpcThrottle) {
+        LOG.info("{} switch rpc throttle from {} to {}", masterServices.getClientIdAuditPrefix(),
+          oldRpcThrottle, rpcThrottle);
+        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+        SwitchRpcThrottleProcedure procedure = new SwitchRpcThrottleProcedure(rpcThrottleStorage,
+            rpcThrottle, masterServices.getServerName(), latch);
+        masterServices.getMasterProcedureExecutor().submitProcedure(procedure);
+        latch.await();
+      } else {
+        LOG.warn("Skip switch rpc throttle to {} because it's the same with old value",
+          rpcThrottle);
+      }
+      SwitchRpcThrottleResponse response = SwitchRpcThrottleResponse.newBuilder()
+          .setPreviousRpcThrottleEnabled(oldRpcThrottle).build();
+      masterServices.getMasterCoprocessorHost().postSwitchRpcThrottle(oldRpcThrottle, rpcThrottle);
+      return response;
+    } else {
+      LOG.warn("Skip switch rpc throttle to {} because rpc quota is disabled", rpcThrottle);
+      return SwitchRpcThrottleResponse.newBuilder().setPreviousRpcThrottleEnabled(false).build();
+    }
+  }
+
+  public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(IsRpcThrottleEnabledRequest request)
+      throws IOException {
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preIsRpcThrottleEnabled();
+      boolean enabled = rpcThrottleStorage.isRpcThrottleEnabled();
+      IsRpcThrottleEnabledResponse response =
+          IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(enabled).build();
+      masterServices.getMasterCoprocessorHost().postIsRpcThrottleEnabled(enabled);
+      return response;
+    } else {
+      LOG.warn("Skip get rpc throttle because rpc quota is disabled");
+      return IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(false).build();
+    }
+  }
+
+  public SwitchExceedThrottleQuotaResponse
+      switchExceedThrottleQuota(SwitchExceedThrottleQuotaRequest request) throws IOException {
+    boolean enabled = request.getExceedThrottleQuotaEnabled();
+    if (initialized) {
+      masterServices.getMasterCoprocessorHost().preSwitchExceedThrottleQuota(enabled);
+      boolean previousEnabled =
+          QuotaUtil.isExceedThrottleQuotaEnabled(masterServices.getConnection());
+      if (previousEnabled == enabled) {
+        LOG.warn("Skip switch exceed throttle quota to {} because it's the same with old value",
+          enabled);
+      } else {
+        QuotaUtil.switchExceedThrottleQuota(masterServices.getConnection(), enabled);
+        LOG.info("{} switch exceed throttle quota from {} to {}",
+          masterServices.getClientIdAuditPrefix(), previousEnabled, enabled);
+      }
+      SwitchExceedThrottleQuotaResponse response = SwitchExceedThrottleQuotaResponse.newBuilder()
+          .setPreviousExceedThrottleQuotaEnabled(previousEnabled).build();
+      masterServices.getMasterCoprocessorHost().postSwitchExceedThrottleQuota(previousEnabled,
+        enabled);
+      return response;
+    } else {
+      LOG.warn("Skip switch exceed throttle quota to {} because quota is disabled", enabled);
+      return SwitchExceedThrottleQuotaResponse.newBuilder()
+          .setPreviousExceedThrottleQuotaEnabled(false).build();
     }
   }
 

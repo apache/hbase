@@ -18,15 +18,16 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ProcedureTestUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -45,13 +46,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
-import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
-import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
-import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 
 /**
  * Confirm that we will do backoff when retrying on closing a region, to avoid consuming all the
@@ -63,8 +57,6 @@ public class TestCloseRegionWhileRSCrash {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCloseRegionWhileRSCrash.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCloseRegionWhileRSCrash.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -158,8 +150,7 @@ public class TestCloseRegionWhileRSCrash {
     if (!srcRs.getRegions(TableName.META_TABLE_NAME).isEmpty()) {
       RegionInfo metaRegion = srcRs.getRegions(TableName.META_TABLE_NAME).get(0).getRegionInfo();
       HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
-      UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(),
-        Bytes.toBytes(dstRs.getServerName().getServerName()));
+      UTIL.getAdmin().move(metaRegion.getEncodedNameAsBytes(), dstRs.getServerName());
       UTIL.waitFor(30000, () -> !dstRs.getRegions(TableName.META_TABLE_NAME).isEmpty());
     }
   }
@@ -176,45 +167,29 @@ public class TestCloseRegionWhileRSCrash {
     HRegionServer dstRs = UTIL.getOtherRegionServer(srcRs);
     ProcedureExecutor<MasterProcedureEnv> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
-    long dummyProcId = procExec.submitProcedure(new DummyServerProcedure(srcRs.getServerName()));
+    procExec.submitProcedure(new DummyServerProcedure(srcRs.getServerName()));
     ARRIVE.await();
     UTIL.getMiniHBaseCluster().killRegionServer(srcRs.getServerName());
     UTIL.waitFor(30000,
       () -> procExec.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure));
     Thread t = new Thread(() -> {
       try {
-        UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
-          Bytes.toBytes(dstRs.getServerName().getServerName()));
+        UTIL.getAdmin().move(region.getEncodedNameAsBytes(), dstRs.getServerName());
       } catch (IOException e) {
       }
     });
     t.start();
-    JsonParser parser = new JsonParser();
-    long oldTimeout = 0;
-    int timeoutIncrements = 0;
     // wait until we enter the WAITING_TIMEOUT state
-    UTIL.waitFor(30000, () -> getTimeout(parser, UTIL.getAdmin().getProcedures()) > 0);
-    while (true) {
-      long timeout = getTimeout(parser, UTIL.getAdmin().getProcedures());
-      if (timeout > oldTimeout) {
-        LOG.info("Timeout incremented, was {}, now is {}, increments={}", timeout, oldTimeout,
-          timeoutIncrements);
-        oldTimeout = timeout;
-        timeoutIncrements++;
-        if (timeoutIncrements > 3) {
-          // If we incremented at least twice, break; the backoff is working.
-          break;
-        }
-      }
-      Thread.sleep(1000);
-    }
-    // let's close the connection to make sure that the SCP can not update meta successfully
-    UTIL.getMiniHBaseCluster().getMaster().getConnection().close();
+    ProcedureTestUtil.waitUntilProcedureWaitingTimeout(UTIL, TransitRegionStateProcedure.class,
+      30000);
+    // wait until the timeout value increase three times
+    ProcedureTestUtil.waitUntilProcedureTimeoutIncrease(UTIL, TransitRegionStateProcedure.class, 3);
+    // close connection to make sure that we can not finish the TRSP
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    master.getConnection().close();
     RESUME.countDown();
-    UTIL.waitFor(30000, () -> procExec.isFinished(dummyProcId));
-    Thread.sleep(2000);
-    // here we restart
-    UTIL.getMiniHBaseCluster().stopMaster(0).join();
+    UTIL.waitFor(30000, () -> !master.isAlive());
+    // here we start a new master
     UTIL.getMiniHBaseCluster().startMaster();
     t.join();
     // Make sure that the region is online, it may not on the original target server, as we will set
@@ -222,25 +197,5 @@ public class TestCloseRegionWhileRSCrash {
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, Bytes.toBytes("cq"), Bytes.toBytes(1)));
     }
-  }
-
-  /**
-   * @param proceduresAsJSON This is String returned by admin.getProcedures call... an array of
-   *          Procedures as JSON.
-   * @return The Procedure timeout value parsed from the TRSP.
-   */
-  private long getTimeout(JsonParser parser, String proceduresAsJSON) {
-    JsonArray array = parser.parse(proceduresAsJSON).getAsJsonArray();
-    Iterator<JsonElement> iterator = array.iterator();
-    while (iterator.hasNext()) {
-      JsonElement element = iterator.next();
-      JsonObject obj = element.getAsJsonObject();
-      String className = obj.get("className").getAsString();
-      String actualClassName = TransitRegionStateProcedure.class.getName();
-      if (className.equals(actualClassName) && obj.has("timeout")) {
-        return obj.get("timeout").getAsLong();
-      }
-    }
-    return -1L;
   }
 }

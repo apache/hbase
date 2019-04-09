@@ -94,6 +94,7 @@ public class TestMasterObserver {
 
   public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {
 
+    private boolean preCreateTableRegionInfosCalled;
     private boolean preCreateTableCalled;
     private boolean postCreateTableCalled;
     private boolean preDeleteTableCalled;
@@ -186,6 +187,7 @@ public class TestMasterObserver {
     private boolean postLockHeartbeatCalled;
 
     public void resetStates() {
+      preCreateTableRegionInfosCalled = false;
       preCreateTableCalled = false;
       postCreateTableCalled = false;
       preDeleteTableCalled = false;
@@ -298,6 +300,14 @@ public class TestMasterObserver {
     }
 
     @Override
+    public TableDescriptor preCreateTableRegionsInfos(
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc)
+        throws IOException {
+      preCreateTableRegionInfosCalled = true;
+      return desc;
+    }
+
+    @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         TableDescriptor desc, RegionInfo[] regions) throws IOException {
       preCreateTableCalled = true;
@@ -310,11 +320,11 @@ public class TestMasterObserver {
     }
 
     public boolean wasCreateTableCalled() {
-      return preCreateTableCalled && postCreateTableCalled;
+      return preCreateTableRegionInfosCalled && preCreateTableCalled && postCreateTableCalled;
     }
 
     public boolean preCreateTableCalledOnly() {
-      return preCreateTableCalled && !postCreateTableCalled;
+      return preCreateTableRegionInfosCalled && preCreateTableCalled && !postCreateTableCalled;
     }
 
     @Override
@@ -363,10 +373,11 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
+    public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
         TableName tableName, final TableDescriptor currentDescriptor,
       final TableDescriptor newDescriptor) throws IOException {
       preModifyTableCalled = true;
+      return newDescriptor;
     }
 
     @Override
@@ -1245,11 +1256,11 @@ public class TestMasterObserver {
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static byte[] TEST_SNAPSHOT = Bytes.toBytes("observed_snapshot");
+  private static String TEST_SNAPSHOT = "observed_snapshot";
   private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
-  private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -1496,10 +1507,10 @@ public class TestMasterObserver {
 
   private void modifyTableSync(Admin admin, TableName tableName, HTableDescriptor htd)
       throws IOException {
-    admin.modifyTable(tableName, htd);
+    admin.modifyTable(htd);
     //wait until modify table finishes
     for (int t = 0; t < 100; t++) { //10 sec timeout
-      HTableDescriptor td = admin.getTableDescriptor(htd.getTableName());
+      HTableDescriptor td = new HTableDescriptor(admin.getDescriptor(htd.getTableName()));
       if (td.equals(htd)) {
         break;
       }

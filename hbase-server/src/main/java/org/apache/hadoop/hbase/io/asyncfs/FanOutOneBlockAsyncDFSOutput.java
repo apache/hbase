@@ -407,6 +407,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       waitingAckQueue.removeFirst();
       return;
     }
+    // TODO: we should perhaps measure time taken per DN here;
+    //       we could collect statistics per DN, and/or exclude bad nodes in createOutput.
     datanodeList.forEach(ch -> {
       ch.write(headerBuf.retainedDuplicate());
       ch.write(checksumBuf.retainedDuplicate());

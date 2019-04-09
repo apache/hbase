@@ -286,5 +286,9 @@ public class TestTableInputFormatBase {
     public TableBuilder getTableBuilder(TableName tableName, ExecutorService pool) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void clearRegionLocationCache() {
+    }
   }
 }

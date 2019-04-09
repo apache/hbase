@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -120,23 +120,17 @@ public class TestFromClientSide3 {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     // Nothing to do.
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd: TEST_UTIL.getAdmin().listTables()) {
+    for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
-  }
+    }
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
@@ -324,12 +318,7 @@ public class TestFromClientSide3 {
       LOG.info("hbase.hstore.compaction.min should now be 5");
       HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
       htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-      admin.modifyTable(tableName, htd);
-      Pair<Integer, Integer> st;
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
 
       // Create 3 more store files.
@@ -351,11 +340,7 @@ public class TestFromClientSide3 {
       HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
       htd.modifyFamily(hcd);
-      admin.modifyTable(tableName, htd);
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
 
       // Issue a compaction request
@@ -386,11 +371,7 @@ public class TestFromClientSide3 {
       hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
       hcd.setValue("hbase.hstore.compaction.min", null);
       htd.modifyFamily(hcd);
-      admin.modifyTable(tableName, htd);
-      while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
-        LOG.debug(st.getFirst() + " regions left to update");
-        Thread.sleep(40);
-      }
+      admin.modifyTable(htd);
       LOG.info("alter status finished");
       assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
           "hbase.hstore.compaction.min"));
@@ -851,7 +832,7 @@ public class TestFromClientSide3 {
               CoprocessorRpcUtils.BlockingRpcCallback<MultiRowMutationProtos.MutateRowsResponse>
                 rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
               exe.mutateRows(controller, request, rpcCallback);
-              if (controller.failedOnException()) {
+              if (controller.failedOnException() && !(controller.getFailedOn() instanceof UnknownProtocolException)) {
                 exceptionDuringMutateRows.set(true);
               }
               return rpcCallback.get();
@@ -1058,7 +1039,7 @@ public class TestFromClientSide3 {
     }
   }
 
-  private static byte[] generateHugeValue(int size) {
+  static byte[] generateHugeValue(int size) {
     Random rand = ThreadLocalRandom.current();
     byte[] value = new byte[size];
     for (int i = 0; i < value.length; i++) {
@@ -1093,7 +1074,7 @@ public class TestFromClientSide3 {
     }
 
     Scan scan = new Scan();
-    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(3)
+    scan.withStartRow(ROW).withStopRow(ROW, true).addFamily(FAMILY).setBatch(3)
         .setMaxResultSize(4 * 1024 * 1024);
     Result result;
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -1116,7 +1097,7 @@ public class TestFromClientSide3 {
     }
 
     scan = new Scan();
-    scan.withStartRow(ROW).withStopRow(ROW).addFamily(FAMILY).setBatch(2)
+    scan.withStartRow(ROW).withStopRow(ROW, true).addFamily(FAMILY).setBatch(2)
         .setMaxResultSize(4 * 1024 * 1024);
     try (ResultScanner scanner = table.getScanner(scan)) {
       List<Result> list = new ArrayList<>();

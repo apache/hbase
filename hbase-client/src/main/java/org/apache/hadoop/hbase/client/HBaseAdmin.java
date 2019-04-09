@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,7 +45,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -53,9 +53,7 @@ import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -82,11 +80,14 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
+import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -105,9 +106,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
@@ -129,7 +135,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Coprocesso
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
@@ -163,8 +168,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
@@ -172,6 +175,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMainte
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMaintenanceModeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
@@ -203,6 +207,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
@@ -242,6 +251,7 @@ public class HBaseAdmin implements Admin {
   private boolean aborted;
   private int operationTimeout;
   private int rpcTimeout;
+  private int getProcedureTimeout;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
@@ -251,6 +261,11 @@ public class HBaseAdmin implements Admin {
   @Override
   public int getOperationTimeout() {
     return operationTimeout;
+  }
+
+  @Override
+  public int getSyncWaitTimeout() {
+    return syncWaitTimeout;
   }
 
   HBaseAdmin(ClusterConnection connection) throws IOException {
@@ -268,6 +283,8 @@ public class HBaseAdmin implements Admin {
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.syncWaitTimeout = this.conf.getInt(
       "hbase.client.sync.wait.timeout.msec", 10 * 60000); // 10min
+    this.getProcedureTimeout =
+        this.conf.getInt("hbase.client.procedure.future.get.timeout.msec", 10 * 60000); // 10min
 
     this.rpcCallerFactory = connection.getRpcRetryingCallerFactory();
     this.rpcControllerFactory = connection.getRpcControllerFactory();
@@ -316,11 +333,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(Pattern pattern) throws IOException {
-    return listTableDescriptors(pattern, false);
-  }
-
-  @Override
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
       throws IOException {
     return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
@@ -340,11 +352,6 @@ public class HBaseAdmin implements Admin {
       throws TableNotFoundException, IOException {
     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
        operationTimeout, rpcTimeout);
-  }
-
-  @Override
-  public void modifyTable(TableDescriptor td) throws IOException {
-    get(modifyTableAsync(td), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -451,42 +458,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public HTableDescriptor[] listTables() throws IOException {
-    return listTables((Pattern)null, false);
-  }
-
-  @Override
-  public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
-    return listTables(pattern, false);
-  }
-
-  @Override
-  public HTableDescriptor[] listTables(String regex) throws IOException {
-    return listTables(Pattern.compile(regex), false);
-  }
-
-  @Override
-  public HTableDescriptor[] listTables(final Pattern pattern, final boolean includeSysTables)
-      throws IOException {
-    return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection(),
-        getRpcControllerFactory()) {
-      @Override
-      protected HTableDescriptor[] rpcCall() throws Exception {
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables);
-        return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(),
-                req)).stream().map(ImmutableHTableDescriptor::new).toArray(HTableDescriptor[]::new);
-      }
-    });
-  }
-
-  @Override
-  public HTableDescriptor[] listTables(String regex, boolean includeSysTables)
-      throws IOException {
-    return listTables(Pattern.compile(regex), includeSysTables);
-  }
-
-  @Override
   public TableName[] listTableNames() throws IOException {
     return listTableNames((Pattern)null, false);
   }
@@ -494,11 +465,6 @@ public class HBaseAdmin implements Admin {
   @Override
   public TableName[] listTableNames(Pattern pattern) throws IOException {
     return listTableNames(pattern, false);
-  }
-
-  @Override
-  public TableName[] listTableNames(String regex) throws IOException {
-    return listTableNames(Pattern.compile(regex), false);
   }
 
   @Override
@@ -514,18 +480,6 @@ public class HBaseAdmin implements Admin {
             .getTableNamesList());
       }
     });
-  }
-
-  @Override
-  public TableName[] listTableNames(final String regex, final boolean includeSysTables)
-      throws IOException {
-    return listTableNames(Pattern.compile(regex), includeSysTables);
-  }
-
-  @Override
-  public HTableDescriptor getTableDescriptor(final TableName tableName) throws IOException {
-    return getHTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
-       operationTimeout, rpcTimeout);
   }
 
   static TableDescriptor getTableDescriptor(final TableName tableName, Connection connection,
@@ -551,38 +505,6 @@ public class HBaseAdmin implements Admin {
     throw new TableNotFoundException(tableName.getNameAsString());
   }
 
-  /**
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getTableDescriptor(TableName,
-   *             Connection, RpcRetryingCallerFactory,RpcControllerFactory,int,int)}
-   */
-  @Deprecated
-  static HTableDescriptor getHTableDescriptor(final TableName tableName, Connection connection,
-      RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
-      int operationTimeout, int rpcTimeout) throws IOException {
-    if (tableName == null) {
-      return null;
-    }
-    HTableDescriptor htd =
-        executeCallable(new MasterCallable<HTableDescriptor>(connection, rpcControllerFactory) {
-          @Override
-          protected HTableDescriptor rpcCall() throws Exception {
-            GetTableDescriptorsRequest req =
-                RequestConverter.buildGetTableDescriptorsRequest(tableName);
-            GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
-            if (!htds.getTableSchemaList().isEmpty()) {
-              return new ImmutableHTableDescriptor(
-                  ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0)));
-            }
-            return null;
-          }
-        }, rpcCallerFactory, operationTimeout, rpcTimeout);
-    if (htd != null) {
-      return new ImmutableHTableDescriptor(htd);
-    }
-    throw new TableNotFoundException(tableName.getNameAsString());
-  }
-
   private long getPauseTime(int tries) {
     int triesCount = tries;
     if (triesCount >= HConstants.RETRY_BACKOFF.length) {
@@ -592,35 +514,22 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createTable(TableDescriptor desc)
-  throws IOException {
-    createTable(desc, null);
-  }
-
-  @Override
-  public void createTable(TableDescriptor desc, byte [] startKey,
-      byte [] endKey, int numRegions)
-  throws IOException {
-    if(numRegions < 3) {
+  public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
+      throws IOException {
+    if (numRegions < 3) {
       throw new IllegalArgumentException("Must create at least three regions");
-    } else if(Bytes.compareTo(startKey, endKey) >= 0) {
+    } else if (Bytes.compareTo(startKey, endKey) >= 0) {
       throw new IllegalArgumentException("Start key must be smaller than end key");
     }
     if (numRegions == 3) {
-      createTable(desc, new byte[][]{startKey, endKey});
+      createTable(desc, new byte[][] { startKey, endKey });
       return;
     }
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    if(splitKeys == null || splitKeys.length != numRegions - 1) {
+    byte[][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    if (splitKeys == null || splitKeys.length != numRegions - 1) {
       throw new IllegalArgumentException("Unable to split key range into enough regions");
     }
     createTable(desc, splitKeys);
-  }
-
-  @Override
-  public void createTable(final TableDescriptor desc, byte [][] splitKeys)
-      throws IOException {
-    get(createTableAsync(desc, splitKeys), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -675,7 +584,7 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    protected TableDescriptor getTableDescriptor() {
+    protected TableDescriptor getDescriptor() {
       return desc;
     }
 
@@ -690,11 +599,6 @@ public class HBaseAdmin implements Admin {
       waitForAllRegionsOnline(deadlineTs, splitKeys);
       return null;
     }
-  }
-
-  @Override
-  public void deleteTable(final TableName tableName) throws IOException {
-    get(deleteTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -740,42 +644,6 @@ public class HBaseAdmin implements Admin {
       ((ClusterConnection) getAdmin().getConnection()).clearRegionCache(getTableName());
       return super.postOperationResult(result, deadlineTs);
     }
-  }
-
-  @Override
-  public HTableDescriptor[] deleteTables(String regex) throws IOException {
-    return deleteTables(Pattern.compile(regex));
-  }
-
-  /**
-   * Delete tables matching the passed in pattern and wait on completion.
-   *
-   * Warning: Use this method carefully, there is no prompting and the effect is
-   * immediate. Consider using {@link #listTables(java.util.regex.Pattern) } and
-   * {@link #deleteTable(TableName)}
-   *
-   * @param pattern The pattern to match table names against
-   * @return Table descriptors for tables that couldn't be deleted
-   * @throws IOException
-   */
-  @Override
-  public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
-    for (HTableDescriptor table : listTables(pattern)) {
-      try {
-        deleteTable(table.getTableName());
-      } catch (IOException ex) {
-        LOG.info("Failed to delete table " + table.getTableName(), ex);
-        failed.add(table);
-      }
-    }
-    return failed.toArray(new HTableDescriptor[failed.size()]);
-  }
-
-  @Override
-  public void truncateTable(final TableName tableName, final boolean preserveSplits)
-      throws IOException {
-    get(truncateTableAsync(tableName, preserveSplits), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -839,12 +707,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void enableTable(final TableName tableName)
-  throws IOException {
-    get(enableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> enableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     EnableTableResponse response = executeCallable(
@@ -880,33 +742,6 @@ public class HBaseAdmin implements Admin {
       waitForTableEnabled(deadlineTs);
       return null;
     }
-  }
-
-  @Override
-  public HTableDescriptor[] enableTables(String regex) throws IOException {
-    return enableTables(Pattern.compile(regex));
-  }
-
-  @Override
-  public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
-    for (HTableDescriptor table : listTables(pattern)) {
-      if (isTableDisabled(table.getTableName())) {
-        try {
-          enableTable(table.getTableName());
-        } catch (IOException ex) {
-          LOG.info("Failed to enable table " + table.getTableName(), ex);
-          failed.add(table);
-        }
-      }
-    }
-    return failed.toArray(new HTableDescriptor[failed.size()]);
-  }
-
-  @Override
-  public void disableTable(final TableName tableName)
-  throws IOException {
-    get(disableTableAsync(tableName), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -949,27 +784,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public HTableDescriptor[] disableTables(String regex) throws IOException {
-    return disableTables(Pattern.compile(regex));
-  }
-
-  @Override
-  public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
-    for (HTableDescriptor table : listTables(pattern)) {
-      if (isTableEnabled(table.getTableName())) {
-        try {
-          disableTable(table.getTableName());
-        } catch (IOException ex) {
-          LOG.info("Failed to disable table " + table.getTableName(), ex);
-          failed.add(table);
-        }
-      }
-    }
-    return failed.toArray(new HTableDescriptor[failed.size()]);
-  }
-
-  @Override
   public boolean isTableEnabled(final TableName tableName) throws IOException {
     checkTableExists(tableName);
     return executeCallable(new RpcRetryingCallable<Boolean>() {
@@ -993,39 +807,6 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isTableAvailable(TableName tableName) throws IOException {
     return connection.isTableAvailable(tableName, null);
-  }
-
-  @Override
-  public boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException {
-    return connection.isTableAvailable(tableName, splitKeys);
-  }
-
-  @Override
-  public Pair<Integer, Integer> getAlterStatus(final TableName tableName) throws IOException {
-    return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection(),
-        getRpcControllerFactory()) {
-      @Override
-      protected Pair<Integer, Integer> rpcCall() throws Exception {
-        setPriority(tableName);
-        GetSchemaAlterStatusRequest req = RequestConverter
-            .buildGetSchemaAlterStatusRequest(tableName);
-        GetSchemaAlterStatusResponse ret = master.getSchemaAlterStatus(getRpcController(), req);
-        Pair<Integer, Integer> pair = new Pair<>(ret.getYetToUpdateRegions(),
-            ret.getTotalRegions());
-        return pair;
-      }
-    });
-  }
-
-  @Override
-  public Pair<Integer, Integer> getAlterStatus(final byte[] tableName) throws IOException {
-    return getAlterStatus(TableName.valueOf(tableName));
-  }
-
-  @Override
-  public void addColumnFamily(final TableName tableName, final ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    get(addColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -1058,24 +839,6 @@ public class HBaseAdmin implements Admin {
     public String getOperationType() {
       return "ADD_COLUMN_FAMILY";
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #deleteColumnFamily(TableName, byte[])} instead.
-   */
-  @Override
-  @Deprecated
-  public void deleteColumn(final TableName tableName, final byte[] columnFamily)
-  throws IOException {
-    deleteColumnFamily(tableName, columnFamily);
-  }
-
-  @Override
-  public void deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
-      throws IOException {
-    get(deleteColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -1112,12 +875,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void modifyColumnFamily(final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily) throws IOException {
-    get(modifyColumnFamilyAsync(tableName, columnFamily), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> modifyColumnFamilyAsync(final TableName tableName,
       final ColumnFamilyDescriptor columnFamily) throws IOException {
     ModifyColumnResponse response =
@@ -1148,45 +905,6 @@ public class HBaseAdmin implements Admin {
     public String getOperationType() {
       return "MODIFY_COLUMN_FAMILY";
     }
-  }
-
-  @Deprecated
-  @Override
-  public void closeRegion(final String regionName, final String unused) throws IOException {
-    unassign(Bytes.toBytes(regionName), true);
-  }
-
-  @Deprecated
-  @Override
-  public void closeRegion(final byte [] regionName, final String unused) throws IOException {
-    unassign(regionName, true);
-  }
-
-  @Deprecated
-  @Override
-  public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
-      final String unused) throws IOException {
-    unassign(Bytes.toBytes(encodedRegionName), true);
-    return true;
-  }
-
-  @Deprecated
-  @Override
-  public void closeRegion(final ServerName unused, final HRegionInfo hri) throws IOException {
-    unassign(hri.getRegionName(), true);
-  }
-
-  /**
-   * @param sn
-   * @return List of {@link HRegionInfo}.
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegions(ServerName)}.
-   */
-  @Deprecated
-  @Override
-  public List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException {
-    return getRegions(sn).stream().map(ImmutableHRegionInfo::new).collect(Collectors.toList());
   }
 
   @Override
@@ -1430,14 +1148,17 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void move(final byte[] encodedRegionName, final byte[] destServerName) throws IOException {
+  public void move(byte[] encodedRegionName) throws IOException {
+    move(encodedRegionName, (ServerName) null);
+  }
+
+  public void move(final byte[] encodedRegionName, ServerName destServerName) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
         setPriority(encodedRegionName);
         MoveRegionRequest request =
-            RequestConverter.buildMoveRegionRequest(encodedRegionName,
-              destServerName != null ? ServerName.valueOf(Bytes.toString(destServerName)) : null);
+          RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
         master.moveRegion(getRpcController(), request);
         return null;
       }
@@ -1704,58 +1425,20 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Merge two regions. Asynchronous operation.
-   * @param nameOfRegionA encoded or full name of region a
-   * @param nameOfRegionB encoded or full name of region b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @throws IOException
-   * @deprecated Since 2.0. Will be removed in 3.0. Use
-   *     {@link #mergeRegionsAsync(byte[], byte[], boolean)} instead.
-   */
-  @Deprecated
-  @Override
-  public void mergeRegions(final byte[] nameOfRegionA,
-      final byte[] nameOfRegionB, final boolean forcible)
-      throws IOException {
-    mergeRegionsAsync(nameOfRegionA, nameOfRegionB, forcible);
-  }
-
-  /**
-   * Merge two regions. Asynchronous operation.
-   * @param nameOfRegionA encoded or full name of region a
-   * @param nameOfRegionB encoded or full name of region b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @throws IOException
-   */
-  @Override
-  public Future<Void> mergeRegionsAsync(
-      final byte[] nameOfRegionA,
-      final byte[] nameOfRegionB,
-      final boolean forcible) throws IOException {
-    byte[][] nameofRegionsToMerge = new byte[2][];
-    nameofRegionsToMerge[0] = nameOfRegionA;
-    nameofRegionsToMerge[1] = nameOfRegionB;
-    return mergeRegionsAsync(nameofRegionsToMerge, forcible);
-  }
-
-  /**
-   * Merge two regions. Asynchronous operation.
    * @param nameofRegionsToMerge encoded or full name of daughter regions
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          adjacent regions
-   * @throws IOException
    */
   @Override
-  public Future<Void> mergeRegionsAsync(
-      final byte[][] nameofRegionsToMerge,
-      final boolean forcible) throws IOException {
-    assert(nameofRegionsToMerge.length >= 2);
+  public Future<Void> mergeRegionsAsync(final byte[][] nameofRegionsToMerge, final boolean forcible)
+      throws IOException {
+    Preconditions.checkArgument(nameofRegionsToMerge.length >= 2, "Can not merge only %s region",
+      nameofRegionsToMerge.length);
     byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
-    for(int i = 0; i < nameofRegionsToMerge.length; i++) {
-      encodedNameofRegionsToMerge[i] = HRegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ?
-          nameofRegionsToMerge[i] :
-          Bytes.toBytes(HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]));
+    for (int i = 0; i < nameofRegionsToMerge.length; i++) {
+      encodedNameofRegionsToMerge[i] =
+        RegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ? nameofRegionsToMerge[i]
+          : Bytes.toBytes(RegionInfo.encodeRegionName(nameofRegionsToMerge[i]));
     }
 
     TableName tableName = null;
@@ -1765,7 +1448,7 @@ public class HBaseAdmin implements Admin {
       pair = getRegion(nameofRegionsToMerge[i]);
 
       if (pair != null) {
-        if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        if (pair.getFirst().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
         }
         if (tableName == null) {
@@ -1843,29 +1526,25 @@ public class HBaseAdmin implements Admin {
    * @param units time units
    * @throws IOException
    */
-  public void splitRegionSync(byte[] regionName, byte[] splitPoint,
-    final long timeout, final TimeUnit units) throws IOException {
-    get(
-        splitRegionAsync(regionName, splitPoint),
-        timeout,
-        units);
+  public void splitRegionSync(byte[] regionName, byte[] splitPoint, final long timeout,
+      final TimeUnit units) throws IOException {
+    get(splitRegionAsync(regionName, splitPoint), timeout, units);
   }
 
   @Override
   public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint)
       throws IOException {
-    byte[] encodedNameofRegionToSplit = HRegionInfo.isEncodedRegionName(regionName) ?
-        regionName : Bytes.toBytes(HRegionInfo.encodeRegionName(regionName));
+    byte[] encodedNameofRegionToSplit = RegionInfo.isEncodedRegionName(regionName) ?
+        regionName : Bytes.toBytes(RegionInfo.encodeRegionName(regionName));
     Pair<RegionInfo, ServerName> pair = getRegion(regionName);
     if (pair != null) {
       if (pair.getFirst() != null &&
-          pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+          pair.getFirst().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
         throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
       }
     } else {
-      throw new UnknownRegionException (
-          "Can't invoke merge on unknown region "
-              + Bytes.toStringBinary(encodedNameofRegionToSplit));
+      throw new UnknownRegionException(
+        "Can't invoke split on unknown region " + Bytes.toStringBinary(encodedNameofRegionToSplit));
     }
 
     return splitRegionAsync(pair.getFirst(), splitPoint);
@@ -1920,11 +1599,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void splitRegion(final byte[] regionName) throws IOException {
-    splitRegion(regionName, null);
-  }
-
-  @Override
   public void split(final TableName tableName, final byte[] splitPoint) throws IOException {
     checkTableExists(tableName);
     for (HRegionLocation loc : connection.locateRegions(tableName, false, false)) {
@@ -1947,39 +1621,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  @Override
-  public void splitRegion(final byte[] regionName, final byte [] splitPoint) throws IOException {
-    Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
-    if (regionServerPair == null) {
-      throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
-    }
-    if (regionServerPair.getFirst() != null &&
-        regionServerPair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException("Can't split replicas directly. "
-          + "Replicas are auto-split when their primary is split.");
-    }
-    if (regionServerPair.getSecond() == null) {
-      throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
-    }
-    splitRegionAsync(regionServerPair.getFirst(), splitPoint);
-  }
-
-  @Override
-  public void modifyTable(final TableName tableName, final TableDescriptor td)
-      throws IOException {
-    get(modifyTableAsync(tableName, td), syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  public Future<Void> modifyTableAsync(final TableName tableName, final TableDescriptor td)
-      throws IOException {
-    if (!tableName.equals(td.getTableName())) {
-      throw new IllegalArgumentException("the specified table name '" + tableName +
-        "' doesn't match with the HTD one: " + td.getTableName());
-    }
-    return modifyTableAsync(td);
-  }
-
   private static class ModifyTableFuture extends TableFuture<Void> {
     public ModifyTableFuture(final HBaseAdmin admin, final TableName tableName,
         final ModifyTableResponse response) {
@@ -1994,16 +1635,6 @@ public class HBaseAdmin implements Admin {
     @Override
     public String getOperationType() {
       return "MODIFY";
-    }
-
-    @Override
-    protected Void postOperationResult(final Void result, final long deadlineTs)
-        throws IOException, TimeoutException {
-      // The modify operation on the table is asynchronous on the server side irrespective
-      // of whether Procedure V2 is supported or not. So, we wait in the client till
-      // all regions get updated.
-      waitForSchemaUpdate(deadlineTs);
-      return result;
     }
   }
 
@@ -2037,9 +1668,9 @@ public class HBaseAdmin implements Admin {
           ServerName sn = null;
           if (rl != null) {
             for (HRegionLocation h : rl.getRegionLocations()) {
-              if (h != null && encodedName.equals(h.getRegionInfo().getEncodedName())) {
+              if (h != null && encodedName.equals(h.getRegion().getEncodedName())) {
                 sn = h.getServerName();
-                info = h.getRegionInfo();
+                info = h.getRegion();
                 matched = true;
               }
             }
@@ -2064,13 +1695,12 @@ public class HBaseAdmin implements Admin {
    * name, the input is returned as is. We don't throw unknown
    * region exception.
    */
-  private byte[] getRegionName(
-      final byte[] regionNameOrEncodedRegionName) throws IOException {
+  private byte[] getRegionName(final byte[] regionNameOrEncodedRegionName) throws IOException {
     if (Bytes.equals(regionNameOrEncodedRegionName,
-        HRegionInfo.FIRST_META_REGIONINFO.getRegionName())
-          || Bytes.equals(regionNameOrEncodedRegionName,
-            HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
-      return HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()) ||
+      Bytes.equals(regionNameOrEncodedRegionName,
+        RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
+      return RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName();
     }
     byte[] tmp = regionNameOrEncodedRegionName;
     Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionNameOrEncodedRegionName);
@@ -2210,12 +1840,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void createNamespace(final NamespaceDescriptor descriptor)
-  throws IOException {
-    get(createNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> createNamespaceAsync(final NamespaceDescriptor descriptor)
       throws IOException {
     CreateNamespaceResponse response =
@@ -2237,12 +1861,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void modifyNamespace(final NamespaceDescriptor descriptor)
-  throws IOException {
-    get(modifyNamespaceAsync(descriptor), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> modifyNamespaceAsync(final NamespaceDescriptor descriptor)
       throws IOException {
     ModifyNamespaceResponse response =
@@ -2261,12 +1879,6 @@ public class HBaseAdmin implements Admin {
         return "MODIFY_NAMESPACE";
       }
     };
-  }
-
-  @Override
-  public void deleteNamespace(final String name)
-  throws IOException {
-    get(deleteNamespaceAsync(name), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -2350,25 +1962,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException {
-    return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection(),
-        getRpcControllerFactory()) {
-      @Override
-      protected HTableDescriptor[] rpcCall() throws Exception {
-        List<TableSchema> list =
-            master.listTableDescriptorsByNamespace(getRpcController(),
-                ListTableDescriptorsByNamespaceRequest.newBuilder().setNamespaceName(name)
-                .build()).getTableSchemaList();
-        HTableDescriptor[] res = new HTableDescriptor[list.size()];
-        for(int i=0; i < list.size(); i++) {
-          res[i] = new ImmutableHTableDescriptor(ProtobufUtil.toTableDescriptor(list.get(i)));
-        }
-        return res;
-      }
-    });
-  }
-
-  @Override
   public TableName[] listTableNamesByNamespace(final String name) throws IOException {
     return executeCallable(new MasterCallable<TableName[]>(getConnection(),
         getRpcControllerFactory()) {
@@ -2389,10 +1982,11 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Is HBase available? Throw an exception if not.
+   * <p/>
+   * TODO: do not expose ZKConnectionException.
    * @param conf system configuration
    * @throws MasterNotRunningException if the master is not running.
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper. // TODO do not expose
-   *           ZKConnectionException.
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper.
    */
   public static void available(final Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
@@ -2404,57 +1998,10 @@ public class HBaseAdmin implements Admin {
     // Check ZK first.
     // If the connection exists, we may have a connection to ZK that does not work anymore
     try (ClusterConnection connection =
-        (ClusterConnection) ConnectionFactory.createConnection(copyOfConf)) {
+      (ClusterConnection) ConnectionFactory.createConnection(copyOfConf)) {
       // can throw MasterNotRunningException
       connection.isMasterRunning();
     }
-  }
-
-  /**
-   *
-   * @param tableName
-   * @return List of {@link HRegionInfo}.
-   * @throws IOException
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegions(TableName)}.
-   */
-  @Deprecated
-  @Override
-  public List<HRegionInfo> getTableRegions(final TableName tableName)
-    throws IOException {
-    return getRegions(tableName).stream()
-        .map(ImmutableHRegionInfo::new)
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public synchronized void close() throws IOException {
-  }
-
-  @Override
-  public HTableDescriptor[] getTableDescriptorsByTableName(final List<TableName> tableNames)
-  throws IOException {
-    return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection(),
-        getRpcControllerFactory()) {
-      @Override
-      protected HTableDescriptor[] rpcCall() throws Exception {
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(tableNames);
-        return ProtobufUtil
-            .toTableDescriptorList(master.getTableDescriptors(getRpcController(), req)).stream()
-            .map(ImmutableHTableDescriptor::new).toArray(HTableDescriptor[]::new);
-      }
-    });
-  }
-
-  @Override
-  public HTableDescriptor[] getTableDescriptors(List<String> names)
-  throws IOException {
-    List<TableName> tableNames = new ArrayList<>(names.size());
-    for(String name : names) {
-      tableNames.add(TableName.valueOf(name));
-    }
-    return getTableDescriptorsByTableName(tableNames);
   }
 
   private RollWALWriterResponse rollWALWriterImpl(final ServerName sn) throws IOException,
@@ -2468,44 +2015,6 @@ public class HBaseAdmin implements Admin {
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
-  }
-
-  /**
-   * Roll the log writer. I.e. when using a file system based write ahead log,
-   * start writing log messages to a new file.
-   *
-   * Note that when talking to a version 1.0+ HBase deployment, the rolling is asynchronous.
-   * This method will return as soon as the roll is requested and the return value will
-   * always be null. Additionally, the named region server may schedule store flushes at the
-   * request of the wal handling the roll request.
-   *
-   * When talking to a 0.98 or older HBase deployment, the rolling is synchronous and the
-   * return value may be either null or a list of encoded region names.
-   *
-   * @param serverName
-   *          The servername of the regionserver. A server name is made of host,
-   *          port and startcode. This is mandatory. Here is an example:
-   *          <code> host187.example.com,60020,1289493121758</code>
-   * @return a set of {@link HRegionInfo#getEncodedName()} that would allow the wal to
-   *         clean up some underlying files. null if there's nothing to flush.
-   * @throws IOException if a remote or network exception occurs
-   * @throws FailedLogCloseException
-   * @deprecated use {@link #rollWALWriter(ServerName)}
-   */
-  @Deprecated
-  public synchronized byte[][] rollHLogWriter(String serverName)
-      throws IOException, FailedLogCloseException {
-    ServerName sn = ServerName.valueOf(serverName);
-    final RollWALWriterResponse response = rollWALWriterImpl(sn);
-    int regionCount = response.getRegionToFlushCount();
-    if (0 == regionCount) {
-      return null;
-    }
-    byte[][] regionsToFlush = new byte[regionCount][];
-    for (int i = 0; i < regionCount; i++) {
-      regionsToFlush[i] = ProtobufUtil.toBytes(response.getRegionToFlush(i));
-    }
-    return regionsToFlush;
   }
 
   @Override
@@ -2546,26 +2055,6 @@ public class HBaseAdmin implements Admin {
       return ProtobufUtil.createCompactionState(response.getCompactionState());
     }
     return null;
-  }
-
-  @Override
-  public void snapshot(final String snapshotName,
-                       final TableName tableName) throws IOException,
-      SnapshotCreationException, IllegalArgumentException {
-    snapshot(snapshotName, tableName, SnapshotType.FLUSH);
-  }
-
-  @Override
-  public void snapshot(final byte[] snapshotName, final TableName tableName)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    snapshot(Bytes.toString(snapshotName), tableName, SnapshotType.FLUSH);
-  }
-
-  @Override
-  public void snapshot(final String snapshotName, final TableName tableName,
-      SnapshotType type)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    snapshot(new SnapshotDescription(snapshotName, tableName, type));
   }
 
   @Override
@@ -2613,9 +2102,35 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void snapshotAsync(SnapshotDescription snapshotDesc) throws IOException,
-      SnapshotCreationException {
+  public Future<Void> snapshotAsync(SnapshotDescription snapshotDesc)
+      throws IOException, SnapshotCreationException {
     asyncSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc));
+    return new ProcedureFuture<Void>(this, null) {
+
+      @Override
+      protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
+        waitForState(deadlineTs, new WaitForStateCallable() {
+
+          @Override
+          public void throwInterruptedException() throws InterruptedIOException {
+            throw new InterruptedIOException(
+              "Interrupted while waiting for taking snapshot" + snapshotDesc);
+          }
+
+          @Override
+          public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+            throw new TimeoutException("Snapshot '" + snapshotDesc.getName() +
+              "' wasn't completed in expectedTime:" + elapsedTime + " ms");
+          }
+
+          @Override
+          public boolean checkState(int tries) throws IOException {
+            return isSnapshotFinished(snapshotDesc);
+          }
+        });
+        return null;
+      }
+    };
   }
 
   private SnapshotResponse asyncSnapshot(SnapshotProtos.SnapshotDescription snapshot)
@@ -2649,12 +2164,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void restoreSnapshot(final byte[] snapshotName)
-      throws IOException, RestoreSnapshotException {
-    restoreSnapshot(Bytes.toString(snapshotName));
-  }
-
-  @Override
   public void restoreSnapshot(final String snapshotName)
       throws IOException, RestoreSnapshotException {
     boolean takeFailSafeSnapshot =
@@ -2663,13 +2172,7 @@ public class HBaseAdmin implements Admin {
     restoreSnapshot(snapshotName, takeFailSafeSnapshot);
   }
 
-  @Override
-  public void restoreSnapshot(final byte[] snapshotName, final boolean takeFailSafeSnapshot)
-      throws IOException, RestoreSnapshotException {
-    restoreSnapshot(Bytes.toString(snapshotName), takeFailSafeSnapshot);
-  }
-
-  /*
+  /**
    * Check whether the snapshot exists and contains disabled table
    *
    * @param snapshotName name of the snapshot to restore
@@ -2769,54 +2272,12 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> restoreSnapshotAsync(final String snapshotName)
-      throws IOException, RestoreSnapshotException {
-    TableName tableName = getTableNameBeforeRestoreSnapshot(snapshotName);
-
-    // The table does not exists, switch to clone.
-    if (!tableExists(tableName)) {
-      return cloneSnapshotAsync(snapshotName, tableName);
-    }
-
-    // Check if the table is disabled
-    if (!isTableDisabled(tableName)) {
-      throw new TableNotDisabledException(tableName);
-    }
-
-    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
-  }
-
-  @Override
-  public void cloneSnapshot(final byte[] snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(Bytes.toString(snapshotName), tableName);
-  }
-
-  @Override
-  public void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+      boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
-    get(
-      internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
-      Integer.MAX_VALUE,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  public void cloneSnapshot(final String snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(snapshotName, tableName, false);
-  }
-
-  @Override
-  public Future<Void> cloneSnapshotAsync(final String snapshotName, final TableName tableName)
-      throws IOException, TableExistsException {
-    if (tableExists(tableName)) {
-      throw new TableExistsException(tableName);
-    }
-    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl);
   }
 
   @Override
@@ -2980,11 +2441,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<SnapshotDescription> listSnapshots(String regex) throws IOException {
-    return listSnapshots(Pattern.compile(regex));
-  }
-
-  @Override
   public List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException {
     List<SnapshotDescription> matched = new LinkedList<>();
     List<SnapshotDescription> snapshots = listSnapshots();
@@ -2994,12 +2450,6 @@ public class HBaseAdmin implements Admin {
       }
     }
     return matched;
-  }
-
-  @Override
-  public List<SnapshotDescription> listTableSnapshots(String tableNameRegex,
-      String snapshotNameRegex) throws IOException {
-    return listTableSnapshots(Pattern.compile(tableNameRegex), Pattern.compile(snapshotNameRegex));
   }
 
   @Override
@@ -3020,11 +2470,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void deleteSnapshot(final byte[] snapshotName) throws IOException {
-    deleteSnapshot(Bytes.toString(snapshotName));
-  }
-
-  @Override
   public void deleteSnapshot(final String snapshotName) throws IOException {
     // make sure the snapshot is possibly valid
     TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(snapshotName));
@@ -3040,11 +2485,6 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
-  }
-
-  @Override
-  public void deleteSnapshots(final String regex) throws IOException {
-    deleteSnapshots(Pattern.compile(regex));
   }
 
   @Override
@@ -3072,12 +2512,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex)
-      throws IOException {
-    deleteTableSnapshots(Pattern.compile(tableNameRegex), Pattern.compile(snapshotNameRegex));
-  }
-
-  @Override
   public void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern)
       throws IOException {
     List<SnapshotDescription> snapshots = listTableSnapshots(tableNamePattern, snapshotNamePattern);
@@ -3100,11 +2534,6 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
-  }
-
-  @Override
-  public QuotaRetriever getQuotaRetriever(final QuotaFilter filter) throws IOException {
-    return QuotaRetriever.open(conf, filter);
   }
 
   @Override
@@ -3166,21 +2595,6 @@ public class HBaseAdmin implements Admin {
         }
       }
     };
-  }
-
-  /**
-   * Simple {@link Abortable}, throwing RuntimeException on abort.
-   */
-  private static class ThrowableAbortable implements Abortable {
-    @Override
-    public void abort(String why, Throwable e) {
-      throw new RuntimeException(why, e);
-    }
-
-    @Override
-    public boolean isAborted() {
-      return true;
-    }
   }
 
   @Override
@@ -3463,7 +2877,15 @@ public class HBaseAdmin implements Admin {
     @Override
     public V get() throws InterruptedException, ExecutionException {
       // TODO: should we ever spin forever?
-      throw new UnsupportedOperationException();
+      // fix HBASE-21715. TODO: If the function call get() without timeout limit is not allowed,
+      // is it possible to compose instead of inheriting from the class Future for this class?
+      try {
+        return get(admin.getProcedureTimeout, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException e) {
+        LOG.warn("Failed to get the procedure with procId=" + procId + " throws exception " + e
+            .getMessage(), e);
+        return null;
+      }
     }
 
     @Override
@@ -3685,7 +3107,7 @@ public class HBaseAdmin implements Admin {
     /**
      * @return the table descriptor
      */
-    protected TableDescriptor getTableDescriptor() throws IOException {
+    protected TableDescriptor getDescriptor() throws IOException {
       return getAdmin().getDescriptor(getTableName());
     }
 
@@ -3767,19 +3189,9 @@ public class HBaseAdmin implements Admin {
       });
     }
 
-    protected void waitForSchemaUpdate(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new TableWaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          return getAdmin().getAlterStatus(tableName).getFirst() == 0;
-        }
-      });
-    }
-
     protected void waitForAllRegionsOnline(final long deadlineTs, final byte[][] splitKeys)
         throws IOException, TimeoutException {
-      final TableDescriptor desc = getTableDescriptor();
+      final TableDescriptor desc = getDescriptor();
       final AtomicInteger actualRegCount = new AtomicInteger(0);
       final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
@@ -3793,16 +3205,18 @@ public class HBaseAdmin implements Admin {
           if (l == null) {
             return true;
           }
-          if (!l.getRegionInfo().getTable().equals(desc.getTableName())) {
+          if (!l.getRegion().getTable().equals(desc.getTableName())) {
             return false;
           }
-          if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
+          if (l.getRegion().isOffline() || l.getRegion().isSplit()) {
+            return true;
+          }
           HRegionLocation[] locations = list.getRegionLocations();
           for (HRegionLocation location : locations) {
             if (location == null) continue;
             ServerName serverName = location.getServerName();
             // Make sure that regions are assigned to server
-            if (serverName != null && serverName.getHostAndPort() != null) {
+            if (serverName != null && serverName.getAddress() != null) {
               actualRegCount.incrementAndGet();
             }
           }
@@ -3950,13 +3364,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws IOException {
-    get(addReplicationPeerAsync(peerId, peerConfig, enabled), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> addReplicationPeerAsync(String peerId, ReplicationPeerConfig peerConfig,
       boolean enabled) throws IOException {
     AddReplicationPeerResponse response = executeCallable(
@@ -3968,11 +3375,6 @@ public class HBaseAdmin implements Admin {
         }
       });
     return new ReplicationFuture(this, peerId, response.getProcId(), () -> "ADD_REPLICATION_PEER");
-  }
-
-  @Override
-  public void removeReplicationPeer(String peerId) throws IOException {
-    get(removeReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -3991,11 +3393,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void enableReplicationPeer(final String peerId) throws IOException {
-    get(enableReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> enableReplicationPeerAsync(final String peerId) throws IOException {
     EnableReplicationPeerResponse response =
       executeCallable(new MasterCallable<EnableReplicationPeerResponse>(getConnection(),
@@ -4008,11 +3405,6 @@ public class HBaseAdmin implements Admin {
       });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "ENABLE_REPLICATION_PEER");
-  }
-
-  @Override
-  public void disableReplicationPeer(final String peerId) throws IOException {
-    get(disableReplicationPeerAsync(peerId), this.syncWaitTimeout, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -4044,13 +3436,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void updateReplicationPeerConfig(final String peerId,
-      final ReplicationPeerConfig peerConfig) throws IOException {
-    get(updateReplicationPeerConfigAsync(peerId, peerConfig), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
-  }
-
-  @Override
   public Future<Void> updateReplicationPeerConfigAsync(final String peerId,
       final ReplicationPeerConfig peerConfig) throws IOException {
     UpdateReplicationPeerConfigResponse response =
@@ -4064,13 +3449,6 @@ public class HBaseAdmin implements Admin {
       });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "UPDATE_REPLICATION_PEER_CONFIG");
-  }
-
-  @Override
-  public void transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState state)
-      throws IOException {
-    get(transitReplicationPeerSyncReplicationStateAsync(peerId, state), this.syncWaitTimeout,
-      TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -4088,32 +3466,6 @@ public class HBaseAdmin implements Admin {
         });
     return new ReplicationFuture(this, peerId, response.getProcId(),
       () -> "TRANSIT_REPLICATION_PEER_SYNCHRONOUS_REPLICATION_STATE");
-  }
-
-  @Override
-  public void appendReplicationPeerTableCFs(String id,
-      Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    if (tableCfs == null) {
-      throw new ReplicationException("tableCfs is null");
-    }
-    ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    ReplicationPeerConfig newPeerConfig =
-        ReplicationPeerConfigUtil.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
-    updateReplicationPeerConfig(id, newPeerConfig);
-  }
-
-  @Override
-  public void removeReplicationPeerTableCFs(String id,
-      Map<TableName, List<String>> tableCfs)
-      throws ReplicationException, IOException {
-    if (tableCfs == null) {
-      throw new ReplicationException("tableCfs is null");
-    }
-    ReplicationPeerConfig peerConfig = getReplicationPeerConfig(id);
-    ReplicationPeerConfig newPeerConfig =
-        ReplicationPeerConfigUtil.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
-    updateReplicationPeerConfig(id, newPeerConfig);
   }
 
   @Override
@@ -4313,15 +3665,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<ServerName> clearDeadServers(final List<ServerName> servers) throws IOException {
-    if (servers == null || servers.size() == 0) {
-      throw new IllegalArgumentException("servers cannot be null or empty");
-    }
+  public List<ServerName> clearDeadServers(List<ServerName> servers) throws IOException {
     return executeCallable(new MasterCallable<List<ServerName>>(getConnection(),
             getRpcControllerFactory()) {
       @Override
       protected List<ServerName> rpcCall() throws Exception {
-        ClearDeadServersRequest req = RequestConverter.buildClearDeadServersRequest(servers);
+        ClearDeadServersRequest req = RequestConverter.
+          buildClearDeadServersRequest(servers == null? Collections.emptyList(): servers);
         return ProtobufUtil.toServerNameList(
                 master.clearDeadServers(getRpcController(), req).getServerNameList());
       }
@@ -4335,11 +3685,185 @@ public class HBaseAdmin implements Admin {
     if (tableExists(newTableName)) {
       throw new TableExistsException(newTableName);
     }
-    TableDescriptor htd = TableDescriptorBuilder.copy(newTableName, getTableDescriptor(tableName));
+    TableDescriptor htd = TableDescriptorBuilder.copy(newTableName, getDescriptor(tableName));
     if (preserveSplits) {
       createTable(htd, getTableSplits(tableName));
     } else {
       createTable(htd);
     }
+  }
+
+  @Override
+  public boolean switchRpcThrottle(final boolean enable) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master
+            .switchRpcThrottle(getRpcController(), MasterProtos.SwitchRpcThrottleRequest
+                .newBuilder().setRpcThrottleEnabled(enable).build())
+            .getPreviousRpcThrottleEnabled();
+      }
+    });
+  }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master.isRpcThrottleEnabled(getRpcController(),
+          IsRpcThrottleEnabledRequest.newBuilder().build()).getRpcThrottleEnabled();
+      }
+    });
+  }
+
+  @Override
+  public boolean exceedThrottleQuotaSwitch(final boolean enable) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return this.master
+            .switchExceedThrottleQuota(getRpcController(),
+              MasterProtos.SwitchExceedThrottleQuotaRequest.newBuilder()
+                  .setExceedThrottleQuotaEnabled(enable).build())
+            .getPreviousExceedThrottleQuotaEnabled();
+      }
+    });
+  }
+
+  @Override
+  public Map<TableName, Long> getSpaceQuotaTableSizes() throws IOException {
+    return executeCallable(
+      new MasterCallable<Map<TableName, Long>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected Map<TableName, Long> rpcCall() throws Exception {
+          GetSpaceQuotaRegionSizesResponse resp = master.getSpaceQuotaRegionSizes(
+            getRpcController(), RequestConverter.buildGetSpaceQuotaRegionSizesRequest());
+          Map<TableName, Long> tableSizes = new HashMap<>();
+          for (RegionSizes sizes : resp.getSizesList()) {
+            TableName tn = ProtobufUtil.toTableName(sizes.getTableName());
+            tableSizes.put(tn, sizes.getSize());
+          }
+          return tableSizes;
+        }
+      });
+  }
+
+  @Override
+  public Map<TableName, SpaceQuotaSnapshot> getRegionServerSpaceQuotaSnapshots(
+      ServerName serverName) throws IOException {
+    final AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
+    Callable<GetSpaceQuotaSnapshotsResponse> callable =
+      new Callable<GetSpaceQuotaSnapshotsResponse>() {
+        @Override
+        public GetSpaceQuotaSnapshotsResponse call() throws Exception {
+          return admin.getSpaceQuotaSnapshots(rpcControllerFactory.newController(),
+            RequestConverter.buildGetSpaceQuotaSnapshotsRequest());
+        }
+      };
+    GetSpaceQuotaSnapshotsResponse resp = ProtobufUtil.call(callable);
+    Map<TableName, SpaceQuotaSnapshot> snapshots = new HashMap<>();
+    for (TableQuotaSnapshot snapshot : resp.getSnapshotsList()) {
+      snapshots.put(ProtobufUtil.toTableName(snapshot.getTableName()),
+        SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot()));
+    }
+    return snapshots;
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(String namespace) throws IOException {
+    return executeCallable(
+      new MasterCallable<SpaceQuotaSnapshot>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected SpaceQuotaSnapshot rpcCall() throws Exception {
+          GetQuotaStatesResponse resp = master.getQuotaStates(getRpcController(),
+            RequestConverter.buildGetQuotaStatesRequest());
+          for (GetQuotaStatesResponse.NamespaceQuotaSnapshot nsSnapshot : resp
+            .getNsSnapshotsList()) {
+            if (namespace.equals(nsSnapshot.getNamespace())) {
+              return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(nsSnapshot.getSnapshot());
+            }
+          }
+          return null;
+        }
+      });
+  }
+
+  @Override
+  public SpaceQuotaSnapshot getCurrentSpaceQuotaSnapshot(TableName tableName) throws IOException {
+    return executeCallable(
+      new MasterCallable<SpaceQuotaSnapshot>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected SpaceQuotaSnapshot rpcCall() throws Exception {
+          GetQuotaStatesResponse resp = master.getQuotaStates(getRpcController(),
+            RequestConverter.buildGetQuotaStatesRequest());
+          HBaseProtos.TableName protoTableName = ProtobufUtil.toProtoTableName(tableName);
+          for (GetQuotaStatesResponse.TableQuotaSnapshot tableSnapshot : resp
+            .getTableSnapshotsList()) {
+            if (protoTableName.equals(tableSnapshot.getTableName())) {
+              return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(tableSnapshot.getSnapshot());
+            }
+          }
+          return null;
+        }
+      });
+  }
+
+  @Override
+  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        GrantRequest req =
+            ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
+        this.master.grant(getRpcController(), req);
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void revoke(UserPermission userPermission) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
+        this.master.revoke(getRpcController(), req);
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public List<UserPermission>
+      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
+    return executeCallable(
+      new MasterCallable<List<UserPermission>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected List<UserPermission> rpcCall() throws Exception {
+          AccessControlProtos.GetUserPermissionsRequest req =
+              ShadedAccessControlUtil.buildGetUserPermissionsRequest(getUserPermissionsRequest);
+          AccessControlProtos.GetUserPermissionsResponse response =
+              this.master.getUserPermissions(getRpcController(), req);
+          return response.getUserPermissionList().stream()
+              .map(userPermission -> ShadedAccessControlUtil.toUserPermission(userPermission))
+              .collect(Collectors.toList());
+        }
+      });
+  }
+
+  @Override
+  public void close() {
+  }
+
+  @Override
+  public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
+    return splitRegionAsync(regionName, null);
+  }
+
+  @Override
+  public Future<Void> createTableAsync(TableDescriptor desc) throws IOException {
+    return createTableAsync(desc, null);
   }
 }

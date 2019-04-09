@@ -42,13 +42,14 @@ public class RSProcedureHandler extends EventHandler {
 
   @Override
   public void process() {
-    Exception error = null;
+    Throwable error = null;
     try {
       callable.call();
-    } catch (Exception e) {
-      LOG.error("Catch exception when call RSProcedureCallable: ", e);
-      error = e;
+    } catch (Throwable t) {
+      LOG.error("Error when call RSProcedureCallable: ", t);
+      error = t;
+    } finally {
+      ((HRegionServer) server).remoteProcedureComplete(procId, error);
     }
-    ((HRegionServer) server).remoteProcedureComplete(procId, error);
   }
 }

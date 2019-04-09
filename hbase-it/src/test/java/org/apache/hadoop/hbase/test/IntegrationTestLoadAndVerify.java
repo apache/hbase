@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -506,10 +507,10 @@ public void cleanUpCluster() throws Exception {
     if (keys.isEmpty()) throw new RuntimeException("No keys to find");
     LOG.info("Count of keys to find: " + keys.size());
     for(byte [] key: keys)  LOG.info("Key: " + Bytes.toStringBinary(key));
-    Path hbaseDir = new Path(getConf().get(HConstants.HBASE_DIR));
     // Now read all WALs. In two dirs. Presumes certain layout.
-    Path walsDir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
-    Path oldWalsDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path walsDir = new Path(CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_LOGDIR_NAME);
+    Path oldWalsDir = new Path(
+        CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_OLDLOGDIR_NAME);
     LOG.info("Running Search with keys inputDir=" + inputDir +
       " against " + getConf().get(HConstants.HBASE_DIR));
     int ret = ToolRunner.run(new WALSearcher(getConf()), new String [] {walsDir.toString(), ""});

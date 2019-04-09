@@ -34,21 +34,7 @@ class TableQueue extends Queue<TableName> {
 
   @Override
   public boolean isAvailable() {
-    // if there are no items in the queue, or the namespace is locked.
-    // we can't execute operation on this table
-    if (isEmpty() || namespaceLockStatus.hasExclusiveLock()) {
-      return false;
-    }
-
-    if (getLockStatus().hasExclusiveLock()) {
-      // if we have an exclusive lock already taken
-      // only child of the lock owner can be executed
-      final Procedure<?> nextProc = peek();
-      return nextProc != null && getLockStatus().hasLockAccess(nextProc);
-    }
-
-    // no xlock
-    return true;
+    return !isEmpty() && !namespaceLockStatus.hasExclusiveLock();
   }
 
   @Override
@@ -67,8 +53,8 @@ class TableQueue extends Queue<TableName> {
       case ENABLE:
         return true;
       case EDIT:
-        // we allow concurrent edit on the NS table
-        return !proc.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
+        // we allow concurrent edit on the ns family in meta table
+        return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
         return false;
       // region operations are using the shared-lock on the table

@@ -35,8 +35,11 @@ class PeerQueue extends Queue<String> {
   }
 
   private static boolean requirePeerExclusiveLock(PeerProcedureInterface proc) {
-    return proc.getPeerOperationType() != PeerOperationType.REFRESH
-        && proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL
-        && proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL_REMOTE;
+    // These procedures will only be used as sub procedures, and if they are scheduled, it always
+    // means that the root procedure holds the xlock, so we do not need to hold any locks.
+    return proc.getPeerOperationType() != PeerOperationType.REFRESH &&
+      proc.getPeerOperationType() != PeerOperationType.RECOVER_STANDBY &&
+      proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL &&
+      proc.getPeerOperationType() != PeerOperationType.SYNC_REPLICATION_REPLAY_WAL_REMOTE;
   }
 }

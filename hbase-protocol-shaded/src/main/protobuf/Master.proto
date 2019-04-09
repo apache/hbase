@@ -36,6 +36,7 @@ import "Procedure.proto";
 import "Quota.proto";
 import "Replication.proto";
 import "Snapshot.proto";
+import "AccessControl.proto";
 
 /* Column-level protobufs */
 
@@ -99,6 +100,7 @@ message MergeTableRegionsResponse {
 
 message AssignRegionRequest {
   required RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 message AssignRegionResponse {
@@ -571,6 +573,7 @@ message SetQuotaRequest {
   optional ThrottleRequest throttle = 7;
 
   optional SpaceLimitRequest space_limit = 8;
+  optional string region_server = 9;
 }
 
 message SetQuotaResponse {
@@ -632,6 +635,29 @@ message ClearDeadServersRequest {
 
 message ClearDeadServersResponse {
   repeated ServerName server_name = 1;
+}
+
+message SwitchRpcThrottleRequest {
+  required bool rpc_throttle_enabled = 1;
+}
+
+message SwitchRpcThrottleResponse {
+  required bool previous_rpc_throttle_enabled = 1;
+}
+
+message IsRpcThrottleEnabledRequest {
+}
+
+message IsRpcThrottleEnabledResponse {
+  required bool rpc_throttle_enabled = 1;
+}
+
+message SwitchExceedThrottleQuotaRequest {
+  required bool exceed_throttle_quota_enabled = 1;
+}
+
+message SwitchExceedThrottleQuotaResponse {
+  required bool previous_exceed_throttle_quota_enabled = 1;
 }
 
 service MasterService {
@@ -991,6 +1017,22 @@ service MasterService {
   rpc ClearDeadServers(ClearDeadServersRequest)
     returns(ClearDeadServersResponse);
 
+  /** Turn the quota throttle on or off */
+  rpc SwitchRpcThrottle (SwitchRpcThrottleRequest) returns (SwitchRpcThrottleResponse);
+
+  /** Get if is rpc throttled enabled */
+  rpc IsRpcThrottleEnabled (IsRpcThrottleEnabledRequest)
+    returns (IsRpcThrottleEnabledResponse);
+
+  /** Turn the exceed throttle quota on or off */
+  rpc SwitchExceedThrottleQuota (SwitchExceedThrottleQuotaRequest)
+    returns (SwitchExceedThrottleQuotaResponse);
+
+  rpc Grant(GrantRequest) returns (GrantResponse);
+
+  rpc Revoke(RevokeRequest) returns (RevokeResponse);
+
+  rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
 }
 
 // HBCK Service definitions.
@@ -1009,6 +1051,7 @@ message SetTableStateInMetaRequest {
 // Region at a time.
 message AssignsRequest {
   repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 /** Like Admin's AssignRegionResponse except it can
@@ -1023,6 +1066,7 @@ message AssignsResponse {
  */
 message UnassignsRequest {
   repeated RegionSpecifier region = 1;
+  optional bool override = 2 [default = false];
 }
 
 /** Like Admin's UnassignRegionResponse except it can
@@ -1035,11 +1079,20 @@ message UnassignsResponse {
 message BypassProcedureRequest {
   repeated uint64 proc_id = 1;
   optional uint64 waitTime = 2; // wait time in ms to acquire lock on a procedure
-  optional bool force = 3; // if true, procedure is marked for bypass even if its executing
+  optional bool override = 3 [default = false]; // if true, procedure is marked for bypass even if its executing
+  optional bool recursive = 4;
 }
 
 message BypassProcedureResponse {
   repeated bool bypassed = 1;
+}
+
+message ScheduleServerCrashProcedureRequest {
+  repeated ServerName serverName = 1;
+}
+
+message ScheduleServerCrashProcedureResponse {
+  repeated uint64 pid = 1;
 }
 
 service HbckService {
@@ -1068,4 +1121,8 @@ service HbckService {
   /** Bypass a procedure to completion, procedure is completed but no actual work is done*/
   rpc BypassProcedure(BypassProcedureRequest)
     returns(BypassProcedureResponse);
+
+  /** Schedule a ServerCrashProcedure to help recover a crash server */
+  rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
+    returns(ScheduleServerCrashProcedureResponse);
 }

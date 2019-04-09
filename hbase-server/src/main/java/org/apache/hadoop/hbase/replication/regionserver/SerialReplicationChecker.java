@@ -255,7 +255,7 @@ class SerialReplicationChecker {
     // has been moved to another RS and then back, so we need to check the barrier.
     MutableLong previousPushedSeqId = pushed.getUnchecked(encodedNameAsString);
     if (seqId == previousPushedSeqId.longValue() + 1) {
-      LOG.trace("The sequence id for {} is continuous, pass");
+      LOG.trace("The sequence id for {} is continuous, pass", entry);
       previousPushedSeqId.increment();
       return true;
     }

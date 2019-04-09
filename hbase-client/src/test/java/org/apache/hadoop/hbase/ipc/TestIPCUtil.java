@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.junit.Assert.assertThat;
 
-import java.net.ConnectException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -36,18 +40,66 @@ public class TestIPCUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIPCUtil.class);
+    HBaseClassTestRule.forClass(TestIPCUtil.class);
 
+  private static Throwable create(Class<? extends Throwable> clazz) throws InstantiationException,
+      IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor();
+      c.setAccessible(true);
+      return c.newInstance();
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor(String.class);
+      c.setAccessible(true);
+      return c.newInstance("error");
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c = clazz.getDeclaredConstructor(Throwable.class);
+      c.setAccessible(true);
+      return c.newInstance(new Exception("error"));
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    try {
+      Constructor<? extends Throwable> c =
+        clazz.getDeclaredConstructor(String.class, Throwable.class);
+      c.setAccessible(true);
+      return c.newInstance("error", new Exception("error"));
+    } catch (NoSuchMethodException e) {
+      // fall through
+    }
+
+    Constructor<? extends Throwable> c =
+      clazz.getDeclaredConstructor(Throwable.class, Throwable.class);
+    c.setAccessible(true);
+    return c.newInstance(new Exception("error"), "error");
+  }
+
+  /**
+   * See HBASE-21862, it is very important to keep the original exception type for connection
+   * exceptions.
+   */
   @Test
-  public void testWrapException() throws Exception {
-    final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 0);
-    assertTrue(wrapException(address, new ConnectException()) instanceof ConnectException);
-    assertTrue(
-      wrapException(address, new SocketTimeoutException()) instanceof SocketTimeoutException);
-    assertTrue(wrapException(address, new ConnectionClosingException(
-        "Test AbstractRpcClient#wrapException")) instanceof ConnectionClosingException);
-    assertTrue(
-      wrapException(address, new CallTimeoutException("Test AbstractRpcClient#wrapException"))
-          .getCause() instanceof CallTimeoutException);
+  public void testWrapConnectionException() throws Exception {
+    List<Throwable> exceptions = new ArrayList<>();
+    for (Class<? extends Throwable> clazz : ClientExceptionsUtil.getConnectionExceptionTypes()) {
+      exceptions.add(create(clazz));
+    }
+    InetSocketAddress addr = InetSocketAddress.createUnresolved("127.0.0.1", 12345);
+    for (Throwable exception : exceptions) {
+      if (exception instanceof TimeoutException) {
+        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(TimeoutIOException.class));
+      } else {
+        assertThat(IPCUtil.wrapException(addr, exception), instanceOf(exception.getClass()));
+      }
+    }
   }
 }

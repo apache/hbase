@@ -339,4 +339,9 @@ public class Put extends Mutation implements HeapSize {
   public Put setTTL(long ttl) {
     return (Put) super.setTTL(ttl);
   }
+
+  @Override
+  public Put setPriority(int priority) {
+    return (Put) super.setPriority(priority);
+  }
 }

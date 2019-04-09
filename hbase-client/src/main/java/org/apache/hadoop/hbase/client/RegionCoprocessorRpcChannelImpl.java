@@ -17,10 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -32,12 +38,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
 
 /**
  * The implementation of a region based coprocessor rpc channel.
@@ -102,16 +102,16 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
-    conn.callerFactory.<Message> single().table(tableName).row(row)
+    addListener(
+      conn.callerFactory.<Message> single().table(tableName).row(row)
         .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call()
-        .whenComplete((r, e) -> {
-          if (e != null) {
-            ((ClientCoprocessorRpcController) controller).setFailed(e);
-          }
-          done.run(r);
-        });
+        .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
+      (r, e) -> {
+        if (e != null) {
+          ((ClientCoprocessorRpcController) controller).setFailed(e);
+        }
+        done.run(r);
+      });
   }
-
 }

@@ -19,7 +19,6 @@
  * limitations under the License.
  */
 -->
-<!-- for testing -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
@@ -71,7 +70,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
         <dependencies>
           <!-- resource bundle only needed at build time -->
           <dependency>
@@ -501,22 +499,6 @@
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
     </dependency>
-    <!-- Jackson only used in compile/runtime scope by BlockCacheUtil class
-         also used by some tests
-      -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.apache.htrace</groupId>
@@ -533,14 +515,20 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minikdc</artifactId>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk16</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>bouncycastle</groupId>
+          <artifactId>bcprov-jdk15</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.kerby</groupId>
@@ -574,7 +562,6 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-crypto</artifactId>
-      <version>${commons-crypto.version}</version>
       <exclusions>
         <exclusion>
           <groupId>net.java.dev.jna</groupId>
@@ -691,7 +678,22 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <!--This dependency is not in top-level pom so needs
+               version specified-->
+          <version>${hadoop-two.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-annotations</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
@@ -787,6 +789,13 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-distcp</artifactId>
+          <!--This dependency is not in top-level pom so needs
+               version specified-->
+          <version>${hadoop-three.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </dependency>
         <dependency>
@@ -813,6 +822,10 @@
           <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
           <type>test-jar</type>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-annotations</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

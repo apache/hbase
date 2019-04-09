@@ -71,7 +71,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     if (snapshot == null) {
       final TableName snapshotTableName = TableName.valueOf("testCloneSnapshot");
       long tid = System.currentTimeMillis();
-      final byte[] snapshotName = Bytes.toBytes("snapshot-" + tid);
+      final String snapshotName = "snapshot-" + tid;
 
       Admin admin = UTIL.getAdmin();
       // create Table
@@ -177,8 +177,8 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
       new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
-    int numberOfSteps = 0; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    int lastStep = 2; // failing before CLONE_SNAPSHOT_WRITE_FS_LAYOUT
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), clonedTableName);

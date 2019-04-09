@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -47,6 +50,16 @@ public interface AsyncConnection extends Closeable {
    * @return An AsyncRegionLocator instance
    */
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
+
+  /**
+   * Clear all the entries in the region location cache, for all the tables.
+   * <p/>
+   * If you only want to clear the cache for a specific table, use
+   * {@link AsyncTableRegionLocator#clearRegionLocationCache()}.
+   * <p/>
+   * This may cause performance issue so use it with caution.
+   */
+  void clearRegionLocationCache();
 
   /**
    * Retrieve an {@link AsyncTable} implementation for accessing a table.
@@ -181,4 +194,39 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    */
   AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
+
+  /**
+   * Returns whether the connection is closed or not.
+   * @return true if this connection is closed
+   */
+  boolean isClosed();
+
+  /**
+   * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
+   * be thread-safe. A new instance should be created by each thread. This is a lightweight
+   * operation. Pooling or caching of the returned Hbck instance is not recommended.
+   * <p/>
+   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
+   * <p/>
+   * This will be used mostly by hbck tool.
+   * @return an Hbck instance for active master. Active master is fetched from the zookeeper.
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
+  CompletableFuture<Hbck> getHbck();
+
+  /**
+   * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
+   * be thread-safe. A new instance should be created by each thread. This is a lightweight
+   * operation. Pooling or caching of the returned Hbck instance is not recommended.
+   * <p/>
+   * The caller is responsible for calling {@link Hbck#close()} on the returned Hbck instance.
+   * <p/>
+   * This will be used mostly by hbck tool. This may only be used to by pass getting registered
+   * master from ZK. In situations where ZK is not available or active master is not registered with
+   * ZK and user can get master address by other means, master can be explicitly specified.
+   * @param masterServer explicit {@link ServerName} for master server
+   * @return an Hbck instance for a specified master server
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
+  Hbck getHbck(ServerName masterServer) throws IOException;
 }

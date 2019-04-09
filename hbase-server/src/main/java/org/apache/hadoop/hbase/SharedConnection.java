@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.TableBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -89,5 +89,20 @@ public class SharedConnection implements Connection {
   @Override
   public TableBuilder getTableBuilder(TableName tableName, ExecutorService pool) {
     return this.conn.getTableBuilder(tableName, pool);
+  }
+
+  @Override
+  public void clearRegionLocationCache() {
+    conn.clearRegionLocationCache();
+  }
+
+  @Override
+  public Hbck getHbck() throws IOException {
+    return conn.getHbck();
+  }
+
+  @Override
+  public Hbck getHbck(ServerName masterServer) throws IOException {
+    return conn.getHbck(masterServer);
   }
 }

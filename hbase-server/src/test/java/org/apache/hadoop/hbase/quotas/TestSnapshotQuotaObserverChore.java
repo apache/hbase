@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.quotas;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -159,6 +161,13 @@ public class TestSnapshotQuotaObserverChore {
     TableName tn1 = helper.createTableWithRegions(ns.getName(), 1);
     TableName tn2 = helper.createTableWithRegions(ns.getName(), 1);
     TableName tn3 = helper.createTableWithRegions(1);
+
+    // Set a throttle quota on 'default' namespace
+    admin.setQuota(QuotaSettingsFactory.throttleNamespace(tn3.getNamespaceAsString(),
+      ThrottleType.WRITE_NUMBER, 100, TimeUnit.SECONDS));
+    // Set a user throttle quota
+    admin.setQuota(
+      QuotaSettingsFactory.throttleUser("user", ThrottleType.WRITE_NUMBER, 100, TimeUnit.MINUTES));
 
     // Set a space quota on the namespace
     admin.setQuota(QuotaSettingsFactory.limitNamespaceSpace(
@@ -353,7 +362,8 @@ public class TestSnapshotQuotaObserverChore {
         }
         r.advance();
         Cell c = r.current();
-        return lastSeenSize.get() == QuotaTableUtil.parseSnapshotSize(c);
+        // The compaction result file has an additional compaction event tracker
+        return lastSeenSize.get() <= QuotaTableUtil.parseSnapshotSize(c);
       }
     });
 
@@ -374,7 +384,8 @@ public class TestSnapshotQuotaObserverChore {
         }
         r.advance();
         Cell c = r.current();
-        return lastSeenSize.get() == QuotaTableUtil.parseSnapshotSize(c);
+        // The compaction result file has an additional compaction event tracker
+        return lastSeenSize.get() <= QuotaTableUtil.parseSnapshotSize(c);
       }
     });
 
@@ -384,8 +395,7 @@ public class TestSnapshotQuotaObserverChore {
     assertFalse(r.isEmpty());
     r.advance();
     long size = QuotaTableUtil.parseSnapshotSize(r.current());
-    // Two snapshots of equal size.
-    assertEquals(lastSeenSize.get() * 2, size);
+    assertTrue(lastSeenSize.get() * 2 <= size);
   }
 
   /**

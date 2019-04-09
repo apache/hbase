@@ -111,14 +111,16 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (this.enabled.get() && !this.services.isInMaintenanceMode() && am != null &&
+      if (this.enabled.get() && !this.services.isInMaintenanceMode() &&
+        !this.services.getServerManager().isClusterShutdown() && am != null &&
         am.isMetaLoaded() && !am.hasRegionsInTransition()) {
         scan();
       } else {
         LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
           ", maintenanceMode=" + this.services.isInMaintenanceMode() + ", am=" + am +
           ", metaLoaded=" + (am != null && am.isMetaLoaded()) + ", hasRIT=" +
-          (am != null && am.hasRegionsInTransition()));
+          (am != null && am.hasRegionsInTransition()) + " clusterShutDown=" + this.services
+          .getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);
@@ -200,7 +202,7 @@ public class CatalogJanitor extends ScheduledChore {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
-    TableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
+    TableDescriptor htd = getDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
@@ -408,7 +410,7 @@ public class CatalogJanitor extends ScheduledChore {
     }
 
     boolean references = false;
-    TableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
+    TableDescriptor parentDescriptor = getDescriptor(parent.getTable());
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
@@ -426,7 +428,7 @@ public class CatalogJanitor extends ScheduledChore {
     return new Pair<>(Boolean.TRUE, Boolean.valueOf(references));
   }
 
-  private TableDescriptor getTableDescriptor(final TableName tableName)
+  private TableDescriptor getDescriptor(final TableName tableName)
       throws FileNotFoundException, IOException {
     return this.services.getTableDescriptors().get(tableName);
   }

@@ -106,7 +106,7 @@ public class TestClientTimeouts {
           admin = connection.getAdmin();
           // run some admin commands
           HBaseAdmin.available(conf);
-          admin.setBalancerRunning(false, false);
+          admin.balancerSwitch(false, false);
         } catch (MasterNotRunningException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
           // a MasterNotRunningException.  It's a bug if we get other exceptions.

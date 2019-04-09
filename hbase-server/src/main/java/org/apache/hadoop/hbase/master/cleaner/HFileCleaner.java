@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,6 +46,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
+  private MasterServices master;
 
   public static final String MASTER_HFILE_CLEANER_PLUGINS = "hbase.master.hfilecleaner.plugins";
 
@@ -494,6 +497,12 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
     super.cancel(mayInterruptIfRunning);
     for (Thread t: this.threads) {
       t.interrupt();
+    }
+  }
+
+  public void init(Map<String, Object> params) {
+    if (params != null && params.containsKey(HMaster.MASTER)) {
+      this.master = (MasterServices) params.get(HMaster.MASTER);
     }
   }
 }

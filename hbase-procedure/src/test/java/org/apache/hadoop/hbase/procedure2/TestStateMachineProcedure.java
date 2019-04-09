@@ -48,6 +48,9 @@ public class TestStateMachineProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(TestStateMachineProcedure.class);
 
   private static final Exception TEST_FAILURE_EXCEPTION = new Exception("test failure") {
+
+    private static final long serialVersionUID = 2147942238987041310L;
+
     @Override
     public boolean equals(final Object other) {
       if (this == other) return true;
@@ -193,6 +196,11 @@ public class TestStateMachineProcedure {
     }
 
     @Override
+    protected boolean isRollbackSupported(TestSMProcedureState state) {
+      return true;
+    }
+
+    @Override
     protected void rollbackState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("ROLLBACK " + state + " " + this);
       env.rollbackCount.incrementAndGet();
@@ -274,7 +282,7 @@ public class TestStateMachineProcedure {
 
   public static class SimpleChildProcedure extends NoopProcedure<TestProcEnv> {
     @Override
-    protected Procedure[] execute(TestProcEnv env) {
+    protected Procedure<TestProcEnv>[] execute(TestProcEnv env) {
       LOG.info("EXEC " + this);
       env.execCount.incrementAndGet();
       if (env.triggerChildRollback) {

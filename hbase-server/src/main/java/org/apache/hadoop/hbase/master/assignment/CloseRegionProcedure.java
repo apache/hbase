@@ -20,14 +20,17 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloseRegionProcedureStateData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * The remote procedure used to close a region.
@@ -45,9 +48,9 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     super();
   }
 
-  public CloseRegionProcedure(RegionInfo region, ServerName targetServer,
-      ServerName assignCandidate) {
-    super(region, targetServer);
+  public CloseRegionProcedure(TransitRegionStateProcedure parent, RegionInfo region,
+      ServerName targetServer, ServerName assignCandidate) {
+    super(parent, region, targetServer);
     this.assignCandidate = assignCandidate;
   }
 
@@ -58,7 +61,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
-    return new RegionCloseOperation(this, region, assignCandidate);
+    return new RegionCloseOperation(this, region, getProcId(), assignCandidate);
   }
 
   @Override
@@ -82,7 +85,22 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected boolean shouldDispatch(RegionStateNode regionNode) {
-    return !regionNode.isInState(RegionState.State.CLOSED, RegionState.State.ABNORMALLY_CLOSED);
+  protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
+    return env.getAssignmentManager().getAssignmentManagerMetrics().getCloseProcMetrics();
+  }
+
+  @Override
+  protected void reportTransition(RegionStateNode regionNode, TransitionCode transitionCode,
+      long seqId) throws IOException {
+    if (transitionCode != TransitionCode.CLOSED) {
+      throw new UnexpectedStateException("Received report unexpected " + transitionCode +
+        " transition, " + regionNode.toShortString() + ", " + this + ", expected CLOSED.");
+    }
+  }
+
+  @Override
+  protected void updateTransition(MasterProcedureEnv env, RegionStateNode regionNode,
+      TransitionCode transitionCode, long seqId) throws IOException {
+    env.getAssignmentManager().regionClosed(regionNode, true);
   }
 }

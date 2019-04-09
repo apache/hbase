@@ -134,7 +134,6 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -144,20 +143,20 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.collect.TreeMultimap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -923,7 +922,7 @@ public class HBaseFsck extends Configured implements Closeable {
             // For all the stores in this column family.
             for (FileStatus storeFile : storeFiles) {
               HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(),
-                new CacheConfig(getConf()), true, getConf());
+                CacheConfig.DISABLED, true, getConf());
               if ((reader.getFirstKey() != null)
                   && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
                       ((KeyValue.KeyOnlyKeyValue) reader.getFirstKey().get()).getKey()) > 0))) {
@@ -1026,8 +1025,7 @@ public class HBaseFsck extends Configured implements Closeable {
         byte[] start, end;
         HFile.Reader hf = null;
         try {
-          CacheConfig cacheConf = new CacheConfig(getConf());
-          hf = HFile.createReader(fs, hfile.getPath(), cacheConf, true, getConf());
+          hf = HFile.createReader(fs, hfile.getPath(), CacheConfig.DISABLED, true, getConf());
           hf.loadFileInfo();
           Optional<Cell> startKv = hf.getFirstKey();
           start = CellUtil.cloneRow(startKv.get());
@@ -1682,9 +1680,9 @@ public class HBaseFsck extends Configured implements Closeable {
    *          Meta recovery WAL directory inside WAL directory path.
    */
   private void removeHBCKMetaRecoveryWALDir(String walFactoryId) throws IOException {
-    Path rootdir = FSUtils.getRootDir(getConf());
-    Path walLogDir = new Path(new Path(rootdir, HConstants.HREGION_LOGDIR_NAME), walFactoryId);
-    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    Path walLogDir = new Path(new Path(CommonFSUtils.getWALRootDir(getConf()),
+          HConstants.HREGION_LOGDIR_NAME), walFactoryId);
+    FileSystem fs = CommonFSUtils.getWALFileSystem(getConf());
     FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
     if (walFiles == null || walFiles.length == 0) {
       LOG.info("HBCK meta recovery WAL directory is empty, removing it now.");
@@ -2002,11 +2000,6 @@ public class HBaseFsck extends Configured implements Closeable {
     });
   }
 
-  private ServerName getMetaRegionServerName(int replicaId)
-  throws IOException, KeeperException {
-    return new MetaTableLocator().getMetaRegionLocation(zkw, replicaId);
-  }
-
   /**
    * Contacts each regionserver and fetches metadata about regions.
    * @param regionServerList - the list of region servers to connect to
@@ -2298,7 +2291,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (hi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return;
     }
-    int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+    int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
     for (int i = 1; i < numReplicas; i++) {
       if (hi.getPrimaryHRIForDeployedReplica() == null) continue;
       RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
@@ -2351,7 +2344,7 @@ public class HBaseFsck extends Configured implements Closeable {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
     // also get the locations of the replicas to close if the primary region is being closed
     if (hi.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-      int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+      int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
       for (int i = 0; i < numReplicas; i++) {
         get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
         get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i));
@@ -2402,7 +2395,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       // also assign replicas if needed (do it only when this call operates on a primary replica)
       if (hbi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) return;
-      int replicationCount = admin.getTableDescriptor(hri.getTable()).getRegionReplication();
+      int replicationCount = admin.getDescriptor(hri.getTable()).getRegionReplication();
       for (int i = 1; i < replicationCount; i++) {
         hri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
         HbckInfo h = regionInfoMap.get(hri.getEncodedName());
@@ -2519,7 +2512,7 @@ public class HBaseFsck extends Configured implements Closeable {
           }
         }
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
-        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
             admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
               .getLiveServerMetrics().keySet(), numReplicas);
@@ -2547,7 +2540,7 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
-        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        int numReplicas = admin.getDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
             admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
               .getLiveServerMetrics().keySet(), numReplicas);
@@ -3667,7 +3660,7 @@ public class HBaseFsck extends Configured implements Closeable {
         metaRegions.put(value.getReplicaId(), value);
       }
     }
-    int metaReplication = admin.getTableDescriptor(TableName.META_TABLE_NAME)
+    int metaReplication = admin.getDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication();
     boolean noProblem = true;
     // There will be always entries in regionInfoMap corresponding to hbase:meta & its replicas

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -621,7 +622,7 @@ public class RestoreSnapshotHelper {
   private void cloneHdfsMobRegion(final Map<String, SnapshotRegionManifest> regionManifests,
       final RegionInfo region) throws IOException {
     // clone region info (change embedded tableName with the new one)
-    Path clonedRegionPath = MobUtils.getMobRegionPath(conf, tableDesc.getTableName());
+    Path clonedRegionPath = MobUtils.getMobRegionPath(rootDir, tableDesc.getTableName());
     cloneRegion(clonedRegionPath, region, regionManifests.get(region.getEncodedName()));
   }
 
@@ -828,7 +829,7 @@ public class RestoreSnapshotHelper {
       throw new IllegalArgumentException("Filesystems for restore directory and HBase root " +
           "directory should be the same");
     }
-    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath())) {
+    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath() +"/")) {
       throw new IllegalArgumentException("Restore directory cannot be a sub directory of HBase " +
           "root directory. RootDir: " + rootDir + ", restoreDir: " + restoreDir);
     }
@@ -858,15 +859,14 @@ public class RestoreSnapshotHelper {
       Configuration conf) throws IOException {
     if (snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null) {
       LOG.info("Restore snapshot acl to table. snapshot: " + snapshot + ", table: " + newTableName);
-      ListMultimap<String, TablePermission> perms =
+      ListMultimap<String, Permission> perms =
           ShadedAccessControlUtil.toUserTablePermissions(snapshot.getUsersAndPermissions());
       try (Connection conn = ConnectionFactory.createConnection(conf)) {
-        for (Entry<String, TablePermission> e : perms.entries()) {
+        for (Entry<String, Permission> e : perms.entries()) {
           String user = e.getKey();
-          TablePermission perm = e.getValue();
-          perm.setTableName(newTableName);
-          AccessControlClient.grant(conn, perm.getTableName(), user, perm.getFamily(),
-            perm.getQualifier(), perm.getActions());
+          TablePermission tablePerm = (TablePermission) e.getValue();
+          AccessControlClient.grant(conn, newTableName, user, tablePerm.getFamily(),
+            tablePerm.getQualifier(), tablePerm.getActions());
         }
       } catch (Throwable e) {
         throw new IOException("Grant acl into newly creatd table failed. snapshot: " + snapshot

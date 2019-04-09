@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 public class MockNoopMasterServices implements MasterServices {
@@ -157,11 +156,6 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public CoordinatedStateManager getCoordinatedStateManager() {
-    return null;
-  }
-
-  @Override
-  public MetaTableLocator getMetaTableLocator() {
     return null;
   }
 

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,25 +32,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -96,7 +91,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
-@JsonIgnoreProperties({"encodingCountsForTest"})
 public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   private static final Logger LOG = LoggerFactory.getLogger(LruBlockCache.class);
@@ -158,21 +152,23 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
   /** Concurrent map (the cache) */
-  private final Map<BlockCacheKey, LruCachedBlock> map;
+  private transient final Map<BlockCacheKey, LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
-  private final ReentrantLock evictionLock = new ReentrantLock(true);
+  private transient final ReentrantLock evictionLock = new ReentrantLock(true);
+
   private final long maxBlockSize;
 
   /** Volatile boolean to track if we are in an eviction process or not */
   private volatile boolean evictionInProgress = false;
 
   /** Eviction thread */
-  private final EvictionThread evictionThread;
+  private transient final EvictionThread evictionThread;
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
-    new ThreadFactoryBuilder().setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
+  private transient final ScheduledExecutorService scheduleThreadPool =
+    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+      .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -227,7 +223,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * external cache as L2.
    * Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
    */
-  private BlockCache victimHandler = null;
+  private transient BlockCache victimHandler = null;
 
   /**
    * Default constructor.  Specify maximum size and expected average block
@@ -1170,10 +1166,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  @JsonIgnore
   public BlockCache[] getBlockCaches() {
-    if (victimHandler != null)
-      return new BlockCache[] {this, this.victimHandler};
+    if (victimHandler != null) {
+      return new BlockCache[] { this, this.victimHandler };
+    }
     return null;
   }
 }

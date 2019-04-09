@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -65,7 +64,7 @@ public class TestTableSnapshotScanner {
   public static void blockUntilSplitFinished(HBaseTestingUtility util, TableName tableName,
       int expectedRegionSize) throws Exception {
     for (int i = 0; i < 100; i++) {
-      List<HRegionInfo> hRegionInfoList = util.getAdmin().getTableRegions(tableName);
+      List<RegionInfo> hRegionInfoList = util.getAdmin().getRegions(tableName);
       if (hRegionInfoList.size() >= expectedRegionSize) {
         break;
       }

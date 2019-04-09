@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -85,6 +88,8 @@ public class TestAsyncTableBatch {
 
   private static byte[][] SPLIT_KEYS;
 
+  private static int MAX_KEY_VALUE_SIZE = 64 * 1024;
+
   @Parameter(0)
   public String tableType;
 
@@ -109,6 +114,8 @@ public class TestAsyncTableBatch {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY,
+      MAX_KEY_VALUE_SIZE);
     TEST_UTIL.startMiniCluster(3);
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
@@ -222,8 +229,8 @@ public class TestAsyncTableBatch {
     actions.add(new Increment(Bytes.toBytes(3)).addColumn(FAMILY, CQ, 1));
     actions.add(new Append(Bytes.toBytes(4)).addColumn(FAMILY, CQ, Bytes.toBytes(4)));
     RowMutations rm = new RowMutations(Bytes.toBytes(5));
-    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes(100L)));
-    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes(200L)));
+    rm.add((Mutation) new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes(100L)));
+    rm.add((Mutation) new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes(200L)));
     actions.add(rm);
     actions.add(new Get(Bytes.toBytes(6)));
 
@@ -280,8 +287,50 @@ public class TestAsyncTableBatch {
     }
     try {
       futures.get(SPLIT_KEYS.length - 1).get();
+      fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(RetriesExhaustedException.class));
+    }
+  }
+
+  @Test
+  public void testPartialSuccessOnSameRegion() throws InterruptedException, ExecutionException {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
+    List<CompletableFuture<Object>> futures = table.batch(Arrays.asList(
+      new Put(Bytes.toBytes("put")).addColumn(Bytes.toBytes("not-exists"), CQ,
+        Bytes.toBytes("bad")),
+      new Increment(Bytes.toBytes("inc")).addColumn(FAMILY, CQ, 1),
+      new Put(Bytes.toBytes("put")).addColumn(FAMILY, CQ, Bytes.toBytes("good"))));
+    try {
+      futures.get(0).get();
+      fail();
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause().getCause(), instanceOf(NoSuchColumnFamilyException.class));
+    }
+    assertEquals(1, Bytes.toLong(((Result) futures.get(1).get()).getValue(FAMILY, CQ)));
+    assertTrue(((Result) futures.get(2).get()).isEmpty());
+    assertEquals("good",
+      Bytes.toString(table.get(new Get(Bytes.toBytes("put"))).get().getValue(FAMILY, CQ)));
+  }
+
+  @Test
+  public void testInvalidPut() {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
+    try {
+      table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), new Put(Bytes.toBytes(0))));
+      fail("Should fail since the put does not contain any cells");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("No columns to insert"));
+    }
+
+    try {
+      table.batch(
+        Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
+          new Delete(Bytes.toBytes(0))));
+      fail("Should fail since the put exceeds the max key value size");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), containsString("KeyValue size too large"));
     }
   }
 }

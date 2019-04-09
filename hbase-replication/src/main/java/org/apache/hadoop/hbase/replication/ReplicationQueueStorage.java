@@ -202,4 +202,11 @@ public interface ReplicationQueueStorage {
    * created hfile references during the call may not be included.
    */
   Set<String> getAllHFileRefs() throws ReplicationException;
+
+  /**
+   * Get full znode name for given region server
+   * @param serverName the name of the region server
+   * @return full znode name
+   */
+  String getRsNode(ServerName serverName);
 }

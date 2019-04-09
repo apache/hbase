@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.List;
@@ -29,11 +28,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,7 +81,7 @@ public class TestFavoredNodeTableImport {
       Threads.sleep(1);
     }
     Admin admin = UTIL.getAdmin();
-    admin.setBalancerRunning(false, true);
+    admin.balancerSwitch(false, true);
 
     String tableName = "testFNImport";
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
@@ -107,8 +106,8 @@ public class TestFavoredNodeTableImport {
 
     FavoredNodesManager fnm = UTIL.getHBaseCluster().getMaster().getFavoredNodesManager();
 
-    List<HRegionInfo> regionsOfTable = admin.getTableRegions(TableName.valueOf(tableName));
-    for (HRegionInfo rInfo : regionsOfTable) {
+    List<RegionInfo> regionsOfTable = admin.getRegions(TableName.valueOf(tableName));
+    for (RegionInfo rInfo : regionsOfTable) {
       Set<ServerName> favNodes = Sets.newHashSet(fnm.getFavoredNodes(rInfo));
       assertNotNull(favNodes);
       assertEquals("Required no of favored nodes not found.", FAVORED_NODES_NUM, favNodes.size());

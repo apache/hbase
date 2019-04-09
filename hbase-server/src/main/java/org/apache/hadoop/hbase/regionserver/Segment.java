@@ -28,10 +28,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -84,17 +81,19 @@ public abstract class Segment implements MemStoreSizing {
     long dataSize = 0;
     long heapSize = 0;
     long OffHeapSize = 0;
+    int cellsCount = 0;
     for (Segment segment : segments) {
       MemStoreSize memStoreSize = segment.getMemStoreSize();
       dataSize += memStoreSize.getDataSize();
       heapSize += memStoreSize.getHeapSize();
       OffHeapSize += memStoreSize.getOffHeapSize();
+      cellsCount += memStoreSize.getCellsCount();
     }
     this.comparator = comparator;
     this.updatesLock = new ReentrantReadWriteLock();
     // Do we need to be thread safe always? What if ImmutableSegment?
     // DITTO for the TimeRangeTracker below.
-    this.memStoreSizing = new ThreadSafeMemStoreSizing(dataSize, heapSize, OffHeapSize);
+    this.memStoreSizing = new ThreadSafeMemStoreSizing(dataSize, heapSize, OffHeapSize, cellsCount);
     this.timeRangeTracker = trt;
   }
 
@@ -142,12 +141,6 @@ public abstract class Segment implements MemStoreSizing {
     return getCellSet().isEmpty();
   }
 
-  /**
-   * @return number of cells in segment
-   */
-  public int getCellsCount() {
-    return getCellSet().size();
-  }
 
   /**
    * Closing a segment before it is being discarded
@@ -176,7 +169,7 @@ public abstract class Segment implements MemStoreSizing {
       return cell;
     }
 
-    Cell cellFromMslab = null;
+    Cell cellFromMslab;
     if (forceCloneOfBigCell) {
       cellFromMslab = this.memStoreLAB.forceCopyOfBigCellInto(cell);
     } else {
@@ -190,8 +183,7 @@ public abstract class Segment implements MemStoreSizing {
    */
   @VisibleForTesting
   static int getCellLength(Cell cell) {
-    return cell instanceof ExtendedCell ? ((ExtendedCell)cell).getSerializedSize():
-        KeyValueUtil.length(cell);
+    return cell.getSerializedSize();
   }
 
   public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
@@ -248,8 +240,13 @@ public abstract class Segment implements MemStoreSizing {
   }
 
   @Override
-  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead) {
-    return this.memStoreSizing.incMemStoreSize(delta, heapOverhead, offHeapOverhead);
+  public int getCellsCount() {
+    return memStoreSizing.getCellsCount();
+  }
+
+  @Override
+  public long incMemStoreSize(long delta, long heapOverhead, long offHeapOverhead, int cellsCount) {
+    return this.memStoreSizing.incMemStoreSize(delta, heapOverhead, offHeapOverhead, cellsCount);
   }
 
   public boolean sharedLock() {
@@ -325,20 +322,21 @@ public abstract class Segment implements MemStoreSizing {
       MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
     long delta = 0;
     long cellSize = getCellLength(cellToAdd);
+    int cellsCount = succ ? 1 : 0;
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
     if (succ || mslabUsed) {
       delta = cellSize;
     }
-    if(sizeAddedPreOperation) {
+    if (sizeAddedPreOperation) {
       delta -= cellSize;
     }
     long heapSize = heapSizeChange(cellToAdd, succ || mslabUsed);
     long offHeapSize = offHeapSizeChange(cellToAdd, succ || mslabUsed);
-    incMemStoreSize(delta, heapSize, offHeapSize);
+    incMemStoreSize(delta, heapSize, offHeapSize, cellsCount);
     if (memstoreSizing != null) {
-      memstoreSizing.incMemStoreSize(delta, heapSize, offHeapSize);
+      memstoreSizing.incMemStoreSize(delta, heapSize, offHeapSize, cellsCount);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
@@ -369,7 +367,7 @@ public abstract class Segment implements MemStoreSizing {
       }
       res += indexEntryOnHeapSize(onHeap);
       if(onHeap) {
-        res += PrivateCellUtil.estimatedSizeOfCell(cell);
+        res += cell.heapSize();
       }
       res = ClassSize.align(res);
     }
@@ -386,7 +384,7 @@ public abstract class Segment implements MemStoreSizing {
       }
       res += indexEntryOffHeapSize(offHeap);
       if(offHeap) {
-        res += PrivateCellUtil.estimatedSizeOfCell(cell);
+        res += cell.heapSize();
       }
       res = ClassSize.align(res);
     }

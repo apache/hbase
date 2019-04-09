@@ -103,8 +103,8 @@ public class SyncReplicationTestBase {
     ZK_UTIL.startMiniZKCluster();
     initTestingUtility(UTIL1, "/cluster1");
     initTestingUtility(UTIL2, "/cluster2");
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartMiniClusterOption option =
+      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL1.startMiniCluster(option);
     UTIL2.startMiniCluster(option);
     TableDescriptor td =
@@ -217,16 +217,16 @@ public class SyncReplicationTestBase {
     return getRemoteWALDir(remoteWALDir, peerId);
   }
 
-  protected Path getRemoteWALDir(Path remoteWALDir, String peerId) {
+  protected final Path getRemoteWALDir(Path remoteWALDir, String peerId) {
     return new Path(remoteWALDir, peerId);
   }
 
-  protected Path getReplayRemoteWALs(Path remoteWALDir, String peerId) {
+  protected final Path getReplayRemoteWALs(Path remoteWALDir, String peerId) {
     return new Path(remoteWALDir, peerId + "-replay");
   }
 
-  protected void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtility utility)
-      throws Exception {
+  protected final void verifyRemovedPeer(String peerId, Path remoteWALDir,
+      HBaseTestingUtility utility) throws Exception {
     ReplicationPeerStorage rps = ReplicationStorageFactory
       .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
@@ -247,7 +247,7 @@ public class SyncReplicationTestBase {
     }
   }
 
-  protected void verifyReplicationRequestRejection(HBaseTestingUtility utility,
+  protected final void verifyReplicationRequestRejection(HBaseTestingUtility utility,
       boolean expectedRejection) throws Exception {
     HRegionServer regionServer = utility.getRSForFirstRegionInTable(TABLE_NAME);
     ClusterConnection connection = regionServer.getClusterConnection();
@@ -269,5 +269,21 @@ public class SyncReplicationTestBase {
         assertTrue(e.getMessage().contains(TABLE_NAME.toString()));
       }
     }
+  }
+
+  protected final void waitUntilDeleted(HBaseTestingUtility util, Path remoteWAL) throws Exception {
+    MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    util.waitFor(30000, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return !mfs.getWALFileSystem().exists(remoteWAL);
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return remoteWAL + " has not been deleted yet";
+      }
+    });
   }
 }

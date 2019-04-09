@@ -75,6 +75,11 @@ public class TestHBaseRpcControllerImpl {
             // Fake out a Cell. All this Cell has is a value that is an int in size and equal
             // to the above 'index' param serialized as an int.
             return new Cell() {
+              @Override
+              public long heapSize() {
+                return 0;
+              }
+
               private final int i = index;
 
               @Override
@@ -162,6 +167,11 @@ public class TestHBaseRpcControllerImpl {
               @Override
               public int getValueLength() {
                 return Bytes.SIZEOF_INT;
+              }
+
+              @Override
+              public int getSerializedSize() {
+                return 0;
               }
 
               @Override

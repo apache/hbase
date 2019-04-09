@@ -32,7 +32,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
   private final MutableFastCounter logReadInEditsCounter;
-  private final MutableFastCounter logEditsFilteredCounter;
+  private final MutableFastCounter walEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
   private final MutableFastCounter shippedBytesCounter;
@@ -52,6 +52,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter repeatedFileBytes;
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
+  private final MutableFastCounter failedRecoveryQueue;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -72,7 +73,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
 
     logReadInEditsCounter = rms.getMetricsRegistry().getCounter(SOURCE_LOG_READ_IN_EDITS, 0L);
 
-    logEditsFilteredCounter = rms.getMetricsRegistry().getCounter(SOURCE_LOG_EDITS_FILTERED, 0L);
+    walEditsFilteredCounter = rms.getMetricsRegistry().getCounter(SOURCE_LOG_EDITS_FILTERED, 0L);
 
     shippedHFilesCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_HFILES, 0L);
 
@@ -89,6 +90,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
     completedWAL = rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_LOGS, 0L);
     completedRecoveryQueue = rms.getMetricsRegistry()
             .getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
+    failedRecoveryQueue = rms.getMetricsRegistry()
+            .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -108,7 +111,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   }
 
   @Override public void incrLogEditsFiltered(long size) {
-    logEditsFilteredCounter.incr(size);
+    walEditsFilteredCounter.incr(size);
   }
 
   @Override public void incrBatchesShipped(int batches) {
@@ -199,7 +202,10 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   public void incrCompletedRecoveryQueue() {
     completedRecoveryQueue.incr(1L);
   }
-
+  @Override
+  public void incrFailedRecoveryQueue() {
+    failedRecoveryQueue.incr(1L);
+  }
   @Override
   public void init() {
     rms.init();
@@ -253,5 +259,20 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public String getMetricsName() {
     return rms.getMetricsName();
+  }
+
+  @Override
+  public long getWALEditsRead() {
+    return this.logReadInEditsCounter.value();
+  }
+
+  @Override
+  public long getShippedOps() {
+    return this.shippedOpsCounter.value();
+  }
+
+  @Override
+  public long getEditsFiltered() {
+    return this.walEditsFilteredCounter.value();
   }
 }

@@ -48,7 +48,8 @@ struct TColumnValue {
   2: required binary qualifier,
   3: required binary value,
   4: optional i64 timestamp,
-  5: optional binary tags
+  5: optional binary tags,
+  6: optional byte type
 }
 
 /**
@@ -67,6 +68,7 @@ struct TResult {
   1: optional binary row,
   2: required list<TColumnValue> columnValues,
   3: optional bool stale = false
+  4: optional bool partial = false
 }
 
 /**
@@ -90,6 +92,7 @@ enum TDeleteType {
  */
 
 enum TDurability {
+  USE_DEFAULT = 0,
   SKIP_WAL = 1,
   ASYNC_WAL = 2,
   SYNC_WAL = 3,
@@ -139,6 +142,12 @@ struct TGet {
   8: optional TAuthorization authorizations
   9: optional TConsistency consistency
   10: optional i32 targetReplicaId
+  11: optional bool cacheBlocks
+  12: optional i32 storeLimit
+  13: optional i32 storeOffset
+  14: optional bool existence_only
+  15: optional binary filterBytes
+
 }
 
 /**
@@ -211,6 +220,7 @@ struct TIncrement {
   4: optional map<binary, binary> attributes,
   5: optional TDurability durability
   6: optional TCellVisibility cellVisibility
+  7: optional bool returnResults
 }
 
 /* 
@@ -222,6 +232,7 @@ struct TAppend {
   3: optional map<binary, binary> attributes,
   4: optional TDurability durability
   5: optional TCellVisibility cellVisibility
+  6: optional bool returnResults
 }
 
 enum TReadType {
@@ -252,14 +263,16 @@ struct TScan {
   15: optional i32 limit
   16: optional TConsistency consistency
   17: optional i32 targetReplicaId
+  18: optional binary filterBytes
+
 }
 
 /**
  * Atomic mutation for the specified row. It can be either Put or Delete.
  */
 union TMutation {
-  1: TPut put,
-  2: TDelete deleteSingle,
+  1: TPut put
+  2: TDelete deleteSingle
 }
 
 /**
@@ -303,6 +316,142 @@ enum TCompareOp {
   GREATER_OR_EQUAL = 4,
   GREATER = 5,
   NO_OP = 6
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.regionserver.BloomType
+ */
+enum TBloomFilterType {
+/**
+   * Bloomfilters disabled
+   */
+  NONE = 0,
+  /**
+   * Bloom enabled with Table row as Key
+   */
+  ROW = 1,
+  /**
+   * Bloom enabled with Table row &amp; column (family+qualifier) as Key
+   */
+  ROWCOL = 2,
+  /**
+   * Bloom enabled with Table row prefix as Key, specify the length of the prefix
+   */
+  ROWPREFIX_FIXED_LENGTH = 3,
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.io.compress.Algorithm
+ */
+enum TCompressionAlgorithm {
+  LZO = 0,
+  GZ = 1,
+  NONE = 2,
+  SNAPPY = 3,
+  LZ4 = 4,
+  BZIP2 = 5,
+  ZSTD = 6
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.io.encoding.DataBlockEncoding
+ */
+enum TDataBlockEncoding {
+/** Disable data block encoding. */
+  NONE = 0,
+  // id 1 is reserved for the BITSET algorithm to be added later
+  PREFIX = 2,
+  DIFF  = 3,
+  FAST_DIFF = 4,
+  // id 5 is reserved for the COPY_KEY algorithm for benchmarking
+  // COPY_KEY(5, "org.apache.hadoop.hbase.io.encoding.CopyKeyDataBlockEncoder"),
+  // PREFIX_TREE(6, "org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec"),
+  ROW_INDEX_V1 = 7
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.KeepDeletedCells
+ */
+enum TKeepDeletedCells {
+  /** Deleted Cells are not retained. */
+  FALSE = 0,
+  /**
+   * Deleted Cells are retained until they are removed by other means
+   * such TTL or VERSIONS.
+   * If no TTL is specified or no new versions of delete cells are
+   * written, they are retained forever.
+   */
+  TRUE = 1,
+  /**
+   * Deleted Cells are retained until the delete marker expires due to TTL.
+   * This is useful when TTL is combined with MIN_VERSIONS and one
+   * wants to keep a minimum number of versions around but at the same
+   * time remove deleted cells after the TTL.
+   */
+  TTL = 2
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.TableName
+ */
+struct TTableName {
+  /** namespace name */
+  1: optional binary ns
+  /** tablename */
+  2: required binary qualifier
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.client.ColumnFamilyDescriptor
+ */
+struct TColumnFamilyDescriptor {
+  1: required binary name
+  2: optional map<binary, binary> attributes
+  3: optional map<string, string> configuration
+  4: optional i32 blockSize
+  5: optional TBloomFilterType bloomnFilterType
+  6: optional TCompressionAlgorithm compressionType
+  7: optional i16 dfsReplication
+  8: optional TDataBlockEncoding dataBlockEncoding
+  9: optional TKeepDeletedCells keepDeletedCells
+  10: optional i32 maxVersions
+  11: optional i32 minVersions
+  12: optional i32 scope
+  13: optional i32 timeToLive
+  14: optional bool blockCacheEnabled
+  15: optional bool cacheBloomsOnWrite
+  16: optional bool cacheDataOnWrite
+  17: optional bool cacheIndexesOnWrite
+  18: optional bool compressTags
+  19: optional bool evictBlocksOnClose
+  20: optional bool inMemory
+
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.client.TableDescriptor
+ */
+struct TTableDescriptor {
+ 1: required TTableName tableName
+ 2: optional list<TColumnFamilyDescriptor> columns
+ 3: optional map<binary, binary> attributes
+ 4: optional TDurability durability
+}
+
+/**
+ * Thrift wrapper around
+ * org.apache.hadoop.hbase.NamespaceDescriptor
+ */
+struct TNamespaceDescriptor {
+1: required string name
+2: optional map<string, string> configuration
 }
 
 
@@ -643,5 +792,240 @@ service THBaseService {
 
     /** row mutations to execute if the value matches */
     7: required TRowMutations rowMutations
+  ) throws (1: TIOError io)
+
+  /**
+  * Get a table descriptor.
+  * @return the TableDescriptor of the giving tablename
+  **/
+  TTableDescriptor getTableDescriptor(
+    /** the tablename of the table to get tableDescriptor*/
+    1: required TTableName table
+  ) throws (1: TIOError io)
+
+  /**
+  * Get table descriptors of tables.
+  * @return the TableDescriptor of the giving tablename
+  **/
+  list<TTableDescriptor> getTableDescriptors(
+    /** the tablename list of the tables to get tableDescriptor*/
+    1: required list<TTableName> tables
+  ) throws (1: TIOError io)
+
+  /**
+  *
+  * @return true if table exists already, false if not
+  **/
+  bool tableExists(
+    /** the tablename of the tables to check*/
+    1: TTableName tableName
+  ) throws (1: TIOError io)
+
+  /**
+  * Get table descriptors of tables that match the given pattern
+  * @return the tableDescriptors of the matching table
+  **/
+  list<TTableDescriptor> getTableDescriptorsByPattern(
+    /** The regular expression to match against */
+    1: optional string regex
+    /** set to false if match only against userspace tables */
+    2: required bool includeSysTables
+  ) throws (1: TIOError io)
+
+  /**
+  * Get table descriptors of tables in the given namespace
+  * @return the tableDescriptors in the namespce
+  **/
+  list<TTableDescriptor> getTableDescriptorsByNamespace(
+    /** The namesapce's name */
+    1: required string name
+  ) throws (1: TIOError io)
+
+  /**
+  * Get table names of tables that match the given pattern
+  * @return the table names of the matching table
+  **/
+  list<TTableName> getTableNamesByPattern(
+    /** The regular expression to match against */
+    1: optional string regex
+    /** set to false if match only against userspace tables */
+    2: required bool includeSysTables
+  ) throws (1: TIOError io)
+
+  /**
+  * Get table names of tables in the given namespace
+  * @return the table names of the matching table
+  **/
+  list<TTableName> getTableNamesByNamespace(
+    /** The namesapce's name */
+    1: required string name
+  ) throws (1: TIOError io)
+
+  /**
+  * Creates a new table with an initial set of empty regions defined by the specified split keys.
+  * The total number of regions created will be the number of split keys plus one. Synchronous
+  * operation.
+  **/
+  void createTable(
+    /** table descriptor for table */
+    1: required TTableDescriptor desc
+    /** rray of split keys for the initial regions of the table */
+    2: optional list<binary> splitKeys
+  ) throws (1: TIOError io)
+
+  /**
+  * Deletes a table. Synchronous operation.
+  **/
+  void deleteTable(
+    /** the tablename to delete */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+  /**
+  * Truncate a table. Synchronous operation.
+  **/
+  void truncateTable(
+    /** the tablename to truncate */
+    1: required TTableName tableName
+    /** whether to  preserve previous splits*/
+    2: required bool preserveSplits
+  ) throws (1: TIOError io)
+
+  /**
+  * Enalbe a table
+  **/
+  void enableTable(
+    /** the tablename to enable */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+  /**
+  * Disable a table
+  **/
+  void disableTable(
+    /** the tablename to disable */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+  /**
+  *
+  * @return true if table is enabled, false if not
+  **/
+  bool isTableEnabled(
+    /** the tablename to check */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+ /**
+  *
+  * @return true if table is disabled, false if not
+  **/
+  bool isTableDisabled(
+    /** the tablename to check */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+ /**
+  *
+  * @return true if table is available, false if not
+  **/
+  bool isTableAvailable(
+    /** the tablename to check */
+    1: required TTableName tableName
+  ) throws (1: TIOError io)
+
+  /**
+   * Use this api to check if the table has been created with the specified number of splitkeys
+   * which was used while creating the given table. Note : If this api is used after a table's
+   * region gets splitted, the api may return false.
+   *
+   * @return true if table is available, false if not
+  **/
+  bool isTableAvailableWithSplit(
+    /** the tablename to check */
+    1: required TTableName tableName
+    /** keys to check if the table has been created with all split keys */
+    2: optional list<binary> splitKeys
+  ) throws (1: TIOError io)
+
+  /**
+  * Add a column family to an existing table. Synchronous operation.
+  **/
+  void addColumnFamily(
+    /** the tablename to add column family to */
+    1: required TTableName tableName
+    /** column family descriptor of column family to be added */
+    2: required TColumnFamilyDescriptor column
+  ) throws (1: TIOError io)
+
+  /**
+  * Delete a column family from a table. Synchronous operation.
+  **/
+  void deleteColumnFamily(
+    /** the tablename to delete column family from */
+    1: required TTableName tableName
+    /** name of column family to be deleted */
+    2: required binary column
+  ) throws (1: TIOError io)
+
+  /**
+  * Modify an existing column family on a table. Synchronous operation.
+  **/
+  void modifyColumnFamily(
+     /** the tablename to modify column family */
+    1: required TTableName tableName
+    /** column family descriptor of column family to be modified */
+    2: required TColumnFamilyDescriptor column
+  ) throws (1: TIOError io)
+
+  /**
+  * Modify an existing table
+  **/
+  void modifyTable(
+    /** the descriptor of the table to modify */
+    1: required TTableDescriptor desc
+  ) throws (1: TIOError io)
+
+  /**
+  * Create a new namespace. Blocks until namespace has been successfully created or an exception is
+  * thrown
+  **/
+  void createNamespace(
+    /** descriptor which describes the new namespace */
+    1: required TNamespaceDescriptor namespaceDesc
+  ) throws (1: TIOError io)
+
+  /**
+  * Modify an existing namespace.  Blocks until namespace has been successfully modified or an
+  * exception is thrown
+  **/
+  void modifyNamespace(
+    /** descriptor which describes the new namespace */
+    1: required TNamespaceDescriptor namespaceDesc
+  ) throws (1: TIOError io)
+
+  /**
+  * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
+  * Blocks until namespace has been successfully deleted or an
+  * exception is thrown.
+  **/
+  void deleteNamespace(
+    /** namespace name */
+    1: required string name
+  ) throws (1: TIOError io)
+
+  /**
+  *  Get a namespace descriptor by name.
+  *  @retrun the descriptor
+  **/
+  TNamespaceDescriptor getNamespaceDescriptor(
+    /** name of namespace descriptor */
+    1: required string name
+  ) throws (1: TIOError io)
+
+  /**
+  * @return all namespaces
+  **/
+  list<TNamespaceDescriptor> listNamespaceDescriptors(
   ) throws (1: TIOError io)
 }

@@ -148,11 +148,11 @@ public class TestProcedureSkipPersistence {
   public void test() throws Exception {
     TestProcedure proc = new TestProcedure();
     long procId = procExecutor.submitProcedure(proc);
-    htu.waitFor(30000, () -> proc.isWaiting());
+    htu.waitFor(30000, () -> proc.isWaiting() && procExecutor.getActiveExecutorCount() == 0);
     ProcedureTestingUtility.restart(procExecutor);
     htu.waitFor(30000, () -> {
       Procedure<?> p = procExecutor.getProcedure(procId);
-      return p.isWaiting() || p.isFinished();
+      return (p.isWaiting() || p.isFinished()) && procExecutor.getActiveExecutorCount() == 0;
     });
     assertFalse(procExecutor.isFinished(procId));
     ProcedureTestingUtility.restart(procExecutor);

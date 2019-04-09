@@ -44,6 +44,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -220,13 +221,16 @@ public class TestHStore {
     WALFactory wals = new WALFactory(walConf, methodName);
     region = new HRegion(new HRegionFileSystem(conf, fs, tableDir, info), wals.getWAL(info), conf,
         htd, null);
+    region.regionServicesForStores = Mockito.spy(region.regionServicesForStores);
+    ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+    Mockito.when(region.regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
   }
 
   private HStore init(String methodName, Configuration conf, TableDescriptorBuilder builder,
       ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
     initHRegion(methodName, conf, builder, hcd, hook, switchToPread);
     if (hook == null) {
-      store = new HStore(region, hcd, conf);
+      store = new HStore(region, hcd, conf, false);
     } else {
       store = new MyStore(region, hcd, conf, hook, switchToPread);
     }
@@ -265,7 +269,7 @@ public class TestHStore {
         MemStoreSizing kvSize = new NonThreadSafeMemStoreSizing();
         store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), kvSize);
         // add the heap size of active (mutable) segment
-        kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
+        kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0, 0);
         mss = store.memstore.getFlushableSize();
         assertEquals(kvSize.getMemStoreSize(), mss);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
@@ -278,12 +282,12 @@ public class TestHStore {
         }
         // due to snapshot, change mutable to immutable segment
         kvSize.incMemStoreSize(0,
-            CSLMImmutableSegment.DEEP_OVERHEAD_CSLM-MutableSegment.DEEP_OVERHEAD, 0);
+          CSLMImmutableSegment.DEEP_OVERHEAD_CSLM - MutableSegment.DEEP_OVERHEAD, 0, 0);
         mss = store.memstore.getFlushableSize();
         assertEquals(kvSize.getMemStoreSize(), mss);
         MemStoreSizing kvSize2 = new NonThreadSafeMemStoreSizing();
-        store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
-        kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0);
+        store.add(new KeyValue(row, family, qf2, 2, (byte[]) null), kvSize2);
+        kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD, 0, 0);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
         assertEquals(kvSize.getMemStoreSize(), mss);
@@ -491,7 +495,8 @@ public class TestHStore {
     w.close();
     this.store.close();
     // Reopen it... should pick up two files
-    this.store = new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c);
+    this.store =
+        new HStore(this.store.getHRegion(), this.store.getColumnFamilyDescriptor(), c, false);
     assertEquals(2, this.store.getStorefilesCount());
 
     result = HBaseTestingUtility.getFromStoreFile(store,
@@ -1521,7 +1526,7 @@ public class TestHStore {
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(family);
     initHRegion(name.getMethodName(), conf,
       TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd, null, false);
-    HStore store = new HStore(region, hcd, conf) {
+    HStore store = new HStore(region, hcd, conf, false) {
 
       @Override
       protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
@@ -1563,7 +1568,7 @@ public class TestHStore {
 
     MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration
         confParam, MyStoreHook hook, boolean switchToPread) throws IOException {
-      super(region, family, confParam);
+      super(region, family, confParam, false);
       this.hook = hook;
     }
 

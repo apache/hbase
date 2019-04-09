@@ -72,7 +72,7 @@ public class KeyValueCodec implements Codec {
     @Override
     protected Cell parseCell() throws IOException {
       // No tags here
-      return KeyValueUtil.iscreate(in, false);
+      return KeyValueUtil.createKeyValueFromInputStream(in, false);
     }
   }
 
@@ -114,7 +114,6 @@ public class KeyValueCodec implements Codec {
       // We know there is not going to be any tags.
       return new NoTagsByteBufferKeyValue(bb, pos, len);
     }
-
   }
 
   /**

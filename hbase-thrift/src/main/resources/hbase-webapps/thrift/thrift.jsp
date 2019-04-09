@@ -20,10 +20,10 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
+<%@ page import="org.apache.hadoop.hbase.thrift.ImplType" %>
 
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
@@ -66,6 +66,7 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/jmx">Metrics Dump</a></li>
+                <li><a href="/prof">Profiler</a></li>
                 <% if (HBaseConfiguration.isShowConfInServlet()) { %>
                 <li><a href="/conf">HBase Configuration</a></li>
                 <% } %>

@@ -87,6 +87,7 @@ public class TestQuotaSettingsFactory {
             assertEquals(tn, throttleSettings.getTableName());
             assertNull("Username should be null", throttleSettings.getUserName());
             assertNull("Namespace should be null", throttleSettings.getNamespace());
+            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
             seenRead = true;
             break;
           case WRITE_NUMBER:
@@ -96,6 +97,7 @@ public class TestQuotaSettingsFactory {
             assertEquals(tn, throttleSettings.getTableName());
             assertNull("Username should be null", throttleSettings.getUserName());
             assertNull("Namespace should be null", throttleSettings.getNamespace());
+            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
             seenWrite = true;
             break;
           default:
@@ -107,6 +109,7 @@ public class TestQuotaSettingsFactory {
         assertEquals(tn, spaceLimit.getTableName());
         assertNull("Username should be null", spaceLimit.getUserName());
         assertNull("Namespace should be null", spaceLimit.getNamespace());
+        assertNull("RegionServer should be null", spaceLimit.getRegionServer());
         assertTrue("SpaceLimitSettings should have a SpaceQuota", spaceLimit.getProto().hasQuota());
         assertEquals(spaceQuota, spaceLimit.getProto().getQuota());
         seenSpace = true;

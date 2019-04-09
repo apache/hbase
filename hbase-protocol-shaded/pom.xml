@@ -162,14 +162,14 @@
               </relocations>
               <artifactSet>
                 <excludes>
+                  <!-- exclude J2EE modules that come in for JDK11+ -->
+                  <exclude>javax.annotation:javax.annotation-api</exclude>
                   <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
                     -->
                   <exclude>org.apache.hbase.thirdparty:*</exclude>
                   <exclude>com.google.protobuf:protobuf-java</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>
-                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
                   <exclude>com.google.j2objc:j2objc-annotations</exclude>
-                  <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>junit:junit</exclude>
                   <exclude>log4j:log4j</exclude>
@@ -274,6 +274,18 @@
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[1.11,)</jdk>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>javax.annotation</groupId>
+          <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>
