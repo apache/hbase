@@ -44,4 +44,5 @@
   <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
   <suppress checks="IllegalImport" message="org\.apache\.htrace\.core"/>
   <suppress checks="ImportOrder" message="Extra separation in import group before"/>
+  <suppress checks="MethodLength" files="DemoClient.java"/>
 </suppressions>
