@@ -192,15 +192,17 @@ public class ByteBufferArray {
   }
 
   /**
-   * Creates a ByteBuff from a given array of ByteBuffers from the given offset to the length
+   * Creates a sub-array from a given array of ByteBuffers from the given offset to the length
    * specified. For eg, if there are 4 buffers forming an array each with length 10 and if we call
-   * asSubBuffer(5, 10) then we will create an MBB consisting of two BBs and the first one be a BB
-   * from 'position' 5 to a 'length' 5 and the 2nd BB will be from 'position' 0 to 'length' 5.
+   * asSubByteBuffers(5, 10) then we will create an sub-array consisting of two BBs and the first
+   * one be a BB from 'position' 5 to a 'length' 5 and the 2nd BB will be from 'position' 0 to
+   * 'length' 5.
    * @param offset the position in the whole array which is composited by multiple byte buffers.
    * @param len the length of bytes
-   * @return a ByteBuff formed from the underlying ByteBuffers
+   * @return the underlying ByteBuffers, each ByteBuffer is a slice from the backend and will have a
+   *         zero position.
    */
-  public ByteBuff asSubByteBuff(long offset, final int len) {
+  public ByteBuffer[] asSubByteBuffers(long offset, final int len) {
     BufferIterator it = new BufferIterator(offset, len);
     ByteBuffer[] mbb = new ByteBuffer[it.getBufferCount()];
     for (int i = 0; i < mbb.length; i++) {
@@ -208,7 +210,7 @@ public class ByteBufferArray {
       mbb[i] = it.next();
     }
     assert it.getSum() == len;
-    return ByteBuff.wrap(mbb);
+    return mbb;
   }
 
   /**

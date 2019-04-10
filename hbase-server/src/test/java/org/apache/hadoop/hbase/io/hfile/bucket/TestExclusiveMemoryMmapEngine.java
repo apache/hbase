@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.createBucketEntry;
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.getByteBuff;
+
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.BufferGrabbingDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -57,9 +59,9 @@ public class TestExclusiveMemoryMmapEngine {
         src.position(pos).limit(lim);
 
         // read
-        BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-        fileMmapEngine.read(offset, len, deserializer);
-        ByteBuff dst = deserializer.getDeserializedByteBuff();
+        BucketEntry be = createBucketEntry(offset, len);
+        fileMmapEngine.read(be);
+        ByteBuff dst = getByteBuff(be);
 
         Assert.assertEquals(src.remaining(), len);
         Assert.assertEquals(dst.remaining(), len);

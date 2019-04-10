@@ -51,7 +51,7 @@ public class TestByteBufferArray {
   public void testAsSubBufferWhenEndOffsetLandInLastBuffer() throws Exception {
     int capacity = 4 * 1024 * 1024;
     ByteBufferArray array = new ByteBufferArray(capacity, ALLOC);
-    ByteBuff subBuf = array.asSubByteBuff(0, capacity);
+    ByteBuff subBuf = ByteBuff.wrap(array.asSubByteBuffers(0, capacity));
     subBuf.position(capacity - 1);// Position to the last byte
     assertTrue(subBuf.hasRemaining());
     // Read last byte
@@ -179,7 +179,7 @@ public class TestByteBufferArray {
   }
 
   private void testAsSubByteBuff(ByteBufferArray array, int off, int len, boolean isMulti) {
-    ByteBuff ret = array.asSubByteBuff(off, len);
+    ByteBuff ret = ByteBuff.wrap(array.asSubByteBuffers(off, len));
     if (isMulti) {
       assertTrue(ret instanceof MultiByteBuff);
     } else {

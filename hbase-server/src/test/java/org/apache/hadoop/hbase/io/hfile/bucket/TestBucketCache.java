@@ -194,7 +194,7 @@ public class TestBucketCache {
 
   @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
-    CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, 2 * NUM_THREADS, 2 * NUM_QUERIES);
+    CacheTestUtils.hammerSingleKey(cache, 2 * NUM_THREADS, 2 * NUM_QUERIES);
   }
 
   @Test
@@ -208,6 +208,7 @@ public class TestBucketCache {
     while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
       Thread.sleep(100);
     }
+    Thread.sleep(1000);
   }
 
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
@@ -221,29 +222,28 @@ public class TestBucketCache {
   @Test
   public void testMemoryLeak() throws Exception {
     final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
-    cacheAndWaitUntilFlushedToBucket(cache, cacheKey, new CacheTestUtils.ByteArrayCacheable(
-        new byte[10]));
+    cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
+      new CacheTestUtils.ByteArrayCacheable(new byte[10]));
     long lockId = cache.backingMap.get(cacheKey).offset();
     ReentrantReadWriteLock lock = cache.offsetLock.getLock(lockId);
     lock.writeLock().lock();
     Thread evictThread = new Thread("evict-block") {
-
       @Override
       public void run() {
         cache.evictBlock(cacheKey);
       }
-
     };
     evictThread.start();
     cache.offsetLock.waitForWaiters(lockId, 1);
     cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true);
-    cacheAndWaitUntilFlushedToBucket(cache, cacheKey, new CacheTestUtils.ByteArrayCacheable(
-        new byte[10]));
+    assertEquals(0, cache.getBlockCount());
+    cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
+      new CacheTestUtils.ByteArrayCacheable(new byte[10]));
+    assertEquals(1, cache.getBlockCount());
     lock.writeLock().unlock();
     evictThread.join();
-    assertEquals(1L, cache.getBlockCount());
-    assertTrue(cache.getCurrentSize() > 0L);
-    assertTrue("We should have a block!", cache.iterator().hasNext());
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(cache.getCurrentSize(), 0L);
   }
 
   @Test
@@ -416,10 +416,10 @@ public class TestBucketCache {
 
   @Test
   public void testOffsetProducesPositiveOutput() {
-    //This number is picked because it produces negative output if the values isn't ensured to be positive.
-    //See HBASE-18757 for more information.
+    // This number is picked because it produces negative output if the values isn't ensured to be
+    // positive. See HBASE-18757 for more information.
     long testValue = 549888460800L;
-    BucketCache.BucketEntry bucketEntry = new BucketCache.BucketEntry(testValue, 10, 10L, true);
+    BucketEntry bucketEntry = new BucketEntry(testValue, 10, 10L, true);
     assertEquals(testValue, bucketEntry.offset());
   }
 
@@ -427,16 +427,15 @@ public class TestBucketCache {
   public void testCacheBlockNextBlockMetadataMissing() throws Exception {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
-    byte[] byteArr = new byte[length];
-    ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
+    ByteBuffer buf1 = ByteBuffer.allocate(size), buf2 = ByteBuffer.allocate(size);
     HFileContext meta = new HFileContextBuilder().build();
     ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
-    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf1,
         HFileBlock.FILL_HEADER, -1, 52, -1, meta, allocator);
-    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf2,
         HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
 
-    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    BlockCacheKey key = new BlockCacheKey("testCacheBlockNextBlockMetadataMissing", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
     ByteBuffer block1Buffer = ByteBuffer.allocate(length);
     ByteBuffer block2Buffer = ByteBuffer.allocate(length);
@@ -448,6 +447,8 @@ public class TestBucketCache {
       block1Buffer);
 
     waitUntilFlushedToBucket(cache, key);
+    assertNotNull(cache.backingMap.get(key));
+    assertEquals(1, cache.backingMap.get(key).refCnt());
     assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
     assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
 
@@ -456,9 +457,10 @@ public class TestBucketCache {
       block1Buffer);
     assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
     assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
+    assertEquals(1, cache.backingMap.get(key).refCnt());
 
     // Clear and add blockWithoutNextBlockMetadata
-    cache.evictBlock(key);
+    assertTrue(cache.evictBlock(key));
     assertEquals(1, blockWithNextBlockMetadata.getBufferReadOnly().refCnt());
     assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
 
@@ -494,8 +496,8 @@ public class TestBucketCache {
         -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
         -1, -1, -1, meta, ByteBuffAllocator.HEAP);
-    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false);
-    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, ByteBuffAllocator.NONE);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, ByteBuffAllocator.NONE);
 
     assertFalse(cache.containsKey(key1));
     assertNull(cache.putIfAbsent(key1, re1));
@@ -542,7 +544,7 @@ public class TestBucketCache {
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
-    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, ByteBuffAllocator.NONE);
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {

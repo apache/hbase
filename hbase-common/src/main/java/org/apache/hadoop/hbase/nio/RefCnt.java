@@ -29,11 +29,25 @@ import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
  * reference count become 0, it'll call {@link Recycler#free()} once.
  */
 @InterfaceAudience.Private
-class RefCnt extends AbstractReferenceCounted {
+public class RefCnt extends AbstractReferenceCounted {
 
   private Recycler recycler = ByteBuffAllocator.NONE;
 
-  RefCnt(Recycler recycler) {
+  /**
+   * Create an {@link RefCnt} with an initial reference count = 1. If the reference count become
+   * zero, the recycler will do nothing. Usually, an Heap {@link ByteBuff} will use this kind of
+   * refCnt to track its life cycle, it help to abstract the code path although it's meaningless to
+   * use an refCnt for heap ByteBuff.
+   */
+  public static RefCnt create() {
+    return new RefCnt(ByteBuffAllocator.NONE);
+  }
+
+  public static RefCnt create(Recycler recycler) {
+    return new RefCnt(recycler);
+  }
+
+  public RefCnt(Recycler recycler) {
     this.recycler = recycler;
   }
 
