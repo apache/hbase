@@ -808,7 +808,7 @@ public class SecureTestUtil {
   }
 
   public static String convertToNamespace(String namespace) {
-    return AccessControlLists.NAMESPACE_PREFIX + namespace;
+    return PermissionStorage.NAMESPACE_PREFIX + namespace;
   }
 
   public static void checkGlobalPerms(HBaseTestingUtility testUtil, Permission.Action... actions)

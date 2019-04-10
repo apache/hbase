@@ -244,7 +244,7 @@ public class TestAccessController extends SecureTestUtil {
     RSCP_ENV = rsCpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -322,7 +322,7 @@ public class TestAccessController extends SecureTestUtil {
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
-    assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(5, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     int size = 0;
     try {
       size = AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString())
@@ -343,11 +343,9 @@ public class TestAccessController extends SecureTestUtil {
       LOG.info("Test deleted table " + TEST_TABLE);
     }
     // Verify all table/namespace permissions are erased
-    assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
-    assertEquals(
-      0,
-      AccessControlLists.getNamespacePermissions(conf,
-        TEST_TABLE.getNamespaceAsString()).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(0,
+      PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
   }
 
   @Test
@@ -474,7 +472,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContextImpl.createAndPrepare(CP_ENV),
-            AccessControlLists.ACL_TABLE_NAME);
+          PermissionStorage.ACL_TABLE_NAME);
         return null;
       }
     };
@@ -1201,8 +1199,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getGlobalPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
           conn.getAdmin().getUserPermissions(GetUserPermissionsRequest.newBuilder().build());
         }
         return null;
@@ -1234,7 +1231,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            Table acl = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
               AccessControlService.newBlockingStub(service);
@@ -1249,7 +1246,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf);
-            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            Table acl = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
               AccessControlService.newBlockingStub(service);
@@ -1911,7 +1908,7 @@ public class TestAccessController extends SecureTestUtil {
                       AccessControlProtos.TablePermission.newBuilder()
                           .setTableName(ProtobufUtil.toProtoTableName(TEST_TABLE))
                           .addAction(AccessControlProtos.Permission.Action.CREATE))).build();
-      Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
+      Table acl = systemUserConnection.getTable(PermissionStorage.ACL_TABLE_NAME);
       try {
         BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
         AccessControlService.BlockingInterface protocol =
@@ -2767,7 +2764,7 @@ public class TestAccessController extends SecureTestUtil {
       int expectedAmount, String expectedNamespace) throws HBaseException {
     try {
       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
-        systemUserConnection, AccessControlLists.toNamespaceEntry(namespaceRegexWithoutPrefix));
+        systemUserConnection, PermissionStorage.toNamespaceEntry(namespaceRegexWithoutPrefix));
       assertTrue(namespacePermissions != null);
       assertEquals(expectedAmount, namespacePermissions.size());
       for (UserPermission namespacePermission : namespacePermissions) {
@@ -2859,7 +2856,7 @@ public class TestAccessController extends SecureTestUtil {
     createTable(TEST_UTIL, htd);
 
     // Verify that we can read sys-tables
-    String aclTableName = AccessControlLists.ACL_TABLE_NAME.getNameAsString();
+    String aclTableName = PermissionStorage.ACL_TABLE_NAME.getNameAsString();
     assertEquals(5, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
     assertEquals(0, testRegexHandler.runAs(getPrivilegedAction(aclTableName)).size());
 
@@ -3318,7 +3315,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              Table acl = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
             BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);

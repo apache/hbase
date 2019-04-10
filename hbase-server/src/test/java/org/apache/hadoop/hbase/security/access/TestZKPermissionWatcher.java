@@ -117,7 +117,7 @@ public class TestZKPermissionWatcher {
         .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
     ListMultimap<String, UserPermission> multimap = ArrayListMultimap.create();
     multimap.putAll(george.getShortName(), acl);
-    byte[] serialized = AccessControlLists.writePermissionsAsBytes(multimap, conf);
+    byte[] serialized = PermissionStorage.writePermissionsAsBytes(multimap, conf);
     AUTH_A.getZKPermissionWatcher().writeToZookeeper(TEST_TABLE.getName(), serialized);
     final long mtimeB = AUTH_B.getMTime();
     // Wait for the update to propagate
@@ -145,7 +145,7 @@ public class TestZKPermissionWatcher {
         Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build()));
     final long mtimeA = AUTH_A.getMTime();
     multimap.putAll(hubert.getShortName(), acl2);
-    byte[] serialized2 = AccessControlLists.writePermissionsAsBytes(multimap, conf);
+    byte[] serialized2 = PermissionStorage.writePermissionsAsBytes(multimap, conf);
     AUTH_B.getZKPermissionWatcher().writeToZookeeper(TEST_TABLE.getName(), serialized2);
     // Wait for the update to propagate
     UTIL.waitFor(10000, 100, new Predicate<Exception>() {

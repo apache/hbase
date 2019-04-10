@@ -86,7 +86,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     conf.setBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, false);
 
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 50000);
+    TEST_UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME.getName(), 50000);
 
     READER = User.createUserForTesting(conf, "reader", new String[0]);
     LIMITED = User.createUserForTesting(conf, "limited", new String[0]);

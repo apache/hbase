@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -418,7 +418,7 @@ public final class SnapshotDescriptionUtils {
   public static boolean isSecurityAvailable(Configuration conf) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
       try (Admin admin = conn.getAdmin()) {
-        return admin.tableExists(AccessControlLists.ACL_TABLE_NAME);
+        return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
       }
     }
   }
@@ -429,7 +429,7 @@ public final class SnapshotDescriptionUtils {
         User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, UserPermission>>() {
           @Override
           public ListMultimap<String, UserPermission> run() throws Exception {
-            return AccessControlLists.getTablePermissions(conf,
+            return PermissionStorage.getTablePermissions(conf,
               TableName.valueOf(snapshot.getTable()));
           }
         });

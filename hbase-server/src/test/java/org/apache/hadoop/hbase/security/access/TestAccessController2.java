@@ -122,7 +122,7 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyConfiguration(conf);
     TEST_UTIL.startMiniCluster();
     // Wait for the ACL table to become available
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     TESTGROUP_1_NAME = toGroupEntry(TESTGROUP_1);
     TESTGROUP1_USER1 =
@@ -146,7 +146,7 @@ public class TestAccessController2 extends SecureTestUtil {
           new Put(TEST_ROW_3).addColumn(TEST_FAMILY_2, Q1, value1)));
     }
 
-    assertEquals(1, AccessControlLists.getTablePermissions(conf, tableName).size());
+    assertEquals(1, PermissionStorage.getTablePermissions(conf, tableName).size());
     try {
       assertEquals(1, AccessControlClient.getUserPermissions(systemUserConnection,
           tableName.toString()).size());
@@ -173,8 +173,8 @@ public class TestAccessController2 extends SecureTestUtil {
     }
     deleteNamespace(TEST_UTIL, namespace);
     // Verify all table/namespace permissions are erased
-    assertEquals(0, AccessControlLists.getTablePermissions(conf, tableName).size());
-    assertEquals(0, AccessControlLists.getNamespacePermissions(conf, namespace).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, tableName).size());
+    assertEquals(0, PermissionStorage.getNamespacePermissions(conf, namespace).size());
   }
 
   @Test
@@ -201,9 +201,8 @@ public class TestAccessController2 extends SecureTestUtil {
     TEST_UTIL.waitTableAvailable(TEST_TABLE.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
-    List<UserPermission> perms =
-      AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())
-       .get(testUser.getShortName());
+    List<UserPermission> perms = PermissionStorage
+        .getTablePermissions(conf, TEST_TABLE.getTableName()).get(testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());
     // Should be RWXCA
@@ -293,9 +292,9 @@ public class TestAccessController2 extends SecureTestUtil {
         public Object run() throws Exception {
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            t.put(new Put(TEST_ROW).addColumn(AccessControlLists.ACL_LIST_FAMILY,
-                TEST_QUALIFIER, TEST_VALUE));
+              Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            t.put(new Put(TEST_ROW).addColumn(PermissionStorage.ACL_LIST_FAMILY, TEST_QUALIFIER,
+              TEST_VALUE));
             return null;
           } finally {
           }
@@ -320,7 +319,7 @@ public class TestAccessController2 extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
             ResultScanner s = t.getScanner(new Scan());
             try {
               for (Result r = s.next(); r != null; r = s.next()) {

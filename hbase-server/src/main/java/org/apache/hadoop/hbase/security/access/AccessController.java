@@ -243,14 +243,14 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> tables = AccessControlLists.loadAll(region);
+    Map<byte[], ListMultimap<String, UserPermission>> tables = PermissionStorage.loadAll(region);
     // For each table, write out the table's permissions to the respective
     // znode for that table.
     for (Map.Entry<byte[], ListMultimap<String, UserPermission>> t:
       tables.entrySet()) {
       byte[] entry = t.getKey();
       ListMultimap<String, UserPermission> perms = t.getValue();
-      byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+      byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
       getAuthManager().getZKPermissionWatcher().writeToZookeeper(entry, serialized);
     }
     initialized = true;
@@ -267,7 +267,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
-        if (CellUtil.matchingFamily(cell, AccessControlLists.ACL_LIST_FAMILY)) {
+        if (CellUtil.matchingFamily(cell, PermissionStorage.ACL_LIST_FAMILY)) {
           entries.add(CellUtil.cloneRow(cell));
         }
       }
@@ -282,12 +282,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // to and fro conversion overhead. get req is converted to PB req
     // and results are converted to PB results 1st and then to POJOs
     // again. We could have avoided such at least in ACL table context..
-    try (Table t = e.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
+    try (Table t = e.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
       for (byte[] entry : entries) {
         currentEntry = entry;
         ListMultimap<String, UserPermission> perms =
-            AccessControlLists.getPermissions(conf, entry, t, null, null, null, false);
-        byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+            PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
+        byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
         zkw.writeToZookeeper(entry, serialized);
       }
     } catch(IOException ex) {
@@ -623,7 +623,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       for (Cell cell: e.getValue()) {
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
         List<Tag> tags = new ArrayList<>();
-        tags.add(new ArrayBackedTag(AccessControlLists.ACL_TAG_TYPE, perms));
+        tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, perms));
         Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(cell);
         while (tagIterator.hasNext()) {
           tags.add(tagIterator.next());
@@ -655,7 +655,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
       Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cellScanner.current());
       while (tagsItr.hasNext()) {
-        if (tagsItr.next().getType() == AccessControlLists.ACL_TAG_TYPE) {
+        if (tagsItr.next().getType() == PermissionStorage.ACL_TAG_TYPE) {
           throw new AccessDeniedException("Mutation contains cell with reserved type tag");
         }
       }
@@ -785,12 +785,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // creating acl table, getting delayed and by that time another table creation got over and
     // this hook is getting called. In such a case, we will need a wait logic here which will
     // wait till the acl table is created.
-    if (AccessControlLists.isAclTable(desc)) {
+    if (PermissionStorage.isAclTable(desc)) {
       this.aclTabAvailable = true;
     } else if (!(TableName.NAMESPACE_TABLE_NAME.equals(desc.getTableName()))) {
       if (!aclTabAvailable) {
         LOG.warn("Not adding owner permission for table " + desc.getTableName() + ". "
-            + AccessControlLists.ACL_TABLE_NAME + " is not yet created. "
+            + PermissionStorage.ACL_TABLE_NAME + " is not yet created. "
             + getClass().getSimpleName() + " should be configured as the first Coprocessor");
       } else {
         String owner = desc.getOwnerString();
@@ -803,9 +803,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            try (Table table = c.getEnvironment().getConnection().
-                getTable(AccessControlLists.ACL_TABLE_NAME)) {
-              AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(),
+            try (Table table =
+                c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+              PermissionStorage.addUserPermission(c.getEnvironment().getConfiguration(),
                 userPermission, table);
             }
             return null;
@@ -829,9 +829,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table = c.getEnvironment().getConnection().
-            getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          AccessControlLists.removeTablePermissions(conf, tableName, table);
+        try (Table table =
+            c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.removeTablePermissions(conf, tableName, table);
         }
         return null;
       }
@@ -850,7 +850,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       @Override
       public Void run() throws Exception {
         List<UserPermission> acls =
-            AccessControlLists.getUserTablePermissions(conf, tableName, null, null, null, false);
+            PermissionStorage.getUserTablePermissions(conf, tableName, null, null, null, false);
         if (acls != null) {
           tableAcls.put(tableName, acls);
         }
@@ -869,9 +869,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         List<UserPermission> perms = tableAcls.get(tableName);
         if (perms != null) {
           for (UserPermission perm : perms) {
-            try (Table table = ctx.getEnvironment().getConnection().
-                getTable(AccessControlLists.ACL_TABLE_NAME)) {
-              AccessControlLists.addUserPermission(conf, perm, table);
+            try (Table table =
+                ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+              PermissionStorage.addUserPermission(conf, perm, table);
             }
           }
         }
@@ -903,8 +903,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         UserPermission userperm = new UserPermission(owner,
             Permission.newBuilder(htd.getTableName()).withActions(Action.values()).build());
         try (Table table =
-            c.getEnvironment().getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          AccessControlLists.addUserPermission(conf, userperm, table);
+            c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.addUserPermission(conf, userperm, table);
         }
         return null;
       }
@@ -921,13 +921,13 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
-    if (Bytes.equals(tableName.getName(), AccessControlLists.ACL_GLOBAL_NAME)) {
+    if (Bytes.equals(tableName.getName(), PermissionStorage.ACL_GLOBAL_NAME)) {
       // We have to unconditionally disallow disable of the ACL table when we are installed,
       // even if not enforcing authorizations. We are still allowing grants and revocations,
       // checking permissions and logging audit messages, etc. If the ACL table is not
       // available we will fail random actions all over the place.
-      throw new AccessDeniedException("Not allowed to disable "
-          + AccessControlLists.ACL_TABLE_NAME + " table with AccessController installed");
+      throw new AccessDeniedException("Not allowed to disable " + PermissionStorage.ACL_TABLE_NAME
+          + " table with AccessController installed");
     }
     requirePermission(c, "disableTable",
         tableName, null, null, Action.ADMIN, Action.CREATE);
@@ -1021,7 +1021,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
     try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
-      if (!admin.tableExists(AccessControlLists.ACL_TABLE_NAME)) {
+      if (!admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
         createACLTable(admin);
       } else {
         this.aclTabAvailable = true;
@@ -1035,7 +1035,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private static void createACLTable(Admin admin) throws IOException {
     /** Table descriptor for ACL table */
     ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(AccessControlLists.ACL_LIST_FAMILY).
+        ColumnFamilyDescriptorBuilder.newBuilder(PermissionStorage.ACL_LIST_FAMILY).
         setMaxVersions(1).
         setInMemory(true).
         setBlockCacheEnabled(true).
@@ -1043,7 +1043,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         setBloomFilterType(BloomType.NONE).
         setScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(AccessControlLists.ACL_TABLE_NAME).
+        TableDescriptorBuilder.newBuilder(PermissionStorage.ACL_TABLE_NAME).
           setColumnFamily(cfd).build();
     admin.createTable(td);
   }
@@ -1139,15 +1139,15 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table = ctx.getEnvironment().getConnection().
-            getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          AccessControlLists.removeNamespacePermissions(conf, namespace, table);
+        try (Table table =
+            ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.removeNamespacePermissions(conf, namespace, table);
         }
         return null;
       }
     });
     getAuthManager().getZKPermissionWatcher().deleteNamespaceACLNode(namespace);
-    LOG.info(namespace + " entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
+    LOG.info(namespace + " entry deleted in " + PermissionStorage.ACL_TABLE_NAME + " table.");
   }
 
   @Override
@@ -1254,7 +1254,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       LOG.error("NULL region from RegionCoprocessorEnvironment in postOpen()");
       return;
     }
-    if (AccessControlLists.isAclRegion(region)) {
+    if (PermissionStorage.isAclRegion(region)) {
       aclRegion = true;
       try {
         initialize(env);
@@ -1799,7 +1799,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(oldCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
-        if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
+        if (tag.getType() != PermissionStorage.ACL_TAG_TYPE) {
           // Not an ACL tag, just carry it through
           if (LOG.isTraceEnabled()) {
             LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType()
@@ -1816,7 +1816,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     byte[] aclBytes = mutation.getACL();
     if (aclBytes != null) {
       // Yes, use it
-      tags.add(new ArrayBackedTag(AccessControlLists.ACL_TAG_TYPE, aclBytes));
+      tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, aclBytes));
     } else {
       // No, use what we carried forward
       if (perms != null) {
@@ -1998,7 +1998,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
+            + "can only execute at " + PermissionStorage.ACL_TABLE_NAME + " table.");
       }
       response = AccessControlProtos.GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
@@ -2038,7 +2038,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
+            + "can only execute at " + PermissionStorage.ACL_TABLE_NAME + " table.");
       }
       response = AccessControlProtos.RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
@@ -2090,7 +2090,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         response = AccessControlUtil.buildGetUserPermissionsResponse(perms);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
+            + "can only execute at " + PermissionStorage.ACL_TABLE_NAME + " table.");
       }
     } catch (IOException ioe) {
       // pass exception back up

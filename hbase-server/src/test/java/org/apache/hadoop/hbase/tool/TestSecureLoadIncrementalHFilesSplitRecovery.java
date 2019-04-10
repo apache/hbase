@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -61,7 +61,7 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
   }
 
   // Disabling this test as it does not work in secure mode

@@ -101,7 +101,7 @@ public class TestTablePermissions {
     UTIL.startMiniCluster();
 
     // Wait for the ACL table to become available
-    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     ZKW = new ZKWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);
@@ -119,19 +119,19 @@ public class TestTablePermissions {
   public void tearDown() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      AccessControlLists.removeTablePermissions(conf, TEST_TABLE, table);
-      AccessControlLists.removeTablePermissions(conf, TEST_TABLE2, table);
-      AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE_NAME, table);
+        Table table = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+      PermissionStorage.removeTablePermissions(conf, TEST_TABLE, table);
+      PermissionStorage.removeTablePermissions(conf, TEST_TABLE2, table);
+      PermissionStorage.removeTablePermissions(conf, PermissionStorage.ACL_TABLE_NAME, table);
     }
   }
 
   /**
-   * The AccessControlLists.addUserPermission may throw exception before closing the table.
+   * The PermissionStorage.addUserPermission may throw exception before closing the table.
    */
   private void addUserPermission(Configuration conf, UserPermission userPerm, Table t) throws IOException {
     try {
-      AccessControlLists.addUserPermission(conf, userPerm, t);
+      PermissionStorage.addUserPermission(conf, userPerm, t);
     } finally {
       t.close();
     }
@@ -146,20 +146,20 @@ public class TestTablePermissions {
         new UserPermission("george",
             Permission.newBuilder(TEST_TABLE)
                 .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("hubert",
             Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("humphrey",
             Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
                 .withActions(Permission.Action.READ).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
     }
     // retrieve the same
     ListMultimap<String, UserPermission> perms =
-        AccessControlLists.getTablePermissions(conf, TEST_TABLE);
+        PermissionStorage.getTablePermissions(conf, TEST_TABLE);
     List<UserPermission> userPerms = perms.get("george");
     assertNotNull("Should have permissions for george", userPerms);
     assertEquals("Should have 1 permission for george", 1, userPerms.size());
@@ -213,15 +213,14 @@ public class TestTablePermissions {
 
     // table 2 permissions
     try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      AccessControlLists.addUserPermission(conf,
+        Table table = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+      PermissionStorage.addUserPermission(conf,
         new UserPermission("hubert", Permission.newBuilder(TEST_TABLE2)
             .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
         table);
     }
     // check full load
-    Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-        AccessControlLists.loadAll(conf);
+    Map<byte[], ListMultimap<String, UserPermission>> allPerms = PermissionStorage.loadAll(conf);
     assertEquals("Full permission map should have entries for both test tables",
         2, allPerms.size());
 
@@ -253,26 +252,26 @@ public class TestTablePermissions {
       addUserPermission(conf,
         new UserPermission("albert",
             Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("betty",
             Permission.newBuilder(TEST_TABLE)
                 .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("clark",
             Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
                 .withActions(Permission.Action.READ).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("dwight",
             Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY).withQualifier(TEST_QUALIFIER)
                 .withActions(Permission.Action.WRITE).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
     }
     // verify permissions survive changes in table metadata
     ListMultimap<String, UserPermission> preperms =
-        AccessControlLists.getTablePermissions(conf, TEST_TABLE);
+        PermissionStorage.getTablePermissions(conf, TEST_TABLE);
 
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
     table.put(
@@ -295,7 +294,7 @@ public class TestTablePermissions {
     Thread.sleep(10000);
 
     ListMultimap<String, UserPermission> postperms =
-        AccessControlLists.getTablePermissions(conf, TEST_TABLE);
+        PermissionStorage.getTablePermissions(conf, TEST_TABLE);
 
     checkMultimapEqual(preperms, postperms);
   }
@@ -304,10 +303,10 @@ public class TestTablePermissions {
   public void testSerialization() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     ListMultimap<String, UserPermission> permissions = createPermissions();
-    byte[] permsData = AccessControlLists.writePermissionsAsBytes(permissions, conf);
+    byte[] permsData = PermissionStorage.writePermissionsAsBytes(permissions, conf);
 
     ListMultimap<String, UserPermission> copy =
-        AccessControlLists.readUserPermission(permsData, conf);
+        PermissionStorage.readUserPermission(permsData, conf);
 
     checkMultimapEqual(permissions, copy);
   }
@@ -410,21 +409,20 @@ public class TestTablePermissions {
       addUserPermission(conf,
         new UserPermission("user1", Permission.newBuilder()
             .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("user2",
             Permission.newBuilder().withActions(Permission.Action.CREATE).build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
       addUserPermission(conf,
         new UserPermission("user3",
             Permission.newBuilder()
                 .withActions(Permission.Action.ADMIN, Permission.Action.READ,
                   Permission.Action.CREATE)
                 .build()),
-        connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
     }
-    ListMultimap<String, UserPermission> perms =
-      AccessControlLists.getTablePermissions(conf, null);
+    ListMultimap<String, UserPermission> perms = PermissionStorage.getTablePermissions(conf, null);
     List<UserPermission> user1Perms = perms.get("user1");
     assertEquals("Should have 1 permission for user1", 1, user1Perms.size());
     assertEquals("user1 should have WRITE permission",
@@ -465,7 +463,7 @@ public class TestTablePermissions {
                   .withActions(Permission.Action.ADMIN, Permission.Action.READ,
                     Permission.Action.WRITE)
                   .build()),
-          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+          connection.getTable(PermissionStorage.ACL_TABLE_NAME));
         // make sure the system user still shows as authorized
         assertTrue("Failed current user auth check on iter "+i,
           authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN));

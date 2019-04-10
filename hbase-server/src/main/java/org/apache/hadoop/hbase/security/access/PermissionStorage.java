@@ -63,10 +63,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -76,6 +72,11 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -102,7 +103,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  */
 @InterfaceAudience.Private
-public class AccessControlLists {
+public final class PermissionStorage {
   /** Internal storage table for access control lists */
   public static final TableName ACL_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
@@ -120,7 +121,10 @@ public class AccessControlLists {
    * _acl_ table info: column keys */
   public static final char ACL_KEY_DELIMITER = ',';
 
-  private static final Logger LOG = LoggerFactory.getLogger(AccessControlLists.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PermissionStorage.class);
+
+  private PermissionStorage() {
+  }
 
   /**
    * Stores a new user permission grant in the access control lists table.
@@ -177,10 +181,8 @@ public class AccessControlLists {
         .setValue(value)
         .build());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing permission with rowKey "+
-          Bytes.toString(rowKey)+" "+
-          Bytes.toString(key)+": "+Bytes.toStringBinary(value)
-          );
+      LOG.debug("Writing permission with rowKey " + Bytes.toString(rowKey) + " "
+          + Bytes.toString(key) + ": " + Bytes.toStringBinary(value));
     }
     try {
       t.put(p);
@@ -319,8 +321,12 @@ public class AccessControlLists {
         table.delete(d);
       }
     } finally {
-      if (scanner != null) scanner.close();
-      if (closeTable) table.close();
+      if (scanner != null) {
+        scanner.close();
+      }
+      if (closeTable) {
+        table.close();
+      }
     }
   }
 
@@ -396,13 +402,12 @@ public class AccessControlLists {
    * Loads all of the permission grants stored in a region of the {@code _acl_}
    * table.
    *
-   * @param aclRegion
+   * @param aclRegion the acl region
    * @return a map of the permissions for this table.
-   * @throws IOException
+   * @throws IOException if an error occurs
    */
   static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Region aclRegion)
       throws IOException {
-
     if (!isAclRegion(aclRegion)) {
       throw new IOException("Can only load permissions from "+ACL_TABLE_NAME);
     }
@@ -479,7 +484,9 @@ public class AccessControlLists {
             allPerms.put(row.getRow(), resultPerms);
           }
         } finally {
-          if (scanner != null) scanner.close();
+          if (scanner != null) {
+            scanner.close();
+          }
         }
       }
     }
@@ -504,12 +511,14 @@ public class AccessControlLists {
    * Reads user permission assignments stored in the <code>l:</code> column family of the first
    * table row in <code>_acl_</code>.
    * <p>
-   * See {@link AccessControlLists class documentation} for the key structure used for storage.
+   * See {@link PermissionStorage class documentation} for the key structure used for storage.
    * </p>
    */
   static ListMultimap<String, UserPermission> getPermissions(Configuration conf, byte[] entryName,
       Table t, byte[] cf, byte[] cq, String user, boolean hasFilterUser) throws IOException {
-    if (entryName == null) entryName = ACL_GLOBAL_NAME;
+    if (entryName == null) {
+      entryName = ACL_GLOBAL_NAME;
+    }
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
     Get get = new Get(entryName);
@@ -737,7 +746,8 @@ public class AccessControlLists {
    */
   public static byte[] writePermissionsAsBytes(ListMultimap<String, UserPermission> perms,
       Configuration conf) {
-    return ProtobufUtil.prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
+    return ProtobufUtil
+        .prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
   }
 
   // This is part of the old HbaseObjectWritableFor96Migration.
@@ -845,8 +855,9 @@ public class AccessControlLists {
   }
 
   public static String fromNamespaceEntry(String namespace) {
-    if(namespace.charAt(0) != NAMESPACE_PREFIX)
+    if (namespace.charAt(0) != NAMESPACE_PREFIX) {
       throw new IllegalArgumentException("Argument is not a valid namespace entry");
+    }
     return namespace.substring(1);
   }
 
@@ -882,7 +893,8 @@ public class AccessControlLists {
         AccessControlProtos.UsersAndPermissions.Builder builder =
             AccessControlProtos.UsersAndPermissions.newBuilder();
         if (tag.hasArray()) {
-          ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(), tag.getValueLength());
+          ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(),
+            tag.getValueLength());
         } else {
           ProtobufUtil.mergeFrom(builder, Tag.cloneValue(tag));
         }
@@ -894,7 +906,7 @@ public class AccessControlLists {
           results.addAll(userPerms);
         }
         // Are there permissions for any of the groups this user belongs to?
-        String groupNames[] = user.getGroupNames();
+        String[] groupNames = user.getGroupNames();
         if (groupNames != null) {
           for (String group : groupNames) {
             List<Permission> groupPerms = kvPerms.get(AuthUtil.toGroupEntry(group));

@@ -52,7 +52,7 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
-org.apache.hadoop.hbase.security.access.AccessControlLists;
+org.apache.hadoop.hbase.security.access.PermissionStorage;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 org.apache.hadoop.hbase.tool.Canary;
@@ -444,7 +444,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         } else if (tableName.equals(Canary.DEFAULT_WRITE_TABLE_NAME)){
             description = "The hbase:canary table is used to sniff the write availbility of"
               + " each regionserver.";
-        } else if (tableName.equals(AccessControlLists.ACL_TABLE_NAME)){
+        } else if (tableName.equals(PermissionStorage.ACL_TABLE_NAME)){
             description = "The hbase:acl table holds information about acl.";
         } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
             description = "The hbase:labels table holds information about visibility labels.";
