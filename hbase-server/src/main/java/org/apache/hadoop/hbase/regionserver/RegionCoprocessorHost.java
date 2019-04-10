@@ -272,8 +272,8 @@ public class RegionCoprocessorHost
                 null : new Path(matcher.group(1).trim());
             String className = matcher.group(2).trim();
             if (className.isEmpty()) {
-              LOG.error("Malformed table coprocessor specification: key=" +
-                key + ", spec: " + spec);
+              LOG.error("Malformed table coprocessor specification, Class name is empty: key=" + key
+                  + ", spec: " + spec);
               continue;
             }
             int priority = matcher.group(3).trim().isEmpty() ?
@@ -303,8 +303,8 @@ public class RegionCoprocessorHost
               ", spec: " + spec);
           }
         } catch (Exception ioe) {
-          LOG.error("Malformed table coprocessor specification: key=" + key +
-            ", spec: " + spec);
+          LOG.error("Malformed table coprocessor specification: key=" + key + ", spec: " + spec,
+              ioe);
         }
       }
     }
