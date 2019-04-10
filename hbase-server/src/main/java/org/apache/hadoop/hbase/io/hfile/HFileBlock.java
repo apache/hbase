@@ -274,7 +274,7 @@ public class HFileBlock implements Cacheable {
         newByteBuff = buf.slice();
       } else {
         int len = buf.limit();
-        newByteBuff = new SingleByteBuff(ByteBuffer.allocate(len));
+        newByteBuff = ByteBuff.wrap(ByteBuffer.allocate(len));
         newByteBuff.put(0, buf, buf.position(), len);
       }
       // Read out the BLOCK_METADATA_SPACE content and shove into our HFileBlock.
@@ -323,7 +323,7 @@ public class HFileBlock implements Cacheable {
       that.prevBlockOffset, that.offset, that.onDiskDataSizeWithHeader, that.nextBlockOnDiskSize,
       that.fileContext, that.allocator);
     if (bufCopy) {
-      this.buf = new SingleByteBuff(ByteBuffer.wrap(that.buf.toBytes(0, that.buf.limit())));
+      this.buf = ByteBuff.wrap(ByteBuffer.wrap(that.buf.toBytes(0, that.buf.limit())));
     } else {
       this.buf = that.buf.duplicate();
     }
