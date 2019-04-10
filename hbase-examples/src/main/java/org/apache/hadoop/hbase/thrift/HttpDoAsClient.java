@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -113,12 +112,7 @@ public class HttpDoAsClient {
 
   // Helper to translate strings to UTF8 bytes
   private byte[] bytes(String s) {
-    try {
-      return s.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("CharSetName {} not supported", s, e);
-      return null;
-    }
+    return Bytes.toBytes(s);
   }
 
   private void run() throws Exception {

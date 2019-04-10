@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -51,7 +52,7 @@ public class TsvImporterCustomTestMapper extends TsvImporterMapper {
 
     // do some basic line parsing
     byte[] lineBytes = value.getBytes();
-    String[] valueTokens = new String(lineBytes, "UTF-8").split("\u001b");
+    String[] valueTokens = new String(lineBytes, StandardCharsets.UTF_8).split("\u001b");
 
     // create the rowKey and Put
     ImmutableBytesWritable rowKey =
