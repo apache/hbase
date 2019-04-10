@@ -54,8 +54,8 @@ import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTest
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil.AccessTestAction;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -204,9 +204,9 @@ public class TestSecureExport {
     SecureTestUtil.verifyConfiguration(UTIL.getConfiguration());
     setUpClusterKdc();
     UTIL.startMiniCluster();
-    UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
     UTIL.waitUntilAllRegionsAssigned(VisibilityConstants.LABELS_TABLE_NAME);
-    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME, 50000);
+    UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME, 50000);
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME, 50000);
     SecureTestUtil.grantGlobal(UTIL, USER_ADMIN,
             Permission.Action.ADMIN,
@@ -249,8 +249,8 @@ public class TestSecureExport {
     SecureTestUtil.grantOnTable(UTIL, USER_XO,
             TableName.valueOf(exportTable), null, null,
             Permission.Action.EXEC);
-    assertEquals(4, AccessControlLists.getTablePermissions(UTIL.getConfiguration(),
-            TableName.valueOf(exportTable)).size());
+    assertEquals(4, PermissionStorage
+        .getTablePermissions(UTIL.getConfiguration(), TableName.valueOf(exportTable)).size());
     AccessTestAction putAction = () -> {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, Bytes.toBytes("qual_0"), NOW, QUAL);

@@ -146,7 +146,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
         @Override
         public void run() {
           String table = ZKUtil.getNodeName(path);
-          if(AccessControlLists.isNamespaceEntry(table)) {
+          if (PermissionStorage.isNamespaceEntry(table)) {
             authManager.removeNamespace(Bytes.toBytes(table));
           } else {
             authManager.removeTable(TableName.valueOf(table));
@@ -245,9 +245,9 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
       LOG.debug("Updating permissions cache from {} with data {}", entry,
           Bytes.toStringBinary(nodeData));
     }
-    if(AccessControlLists.isNamespaceEntry(entry)) {
-      authManager.refreshNamespaceCacheFromWritable(
-          AccessControlLists.fromNamespaceEntry(entry), nodeData);
+    if (PermissionStorage.isNamespaceEntry(entry)) {
+      authManager.refreshNamespaceCacheFromWritable(PermissionStorage.fromNamespaceEntry(entry),
+        nodeData);
     } else {
       authManager.refreshTableCacheFromWritable(TableName.valueOf(entry), nodeData);
     }
@@ -296,7 +296,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
    */
   public void deleteNamespaceACLNode(final String namespace) {
     String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);
-    zkNode = ZNodePaths.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
+    zkNode = ZNodePaths.joinZNode(zkNode, PermissionStorage.NAMESPACE_PREFIX + namespace);
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);

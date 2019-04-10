@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AuthManager;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -113,7 +113,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     rsGroupAdminEndpoint = (RSGroupAdminEndpoint) TEST_UTIL.getMiniHBaseCluster().getMaster().
         getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
     // Wait for the ACL table to become available
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -174,7 +174,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
-    assertEquals(4, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(4, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     try {
       assertEquals(4, AccessControlClient.getUserPermissions(systemUserConnection,
           TEST_TABLE.toString()).size());
@@ -194,9 +194,9 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
       LOG.info("Test deleted table " + TEST_TABLE);
     }
     // Verify all table/namespace permissions are erased
-    assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
-    assertEquals(0, AccessControlLists.getNamespacePermissions(conf,
-            TEST_TABLE.getNamespaceAsString()).size());
+    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(0,
+      PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
   }
 
   @AfterClass

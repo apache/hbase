@@ -102,10 +102,10 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessChecker.InputUser;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -2712,8 +2712,8 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preGrant(perm, mergeExistingPermissions);
       }
-      try (Table table = master.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
-        AccessControlLists.addUserPermission(getConfiguration(), perm, table,
+      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.addUserPermission(getConfiguration(), perm, table,
           mergeExistingPermissions);
       }
       if (master.cpHost != null) {
@@ -2734,8 +2734,8 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preRevoke(userPermission);
       }
-      try (Table table = master.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
-        AccessControlLists.removeUserPermission(master.getConfiguration(), userPermission, table);
+      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
       }
       if (master.cpHost != null) {
         master.cpHost.postRevoke(userPermission);
@@ -2765,17 +2765,17 @@ public class MasterRpcServices extends RSRpcServices
       List<UserPermission> perms = null;
       if (permissionType == Type.Table) {
         boolean filter = (cf != null || userName != null) ? true : false;
-        perms = AccessControlLists.getUserTablePermissions(master.getConfiguration(), table, cf, cq,
+        perms = PermissionStorage.getUserTablePermissions(master.getConfiguration(), table, cf, cq,
           userName, filter);
       } else if (permissionType == Type.Namespace) {
-        perms = AccessControlLists.getUserNamespacePermissions(master.getConfiguration(), namespace,
+        perms = PermissionStorage.getUserNamespacePermissions(master.getConfiguration(), namespace,
           userName, userName != null ? true : false);
       } else {
-        perms = AccessControlLists.getUserPermissions(master.getConfiguration(), null, null, null,
+        perms = PermissionStorage.getUserPermissions(master.getConfiguration(), null, null, null,
           userName, userName != null ? true : false);
         // Skip super users when filter user is specified
         if (userName == null) {
-          // Adding superusers explicitly to the result set as AccessControlLists do not store
+          // Adding superusers explicitly to the result set as PermissionStorage do not store
           // them. Also using acl as table name to be inline with the results of global admin and
           // will help in avoiding any leakage of information about being superusers.
           for (String user : Superusers.getSuperUsers()) {

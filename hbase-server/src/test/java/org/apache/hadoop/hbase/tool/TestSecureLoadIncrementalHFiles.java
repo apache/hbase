@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -62,7 +62,7 @@ public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     setupNamespace();
   }

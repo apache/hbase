@@ -1036,12 +1036,10 @@ public static void grantOnTable(final HBaseTestingUtility util, final String use
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration());
-           Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-        AccessControlService.BlockingInterface protocol =
-          AccessControlService.newBlockingStub(service);
-        AccessControlUtil.grant(null, protocol, user, table, family, qualifier, false, actions);
+      try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+        connection.getAdmin().grant(new UserPermission(user, Permission.newBuilder(table)
+            .withFamily(family).withQualifier(qualifier).withActions(actions).build()),
+          false);
       }
       return null;
     }
@@ -1084,16 +1082,9 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      Configuration conf = HBaseConfiguration.create();
-      Connection connection = ConnectionFactory.createConnection(conf);
-      Table acl = connection.getTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
-      } finally {
-        acl.close();
+      try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+        connection.getAdmin().revoke(new UserPermission(user, Permission.newBuilder(table)
+            .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
       }
       return null;
     }

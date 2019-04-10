@@ -155,7 +155,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     RSCP_ENV = rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -219,8 +219,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       Permission.Action.READ,
       Permission.Action.WRITE);
 
-    assertEquals(5, AccessControlLists.getTablePermissions(TEST_UTIL.getConfiguration(),
-      TEST_TABLE.getTableName()).size());
+    assertEquals(5, PermissionStorage
+        .getTablePermissions(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName()).size());
   }
 
   @After
@@ -233,9 +233,9 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       LOG.info("Test deleted table " + TEST_TABLE.getTableName());
     }
     // Verify all table/namespace permissions are erased
-    assertEquals(0, AccessControlLists.getTablePermissions(TEST_UTIL.getConfiguration(),
-      TEST_TABLE.getTableName()).size());
-    assertEquals(0, AccessControlLists.getNamespacePermissions(TEST_UTIL.getConfiguration(),
+    assertEquals(0, PermissionStorage
+        .getTablePermissions(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName()).size());
+    assertEquals(0, PermissionStorage.getNamespacePermissions(TEST_UTIL.getConfiguration(),
       TEST_TABLE.getTableName().getNamespaceAsString()).size());
   }
 

@@ -20,9 +20,9 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil.AccessTestAction;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -48,7 +48,7 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
   public static void setUpBeforeClass() throws Exception {
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(1);
-    TEST_UTIL.waitTableAvailable(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 

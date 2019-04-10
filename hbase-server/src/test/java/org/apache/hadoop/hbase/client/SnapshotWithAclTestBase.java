@@ -26,9 +26,9 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -108,7 +108,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
     MasterCoprocessorHost cpHost =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
