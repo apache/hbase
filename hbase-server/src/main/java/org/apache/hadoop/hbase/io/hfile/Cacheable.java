@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-
-import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
+import org.apache.hadoop.hbase.nio.HBaseReferenceCounted;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Cacheable is an interface that allows for an object to be cached. If using an
@@ -36,7 +35,7 @@ import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
  *
  */
 @InterfaceAudience.Private
-public interface Cacheable extends HeapSize, ReferenceCounted {
+public interface Cacheable extends HeapSize, HBaseReferenceCounted {
   /**
    * Returns the length of the ByteBuffer required to serialized the object. If the
    * object cannot be serialized, it should return 0.
@@ -87,10 +86,6 @@ public interface Cacheable extends HeapSize, ReferenceCounted {
     return this;
   }
 
-  default Cacheable retain(int increment) {
-    throw new UnsupportedOperationException();
-  }
-
   /**
    * Reference count of this Cacheable.
    */
@@ -105,17 +100,5 @@ public interface Cacheable extends HeapSize, ReferenceCounted {
    */
   default boolean release() {
     return false;
-  }
-
-  default boolean release(int increment) {
-    throw new UnsupportedOperationException();
-  }
-
-  default ReferenceCounted touch() {
-    throw new UnsupportedOperationException();
-  }
-
-  default ReferenceCounted touch(Object hint) {
-    throw new UnsupportedOperationException();
   }
 }

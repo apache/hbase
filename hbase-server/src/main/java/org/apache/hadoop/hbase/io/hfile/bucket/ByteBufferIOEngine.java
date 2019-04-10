@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferAllocator;
@@ -100,16 +99,15 @@ public class ByteBufferIOEngine implements IOEngine {
   }
 
   @Override
-  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
-      throws IOException {
-    ByteBuff dstBuffer = bufferArray.asSubByteBuff(offset, length);
+  public Cacheable read(BucketEntry be) throws IOException {
+    ByteBuffer[] buffers = bufferArray.asSubByteBuffers(be.offset(), be.getLength());
     // Here the buffer that is created directly refers to the buffer in the actual buckets.
     // When any cell is referring to the blocks created out of these buckets then it means that
     // those cells are referring to a shared memory area which if evicted by the BucketCache would
     // lead to corruption of results. Hence we set the type of the buffer as SHARED_MEMORY
     // so that the readers using this block are aware of this fact and do the necessary action
     // to prevent eviction till the results are either consumed or copied
-    return deserializer.deserialize(dstBuffer, true, MemoryType.SHARED);
+    return be.wrapAsCacheable(buffers, MemoryType.SHARED);
   }
 
   /**
