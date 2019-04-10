@@ -61,7 +61,7 @@ public class MultiByteBuff extends ByteBuff {
     this(new RefCnt(recycler), items);
   }
 
-  private MultiByteBuff(RefCnt refCnt, ByteBuffer... items) {
+  MultiByteBuff(RefCnt refCnt, ByteBuffer... items) {
     this.refCnt = refCnt;
     assert items != null;
     assert items.length > 0;

@@ -22,14 +22,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
 import org.apache.hbase.thirdparty.io.netty.util.internal.ObjectUtil;
 
 
@@ -39,7 +37,7 @@ import org.apache.hbase.thirdparty.io.netty.util.internal.ObjectUtil;
  * provides APIs similar to the ones provided in java's nio ByteBuffers and allows you to do
  * positional reads/writes and relative reads and writes on the underlying BB. In addition to it, we
  * have some additional APIs which helps us in the read path. <br/>
- * The ByteBuff implement {@link ReferenceCounted} interface which mean need to maintains a
+ * The ByteBuff implement {@link HBaseReferenceCounted} interface which mean need to maintains a
  * {@link RefCnt} inside, if ensure that the ByteBuff won't be used any more, we must do a
  * {@link ByteBuff#release()} to recycle its NIO ByteBuffers. when considering the
  * {@link ByteBuff#duplicate()} or {@link ByteBuff#slice()}, releasing either the duplicated one or
@@ -59,7 +57,7 @@ import org.apache.hbase.thirdparty.io.netty.util.internal.ObjectUtil;
  * </pre>
  */
 @InterfaceAudience.Private
-public abstract class ByteBuff implements ReferenceCounted {
+public abstract class ByteBuff implements HBaseReferenceCounted {
   private static final String REFERENCE_COUNT_NAME = "ReferenceCount";
   private static final int NIO_BUFFER_LIMIT = 64 * 1024; // should not be more than 64KB.
 
@@ -78,26 +76,6 @@ public abstract class ByteBuff implements ReferenceCounted {
   @Override
   public boolean release() {
     return refCnt.release();
-  }
-
-  @Override
-  public final ByteBuff retain(int increment) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public final boolean release(int increment) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public final ByteBuff touch() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public final ByteBuff touch(Object hint) {
-    throw new UnsupportedOperationException();
   }
 
   /******************************* Methods for ByteBuff **************************************/
@@ -563,31 +541,56 @@ public abstract class ByteBuff implements ReferenceCounted {
 
   /********************************* ByteBuff wrapper methods ***********************************/
 
-  public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {
+  /**
+   * In theory, the upstream should never construct an ByteBuff by passing an given refCnt, so
+   * please don't use this public method in other place. Make the method public here because the
+   * BucketEntry#wrapAsCacheable in hbase-server module will use its own refCnt and ByteBuffers from
+   * IOEngine to composite an HFileBlock's ByteBuff, we didn't find a better way so keep the public
+   * way here.
+   */
+  public static ByteBuff wrap(ByteBuffer[] buffers, RefCnt refCnt) {
     if (buffers == null || buffers.length == 0) {
       throw new IllegalArgumentException("buffers shouldn't be null or empty");
     }
-    return buffers.length == 1 ? new SingleByteBuff(recycler, buffers[0])
-        : new MultiByteBuff(recycler, buffers);
+    return buffers.length == 1 ? new SingleByteBuff(refCnt, buffers[0])
+        : new MultiByteBuff(refCnt, buffers);
+  }
+
+  public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {
+    return wrap(buffers, RefCnt.create(recycler));
   }
 
   public static ByteBuff wrap(ByteBuffer[] buffers) {
-    return wrap(buffers, ByteBuffAllocator.NONE);
+    return wrap(buffers, RefCnt.create());
   }
 
   public static ByteBuff wrap(List<ByteBuffer> buffers, Recycler recycler) {
-    if (buffers == null || buffers.size() == 0) {
-      throw new IllegalArgumentException("buffers shouldn't be null or empty");
-    }
-    return buffers.size() == 1 ? new SingleByteBuff(recycler, buffers.get(0))
-        : new MultiByteBuff(recycler, buffers.toArray(new ByteBuffer[0]));
+    return wrap(buffers, RefCnt.create(recycler));
   }
 
   public static ByteBuff wrap(List<ByteBuffer> buffers) {
-    return wrap(buffers, ByteBuffAllocator.NONE);
+    return wrap(buffers, RefCnt.create());
   }
 
   public static ByteBuff wrap(ByteBuffer buffer) {
-    return new SingleByteBuff(ByteBuffAllocator.NONE, buffer);
+    return wrap(buffer, RefCnt.create());
+  }
+
+  /**
+   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
+   */
+  private static ByteBuff wrap(List<ByteBuffer> buffers, RefCnt refCnt) {
+    if (buffers == null || buffers.size() == 0) {
+      throw new IllegalArgumentException("buffers shouldn't be null or empty");
+    }
+    return buffers.size() == 1 ? new SingleByteBuff(refCnt, buffers.get(0))
+        : new MultiByteBuff(refCnt, buffers.toArray(new ByteBuffer[0]));
+  }
+
+  /**
+   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
+   */
+  private static ByteBuff wrap(ByteBuffer buffer, RefCnt refCnt) {
+    return new SingleByteBuff(refCnt, buffer);
   }
 }

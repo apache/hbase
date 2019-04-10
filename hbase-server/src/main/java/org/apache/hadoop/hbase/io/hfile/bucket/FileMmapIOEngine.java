@@ -24,7 +24,6 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferAllocator;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
@@ -101,8 +100,7 @@ public abstract class FileMmapIOEngine implements IOEngine {
   }
 
   @Override
-  public abstract Cacheable read(long offset, int length,
-      CacheableDeserializer<Cacheable> deserializer) throws IOException;
+  public abstract Cacheable read(BucketEntry be) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to file

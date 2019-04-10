@@ -57,7 +57,7 @@ public class SingleByteBuff extends ByteBuff {
     this(new RefCnt(recycler), buf);
   }
 
-  private SingleByteBuff(RefCnt refCnt, ByteBuffer buf) {
+  SingleByteBuff(RefCnt refCnt, ByteBuffer buf) {
     this.refCnt = refCnt;
     this.buf = buf;
     if (buf.hasArray()) {
