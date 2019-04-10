@@ -24,13 +24,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -78,7 +76,7 @@ public class TestCleanupCompactedFileOnRegionClose {
     byte[] familyNameBytes = Bytes.toBytes(familyName);
     util.createTable(tableName, familyName);
 
-    HBaseAdmin hBaseAdmin = util.getHBaseAdmin();
+    Admin hBaseAdmin = util.getAdmin();
     Table table = util.getConnection().getTable(tableName);
 
     HRegionServer rs = util.getRSForFirstRegionInTable(tableName);

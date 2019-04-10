@@ -67,7 +67,7 @@ public class TestModifyTableWhileMerging {
     //Set procedure executor thread to 1, making reproducing this issue of HBASE-20921 easier
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     UTIL.startMiniCluster(1);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = SPLITKEY;
     client = UTIL.createTable(TABLE_NAME, CF, splitKeys);

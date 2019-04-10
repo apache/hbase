@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
+
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
@@ -298,44 +300,7 @@ class TableOverAsyncTable implements Table {
   public void close() {
   }
 
-  private static final class BlockingRpcCallback<R> implements RpcCallback<R> {
-    private R result;
-    private boolean resultSet = false;
-
-    /**
-     * Called on completion of the RPC call with the response object, or {@code null} in the case of
-     * an error.
-     * @param parameter the response object or {@code null} if an error occurred
-     */
-    @Override
-    public void run(R parameter) {
-      synchronized (this) {
-        result = parameter;
-        resultSet = true;
-        this.notifyAll();
-      }
-    }
-
-    /**
-     * Returns the parameter passed to {@link #run(Object)} or {@code null} if a null value was
-     * passed. When used asynchronously, this method will block until the {@link #run(Object)}
-     * method has been called.
-     * @return the response object or {@code null} if no response was passed
-     */
-    public synchronized R get() throws IOException {
-      while (!resultSet) {
-        try {
-          this.wait();
-        } catch (InterruptedException ie) {
-          InterruptedIOException exception = new InterruptedIOException(ie.getMessage());
-          exception.initCause(ie);
-          throw exception;
-        }
-      }
-      return result;
-    }
-  }
-
+  @SuppressWarnings("deprecation")
   private static final class RegionCoprocessorRpcChannel extends RegionCoprocessorRpcChannelImpl
       implements CoprocessorRpcChannel {
 
@@ -348,17 +313,17 @@ class TableOverAsyncTable implements Table {
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
         Message responsePrototype, RpcCallback<Message> done) {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
-      BlockingRpcCallback<Message> callback = new BlockingRpcCallback<>();
+      CoprocessorBlockingRpcCallback<Message> callback = new CoprocessorBlockingRpcCallback<>();
       super.callMethod(method, c, request, responsePrototype, callback);
       Message ret;
       try {
         ret = callback.get();
       } catch (IOException e) {
-        setError(controller, e);
+        setCoprocessorError(controller, e);
         return;
       }
       if (c.failed()) {
-        setError(controller, c.getFailed());
+        setCoprocessorError(controller, c.getFailed());
       }
       done.run(ret);
     }
@@ -367,7 +332,7 @@ class TableOverAsyncTable implements Table {
     public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
         Message request, Message responsePrototype) throws ServiceException {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
-      BlockingRpcCallback<Message> done = new BlockingRpcCallback<>();
+      CoprocessorBlockingRpcCallback<Message> done = new CoprocessorBlockingRpcCallback<>();
       callMethod(method, c, request, responsePrototype, done);
       Message ret;
       try {
@@ -376,7 +341,7 @@ class TableOverAsyncTable implements Table {
         throw new ServiceException(e);
       }
       if (c.failed()) {
-        setError(controller, c.getFailed());
+        setCoprocessorError(controller, c.getFailed());
         throw new ServiceException(c.getFailed());
       }
       return ret;

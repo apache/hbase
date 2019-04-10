@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
@@ -1590,7 +1589,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       builder.setColumnFamily(cfdb.build());
     }
     TableDescriptor td = builder.build();
-    getAdmin().createTable(td, splitKeys);
+    if (splitKeys != null) {
+      getAdmin().createTable(td, splitKeys);
+    } else {
+      getAdmin().createTable(td);
+    }
     // HBaseAdmin only waits for regions to appear in hbase:meta
     // we should wait until they are assigned
     waitUntilAllRegionsAssigned(td.getTableName());
@@ -1613,7 +1616,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
            .setNewVersionBehavior(true).build());
       }
     }
-    getAdmin().createTable(builder.build(), splitRows);
+    if (splitRows != null) {
+      getAdmin().createTable(builder.build(), splitRows);
+    } else {
+      getAdmin().createTable(builder.build());
+    }
     // HBaseAdmin only waits for regions to appear in hbase:meta
     // we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
@@ -1682,7 +1689,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
       desc.addFamily(hcd);
     }
-    getAdmin().createTable(desc, splitKeys);
+    if (splitKeys != null) {
+      getAdmin().createTable(desc, splitKeys);
+    } else {
+      getAdmin().createTable(desc);
+    }
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -3031,36 +3042,17 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Returns a Admin instance.
-   * This instance is shared between HBaseTestingUtility instance users. Closing it has no effect,
-   * it will be closed automatically when the cluster shutdowns
-   *
-   * @return HBaseAdmin instance which is guaranteed to support only {@link Admin} interface.
-   *   Functions in HBaseAdmin not provided by {@link Admin} interface can be changed/deleted
-   *   anytime.
-   * @deprecated Since 2.0. Will be removed in 3.0. Use {@link #getAdmin()} instead.
-   */
-  @Deprecated
-  public synchronized HBaseAdmin getHBaseAdmin()
-  throws IOException {
-    if (hbaseAdmin == null){
-      this.hbaseAdmin = (HBaseAdmin) getConnection().getAdmin();
-    }
-    return hbaseAdmin;
-  }
-
-  /**
    * Returns an Admin instance which is shared between HBaseTestingUtility instance users.
    * Closing it has no effect, it will be closed automatically when the cluster shutdowns
    */
   public synchronized Admin getAdmin() throws IOException {
     if (hbaseAdmin == null){
-      this.hbaseAdmin = (HBaseAdmin) getConnection().getAdmin();
+      this.hbaseAdmin = getConnection().getAdmin();
     }
     return hbaseAdmin;
   }
 
-  private HBaseAdmin hbaseAdmin = null;
+  private Admin hbaseAdmin = null;
 
   /**
    * Returns an {@link Hbck} instance. Needs be closed when done.

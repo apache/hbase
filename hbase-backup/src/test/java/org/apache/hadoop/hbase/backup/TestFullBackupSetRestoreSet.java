@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.ClassRule;
@@ -76,7 +76,7 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       // Run backup
       ret = ToolRunner.run(conf1, new RestoreDriver(), args);
       assertTrue(ret == 0);
-      HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+      Admin hba = TEST_UTIL.getAdmin();
       assertTrue(hba.tableExists(table1_restore));
       // Verify number of rows in both tables
       assertEquals(TEST_UTIL.countRows(table1), TEST_UTIL.countRows(table1_restore));
@@ -118,7 +118,7 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       // Run backup
       ret = ToolRunner.run(conf1, new RestoreDriver(), args);
       assertTrue(ret == 0);
-      HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+      Admin hba = TEST_UTIL.getAdmin();
       assertTrue(hba.tableExists(table1));
       // Verify number of rows in both tables
       assertEquals(count, TEST_UTIL.countRows(table1));
