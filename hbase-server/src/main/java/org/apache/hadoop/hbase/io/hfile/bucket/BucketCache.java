@@ -1429,26 +1429,25 @@ public class BucketCache implements BlockCache, HeapSize {
       this.accessCounter = accessCounter;
     }
 
-    public BucketEntry writeToCache(final IOEngine ioEngine,
-        final BucketAllocator bucketAllocator,
-        final UniqueIndexMap<Integer> deserialiserMap,
-        final AtomicLong realCacheSize) throws CacheFullException, IOException,
-        BucketAllocatorException {
+    public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator bucketAllocator,
+        final UniqueIndexMap<Integer> deserialiserMap, final AtomicLong realCacheSize)
+        throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
-      if (len == 0) return null;
+      if (len == 0) {
+        return null;
+      }
       long offset = bucketAllocator.allocateBlock(len);
-      BucketEntry bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory);
-      bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
+      BucketEntry bucketEntry;
+      boolean succ = false;
       try {
+        bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory);
+        bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
         if (data instanceof HFileBlock) {
           // If an instance of HFileBlock, save on some allocations.
-          HFileBlock block = (HFileBlock)data;
+          HFileBlock block = (HFileBlock) data;
           ByteBuffer sliceBuf = block.getBufferReadOnly();
           ByteBuffer metadata = block.getMetaData();
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Write offset=" + offset + ", len=" + len);
-          }
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(metadata, offset + len - metadata.limit());
         } else {
@@ -1456,12 +1455,12 @@ public class BucketCache implements BlockCache, HeapSize {
           data.serialize(bb, true);
           ioEngine.write(bb, offset);
         }
-      } catch (IOException ioe) {
-        // free it in bucket allocator
-        bucketAllocator.freeBlock(offset);
-        throw ioe;
+        succ = true;
+      } finally {
+        if (!succ) {
+          bucketAllocator.freeBlock(offset);
+        }
       }
-
       realCacheSize.addAndGet(len);
       return bucketEntry;
     }

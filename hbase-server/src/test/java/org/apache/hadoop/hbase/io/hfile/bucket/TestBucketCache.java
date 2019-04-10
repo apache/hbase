@@ -50,13 +50,16 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 
 /**
  * Basic test of BucketCache.Puts and gets.
@@ -430,5 +433,37 @@ public class TestBucketCache {
     //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata,
         actualBuffer, block1Buffer);
+  }
+
+  @Test
+  public void testFreeBlockWhenIOEngineWriteFailure() throws IOException {
+    // initialize an block.
+    int size = 100, offset = 20;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    ByteBuffer buf = ByteBuffer.allocate(length);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
+        offset, 52, -1, meta);
+
+    // initialize an mocked ioengine.
+    IOEngine ioEngine = Mockito.mock(IOEngine.class);
+    // Mockito.doNothing().when(ioEngine).write(Mockito.any(ByteBuffer.class), Mockito.anyLong());
+    Mockito.doThrow(RuntimeException.class).when(ioEngine).write(Mockito.any(ByteBuffer.class),
+      Mockito.anyLong());
+
+    // create an bucket allocator.
+    long availableSpace = 1024 * 1024 * 1024L;
+    BucketAllocator allocator = new BucketAllocator(availableSpace, null);
+
+    BlockCacheKey key = new BlockCacheKey("dummy", 1L);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
+
+    Assert.assertEquals(0, allocator.getUsedSize());
+    try {
+      re.writeToCache(ioEngine, allocator, new UniqueIndexMap<Integer>(), null);
+      Assert.fail();
+    } catch (Exception e) {
+    }
+    Assert.assertEquals(0, allocator.getUsedSize());
   }
 }
