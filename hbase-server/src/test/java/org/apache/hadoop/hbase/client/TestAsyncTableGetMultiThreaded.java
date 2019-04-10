@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIM
 import static org.apache.hadoop.hbase.master.LoadBalancer.TABLES_ON_MASTER;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -55,6 +55,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Will split the table, and move region randomly when testing.
@@ -64,7 +66,9 @@ public class TestAsyncTableGetMultiThreaded {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
+    HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncTableGetMultiThreaded.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -155,12 +159,23 @@ public class TestAsyncTableGetMultiThreaded {
 
       for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)) {
         region.compact(true);
-
-        //Waiting for compaction to complete and references are cleaned up
+      }
+      for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)) {
+        // Waiting for compaction to complete and references are cleaned up
         RetryCounter retrier = new RetryCounter(30, 1, TimeUnit.SECONDS);
-        while (CompactionState.NONE != admin
-            .getCompactionStateForRegion(region.getRegionInfo().getRegionName())
-            && retrier.shouldRetry()) {
+        for (;;) {
+          try {
+            if (admin.getCompactionStateForRegion(
+              region.getRegionInfo().getRegionName()) == CompactionState.NONE) {
+              break;
+            }
+          } catch (IOException e) {
+            LOG.warn("Failed to query");
+          }
+          if (!retrier.shouldRetry()) {
+            throw new IOException("Can not finish compaction in time after attempt " +
+              retrier.getAttemptTimes() + " times");
+          }
           retrier.sleepUntilNextRetry();
         }
         region.getStores().get(0).closeAndArchiveCompactedFiles();
