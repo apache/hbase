@@ -386,9 +386,10 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @VisibleForTesting
-  public int getRefCount(BlockCacheKey cacheKey) {
+  public int getRpcRefCount(BlockCacheKey cacheKey) {
     return (this.l2Cache instanceof BucketCache)
-        ? ((BucketCache) this.l2Cache).getRefCount(cacheKey) : 0;
+        ? ((BucketCache) this.l2Cache).getRpcRefCount(cacheKey)
+        : 0;
   }
 
   public FirstLevelBlockCache getFirstLevelCache() {
