@@ -594,10 +594,10 @@ public class TestTableScan {
       RowModel rowModel = rowModels.get(i);
       RowModel reversedRowModel = reversedRowModels.get(i);
 
-      assertEquals(new String(rowModel.getKey(), "UTF-8"),
-          new String(reversedRowModel.getKey(), "UTF-8"));
-      assertEquals(new String(rowModel.getCells().get(0).getValue(), "UTF-8"),
-          new String(reversedRowModel.getCells().get(0).getValue(), "UTF-8"));
+      assertEquals(new String(rowModel.getKey(), StandardCharsets.UTF_8),
+          new String(reversedRowModel.getKey(), StandardCharsets.UTF_8));
+      assertEquals(new String(rowModel.getCells().get(0).getValue(), StandardCharsets.UTF_8),
+          new String(reversedRowModel.getCells().get(0).getValue(), StandardCharsets.UTF_8));
     }
   }
 

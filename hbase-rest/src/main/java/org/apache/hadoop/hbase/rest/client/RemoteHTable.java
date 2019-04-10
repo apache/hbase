@@ -24,6 +24,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -953,7 +954,7 @@ public class RemoteHTable implements Table {
    */
   private static String toURLEncodedBytes(byte[] row) {
     try {
-      return URLEncoder.encode(new String(row, "UTF-8"), "UTF-8");
+      return URLEncoder.encode(new String(row, StandardCharsets.UTF_8), "UTF-8");
     } catch (UnsupportedEncodingException e) {
       throw new IllegalStateException("URLEncoder doesn't support UTF-8", e);
     }

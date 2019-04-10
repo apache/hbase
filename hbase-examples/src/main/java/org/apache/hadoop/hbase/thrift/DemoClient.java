@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSaslClientTransport;
@@ -115,12 +115,7 @@ public class DemoClient {
 
   // Helper to translate strings to UTF8 bytes
   private byte[] bytes(String s) {
-    try {
-      return s.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      LOG.error("CharSetName {} not supported", s, e);
-      return null;
-    }
+    return Bytes.toBytes(s);
   }
 
   private void run() throws Exception {
