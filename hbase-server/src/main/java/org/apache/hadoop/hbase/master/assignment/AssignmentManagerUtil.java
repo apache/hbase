@@ -229,8 +229,7 @@ final class AssignmentManagerUtil {
   }
 
   static void checkClosedRegion(MasterProcedureEnv env, RegionInfo regionInfo) throws IOException {
-    if (WALSplitter.hasRecoveredEdits(env.getMasterServices().getFileSystem(),
-      env.getMasterConfiguration(), regionInfo)) {
+    if (WALSplitter.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
       throw new IOException("Recovered.edits are found in Region: " + regionInfo +
         ", abort split/merge to prevent data loss");
     }
