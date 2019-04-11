@@ -55,6 +55,6 @@ public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot
 
   public static void setUpBaseConf(Configuration conf) {
     TestExportSnapshot.setUpBaseConf(conf);
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + TEMP_DIR + "/.tmpdir/");
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(TEMP_DIR, ".tmpdir").toUri());
   }
 }
