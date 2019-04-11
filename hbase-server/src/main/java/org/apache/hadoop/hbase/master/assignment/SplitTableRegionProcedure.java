@@ -149,8 +149,7 @@ public class SplitTableRegionProcedure
    * @throws IOException IOException
    */
   static boolean hasRecoveredEdits(MasterProcedureEnv env, RegionInfo ri) throws IOException {
-    return WALSplitter.hasRecoveredEdits(env.getMasterServices().getFileSystem(),
-        env.getMasterConfiguration(), ri);
+    return WALSplitter.hasRecoveredEdits(env.getMasterConfiguration(), ri);
   }
 
   /**
