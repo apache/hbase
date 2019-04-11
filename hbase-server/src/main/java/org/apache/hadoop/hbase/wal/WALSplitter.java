@@ -538,14 +538,13 @@ public class WALSplitter {
 
   /**
    * Check whether there is recovered.edits in the region dir
-   * @param walFS FileSystem
    * @param conf conf
    * @param regionInfo the region to check
    * @throws IOException IOException
    * @return true if recovered.edits exist in the region dir
    */
-  public static boolean hasRecoveredEdits(final FileSystem walFS,
-      final Configuration conf, final RegionInfo regionInfo) throws IOException {
+  public static boolean hasRecoveredEdits(final Configuration conf,
+    final RegionInfo regionInfo) throws IOException {
     // No recovered.edits for non default replica regions
     if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return false;
@@ -554,7 +553,7 @@ public class WALSplitter {
     //directly without converting it to default replica's regioninfo.
     Path regionDir = FSUtils.getWALRegionDir(conf, regionInfo.getTable(),
         regionInfo.getEncodedName());
-    NavigableSet<Path> files = getSplitEditFilesSorted(walFS, regionDir);
+    NavigableSet<Path> files = getSplitEditFilesSorted(FSUtils.getWALFileSystem(conf), regionDir);
     return files != null && !files.isEmpty();
   }
 

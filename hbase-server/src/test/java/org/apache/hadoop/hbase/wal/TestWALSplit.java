@@ -380,18 +380,7 @@ public class TestWALSplit {
    */
   @Test
   public void testRecoveredEditsPathForMeta() throws IOException {
-    byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
-    Path regiondir = new Path(tdir,
-      RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
-    fs.mkdirs(regiondir);
-    long now = System.currentTimeMillis();
-    Entry entry =
-        new Entry(new WALKeyImpl(encoded,
-            TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
-            new WALEdit());
-    Path p = WALSplitter.getRegionSplitEditsPath(entry,
-        FILENAME_BEING_SPLIT, conf);
+    Path p = createRecoveredEditsPathForRegion();
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -402,25 +391,42 @@ public class TestWALSplit {
    */
   @Test
   public void testOldRecoveredEditsFileSidelined() throws IOException {
-    byte [] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    Path p = createRecoveredEditsPathForRegion();
     Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
       RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
-    long now = System.currentTimeMillis();
-    Entry entry =
-        new Entry(new WALKeyImpl(encoded,
-            TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
-            new WALEdit());
     Path parent = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
     assertEquals(HConstants.RECOVERED_EDITS_DIR, parent.getName());
     fs.createNewFile(parent); // create a recovered.edits file
-
-    Path p = WALSplitter.getRegionSplitEditsPath(entry,
-        FILENAME_BEING_SPLIT, conf);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
+  }
+
+  private Path createRecoveredEditsPathForRegion() throws  IOException{
+    byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    long now = System.currentTimeMillis();
+    Entry entry =
+      new Entry(new WALKeyImpl(encoded,
+        TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+        new WALEdit());
+    Path p = WALSplitter.getRegionSplitEditsPath(entry,
+      FILENAME_BEING_SPLIT, conf);
+    return p;
+  }
+
+  /**
+   * Test hasRecoveredEdits correctly identifies proper recovered edits file on related dir.
+   * @throws IOException on any issues found while creating test required files/directories.
+   */
+  @Test
+  public void testHasRecoveredEdits() throws IOException {
+    Path p = createRecoveredEditsPathForRegion();
+    assertFalse(WALSplitter.hasRecoveredEdits(conf, RegionInfoBuilder.FIRST_META_REGIONINFO));
+    String renamedEdit = p.getName().split("-")[0];
+    fs.createNewFile(new Path(p.getParent(), renamedEdit));
+    assertTrue(WALSplitter.hasRecoveredEdits(conf, RegionInfoBuilder.FIRST_META_REGIONINFO));
   }
 
   private void useDifferentDFSClient() throws IOException {
