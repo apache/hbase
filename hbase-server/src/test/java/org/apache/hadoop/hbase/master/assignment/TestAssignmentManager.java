@@ -92,7 +92,9 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20));
     waitOnFuture(submitProcedure(createAssignProcedure(hri)));
 
-    assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
+    // we crashed a rs, so it is possible that there are other regions on the rs which will also be
+    // reassigned, so here we just assert greater than, not the exact number.
+    assertTrue(assignProcMetrics.getSubmittedCounter().getCount() > assignSubmittedCount);
     assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
   }
 
