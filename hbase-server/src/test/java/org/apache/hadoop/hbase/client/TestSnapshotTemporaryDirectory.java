@@ -121,7 +121,7 @@ public class TestSnapshotTemporaryDirectory {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
         ConstantSizeRegionSplitPolicy.class.getName());
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + TEMP_DIR + "/.tmpdir/");
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(TEMP_DIR, ".tmpDir").toUri());
   }
 
   @Before public void setup() throws Exception {
