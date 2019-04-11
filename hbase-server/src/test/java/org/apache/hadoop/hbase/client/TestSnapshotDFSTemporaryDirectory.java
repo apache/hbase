@@ -66,8 +66,8 @@ public class TestSnapshotDFSTemporaryDirectory
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
         ConstantSizeRegionSplitPolicy.class.getName());
 
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, UTIL.getDefaultRootDirPath().toString()
-        + Path.SEPARATOR + UUID.randomUUID().toString() + Path.SEPARATOR + ".tmpdir"
-        + Path.SEPARATOR);
+    String snapshotPath = UTIL.getDefaultRootDirPath().toString() + Path.SEPARATOR +
+        UUID.randomUUID().toString() + Path.SEPARATOR + ".tmpdir" + Path.SEPARATOR;
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(snapshotPath).toUri());
   }
 }
