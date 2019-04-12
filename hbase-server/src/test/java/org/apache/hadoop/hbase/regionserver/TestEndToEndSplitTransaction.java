@@ -102,10 +102,9 @@ public class TestEndToEndSplitTransaction {
   }
 
 
-  /*
+  /**
    * This is the test for : HBASE-20940 This test will split the region and try to open an reference
    * over store file. Once store file has any reference, it makes sure that region can't be split
-   * @throws Exception
    */
   @Test
   public void testCanSplitJustAfterASplit() throws Exception {
@@ -125,7 +124,7 @@ public class TestEndToEndSplitTransaction {
       TEST_UTIL.loadTable(source, fam);
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       regions.get(0).forceSplit(null);
-      admin.split(tableName);
+      TEST_UTIL.getAsyncConnection().getAdmin().split(tableName);
 
       while (regions.size() <= 1) {
         regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
@@ -325,7 +324,7 @@ public class TestEndToEndSplitTransaction {
 
           Set<RegionInfo> regions = new TreeSet<>(RegionInfo.COMPARATOR);
           for (HRegionLocation loc : rl.getAllRegionLocations()) {
-            regions.add(loc.getRegionInfo());
+            regions.add(loc.getRegion());
           }
           verifyTableRegions(regions);
         }
@@ -504,7 +503,7 @@ public class TestEndToEndSplitTransaction {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
       HRegionLocation loc = MetaTableAccessor.getRegionLocation(conn, hri);
-      if (loc != null && !loc.getRegionInfo().isOffline()) {
+      if (loc != null && !loc.getRegion().isOffline()) {
         log("found region in META: " + hri.getRegionNameAsString());
         break;
       }

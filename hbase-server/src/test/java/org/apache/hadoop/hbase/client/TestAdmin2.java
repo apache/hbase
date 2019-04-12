@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -211,7 +209,7 @@ public class TestAdmin2 {
       // Use 80 bit numbers to make sure we aren't limited
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
-      Admin hbaseadmin = TEST_UTIL.getHBaseAdmin();
+      Admin hbaseadmin = TEST_UTIL.getAdmin();
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
@@ -391,14 +389,14 @@ public class TestAdmin2 {
       isInList);
   }
 
-  private HBaseAdmin createTable(TableName tableName) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+  private Admin createTable(TableName tableName) throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
 
     htd.addFamily(hcd);
-    admin.createTable(htd, null);
+    admin.createTable(htd);
     return admin;
   }
 
@@ -411,7 +409,7 @@ public class TestAdmin2 {
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
 
-    ADMIN.createTable(htd, null);
+    ADMIN.createTable(htd);
   }
 
   /**
@@ -588,7 +586,7 @@ public class TestAdmin2 {
         new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("cf1"));
     htd.addFamily(hcd);
-    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    TEST_UTIL.getAdmin().createTable(htd);
   }
 
   @Test
@@ -603,27 +601,6 @@ public class TestAdmin2 {
       ADMIN.isTableDisabled(TableName.valueOf(name.getMethodName()));
       fail("Test should fail if isTableDisabled called on unknown table.");
     } catch (IOException e) {
-    }
-  }
-
-  @Test
-  public void testGetRegion() throws Exception {
-    // We use actual HBaseAdmin instance instead of going via Admin interface in
-    // here because makes use of an internal HBA method (TODO: Fix.).
-    HBaseAdmin rawAdmin = TEST_UTIL.getHBaseAdmin();
-
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    LOG.info("Started " + tableName);
-    Table t = TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
-
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
-      RegionInfo region = regionLocation.getRegionInfo();
-      byte[] regionName = region.getRegionName();
-      Pair<RegionInfo, ServerName> pair = rawAdmin.getRegion(regionName);
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-      pair = rawAdmin.getRegion(region.getEncodedNameAsBytes());
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
     }
   }
 

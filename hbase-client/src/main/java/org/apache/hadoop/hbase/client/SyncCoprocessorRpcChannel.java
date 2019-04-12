@@ -36,7 +36,10 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
  * call coprocessor endpoint {@link com.google.protobuf.Service}s.
  * Note that clients should not use this class directly, except through
  * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
+ * @deprecated Please stop using this class again, as it is too low level, which is part of the rpc
+ *             framework for HBase. Will be deleted in 4.0.0.
  */
+@Deprecated
 @InterfaceAudience.Public
 abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
   private static final Logger LOG = LoggerFactory.getLogger(SyncCoprocessorRpcChannel.class);

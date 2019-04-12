@@ -55,17 +55,11 @@ public class TestSplitOrMergeStatus {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -84,7 +78,12 @@ public class TestSplitOrMergeStatus {
     initSwitchStatus(admin);
     boolean result = admin.splitSwitch(false, false);
     assertTrue(result);
-    admin.split(t.getName());
+    try {
+      admin.split(t.getName());
+      fail();
+    } catch (IOException e) {
+      // expected
+    }
     int count = admin.getRegions(tableName).size();
     assertTrue(originalCount == count);
     result = admin.splitSwitch(true, false);
