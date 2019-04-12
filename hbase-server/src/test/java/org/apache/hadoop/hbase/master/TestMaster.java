@@ -190,7 +190,7 @@ public class TestMaster {
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
 
-    admin.createTable(htd, null);
+    admin.createTable(htd);
     try {
       RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
           .setStartKey(Bytes.toBytes("A"))
@@ -213,7 +213,7 @@ public class TestMaster {
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
 
-    admin.createTable(htd, null);
+    admin.createTable(htd);
     try {
       List<RegionInfo> tableRegions = admin.getRegions(tableName);
 

@@ -4249,8 +4249,7 @@ public class TestFromClientSide {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      try (Table t = conn.getTable(tableName);
-           Admin admin = conn.getAdmin()) {
+      try (Table t = conn.getTable(tableName); Admin admin = conn.getAdmin()) {
         assertTrue(admin.tableExists(tableName));
         assertTrue(t.get(new Get(ROW)).isEmpty());
       }
@@ -4269,8 +4268,8 @@ public class TestFromClientSide {
       boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
       try (Admin admin = conn.getAdmin()) {
         assertTrue(admin.tableExists(tableName));
-        assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-                .getLiveServerMetrics().size() == SLAVES + (tablesOnMaster ? 1 : 0));
+        assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
+          .size() == SLAVES + (tablesOnMaster ? 1 : 0));
       }
     }
   }
