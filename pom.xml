@@ -1302,7 +1302,7 @@
     <jcodings.version>1.0.8</jcodings.version>
     <spy.version>2.11.6</spy.version>
     <bouncycastle.version>1.46</bouncycastle.version>
-    <kerby.version>1.0.0-RC2</kerby.version>
+    <kerby.version>1.0.1</kerby.version>
     <!-- Plugin Dependencies -->
     <error-prone.version>2.1.1</error-prone.version>
     <maven.assembly.version>2.4</maven.assembly.version>
