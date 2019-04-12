@@ -346,7 +346,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     this.ng = connection.getNonceGenerator();
   }
 
-  private <T> MasterRequestCallerBuilder<T> newMasterCaller() {
+  <T> MasterRequestCallerBuilder<T> newMasterCaller() {
     return this.connection.callerFactory.<T> masterRequest()
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
@@ -688,11 +688,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
-    return isTableAvailable(tableName, Optional.empty());
-  }
-
-  private CompletableFuture<Boolean> isTableAvailable(TableName tableName,
-      Optional<byte[][]> splitKeys) {
     if (TableName.isMetaTableName(tableName)) {
       return connection.registry.getMetaRegionLocation().thenApply(locs -> Stream
         .of(locs.getRegionLocations()).allMatch(loc -> loc != null && loc.getServerName() != null));
@@ -726,33 +721,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               future.complete(false);
               return;
             }
-
-            Optional<Boolean> available =
-              splitKeys.map(keys -> compareRegionsWithSplitKeys(locations, keys));
-            future.complete(available.orElse(true));
+            future.complete(true);
           });
       }
     });
     return future;
-  }
-
-  private boolean compareRegionsWithSplitKeys(List<HRegionLocation> locations, byte[][] splitKeys) {
-    int regionCount = 0;
-    for (HRegionLocation location : locations) {
-      RegionInfo info = location.getRegion();
-      if (Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        regionCount++;
-        continue;
-      }
-      for (byte[] splitKey : splitKeys) {
-        // Just check if the splitkey is available
-        if (Bytes.equals(info.getStartKey(), splitKey)) {
-          regionCount++;
-          break;
-        }
-      }
-    }
-    return regionCount == splitKeys.length + 1;
   }
 
   @Override
@@ -1970,10 +1943,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                     LOG.error(
                       "Unable to remove the failsafe snapshot: " + failSafeSnapshotSnapshotName,
                       err3);
-                    future.completeExceptionally(err3);
-                  } else {
-                    future.complete(ret3);
                   }
+                  future.complete(ret3);
                 });
               }
             });
@@ -3359,7 +3330,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
-  private <T> ServerRequestCallerBuilder<T> newServerCaller() {
+  <T> ServerRequestCallerBuilder<T> newServerCaller() {
     return this.connection.callerFactory.<T> serverRequest()
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)

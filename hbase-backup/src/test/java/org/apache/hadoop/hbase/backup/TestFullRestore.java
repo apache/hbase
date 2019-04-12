@@ -26,7 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.ClassRule;
@@ -66,7 +66,7 @@ public class TestFullRestore extends TestBackupBase {
     BackupAdmin client = getBackupAdmin();
     client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
       tableset, tablemap, false));
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
     hba.close();
@@ -88,7 +88,7 @@ public class TestFullRestore extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
     assertTrue(ret == 0);
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
     hba.close();
@@ -110,7 +110,7 @@ public class TestFullRestore extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret == 0);
     //Verify that table has not been restored
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertFalse(hba.tableExists(table1_restore));
   }
 
@@ -131,7 +131,7 @@ public class TestFullRestore extends TestBackupBase {
     BackupAdmin client = getBackupAdmin();
     client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
       restore_tableset, tablemap, false));
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table2_restore));
     assertTrue(hba.tableExists(table3_restore));
     TEST_UTIL.deleteTable(table2_restore);
@@ -162,7 +162,7 @@ public class TestFullRestore extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
     assertTrue(ret == 0);
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table2_restore));
     assertTrue(hba.tableExists(table3_restore));
     TEST_UTIL.deleteTable(table2_restore);
@@ -210,7 +210,7 @@ public class TestFullRestore extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret == 0);
 
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1));
     hba.close();
   }
@@ -256,7 +256,7 @@ public class TestFullRestore extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
     assertTrue(ret == 0);
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table2));
     assertTrue(hba.tableExists(table3));
     hba.close();

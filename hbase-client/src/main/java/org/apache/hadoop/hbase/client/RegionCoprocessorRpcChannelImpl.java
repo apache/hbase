@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.google.protobuf.Descriptors.MethodDescriptor;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -101,23 +101,6 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     return future;
   }
 
-  protected final void setError(RpcController controller, Throwable error) {
-    if (controller == null) {
-      return;
-    }
-    if (controller instanceof ServerRpcController) {
-      if (error instanceof IOException) {
-        ((ServerRpcController) controller).setFailedOn((IOException) error);
-      } else {
-        ((ServerRpcController) controller).setFailedOn(new IOException(error));
-      }
-    } else if (controller instanceof ClientCoprocessorRpcController) {
-      ((ClientCoprocessorRpcController) controller).setFailed(error);
-    } else {
-      controller.setFailed(error.toString());
-    }
-  }
-
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
@@ -128,7 +111,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
         .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
       (r, e) -> {
         if (e != null) {
-          setError(controller, e);
+          setCoprocessorError(controller, e);
         }
         done.run(r);
       });

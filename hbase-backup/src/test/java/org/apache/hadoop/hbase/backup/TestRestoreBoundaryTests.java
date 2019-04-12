@@ -23,7 +23,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -55,7 +55,7 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
     getBackupAdmin().restore(
       BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset, tablemap,
         false));
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
   }
@@ -76,7 +76,7 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
     getBackupAdmin().restore(
       BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, restore_tableset,
         tablemap, false));
-    HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
+    Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table2_restore));
     assertTrue(hba.tableExists(table3_restore));
     TEST_UTIL.deleteTable(table2_restore);

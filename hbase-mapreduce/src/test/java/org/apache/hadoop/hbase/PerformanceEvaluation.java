@@ -383,7 +383,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
           }
         }
       }
-      admin.createTable(desc, splits);
+      if (splits != null) {
+        admin.createTable(desc, splits);
+      } else {
+        admin.createTable(desc);
+      }
       LOG.info("Table " + desc + " created");
     }
     return admin.tableExists(tableName);

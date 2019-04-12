@@ -486,7 +486,7 @@ public class RestoreTool {
         LOG.info("Creating target table '" + targetTableName + "'");
         byte[][] keys;
         if (regionDirList == null || regionDirList.size() == 0) {
-          admin.createTable(htd, null);
+          admin.createTable(htd);
         } else {
           keys = generateBoundaryKeys(regionDirList);
           // create table using table descriptor and region boundaries
