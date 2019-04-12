@@ -1156,10 +1156,10 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void move(byte[] encodedRegionName) throws IOException {
-    move(encodedRegionName, (ServerName) null);
+    move(encodedRegionName, null);
   }
 
-  public void move(final byte[] encodedRegionName, ServerName destServerName) throws IOException {
+  public void move(byte[] encodedRegionName, ServerName destServerName) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
@@ -3907,6 +3907,11 @@ public class HBaseAdmin implements Admin {
   @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
+  }
+
+  @Override
+  public List<RegionMetrics> getRegionMetrics(ServerName serverName) throws IOException {
+    return getRegionMetrics(serverName, null);
   }
 
   @Override

@@ -50,10 +50,11 @@ public class TestSnapshotDFSTemporaryDirectory
    *
    * @throws Exception on failure
    */
-  @BeforeClass public static void setupCluster() throws Exception {
+  @BeforeClass
+  public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
   }
 
   private static void setupConf(Configuration conf) throws IOException {

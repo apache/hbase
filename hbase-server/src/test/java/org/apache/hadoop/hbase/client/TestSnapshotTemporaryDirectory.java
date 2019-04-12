@@ -104,7 +104,7 @@ public class TestSnapshotTemporaryDirectory {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
   }
 
   private static void setupConf(Configuration conf) {
@@ -139,7 +139,7 @@ public class TestSnapshotTemporaryDirectory {
   @After
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
@@ -290,7 +290,7 @@ public class TestSnapshotTemporaryDirectory {
    */
   @Test
   public void testOfflineTableSnapshot() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 

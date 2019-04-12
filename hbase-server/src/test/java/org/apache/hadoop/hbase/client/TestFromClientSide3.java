@@ -272,13 +272,13 @@ public class TestFromClientSide3 {
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       Admin admin = TEST_UTIL.getAdmin();
 
       // Create 3 store files.
       byte[] row = Bytes.toBytes(random.nextInt());
-      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 100);
+      performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 100);
 
       try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
         // Verify we have multiple store files.
@@ -304,13 +304,13 @@ public class TestFromClientSide3 {
 
         // change the compaction.min config option for this table to 5
         LOG.info("hbase.hstore.compaction.min should now be 5");
-        HTableDescriptor htd = new HTableDescriptor(hTable.getDescriptor());
+        HTableDescriptor htd = new HTableDescriptor(table.getDescriptor());
         htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
         admin.modifyTable(htd);
         LOG.info("alter status finished");
 
         // Create 3 more store files.
-        performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
+        performMultiplePutAndFlush(admin, table, row, FAMILY, 3, 10);
 
         // Issue a compaction request
         admin.compact(tableName);
@@ -357,7 +357,7 @@ public class TestFromClientSide3 {
         htd.modifyFamily(hcd);
         admin.modifyTable(htd);
         LOG.info("alter status finished");
-        assertNull(hTable.getDescriptor().getColumnFamily(FAMILY)
+        assertNull(table.getDescriptor().getColumnFamily(FAMILY)
           .getValue(Bytes.toBytes("hbase.hstore.compaction.min")));
       }
     }
