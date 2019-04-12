@@ -26,9 +26,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -126,7 +126,7 @@ public class TestRemoteBackup extends TestBackupBase {
       tablesRestoreFull, tablesMapFull, false));
 
     // check tables for full restore
-    HBaseAdmin hAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hAdmin = TEST_UTIL.getAdmin();
     assertTrue(hAdmin.tableExists(table1_restore));
 
     // #5.2 - checking row count of tables for full restore

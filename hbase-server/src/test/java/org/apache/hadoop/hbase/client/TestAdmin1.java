@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
@@ -273,7 +274,11 @@ public class TestAdmin1 extends TestAdminBase {
 
         // Split the table
         if (async) {
-          ADMIN.split(tableName, splitPoint);
+          if (splitPoint != null) {
+            ADMIN.split(tableName, splitPoint);
+          } else {
+            ADMIN.split(tableName);
+          }
           final AtomicInteger count = new AtomicInteger(0);
           Thread t = new Thread("CheckForSplit") {
             @Override
@@ -391,7 +396,8 @@ public class TestAdmin1 extends TestAdminBase {
     // the element at index 1 would be a replica (since the metareader gives us ordered
     // regions). Try splitting that region via the split API . Should fail
     try {
-      TEST_UTIL.getAdmin().splitRegionAsync(regions.get(1).getFirst().getRegionName()).get();
+      FutureUtils.get(
+        TEST_UTIL.getAdmin().splitRegionAsync(regions.get(1).getFirst().getRegionName()));
     } catch (IllegalArgumentException ex) {
       gotException = true;
     }
@@ -401,9 +407,9 @@ public class TestAdmin1 extends TestAdminBase {
     // regions). Try splitting that region via a different split API (the difference is
     // this API goes direct to the regionserver skipping any checks in the admin). Should fail
     try {
-      TEST_UTIL.getHBaseAdmin().splitRegionAsync(regions.get(1).getFirst(),
-        new byte[] { (byte) '1' });
-    } catch (IOException ex) {
+      FutureUtils.get(TEST_UTIL.getAdmin().splitRegionAsync(
+        regions.get(1).getFirst().getEncodedNameAsBytes(), new byte[] { (byte) '1' }));
+    } catch (IllegalArgumentException ex) {
       gotException = true;
     }
     assertTrue(gotException);
@@ -411,9 +417,8 @@ public class TestAdmin1 extends TestAdminBase {
     gotException = false;
     // testing Sync split operation
     try {
-      TEST_UTIL.getAdmin()
-        .splitRegionAsync(regions.get(1).getFirst().getRegionName(), new byte[] { (byte) '1' })
-        .get();
+      FutureUtils.get(TEST_UTIL.getAdmin()
+        .splitRegionAsync(regions.get(1).getFirst().getRegionName(), new byte[] { (byte) '1' }));
     } catch (IllegalArgumentException ex) {
       gotException = true;
     }
@@ -422,8 +427,10 @@ public class TestAdmin1 extends TestAdminBase {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
-      TEST_UTIL.getAdmin().mergeRegionsAsync(regions.get(1).getFirst().getEncodedNameAsBytes(),
-        regions.get(2).getFirst().getEncodedNameAsBytes(), true).get();
+      FutureUtils.get(TEST_UTIL.getAdmin().mergeRegionsAsync(
+        regions.get(1).getFirst().getEncodedNameAsBytes(),
+        regions.get(2).getFirst().getEncodedNameAsBytes(),
+        true));
     } catch (IllegalArgumentException m) {
       gotException = true;
     }
@@ -435,8 +442,8 @@ public class TestAdmin1 extends TestAdminBase {
       nameofRegionsToMerge[1] = regions.get(2).getFirst().getEncodedNameAsBytes();
       MergeTableRegionsRequest request = RequestConverter.buildMergeTableRegionsRequest(
         nameofRegionsToMerge, true, HConstants.NO_NONCE, HConstants.NO_NONCE);
-      ((ConnectionImplementation) TEST_UTIL.getAdmin().getConnection()).getMaster()
-        .mergeTableRegions(null, request);
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().mergeTableRegions(null,
+        request);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException m) {
       Throwable t = m.getCause();
       do {
@@ -568,24 +575,24 @@ public class TestAdmin1 extends TestAdminBase {
       List<RegionInfo> tableRegions = ADMIN.getRegions(tableName);
       // 0
       try {
-        ADMIN.mergeRegionsAsync(new byte[0][0], false).get();
+        FutureUtils.get(ADMIN.mergeRegionsAsync(new byte[0][0], false));
         fail();
       } catch (IllegalArgumentException e) {
         // expected
       }
       // 1
       try {
-        ADMIN.mergeRegionsAsync(new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false)
-          .get();
+        FutureUtils.get(ADMIN
+          .mergeRegionsAsync(new byte[][] { tableRegions.get(0).getEncodedNameAsBytes() }, false));
         fail();
       } catch (IllegalArgumentException e) {
         // expected
       }
       // 3
       try {
-        ADMIN.mergeRegionsAsync(
+        FutureUtils.get(ADMIN.mergeRegionsAsync(
           tableRegions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new),
-          false).get();
+          false));
         fail();
       } catch (DoNotRetryIOException e) {
         // expected

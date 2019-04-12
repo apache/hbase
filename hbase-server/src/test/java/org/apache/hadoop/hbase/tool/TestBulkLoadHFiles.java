@@ -335,7 +335,11 @@ public class TestBulkLoadHFiles {
 
     TableName tableName = htd.getTableName();
     if (!util.getAdmin().tableExists(tableName) && (preCreateTable || map != null)) {
-      util.getAdmin().createTable(htd, tableSplitKeys);
+      if (tableSplitKeys != null) {
+        util.getAdmin().createTable(htd, tableSplitKeys);
+      } else {
+        util.getAdmin().createTable(htd);
+      }
     }
 
     Configuration conf = util.getConfiguration();

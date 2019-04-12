@@ -255,13 +255,14 @@ public interface Admin extends Abortable, Closeable {
   Future<Void> createTableAsync(TableDescriptor desc) throws IOException;
 
   /**
-   * Creates a new table but does not block and wait for it to come online. You can use
-   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
-   * ExecutionException if there was an error while executing the operation or TimeoutException in
-   * case the wait timeout was not long enough to allow the operation to complete.
-   * <p/>
-   * Throws IllegalArgumentException Bad table name, if the split keys are repeated and if the split
-   * key has empty byte array.
+   * Creates a new table but does not block and wait for it to come online.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   * Throws IllegalArgumentException Bad table name, if the split keys
+   *    are repeated and if the split key has empty byte array.
+   *
    * @param desc table descriptor for table
    * @param splitKeys keys to check if the table has been created with all split keys
    * @throws IOException if a remote or network exception occurs
@@ -723,7 +724,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Move the region <code>rencodedRegionName</code> to <code>destServerName</code>.
+   * Move the region <code>encodedRegionName</code> to <code>destServerName</code>.
    * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
    *          suffix: e.g. if regionname is
    *          <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
@@ -922,15 +923,13 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Split a table. The method will execute split action for each region in table.
-   * Asynchronous operation.
    * @param tableName table to split
    * @throws IOException if a remote or network exception occurs
    */
   void split(TableName tableName) throws IOException;
 
   /**
-   * Split a table. Asynchronous operation.
-   *
+   * Split a table.
    * @param tableName table to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
@@ -1065,9 +1064,7 @@ public interface Admin extends Abortable, Closeable {
    * @return a {@link RegionMetrics} list of all regions hosted on a region server
    * @throws IOException if a remote or network exception occurs
    */
-  default List<RegionMetrics> getRegionMetrics(ServerName serverName) throws IOException {
-    return getRegionMetrics(serverName, null);
-  }
+  List<RegionMetrics> getRegionMetrics(ServerName serverName) throws IOException;
 
   /**
    * Get {@link RegionMetrics} of all regions hosted on a regionserver for a table.
@@ -1660,7 +1657,10 @@ public interface Admin extends Abortable, Closeable {
    * </pre></blockquote></div>
    *
    * @return A MasterCoprocessorRpcChannel instance
+   * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
+   *             more. Use the coprocessorService methods in {@link AsyncAdmin} instead.
    */
+  @Deprecated
   CoprocessorRpcChannel coprocessorService();
 
 
@@ -1685,7 +1685,10 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param serverName the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
+   * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
+   *             more. Use the coprocessorService methods in {@link AsyncAdmin} instead.
    */
+  @Deprecated
   CoprocessorRpcChannel coprocessorService(ServerName serverName);
 
 

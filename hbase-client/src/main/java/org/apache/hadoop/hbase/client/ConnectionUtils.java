@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -713,6 +714,23 @@ public final class ConnectionUtils {
       }
     } catch (InterruptedException e) {
       pool.shutdownNow();
+    }
+  }
+
+  static void setCoprocessorError(com.google.protobuf.RpcController controller, Throwable error) {
+    if (controller == null) {
+      return;
+    }
+    if (controller instanceof ServerRpcController) {
+      if (error instanceof IOException) {
+        ((ServerRpcController) controller).setFailedOn((IOException) error);
+      } else {
+        ((ServerRpcController) controller).setFailedOn(new IOException(error));
+      }
+    } else if (controller instanceof ClientCoprocessorRpcController) {
+      ((ClientCoprocessorRpcController) controller).setFailed(error);
+    } else {
+      controller.setFailed(error.toString());
     }
   }
 }

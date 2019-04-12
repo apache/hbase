@@ -106,7 +106,7 @@ public class TestAssignmentOnRSCrash {
       throws Exception {
     final int NROWS = 100;
     int nkilled = 0;
-    for (RegionInfo hri: UTIL.getHBaseAdmin().getRegions(TEST_TABLE)) {
+    for (RegionInfo hri: UTIL.getAdmin().getRegions(TEST_TABLE)) {
       ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(UTIL, hri);
       if (AssignmentTestingUtil.isServerHoldingMeta(UTIL, serverName)) continue;
 

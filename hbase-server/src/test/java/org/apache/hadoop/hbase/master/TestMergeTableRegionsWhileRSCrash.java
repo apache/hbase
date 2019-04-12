@@ -69,7 +69,7 @@ public class TestMergeTableRegionsWhileRSCrash {
   @BeforeClass
   public static void setupCluster() throws Exception {
     UTIL.startMiniCluster(1);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = SPLITKEY;
     TABLE = UTIL.createTable(TABLE_NAME, CF, splitKeys);
