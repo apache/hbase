@@ -50,22 +50,6 @@ public class ServerSideScanMetrics {
   public static final String COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME = "ROWS_FILTERED";
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
-   *             Use {@link #COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME}.
-   */
-  @Deprecated
-  public static final String COUNT_OF_ROWS_SCANNED_KEY = COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
-   *             Use {@link #COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME}.
-   */
-  @Deprecated
-  public static final String COUNT_OF_ROWS_FILTERED_KEY = COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME;
-
-  /**
    * number of rows filtered during scan RPC
    */
   public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
