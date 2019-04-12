@@ -16,7 +16,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -24,9 +23,8 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
-import org.apache.hbase.thirdparty.com.google.common.collect.Collections2;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -199,16 +197,9 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   /**
    * @param candidates pre-filtrate
-   * @return filtered subset exclude all bulk load files if configured
    */
-  protected ArrayList<HStoreFile> filterBulk(ArrayList<HStoreFile> candidates) {
-    candidates.removeAll(Collections2.filter(candidates, new Predicate<HStoreFile>() {
-      @Override
-      public boolean apply(HStoreFile input) {
-        return input.excludeFromMinorCompaction();
-      }
-    }));
-    return candidates;
+  protected void filterBulk(ArrayList<HStoreFile> candidates) {
+    candidates.removeIf(HStoreFile::excludeFromMinorCompaction);
   }
 
   /**

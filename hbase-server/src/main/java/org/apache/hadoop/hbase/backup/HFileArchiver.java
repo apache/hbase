@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -31,7 +30,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,10 +50,8 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.base.Function;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.Collections2;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Utility class to handle the removal of HFiles (or the respective {@link HStoreFile StoreFiles})
@@ -158,15 +157,15 @@ public class HFileArchiver {
     }
 
     // convert the files in the region to a File
-    toArchive.addAll(Lists.transform(Arrays.asList(storeDirs), getAsFile));
+    Stream.of(storeDirs).map(getAsFile).forEachOrdered(toArchive::add);
     LOG.debug("Archiving " + toArchive);
     List<File> failedArchive = resolveAndArchive(fs, regionArchiveDir, toArchive,
         EnvironmentEdgeManager.currentTime());
     if (!failedArchive.isEmpty()) {
-      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
-          + regionDir.getName() + " into " + regionArchiveDir
-          + ". Something is probably awry on the filesystem.",
-          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
+      throw new FailedArchiveException(
+        "Failed to archive/delete all the files for region:" + regionDir.getName() + " into " +
+          regionArchiveDir + ". Something is probably awry on the filesystem.",
+        failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
     // if that was successful, then we delete the region
     return deleteRegionWithoutArchiving(fs, regionDir);
@@ -269,7 +268,7 @@ public class HFileArchiver {
     }
 
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
-    Collection<File> toArchive = Lists.transform(Arrays.asList(storeFiles), getAsFile);
+    Collection<File> toArchive = Stream.of(storeFiles).map(getAsFile).collect(Collectors.toList());
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
 
     // do the actual archive
@@ -279,7 +278,7 @@ public class HFileArchiver {
       throw new FailedArchiveException("Failed to archive/delete all the files for region:"
           + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
-          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
+          failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
   }
 
@@ -328,17 +327,18 @@ public class HFileArchiver {
 
     // Wrap the storefile into a File
     StoreToFile getStorePath = new StoreToFile(fs);
-    Collection<File> storeFiles = Collections2.transform(compactedFiles, getStorePath);
+    Collection<File> storeFiles =
+      compactedFiles.stream().map(getStorePath).collect(Collectors.toList());
 
     // do the actual archive
-    List<File> failedArchive = resolveAndArchive(fs, storeArchiveDir, storeFiles,
-        EnvironmentEdgeManager.currentTime());
+    List<File> failedArchive =
+      resolveAndArchive(fs, storeArchiveDir, storeFiles, EnvironmentEdgeManager.currentTime());
 
     if (!failedArchive.isEmpty()){
       throw new FailedArchiveException("Failed to archive/delete all the files for region:"
           + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
-          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
+          failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
   }
 
@@ -698,8 +698,10 @@ public class HFileArchiver {
 
     @Override
     public Collection<File> getChildren() throws IOException {
-      if (fs.isFile(file)) return Collections.emptyList();
-      return Collections2.transform(Arrays.asList(fs.listStatus(file)), getAsFile);
+      if (fs.isFile(file)) {
+        return Collections.emptyList();
+      }
+      return Stream.of(fs.listStatus(file)).map(getAsFile).collect(Collectors.toList());
     }
 
     @Override
