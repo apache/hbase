@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -80,23 +79,17 @@ public class AsyncMetaTableAccessor {
       TableName tableName) {
     CompletableFuture<Optional<TableState>> future = new CompletableFuture<>();
     Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getStateColumn());
-    long time = EnvironmentEdgeManager.currentTime();
-    try {
-      get.setTimeRange(0, time);
-      addListener(metaTable.get(get), (result, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        try {
-          future.complete(getTableState(result));
-        } catch (IOException e) {
-          future.completeExceptionally(e);
-        }
-      });
-    } catch (IOException ioe) {
-      future.completeExceptionally(ioe);
-    }
+    addListener(metaTable.get(get), (result, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      try {
+        future.complete(getTableState(result));
+      } catch (IOException e) {
+        future.completeExceptionally(e);
+      }
+    });
     return future;
   }
 

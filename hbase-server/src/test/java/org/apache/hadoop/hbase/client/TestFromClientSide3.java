@@ -145,7 +145,7 @@ public class TestFromClientSide3 {
     table.put(put);
   }
 
-  private void performMultiplePutAndFlush(HBaseAdmin admin, Table table, byte[] row, byte[] family,
+  private void performMultiplePutAndFlush(Admin admin, Table table, byte[] row, byte[] family,
       int nFlushes, int nPuts) throws Exception {
     for (int i = 0; i < nFlushes; i++) {
       randomCFPuts(table, row, family, nPuts);
@@ -283,7 +283,7 @@ public class TestFromClientSide3 {
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());
-    performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 100);
+    performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 100);
 
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       // Verify we have multiple store files.
@@ -315,7 +315,7 @@ public class TestFromClientSide3 {
       LOG.info("alter status finished");
 
       // Create 3 more store files.
-      performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 10);
+      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
 
       // Issue a compaction request
       admin.compact(tableName);

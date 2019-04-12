@@ -710,6 +710,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public List<RegionMetrics> getRegionMetrics(ServerName serverName) {
+    throw new NotImplementedException("getRegionMetrics not supported in ThriftAdmin");
+  }
+
+  @Override
   public List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName) {
     throw new NotImplementedException("getRegionMetrics not supported in ThriftAdmin");
   }
@@ -1117,8 +1122,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<UserPermission>
-      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) {
+  public List<UserPermission> getUserPermissions(
+      GetUserPermissionsRequest getUserPermissionsRequest) {
     throw new NotImplementedException("getUserPermissions not supported in ThriftAdmin");
   }
 

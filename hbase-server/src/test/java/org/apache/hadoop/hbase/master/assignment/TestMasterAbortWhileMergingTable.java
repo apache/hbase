@@ -68,7 +68,7 @@ public class TestMasterAbortWhileMergingTable {
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         MergeRegionObserver.class.getName());
     UTIL.startMiniCluster(3);
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = SPLITKEY;
     UTIL.createTable(TABLE_NAME, CF, splitKeys);

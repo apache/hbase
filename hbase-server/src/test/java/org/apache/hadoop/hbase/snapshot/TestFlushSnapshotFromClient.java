@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,7 +59,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -273,6 +279,38 @@ public class TestFlushSnapshotFromClient {
     }
   }
 
+  /**
+   * Helper method for testing async snapshot operations. Just waits for the given snapshot to
+   * complete on the server by repeatedly checking the master.
+   * @param master the master running the snapshot
+   * @param snapshot the snapshot to check
+   * @param sleep amount to sleep between checks to see if the snapshot is done
+   */
+  private static void waitForSnapshotToComplete(HMaster master,
+      SnapshotProtos.SnapshotDescription snapshot, long timeoutNanos) throws Exception {
+    final IsSnapshotDoneRequest request =
+      IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build();
+    long start = System.nanoTime();
+    while (System.nanoTime() - start < timeoutNanos) {
+      try {
+        IsSnapshotDoneResponse done = master.getMasterRpcServices().isSnapshotDone(null, request);
+        if (done.getDone()) {
+          return;
+        }
+      } catch (ServiceException e) {
+        // ignore UnknownSnapshotException, this is possible as for AsyncAdmin, the method will
+        // return immediately after sending out the request, no matter whether the master has
+        // processed the request or not.
+        if (!(e.getCause() instanceof UnknownSnapshotException)) {
+          throw e;
+        }
+      }
+
+      Thread.sleep(200);
+    }
+    throw new TimeoutException("Timeout waiting for snapshot " + snapshot + " to complete");
+  }
+
   @Test
   public void testAsyncFlushSnapshot() throws Exception {
     SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
@@ -285,7 +323,7 @@ public class TestFlushSnapshotFromClient {
 
     // constantly loop, looking for the snapshot to complete
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
+    waitForSnapshotToComplete(master, snapshot, TimeUnit.MINUTES.toNanos(1));
     LOG.info(" === Async Snapshot Completed ===");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
@@ -523,7 +561,6 @@ public class TestFlushSnapshotFromClient {
     }
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TABLE_NAME);
   }
-
 
   protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
       long expectedRows) throws IOException {

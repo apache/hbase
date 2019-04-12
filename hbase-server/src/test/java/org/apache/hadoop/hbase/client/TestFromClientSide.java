@@ -4197,29 +4197,29 @@ public class TestFromClientSide {
   public void testUnmanagedHConnectionReconnect() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    Table t = conn.getTable(tableName);
-    try (Admin admin = conn.getAdmin()) {
-      assertTrue(admin.tableExists(tableName));
-      assertTrue(t.get(new Get(ROW)).isEmpty());
-    }
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Table t = conn.getTable(tableName); Admin admin = conn.getAdmin()) {
+        assertTrue(admin.tableExists(tableName));
+        assertTrue(t.get(new Get(ROW)).isEmpty());
+      }
 
-    // stop the master
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    cluster.stopMaster(0, false);
-    cluster.waitOnMaster(0);
+      // stop the master
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      cluster.stopMaster(0, false);
+      cluster.waitOnMaster(0);
 
-    // start up a new master
-    cluster.startMaster();
-    assertTrue(cluster.waitForActiveAndReadyMaster());
+      // start up a new master
+      cluster.startMaster();
+      assertTrue(cluster.waitForActiveAndReadyMaster());
 
-    // test that the same unmanaged connection works with a new
-    // Admin and can connect to the new master;
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    try (Admin admin = conn.getAdmin()) {
-      assertTrue(admin.tableExists(tableName));
-      assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-          .getLiveServerMetrics().size() == SLAVES + (tablesOnMaster ? 1 : 0));
+      // test that the same unmanaged connection works with a new
+      // Admin and can connect to the new master;
+      boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+      try (Admin admin = conn.getAdmin()) {
+        assertTrue(admin.tableExists(tableName));
+        assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
+          .size() == SLAVES + (tablesOnMaster ? 1 : 0));
+      }
     }
   }
 
