@@ -626,7 +626,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     try {
       TableDescriptor descriptor = tableDescriptorFromThrift(desc);
       byte[][] split = splitKeyFromThrift(splitKeys);
-      connectionCache.getAdmin().createTable(descriptor, split);
+      if (split != null) {
+        connectionCache.getAdmin().createTable(descriptor, split);
+      } else {
+        connectionCache.getAdmin().createTable(descriptor);
+      }
     } catch (IOException e) {
       throw getTIOError(e);
     }
