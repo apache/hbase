@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -93,8 +93,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       int NB_ROWS_FAM3 = 6;
       insertIntoTable(conn, table1, fam3Name, 3, NB_ROWS_FAM3).close();
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_FAM3).close();
-      HBaseAdmin admin = null;
-      admin = (HBaseAdmin) conn.getAdmin();
+      Admin admin = conn.getAdmin();
       BackupAdminImpl client = new BackupAdminImpl(conn);
       BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
       String backupIdFull = client.backupTables(request);
@@ -182,7 +181,7 @@ public class TestIncrementalBackup extends TestBackupBase {
                 tablesRestoreFull, tablesMapFull, true));
 
       // #6.1 - check tables for full restore
-      HBaseAdmin hAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hAdmin = TEST_UTIL.getAdmin();
       assertTrue(hAdmin.tableExists(table1_restore));
       assertTrue(hAdmin.tableExists(table2_restore));
       hAdmin.close();

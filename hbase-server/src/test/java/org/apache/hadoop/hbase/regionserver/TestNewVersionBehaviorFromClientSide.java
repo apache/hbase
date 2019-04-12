@@ -82,7 +82,7 @@ public class TestNewVersionBehaviorFromClientSide {
     fam.setNewVersionBehavior(true);
     fam.setMaxVersions(3);
     table.addFamily(fam);
-    TEST_UTIL.getHBaseAdmin().createTable(table);
+    TEST_UTIL.getAdmin().createTable(table);
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 

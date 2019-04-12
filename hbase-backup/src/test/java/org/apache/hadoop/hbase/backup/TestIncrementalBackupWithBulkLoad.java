@@ -26,9 +26,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -70,7 +70,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
     List<TableName> tables = Lists.newArrayList(table1);
     Connection conn = ConnectionFactory.createConnection(conf1);
-    HBaseAdmin admin = (HBaseAdmin) conn.getAdmin();
+    Admin admin = conn.getAdmin();
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
@@ -119,7 +119,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     // Delete all data in table1
     TEST_UTIL.deleteTableData(table1);
     // #5.1 - check tables for full restore */
-    HBaseAdmin hAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hAdmin = TEST_UTIL.getAdmin();
 
     // #6 - restore incremental backup for table1
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1 };

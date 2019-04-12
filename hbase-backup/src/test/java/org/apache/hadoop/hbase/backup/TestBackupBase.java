@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -342,7 +340,7 @@ public class TestBackupBase {
   @AfterClass
   public static void tearDown() throws Exception {
     try{
-      SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+      SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
     } catch (Exception e) {
     }
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
@@ -416,7 +414,7 @@ public class TestBackupBase {
   protected static void createTables() throws Exception {
     long tid = System.currentTimeMillis();
     table1 = TableName.valueOf("test-" + tid);
-    HBaseAdmin ha = TEST_UTIL.getHBaseAdmin();
+    Admin ha = TEST_UTIL.getAdmin();
 
     // Create namespaces
     NamespaceDescriptor desc1 = NamespaceDescriptor.create("ns1").build();

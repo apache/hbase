@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,7 +73,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
@@ -267,33 +265,6 @@ public final class SnapshotTestingUtils {
     for (RegionInfo info : regions) {
       String regionName = info.getEncodedName();
       assertTrue("Missing region name: '" + regionName + "'", regionManifests.containsKey(regionName));
-    }
-  }
-
-  /**
-   * Helper method for testing async snapshot operations. Just waits for the
-   * given snapshot to complete on the server by repeatedly checking the master.
-   *
-   * @param master the master running the snapshot
-   * @param snapshot the snapshot to check
-   * @param sleep amount to sleep between checks to see if the snapshot is done
-   * @throws ServiceException if the snapshot fails
-   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
-   */
-  public static void waitForSnapshotToComplete(HMaster master,
-      SnapshotProtos.SnapshotDescription snapshot, long sleep)
-          throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
-    final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
-        .setSnapshot(snapshot).build();
-    IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()
-        .buildPartial();
-    while (!done.getDone()) {
-      done = master.getMasterRpcServices().isSnapshotDone(null, request);
-      try {
-        Thread.sleep(sleep);
-      } catch (InterruptedException e) {
-        throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
-      }
     }
   }
 

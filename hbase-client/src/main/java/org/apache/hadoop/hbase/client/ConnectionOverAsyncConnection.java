@@ -102,7 +102,7 @@ class ConnectionOverAsyncConnection implements Connection {
 
   @Override
   public Admin getAdmin() throws IOException {
-    return oldConn.getAdmin();
+    return new AdminOverAsyncAdmin(this, (RawAsyncHBaseAdmin) conn.getAdmin());
   }
 
   @Override
