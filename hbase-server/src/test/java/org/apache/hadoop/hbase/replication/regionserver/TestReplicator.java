@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -167,7 +167,7 @@ public class TestReplicator extends TestReplicationBase {
   }
 
   private void truncateTable(HBaseTestingUtility util, TableName tablename) throws IOException {
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     admin.disableTable(tableName);
     admin.truncateTable(tablename, false);
   }

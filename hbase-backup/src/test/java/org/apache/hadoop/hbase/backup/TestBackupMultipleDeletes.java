@@ -26,9 +26,9 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -59,9 +59,8 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     // #1 - create full backup for all tables
     LOG.info("create full backup image for all tables");
     List<TableName> tables = Lists.newArrayList(table1, table2);
-    HBaseAdmin admin = null;
     Connection conn = ConnectionFactory.createConnection(conf1);
-    admin = (HBaseAdmin) conn.getAdmin();
+    Admin admin = conn.getAdmin();
     BackupAdmin client = new BackupAdminImpl(conn);
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
     String backupIdFull = client.backupTables(request);
