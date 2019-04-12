@@ -77,6 +77,11 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     return Iterables.filter(files, new Predicate<FileStatus>() {
       @Override
       public boolean apply(FileStatus file) {
+        // just for overriding the findbugs NP warnings, as the parameter is marked as Nullable in
+        // the guava Predicate.
+        if (file == null) {
+          return false;
+        }
         String wal = file.getPath().getName();
         boolean logInReplicationQueue = wals.contains(wal);
           if (logInReplicationQueue) {
