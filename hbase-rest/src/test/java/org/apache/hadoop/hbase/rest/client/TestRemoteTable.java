@@ -600,8 +600,8 @@ public class TestRemoteTable {
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
 
     // Truncate the test table for inserting test scenarios rows keys
-    TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
-    TEST_UTIL.getHBaseAdmin().truncateTable(TABLE, false);
+    TEST_UTIL.getAdmin().disableTable(TABLE);
+    TEST_UTIL.getAdmin().truncateTable(TABLE, false);
 
     remoteTable = new RemoteHTable(
         new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
