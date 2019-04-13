@@ -226,32 +226,20 @@ public class TransitRegionStateProcedure
       return Flow.HAS_MORE_STATE;
     }
 
-    int retries = env.getAssignmentManager().getRegionStates().addToFailedOpen(regionNode)
-        .incrementAndGetRetries();
-    int maxAttempts = env.getAssignmentManager().getAssignMaxAttempts();
-    LOG.info("Retry={} of max={}; {}; {}", retries, maxAttempts, this, regionNode.toShortString());
-
-    if (retries >= maxAttempts) {
+    if (incrementAndCheckMaxAttempts(env, regionNode)) {
       env.getAssignmentManager().regionFailedOpen(regionNode, true);
       setFailure(getClass().getSimpleName(), new RetriesExhaustedException(
         "Max attempts " + env.getAssignmentManager().getAssignMaxAttempts() + " exceeded"));
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
-
     env.getAssignmentManager().regionFailedOpen(regionNode, false);
     // we failed to assign the region, force a new plan
     forceNewPlan = true;
     regionNode.setRegionLocation(null);
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
-
-    if (retries > env.getAssignmentManager().getAssignRetryImmediatelyMaxAttempts()) {
-      // Throw exception to backoff and retry when failed open too many times
-      throw new HBaseIOException("Failed to open region");
-    } else {
-      // Here we do not throw exception because we want to the region to be online ASAP
-      return Flow.HAS_MORE_STATE;
-    }
+    // Here we do not throw exception because we want to the region to be online ASAP
+    return Flow.HAS_MORE_STATE;
   }
 
   private void closeRegion(MasterProcedureEnv env, RegionStateNode regionNode) throws IOException {
@@ -410,6 +398,14 @@ public class TransitRegionStateProcedure
   void unattachRemoteProc(RegionRemoteProcedureBase proc) {
     assert this.remoteProc == proc;
     this.remoteProc = null;
+  }
+
+  private boolean incrementAndCheckMaxAttempts(MasterProcedureEnv env, RegionStateNode regionNode) {
+    int retries = env.getAssignmentManager().getRegionStates().addToFailedOpen(regionNode)
+      .incrementAndGetRetries();
+    int max = env.getAssignmentManager().getAssignMaxAttempts();
+    LOG.info("Retry={} of max={}; {}; {}", retries, max, this, regionNode.toShortString());
+    return retries >= max;
   }
 
   @Override

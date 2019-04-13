@@ -131,10 +131,6 @@ public class AssignmentManager {
       "hbase.assignment.maximum.attempts";
   private static final int DEFAULT_ASSIGN_MAX_ATTEMPTS = Integer.MAX_VALUE;
 
-  public static final String ASSIGN_RETRY_IMMEDIATELY_MAX_ATTEMPTS =
-      "hbase.assignment.retry.immediately.maximum.attempts";
-  private static final int DEFAULT_ASSIGN_RETRY_IMMEDIATELY_MAX_ATTEMPTS = 3;
-
   /** Region in Transition metrics threshold time */
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
       "hbase.metrics.rit.stuck.warning.threshold";
@@ -155,7 +151,6 @@ public class AssignmentManager {
   private final int assignDispatchWaitQueueMaxSize;
   private final int assignDispatchWaitMillis;
   private final int assignMaxAttempts;
-  private final int assignRetryImmediatelyMaxAttempts;
 
   private final Object checkIfShouldMoveSystemRegionLock = new Object();
 
@@ -184,8 +179,6 @@ public class AssignmentManager {
 
     this.assignMaxAttempts = Math.max(1, conf.getInt(ASSIGN_MAX_ATTEMPTS,
         DEFAULT_ASSIGN_MAX_ATTEMPTS));
-    this.assignRetryImmediatelyMaxAttempts = conf.getInt(ASSIGN_RETRY_IMMEDIATELY_MAX_ATTEMPTS,
-        DEFAULT_ASSIGN_RETRY_IMMEDIATELY_MAX_ATTEMPTS);
 
     int ritChoreInterval = conf.getInt(RIT_CHORE_INTERVAL_MSEC_CONF_KEY,
         DEFAULT_RIT_CHORE_INTERVAL_MSEC);
@@ -313,10 +306,6 @@ public class AssignmentManager {
 
   int getAssignMaxAttempts() {
     return assignMaxAttempts;
-  }
-
-  int getAssignRetryImmediatelyMaxAttempts() {
-    return assignRetryImmediatelyMaxAttempts;
   }
 
   public RegionStates getRegionStates() {
