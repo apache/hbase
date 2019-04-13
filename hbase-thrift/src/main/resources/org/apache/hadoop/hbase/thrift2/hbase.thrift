@@ -306,9 +306,9 @@ struct THRegionLocation {
 
 /**
  * Thrift wrapper around
- * org.apache.hadoop.hbase.filter.CompareFilter$CompareOp.
+ * org.apache.hadoop.hbase.CompareOperator.
  */
-enum TCompareOp {
+enum TCompareOperator {
   LESS = 0,
   LESS_OR_EQUAL = 1,
   EQUAL = 2,
@@ -784,7 +784,7 @@ service THBaseService {
     4: required binary qualifier,
 
     /** comparison to make on the value */
-    5: required TCompareOp compareOp,
+    5: required TCompareOperator compareOperator,
 
     /** the expected value to be compared against, if not provided the
         check is for the non-existence of the column in question */
