@@ -15,10 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.factories;
 
-import org.apache.hadoop.hbase.chaos.actions.*;
+import org.apache.hadoop.hbase.chaos.actions.Action;
+import org.apache.hadoop.hbase.chaos.actions.AddColumnAction;
+import org.apache.hadoop.hbase.chaos.actions.BatchRestartRsAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeBloomFilterAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeCompressionAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeEncodingAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeSplitPolicyAction;
+import org.apache.hadoop.hbase.chaos.actions.ChangeVersionsAction;
+import org.apache.hadoop.hbase.chaos.actions.CompactRandomRegionOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.CompactTableAction;
+import org.apache.hadoop.hbase.chaos.actions.DecreaseMaxHFileSizeAction;
+import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
+import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
+import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.RemoveColumnAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
+import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
+import org.apache.hadoop.hbase.chaos.actions.SnapshotTableAction;
+import org.apache.hadoop.hbase.chaos.actions.SplitAllRegionOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.SplitRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
@@ -26,7 +49,6 @@ import org.apache.hadoop.hbase.chaos.policies.DoActionsOncePolicy;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 
 public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
-
   private long action1Period;
   private long action2Period;
   private long action3Period;
@@ -47,7 +69,6 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
   @Override
   public ChaosMonkey build() {
-
     loadProperties();
     // Actions such as compact/flush a table/region,
     // move one region around. They are not so destructive,
