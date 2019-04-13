@@ -16,18 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
-
-import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
+
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Coprocessors implement this interface to observe and mediate endpoint invocations

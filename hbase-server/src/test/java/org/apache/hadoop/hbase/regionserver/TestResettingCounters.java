@@ -24,8 +24,15 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
@@ -50,7 +57,6 @@ public class TestResettingCounters {
 
   @Test
   public void testResettingCounters() throws Exception {
-
     HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
@@ -102,7 +108,7 @@ public class TestResettingCounters {
       // increment all qualifiers, should have value=6 for all
       Result result = region.increment(all, HConstants.NO_NONCE, HConstants.NO_NONCE);
       assertEquals(numQualifiers, result.size());
-      Cell [] kvs = result.rawCells();
+      Cell[] kvs = result.rawCells();
       for (int i=0;i<kvs.length;i++) {
         System.out.println(kvs[i].toString());
         assertTrue(CellUtil.matchingQualifier(kvs[i], qualifiers[i]));
