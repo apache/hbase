@@ -54,29 +54,6 @@ public class DependentColumnFilter extends CompareFilter {
   protected boolean dropDependentColumn;
 
   protected Set<Long> stampSet = new HashSet<>();
-  
-  /**
-   * Build a dependent column filter with value checking
-   * dependent column varies will be compared using the supplied
-   * compareOp and comparator, for usage of which
-   * refer to {@link CompareFilter}
-   * 
-   * @param family dependent column family
-   * @param qualifier dependent column qualifier
-   * @param dropDependentColumn whether the column should be discarded after
-   * @param valueCompareOp comparison op 
-   * @param valueComparator comparator
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #DependentColumnFilter(byte[], byte[], boolean, CompareOperator, ByteArrayComparable)}
-   * instead.
-   */
-  @Deprecated
-  public DependentColumnFilter(final byte [] family, final byte[] qualifier,
-      final boolean dropDependentColumn, final CompareOp valueCompareOp,
-        final ByteArrayComparable valueComparator) {
-    this(family, qualifier, dropDependentColumn, CompareOperator.valueOf(valueCompareOp.name()),
-      valueComparator);
-  }
 
   /**
    * Build a dependent column filter with value checking
@@ -123,7 +100,7 @@ public class DependentColumnFilter extends CompareFilter {
    */
   public DependentColumnFilter(final byte [] family, final byte [] qualifier,
       final boolean dropDependentColumn) {
-    this(family, qualifier, dropDependentColumn, CompareOp.NO_OP, null);
+    this(family, qualifier, dropDependentColumn, CompareOperator.NO_OP, null);
   }
 
   /**

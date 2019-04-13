@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
@@ -29,7 +28,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -41,7 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
+ * This filter is used to filter cells based on value. It takes a {@link CompareOperator}
  * operator (equal, greater, not equal, etc), and either a byte [] value or
  * a ByteArrayComparable.
  * <p>
@@ -91,29 +89,6 @@ public class SingleColumnValueFilter extends FilterBase {
    *
    * @param family name of column family
    * @param qualifier name of column qualifier
-   * @param compareOp operator
-   * @param value value to compare column values against
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, byte[])} instead.
-   */
-  @Deprecated
-  public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final byte[] value) {
-    this(family, qualifier, CompareOperator.valueOf(compareOp.name()),
-      new org.apache.hadoop.hbase.filter.BinaryComparator(value));
-  }
-
-  /**
-   * Constructor for binary compare of the value of a single column.  If the
-   * column is found and the condition passes, all columns of the row will be
-   * emitted.  If the condition fails, the row will not be emitted.
-   * <p>
-   * Use the filterIfColumnMissing flag to set whether the rest of the columns
-   * in a row will be emitted if the specified column to check is not found in
-   * the row.
-   *
-   * @param family name of column family
-   * @param qualifier name of column qualifier
    * @param op operator
    * @param value value to compare column values against
    */
@@ -121,29 +96,6 @@ public class SingleColumnValueFilter extends FilterBase {
                                  final CompareOperator op, final byte[] value) {
     this(family, qualifier, op,
       new org.apache.hadoop.hbase.filter.BinaryComparator(value));
-  }
-
-  /**
-   * Constructor for binary compare of the value of a single column.  If the
-   * column is found and the condition passes, all columns of the row will be
-   * emitted.  If the condition fails, the row will not be emitted.
-   * <p>
-   * Use the filterIfColumnMissing flag to set whether the rest of the columns
-   * in a row will be emitted if the specified column to check is not found in
-   * the row.
-   *
-   * @param family name of column family
-   * @param qualifier name of column qualifier
-   * @param compareOp operator
-   * @param comparator Comparator to use.
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable)} instead.
-   */
-  @Deprecated
-  public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp,
-      final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator) {
-    this(family, qualifier, CompareOperator.valueOf(compareOp.name()), comparator);
   }
 
   /**
@@ -173,27 +125,6 @@ public class SingleColumnValueFilter extends FilterBase {
    * Constructor for protobuf deserialization only.
    * @param family
    * @param qualifier
-   * @param compareOp
-   * @param comparator
-   * @param filterIfMissing
-   * @param latestVersionOnly
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable,
-   *   boolean, boolean)} instead.
-   */
-  @Deprecated
-  protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
-      final CompareOp compareOp, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,
-      final boolean filterIfMissing,
-      final boolean latestVersionOnly) {
-    this(family, qualifier, CompareOperator.valueOf(compareOp.name()), comparator, filterIfMissing,
-      latestVersionOnly);
-  }
-
-  /**
-   * Constructor for protobuf deserialization only.
-   * @param family
-   * @param qualifier
    * @param op
    * @param comparator
    * @param filterIfMissing
@@ -212,8 +143,8 @@ public class SingleColumnValueFilter extends FilterBase {
    * @deprecated  since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()} instead.
    */
   @Deprecated
-  public CompareOp getOperator() {
-    return CompareOp.valueOf(op.name());
+  public CompareOperator getOperator() {
+    return CompareOperator.valueOf(op.name());
   }
 
   public CompareOperator getCompareOperator() {

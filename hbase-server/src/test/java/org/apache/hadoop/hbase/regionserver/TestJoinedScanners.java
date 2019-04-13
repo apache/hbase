@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -173,7 +172,7 @@ public class TestJoinedScanners {
     scan.addColumn(cf_joined, col_name);
 
     SingleColumnValueFilter filter = new SingleColumnValueFilter(
-        cf_essential, col_name, CompareFilter.CompareOp.EQUAL, flag_yes);
+        cf_essential, col_name, CompareOperator.EQUAL, flag_yes);
     filter.setFilterIfMissing(true);
     scan.setFilter(filter);
     scan.setLoadColumnFamiliesOnDemand(!slow);

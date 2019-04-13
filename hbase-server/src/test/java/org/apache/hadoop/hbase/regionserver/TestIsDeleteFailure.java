@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,7 +30,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -148,7 +148,7 @@ public class TestIsDeleteFailure {
     scan.addColumn(family, c9);
     scan.addColumn(family, c15);
     SingleColumnValueFilter filter =
-        new SingleColumnValueFilter(family, c15, CompareFilter.CompareOp.EQUAL,
+        new SingleColumnValueFilter(family, c15, CompareOperator.EQUAL,
             new BinaryComparator(c15));
     scan.setFilter(filter);
     //Trigger the scan for not existing row, so it will scan over all rows

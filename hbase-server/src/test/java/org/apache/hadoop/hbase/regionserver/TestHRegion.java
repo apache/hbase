@@ -118,7 +118,6 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BigDecimalComparator;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -1451,7 +1450,7 @@ public class TestHRegion {
     allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
     // Only return rows where this column value exists in the row.
     SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes.toBytes("trans-tags"),
-        Bytes.toBytes("qual2"), CompareOp.EQUAL, Bytes.toBytes(value));
+        Bytes.toBytes("qual2"), CompareOperator.EQUAL, Bytes.toBytes(value));
     filter.setFilterIfMissing(true);
     allFilters.addFilter(filter);
     Scan scan = new Scan();
@@ -2638,7 +2637,7 @@ public class TestHRegion {
     // Get 3 versions, the oldest version has gone from user view
     assertEquals(maxVersions, res.size());
 
-    get.setFilter(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("value")));
+    get.setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value")));
     res = region.get(get);
     // When use value filter, the oldest version should still gone from user view and it
     // should only return one key vaule
@@ -3282,7 +3281,7 @@ public class TestHRegion {
 
     Scan scan = new Scan();
     Filter filter = new SingleColumnValueExcludeFilter(cf_essential, col_normal,
-        CompareOp.NOT_EQUAL, filtered_val);
+            CompareOperator.NOT_EQUAL, filtered_val);
     scan.setFilter(filter);
     scan.setLoadColumnFamiliesOnDemand(true);
     InternalScanner s = region.getScanner(scan);
@@ -3442,7 +3441,7 @@ public class TestHRegion {
 
       Scan scan = new Scan();
       scan.addFamily(family);
-      scan.setFilter(new SingleColumnValueFilter(family, qual1, CompareOp.EQUAL,
+      scan.setFilter(new SingleColumnValueFilter(family, qual1, CompareOperator.EQUAL,
           new BinaryComparator(Bytes.toBytes(5L))));
 
       int expectedCount = 0;
@@ -3881,9 +3880,9 @@ public class TestHRegion {
     Scan idxScan = new Scan();
     idxScan.addFamily(family);
     idxScan.setFilter(new FilterList(FilterList.Operator.MUST_PASS_ALL, Arrays.<Filter> asList(
-        new SingleColumnValueFilter(family, qual1, CompareOp.GREATER_OR_EQUAL,
+        new SingleColumnValueFilter(family, qual1, CompareOperator.GREATER_OR_EQUAL,
             new BinaryComparator(Bytes.toBytes(0L))), new SingleColumnValueFilter(family, qual1,
-            CompareOp.LESS_OR_EQUAL, new BinaryComparator(Bytes.toBytes(3L))))));
+                    CompareOperator.LESS_OR_EQUAL, new BinaryComparator(Bytes.toBytes(3L))))));
     InternalScanner scanner = region.getScanner(idxScan);
     List<Cell> res = new ArrayList<>();
 

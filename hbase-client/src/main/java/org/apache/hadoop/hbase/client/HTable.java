@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -670,13 +669,6 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, compareOp.name(), value, null, put);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
     // The name of the operators in CompareOperator are intentionally those of the
     // operators in the filter's CompareOp enum.
@@ -709,13 +701,6 @@ public class HTable implements Table {
     final byte[] value, final Delete delete) throws IOException {
     return doCheckAndDelete(row, family, qualifier, CompareOperator.EQUAL.name(), value, null,
       delete);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, compareOp.name(), value, null, delete);
   }
 
   @Override
@@ -814,14 +799,6 @@ public class HTable implements Table {
     }
 
     return ((Result)results[0]).getExists();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
-    final CompareOp compareOp, final byte [] value, final RowMutations rm)
-  throws IOException {
-    return doCheckAndMutate(row, family, qualifier, compareOp.name(), value, null, rm);
   }
 
   @Override

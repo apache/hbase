@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -55,7 +56,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -340,7 +340,7 @@ public class TestRegionServerReadRequestMetrics {
 
     // test for scan
     scan = new Scan();
-    scan.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
+    scan.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareOperator.EQUAL, VAL1));
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
       for (Result ignore : scanner) {
@@ -351,7 +351,7 @@ public class TestRegionServerReadRequestMetrics {
 
     // test for scan
     scan = new Scan();
-    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(ROW1)));
+    scan.setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW1)));
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
       for (Result ignore : scanner) {
@@ -362,7 +362,7 @@ public class TestRegionServerReadRequestMetrics {
 
     // test for scan
     scan = new Scan(ROW2, ROW3);
-    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL, new BinaryComparator(ROW1)));
+    scan.setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW1)));
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
       for (Result ignore : scanner) {

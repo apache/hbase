@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
 /**
@@ -221,14 +220,6 @@ public class RegionAsTable implements Table {
 
   @Override
   @Deprecated
-  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
-      byte[] value, Put put)
-  throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
                              CompareOperator compareOp, byte[] value, Put put)
   throws IOException {
@@ -248,14 +239,6 @@ public class RegionAsTable implements Table {
   @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value,
       Delete delete)
-  throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Delete delete)
   throws IOException {
     throw new UnsupportedOperationException();
   }
@@ -339,14 +322,6 @@ public class RegionAsTable implements Table {
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
       Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
   throws ServiceException, Throwable {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
-      byte[] value, RowMutations mutation)
-  throws IOException {
     throw new UnsupportedOperationException();
   }
 
