@@ -104,7 +104,8 @@ public class AsyncRegionServerAdmin {
         @Override
         public void run(RESP resp) {
           if (controller.failed()) {
-            future.completeExceptionally(controller.getFailed());
+            future
+              .completeExceptionally(ConnectionUtils.translateException(controller.getFailed()));
           } else {
             future.complete(resp);
           }
