@@ -87,7 +87,24 @@ class ConnectionOverAsyncConnection implements Connection {
 
   @Override
   public BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException {
-    return oldConn.getBufferedMutator(params);
+    AsyncBufferedMutatorBuilder builder = conn.getBufferedMutatorBuilder(params.getTableName());
+    if (params.getRpcTimeout() != BufferedMutatorParams.UNSET) {
+      builder.setRpcTimeout(params.getRpcTimeout(), TimeUnit.MILLISECONDS);
+    }
+    if (params.getOperationTimeout() != BufferedMutatorParams.UNSET) {
+      builder.setOperationTimeout(params.getOperationTimeout(), TimeUnit.MILLISECONDS);
+    }
+    if (params.getWriteBufferSize() != BufferedMutatorParams.UNSET) {
+      builder.setWriteBufferSize(params.getWriteBufferSize());
+    }
+    if (params.getWriteBufferPeriodicFlushTimeoutMs() != BufferedMutatorParams.UNSET) {
+      builder.setWriteBufferPeriodicFlush(params.getWriteBufferPeriodicFlushTimeoutMs(),
+        TimeUnit.MILLISECONDS);
+    }
+    if (params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET) {
+      builder.setMaxKeyValueSize(params.getMaxKeyValueSize());
+    }
+    return new BufferedMutatorOverAsyncBufferedMutator(builder.build(), params.getListener());
   }
 
   @Override
