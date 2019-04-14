@@ -253,7 +253,7 @@ public class TestHbck {
       Assert.assertEquals(1, result.size());
       hbck.assigns(Arrays.asList(result.keySet().toArray(new String[0])).stream()
           .map(regionName -> regionName.split("\\.")[1]).collect(Collectors.toList()));
-      ProcedureTestingUtility.waitNoProcedureRunning(master.getMasterProcedureExecutor());
+      ProcedureTestingUtility.waitAllProcedures(master.getMasterProcedureExecutor());
       // now the state should be fixed
       result = hbck.getFailedSplitMergeLegacyRegions(Arrays.asList(TableName.valueOf(testTable)));
       Assert.assertEquals(0, result.size());
@@ -290,7 +290,7 @@ public class TestHbck {
       Assert.assertEquals(2, result.size());
       hbck.assigns(Arrays.asList(result.keySet().toArray(new String[0])).stream()
           .map(regionName -> regionName.split("\\.")[1]).collect(Collectors.toList()));
-      ProcedureTestingUtility.waitNoProcedureRunning(master.getMasterProcedureExecutor());
+      ProcedureTestingUtility.waitAllProcedures(master.getMasterProcedureExecutor());
       // now the state should be fixed
       result = hbck.getFailedSplitMergeLegacyRegions(Arrays.asList(TableName.valueOf(testTable)));
       Assert.assertEquals(0, result.size());
@@ -310,7 +310,7 @@ public class TestHbck {
       Assert.assertEquals(2, result.size());
       hbck.assigns(Arrays.asList(result.keySet().toArray(new String[0])).stream()
           .map(regionName -> regionName.split("\\.")[1]).collect(Collectors.toList()));
-      ProcedureTestingUtility.waitNoProcedureRunning(master.getMasterProcedureExecutor());
+      ProcedureTestingUtility.waitAllProcedures(master.getMasterProcedureExecutor());
       // now the state should be fixed
       result = hbck.getFailedSplitMergeLegacyRegions(Arrays.asList(TableName.valueOf(testTable)));
       Assert.assertEquals(0, result.size());
