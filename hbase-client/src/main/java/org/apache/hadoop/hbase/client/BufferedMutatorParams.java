@@ -101,13 +101,21 @@ public class BufferedMutatorParams implements Cloneable {
     return this;
   }
 
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. We use a common timer in the whole client
+   *             implementation so you can not set it any more.
+   */
+  @Deprecated
   public long getWriteBufferPeriodicFlushTimerTickMs() {
     return writeBufferPeriodicFlushTimerTickMs;
   }
 
   /**
    * Set the TimerTick how often the buffer timeout if checked.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. We use a common timer in the whole client
+   *             implementation so you can not set it any more.
    */
+  @Deprecated
   public BufferedMutatorParams setWriteBufferPeriodicFlushTimerTickMs(long timerTickMs) {
     this.writeBufferPeriodicFlushTimerTickMs = timerTickMs;
     return this;
@@ -141,9 +149,12 @@ public class BufferedMutatorParams implements Cloneable {
   }
 
   /**
-   * @return Name of the class we will use when we construct a
-   * {@link BufferedMutator} instance or null if default implementation.
+   * @return Name of the class we will use when we construct a {@link BufferedMutator} instance or
+   *         null if default implementation.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You can not set it any more as the
+   *             implementation has to use too many internal stuffs in HBase.
    */
+  @Deprecated
   public String getImplementationClassName() {
     return this.implementationClassName;
   }
@@ -151,7 +162,10 @@ public class BufferedMutatorParams implements Cloneable {
   /**
    * Specify a BufferedMutator implementation other than the default.
    * @param implementationClassName Name of the BufferedMutator implementation class
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. You can not set it any more as the
+   *             implementation has to use too many internal stuffs in HBase.
    */
+  @Deprecated
   public BufferedMutatorParams implementationClassName(String implementationClassName) {
     this.implementationClassName = implementationClassName;
     return this;
@@ -169,11 +183,6 @@ public class BufferedMutatorParams implements Cloneable {
     return this;
   }
 
-  /*
-   * (non-Javadoc)
-   *
-   * @see java.lang.Object#clone()
-   */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
     justification="The clone below is complete")
   @Override
