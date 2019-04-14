@@ -314,6 +314,10 @@ class AsyncNonMetaRegionLocator {
       LOG.debug("The fetched location of '{}', row='{}', locateType={} is {}", tableName,
         Bytes.toStringBinary(req.row), req.locateType, locs);
     }
+    // remove HRegionLocation with null location, i.e, getServerName returns null.
+    if (locs != null) {
+      locs = locs.removeElementsWithNullLocation();
+    }
 
     // the default region location should always be presented when fetching from meta, otherwise
     // let's fail the request.
