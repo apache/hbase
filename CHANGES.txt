@@ -1,5 +1,44 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.3.4 04/14/2019
+
+** Sub-task
+    * [HBASE-21374] - Backport HBASE-21342 to branch-1
+    * [HBASE-21561] - Backport HBASE-21413 (Empty meta log doesn't get split when restart whole cluster) to branch-1
+    * [HBASE-21711] - Remove references to git.apache.org/hbase.git
+    * [HBASE-21748] - Port HBASE-21738 (Remove all the CLSM#size operation in our memstore because it's an quite time consuming.) to branch-1
+    * [HBASE-22152] - Create a jenkins file for yetus to processing GitHub PR
+
+** Bug
+    * [HBASE-20911] - correct Swtich/case indentation in formatter template for eclipse
+    * [HBASE-20912] - Add import order config in dev support for eclipse
+    * [HBASE-21135] - Build fails on windows as it fails to parse windows path during license check
+    * [HBASE-21196] - HTableMultiplexer clears the meta cache after every put operation
+    * [HBASE-21475] - Put mutation (having TTL set) added via co-processor is retrieved even after TTL expires
+    * [HBASE-21492] - CellCodec Written To WAL Before It's Verified
+    * [HBASE-21547] - Precommit uses master flaky list for other branches
+    * [HBASE-21766] - TestSimpleRpcScheduler is flaky (branch-1)
+    * [HBASE-22058] - upgrade thrift dependency to 0.9.3.1 on  branches 1.4, 1.3 and 1.2
+    * [HBASE-22067] - Fix log line in StochasticLoadBalancer when balancer is an ill-fit for cluster size
+    * [HBASE-22070] - Checking restoreDir in RestoreSnapshotHelper 
+    * [HBASE-22106] - Log cause of the failure when coprocessor specification parsing fails.
+    * [HBASE-22125] - Fix more instances in make_rc.sh where we need -Dhttps.protocols=TLSv1.2
+
+** New Feature
+    * [HBASE-21926] - Profiler servlet
+
+** Improvement
+    * [HBASE-21818] - Incorrect list item in javadoc
+
+** Test
+    * [HBASE-21963] - Add a script for building and verifying release candidate
+
+** Task
+    * [HBASE-21685] - Change repository urls to Gitbox
+    * [HBASE-21687] - Update Findbugs Maven Plugin to 3.0.4 to work with Maven 3.6.0+ [branches-1]
+    * [HBASE-21853] - update copyright notices to 2019
+
+
 Release Notes - HBase - Version 1.3.3 12/21/2018
 
 ** Sub-task
