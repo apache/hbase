@@ -85,7 +85,7 @@ public final class HConstants {
   /**
    * Status codes used for return values of bulk operations.
    */
-  @InterfaceAudience.Private
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
   public enum OperationStatusCode {
     NOT_RUN,
     SUCCESS,
