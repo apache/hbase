@@ -924,16 +924,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
-   *             Deprecated since 1.4.0.
-   * @see #mayHaveMoreCellsInRow()
-   */
-  @Deprecated
-  public boolean isPartial() {
-    return mayHaveMoreCellsInRow;
-  }
-
-  /**
    * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM
    * or timeout. This flag is used to tell you if the current Result is the last one of the current
    * row. False means this Result is the last one. True means there MAY be more cells belonging to
