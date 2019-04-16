@@ -35,11 +35,6 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedOpsKey;
   private String keyPrefix;
 
-  /**
-   * @deprecated since 1.3.0. Use {@link #shippedBytesKey} instead.
-   */
-  @Deprecated
-  private final String shippedKBsKey;
   private final String shippedBytesKey;
   private final String logReadInBytesKey;
   private final String shippedHFilesKey;
@@ -51,7 +46,6 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final MutableFastCounter walEditsFilteredCounter;
   private final MutableFastCounter shippedBatchesCounter;
   private final MutableFastCounter shippedOpsCounter;
-  private final MutableFastCounter shippedKBsCounter;
   private final MutableFastCounter shippedBytesCounter;
   private final MutableFastCounter logReadInBytesCounter;
   private final MutableFastCounter shippedHFilesCounter;
@@ -88,9 +82,6 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     shippedOpsKey = this.keyPrefix + "shippedOps";
     shippedOpsCounter = rms.getMetricsRegistry().getCounter(shippedOpsKey, 0L);
-
-    shippedKBsKey = this.keyPrefix + "shippedKBs";
-    shippedKBsCounter = rms.getMetricsRegistry().getCounter(shippedKBsKey, 0L);
 
     shippedBytesKey = this.keyPrefix + "shippedBytes";
     shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);
@@ -162,8 +153,6 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public void incrShippedBytes(long size) {
     shippedBytesCounter.incr(size);
-    MetricsReplicationGlobalSourceSource
-      .incrementKBsCounter(shippedBytesCounter, shippedKBsCounter);
   }
 
   @Override public void incrLogReadInBytes(long size) {
@@ -177,7 +166,6 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     rms.removeMetric(shippedBatchesKey);
     rms.removeMetric(shippedOpsKey);
-    rms.removeMetric(shippedKBsKey);
     rms.removeMetric(shippedBytesKey);
 
     rms.removeMetric(logReadInBytesKey);
