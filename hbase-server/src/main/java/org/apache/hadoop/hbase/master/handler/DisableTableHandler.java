@@ -129,12 +129,13 @@ public class DisableTableHandler extends EventHandler {
       LOG.info("Attempting to disable table " + this.tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
           .getMasterCoprocessorHost();
+      // this executes in assignment manager to recover disabling table, not overriding user
       if (cpHost != null) {
-        cpHost.preDisableTableHandler(this.tableName);
+        cpHost.preDisableTableHandler(this.tableName, null);
       }
       handleDisableTable();
       if (cpHost != null) {
-        cpHost.postDisableTableHandler(this.tableName);
+        cpHost.postDisableTableHandler(this.tableName, null);
       }
     } catch (IOException e) {
       LOG.error("Error trying to disable table " + this.tableName, e);

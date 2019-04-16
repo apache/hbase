@@ -150,12 +150,13 @@ public class EnableTableHandler extends EventHandler {
       LOG.info("Attempting to enable the table " + this.tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
           .getMasterCoprocessorHost();
+      // this executes within assignment manager, so not overriding user
       if (cpHost != null) {
-        cpHost.preEnableTableHandler(this.tableName);
+        cpHost.preEnableTableHandler(this.tableName, null);
       }
       handleEnableTable();
       if (cpHost != null) {
-        cpHost.postEnableTableHandler(this.tableName);
+        cpHost.postEnableTableHandler(this.tableName, null);
       }
     } catch (IOException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);

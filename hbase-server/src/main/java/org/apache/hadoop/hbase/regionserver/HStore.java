@@ -23,7 +23,6 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.security.Key;
 import java.security.KeyException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1406,23 +1405,7 @@ public class HStore implements Store {
       final StoreFile sf = moveFileIntoPlace(newFile);
       if (this.getCoprocessorHost() != null) {
         final Store thisStore = this;
-        if (user == null) {
-          getCoprocessorHost().postCompact(thisStore, sf, cr);
-        } else {
-          try {
-            user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-              @Override
-              public Void run() throws Exception {
-                getCoprocessorHost().postCompact(thisStore, sf, cr);
-                return null;
-              }
-            });
-          } catch (InterruptedException ie) {
-            InterruptedIOException iioe = new InterruptedIOException();
-            iioe.initCause(ie);
-            throw iioe;
-          }
-        }
+        getCoprocessorHost().postCompact(thisStore, sf, cr, user);
       }
       assert sf != null;
       sfs.add(sf);
@@ -1628,7 +1611,7 @@ public class HStore implements Store {
         // Move the compaction into place.
         StoreFile sf = moveFileIntoPlace(newFile);
         if (this.getCoprocessorHost() != null) {
-          this.getCoprocessorHost().postCompact(this, sf, null);
+          this.getCoprocessorHost().postCompact(this, sf, null, null);
         }
         replaceStoreFiles(filesToCompact, Lists.newArrayList(sf));
         completeCompaction(filesToCompact);
@@ -1699,29 +1682,12 @@ public class HStore implements Store {
     this.lock.readLock().lock();
     try {
       synchronized (filesCompacting) {
-        final Store thisStore = this;
         // First, see if coprocessor would want to override selection.
         if (this.getCoprocessorHost() != null) {
           final List<StoreFile> candidatesForCoproc = compaction.preSelect(this.filesCompacting);
           boolean override = false;
-          if (user == null) {
-            override = getCoprocessorHost().preCompactSelection(this, candidatesForCoproc,
-              baseRequest);
-          } else {
-            try {
-              override = user.getUGI().doAs(new PrivilegedExceptionAction<Boolean>() {
-                @Override
-                public Boolean run() throws Exception {
-                  return getCoprocessorHost().preCompactSelection(thisStore, candidatesForCoproc,
-                    baseRequest);
-                }
-              });
-            } catch (InterruptedException ie) {
-              InterruptedIOException iioe = new InterruptedIOException();
-              iioe.initCause(ie);
-              throw iioe;
-            }
-          }
+          override = getCoprocessorHost().preCompactSelection(this, candidatesForCoproc,
+              baseRequest, user);
           if (override) {
             // Coprocessor is overriding normal file selection.
             compaction.forceSelect(new CompactionRequest(candidatesForCoproc));
@@ -1749,25 +1715,8 @@ public class HStore implements Store {
           }
         }
         if (this.getCoprocessorHost() != null) {
-          if (user == null) {
-            this.getCoprocessorHost().postCompactSelection(
-              this, ImmutableList.copyOf(compaction.getRequest().getFiles()), baseRequest);
-          } else {
-            try {
-              user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-                @Override
-                public Void run() throws Exception {
-                  getCoprocessorHost().postCompactSelection(
-                    thisStore,ImmutableList.copyOf(compaction.getRequest().getFiles()),baseRequest);
-                  return null;
-                }
-              });
-            } catch (InterruptedException ie) {
-              InterruptedIOException iioe = new InterruptedIOException();
-              iioe.initCause(ie);
-              throw iioe;
-            }
-          }
+          this.getCoprocessorHost().postCompactSelection(
+              this, ImmutableList.copyOf(compaction.getRequest().getFiles()), baseRequest, user);
         }
 
         // Selected files; see if we have a compaction with some custom base request.

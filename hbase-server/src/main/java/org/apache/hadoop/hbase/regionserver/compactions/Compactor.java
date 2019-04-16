@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -364,24 +363,8 @@ public abstract class Compactor<T extends CellSink> {
     if (store.getCoprocessorHost() == null) {
       return null;
     }
-    if (user == null) {
-      return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
-        earliestPutTs, request, readPoint);
-    } else {
-      try {
-        return user.getUGI().doAs(new PrivilegedExceptionAction<InternalScanner>() {
-          @Override
-          public InternalScanner run() throws Exception {
-            return store.getCoprocessorHost().preCompactScannerOpen(store, scanners,
-              scanType, earliestPutTs, request, readPoint);
-          }
-        });
-      } catch (InterruptedException ie) {
-        InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
-        throw iioe;
-      }
-    }
+    return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
+      earliestPutTs, request, readPoint, user);
   }
 
   /**
@@ -396,22 +379,7 @@ public abstract class Compactor<T extends CellSink> {
     if (store.getCoprocessorHost() == null) {
       return scanner;
     }
-    if (user == null) {
-      return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
-    } else {
-      try {
-        return user.getUGI().doAs(new PrivilegedExceptionAction<InternalScanner>() {
-          @Override
-          public InternalScanner run() throws Exception {
-            return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
-          }
-        });
-      } catch (InterruptedException ie) {
-        InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
-        throw iioe;
-      }
-    }
+    return store.getCoprocessorHost().preCompact(store, scanner, scanType, request, user);
   }
 
   /**

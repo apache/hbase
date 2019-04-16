@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,14 +42,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure
@@ -62,7 +60,7 @@ public class ModifyTableProcedure
 
   private HTableDescriptor unmodifiedHTableDescriptor = null;
   private HTableDescriptor modifiedHTableDescriptor;
-  private UserGroupInformation user;
+  private User user;
   private boolean deleteColumnFamilyInModify;
 
   private List<HRegionInfo> regionInfoList;
@@ -75,8 +73,8 @@ public class ModifyTableProcedure
   public ModifyTableProcedure(final MasterProcedureEnv env, final HTableDescriptor htd) {
     initilize();
     this.modifiedHTableDescriptor = htd;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
   }
 
   private void initilize() {
@@ -468,22 +466,16 @@ public class ModifyTableProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case MODIFY_TABLE_PRE_OPERATION:
-            cpHost.preModifyTableHandler(getTableName(), modifiedHTableDescriptor);
-            break;
-          case MODIFY_TABLE_POST_OPERATION:
-            cpHost.postModifyTableHandler(getTableName(), modifiedHTableDescriptor);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case MODIFY_TABLE_PRE_OPERATION:
+          cpHost.preModifyTableHandler(getTableName(), modifiedHTableDescriptor, user);
+          break;
+        case MODIFY_TABLE_POST_OPERATION:
+          cpHost.postModifyTableHandler(getTableName(), modifiedHTableDescriptor, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 
