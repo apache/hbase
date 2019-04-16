@@ -3221,6 +3221,49 @@ public class TestHBaseFsck {
     }
   }
 
+  /**
+   * This creates and fixes a bad table where a region is completely contained by another region.
+   * Verify there is no data loss during scan using 'start-row' and 'end-row' after region overlap
+   * fix.
+   */
+  @Test(timeout = 180000)
+  public void testNoDataLossAfterRegionOverlapFix() throws Exception {
+    int startRow = 0;
+    int endRow = 5;
+    TableName table = TableName.valueOf("testNoDataLossAfterRegionOverlapFix");
+    try {
+      TEST_UTIL.createTable(table, FAM);
+      tbl = new HTable(TEST_UTIL.getConfiguration(), table);
+      // Load data.
+      TEST_UTIL.loadNumericRows(tbl, FAM, startRow, endRow);
+      admin.flush(table);
+      // Mess it up by creating an overlap.
+      HRegionInfo hriOverlap =
+          createRegion(tbl.getTableDescriptor(), HConstants.EMPTY_START_ROW, Bytes.toBytes("3"));
+      TEST_UTIL.assignRegion(hriOverlap);
+      // Verify overlaps exists.
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS, ERROR_CODE.DUPE_STARTKEYS });
+      assertEquals(2, hbck.getOverlapGroups(table).size());
+      // Fix the problem.
+      doFsck(conf, true);
+      // Verify that overlaps are fixed.
+      HBaseFsck hbck2 = doFsck(conf, false);
+      assertNoErrors(hbck2);
+      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      // Scan the table using start-row and end-row.
+      for (int i = startRow; i < endRow; i++) {
+        assertEquals(endRow - i,
+          countRows(Bytes.toBytes(String.valueOf(i)), HConstants.EMPTY_BYTE_ARRAY));
+      }
+    } finally {
+      if (tbl != null) {
+        tbl.close();
+        tbl = null;
+      }
+      cleanupTable(table);
+    }
+  }
 
   public static class MasterSyncObserver extends BaseMasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
