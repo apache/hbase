@@ -43,20 +43,12 @@ class ConnectionOverAsyncConnection implements Connection {
 
   private volatile ExecutorService batchPool = null;
 
-  protected final AsyncConnectionImpl conn;
-
-  /**
-   * @deprecated we can not implement all the related stuffs at once so keep it here for now, will
-   *             remove it after we implement all the stuffs, like Admin, RegionLocator, etc.
-   */
-  @Deprecated
-  private final ConnectionImplementation oldConn;
+  private final AsyncConnectionImpl conn;
 
   private final ConnectionConfiguration connConf;
 
-  ConnectionOverAsyncConnection(AsyncConnectionImpl conn, ConnectionImplementation oldConn) {
+  ConnectionOverAsyncConnection(AsyncConnectionImpl conn) {
     this.conn = conn;
-    this.oldConn = oldConn;
     this.connConf = new ConnectionConfiguration(conn.getConfiguration());
   }
 
@@ -109,7 +101,7 @@ class ConnectionOverAsyncConnection implements Connection {
 
   @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-    return oldConn.getRegionLocator(tableName);
+    return new RegionLocatorOverAsyncTableRegionLocator(conn.getRegionLocator(tableName));
   }
 
   @Override
@@ -129,7 +121,7 @@ class ConnectionOverAsyncConnection implements Connection {
 
   // will be called from AsyncConnection, to avoid infinite loop as in the above method we will call
   // AsyncConnection.close.
-  void closeConnImpl() {
+  void closePool() {
     ExecutorService batchPool = this.batchPool;
     if (batchPool != null) {
       ConnectionUtils.shutdownPool(batchPool);
