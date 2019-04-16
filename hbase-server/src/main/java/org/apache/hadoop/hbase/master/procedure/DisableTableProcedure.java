@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,8 +46,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.htrace.Trace;
 
 @InterfaceAudience.Private
@@ -64,7 +63,7 @@ public class DisableTableProcedure
 
   private TableName tableName;
   private boolean skipTableStateCheck;
-  private UserGroupInformation user;
+  private User user;
 
   private Boolean traceEnabled = null;
 
@@ -99,8 +98,8 @@ public class DisableTableProcedure
       final boolean skipTableStateCheck, final ProcedurePrepareLatch syncLatch) {
     this.tableName = tableName;
     this.skipTableStateCheck = skipTableStateCheck;
-    this.user = env.getRequestUser().getUGI();
-    this.setOwner(this.user.getShortUserName());
+    this.user = env.getRequestUser();
+    this.setOwner(this.user.getShortName());
 
     // Compatible with 1.0: We use latch to make sure that this procedure implementation is
     // compatible with 1.0 asynchronized operations. We need to lock the table and check
@@ -475,22 +474,16 @@ public class DisableTableProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      user.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          switch (state) {
-          case DISABLE_TABLE_PRE_OPERATION:
-            cpHost.preDisableTableHandler(tableName);
-            break;
-          case DISABLE_TABLE_POST_OPERATION:
-            cpHost.postDisableTableHandler(tableName);
-            break;
-          default:
-            throw new UnsupportedOperationException(this + " unhandled state=" + state);
-          }
-          return null;
-        }
-      });
+      switch (state) {
+        case DISABLE_TABLE_PRE_OPERATION:
+          cpHost.preDisableTableHandler(tableName, user);
+          break;
+        case DISABLE_TABLE_POST_OPERATION:
+          cpHost.postDisableTableHandler(tableName, user);
+          break;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
+      }
     }
   }
 

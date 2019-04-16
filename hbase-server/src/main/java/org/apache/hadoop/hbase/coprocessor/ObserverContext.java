@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor
@@ -40,8 +42,10 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   private E env;
   private boolean bypass;
   private boolean complete;
+  private User caller;
 
-  public ObserverContext() {
+  public ObserverContext(User caller) {
+    this.caller = caller;
   }
 
   public E getEnvironment() {
@@ -92,6 +96,16 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   }
 
   /**
+   * Returns the active user for the coprocessor call.
+   * If an explicit {@code User} instance was provided to the constructor, that will be returned,
+   * otherwise if we are in the context of an RPC call, the remote user is used.  May return null
+   * if the execution is outside of an RPC context.
+   */
+  public User getCaller() {
+    return caller;
+  }
+
+  /**
    * Instantiates a new ObserverContext instance if the passed reference is
    * <code>null</code> and sets the environment in the new or existing instance.
    * This allows deferring the instantiation of a ObserverContext until it is
@@ -102,11 +116,36 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
    *     to create a new instance
    * @param <T> The environment type for the context
    * @return An instance of <code>ObserverContext</code> with the environment set
+   * @deprecated
    */
+  @Deprecated
+  // TODO: Remove this method, ObserverContext should not depend on RpcServer
   public static <T extends CoprocessorEnvironment> ObserverContext<T> createAndPrepare(
       T env, ObserverContext<T> context) {
     if (context == null) {
-      context = new ObserverContext<T>();
+      context = new ObserverContext<T>(RpcServer.getRequestUser());
+    }
+    context.prepare(env);
+    return context;
+  }
+
+  /**
+   * Instantiates a new ObserverContext instance if the passed reference is
+   * <code>null</code> and sets the environment in the new or existing instance.
+   * This allows deferring the instantiation of a ObserverContext until it is
+   * actually needed.
+   *
+   * @param env The coprocessor environment to set
+   * @param context An existing ObserverContext instance to use, or <code>null</code>
+   *     to create a new instance
+   * @param user The requesting caller for the execution context
+   * @param <T> The environment type for the context
+   * @return An instance of <code>ObserverContext</code> with the environment set
+   */
+  public static <T extends CoprocessorEnvironment> ObserverContext<T> createAndPrepare(
+      T env, ObserverContext<T> context, User user) {
+    if (context == null) {
+      context = new ObserverContext<T>(user);
     }
     context.prepare(env);
     return context;

@@ -44,12 +44,14 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -257,9 +259,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void preCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -268,9 +270,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void postCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -299,8 +301,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDeleteTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void preDeleteTableHandler(final TableName tableName, final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -309,8 +311,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDeleteTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void postDeleteTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -339,8 +342,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preTruncateTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void preTruncateTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -349,8 +353,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postTruncateTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void postTruncateTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -381,9 +386,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
+  public void preModifyTableHandler(final TableName tableName, final HTableDescriptor htd,
+                                    final User user)
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -392,9 +398,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
+  public void postModifyTableHandler(final TableName tableName, final HTableDescriptor htd,
+                                     final User user)
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -425,9 +432,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preAddColumnHandler(final TableName tableName, final HColumnDescriptor column)
+  public boolean preAddColumnHandler(final TableName tableName, final HColumnDescriptor column,
+                                     final User user)
       throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -436,9 +444,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postAddColumnHandler(final TableName tableName, final HColumnDescriptor column)
+  public void postAddColumnHandler(final TableName tableName, final HColumnDescriptor column,
+                                   final User user)
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -470,8 +479,8 @@ public class MasterCoprocessorHost
   }
 
   public boolean preModifyColumnHandler(final TableName tableName,
-      final HColumnDescriptor descriptor) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      final HColumnDescriptor descriptor, final User user) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -481,8 +490,8 @@ public class MasterCoprocessorHost
   }
 
   public void postModifyColumnHandler(final TableName tableName,
-      final HColumnDescriptor descriptor) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      final HColumnDescriptor descriptor, final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -511,9 +520,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preDeleteColumnHandler(final TableName tableName, final byte[] c)
+  public boolean preDeleteColumnHandler(final TableName tableName, final byte[] c,
+                                        final User user)
       throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -522,9 +532,10 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDeleteColumnHandler(final TableName tableName, final byte[] c)
+  public void postDeleteColumnHandler(final TableName tableName, final byte[] c,
+                                      final User user)
       throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -553,8 +564,8 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preEnableTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void preEnableTableHandler(final TableName tableName, final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -563,8 +574,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postEnableTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void postEnableTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -593,8 +605,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDisableTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void preDisableTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -603,8 +616,9 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postDisableTableHandler(final TableName tableName) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+  public void postDisableTableHandler(final TableName tableName, final User user)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -1404,6 +1418,11 @@ public class MasterCoprocessorHost
   private static abstract class CoprocessorOperation
       extends ObserverContext<MasterCoprocessorEnvironment> {
     public CoprocessorOperation() {
+      this(RpcServer.getRequestUser());
+    }
+
+    public CoprocessorOperation(User user) {
+      super(user);
     }
 
     public abstract void call(MasterObserver oserver,

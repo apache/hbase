@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -200,18 +199,12 @@ public class CreateTableHandler extends EventHandler {
     try {
       final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
       if (cpHost != null) {
-        cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
+        cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions, activeUser);
       }
       handleCreateTable(tableName);
       completed(null);
       if (cpHost != null) {
-        this.activeUser.runAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            cpHost.postCreateTableHandler(hTableDescriptor, newRegions);
-            return null;
-          }
-        });
+        cpHost.postCreateTableHandler(hTableDescriptor, newRegions, activeUser);
       }
     } catch (Throwable e) {
       LOG.error("Error trying to create the table " + tableName, e);

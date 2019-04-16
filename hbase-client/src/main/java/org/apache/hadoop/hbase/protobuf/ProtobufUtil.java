@@ -2125,7 +2125,7 @@ public final class ProtobufUtil {
         region_a.getRegionName(), region_b.getRegionName(),forcible);
     if (user != null) {
       try {
-        user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+        user.runAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
             try {
