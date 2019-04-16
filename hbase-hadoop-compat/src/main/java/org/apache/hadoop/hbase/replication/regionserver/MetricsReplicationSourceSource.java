@@ -28,11 +28,6 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
   public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
 
-  /**
-   * @deprecated Use {@link #SOURCE_SHIPPED_BYTES} instead
-   */
-  @Deprecated
-  public static final String SOURCE_SHIPPED_KBS = "source.shippedKBs";
   public static final String SOURCE_SHIPPED_BYTES = "source.shippedBytes";
   public static final String SOURCE_SHIPPED_OPS = "source.shippedOps";
 
