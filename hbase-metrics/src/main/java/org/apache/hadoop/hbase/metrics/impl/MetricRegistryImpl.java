@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.MetricSet;
 import org.apache.hadoop.hbase.metrics.Timer;
-import org.apache.hadoop.hbase.util.CollectionUtils;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -51,7 +51,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public Timer timer(String name) {
-    return (Timer) CollectionUtils.computeIfAbsent(metrics, name, this::createTimer);
+    return (Timer) ConcurrentMapUtils.computeIfAbsent(metrics, name, this::createTimer);
   }
 
   protected Timer createTimer() {
@@ -60,7 +60,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public Histogram histogram(String name) {
-    return (Histogram) CollectionUtils.computeIfAbsent(metrics, name, this::createHistogram);
+    return (Histogram) ConcurrentMapUtils.computeIfAbsent(metrics, name, this::createHistogram);
   }
 
   protected Histogram createHistogram() {
@@ -69,7 +69,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public Meter meter(String name) {
-    return (Meter) CollectionUtils.computeIfAbsent(metrics, name, this::createMeter);
+    return (Meter) ConcurrentMapUtils.computeIfAbsent(metrics, name, this::createMeter);
   }
 
   protected Meter createMeter() {
@@ -78,7 +78,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public Counter counter(String name) {
-    return (Counter) CollectionUtils.computeIfAbsent(metrics, name, this::createCounter);
+    return (Counter) ConcurrentMapUtils.computeIfAbsent(metrics, name, this::createCounter);
   }
 
   protected Counter createCounter() {
@@ -92,7 +92,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public Metric register(String name, Metric metric) {
-    return CollectionUtils.computeIfAbsent(metrics, name, () -> metric);
+    return ConcurrentMapUtils.computeIfAbsent(metrics, name, () -> metric);
   }
 
   @Override
