@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLE
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -159,7 +158,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
     ConnectionOverAsyncConnection c = this.conn;
     if (c != null) {
-      c.closeConnImpl();
+      c.closePool();
     }
     closed = true;
   }
@@ -305,14 +304,7 @@ class AsyncConnectionImpl implements AsyncConnection {
       if (c != null) {
         return c;
       }
-      try {
-        c = new ConnectionOverAsyncConnection(this,
-          ConnectionFactory.createConnectionImpl(conf, null, user));
-      } catch (IOException e) {
-        // TODO: finally we will not rely on ConnectionImplementation anymore and there will no
-        // IOException here.
-        throw new UncheckedIOException(e);
-      }
+      c = new ConnectionOverAsyncConnection(this);
       this.conn = c;
     }
     return c;
