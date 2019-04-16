@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.http.log;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -34,59 +37,223 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.util.ServletUtil;
+import org.apache.hadoop.util.Tool;
 
 /**
  * Change log level in runtime.
  */
 @InterfaceStability.Evolving
 public class LogLevel {
-  public static final String USAGES = "\nUsage: General options are:\n"
-      + "\t[-getlevel <host:httpPort> <name>]\n"
-      + "\t[-setlevel <host:httpPort> <name> <level>]\n";
+  private static final String USAGES = "\nUsage: General options are:\n"
+      + "\t[-getlevel <host:port> <classname>\n"
+      + "\t[-setlevel <host:port> <classname> <level> ";
 
+  public static final String PROTOCOL_HTTP = "http";
   /**
    * A command line implementation
    */
-  public static void main(String[] args) {
-    if (args.length == 3 && "-getlevel".equals(args[0])) {
-      process("http://" + args[1] + "/logLevel?log=" + args[2]);
-      return;
-    }
-    else if (args.length == 4 && "-setlevel".equals(args[0])) {
-      process("http://" + args[1] + "/logLevel?log=" + args[2]
-              + "&level=" + args[3]);
-      return;
-    }
+  public static void main(String[] args) throws Exception {
+    CLI cli = new CLI(new Configuration());
+    System.exit(cli.run(args));
+  }
 
+  /**
+   * Valid command line options.
+   */
+  private enum Operations {
+    GETLEVEL,
+    SETLEVEL,
+    UNKNOWN
+  }
+
+  private static void printUsage() {
     System.err.println(USAGES);
     System.exit(-1);
   }
 
-  private static void process(String urlstring) {
-    try {
-      URL url = new URL(urlstring);
-      System.out.println("Connecting to " + url);
-      URLConnection connection = url.openConnection();
-      connection.connect();
+  @VisibleForTesting
+  static class CLI extends Configured implements Tool {
+    private Operations operation = Operations.UNKNOWN;
+    private String hostName;
+    private String className;
+    private String level;
 
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
-      for(String line; (line = in.readLine()) != null; )
-        if (line.startsWith(MARKER)) {
-          System.out.println(TAG.matcher(line).replaceAll(""));
+    CLI(Configuration conf) {
+      setConf(conf);
+    }
+
+    @Override
+    public int run(String[] args) throws Exception {
+      try {
+        parseArguments(args);
+        sendLogLevelRequest();
+      } catch (HadoopIllegalArgumentException e) {
+        printUsage();
+      }
+      return 0;
+    }
+
+    /**
+     * Send HTTP request to the daemon.
+     * @throws HadoopIllegalArgumentException if arguments are invalid.
+     * @throws Exception if unable to connect
+     */
+    private void sendLogLevelRequest()
+        throws HadoopIllegalArgumentException, Exception {
+      switch (operation) {
+        case GETLEVEL:
+          doGetLevel();
+          break;
+        case SETLEVEL:
+          doSetLevel();
+          break;
+        default:
+          throw new HadoopIllegalArgumentException(
+              "Expect either -getlevel or -setlevel");
+      }
+    }
+
+    public void parseArguments(String[] args) throws
+        HadoopIllegalArgumentException {
+      if (args.length == 0) {
+        throw new HadoopIllegalArgumentException("No arguments specified");
+      }
+      int nextArgIndex = 0;
+      while (nextArgIndex < args.length) {
+        switch (args[nextArgIndex]) {
+          case "-getlevel":
+            nextArgIndex = parseGetLevelArgs(args, nextArgIndex);
+            break;
+          case "-setlevel":
+            nextArgIndex = parseSetLevelArgs(args, nextArgIndex);
+            break;
+          default:
+            throw new HadoopIllegalArgumentException(
+                "Unexpected argument " + args[nextArgIndex]);
         }
-      in.close();
-    } catch (IOException ioe) {
-      System.err.println("" + ioe);
+      }
+
+      // if operation is never specified in the arguments
+      if (operation == Operations.UNKNOWN) {
+        throw new HadoopIllegalArgumentException(
+            "Must specify either -getlevel or -setlevel");
+      }
+    }
+
+    private int parseGetLevelArgs(String[] args, int index) throws
+        HadoopIllegalArgumentException {
+      // fail if multiple operations are specified in the arguments
+      if (operation != Operations.UNKNOWN) {
+        throw new HadoopIllegalArgumentException("Redundant -getlevel command");
+      }
+      // check number of arguments is sufficient
+      if (index + 2 >= args.length) {
+        throw new HadoopIllegalArgumentException("-getlevel needs two parameters");
+      }
+      operation = Operations.GETLEVEL;
+      hostName = args[index + 1];
+      className = args[index + 2];
+      return index + 3;
+    }
+
+    private int parseSetLevelArgs(String[] args, int index) throws
+        HadoopIllegalArgumentException {
+      // fail if multiple operations are specified in the arguments
+      if (operation != Operations.UNKNOWN) {
+        throw new HadoopIllegalArgumentException("Redundant -setlevel command");
+      }
+      // check number of arguments is sufficient
+      if (index + 3 >= args.length) {
+        throw new HadoopIllegalArgumentException("-setlevel needs three parameters");
+      }
+      operation = Operations.SETLEVEL;
+      hostName = args[index + 1];
+      className = args[index + 2];
+      level = args[index + 3];
+      return index + 4;
+    }
+
+    /**
+     * Send HTTP request to get log level.
+     *
+     * @throws HadoopIllegalArgumentException if arguments are invalid.
+     * @throws Exception if unable to connect
+     */
+    private void doGetLevel() throws Exception {
+      process(PROTOCOL_HTTP + "://" + hostName + "/logLevel?log=" + className);
+    }
+
+    /**
+     * Send HTTP request to set log level.
+     *
+     * @throws HadoopIllegalArgumentException if arguments are invalid.
+     * @throws Exception if unable to connect
+     */
+    private void doSetLevel() throws Exception {
+      process(PROTOCOL_HTTP + "://" + hostName + "/logLevel?log=" + className
+          + "&level=" + level);
+    }
+
+    /**
+     * Connect to the URL. Supports HTTP and supports SPNEGO
+     * authentication. It falls back to simple authentication if it fails to
+     * initiate SPNEGO.
+     *
+     * @param url the URL address of the daemon servlet
+     * @return a connected connection
+     * @throws Exception if it can not establish a connection.
+     */
+    private URLConnection connect(URL url) throws Exception {
+      AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+      AuthenticatedURL aUrl;
+      URLConnection connection;
+
+      aUrl = new AuthenticatedURL(new KerberosAuthenticator());
+      connection = aUrl.openConnection(url, token);
+      connection.connect();
+      return connection;
+    }
+
+    /**
+     * Configures the client to send HTTP request to the URL.
+     * Supports SPENGO for authentication.
+     * @param urlString URL and query string to the daemon's web UI
+     * @throws Exception if unable to connect
+     */
+    private void process(String urlString) throws Exception {
+      URL url = new URL(urlString);
+      System.out.println("Connecting to " + url);
+
+      URLConnection connection = connect(url);
+
+      // read from the servlet
+
+      try (InputStreamReader streamReader =
+          new InputStreamReader(connection.getInputStream(), Charsets.UTF_8);
+          BufferedReader bufferedReader = new BufferedReader(streamReader)) {
+        String line;
+        while((line = bufferedReader.readLine()) != null) {
+          if (line.startsWith(MARKER)) {
+            System.out.println(TAG.matcher(line).replaceAll(""));
+          }
+        }
+      } catch (IOException ioe) {
+        System.err.println("" + ioe);
+      }
     }
   }
 
-  static final String MARKER = "<!-- OUTPUT -->";
-  static final Pattern TAG = Pattern.compile("<[^>]*>");
+  private static final String MARKER = "<!-- OUTPUT -->";
+  private static final Pattern TAG = Pattern.compile("<[^>]*>");
 
   /**
    * A servlet implementation
@@ -97,8 +264,8 @@ public class LogLevel {
     private static final long serialVersionUID = 1L;
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response
-        ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
 
       // Do the authorization
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
@@ -146,8 +313,7 @@ public class LogLevel {
         + "<input type='submit' value='Set Log Level' />"
         + "</form>";
 
-    private static void process(org.apache.log4j.Logger log, String level,
-        PrintWriter out) throws IOException {
+    private static void process(org.apache.log4j.Logger log, String level, PrintWriter out) {
       if (level != null) {
         if (!level.equals(org.apache.log4j.Level.toLevel(level).toString())) {
           out.println(MARKER + "Bad level : <b>" + level + "</b><br />");
@@ -161,14 +327,16 @@ public class LogLevel {
     }
 
     private static void process(java.util.logging.Logger log, String level,
-        PrintWriter out) throws IOException {
+        PrintWriter out) {
       if (level != null) {
         log.setLevel(java.util.logging.Level.parse(level));
         out.println(MARKER + "Setting Level to " + level + " ...<br />");
       }
 
       java.util.logging.Level lev;
-      for(; (lev = log.getLevel()) == null; log = log.getParent());
+      while ((lev = log.getLevel()) == null) {
+        log = log.getParent();
+      }
       out.println(MARKER + "Effective level: <b>" + lev + "</b><br />");
     }
   }
