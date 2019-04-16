@@ -3002,7 +3002,12 @@ public class HBaseFsck extends Configured implements Closeable {
                 .compare(hi.getStartKey(), range.getFirst()) < 0) {
               range.setFirst(hi.getStartKey());
             }
-            if (RegionSplitCalculator.BYTES_COMPARATOR
+            if ((RegionSplitCalculator.BYTES_COMPARATOR
+                .compare(range.getSecond(), HConstants.EMPTY_END_ROW) == 0)
+                || (RegionSplitCalculator.BYTES_COMPARATOR.compare(hi.getEndKey(),
+                  HConstants.EMPTY_END_ROW) == 0)) {
+              range.setSecond(HConstants.EMPTY_END_ROW);
+            } else if (RegionSplitCalculator.BYTES_COMPARATOR
                 .compare(hi.getEndKey(), range.getSecond()) > 0) {
               range.setSecond(hi.getEndKey());
             }
