@@ -1378,6 +1378,7 @@
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.7.7</avro.version>
+    <caffeine.version>2.6.2</caffeine.version>
     <commons-codec.version>1.10</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.5</commons-io.version>
@@ -1782,6 +1783,11 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>${caffeine.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>

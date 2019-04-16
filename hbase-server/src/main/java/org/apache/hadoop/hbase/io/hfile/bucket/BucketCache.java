@@ -94,11 +94,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  *
  * <p>BucketCache can be used as mainly a block cache (see
  * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with
- * LruBlockCache to decrease CMS GC and heap fragmentation.
+ * a BlockCache to decrease CMS GC and heap fragmentation.
  *
  * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
- * blocks) to enlarge cache space via
- * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache#setVictimCache}
+ * blocks) to enlarge cache space via a victim cache.
  */
 @InterfaceAudience.Private
 public class BucketCache implements BlockCache, HeapSize {
@@ -427,7 +426,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param inMemory if block is in-memory
    * @param wait if true, blocking wait when queue is full
    */
-  private void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+  public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
       boolean wait) {
     if (cacheEnabled) {
       if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
@@ -698,7 +697,7 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.realCacheSize.sum();
   }
 
-  private long acceptableSize() {
+  public long acceptableSize() {
     return (long) Math.floor(bucketAllocator.getTotalSize() * acceptableFactor);
   }
 

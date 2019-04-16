@@ -172,6 +172,10 @@
                                         <shadedPattern>${shaded.prefix}.com.fasterxml</shadedPattern>
                                     </relocation>
                                     <relocation>
+                                        <pattern>com.github.benmanes.caffeine</pattern>
+                                        <shadedPattern>${shaded.prefix}.com.github.benmanes.caffeine</shadedPattern>
+                                    </relocation>
+                                    <relocation>
                                         <pattern>com.google</pattern>
                                         <shadedPattern>${shaded.prefix}.com.google</shadedPattern>
                                     </relocation>

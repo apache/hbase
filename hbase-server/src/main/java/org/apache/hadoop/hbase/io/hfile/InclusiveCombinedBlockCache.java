@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class InclusiveCombinedBlockCache extends CombinedBlockCache {
-  public InclusiveCombinedBlockCache(LruBlockCache l1, BlockCache l2) {
+  public InclusiveCombinedBlockCache(FirstLevelBlockCache l1, BlockCache l2) {
     super(l1,l2);
     l1.setVictimCache(l2);
   }
@@ -34,7 +34,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache {
     // On all external cache set ups the lru should have the l2 cache set as the victimHandler
     // Because of that all requests that miss inside of the lru block cache will be
     // tried in the l2 block cache.
-    return onHeapCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   /**
@@ -48,7 +48,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     // This is the inclusive part of the combined block cache.
     // Every block is placed into both block caches.
-    onHeapCache.cacheBlock(cacheKey, buf, inMemory);
+    l1Cache.cacheBlock(cacheKey, buf, inMemory);
 
     // This assumes that insertion into the L2 block cache is either async or very fast.
     l2Cache.cacheBlock(cacheKey, buf, inMemory);
@@ -56,7 +56,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache {
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
-    boolean l1Result = this.onHeapCache.evictBlock(cacheKey);
+    boolean l1Result = this.l1Cache.evictBlock(cacheKey);
     boolean l2Result = this.l2Cache.evictBlock(cacheKey);
     return l1Result || l2Result;
   }

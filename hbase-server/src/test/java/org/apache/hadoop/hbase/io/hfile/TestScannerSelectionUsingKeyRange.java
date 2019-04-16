@@ -123,16 +123,17 @@ public class TestScannerSelectionUsingKeyRange {
     }
 
     Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));
-    LruBlockCache cache = (LruBlockCache) BlockCacheFactory.createBlockCache(conf);
-    cache.clearCache();
+    BlockCache cache = BlockCacheFactory.createBlockCache(conf);
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     while (scanner.next(results)) {
     }
     scanner.close();
     assertEquals(0, results.size());
-    Set<String> accessedFiles = cache.getCachedFileNamesForTest();
-    assertEquals(expectedCount, accessedFiles.size());
+    if (cache instanceof LruBlockCache) {
+      Set<String> accessedFiles = ((LruBlockCache)cache).getCachedFileNamesForTest();
+      assertEquals(expectedCount, accessedFiles.size());
+    }
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 }

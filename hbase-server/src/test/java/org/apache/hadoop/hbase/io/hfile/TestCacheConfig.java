@@ -336,7 +336,7 @@ public class TestCacheConfig {
     assertTrue(blockCache instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
     CombinedBlockCache cbc = (CombinedBlockCache) blockCache;
-    LruBlockCache lbc = cbc.onHeapCache;
+    FirstLevelBlockCache lbc = cbc.l1Cache;
     assertEquals(lruExpectedSize, lbc.getMaxSize());
     BlockCache bc = cbc.l2Cache;
     // getMaxSize comes back in bytes but we specified size in MB
@@ -350,7 +350,7 @@ public class TestCacheConfig {
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
     // Force evictions by putting in a block too big.
-    final long justTooBigSize = lbc.acceptableSize() + 1;
+    final long justTooBigSize = ((LruBlockCache)lbc).acceptableSize() + 1;
     lbc.cacheBlock(new BlockCacheKey("bck2", 0), new DataCacheEntry() {
       @Override
       public long heapSize() {
