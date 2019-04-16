@@ -124,7 +124,7 @@ public class HeapMemoryManager {
 
   private ResizableBlockCache toResizableBlockCache(BlockCache blockCache) {
     if (blockCache instanceof CombinedBlockCache) {
-      return (ResizableBlockCache) ((CombinedBlockCache) blockCache).getOnHeapCache();
+      return (ResizableBlockCache) ((CombinedBlockCache) blockCache).getFirstLevelCache();
     } else {
       return (ResizableBlockCache) blockCache;
     }
