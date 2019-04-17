@@ -97,18 +97,6 @@ public class StoreFileScanner implements KeyValueScanner {
     this.reader.incrementRefCount();
   }
 
-  boolean isPrimaryReplica() {
-    return reader.isPrimaryReplicaReader();
-  }
-
-  /**
-   * Return an array of scanners corresponding to the given set of store files.
-   */
-  public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
-      boolean cacheBlocks, boolean usePread, long readPt) throws IOException {
-    return getScannersForStoreFiles(files, cacheBlocks, usePread, false, false, readPt);
-  }
-
   /**
    * Return an array of scanners corresponding to the given set of store files.
    */
