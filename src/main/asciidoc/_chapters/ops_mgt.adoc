@@ -645,8 +645,11 @@ which does not give any meaningful result.
 .Remote Clusters on different Kerberos Realms
 [NOTE]
 ====
-Currently, SyncTable can't be ran for remote clusters on different Kerberos realms.
-There's some work in progress to resolve this on link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586]
+Often, remote clusters may be deployed on different Kerberos Realms.
+link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586] added SyncTable support for
+cross realm authentication, allowing a SyncTable process running on target cluster to connect to
+source cluster and read both HashTable output files and the given HBase table when performing the
+required comparisons.
 ====
 
 [[export]]
