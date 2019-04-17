@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.12
+Release Notes - HBase - Version 1.2.12 2019/04/17
 
 ** Sub-task
     * [HBASE-22152] - Create a jenkins file for yetus to processing GitHub PR
