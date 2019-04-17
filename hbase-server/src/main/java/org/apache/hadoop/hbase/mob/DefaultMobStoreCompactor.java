@@ -244,19 +244,21 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 writer.append(c);
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
-                // the mob cell from the mob file, and write it back to the store file.
-                Cell mobCell = mobStore.resolve(c, false);
-                if (mobCell.getValueLength() != 0) {
-                  // put the mob data back to the store file
-                  PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
-                  writer.append(mobCell);
-                  cellsCountCompactedFromMob++;
-                  cellsSizeCompactedFromMob += mobCell.getValueLength();
-                } else {
-                  // If the value of a file is empty, there might be issues when retrieving,
-                  // directly write the cell to the store file, and leave it to be handled by the
-                  // next compaction.
-                  writer.append(c);
+                // the mob cell from the mob file, and write it back to the store file. Must
+                // close the mob scanner once the life cycle finished.
+                try (MobCell mobCell = mobStore.resolve(c, false)) {
+                  if (mobCell.getCell().getValueLength() != 0) {
+                    // put the mob data back to the store file
+                    PrivateCellUtil.setSequenceId(mobCell.getCell(), c.getSequenceId());
+                    writer.append(mobCell.getCell());
+                    cellsCountCompactedFromMob++;
+                    cellsSizeCompactedFromMob += mobCell.getCell().getValueLength();
+                  } else {
+                    // If the value of a file is empty, there might be issues when retrieving,
+                    // directly write the cell to the store file, and leave it to be handled by the
+                    // next compaction.
+                    writer.append(c);
+                  }
                 }
               }
             } else {
