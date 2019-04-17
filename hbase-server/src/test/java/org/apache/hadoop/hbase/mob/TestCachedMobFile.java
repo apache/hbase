@@ -113,46 +113,45 @@ public class TestCachedMobFile {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(testDir).withFileContext(meta).build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
+        .withFileContext(meta).build();
     String caseName = testName.getMethodName();
     MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile = CachedMobFile.create(fs, writer.getPath(), conf, cacheConf);
     byte[] family = Bytes.toBytes(caseName);
     byte[] qualify = Bytes.toBytes(caseName);
     // Test the start key
-    byte[] startKey = Bytes.toBytes("aa");  // The start key bytes
+    byte[] startKey = Bytes.toBytes("aa"); // The start key bytes
     KeyValue expectedKey =
         new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     KeyValue seekKey = expectedKey.createKeyOnly(false);
-    Cell cell = cachedMobFile.readCell(seekKey, false);
+    Cell cell = cachedMobFile.readCell(seekKey, false).getCell();
     MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the end key
-    byte[] endKey = Bytes.toBytes("zz");  // The end key bytes
+    byte[] endKey = Bytes.toBytes("zz"); // The end key bytes
     expectedKey = new KeyValue(endKey, family, qualify, Long.MAX_VALUE, Type.Put, endKey);
     seekKey = expectedKey.createKeyOnly(false);
-    cell = cachedMobFile.readCell(seekKey, false);
+    cell = cachedMobFile.readCell(seekKey, false).getCell();
     MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the random key
     byte[] randomKey = Bytes.toBytes(MobTestUtil.generateRandomString(2));
     expectedKey = new KeyValue(randomKey, family, qualify, Long.MAX_VALUE, Type.Put, randomKey);
     seekKey = expectedKey.createKeyOnly(false);
-    cell = cachedMobFile.readCell(seekKey, false);
+    cell = cachedMobFile.readCell(seekKey, false).getCell();
     MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is less than the start key
     byte[] lowerKey = Bytes.toBytes("a1"); // Smaller than "aa"
     expectedKey = new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     seekKey = new KeyValue(lowerKey, family, qualify, Long.MAX_VALUE, Type.Put, lowerKey);
-    cell = cachedMobFile.readCell(seekKey, false);
+    cell = cachedMobFile.readCell(seekKey, false).getCell();
     MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is more than the end key
     byte[] upperKey = Bytes.toBytes("z{"); // Bigger than "zz"
     seekKey = new KeyValue(upperKey, family, qualify, Long.MAX_VALUE, Type.Put, upperKey);
-    cell = cachedMobFile.readCell(seekKey, false);
-    Assert.assertNull(cell);
+    Assert.assertNull(cachedMobFile.readCell(seekKey, false));
   }
 }
