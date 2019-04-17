@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceRegionLocation;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -106,7 +107,7 @@ class AsyncMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCacheLocation,
-      this::addLocationToCache, this::removeLocationFromCache);
+      this::addLocationToCache, this::removeLocationFromCache, Optional.empty());
   }
 
   void clearCache() {
