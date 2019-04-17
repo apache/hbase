@@ -74,12 +74,6 @@ public class KeyOnlyFilter extends FilterBase {
     }
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell ignored) throws IOException {
-    return filterCell(ignored);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;

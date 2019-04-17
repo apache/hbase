@@ -47,25 +47,9 @@ public abstract class FilterBase extends Filter {
   public void reset() throws IOException {
   }
 
-  /**
-   * Filters that do not filter by row key can inherit this implementation that
-   * never filters anything. (ie: returns false).
-   *
-   * {@inheritDoc}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use {@link #filterRowKey(Cell)}
-   */
-  @Override
-  @Deprecated
-  public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
-    if (filterAllRemaining()) return true;
-    return false;
-  }
-
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
-    if (filterAllRemaining()) return true;
-    return filterRowKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    return filterAllRemaining();
   }
 
   /**

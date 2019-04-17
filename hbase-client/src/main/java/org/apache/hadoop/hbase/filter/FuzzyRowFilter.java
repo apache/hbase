@@ -147,12 +147,6 @@ public class FuzzyRowFilter extends FilterBase {
     return true;
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell c) {
     final int startIndex = lastFoundIndex >= 0 ? lastFoundIndex : 0;

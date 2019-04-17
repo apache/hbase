@@ -31,7 +31,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
- * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
+ * as the wrapped filters {@link Filter#filterRowKey(Cell)},
  * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
@@ -65,24 +65,11 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   @Override
-  public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
-    boolean value = filter.filterRowKey(buffer, offset, length);
-    changeFAR(value);
-    return value;
-  }
-
-  @Override
   public boolean filterRowKey(Cell cell) throws IOException {
     if (filterAllRemaining()) return true;
     boolean value = filter.filterRowKey(cell);
     changeFAR(value);
     return value;
-  }
-
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) throws IOException {
-    return filterCell(c);
   }
 
   @Override

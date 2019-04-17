@@ -112,12 +112,6 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   @Override
-  @Deprecated
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
-  @Override
   public ReturnCode filterCell(final Cell c)
   {
     if (columnOffset != null) {

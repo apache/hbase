@@ -200,21 +200,6 @@ public class FilterListWithAND extends FilterListBase {
   }
 
   @Override
-  public boolean filterRowKey(byte[] rowKey, int offset, int length) throws IOException {
-    if (isEmpty()) {
-      return super.filterRowKey(rowKey, offset, length);
-    }
-    boolean retVal = false;
-    for (int i = 0, n = filters.size(); i < n; i++) {
-      Filter filter = filters.get(i);
-      if (filter.filterAllRemaining() || filter.filterRowKey(rowKey, offset, length)) {
-        retVal = true;
-      }
-    }
-    return retVal;
-  }
-
-  @Override
   public boolean filterRowKey(Cell firstRowCell) throws IOException {
     if (isEmpty()) {
       return super.filterRowKey(firstRowCell);

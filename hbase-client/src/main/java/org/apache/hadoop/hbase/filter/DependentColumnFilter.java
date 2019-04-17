@@ -133,12 +133,6 @@ public class DependentColumnFilter extends CompareFilter {
     return false;
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell c) {
     // Check if the column and qualifier match
@@ -173,10 +167,6 @@ public class DependentColumnFilter extends CompareFilter {
     return false;
   }
 
-  @Override
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    return false;
-  }
   @Override
   public void reset() {
     stampSet.clear();    

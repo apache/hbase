@@ -61,12 +61,6 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     this.qualifiers = qualifiers;
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell c) {
     if (hasFoundKV()) {
