@@ -60,15 +60,6 @@ public final class ReplicationLoadSource {
     return this.sizeOfLogQueue;
   }
 
-  /**
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
-   * @see #getTimestampOfLastShippedOp()
-   */
-  @Deprecated
-  public long getTimeStampOfLastShippedOp() {
-    return getTimestampOfLastShippedOp();
-  }
-
   public long getTimestampOfLastShippedOp() {
     return this.timestampOfLastShippedOp;
   }
