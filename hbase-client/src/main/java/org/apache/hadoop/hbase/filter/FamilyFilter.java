@@ -56,12 +56,6 @@ public class FamilyFilter extends CompareFilter {
     super(op, familyComparator);
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell c) {
     int familyLength = c.getFamilyLength();

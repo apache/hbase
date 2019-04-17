@@ -48,6 +48,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.stream.XMLStreamException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -649,8 +650,9 @@ public class TestTableScan {
     }
 
     @Override
-    public boolean filterRowKey(byte[] buffer, int offset, int length) {
-      int cmp = Bytes.compareTo(buffer, offset, length, this.key, 0, this.key.length);
+    public boolean filterRowKey(Cell cell) {
+      int cmp = Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+              this.key, 0, this.key.length);
       return cmp != 0;
     }
 

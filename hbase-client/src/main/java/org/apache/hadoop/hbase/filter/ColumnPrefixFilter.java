@@ -58,12 +58,6 @@ public class ColumnPrefixFilter extends FilterBase {
     return false;
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell cell) {
     if (this.prefix == null) {

@@ -504,18 +504,6 @@ public class TestConnectionImplementation {
 
   public static class BlockingFilter extends FilterBase {
     @Override
-    public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
-      int i = 0;
-      while (i++ < 1000 && !syncBlockingFilter.get()) {
-        synchronized (syncBlockingFilter) {
-          syncBlockingFilter.notifyAll();
-        }
-        Threads.sleep(100);
-      }
-      syncBlockingFilter.set(true);
-      return false;
-    }
-    @Override
     public ReturnCode filterCell(final Cell ignored) throws IOException {
       return ReturnCode.INCLUDE;
     }

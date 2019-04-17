@@ -112,11 +112,6 @@ public abstract class FilterListBase extends FilterBase {
     return transformed;
   }
 
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) throws IOException {
-    return filterCell(c);
-  }
-
   /**
    * Filters that never filter by modifying the returned List of Cells can inherit this
    * implementation that does nothing. {@inheritDoc}

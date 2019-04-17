@@ -67,24 +67,6 @@ public abstract class Filter {
   /**
    * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
    * false, each KeyValue in the row will be passed to {@link #filterCell(Cell)} below.
-   * 
-   * Concrete implementers can signal a failure condition in their code by throwing an
-   * {@link IOException}.
-   * 
-   * @param buffer buffer containing row key
-   * @param offset offset into buffer where row key starts
-   * @param length length of the row key
-   * @return true, remove entire row, false, include the row (maybe).
-   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use {@link #filterRowKey(Cell)}
-   */
-  @Deprecated
-  abstract public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException;
-
-  /**
-   * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
-   * false, each KeyValue in the row will be passed to {@link #filterCell(Cell)} below.
    * If {@link #filterAllRemaining()} returns true, then {@link #filterRowKey(Cell)} should
    * also return true.
    *
@@ -112,34 +94,6 @@ public abstract class Filter {
    * A way to filter based on the column family, column qualifier and/or the column value. Return
    * code is described below. This allows filters to filter only certain number of columns, then
    * terminate without matching ever column.
-   * 
-   * If filterRowKey returns true, filterKeyValue needs to be consistent with it.
-   * 
-   * filterKeyValue can assume that filterRowKey has already been called for the row.
-   * 
-   * If your filter returns <code>ReturnCode.NEXT_ROW</code>, it should return
-   * <code>ReturnCode.NEXT_ROW</code> until {@link #reset()} is called just in case the caller calls
-   * for the next row.
-   *
-   * Concrete implementers can signal a failure condition in their code by throwing an
-   * {@link IOException}.
-   * 
-   * @param c the Cell in question
-   * @return code as described below, Filter.ReturnCode.INCLUDE by default
-   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
-   * @see Filter.ReturnCode
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use filterCell(Cell)
-   */
-  @Deprecated
-  public ReturnCode filterKeyValue(final Cell c) throws IOException {
-    return Filter.ReturnCode.INCLUDE;
-  }
-
-  /**
-   * A way to filter based on the column family, column qualifier and/or the column value. Return
-   * code is described below. This allows filters to filter only certain number of columns, then
-   * terminate without matching ever column.
    *
    * If filterRowKey returns true, filterCell needs to be consistent with it.
    *
@@ -157,8 +111,8 @@ public abstract class Filter {
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    * @see Filter.ReturnCode
    */
-  public ReturnCode filterCell(final Cell c) throws IOException{
-    return filterKeyValue(c);
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    return ReturnCode.INCLUDE;
   }
 
   /**

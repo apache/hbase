@@ -55,12 +55,6 @@ public class QualifierFilter extends CompareFilter {
     super(op, qualifierComparator);
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell c) {
-    return filterCell(c);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell c) {
     if (compareQualifier(getCompareOperator(), this.comparator, c)) {

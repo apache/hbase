@@ -137,12 +137,6 @@ public class MultiRowRangeFilter extends FilterBase {
     return false;
   }
 
-  @Deprecated
-  @Override
-  public ReturnCode filterKeyValue(final Cell ignored) {
-    return filterCell(ignored);
-  }
-
   @Override
   public ReturnCode filterCell(final Cell ignored) {
     return currentReturnCode;
