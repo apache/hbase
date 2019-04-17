@@ -338,15 +338,25 @@ class AsyncNonMetaRegionLocator {
     return true;
   }
 
+  private void recordCacheHit() {
+    conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheHit);
+  }
+
+  private void recordCacheMiss() {
+    conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheMiss);
+  }
+
   private RegionLocations locateRowInCache(TableCache tableCache, TableName tableName, byte[] row,
       int replicaId) {
     Map.Entry<byte[], RegionLocations> entry = tableCache.cache.floorEntry(row);
     if (entry == null) {
+      recordCacheMiss();
       return null;
     }
     RegionLocations locs = entry.getValue();
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     if (loc == null) {
+      recordCacheMiss();
       return null;
     }
     byte[] endKey = loc.getRegion().getEndKey();
@@ -355,8 +365,10 @@ class AsyncNonMetaRegionLocator {
         LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
           Bytes.toStringBinary(row), RegionLocateType.CURRENT, replicaId);
       }
+      recordCacheHit();
       return locs;
     } else {
+      recordCacheMiss();
       return null;
     }
   }
@@ -367,11 +379,13 @@ class AsyncNonMetaRegionLocator {
     Map.Entry<byte[], RegionLocations> entry =
       isEmptyStopRow ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(row);
     if (entry == null) {
+      recordCacheMiss();
       return null;
     }
     RegionLocations locs = entry.getValue();
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     if (loc == null) {
+      recordCacheMiss();
       return null;
     }
     if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
@@ -380,8 +394,10 @@ class AsyncNonMetaRegionLocator {
         LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
           Bytes.toStringBinary(row), RegionLocateType.BEFORE, replicaId);
       }
+      recordCacheHit();
       return locs;
     } else {
+      recordCacheMiss();
       return null;
     }
   }
@@ -529,6 +545,10 @@ class AsyncNonMetaRegionLocator {
     return getRegionLocationsInternal(tableName, row, replicaId, locateType, reload);
   }
 
+  private void recordClearRegionCache() {
+    conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheNumClearRegion);
+  }
+
   private void removeLocationFromCache(HRegionLocation loc) {
     TableCache tableCache = cache.get(loc.getRegion().getTable());
     if (tableCache == null) {
@@ -544,10 +564,12 @@ class AsyncNonMetaRegionLocator {
       RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
       if (newLocs == null) {
         if (tableCache.cache.remove(startKey, oldLocs)) {
+          recordClearRegionCache();
           return;
         }
       } else {
         if (tableCache.cache.replace(startKey, oldLocs, newLocs)) {
+          recordClearRegionCache();
           return;
         }
       }
@@ -569,7 +591,7 @@ class AsyncNonMetaRegionLocator {
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
     AsyncRegionLocatorHelper.updateCachedLocationOnError(loc, exception, this::getCachedLocation,
-      this::addLocationToCache, this::removeLocationFromCache);
+      this::addLocationToCache, this::removeLocationFromCache, conn.getConnectionMetrics());
   }
 
   void clearCache(TableName tableName) {
@@ -583,6 +605,8 @@ class AsyncNonMetaRegionLocator {
         tableCache.allRequests.values().forEach(f -> f.completeExceptionally(error));
       }
     }
+    conn.getConnectionMetrics()
+      .ifPresent(metrics -> metrics.incrMetaCacheNumClearRegion(tableCache.cache.size()));
   }
 
   void clearCache() {

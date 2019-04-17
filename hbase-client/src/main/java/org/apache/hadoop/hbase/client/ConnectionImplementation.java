@@ -190,10 +190,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   // thread executor shared by all Table instances created
   // by this connection
-  private volatile ExecutorService batchPool = null;
+  private volatile ThreadPoolExecutor batchPool = null;
   // meta thread executor shared by all Table instances created
   // by this connection
-  private volatile ExecutorService metaLookupPool = null;
+  private volatile ThreadPoolExecutor metaLookupPool = null;
   private volatile boolean cleanupPool = false;
 
   private final Configuration conf;
@@ -238,14 +238,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * constructor
    * @param conf Configuration object
    */
-  ConnectionImplementation(Configuration conf,
-                           ExecutorService pool, User user) throws IOException {
+  ConnectionImplementation(Configuration conf, ExecutorService pool, User user) throws IOException {
     this.conf = conf;
     this.user = user;
     if (user != null && user.isLoginFromKeytab()) {
       spawnRenewalChore(user.getUGI());
     }
-    this.batchPool = pool;
+    this.batchPool = (ThreadPoolExecutor) pool;
     this.connectionConfig = new ConnectionConfiguration(conf);
     this.closed = false;
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -286,7 +285,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      this.metrics = new MetricsConnection(this);
+      this.metrics =
+        new MetricsConnection(this.toString(), this::getBatchPool, this::getMetaLookupPool);
     } else {
       this.metrics = null;
     }
@@ -461,7 +461,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.metrics;
   }
 
-  private ExecutorService getBatchPool() {
+  private ThreadPoolExecutor getBatchPool() {
     if (batchPool == null) {
       synchronized (this) {
         if (batchPool == null) {
@@ -474,7 +474,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.batchPool;
   }
 
-  private ExecutorService getThreadPool(int maxThreads, int coreThreads, String nameHint,
+  private ThreadPoolExecutor getThreadPool(int maxThreads, int coreThreads, String nameHint,
       BlockingQueue<Runnable> passedWorkQueue) {
     // shared HTable thread executor not yet initialized
     if (maxThreads == 0) {
@@ -503,7 +503,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return tpe;
   }
 
-  private ExecutorService getMetaLookupPool() {
+  private ThreadPoolExecutor getMetaLookupPool() {
     if (this.metaLookupPool == null) {
       synchronized (this) {
         if (this.metaLookupPool == null) {

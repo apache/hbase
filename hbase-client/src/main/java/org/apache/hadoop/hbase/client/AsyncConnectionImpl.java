@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -103,6 +105,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private volatile boolean closed = false;
 
+  private final Optional<MetricsConnection> metrics;
+
   public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
       User user) {
     this.conf = conf;
@@ -112,7 +116,12 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
-    this.rpcClient = RpcClientFactory.createClient(conf, clusterId);
+    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+      this.metrics = Optional.of(new MetricsConnection(this.toString(), () -> null, () -> null));
+    } else {
+      this.metrics = Optional.empty();
+    }
+    this.rpcClient = RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout =
@@ -148,6 +157,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     if (authService != null) {
       authService.shutdown();
     }
+    metrics.ifPresent(MetricsConnection::shutdown);
     closed = true;
   }
 
@@ -311,5 +321,9 @@ class AsyncConnectionImpl implements AsyncConnection {
   @Override
   public void clearRegionLocationCache() {
     locator.clearCache();
+  }
+
+  Optional<MetricsConnection> getConnectionMetrics() {
+    return metrics;
   }
 }
