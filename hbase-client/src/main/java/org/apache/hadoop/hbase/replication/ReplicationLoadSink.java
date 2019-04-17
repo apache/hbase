@@ -31,15 +31,6 @@ public class ReplicationLoadSink {
     return this.ageOfLastAppliedOp;
   }
 
-  /**
-   * @deprecated Since hbase-2.0.0. Will be removed in 3.0.0.
-   * @see #getTimestampsOfLastAppliedOp()
-   */
-  @Deprecated
-  public long getTimeStampsOfLastAppliedOp() {
-    return getTimestampsOfLastAppliedOp();
-  }
-
   public long getTimestampsOfLastAppliedOp() {
     return this.timestampsOfLastAppliedOp;
   }
