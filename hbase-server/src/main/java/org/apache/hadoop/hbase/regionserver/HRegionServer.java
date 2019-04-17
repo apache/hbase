@@ -2402,12 +2402,13 @@ public class HRegionServer extends HasThread implements
         msg += "\nCause:\n" + Throwables.getStackTraceAsString(cause);
       }
       // Report to the master but only if we have already registered with the master.
-      if (rssStub != null && this.serverName != null) {
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      if (rss != null && this.serverName != null) {
         ReportRSFatalErrorRequest.Builder builder =
           ReportRSFatalErrorRequest.newBuilder();
         builder.setServer(ProtobufUtil.toServerName(this.serverName));
         builder.setErrorMessage(msg);
-        rssStub.reportRSFatalError(null, builder.build());
+        rss.reportRSFatalError(null, builder.build());
       }
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
@@ -2615,7 +2616,8 @@ public class HRegionServer extends HasThread implements
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) return RegionServerStartupResponse.getDefaultInstance();
     ServerName masterServerName = createRegionServerStatusStub(true);
-    if (masterServerName == null) return null;
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    if (masterServerName == null || rss == null) return null;
     RegionServerStartupResponse result = null;
     try {
       rpcServices.requestCount.reset();
@@ -2634,7 +2636,7 @@ public class HRegionServer extends HasThread implements
       request.setPort(port);
       request.setServerStartCode(this.startcode);
       request.setServerCurrentTime(now);
-      result = this.rssStub.regionServerStartup(null, request.build());
+      result = rss.regionServerStartup(null, request.build());
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof ClockOutOfSyncException) {
