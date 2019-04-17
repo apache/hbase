@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -70,7 +71,7 @@ public class MobFile {
    * @return The cell in the mob file.
    * @throws IOException
    */
-  public Cell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
+  public MobCell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
     return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
   }
 
@@ -82,26 +83,26 @@ public class MobFile {
    * @return The cell in the mob file.
    * @throws IOException
    */
-  public Cell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
-    Cell result = null;
+  public MobCell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
     StoreFileScanner scanner = null;
-    List<HStoreFile> sfs = new ArrayList<>();
-    sfs.add(sf);
+    boolean succ = false;
     try {
-      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs,
-        cacheMobBlocks, true, false, false, readPt);
+      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
+        Collections.singletonList(sf), cacheMobBlocks, true, false, false, readPt);
       if (!sfScanners.isEmpty()) {
         scanner = sfScanners.get(0);
         if (scanner.seek(search)) {
-          result = scanner.peek();
+          MobCell mobCell = new MobCell(scanner.peek(), scanner);
+          succ = true;
+          return mobCell;
         }
       }
+      return null;
     } finally {
-      if (scanner != null) {
+      if (scanner != null && !succ) {
         scanner.close();
       }
     }
-    return result;
   }
 
   /**
