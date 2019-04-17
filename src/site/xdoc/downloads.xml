@@ -135,23 +135,23 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        1.2.11
+        1.2.12
       </td>
       <td style="test-align: left">
-        2019/02/25
+        2019/04/17
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/hbase-1.2.11/compat-check-report.html">1.2.10 vs 1.2.11</a>
+        <a href="https://apache.org/dist/hbase/hbase-1.2.12/compat-check-report.html">1.2.11 vs 1.2.12</a>
       </td>
       <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.2.11/CHANGES.txt">Changes</a>
+        <a href="https://github.com/apache/hbase/blob/rel/1.2.12/CHANGES.txt">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://s.apache.org/hbase-1.2.11-jira-release-notes">Release Notes</a>
+        <a href="https://s.apache.org/hbase-1.2.12-jira-release-notes">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.2.11/hbase-1.2.11-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/hbase-1.2.11/hbase-1.2.11-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.2.11/hbase-1.2.11-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.2.11/hbase-1.2.11-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/hbase-1.2.11/hbase-1.2.11-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.2.11/hbase-1.2.11-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.2.12/hbase-1.2.12-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/hbase-1.2.12/hbase-1.2.12-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.2.12/hbase-1.2.12-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-1.2.12/hbase-1.2.12-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/hbase-1.2.12/hbase-1.2.12-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/hbase-1.2.12/hbase-1.2.12-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
     </tr>
