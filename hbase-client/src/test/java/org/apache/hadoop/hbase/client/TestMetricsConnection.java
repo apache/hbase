@@ -22,9 +22,8 @@ import static org.junit.Assert.assertEquals;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -35,7 +34,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -57,13 +55,11 @@ public class TestMetricsConnection {
       HBaseClassTestRule.forClass(TestMetricsConnection.class);
 
   private static MetricsConnection METRICS;
-  private static final ExecutorService BATCH_POOL = Executors.newFixedThreadPool(2);
+  private static final ThreadPoolExecutor BATCH_POOL =
+    (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
   @BeforeClass
   public static void beforeClass() {
-    ConnectionImplementation mocked = Mockito.mock(ConnectionImplementation.class);
-    Mockito.when(mocked.toString()).thenReturn("mocked-connection");
-    Mockito.when(mocked.getCurrentBatchPool()).thenReturn(BATCH_POOL);
-    METRICS = new MetricsConnection(mocked);
+    METRICS = new MetricsConnection("mocked-connection", () -> BATCH_POOL, () -> null);
   }
 
   @AfterClass

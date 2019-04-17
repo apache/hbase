@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -305,30 +305,30 @@ public class MetricsConnection implements StatisticTrackable {
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
-  MetricsConnection(final ConnectionImplementation conn) {
-    this.scope = conn.toString();
+  MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
+      Supplier<ThreadPoolExecutor> metaPool) {
+    this.scope = scope;
     this.registry = new MetricRegistry();
-
     this.registry.register(getExecutorPoolName(),
         new RatioGauge() {
           @Override
           protected Ratio getRatio() {
-            ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
-            if (batchPool == null) {
+            ThreadPoolExecutor pool = batchPool.get();
+            if (pool == null) {
               return Ratio.of(0, 0);
             }
-            return Ratio.of(batchPool.getActiveCount(), batchPool.getMaximumPoolSize());
+            return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
           }
         });
     this.registry.register(getMetaPoolName(),
         new RatioGauge() {
           @Override
           protected Ratio getRatio() {
-            ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
-            if (metaPool == null) {
+            ThreadPoolExecutor pool = metaPool.get();
+            if (pool == null) {
               return Ratio.of(0, 0);
             }
-            return Ratio.of(metaPool.getActiveCount(), metaPool.getMaximumPoolSize());
+            return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
           }
         });
     this.metaCacheHits = registry.counter(name(this.getClass(), "metaCacheHits", scope));
@@ -399,6 +399,11 @@ public class MetricsConnection implements StatisticTrackable {
   /** Increment the number of meta cache drops requested for individual region. */
   public void incrMetaCacheNumClearRegion() {
     metaCacheNumClearRegion.inc();
+  }
+
+  /** Increment the number of meta cache drops requested for individual region. */
+  public void incrMetaCacheNumClearRegion(int count) {
+    metaCacheNumClearRegion.inc(count);
   }
 
   /** Increment the number of hedged read that have occurred. */
