@@ -197,10 +197,9 @@ class AsyncClientScanner {
   private void openScanner() {
     incRegionCountMetrics(scanMetrics);
     openScannerTries.set(1);
-    addListener(
-      timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
-        getLocateType(scan), this::openScanner, rpcTimeoutNs, getPrimaryTimeoutNs(), retryTimer),
-      (resp, error) -> {
+    addListener(timelineConsistentRead(conn.getLocator(), tableName, scan, scan.getStartRow(),
+      getLocateType(scan), this::openScanner, rpcTimeoutNs, getPrimaryTimeoutNs(), retryTimer,
+      conn.getConnectionMetrics()), (resp, error) -> {
         if (error != null) {
           consumer.onError(error);
           return;

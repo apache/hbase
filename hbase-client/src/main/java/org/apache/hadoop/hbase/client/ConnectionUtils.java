@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -500,13 +501,19 @@ public final class ConnectionUtils {
   /**
    * Connect the two futures, if the src future is done, then mark the dst future as done. And if
    * the dst future is done, then cancel the src future. This is used for timeline consistent read.
+   * <p/>
+   * Pass empty metrics if you want to link the primary future and the dst future so we will not
+   * increase the hedge read related metrics.
    */
-  private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture) {
+  private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture,
+      Optional<MetricsConnection> metrics) {
     addListener(srcFuture, (r, e) -> {
       if (e != null) {
         dstFuture.completeExceptionally(e);
       } else {
-        dstFuture.complete(r);
+        if (dstFuture.complete(r)) {
+          metrics.ifPresent(MetricsConnection::incrHedgedReadWin);
+        }
       }
     });
     // The cancellation may be a dummy one as the dstFuture may be completed by this srcFuture.
@@ -519,7 +526,7 @@ public final class ConnectionUtils {
 
   private static <T> void sendRequestsToSecondaryReplicas(
       Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
-      CompletableFuture<T> future) {
+      CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
     if (future.isDone()) {
       // do not send requests to secondary replicas if the future is done, i.e, the primary request
       // has already been finished.
@@ -527,14 +534,15 @@ public final class ConnectionUtils {
     }
     for (int replicaId = 1, n = locs.size(); replicaId < n; replicaId++) {
       CompletableFuture<T> secondaryFuture = requestReplica.apply(replicaId);
-      connect(secondaryFuture, future);
+      metrics.ifPresent(MetricsConnection::incrHedgedReadOps);
+      connect(secondaryFuture, future, metrics);
     }
   }
 
   static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
       TableName tableName, Query query, byte[] row, RegionLocateType locateType,
       Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
-      long primaryCallTimeoutNs, Timer retryTimer) {
+      long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
     if (query.getConsistency() == Consistency.STRONG) {
       return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
@@ -545,7 +553,7 @@ public final class ConnectionUtils {
     // Timeline consistent read, where we may send requests to other region replicas
     CompletableFuture<T> primaryFuture = requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     CompletableFuture<T> future = new CompletableFuture<>();
-    connect(primaryFuture, future);
+    connect(primaryFuture, future, Optional.empty());
     long startNs = System.nanoTime();
     // after the getRegionLocations, all the locations for the replicas of this region should have
     // been cached, so it is not big deal to locate them again when actually sending requests to
@@ -567,11 +575,11 @@ public final class ConnectionUtils {
         }
         long delayNs = primaryCallTimeoutNs - (System.nanoTime() - startNs);
         if (delayNs <= 0) {
-          sendRequestsToSecondaryReplicas(requestReplica, locs, future);
+          sendRequestsToSecondaryReplicas(requestReplica, locs, future, metrics);
         } else {
           retryTimer.newTimeout(
-            timeout -> sendRequestsToSecondaryReplicas(requestReplica, locs, future), delayNs,
-            TimeUnit.NANOSECONDS);
+            timeout -> sendRequestsToSecondaryReplicas(requestReplica, locs, future, metrics),
+            delayNs, TimeUnit.NANOSECONDS);
         }
       });
     return future;

@@ -232,7 +232,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public CompletableFuture<Result> get(Get get) {
     return timelineConsistentRead(conn.getLocator(), tableName, get, get.getRow(),
       RegionLocateType.CURRENT, replicaId -> get(get, replicaId), readRpcTimeoutNs,
-      conn.connConf.getPrimaryCallTimeoutNs(), retryTimer);
+      conn.connConf.getPrimaryCallTimeoutNs(), retryTimer, conn.getConnectionMetrics());
   }
 
   @Override
