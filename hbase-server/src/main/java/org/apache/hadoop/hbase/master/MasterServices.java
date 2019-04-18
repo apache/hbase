@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -517,4 +519,14 @@ public interface MasterServices extends Server {
   default SplitWALManager getSplitWALManager(){
     return null;
   }
+
+  /**
+   * @return the {@link AccessChecker}
+   */
+  AccessChecker getAccessChecker();
+
+  /**
+   * @return the {@link ZKPermissionWatcher}
+   */
+  ZKPermissionWatcher getZKPermissionWatcher();
 }

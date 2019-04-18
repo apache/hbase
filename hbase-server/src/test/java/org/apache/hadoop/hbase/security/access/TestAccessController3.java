@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -202,7 +202,7 @@ public class TestAccessController3 extends SecureTestUtil {
     }
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
-    assertTrue("region server should have aborted due to FaultyAccessController", rs.isAborted());
+    assertFalse("region server should have aborted due to FaultyAccessController", rs.isAborted());
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {

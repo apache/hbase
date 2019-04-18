@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,23 +52,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @InterfaceAudience.Private
-public final class AccessChecker {
+public class AccessChecker {
   private static final Logger LOG = LoggerFactory.getLogger(AccessChecker.class);
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
-  // TODO: we should move to a design where we don't even instantiate an AccessChecker if
-  // authorization is not enabled (like in RSRpcServices), instead of always instantiating one and
-  // calling requireXXX() only to do nothing (since authorizationEnabled will be false).
-  private AuthManager authManager;
+  private final AuthManager authManager;
 
   /** Group service to retrieve the user group information */
   private static Groups groupService;
-
-  /**
-   * if we are active, usually false, only true if "hbase.security.authorization"
-   * has been set to true in site configuration.see HBASE-19483.
-   */
-  private boolean authorizationEnabled;
 
   public static boolean isAuthorizationSupported(Configuration conf) {
     return conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, false);
@@ -79,28 +69,10 @@ public final class AccessChecker {
    * Constructor with existing configuration
    *
    * @param conf Existing configuration to use
-   * @param zkw reference to the {@link ZKWatcher}
    */
-  public AccessChecker(final Configuration conf, final ZKWatcher zkw)
-      throws RuntimeException {
-    if (zkw != null) {
-      try {
-        this.authManager = AuthManager.getOrCreate(zkw, conf);
-      } catch (IOException ioe) {
-        throw new RuntimeException("Error obtaining AccessChecker", ioe);
-      }
-    } else {
-      throw new NullPointerException("Error obtaining AccessChecker, zk found null.");
-    }
-    authorizationEnabled = isAuthorizationSupported(conf);
+  public AccessChecker(final Configuration conf) {
+    this.authManager = new AuthManager(conf);
     initGroupService(conf);
-  }
-
-  /**
-   * Releases {@link AuthManager}'s reference.
-   */
-  public void stop() {
-    AuthManager.release(authManager);
   }
 
   public AuthManager getAuthManager() {
@@ -119,9 +91,6 @@ public final class AccessChecker {
    */
   public void requireAccess(User user, String request, TableName tableName,
       Action... permissions) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -170,9 +139,6 @@ public final class AccessChecker {
   public void requireGlobalPermission(User user, String request,
       Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap, String filterUser) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result;
     if (authManager.authorizeUserGlobal(user, perm)) {
       result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
@@ -201,9 +167,6 @@ public final class AccessChecker {
    */
   public void requireGlobalPermission(User user, String request, Action perm,
       String namespace) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult authResult;
     if (authManager.authorizeUserGlobal(user, perm)) {
       authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
@@ -229,9 +192,6 @@ public final class AccessChecker {
    */
   public void requireNamespacePermission(User user, String request, String namespace,
       String filterUser, Action... permissions) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -264,9 +224,6 @@ public final class AccessChecker {
   public void requireNamespacePermission(User user, String request, String namespace,
       TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap,
       Action... permissions) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -303,9 +260,6 @@ public final class AccessChecker {
    */
   public void requirePermission(User user, String request, TableName tableName, byte[] family,
       byte[] qualifier, String filterUser, Action... permissions) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -341,9 +295,6 @@ public final class AccessChecker {
   public void requireTablePermission(User user, String request,
       TableName tableName,byte[] family, byte[] qualifier,
       Action... permissions) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -374,10 +325,6 @@ public final class AccessChecker {
    */
   public void performOnSuperuser(String request, User caller, String userToBeChecked)
       throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-
     List<String> userGroups = new ArrayList<>();
     userGroups.add(userToBeChecked);
     if (!AuthUtil.isGroupPrincipal(userToBeChecked)) {
@@ -541,9 +488,6 @@ public final class AccessChecker {
    * @return True if the user has the specific permission
    */
   public boolean hasUserPermission(User user, String request, Permission permission) {
-    if (!authorizationEnabled) {
-      return true;
-    }
     if (permission instanceof TablePermission) {
       TablePermission tPerm = (TablePermission) permission;
       for (Permission.Action action : permission.getActions()) {
@@ -609,10 +553,6 @@ public final class AccessChecker {
    */
   public AuthResult permissionGranted(String request, User user, Action permRequest,
       TableName tableName, Map<byte[], ? extends Collection<?>> families) {
-    if (!authorizationEnabled) {
-      return AuthResult.allow(request, "All users allowed because authorization is disabled", user,
-        permRequest, tableName, families);
-    }
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
     if (TableName.META_TABLE_NAME.equals(tableName)) {

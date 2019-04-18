@@ -916,7 +916,7 @@ public class MasterRpcServices extends RSRpcServices
           + desc.getSignature()));
       }
       LOG.info(master.getClientIdAuditPrefix() + " procedure request for: " + desc.getSignature());
-      mpm.checkPermissions(desc, accessChecker, RpcServer.getRequestUser().orElse(null));
+      mpm.checkPermissions(desc, getAccessChecker(), RpcServer.getRequestUser().orElse(null));
       mpm.execProcedure(desc);
       // send back the max amount of time the client should wait for the procedure
       // to complete
@@ -2816,10 +2816,10 @@ public class MasterRpcServices extends RSRpcServices
         caller = new InputUser(userName, groups.toArray(new String[groups.size()]));
       }
       List<Boolean> hasUserPermissions = new ArrayList<>();
-      if (accessChecker != null) {
+      if (getAccessChecker() != null) {
         for (Permission permission : permissions) {
           boolean hasUserPermission =
-              accessChecker.hasUserPermission(caller, "hasUserPermissions", permission);
+              getAccessChecker().hasUserPermission(caller, "hasUserPermissions", permission);
           hasUserPermissions.add(hasUserPermission);
         }
       } else {

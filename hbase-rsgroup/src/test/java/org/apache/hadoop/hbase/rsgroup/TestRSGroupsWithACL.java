@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
-import org.apache.hadoop.hbase.security.access.AuthManager;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -203,8 +201,6 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
-    int total = AuthManager.getTotalRefCount();
-    assertTrue("Unexpected reference count: " + total, total == 0);
   }
 
   private static void configureRSGroupAdminEndpoint(Configuration conf) {

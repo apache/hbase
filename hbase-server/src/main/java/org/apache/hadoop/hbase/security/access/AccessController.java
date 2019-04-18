@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -109,6 +110,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -130,7 +132,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -191,6 +192,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private static final byte[] TRUE = Bytes.toBytes(true);
 
   private AccessChecker accessChecker;
+  private ZKPermissionWatcher zkPermissionWatcher;
 
   /** flags if we are running on a region of the _acl_ table */
   private boolean aclRegion = false;
@@ -252,7 +254,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       byte[] entry = t.getKey();
       ListMultimap<String, UserPermission> perms = t.getValue();
       byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-      getAuthManager().getZKPermissionWatcher().writeToZookeeper(entry, serialized);
+      zkPermissionWatcher.writeToZookeeper(entry, serialized);
     }
     initialized = true;
   }
@@ -273,7 +275,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         }
       }
     }
-    ZKPermissionWatcher zkw = getAuthManager().getZKPermissionWatcher();
     Configuration conf = regionEnv.getConfiguration();
     byte [] currentEntry = null;
     // TODO: Here we are already on the ACL region. (And it is single
@@ -289,7 +290,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         ListMultimap<String, UserPermission> perms =
             PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
         byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-        zkw.writeToZookeeper(entry, serialized);
+        zkPermissionWatcher.writeToZookeeper(entry, serialized);
       }
     } catch(IOException ex) {
           LOG.error("Failed updating permissions mirror for '" +
@@ -685,39 +686,48 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           + " accordingly.");
     }
 
-    ZKWatcher zk = null;
     if (env instanceof MasterCoprocessorEnvironment) {
       // if running on HMaster
-      MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment)env;
+      MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
       if (mEnv instanceof HasMasterServices) {
-        zk = ((HasMasterServices)mEnv).getMasterServices().getZooKeeper();
+        MasterServices masterServices = ((HasMasterServices) mEnv).getMasterServices();
+        zkPermissionWatcher = masterServices.getZKPermissionWatcher();
+        accessChecker = masterServices.getAccessChecker();
       }
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
-      RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment)env;
+      RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
       if (rsEnv instanceof HasRegionServerServices) {
-        zk = ((HasRegionServerServices)rsEnv).getRegionServerServices().getZooKeeper();
+        RegionServerServices rsServices =
+            ((HasRegionServerServices) rsEnv).getRegionServerServices();
+        zkPermissionWatcher = rsServices.getZKPermissionWatcher();
+        accessChecker = rsServices.getAccessChecker();
       }
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
       conf.addBytesMap(regionEnv.getRegion().getTableDescriptor().getValues());
       compatibleEarlyTermination = conf.getBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT,
-          AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
+        AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
       if (regionEnv instanceof HasRegionServerServices) {
-        zk = ((HasRegionServerServices)regionEnv).getRegionServerServices().getZooKeeper();
+        RegionServerServices rsServices =
+            ((HasRegionServerServices) regionEnv).getRegionServerServices();
+        zkPermissionWatcher = rsServices.getZKPermissionWatcher();
+        accessChecker = rsServices.getAccessChecker();
       }
     }
 
+    if (zkPermissionWatcher == null) {
+      throw new NullPointerException("ZKPermissionWatcher is null");
+    } else if (accessChecker == null) {
+      throw new NullPointerException("AccessChecker is null");
+    }
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
-    // Throws RuntimeException if fails to load AuthManager so that coprocessor is unloaded.
-    accessChecker = new AccessChecker(env.getConfiguration(), zk);
     tableAcls = new MapMaker().weakValues().makeMap();
   }
 
   @Override
   public void stop(CoprocessorEnvironment env) {
-    accessChecker.stop();
   }
 
   /*********************************** Observer/Service Getters ***********************************/
@@ -837,7 +847,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         return null;
       }
     });
-    getAuthManager().getZKPermissionWatcher().deleteTableACLNode(tableName);
+    zkPermissionWatcher.deleteTableACLNode(tableName);
   }
 
   @Override
@@ -1147,7 +1157,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         return null;
       }
     });
-    getAuthManager().getZKPermissionWatcher().deleteNamespaceACLNode(namespace);
+    zkPermissionWatcher.deleteNamespaceACLNode(namespace);
     LOG.info(namespace + " entry deleted in " + PermissionStorage.ACL_TABLE_NAME + " table.");
   }
 
