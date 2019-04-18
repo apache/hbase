@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,17 +32,13 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
@@ -63,7 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
  * </p>
  */
 @InterfaceAudience.Private
-public final class AuthManager implements Closeable {
+public final class AuthManager {
 
   /**
    * Cache of permissions, it is thread safe.
@@ -114,28 +109,10 @@ public final class AuthManager implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(AuthManager.class);
 
   private Configuration conf;
-  private ZKPermissionWatcher zkperms;
   private final AtomicLong mtime = new AtomicLong(0L);
 
-  private AuthManager(ZKWatcher watcher, Configuration conf)
-      throws IOException {
+  AuthManager(Configuration conf) {
     this.conf = conf;
-
-    this.zkperms = new ZKPermissionWatcher(watcher, this, conf);
-    try {
-      this.zkperms.start();
-    } catch (KeeperException ke) {
-      LOG.error("ZooKeeper initialization failed", ke);
-    }
-  }
-
-  @Override
-  public void close() {
-    this.zkperms.close();
-  }
-
-  public ZKPermissionWatcher getZKPermissionWatcher() {
-    return this.zkperms;
   }
 
   /**
@@ -514,62 +491,5 @@ public final class AuthManager implements Closeable {
    */
   public long getMTime() {
     return mtime.get();
-  }
-
-  private static Map<ZKWatcher, AuthManager> managerMap = new HashMap<>();
-
-  private static Map<AuthManager, Integer> refCount = new HashMap<>();
-
-  /**
-   * Returns a AuthManager from the cache. If not cached, constructs a new one.
-   * Returned instance should be released back by calling {@link #release(AuthManager)}.
-   * @param watcher zk watcher
-   * @param conf configuration
-   * @return an AuthManager
-   * @throws IOException zookeeper initialization failed
-   */
-  public synchronized static AuthManager getOrCreate(
-      ZKWatcher watcher, Configuration conf) throws IOException {
-    AuthManager instance = managerMap.get(watcher);
-    if (instance == null) {
-      instance = new AuthManager(watcher, conf);
-      managerMap.put(watcher, instance);
-    }
-    int ref = refCount.get(instance) == null ? 0 : refCount.get(instance);
-    refCount.put(instance, ref + 1);
-    return instance;
-  }
-
-  @VisibleForTesting
-  public static int getTotalRefCount() {
-    int total = 0;
-    for (int count : refCount.values()) {
-      total += count;
-    }
-    return total;
-  }
-
-  /**
-   * Releases the resources for the given AuthManager if the reference count is down to 0.
-   * @param instance AuthManager to be released
-   */
-  public synchronized static void release(AuthManager instance) {
-    if (refCount.get(instance) == null || refCount.get(instance) < 1) {
-      String msg = "Something wrong with the AuthManager reference counting: " + instance
-          + " whose count is " + refCount.get(instance);
-      LOG.error(HBaseMarkers.FATAL, msg);
-      instance.close();
-      managerMap.remove(instance.getZKPermissionWatcher().getWatcher());
-      instance.getZKPermissionWatcher().getWatcher().abort(msg, null);
-    } else {
-      int ref = refCount.get(instance);
-      --ref;
-      refCount.put(instance, ref);
-      if (ref == 0) {
-        instance.close();
-        managerMap.remove(instance.getZKPermissionWatcher().getWatcher());
-        refCount.remove(instance);
-      }
-    }
   }
 }

@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -276,4 +278,14 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return The cache for mob files.
    */
   Optional<MobFileCache> getMobFileCache();
+
+  /**
+   * @return the {@link AccessChecker}
+   */
+  AccessChecker getAccessChecker();
+
+  /**
+   * @return {@link ZKPermissionWatcher}
+   */
+  ZKPermissionWatcher getZKPermissionWatcher();
 }

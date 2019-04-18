@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,8 +119,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     if (!RSGroupableBalancer.class.isAssignableFrom(clazz)) {
       throw new IOException("Configured balancer does not support RegionServer groups.");
     }
-    ZKWatcher zk = ((HasMasterServices)env).getMasterServices().getZooKeeper();
-    accessChecker = new AccessChecker(env.getConfiguration(), zk);
+    accessChecker = ((HasMasterServices) env).getMasterServices().getAccessChecker();
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
@@ -129,7 +127,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
   @Override
   public void stop(CoprocessorEnvironment env) {
-    accessChecker.stop();
   }
 
   @Override
