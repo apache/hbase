@@ -439,7 +439,7 @@ public abstract class RpcServer implements RpcServerInterface,
       metrics.sentResponse(responseSize);
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
-      boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
+      boolean tooSlow = (totalTime > warnResponseTime && warnResponseTime > -1);
       boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
       if (tooSlow || tooLarge) {
         // when tagging, we let TooLarge trump TooSmall to keep output simple
