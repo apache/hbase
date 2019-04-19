@@ -155,7 +155,8 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    * @param key the node identifier
    */
   public void addOperationToNode(final TRemote key, RemoteProcedure rp)
-  throws NullTargetServerDispatchException, NoServerDispatchException, NoNodeDispatchException {
+          throws NullTargetServerDispatchException, NoServerDispatchException,
+          NoNodeDispatchException {
     if (key == null) {
       throw new NullTargetServerDispatchException(rp.toString());
     }
@@ -188,7 +189,10 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    */
   public boolean removeNode(final TRemote key) {
     final BufferNode node = nodeMap.remove(key);
-    if (node == null) return false;
+    if (node == null) {
+      return false;
+    }
+
     node.abortOperationsInQueue();
     return true;
   }
@@ -256,7 +260,6 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     default boolean storeInDispatchedQueue() {
       return true;
     }
-
   }
 
   /**

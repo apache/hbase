@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertEquals;
@@ -46,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-public class ProcedureTestingUtility {
+public final class ProcedureTestingUtility {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureTestingUtility.class);
 
   private ProcedureTestingUtility() {
@@ -219,7 +218,10 @@ public class ProcedureTestingUtility {
 
   private static <TEnv> void assertSingleExecutorForKillTests(
       final ProcedureExecutor<TEnv> procExecutor) {
-    if (procExecutor.testing == null) return;
+    if (procExecutor.testing == null) {
+      return;
+    }
+
     if (procExecutor.testing.killBeforeStoreUpdate ||
         procExecutor.testing.toggleKillBeforeStoreUpdate) {
       assertEquals("expected only one executor running during test with kill/restart",
@@ -412,7 +414,9 @@ public class ProcedureTestingUtility {
     }
 
     @Override
-    protected boolean abort(TEnv env) { return false; }
+    protected boolean abort(TEnv env) {
+      return false;
+    }
 
     @Override
     protected void serializeStateData(ProcedureStateSerializer serializer)

@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureNonce {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProcedureNonce.class);
@@ -125,7 +124,9 @@ public class TestProcedureNonce {
     TestSingleStepProcedure proc = new TestSingleStepProcedure();
     procEnv.setWaitLatch(latch);
     long procId = procExecutor.submitProcedure(proc, nonceKey);
-    while (proc.step != 1) Threads.sleep(25);
+    while (proc.step != 1) {
+      Threads.sleep(25);
+    }
 
     // try to register a procedure with the same nonce
     // we should get back the old procId
@@ -239,8 +240,14 @@ public class TestProcedureNonce {
       }
     };
 
-    for (int i = 0; i < threads.length; ++i) threads[i].start();
-    for (int i = 0; i < threads.length; ++i) Threads.shutdown(threads[i]);
+    for (int i = 0; i < threads.length; ++i) {
+      threads[i].start();
+    }
+
+    for (int i = 0; i < threads.length; ++i) {
+      Threads.shutdown(threads[i]);
+    }
+
     ProcedureTestingUtility.waitNoProcedureRunning(procExecutor);
     assertEquals(null, t1Exception.get());
     assertEquals(null, t2Exception.get());
@@ -265,7 +272,9 @@ public class TestProcedureNonce {
     protected void rollback(TestProcEnv env) { }
 
     @Override
-    protected boolean abort(TestProcEnv env) { return true; }
+    protected boolean abort(TestProcEnv env) {
+      return true;
+    }
   }
 
   private static class TestProcEnv {

@@ -62,7 +62,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestWALProcedureStore {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALProcedureStore.class);
@@ -628,19 +627,19 @@ public class TestWALProcedureStore {
 
     // simulate another active master removing the wals
     procStore = new WALProcedureStore(htu.getConfiguration(), logDir, null,
-        new WALProcedureStore.LeaseRecovery() {
-      private int count = 0;
+      new WALProcedureStore.LeaseRecovery() {
+        private int count = 0;
 
-      @Override
-      public void recoverFileLease(FileSystem fs, Path path) throws IOException {
-        if (++count <= 2) {
-          fs.delete(path, false);
-          LOG.debug("Simulate FileNotFound at count=" + count + " for " + path);
-          throw new FileNotFoundException("test file not found " + path);
+        @Override
+        public void recoverFileLease(FileSystem fs, Path path) throws IOException {
+          if (++count <= 2) {
+            fs.delete(path, false);
+            LOG.debug("Simulate FileNotFound at count=" + count + " for " + path);
+            throw new FileNotFoundException("test file not found " + path);
+          }
+          LOG.debug("Simulate recoverFileLease() at count=" + count + " for " + path);
         }
-        LOG.debug("Simulate recoverFileLease() at count=" + count + " for " + path);
-      }
-    });
+      });
 
     final LoadCounter loader = new LoadCounter();
     procStore.start(PROCEDURE_STORE_SLOTS);

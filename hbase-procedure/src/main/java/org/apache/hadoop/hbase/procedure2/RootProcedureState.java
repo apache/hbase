@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.ArrayList;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class RootProcedureState<TEnvironment> {
-
   private static final Logger LOG = LoggerFactory.getLogger(RootProcedureState.class);
 
   private enum State {
@@ -181,7 +179,9 @@ class RootProcedureState<TEnvironment> {
       int diff = (1 + stackIndexes[stackIndexes.length - 1]) - subprocStack.size();
       if (diff > 0) {
         subprocStack.ensureCapacity(1 + stackIndexes[stackIndexes.length - 1]);
-        while (diff-- > 0) subprocStack.add(null);
+        while (diff-- > 0) {
+          subprocStack.add(null);
+        }
       }
       for (int i = 0; i < stackIndexes.length; ++i) {
         subprocStack.set(stackIndexes[i], proc);
