@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Collection;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -183,6 +182,22 @@ public class RegionLocations {
     }
 
     return new RegionLocations(newLocations);
+  }
+
+  /**
+   * Set the element to null if its getServerName method returns null. Returns null if all the
+   * elements are removed.
+   */
+  public RegionLocations removeElementsWithNullLocation() {
+    HRegionLocation[] newLocations = new HRegionLocation[locations.length];
+    boolean hasNonNullElement = false;
+    for (int i = 0; i < locations.length; i++) {
+      if (locations[i] != null && locations[i].getServerName() != null) {
+        hasNonNullElement = true;
+        newLocations[i] = locations[i];
+      }
+    }
+    return hasNonNullElement ? new RegionLocations(newLocations) : null;
   }
 
   /**
