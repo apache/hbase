@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
@@ -209,11 +208,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * of the execution.
    * @param env the environment passed to the ProcedureExecutor
    * @return a set of sub-procedures to run or ourselves if there is more work to do or null if the
-   * procedure is done.
-   * @throws ProcedureYieldException the procedure will be added back to the queue and retried later.
+   *         procedure is done.
+   * @throws ProcedureYieldException the procedure will be added back to the queue and retried
+   *         later.
    * @throws InterruptedException the procedure will be added back to the queue and retried later.
-   * @throws ProcedureSuspendedException Signal to the executor that Procedure has suspended itself and
-   * has set itself up waiting for an external event to wake it back up again.
+   * @throws ProcedureSuspendedException Signal to the executor that Procedure has suspended itself
+   *         and has set itself up waiting for an external event to wake it back up again.
    */
   protected abstract Procedure<TEnvironment>[] execute(TEnvironment env)
     throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException;
@@ -468,7 +468,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       sb.append(getParentProcId());
     }
 
-    /**
+    /*
      * TODO
      * Enable later when this is being used.
      * Currently owner not used.
@@ -710,7 +710,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   /**
    * Will only be called when loading procedures from procedure store, where we need to record
    * whether the procedure has already held a lock. Later we will call
-   * {@link #restoreLock(Object, ProcedureStore)} to actually acquire the lock.
+   * {@link #restoreLock(Object)} to actually acquire the lock.
    */
   final void lockedWhenLoading() {
     this.lockedWhenLoading = true;
@@ -764,7 +764,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
 
   /**
    * @return true if the procedure is finished. The Procedure may be completed successfully or
-   * rolledback.
+   *         rolledback.
    */
   public synchronized boolean isFinished() {
     return isSuccess() || state == ProcedureState.ROLLEDBACK;

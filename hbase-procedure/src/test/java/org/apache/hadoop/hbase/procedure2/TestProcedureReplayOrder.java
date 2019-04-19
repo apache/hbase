@@ -50,7 +50,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 @Ignore
 @Category({ MasterTests.class, LargeTests.class })
 public class TestProcedureReplayOrder {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProcedureReplayOrder.class);
@@ -202,7 +201,9 @@ public class TestProcedureReplayOrder {
     protected void rollback(TestProcedureEnv env) { }
 
     @Override
-    protected boolean abort(TestProcedureEnv env) { return true; }
+    protected boolean abort(TestProcedureEnv env) {
+      return true;
+    }
 
     @Override
     protected void serializeStateData(ProcedureStateSerializer serializer)
