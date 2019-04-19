@@ -176,8 +176,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     /**
      * This tears down any tables that existed from before and rebuilds the tables and schemas on
      * the source cluster. It then sets up replication from the source to the sink cluster by using
-     * the {@link org.apache.hadoop.hbase.client.replication.ReplicationAdmin}
-     * connection.
+     * the {@link org.apache.hadoop.hbase.client.Admin} connection.
      *
      * @throws Exception
      */

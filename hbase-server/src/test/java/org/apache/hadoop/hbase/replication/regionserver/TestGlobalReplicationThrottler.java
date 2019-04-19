@@ -28,12 +28,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -98,17 +99,17 @@ public class TestGlobalReplicationThrottler {
     utility2.setZkCluster(miniZK);
     new ZKWatcher(conf2, "cluster2", null, true);
 
-    ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
+    Admin admin1 = ConnectionFactory.createConnection(conf1).getAdmin();
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();
 
-    admin1.addPeer("peer1", rpc, null);
-    admin1.addPeer("peer2", rpc, null);
-    admin1.addPeer("peer3", rpc, null);
-    numOfPeer = admin1.getPeersCount();
+    admin1.addReplicationPeer("peer1", rpc);
+    admin1.addReplicationPeer("peer2", rpc);
+    admin1.addReplicationPeer("peer3", rpc);
+    numOfPeer = admin1.listReplicationPeers().size();
   }
 
   @AfterClass

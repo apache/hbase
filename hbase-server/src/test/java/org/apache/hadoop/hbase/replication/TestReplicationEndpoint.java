@@ -133,9 +133,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   @Test
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
-    admin.addPeer("testCustomReplicationEndpoint",
+    hbaseAdmin.addReplicationPeer("testCustomReplicationEndpoint",
         new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-            .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()), null);
+            .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()));
 
     // check whether the class has been constructed and started
     Waiter.waitFor(CONF1, 60000, new Waiter.Predicate<Exception>() {
@@ -166,22 +166,22 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     doAssert(Bytes.toBytes("row42"));
 
-    admin.removePeer("testCustomReplicationEndpoint");
+    hbaseAdmin.removeReplicationPeer("testCustomReplicationEndpoint");
   }
 
   @Test
   public void testReplicationEndpointReturnsFalseOnReplicate() throws Exception {
     Assert.assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
     Assert.assertTrue(!ReplicationEndpointReturningFalse.replicated.get());
-    int peerCount = admin.getPeersCount();
+    int peerCount = hbaseAdmin.listReplicationPeers().size();
     final String id = "testReplicationEndpointReturnsFalseOnReplicate";
-    admin.addPeer(id,
+    hbaseAdmin.addReplicationPeer(id,
       new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF1))
-        .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()), null);
+        .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()));
     // This test is flakey and then there is so much stuff flying around in here its, hard to
     // debug.  Peer needs to be up for the edit to make it across. This wait on
     // peer count seems to be a hack that has us not progress till peer is up.
-    if (admin.getPeersCount() <= peerCount) {
+    if (hbaseAdmin.listReplicationPeers().size() <= peerCount) {
       LOG.info("Waiting on peercount to go up from " + peerCount);
       Threads.sleep(100);
     }
@@ -202,7 +202,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       throw ReplicationEndpointReturningFalse.ex.get();
     }
 
-    admin.removePeer("testReplicationEndpointReturnsFalseOnReplicate");
+    hbaseAdmin.removeReplicationPeer("testReplicationEndpointReturnsFalseOnReplicate");
   }
 
   @Test
@@ -227,10 +227,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
     }
 
-    admin.addPeer(id,
+    hbaseAdmin.addReplicationPeer(id,
         new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(CONF2))
-            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()),
-        null);
+            .setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName()));
 
     final int numEdits = totEdits;
     Waiter.waitFor(CONF1, 30000, new Waiter.ExplainingPredicate<Exception>() {
@@ -247,7 +246,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
     });
 
-    admin.removePeer("testInterClusterReplication");
+    hbaseAdmin.removeReplicationPeer("testInterClusterReplication");
     UTIL1.deleteTableData(tableName);
   }
 
@@ -260,7 +259,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
       EverythingPassesWALEntryFilter.class.getName() + "," +
         EverythingPassesWALEntryFilterSubclass.class.getName());
-    admin.addPeer("testWALEntryFilterFromReplicationEndpoint", rpc);
+    hbaseAdmin.addReplicationPeer("testWALEntryFilterFromReplicationEndpoint", rpc);
     // now replicate some data.
     try (Connection connection = ConnectionFactory.createConnection(CONF1)) {
       doPut(connection, Bytes.toBytes("row1"));
@@ -278,7 +277,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     Assert.assertNull(ReplicationEndpointWithWALEntryFilter.ex.get());
     //make sure our reflectively created filter is in the filter chain
     Assert.assertTrue(EverythingPassesWALEntryFilter.hasPassedAnEntry());
-    admin.removePeer("testWALEntryFilterFromReplicationEndpoint");
+    hbaseAdmin.removeReplicationPeer("testWALEntryFilterFromReplicationEndpoint");
   }
 
   @Test(expected = IOException.class)
@@ -289,7 +288,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     // test that we can create mutliple WALFilters reflectively
     rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
       "IAmNotARealWalEntryFilter");
-    admin.addPeer("testWALEntryFilterAddValidation", rpc);
+    hbaseAdmin.addReplicationPeer("testWALEntryFilterAddValidation", rpc);
   }
 
   @Test(expected = IOException.class)
@@ -300,7 +299,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     // test that we can create mutliple WALFilters reflectively
     rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
       "IAmNotARealWalEntryFilter");
-    admin.updatePeerConfig("testWALEntryFilterUpdateValidation", rpc);
+    hbaseAdmin.updateReplicationPeerConfig("testWALEntryFilterUpdateValidation", rpc);
   }
 
   @Test

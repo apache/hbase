@@ -65,7 +65,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
     Thread.sleep(SLEEP_TIME * NB_RETRIES);
 
     // disable and start the peer
-    admin.disablePeer("2");
+    hbaseAdmin.disableReplicationPeer("2");
     StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
     UTIL2.startMiniHBaseCluster(option);
     Get get = new Get(rowkey);
@@ -80,7 +80,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
     }
 
     // Test enable replication
-    admin.enablePeer("2");
+    hbaseAdmin.enableReplicationPeer("2");
     // wait since the sleep interval would be long
     Thread.sleep(SLEEP_TIME * NB_RETRIES);
     for (int i = 0; i < NB_RETRIES; i++) {

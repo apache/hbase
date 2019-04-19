@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -396,11 +395,11 @@ public class TestReplicaWithCluster {
     LOG.info("Setup second Zk");
     HTU2.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
-    ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
+    Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(HTU2.getClusterKey());
-    admin.addPeer("2", rpc, null);
+    admin.addReplicationPeer("2", rpc);
     admin.close();
 
     Put p = new Put(row);

@@ -70,10 +70,9 @@ public class TestReplicator extends TestReplicationBase {
     truncateTable(UTIL2, tableName);
 
     // Replace the peer set up for us by the base class with a wrapper for this test
-    admin.addPeer("testReplicatorBatching",
+    hbaseAdmin.addReplicationPeer("testReplicatorBatching",
       new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()),
-      null);
+          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()));
 
     ReplicationEndpointForTest.setBatchCount(0);
     ReplicationEndpointForTest.setEntriesCount(0);
@@ -109,7 +108,7 @@ public class TestReplicator extends TestReplicationBase {
         ReplicationEndpointForTest.getBatchCount());
       assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
-      admin.removePeer("testReplicatorBatching");
+      hbaseAdmin.removeReplicationPeer("testReplicatorBatching");
     }
   }
 
@@ -120,10 +119,9 @@ public class TestReplicator extends TestReplicationBase {
     truncateTable(UTIL2, tableName);
 
     // Replace the peer set up for us by the base class with a wrapper for this test
-    admin.addPeer("testReplicatorWithErrors",
+    hbaseAdmin.addReplicationPeer("testReplicatorWithErrors",
       new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()),
-      null);
+          .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()));
 
     FailureInjectingReplicationEndpointForTest.setBatchCount(0);
     FailureInjectingReplicationEndpointForTest.setEntriesCount(0);
@@ -157,7 +155,7 @@ public class TestReplicator extends TestReplicationBase {
 
       assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
-      admin.removePeer("testReplicatorWithErrors");
+      hbaseAdmin.removeReplicationPeer("testReplicatorWithErrors");
     }
   }
 
