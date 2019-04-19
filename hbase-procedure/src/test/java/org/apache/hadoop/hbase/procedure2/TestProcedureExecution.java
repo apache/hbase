@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureExecution {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProcedureExecution.class);
@@ -223,7 +222,9 @@ public class TestProcedureExecution {
     }
 
     @Override
-    protected boolean abort(Void env) { return false; }
+    protected boolean abort(Void env) {
+      return false;
+    }
   }
 
   @Test

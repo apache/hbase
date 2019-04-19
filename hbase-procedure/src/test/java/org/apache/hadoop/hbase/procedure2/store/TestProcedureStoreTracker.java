@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestProcedureStoreTracker {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProcedureStoreTracker.class);
@@ -161,7 +160,9 @@ public class TestProcedureStoreTracker {
       int count = 0;
       while (count < NPROCEDURES) {
         long procId = rand.nextLong();
-        if (procId < 1) continue;
+        if (procId < 1) {
+          continue;
+        }
 
         tracker.setDeleted(procId, i % 2 == 0);
         count++;

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -56,10 +55,22 @@ public final class StringUtils {
   }
 
   public static String humanSize(double size) {
-    if (size >= (1L << 40)) return String.format("%.1fT", size / (1L << 40));
-    if (size >= (1L << 30)) return String.format("%.1fG", size / (1L << 30));
-    if (size >= (1L << 20)) return String.format("%.1fM", size / (1L << 20));
-    if (size >= (1L << 10)) return String.format("%.1fK", size / (1L << 10));
+    if (size >= (1L << 40)) {
+      return String.format("%.1fT", size / (1L << 40));
+    }
+
+    if (size >= (1L << 30)) {
+      return String.format("%.1fG", size / (1L << 30));
+    }
+
+    if (size >= (1L << 20)) {
+      return String.format("%.1fM", size / (1L << 20));
+    }
+
+    if (size >= (1L << 10)) {
+      return String.format("%.1fK", size / (1L << 10));
+    }
+
     return String.format("%.0f", size);
   }
 

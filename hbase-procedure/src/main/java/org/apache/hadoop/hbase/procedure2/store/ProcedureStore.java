@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.procedure2.Procedure;
 
 /**
  * The ProcedureStore is used by the executor to persist the state of each procedure execution.
@@ -149,7 +148,7 @@ public interface ProcedureStore {
 
   /**
    * Start/Open the procedure store
-   * @param numThreads
+   * @param numThreads number of threads to be used by the procedure store
    */
   void start(int numThreads) throws IOException;
 

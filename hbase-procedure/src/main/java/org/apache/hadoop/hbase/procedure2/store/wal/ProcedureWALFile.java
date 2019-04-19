@@ -111,7 +111,10 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
   }
 
   public void close() {
-    if (stream == null) return;
+    if (stream == null) {
+      return;
+    }
+
     try {
       stream.close();
     } catch (IOException e) {
@@ -192,8 +195,14 @@ public class ProcedureWALFile implements Comparable<ProcedureWALFile> {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof ProcedureWALFile)) return false;
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof ProcedureWALFile)) {
+      return false;
+    }
+
     return compareTo((ProcedureWALFile)o) == 0;
   }
 

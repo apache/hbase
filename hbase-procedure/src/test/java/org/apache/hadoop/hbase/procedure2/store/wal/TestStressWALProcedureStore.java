@@ -113,7 +113,9 @@ public class TestStressWALProcedureStore {
             procStore.insert(proc, null);
             // Update
             for (int i = 0, nupdates = rand.nextInt(10); i <= nupdates; ++i) {
-              try { Thread.sleep(0, rand.nextInt(15)); } catch (InterruptedException e) {}
+              try {
+                Thread.sleep(0, rand.nextInt(15));
+              } catch (InterruptedException e) {}
               procStore.update(proc);
             }
             // Delete

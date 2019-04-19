@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public class ProcedureStoreTracker {
-
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureStoreTracker.class);
 
   // Key is procedure id corresponding to first bit of the bitmap.
@@ -68,7 +66,8 @@ public class ProcedureStoreTracker {
 
   public void resetToProto(ProcedureProtos.ProcedureStoreTracker trackerProtoBuf) {
     reset();
-    for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode: trackerProtoBuf.getNodeList()) {
+    for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode :
+            trackerProtoBuf.getNodeList()) {
       final BitSetNode node = new BitSetNode(protoNode);
       map.put(node.getStart(), node);
     }
@@ -252,7 +251,10 @@ public class ProcedureStoreTracker {
    * @return the node that may contains the procId or null
    */
   private BitSetNode lookupClosestNode(final BitSetNode node, final long procId) {
-    if (node != null && node.contains(procId)) return node;
+    if (node != null && node.contains(procId)) {
+      return node;
+    }
+
     final Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
     return entry != null ? entry.getValue() : null;
   }
