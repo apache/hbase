@@ -50,12 +50,13 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
  *
