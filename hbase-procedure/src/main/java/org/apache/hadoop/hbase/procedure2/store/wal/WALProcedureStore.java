@@ -659,7 +659,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   @Override
   public void delete(final long[] procIds, final int offset, final int count) {
-    if (count == 0) return;
+    if (count == 0) {
+      return;
+    }
+
     if (offset == 0 && count == procIds.length) {
       delete(procIds);
     } else if (count == 1) {
@@ -946,7 +949,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private boolean rollWriterWithRetries() {
     for (int i = 0; i < rollRetries && isRunning(); ++i) {
-      if (i > 0) Threads.sleepWithoutInterrupt(waitBeforeRoll * i);
+      if (i > 0) {
+        Threads.sleepWithoutInterrupt(waitBeforeRoll * i);
+      }
 
       try {
         if (rollWriter()) {
@@ -1084,7 +1089,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // to provide.
     final String durability = useHsync ? "hsync" : "hflush";
     if (enforceStreamCapability && !(CommonFSUtils.hasCapability(newStream, durability))) {
-        throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
+      throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
           " for proper operation during component failures, but the underlying filesystem does " +
           "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY +
           "' to set the desired level of robustness and ensure the config value of '" +

@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store.wal;
+
+import static java.lang.System.currentTimeMillis;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,8 +39,6 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
-
-import static java.lang.System.currentTimeMillis;
 
 public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
@@ -135,8 +134,8 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
 
   /**
    * @return a list of shuffled integers which represent state of proc id. First occurrence of a
-   * number denotes insert state, consecutive occurrences denote update states, and -ve value
-   * denotes delete state.
+   *         number denotes insert state, consecutive occurrences denote update states, and -ve
+   *         value denotes delete state.
    */
   private List<Integer> shuffleProcWriteSequence() {
     Random rand = new Random();
@@ -207,11 +206,11 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Load time : " + (timeTaken / 1000.0f) + "sec");
     System.out.println("******************************************");
     System.out.println("Raw format for scripts");
-        System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
+    System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
                 + "total_time_ms=%s]",
-        NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
-        UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
-        deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
+          NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
+          UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
+          deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
   }
 
   public void tearDownProcedureStore() {
