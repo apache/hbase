@@ -252,10 +252,13 @@ public class MasterProcedureTestingUtility {
         if (l == null) {
           return true;
         }
-        if (!l.getRegionInfo().getTable().equals(tableName)) {
+        if (!l.getRegion().getTable().equals(tableName)) {
           return false;
         }
-        if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
+        if (l.getRegion().isOffline() || l.getRegion().isSplit()) {
+          return true;
+        }
+
         HRegionLocation[] locations = list.getRegionLocations();
         for (HRegionLocation location : locations) {
           if (location == null) continue;

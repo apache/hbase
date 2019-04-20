@@ -190,7 +190,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
           .getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -280,7 +280,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -339,7 +339,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -401,7 +401,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
@@ -494,7 +494,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
@@ -634,7 +634,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -717,7 +717,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
@@ -817,7 +817,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -883,7 +883,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -1001,7 +1001,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -1131,7 +1131,7 @@ public class TestBlockEvictionFromClient {
           CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();

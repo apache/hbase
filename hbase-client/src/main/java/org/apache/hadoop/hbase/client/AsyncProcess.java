@@ -307,7 +307,7 @@ class AsyncProcess {
           setNonce(ng, r, action);
           retainedActions.add(action);
           // TODO: replica-get is not supported on this path
-          byte[] regionName = loc.getRegionInfo().getRegionName();
+          byte[] regionName = loc.getRegion().getRegionName();
           addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
           it.remove();
         }

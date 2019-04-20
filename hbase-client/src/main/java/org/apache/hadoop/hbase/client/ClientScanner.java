@@ -30,7 +30,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -60,7 +59,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected boolean closed = false;
   // Current region scanner is against. Gets cleared if current region goes
   // wonky: e.g. if it splits on us.
-  protected HRegionInfo currentRegion = null;
+  protected RegionInfo currentRegion = null;
   protected ScannerCallableWithReplicas callable = null;
   protected Queue<Result> cache;
   private final ScanResultCache scanResultCache;
@@ -262,7 +261,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // we do a callWithRetries
     Result[] rrs = caller.callWithoutRetries(callable, scannerTimeout);
     if (currentRegion == null && updateCurrentRegion) {
-      currentRegion = callable.getHRegionInfo();
+      currentRegion = callable.getRegionInfo();
     }
     return rrs;
   }
@@ -411,7 +410,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // Any accumulated partial results are no longer valid since the callable will
           // openScanner with the correct startkey and we must pick up from there
           scanResultCache.clear();
-          this.currentRegion = callable.getHRegionInfo();
+          this.currentRegion = callable.getRegionInfo();
         }
         retryAfterOutOfOrderException.setValue(true);
       } catch (DoNotRetryIOException e) {

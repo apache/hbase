@@ -35,12 +35,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -218,8 +218,8 @@ public class TestCoprocessorEndpoint {
       }
       assertEquals(3, results.size());
       for (HRegionLocation info : regions) {
-        LOG.info("Region info is "+info.getRegionInfo().getRegionNameAsString());
-        assertTrue(results.containsKey(info.getRegionInfo().getRegionName()));
+        LOG.info("Region info is "+info.getRegion().getRegionNameAsString());
+        assertTrue(results.containsKey(info.getRegion().getRegionName()));
       }
       results.clear();
 
@@ -291,7 +291,7 @@ public class TestCoprocessorEndpoint {
       }
       assertEquals(3, results.size());
       for (HRegionLocation region : regions) {
-        HRegionInfo info = region.getRegionInfo();
+        RegionInfo info = region.getRegion();
         LOG.info("Region info is "+info.getRegionNameAsString());
         assertTrue(results.containsKey(info.getRegionName()));
         assertNull(results.get(info.getRegionName()));

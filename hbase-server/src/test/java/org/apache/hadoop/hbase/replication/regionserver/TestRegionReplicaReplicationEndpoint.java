@@ -428,7 +428,7 @@ public class TestRegionReplicaReplicationEndpoint {
             fstd);
     RegionLocator rl = connection.getRegionLocator(toBeDisabledTable);
     HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
-    byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
+    byte[] encodedRegionName = hrl.getRegion().getEncodedNameAsBytes();
 
     Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("A"))
         .setFamily(HTU.fam1).setValue(Bytes.toBytes("VAL")).setType(Type.Put).build();

@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
@@ -76,7 +76,7 @@ public class TestRegionServerOnlineConfigChange {
     hbaseTestingUtility.startMiniCluster();
     t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
     try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
-      HRegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegionInfo();
+      RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
       r1name = firstHRI.getRegionName();
       rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
           hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));

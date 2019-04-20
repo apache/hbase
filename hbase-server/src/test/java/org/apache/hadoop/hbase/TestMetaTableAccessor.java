@@ -800,7 +800,7 @@ public class TestMetaTableAccessor {
       UTIL.createTable(tableName, "cf1");
 
       HRegionLocation loc = rl.getAllRegionLocations().get(0);
-      RegionInfo parent = loc.getRegionInfo();
+      RegionInfo parent = loc.getRegion();
       long rid = 1000;
       byte[] splitKey = Bytes.toBytes("a");
       RegionInfo splitA = RegionInfoBuilder.newBuilder(parent.getTable())

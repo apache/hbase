@@ -154,7 +154,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       for (int i = 1; i < locs.length; ++i) {
         Action replicaAction = new Action(action, i);
         if (locs[i] != null) {
-          asyncProcess.addAction(locs[i].getServerName(), locs[i].getRegionInfo().getRegionName(),
+          asyncProcess.addAction(locs[i].getServerName(), locs[i].getRegion().getRegionName(),
               replicaAction, actionsByServer, nonceGroup);
         } else {
           unknownReplicaActions.add(replicaAction);
@@ -169,7 +169,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       }
       HRegionLocation loc = getReplicaLocationOrFail(action);
       if (loc == null) return;
-      asyncProcess.addAction(loc.getServerName(), loc.getRegionInfo().getRegionName(),
+      asyncProcess.addAction(loc.getServerName(), loc.getRegion().getRegionName(),
           action, actionsByServer, nonceGroup);
     }
   }
@@ -437,7 +437,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           manageLocationError(action, null);
         }
       } else {
-        byte[] regionName = loc.getRegionInfo().getRegionName();
+        byte[] regionName = loc.getRegion().getRegionName();
         AsyncProcess.addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
       }
     }
@@ -455,7 +455,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       for (Action action : unknownReplicaActions) {
         HRegionLocation loc = getReplicaLocationOrFail(action);
         if (loc == null) continue;
-        byte[] regionName = loc.getRegionInfo().getRegionName();
+        byte[] regionName = loc.getRegion().getRegionName();
         AsyncProcess.addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
       }
       if (!actionsByServer.isEmpty()) {

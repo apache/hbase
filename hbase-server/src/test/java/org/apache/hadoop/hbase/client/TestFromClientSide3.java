@@ -155,7 +155,7 @@ public class TestFromClientSide3 {
       HRegionLocation loc = locator.getRegionLocation(row, true);
       AdminProtos.AdminService.BlockingInterface server =
         ((ClusterConnection) admin.getConnection()).getAdmin(loc.getServerName());
-      byte[] regName = loc.getRegionInfo().getRegionName();
+      byte[] regName = loc.getRegion().getRegionName();
 
       for (int i = 0; i < nFlushes; i++) {
         randomCFPuts(table, row, family, nPuts);
@@ -285,7 +285,7 @@ public class TestFromClientSide3 {
         try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
           // Verify we have multiple store files.
           HRegionLocation loc = locator.getRegionLocation(row, true);
-          byte[] regionName = loc.getRegionInfo().getRegionName();
+          byte[] regionName = loc.getRegion().getRegionName();
           AdminProtos.AdminService.BlockingInterface server =
                   connection.getAdmin(loc.getServerName());
           assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
@@ -297,8 +297,8 @@ public class TestFromClientSide3 {
           for (int i = 0; i < 10 * 1000 / 40; ++i) {
             // The number of store files after compaction should be lesser.
             loc = locator.getRegionLocation(row, true);
-            if (!loc.getRegionInfo().isOffline()) {
-              regionName = loc.getRegionInfo().getRegionName();
+            if (!loc.getRegion().isOffline()) {
+              regionName = loc.getRegion().getRegionName();
               server = connection.getAdmin(loc.getServerName());
               if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
                 break;
@@ -325,7 +325,7 @@ public class TestFromClientSide3 {
           // This time, the compaction request should not happen
           Thread.sleep(10 * 1000);
           loc = locator.getRegionLocation(row, true);
-          regionName = loc.getRegionInfo().getRegionName();
+          regionName = loc.getRegion().getRegionName();
           server = connection.getAdmin(loc.getServerName());
           int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
           assertTrue(sfCount > 1);
@@ -344,7 +344,7 @@ public class TestFromClientSide3 {
           // poll wait for the compactions to happen
           for (int i = 0; i < 10 * 1000 / 40; ++i) {
             loc = locator.getRegionLocation(row, true);
-            regionName = loc.getRegionInfo().getRegionName();
+            regionName = loc.getRegion().getRegionName();
             try {
               server = connection.getAdmin(loc.getServerName());
               if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {

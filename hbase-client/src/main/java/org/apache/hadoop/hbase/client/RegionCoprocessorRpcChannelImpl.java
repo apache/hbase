@@ -72,14 +72,14 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
       ClientService.Interface stub) {
     CompletableFuture<Message> future = new CompletableFuture<>();
     if (region != null
-        && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())) {
+        && !Bytes.equals(loc.getRegion().getRegionName(), region.getRegionName())) {
       future.completeExceptionally(new DoNotRetryIOException(
           "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
-              + loc.getRegionInfo().getRegionNameAsString()));
+              + loc.getRegion().getRegionNameAsString()));
       return future;
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
-      request, row, loc.getRegionInfo().getRegionName());
+      request, row, loc.getRegion().getRegionName());
     stub.execService(controller, csr,
       new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
 

@@ -816,7 +816,7 @@ EOF
       locator = @table.getRegionLocator
       locator.getAllRegionLocations
              .select { |s| RegionReplicaUtil.isDefaultReplica(s.getRegion) }
-             .map { |i| Bytes.toStringBinary(i.getRegionInfo.getStartKey) }
+             .map { |i| Bytes.toStringBinary(i.getRegion.getStartKey) }
              .delete_if { |k| k == '' }
     ensure
       locator.close

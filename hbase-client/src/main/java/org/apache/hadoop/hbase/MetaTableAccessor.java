@@ -169,7 +169,7 @@ public class MetaTableAccessor {
         if (locations == null) return true;
         for (HRegionLocation loc : locations.getRegionLocations()) {
           if (loc != null) {
-            RegionInfo regionInfo = loc.getRegionInfo();
+            RegionInfo regionInfo = loc.getRegion();
             regions.put(regionInfo, loc.getServerName());
           }
         }
@@ -295,7 +295,7 @@ public class MetaTableAccessor {
     HRegionLocation location = getRegionLocation(connection, regionName);
     return location == null
       ? null
-      : new Pair<>(location.getRegionInfo(), location.getServerName());
+      : new Pair<>(location.getRegion(), location.getServerName());
   }
 
   /**

@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -370,7 +369,7 @@ class SimpleRequestController implements RequestController {
   static class TaskCountChecker implements RowChecker {
 
     private static final long MAX_WAITING_TIME = 1000; //ms
-    private final Set<HRegionInfo> regionsIncluded = new HashSet<>();
+    private final Set<RegionInfo> regionsIncluded = new HashSet<>();
     private final Set<ServerName> serversIncluded = new HashSet<>();
     private final int maxConcurrentTasksPerRegion;
     private final int maxTotalConcurrentTasks;
@@ -438,13 +437,12 @@ class SimpleRequestController implements RequestController {
      */
     @Override
     public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
-
-      HRegionInfo regionInfo = loc.getRegionInfo();
+      RegionInfo regionInfo = loc.getRegion();
       if (regionsIncluded.contains(regionInfo)) {
         // We already know what to do with this region.
         return ReturnCode.INCLUDE;
       }
-      AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegionInfo().getRegionName());
+      AtomicInteger regionCnt = taskCounterPerRegion.get(loc.getRegion().getRegionName());
       if (regionCnt != null && regionCnt.get() >= maxConcurrentTasksPerRegion) {
         // Too many tasks on this region already.
         return ReturnCode.SKIP;
@@ -466,10 +464,10 @@ class SimpleRequestController implements RequestController {
     @Override
     public void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow) {
       if (code == ReturnCode.INCLUDE) {
-        regionsIncluded.add(loc.getRegionInfo());
+        regionsIncluded.add(loc.getRegion());
         serversIncluded.add(loc.getServerName());
       }
-      busyRegions.add(loc.getRegionInfo().getRegionName());
+      busyRegions.add(loc.getRegion().getRegionName());
     }
   }
 

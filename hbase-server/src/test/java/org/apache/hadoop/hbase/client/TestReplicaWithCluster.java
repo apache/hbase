@@ -494,7 +494,7 @@ public class TestReplicaWithCluster {
         LOG.debug("Going to connect to server " + getLocation() + " for row "
             + Bytes.toStringBinary(getRow()));
         SecureBulkLoadClient secureClient = null;
-        byte[] regionName = getLocation().getRegionInfo().getRegionName();
+        byte[] regionName = getLocation().getRegion().getRegionName();
         try (Table table = conn.getTable(getTableName())) {
           secureClient = new SecureBulkLoadClient(HTU.getConfiguration(), table);
           secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
@@ -726,7 +726,7 @@ public class TestReplicaWithCluster {
       // Make sure that user primary region is co-hosted with the meta region
       if (!url.getDefaultRegionLocation().getServerName().equals(
           mrl.getDefaultRegionLocation().getServerName())) {
-        HTU.moveRegionAndWait(url.getDefaultRegionLocation().getRegionInfo(),
+        HTU.moveRegionAndWait(url.getDefaultRegionLocation().getRegion(),
             mrl.getDefaultRegionLocation().getServerName());
       }
 
@@ -734,7 +734,7 @@ public class TestReplicaWithCluster {
       // primary
       if (url.getRegionLocation(1).getServerName().equals(mrl.getDefaultRegionLocation()
           .getServerName())) {
-        HTU.moveRegionAndWait(url.getRegionLocation(1).getRegionInfo(),
+        HTU.moveRegionAndWait(url.getRegionLocation(1).getRegion(),
             url.getDefaultRegionLocation().getServerName());
       }
 

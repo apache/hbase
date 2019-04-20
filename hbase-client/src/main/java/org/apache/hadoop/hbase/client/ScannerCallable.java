@@ -30,7 +30,6 @@ import java.io.InterruptedIOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -327,7 +326,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   private ScanResponse openScanner() throws IOException {
     incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
     ScanRequest request = RequestConverter.buildScanRequest(
-      getLocation().getRegionInfo().getRegionName(), this.scan, this.caching, false);
+      getLocation().getRegion().getRegionName(), this.scan, this.caching, false);
     try {
       ScanResponse response = getStub().scan(getRpcController(), request);
       long id = response.getScannerId();
@@ -366,14 +365,14 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   }
 
   /**
-   * @return the HRegionInfo for the current region
+   * @return the RegionInfo for the current region
    */
   @Override
-  public HRegionInfo getHRegionInfo() {
+  public RegionInfo getRegionInfo() {
     if (!instantiated) {
       return null;
     }
-    return getLocation().getRegionInfo();
+    return getLocation().getRegion();
   }
 
   /**

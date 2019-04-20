@@ -587,7 +587,7 @@ public class TestRegionObserverInterface {
 
       JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
       ServerName sn2 = rs1.getRegionServer().getServerName();
-      String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regEN = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
 
       util.getAdmin().move(Bytes.toBytes(regEN), sn2);
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {
@@ -637,7 +637,7 @@ public class TestRegionObserverInterface {
     try (RegionLocator locator = util.getConnection().getRegionLocator(tableName)) {
       JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
       ServerName sn2 = rs1.getRegionServer().getServerName();
-      String regEN = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regEN = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
 
       util.getAdmin().move(Bytes.toBytes(regEN), sn2);
       while (!sn2.equals(locator.getAllRegionLocations().get(0).getServerName())) {

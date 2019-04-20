@@ -60,7 +60,7 @@ public class SecureBulkLoadClient {
           this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
         @Override
         protected String rpcCall() throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          byte[] regionName = getLocation().getRegion().getRegionName();
           RegionSpecifier region =
               RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
           PrepareBulkLoadRequest request = PrepareBulkLoadRequest.newBuilder()
@@ -83,7 +83,7 @@ public class SecureBulkLoadClient {
           table.getName(), HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
         @Override
         protected Void rpcCall() throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          byte[] regionName = getLocation().getRegion().getRegionName();
           RegionSpecifier region = RequestConverter.buildRegionSpecifier(
               RegionSpecifierType.REGION_NAME, regionName);
           CleanupBulkLoadRequest request =

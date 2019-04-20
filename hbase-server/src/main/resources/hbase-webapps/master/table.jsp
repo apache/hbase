@@ -407,7 +407,7 @@ if ( fqtn != null ) {
   Map<RegionInfo, RegionMetrics> regionsToLoad = new LinkedHashMap<>();
   Map<RegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
   for (HRegionLocation hriEntry : regions) {
-    RegionInfo regionInfo = hriEntry.getRegionInfo();
+    RegionInfo regionInfo = hriEntry.getRegion();
     ServerName addr = hriEntry.getServerName();
     regionsToServer.put(regionInfo, addr);
 

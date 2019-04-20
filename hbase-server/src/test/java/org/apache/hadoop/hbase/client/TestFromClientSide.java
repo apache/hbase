@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -482,7 +481,7 @@ public class TestFromClientSide {
       List<HRegionLocation> regions = splitTable(t);
       assertRowCount(t, rowCount);
       // Get end key of first region.
-      byte[] endKey = regions.get(0).getRegionInfo().getEndKey();
+      byte[] endKey = regions.get(0).getRegion().getEndKey();
       // Count rows with a filter that stops us before passed 'endKey'.
       // Should be count of rows in first region.
       int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
@@ -4427,7 +4426,7 @@ public class TestFromClientSide {
 
       // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
       // in Store.rowAtOrBeforeFromStoreFile
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Put put1 = new Put(firstRow);
       Put put2 = new Put(secondRow);
@@ -5296,7 +5295,7 @@ public class TestFromClientSide {
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
         // get the block cache and region
-        String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+        String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
 
         HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
                 .getRegion(regionName);
@@ -5417,7 +5416,7 @@ public class TestFromClientSide {
         RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
       assertEquals(1, allRegionLocations.size());
-      HRegionInfo regionInfo = allRegionLocations.get(0).getRegionInfo();
+      RegionInfo regionInfo = allRegionLocations.get(0).getRegion();
       ServerName addrBefore = allRegionLocations.get(0).getServerName();
       // Verify region location before move.
       HRegionLocation addrCache = locator.getRegionLocation(regionInfo.getStartKey(), false);
@@ -5519,7 +5518,7 @@ public class TestFromClientSide {
       do {
         HRegionLocation regionLocation = r.getRegionLocation(currentKey);
         regionsInRange.add(regionLocation);
-        currentKey = regionLocation.getRegionInfo().getEndKey();
+        currentKey = regionLocation.getRegion().getEndKey();
       } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
           && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
       return regionsInRange;

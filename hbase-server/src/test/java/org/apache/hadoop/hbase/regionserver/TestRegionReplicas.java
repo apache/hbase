@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -79,7 +80,7 @@ public class TestRegionReplicas {
   private static Table table;
   private static final byte[] row = Bytes.toBytes("TestRegionReplicas");
 
-  private static HRegionInfo hriPrimary;
+  private static RegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
@@ -100,7 +101,7 @@ public class TestRegionReplicas {
     table = HTU.createTable(tableName, f);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
-      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+      hriPrimary = locator.getRegionLocation(row, false).getRegion();
     }
 
     // mock a secondary region info to open

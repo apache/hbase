@@ -110,7 +110,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
   @Override
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {
-      connection.updateCachedLocations(tableName, location.getRegionInfo().getRegionName(), row,
+      connection.updateCachedLocations(tableName, location.getRegion().getRegionName(), row,
           t, location.getServerName());
     }
   }

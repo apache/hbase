@@ -563,7 +563,7 @@ module Hbase
       locator = @connection.getRegionLocator(table_name)
       begin
         splits = locator.getAllRegionLocations
-                        .map { |i| Bytes.toStringBinary(i.getRegionInfo.getStartKey) }
+                        .map { |i| Bytes.toStringBinary(i.getRegion.getStartKey) }
                         .delete_if { |k| k == '' }.to_java :String
         splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
       ensure
