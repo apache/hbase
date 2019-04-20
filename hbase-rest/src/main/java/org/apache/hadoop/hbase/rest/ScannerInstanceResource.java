@@ -83,6 +83,9 @@ public class ScannerInstanceResource extends ResourceBase {
       return Response.status(Response.Status.NOT_FOUND)
         .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
         .build();
+    } else {
+      // Updated the connection access time for each client next() call
+      RESTServlet.getInstance().getConnectionCache().updateConnectionAccessTime();
     }
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
