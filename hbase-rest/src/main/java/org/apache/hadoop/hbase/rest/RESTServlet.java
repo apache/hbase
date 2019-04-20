@@ -46,8 +46,8 @@ public class RESTServlet implements Constants {
   private final UserGroupInformation realUser;
   private final JvmPauseMonitor pauseMonitor;
 
-  static final String CLEANUP_INTERVAL = "hbase.rest.connection.cleanup-interval";
-  static final String MAX_IDLETIME = "hbase.rest.connection.max-idletime";
+  public static final String CLEANUP_INTERVAL = "hbase.rest.connection.cleanup-interval";
+  public static final String MAX_IDLETIME = "hbase.rest.connection.max-idletime";
   static final String HBASE_REST_SUPPORT_PROXYUSER = "hbase.rest.support.proxyuser";
 
   UserGroupInformation getRealUser() {
@@ -60,6 +60,13 @@ public class RESTServlet implements Constants {
   public synchronized static RESTServlet getInstance() {
     assert(INSTANCE != null);
     return INSTANCE;
+  }
+
+  /**
+   * @return the ConnectionCache instance
+   */
+  public ConnectionCache getConnectionCache() {
+    return connectionCache;
   }
 
   /**
