@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
