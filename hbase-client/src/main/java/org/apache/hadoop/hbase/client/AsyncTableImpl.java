@@ -63,6 +63,16 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
+  public CompletableFuture<TableDescriptor> getDescriptor() {
+    return wrap(rawTable.getDescriptor());
+  }
+
+  @Override
+  public AsyncTableRegionLocator getRegionLocator() {
+    return rawTable.getRegionLocator();
+  }
+
+  @Override
   public long getRpcTimeout(TimeUnit unit) {
     return rawTable.getRpcTimeout(unit);
   }
