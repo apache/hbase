@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.BindException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 
 import org.junit.ClassRule;
