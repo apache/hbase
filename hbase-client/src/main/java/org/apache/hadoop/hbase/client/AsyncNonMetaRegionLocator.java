@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
@@ -611,6 +612,24 @@ class AsyncNonMetaRegionLocator {
 
   void clearCache() {
     cache.clear();
+  }
+
+  void clearCache(ServerName serverName) {
+    for (TableCache tableCache : cache.values()) {
+      for (Map.Entry<byte[], RegionLocations> entry : tableCache.cache.entrySet()) {
+        byte[] regionName = entry.getKey();
+        RegionLocations locs = entry.getValue();
+        RegionLocations newLocs = locs.removeByServer(serverName);
+        if (locs == newLocs) {
+          continue;
+        }
+        if (newLocs.isEmpty()) {
+          tableCache.cache.remove(regionName, locs);
+        } else {
+          tableCache.cache.replace(regionName, locs, newLocs);
+        }
+      }
+    }
   }
 
   // only used for testing whether we have cached the location for a region.
