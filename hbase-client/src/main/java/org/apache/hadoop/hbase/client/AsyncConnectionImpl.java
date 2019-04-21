@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.STATUS_PUBLISHED;
+import static org.apache.hadoop.hbase.HConstants.STATUS_PUBLISHED_DEFAULT;
+import static org.apache.hadoop.hbase.client.ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS;
+import static org.apache.hadoop.hbase.client.ClusterStatusListener.STATUS_LISTENER_CLASS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
@@ -112,6 +116,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final Optional<MetricsConnection> metrics;
 
+  private final ClusterStatusListener clusterStatusListener;
+
   public AsyncConnectionImpl(Configuration conf, AsyncRegistry registry, String clusterId,
       User user) {
     this.conf = conf;
@@ -140,6 +146,31 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
     this.stats = Optional.ofNullable(ServerStatisticTracker.create(conf));
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+    ClusterStatusListener listener = null;
+    if (conf.getBoolean(STATUS_PUBLISHED, STATUS_PUBLISHED_DEFAULT)) {
+      // TODO: this maybe a blocking operation, better to create it outside the constructor and pass
+      // it in, just like clusterId. Not a big problem for now as the default value is false.
+      Class<? extends ClusterStatusListener.Listener> listenerClass = conf.getClass(
+        STATUS_LISTENER_CLASS, DEFAULT_STATUS_LISTENER_CLASS, ClusterStatusListener.Listener.class);
+      if (listenerClass == null) {
+        LOG.warn("{} is true, but {} is not set", STATUS_PUBLISHED, STATUS_LISTENER_CLASS);
+      } else {
+        try {
+          listener = new ClusterStatusListener(
+            new ClusterStatusListener.DeadServerHandler() {
+              @Override
+              public void newDead(ServerName sn) {
+                locator.clearCache(sn);
+                rpcClient.cancelConnections(sn);
+              }
+            }, conf, listenerClass);
+        } catch (IOException e) {
+          LOG.warn("Failed to create ClusterStatusListener, not a critical problem, ignoring...",
+            e);
+        }
+      }
+    }
+    this.clusterStatusListener = listener;
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -159,6 +190,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     if (closed) {
       return;
     }
+    IOUtils.closeQuietly(clusterStatusListener);
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
     if (authService != null) {
