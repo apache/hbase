@@ -466,9 +466,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // version delete just consider only one version for those column cells.
     boolean considerCellTs  = (request == OpType.PUT || request == OpType.DELETE);
     if (considerCellTs) {
-      get.setMaxVersions();
+      get.readAllVersions();
     } else {
-      get.setMaxVersions(1);
+      get.readVersions(1);
     }
     boolean diffCellTsFromOpTs = false;
     for (Map.Entry<byte[], ? extends Collection<?>> entry: familyMap.entrySet()) {
@@ -527,7 +527,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // where columns are added with TS other than the Mutation TS. But normally this wont be the
     // case with Put. There no need to get all versions but get latest version only.
     if (!diffCellTsFromOpTs && request == OpType.PUT) {
-      get.setMaxVersions(1);
+      get.readVersions(1);
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Scanning for cells with " + get);

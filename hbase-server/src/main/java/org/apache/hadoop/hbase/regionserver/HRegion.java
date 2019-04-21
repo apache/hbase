@@ -3087,7 +3087,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           count = kvCount.get(qual);
 
           Get get = new Get(CellUtil.cloneRow(cell));
-          get.setMaxVersions(count);
+          get.readVersions(count);
           get.addColumn(family, qual);
           if (coprocessorHost != null) {
             if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell,

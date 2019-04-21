@@ -440,7 +440,7 @@ public class TestMultipleTimestamps {
     byte column[] = Bytes.toBytes("column:" + colIdx);
     Get get = new Get(row);
     get.addColumn(cf, column);
-    get.setMaxVersions();
+    get.readAllVersions();
     get.setTimeRange(Collections.min(versions), Collections.max(versions)+1);
     Result result = ht.get(get);
 

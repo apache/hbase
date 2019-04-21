@@ -228,11 +228,11 @@ public class TestImportExport {
       assertTrue(runImport(args));
 
       Get g = new Get(ROW1);
-      g.setMaxVersions();
+      g.readAllVersions();
       Result r = t.get(g);
       assertEquals(3, r.size());
       g = new Get(ROW2);
-      g.setMaxVersions();
+      g.readAllVersions();
       r = t.get(g);
       assertEquals(3, r.size());
       g = new Get(ROW3);
