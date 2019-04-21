@@ -54,6 +54,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -132,6 +134,10 @@ class AsyncBatchRpcRetryingCaller<T> {
     public void addAction(HRegionLocation loc, Action action) {
       computeIfAbsent(actionsByRegion, loc.getRegion().getRegionName(),
         () -> new RegionRequest(loc)).actions.add(action);
+    }
+
+    public void setRegionRequest(byte[] regionName, RegionRequest regionReq) {
+      actionsByRegion.put(regionName, regionReq);
     }
 
     public int getPriority() {
@@ -298,6 +304,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private void onComplete(Map<byte[], RegionRequest> actionsByRegion, int tries,
       ServerName serverName, MultiResponse resp) {
+    ConnectionUtils.updateStats(conn.getStatisticsTracker(), conn.getConnectionMetrics(),
+      serverName, resp);
     List<Action> failedActions = new ArrayList<>();
     MutableBoolean retryImmediately = new MutableBoolean(false);
     actionsByRegion.forEach((rn, regionReq) -> {
@@ -333,55 +341,88 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
   }
 
-  private void send(Map<ServerName, ServerRequest> actionsByServer, int tries) {
+  private void sendToServer(ServerName serverName, ServerRequest serverReq, int tries) {
     long remainingNs;
     if (operationTimeoutNs > 0) {
       remainingNs = remainingTimeNs();
       if (remainingNs <= 0) {
-        failAll(actionsByServer.values().stream().flatMap(m -> m.actionsByRegion.values().stream())
-          .flatMap(r -> r.actions.stream()), tries);
+        failAll(serverReq.actionsByRegion.values().stream().flatMap(r -> r.actions.stream()),
+          tries);
         return;
       }
     } else {
       remainingNs = Long.MAX_VALUE;
     }
-    actionsByServer.forEach((sn, serverReq) -> {
-      ClientService.Interface stub;
-      try {
-        stub = conn.getRegionServerStub(sn);
-      } catch (IOException e) {
-        onError(serverReq.actionsByRegion, tries, e, sn);
-        return;
+    ClientService.Interface stub;
+    try {
+      stub = conn.getRegionServerStub(serverName);
+    } catch (IOException e) {
+      onError(serverReq.actionsByRegion, tries, e, serverName);
+      return;
+    }
+    ClientProtos.MultiRequest req;
+    List<CellScannable> cells = new ArrayList<>();
+    // Map from a created RegionAction to the original index for a RowMutations within
+    // the original list of actions. This will be used to process the results when there
+    // is RowMutations in the action list.
+    Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
+    try {
+      req = buildReq(serverReq.actionsByRegion, cells, rowMutationsIndexMap);
+    } catch (IOException e) {
+      onError(serverReq.actionsByRegion, tries, e, serverName);
+      return;
+    }
+    HBaseRpcController controller = conn.rpcControllerFactory.newController();
+    resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
+      calcPriority(serverReq.getPriority(), tableName));
+    if (!cells.isEmpty()) {
+      controller.setCellScanner(createCellScanner(cells));
+    }
+    stub.multi(controller, req, resp -> {
+      if (controller.failed()) {
+        onError(serverReq.actionsByRegion, tries, controller.getFailed(), serverName);
+      } else {
+        try {
+          onComplete(serverReq.actionsByRegion, tries, serverName, ResponseConverter.getResults(req,
+            rowMutationsIndexMap, resp, controller.cellScanner()));
+        } catch (Exception e) {
+          onError(serverReq.actionsByRegion, tries, e, serverName);
+          return;
+        }
       }
-      ClientProtos.MultiRequest req;
-      List<CellScannable> cells = new ArrayList<>();
-      // Map from a created RegionAction to the original index for a RowMutations within
-      // the original list of actions. This will be used to process the results when there
-      // is RowMutations in the action list.
-      Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
-      try {
-        req = buildReq(serverReq.actionsByRegion, cells, rowMutationsIndexMap);
-      } catch (IOException e) {
-        onError(serverReq.actionsByRegion, tries, e, sn);
-        return;
-      }
-      HBaseRpcController controller = conn.rpcControllerFactory.newController();
-      resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
-        calcPriority(serverReq.getPriority(), tableName));
-      if (!cells.isEmpty()) {
-        controller.setCellScanner(createCellScanner(cells));
-      }
-      stub.multi(controller, req, resp -> {
-        if (controller.failed()) {
-          onError(serverReq.actionsByRegion, tries, controller.getFailed(), sn);
+    });
+  }
+
+  // We will make use of the ServerStatisticTracker to determine whether we need to delay a bit,
+  // based on the load of the region server and the region.
+  private void sendOrDelay(Map<ServerName, ServerRequest> actionsByServer, int tries) {
+    Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
+    Optional<ServerStatisticTracker> optStats = conn.getStatisticsTracker();
+    if (!optStats.isPresent()) {
+      actionsByServer.forEach((serverName, serverReq) -> {
+        metrics.ifPresent(MetricsConnection::incrNormalRunners);
+        sendToServer(serverName, serverReq, tries);
+      });
+      return;
+    }
+    ServerStatisticTracker stats = optStats.get();
+    ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
+    actionsByServer.forEach((serverName, serverReq) -> {
+      ServerStatistics serverStats = stats.getStats(serverName);
+      Map<Long, ServerRequest> groupByBackoff = new HashMap<>();
+      serverReq.actionsByRegion.forEach((regionName, regionReq) -> {
+        long backoff = backoffPolicy.getBackoffTime(serverName, regionName, serverStats);
+        groupByBackoff.computeIfAbsent(backoff, k -> new ServerRequest())
+          .setRegionRequest(regionName, regionReq);
+      });
+      groupByBackoff.forEach((backoff, sr) -> {
+        if (backoff > 0) {
+          metrics.ifPresent(m -> m.incrDelayRunnersAndUpdateDelayInterval(backoff));
+          retryTimer.newTimeout(timer -> sendToServer(serverName, sr, tries), backoff,
+            TimeUnit.MILLISECONDS);
         } else {
-          try {
-            onComplete(serverReq.actionsByRegion, tries, sn, ResponseConverter.getResults(req,
-              rowMutationsIndexMap, resp, controller.cellScanner()));
-          } catch (Exception e) {
-            onError(serverReq.actionsByRegion, tries, e, sn);
-            return;
-          }
+          metrics.ifPresent(MetricsConnection::incrNormalRunners);
+          sendToServer(serverName, sr, tries);
         }
       });
     });
@@ -454,7 +495,7 @@ class AsyncBatchRpcRetryingCaller<T> {
         }))
       .toArray(CompletableFuture[]::new)), (v, r) -> {
         if (!actionsByServer.isEmpty()) {
-          send(actionsByServer, tries);
+          sendOrDelay(actionsByServer, tries);
         }
         if (!locateFailed.isEmpty()) {
           tryResubmit(locateFailed.stream(), tries, false);

@@ -18,16 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -36,20 +35,21 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestClientPushback extends ClientPushbackTestBase {
+public class TestAsyncClientPushback extends ClientPushbackTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientPushback.class);
+    HBaseClassTestRule.forClass(TestAsyncClientPushback.class);
 
-  private ConnectionImplementation conn;
+  private AsyncConnectionImpl conn;
 
-  private BufferedMutatorImpl mutator;
+  private AsyncBufferedMutator mutator;
 
   @Before
-  public void setUp() throws IOException {
-    conn = (ConnectionImplementation) ConnectionFactory.createConnection(UTIL.getConfiguration());
-    mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
+  public void setUp() throws Exception {
+    conn =
+      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+    mutator = conn.getBufferedMutator(tableName);
   }
 
   @After
@@ -65,42 +65,32 @@ public class TestClientPushback extends ClientPushbackTestBase {
 
   @Override
   protected ServerStatisticTracker getStatisticsTracker() throws IOException {
-    return conn.getStatisticsTracker();
+    return conn.getStatisticsTracker().get();
   }
 
   @Override
   protected MetricsConnection getConnectionMetrics() throws IOException {
-    return conn.getConnectionMetrics();
+    return conn.getConnectionMetrics().get();
   }
 
   @Override
   protected void mutate(Put put) throws IOException {
-    mutator.mutate(put);
+    CompletableFuture<?> future = mutator.mutate(put);
     mutator.flush();
+    future.join();
   }
 
   @Override
   protected void mutate(Put put, AtomicLong endTime, CountDownLatch latch) throws IOException {
-    // Reach into the connection and submit work directly to AsyncProcess so we can
-    // monitor how long the submission was delayed via a callback
-    List<Row> ops = new ArrayList<>(1);
-    ops.add(put);
-    Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
+    FutureUtils.addListener(mutator.mutate(put), (r, e) -> {
       endTime.set(EnvironmentEdgeManager.currentTime());
       latch.countDown();
-    };
-    AsyncProcessTask<Result> task =
-      AsyncProcessTask.newBuilder(callback).setPool(mutator.getPool()).setTableName(tableName)
-        .setRowAccess(ops).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
-        .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
-        .setRpcTimeout(60 * 1000).build();
-    mutator.getAsyncProcess().submit(task);
+    });
+    mutator.flush();
   }
 
   @Override
   protected void mutateRow(RowMutations mutations) throws IOException {
-    try (Table table = conn.getTable(tableName)) {
-      table.mutateRow(mutations);
-    }
+    conn.getTable(tableName).mutateRow(mutations).join();
   }
 }

@@ -421,13 +421,9 @@ public class MetricsConnection implements StatisticTrackable {
     this.runnerStats.incrNormalRunners();
   }
 
-  /** Increment the number of delay runner counts. */
-  public void incrDelayRunners() {
+  /** Increment the number of delay runner counts and update delay interval of delay runner. */
+  public void incrDelayRunnersAndUpdateDelayInterval(long interval) {
     this.runnerStats.incrDelayRunners();
-  }
-
-  /** Update delay interval of delay runner. */
-  public void updateDelayInterval(long interval) {
     this.runnerStats.updateDelayInterval(interval);
   }
 
