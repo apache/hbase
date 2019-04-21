@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -115,7 +118,7 @@ public class TestMultipleTimestamps {
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
 
-    Cell [] kvs;
+    Cell[] kvs;
 
     kvs = scanner.next().rawCells();
     assertEquals(2, kvs.length);

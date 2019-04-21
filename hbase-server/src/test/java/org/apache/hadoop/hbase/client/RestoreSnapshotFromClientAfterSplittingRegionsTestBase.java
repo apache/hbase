@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
