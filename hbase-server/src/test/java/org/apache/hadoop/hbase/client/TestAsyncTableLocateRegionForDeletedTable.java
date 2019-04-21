@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.commons.io.IOUtils;

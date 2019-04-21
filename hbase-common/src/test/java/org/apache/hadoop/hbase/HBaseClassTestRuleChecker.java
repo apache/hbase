@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.yetus.audience.InterfaceAudience;

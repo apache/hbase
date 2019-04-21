@@ -22,8 +22,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKeyImpl;
 
 public class FaultyProtobufLogReader extends ProtobufLogReader {
 

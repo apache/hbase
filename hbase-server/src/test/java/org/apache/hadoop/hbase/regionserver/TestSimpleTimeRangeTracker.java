@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
