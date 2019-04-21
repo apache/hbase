@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A class to manage a list of servers that failed recently.

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A tracker both implementing ColumnTracker and DeleteTracker, used for mvcc-sensitive scanning.
