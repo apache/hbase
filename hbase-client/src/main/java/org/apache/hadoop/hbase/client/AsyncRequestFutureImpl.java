@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -54,9 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * The context, and return value, for a single submit/submitAll call.
@@ -614,8 +612,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         traceText = "AsyncProcess.clientBackoff.sendMultiAction";
         runnable = runner;
         if (asyncProcess.connection.getConnectionMetrics() != null) {
-          asyncProcess.connection.getConnectionMetrics().incrDelayRunners();
-          asyncProcess.connection.getConnectionMetrics().updateDelayInterval(runner.getSleepTime());
+          asyncProcess.connection.getConnectionMetrics()
+            .incrDelayRunnersAndUpdateDelayInterval(runner.getSleepTime());
         }
       } else {
         if (asyncProcess.connection.getConnectionMetrics() != null) {
@@ -802,19 +800,16 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param responses      - the response, if any
    * @param numAttempt     - the attempt
    */
-  private void receiveMultiAction(MultiAction multiAction,
-                                  ServerName server, MultiResponse responses, int numAttempt) {
+  private void receiveMultiAction(MultiAction multiAction, ServerName server,
+      MultiResponse responses, int numAttempt) {
     assert responses != null;
-
-    Map<byte[], MultiResponse.RegionResult> results = responses.getResults();
-    updateStats(server, results);
-
+    updateStats(server, responses);
     // Success or partial success
     // Analyze detailed results. We can still have individual failures to be redo.
     // two specific throwables are managed:
     //  - DoNotRetryIOException: we continue to retry for other actions
     //  - RegionMovedException: we update the cache with the new region location
-
+    Map<byte[], MultiResponse.RegionResult> results = responses.getResults();
     List<Action> toReplay = new ArrayList<>();
     Throwable lastException = null;
     int failureCount = 0;
@@ -926,26 +921,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   @VisibleForTesting
-  protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
-    boolean metrics = asyncProcess.connection.getConnectionMetrics() != null;
-    boolean stats = asyncProcess.connection.getStatisticsTracker() != null;
-    if (!stats && !metrics) {
-      return;
-    }
-    for (Map.Entry<byte[], MultiResponse.RegionResult> regionStats : results.entrySet()) {
-      byte[] regionName = regionStats.getKey();
-      ClientProtos.RegionLoadStats stat = regionStats.getValue().getStat();
-      if (stat == null) {
-        LOG.error("No ClientProtos.RegionLoadStats found for server=" + server
-          + ", region=" + Bytes.toStringBinary(regionName));
-        continue;
-      }
-      RegionLoadStats regionLoadstats = ProtobufUtil.createRegionLoadStats(stat);
-      ResultStatsUtil.updateStats(asyncProcess.connection.getStatisticsTracker(), server,
-          regionName, regionLoadstats);
-      ResultStatsUtil.updateStats(asyncProcess.connection.getConnectionMetrics(),
-          server, regionName, regionLoadstats);
-    }
+  protected void updateStats(ServerName server, MultiResponse resp) {
+    ConnectionUtils.updateStats(Optional.ofNullable(asyncProcess.connection.getStatisticsTracker()),
+      Optional.ofNullable(asyncProcess.connection.getConnectionMetrics()), server, resp);
   }
 
 

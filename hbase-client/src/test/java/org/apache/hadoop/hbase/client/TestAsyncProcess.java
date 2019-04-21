@@ -271,7 +271,7 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
+    protected void updateStats(ServerName server, MultiResponse resp) {
       // Do nothing for avoiding the NPE if we test the ClientBackofPolicy.
     }
 
