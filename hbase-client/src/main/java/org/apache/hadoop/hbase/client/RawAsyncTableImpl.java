@@ -357,8 +357,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       preCheck();
       return RawAsyncTableImpl.this
         .<Boolean> newCaller(row, mutation.getMaxPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
-          stub, mutation,
+        .action((controller, loc, stub) -> RawAsyncTableImpl.this.<Boolean> mutateRow(controller,
+          loc, stub, mutation,
           (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
             new BinaryComparator(value), CompareType.valueOf(op.name()), timeRange, rm),
           resp -> resp.getExists()))
@@ -373,7 +373,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
   // so here I write a new method as I do not want to change the abstraction of call method.
-  private static <RESP> CompletableFuture<RESP> mutateRow(HBaseRpcController controller,
+  private <RESP> CompletableFuture<RESP> mutateRow(HBaseRpcController controller,
       HRegionLocation loc, ClientService.Interface stub, RowMutations mutation,
       Converter<MultiRequest, byte[], RowMutations> reqConvert,
       Function<Result, RESP> respConverter) {
@@ -391,6 +391,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
             try {
               org.apache.hadoop.hbase.client.MultiResponse multiResp =
                 ResponseConverter.getResults(req, resp, controller.cellScanner());
+              ConnectionUtils.updateStats(conn.getStatisticsTracker(), conn.getConnectionMetrics(),
+                loc.getServerName(), multiResp);
               Throwable ex = multiResp.getException(regionName);
               if (ex != null) {
                 future.completeExceptionally(ex instanceof IOException ? ex
@@ -415,8 +417,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Void> mutateRow(RowMutations mutation) {
     return this.<Void> newCaller(mutation.getRow(), mutation.getMaxPriority(), writeRpcTimeoutNs)
-      .action((controller, loc, stub) -> RawAsyncTableImpl.<Void> mutateRow(controller, loc, stub,
-        mutation, (rn, rm) -> {
+      .action((controller, loc, stub) -> this.<Void> mutateRow(controller, loc, stub, mutation,
+        (rn, rm) -> {
           RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(rn, rm);
           regionMutationBuilder.setAtomic(true);
           return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();

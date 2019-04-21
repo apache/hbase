@@ -62,8 +62,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -671,5 +673,26 @@ public final class ConnectionUtils {
         }
       }
     }
+  }
+
+  static void updateStats(Optional<ServerStatisticTracker> optStats,
+      Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
+    if (!optStats.isPresent() && !optMetrics.isPresent()) {
+      // ServerStatisticTracker and MetricsConnection are both not present, just return
+      return;
+    }
+    resp.getResults().forEach((regionName, regionResult) -> {
+      ClientProtos.RegionLoadStats stat = regionResult.getStat();
+      if (stat == null) {
+        LOG.error("No ClientProtos.RegionLoadStats found for server={}, region={}", serverName,
+          Bytes.toStringBinary(regionName));
+        return;
+      }
+      RegionLoadStats regionLoadStats = ProtobufUtil.createRegionLoadStats(stat);
+      optStats.ifPresent(
+        stats -> ResultStatsUtil.updateStats(stats, serverName, regionName, regionLoadStats));
+      optMetrics.ifPresent(
+        metrics -> ResultStatsUtil.updateStats(metrics, serverName, regionName, regionLoadStats));
+    });
   }
 }
