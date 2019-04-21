@@ -540,7 +540,11 @@ public class TestWALEntrySinkFilter {
 
             @Override
             public void setOperationTimeout(int operationTimeout) {
+            }
 
+            @Override
+            public RegionLocator getRegionLocator() throws IOException {
+              return null;
             }
           };
         }

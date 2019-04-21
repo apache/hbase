@@ -61,6 +61,15 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   Configuration getConfiguration();
 
   /**
+   * Gets the {@link TableDescriptor} for this table.
+   */
+  CompletableFuture<TableDescriptor> getDescriptor();
+
+  /**
+   * Gets the {@link AsyncTableRegionLocator} for this table.
+   */
+  AsyncTableRegionLocator getRegionLocator();
+  /**
    * Get timeout of each rpc request in this Table instance. It will be overridden by a more
    * specific rpc timeout config such as readRpcTimeout or writeRpcTimeout.
    * @see #getReadRpcTimeout(TimeUnit)

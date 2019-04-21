@@ -18,30 +18,28 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to communicate with a single HBase table.
@@ -91,6 +89,11 @@ public interface Table extends Closeable {
    * @throws java.io.IOException if a remote or network exception occurs.
    */
   TableDescriptor getDescriptor() throws IOException;
+
+  /**
+   * Gets the {@link RegionLocator} for this table.
+   */
+  RegionLocator getRegionLocator() throws IOException;
 
   /**
    * Test for the existence of columns in the table, as specified by the Get.
