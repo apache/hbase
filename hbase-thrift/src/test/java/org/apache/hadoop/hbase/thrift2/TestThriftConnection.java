@@ -298,7 +298,7 @@ public class TestThriftConnection {
 
       get = new Get(ROW_2);
       get.addFamily(FAMILYA);
-      get.setMaxVersions(2);
+      get.readVersions(2);
       result = table.get(get);
       int count = 0;
       for (Cell kv: result.listCells()) {
@@ -357,10 +357,10 @@ public class TestThriftConnection {
       //Test Versions
       gets = new ArrayList<>(2);
       Get g = new Get(ROW_1);
-      g.setMaxVersions(3);
+      g.readVersions(3);
       gets.add(g);
       Get get2 = new Get(ROW_2);
-      get2.setMaxVersions(3);
+      get2.readVersions(3);
       gets.add(get2);
       results = table.get(gets);
       assertNotNull(results);

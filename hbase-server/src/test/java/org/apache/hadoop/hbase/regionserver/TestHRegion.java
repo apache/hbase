@@ -2632,7 +2632,7 @@ public class TestHRegion {
     region.put(put);
 
     Get get = new Get(row1);
-    get.setMaxVersions();
+    get.readAllVersions();
     Result res = region.get(get);
     // Get 3 versions, the oldest version has gone from user view
     assertEquals(maxVersions, res.size());
@@ -3976,7 +3976,7 @@ public class TestHRegion {
 
     // Get rows
     Get get = new Get(row);
-    get.setMaxVersions();
+    get.readAllVersions();
     Cell[] kvs = region.get(get).rawCells();
 
     // Check if rows are correct
@@ -4259,7 +4259,7 @@ public class TestHRegion {
 
     Get get = new Get(Incrementer.incRow);
     get.addColumn(Incrementer.family, Incrementer.qualifier);
-    get.setMaxVersions(1);
+    get.readVersions(1);
     Result res = this.region.get(get);
     List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
 
@@ -4349,7 +4349,7 @@ public class TestHRegion {
 
     Get get = new Get(Appender.appendRow);
     get.addColumn(Appender.family, Appender.qualifier);
-    get.setMaxVersions(1);
+    get.readVersions(1);
     Result res = this.region.get(get);
     List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
 
@@ -4383,7 +4383,7 @@ public class TestHRegion {
     region.put(put);
     get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setMaxVersions();
+    get.readAllVersions();
     res = this.region.get(get);
     kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
@@ -4392,7 +4392,7 @@ public class TestHRegion {
     region.flush(true);
     get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setMaxVersions();
+    get.readAllVersions();
     res = this.region.get(get);
     kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
@@ -4404,7 +4404,7 @@ public class TestHRegion {
     region.put(put);
     get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setMaxVersions();
+    get.readAllVersions();
     res = this.region.get(get);
     kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
@@ -4413,7 +4413,7 @@ public class TestHRegion {
     region.flush(true);
     get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setMaxVersions();
+    get.readAllVersions();
     res = this.region.get(get);
     kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
@@ -4734,7 +4734,7 @@ public class TestHRegion {
 
   static void assertGet(final HRegion r, final byte[] family, final byte[] k) throws IOException {
     // Now I have k, get values out and assert they are as expected.
-    Get get = new Get(k).addFamily(family).setMaxVersions();
+    Get get = new Get(k).addFamily(family).readAllVersions();
     Cell[] results = r.get(get).rawCells();
     for (int j = 0; j < results.length; j++) {
       byte[] tmp = CellUtil.cloneValue(results[j]);

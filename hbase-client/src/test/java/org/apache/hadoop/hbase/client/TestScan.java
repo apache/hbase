@@ -78,7 +78,7 @@ public class TestScan {
             .setIsolationLevel(IsolationLevel.READ_COMMITTED)
             .setLoadColumnFamiliesOnDemand(false)
             .setMaxResultsPerColumnFamily(1000)
-            .setMaxVersions(9999)
+            .readVersions(9999)
             .setRowOffsetPerColumnFamily(5)
             .setTimeRange(0, 13)
             .setAttribute("att_v0", Bytes.toBytes("att_v0"))

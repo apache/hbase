@@ -207,7 +207,7 @@ public class TestTimestampsFilter {
 
     Get g = new Get(Bytes.toBytes("row"));
     g.setFilter(filter);
-    g.setMaxVersions();
+    g.readAllVersions();
     g.addColumn(FAMILY, Bytes.toBytes("column2"));
     g.addColumn(FAMILY, Bytes.toBytes("column4"));
 
@@ -338,7 +338,7 @@ public class TestTimestampsFilter {
     Get get = new Get(row);
     get.addColumn(cf, column);
     get.setFilter(filter);
-    get.setMaxVersions();
+    get.readAllVersions();
     Result result = ht.get(get);
 
     return result.rawCells();
