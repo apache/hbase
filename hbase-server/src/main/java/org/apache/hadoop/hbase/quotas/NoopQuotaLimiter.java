@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
 
 /**
  * Noop quota limiter returned when no limiter is associated to the user/table
