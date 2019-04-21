@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -46,11 +48,14 @@ class AsyncRegionLocator {
 
   private final HashedWheelTimer retryTimer;
 
+  private final AsyncConnectionImpl conn;
+
   private final AsyncMetaRegionLocator metaRegionLocator;
 
   private final AsyncNonMetaRegionLocator nonMetaRegionLocator;
 
   AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
+    this.conn = conn;
     this.metaRegionLocator = new AsyncMetaRegionLocator(conn.registry);
     this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn);
     this.retryTimer = retryTimer;
@@ -150,9 +155,7 @@ class AsyncRegionLocator {
   }
 
   void clearCache(TableName tableName) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Clear meta cache for " + tableName);
-    }
+    LOG.debug("Clear meta cache for {}", tableName);
     if (tableName.equals(META_TABLE_NAME)) {
       metaRegionLocator.clearCache();
     } else {
@@ -160,8 +163,20 @@ class AsyncRegionLocator {
     }
   }
 
+  void clearCache(ServerName serverName) {
+    LOG.debug("Clear meta cache for {}", serverName);
+    metaRegionLocator.clearCache(serverName);
+    nonMetaRegionLocator.clearCache(serverName);
+    conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheNumClearServer);
+  }
+
   void clearCache() {
     metaRegionLocator.clearCache();
     nonMetaRegionLocator.clearCache();
+  }
+
+  @VisibleForTesting
+  AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
+    return nonMetaRegionLocator;
   }
 }

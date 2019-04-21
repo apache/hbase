@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -112,5 +113,24 @@ class AsyncMetaRegionLocator {
 
   void clearCache() {
     metaRegionLocations.set(null);
+  }
+
+  void clearCache(ServerName serverName) {
+    for (;;) {
+      RegionLocations locs = metaRegionLocations.get();
+      if (locs == null) {
+        return;
+      }
+      RegionLocations newLocs = locs.removeByServer(serverName);
+      if (locs == newLocs) {
+        return;
+      }
+      if (newLocs.isEmpty()) {
+        newLocs = null;
+      }
+      if (metaRegionLocations.compareAndSet(locs, newLocs)) {
+        return;
+      }
+    }
   }
 }
