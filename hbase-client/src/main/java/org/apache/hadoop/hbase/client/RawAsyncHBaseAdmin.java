@@ -1342,7 +1342,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (splitPoint == null) {
       return failedFuture(new IllegalArgumentException("splitPoint can not be null."));
     }
-    addListener(connection.getRegionLocator(tableName).getRegionLocation(splitPoint),
+    addListener(connection.getRegionLocator(tableName).getRegionLocation(splitPoint, true),
       (loc, err) -> {
         if (err != null) {
           result.completeExceptionally(err);
