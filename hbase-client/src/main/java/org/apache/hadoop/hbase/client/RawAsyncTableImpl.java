@@ -130,6 +130,16 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return conn.getConfiguration();
   }
 
+  @Override
+  public CompletableFuture<TableDescriptor> getDescriptor() {
+    return conn.getAdmin().getDescriptor(tableName);
+  }
+
+  @Override
+  public AsyncTableRegionLocator getRegionLocator() {
+    return conn.getRegionLocator(tableName);
+  }
+
   @FunctionalInterface
   private interface Converter<D, I, S> {
     D convert(I info, S src) throws IOException;
