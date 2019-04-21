@@ -817,7 +817,7 @@ module Hbase
                            r_load_sink.getAgeOfLastAppliedOp.to_s
           r_sink_string << ', TimeStampsOfLastAppliedOp=' +
                            java.util.Date.new(r_load_sink
-                             .getTimeStampsOfLastAppliedOp).toString
+                             .getTimestampsOfLastAppliedOp).toString
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
           puts(format('    %<host>s:', host: server_status.getHostname))
