@@ -4348,11 +4348,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     for (Path edits : files) {
-      if (edits == null || !walFS.exists(edits)) {
+      if (edits == null || !fs.exists(edits)) {
         LOG.warn("Null or non-existent edits file: " + edits);
         continue;
       }
-      if (isZeroLengthThenDelete(walFS, edits)) {
+      if (isZeroLengthThenDelete(fs, edits)) {
         continue;
       }
 
@@ -4382,7 +4382,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
         }
         if (skipErrors) {
-          Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
           LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS +
               "=true so continuing. Renamed " + edits + " as " + p, e);
         } else {
