@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
@@ -320,6 +321,8 @@ public class RpcRetryingCallerWithReadReplicas {
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
 
     RegionLocations rl;
+    String errorMsg = "Cannot get the location for replica" + replicaId + " of region for "
+        + Bytes.toStringBinary(row) + " in " + tableName;
     try {
       if (useCache) {
         rl = cConnection.locateRegion(tableName, row, true, true, replicaId);
@@ -329,10 +332,10 @@ public class RpcRetryingCallerWithReadReplicas {
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId, e);
+      throw new RetriesExhaustedException(errorMsg, e);
     }
     if (rl == null) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId);
+      throw new RetriesExhaustedException(errorMsg);
     }
 
     return rl;
