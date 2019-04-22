@@ -187,7 +187,7 @@ public abstract class AbstractMemStore implements MemStore {
     int i = 1;
     try {
       for (Segment segment : getSegments()) {
-        buf.append("Segment (" + i + ") " + segment.toString() + "; ");
+        buf.append("Segment (").append(i).append(") ").append(segment.toString()).append("; ");
         i++;
       }
     } catch (IOException e){
