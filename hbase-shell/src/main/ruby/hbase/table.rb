@@ -717,7 +717,7 @@ EOF
 
     # Returns a list of column names in the table
     def get_all_columns
-      @table.table_descriptor.getFamilies.map do |family|
+      @table.descriptor.getColumnFamilies.map do |family|
         "#{family.getNameAsString}:"
       end
     end
