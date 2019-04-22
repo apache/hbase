@@ -54,7 +54,7 @@ module Hbase
     # Requests a table or region or region server flush
     def flush(name)
       @admin.flushRegion(name.to_java_bytes)
-    rescue java.lang.IllegalArgumentException
+    rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
       # Unknown region. Try table.
       begin
         @admin.flush(TableName.valueOf(name))
@@ -79,9 +79,17 @@ module Hbase
       end
 
       begin
-        @admin.compactRegion(table_or_region_name.to_java_bytes, family_bytes)
-      rescue java.lang.IllegalArgumentException => e
-        @admin.compact(TableName.valueOf(table_or_region_name), family_bytes, compact_type)
+        if family_bytes.nil?
+          @admin.compactRegion(table_or_region_name.to_java_bytes)
+        else
+          @admin.compactRegion(table_or_region_name.to_java_bytes, family_bytes)
+        end
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        if family_bytes.nil?
+          @admin.compact(TableName.valueOf(table_or_region_name), compact_type)
+        else
+          @admin.compact(TableName.valueOf(table_or_region_name), family_bytes, compact_type)
+        end
       end
     end
 
@@ -124,9 +132,17 @@ module Hbase
       end
 
       begin
-        @admin.majorCompactRegion(table_or_region_name.to_java_bytes, family_bytes)
-      rescue java.lang.IllegalArgumentException => e
-        @admin.majorCompact(TableName.valueOf(table_or_region_name), family_bytes, compact_type)
+        if family_bytes.nil?
+          @admin.majorCompactRegion(table_or_region_name.to_java_bytes)
+        else
+          @admin.majorCompactRegion(table_or_region_name.to_java_bytes, family_bytes)
+        end
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        if family_bytes.nil?
+          @admin.majorCompact(TableName.valueOf(table_or_region_name), compact_type)
+        else
+          @admin.majorCompact(TableName.valueOf(table_or_region_name), family_bytes, compact_type)
+        end
       end
     end
 
@@ -144,9 +160,17 @@ module Hbase
       split_point_bytes = nil
       split_point_bytes = split_point.to_java_bytes unless split_point.nil?
       begin
-        @admin.splitRegionAsync(table_or_region_name.to_java_bytes, split_point_bytes).get
-      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException => e
-        @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
+        if split_point_bytes.nil?
+          org.apache.hadoop.hbase.util.FutureUtils.get(@admin.splitRegionAsync(table_or_region_name.to_java_bytes))
+        else
+          org.apache.hadoop.hbase.util.FutureUtils.get(@admin.splitRegionAsync(table_or_region_name.to_java_bytes, split_point_bytes))
+        end
+      rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
+        if split_point_bytes.nil?
+          @admin.split(TableName.valueOf(table_or_region_name))
+        else
+          @admin.split(TableName.valueOf(table_or_region_name), split_point_bytes)
+        end
       end
     end
 
