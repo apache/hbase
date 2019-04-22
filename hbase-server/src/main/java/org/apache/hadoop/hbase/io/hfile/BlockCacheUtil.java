@@ -247,8 +247,8 @@ public class BlockCacheUtil {
         return false;
       }
     } finally {
-      // return the block since we need to decrement the count
-      blockCache.returnBlock(cacheKey, existingBlock);
+      // Release this block to decrement the reference count.
+      existingBlock.release();
     }
   }
 
