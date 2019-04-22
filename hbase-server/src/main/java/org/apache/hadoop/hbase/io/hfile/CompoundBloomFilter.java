@@ -105,8 +105,8 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
       result = BloomFilterUtil.contains(key, keyOffset, keyLength, bloomBuf,
           bloomBlock.headerSize(), bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
     } finally {
-      // After the use return back the block if it was served from a cache.
-      reader.returnBlock(bloomBlock);
+      // After the use, should release the block to deallocate byte buffers.
+      bloomBlock.release();
     }
     if (numPositivesPerChunk != null && result) {
       // Update statistics. Only used in unit tests.
@@ -144,10 +144,10 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     try {
       ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
       result = BloomFilterUtil.contains(keyCell, bloomBuf, bloomBlock.headerSize(),
-          bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount, type);
+        bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount, type);
     } finally {
-      // After the use return back the block if it was served from a cache.
-      reader.returnBlock(bloomBlock);
+      // After the use, should release the block to deallocate the byte buffers.
+      bloomBlock.release();
     }
     if (numPositivesPerChunk != null && result) {
       // Update statistics. Only used in unit tests.

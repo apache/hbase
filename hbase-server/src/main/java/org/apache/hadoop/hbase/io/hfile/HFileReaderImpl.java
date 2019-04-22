@@ -291,7 +291,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
                 // Ideally here the readBlock won't find the block in cache. We call this
                 // readBlock so that block data is read from FS and cached in BC. we must call
                 // returnBlock here to decrease the reference count of block.
-                returnBlock(block);
+                block.release();
               }
             }
           } catch (IOException e) {
@@ -375,20 +375,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public long length() {
     return fileSize;
-  }
-
-  @Override
-  public void returnBlock(HFileBlock block) {
-    if (block != null) {
-      if (this.cacheConf.getBlockCache().isPresent()) {
-        BlockCacheKey cacheKey = new BlockCacheKey(this.getFileContext().getHFileName(),
-            block.getOffset(), this.isPrimaryReplicaReader(), block.getBlockType());
-        cacheConf.getBlockCache().get().returnBlock(cacheKey, block);
-      } else {
-        // Release the block here, it means the RPC path didn't ref to this block any more.
-        block.release();
-      }
-    }
   }
 
   /**
@@ -553,23 +539,15 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       this.curBlock = null;
     }
 
-    private void returnBlock(HFileBlock block) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Returning the block : " + block);
-      }
-      this.reader.returnBlock(block);
-    }
-
     private void returnBlocks(boolean returnAll) {
-      for (int i = 0; i < this.prevBlocks.size(); i++) {
-        returnBlock(this.prevBlocks.get(i));
-      }
+      this.prevBlocks.forEach(HFileBlock::release);
       this.prevBlocks.clear();
       if (returnAll && this.curBlock != null) {
-        returnBlock(this.curBlock);
+        this.curBlock.release();
         this.curBlock = null;
       }
     }
+
     @Override
     public boolean isSeeked(){
       return blockBuffer != null;
@@ -893,7 +871,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // The first key in the current block 'seekToBlock' is greater than the given
         // seekBefore key. We will go ahead by reading the next block that satisfies the
         // given key. Return the current block before reading the next one.
-        reader.returnBlock(seekToBlock);
+        seekToBlock.release();
         // It is important that we compute and pass onDiskSize to the block
         // reader so that it does not have to read the header separately to
         // figure out the size.  Currently, we do not have a way to do this
@@ -943,7 +921,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         if (block != null && !block.getBlockType().isData()) { // Findbugs: NP_NULL_ON_SOME_PATH
           // Whatever block we read we will be returning it unless
           // it is a datablock. Just in case the blocks are non data blocks
-          reader.returnBlock(block);
+          block.release();
         }
       } while (!block.getBlockType().isData());
 
@@ -1319,9 +1297,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
           HFileBlock compressedBlock = cachedBlock;
           cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
-          // In case of compressed block after unpacking we can return the compressed block
+          // In case of compressed block after unpacking we can release the compressed block
           if (compressedBlock != cachedBlock) {
-            cache.returnBlock(cacheKey, compressedBlock);
+            compressedBlock.release();
           }
         }
         validateBlockType(cachedBlock, expectedBlockType);
@@ -1353,12 +1331,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             // so blocks with the old encoding still linger in cache for some
             // period of time. This event should be rare as it only happens on
             // schema definition change.
-            LOG.info("Evicting cached block with key " + cacheKey +
-                " because of a data block encoding mismatch" + "; expected: " +
-                expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding);
-            // This is an error scenario. so here we need to decrement the
-            // count.
-            cache.returnBlock(cacheKey, cachedBlock);
+            LOG.info("Evicting cached block with key " + cacheKey
+                + " because of a data block encoding mismatch" + "; expected: "
+                + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding);
+            // This is an error scenario. so here we need to release the block.
+            cachedBlock.release();
             cache.evictBlock(cacheKey);
           }
           return null;
