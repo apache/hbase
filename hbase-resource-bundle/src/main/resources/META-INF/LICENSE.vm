@@ -1340,7 +1340,7 @@ You can redistribute it and/or modify it under either the terms of the
 ## See this FAQ link for justifications: https://www.apache.org/legal/resolved.html
 ##
 ## NB: This list is later compared as lower-case. New entries must also be all lower-case
-#set($non_aggregate_fine = [ 'public domain', 'new bsd license', 'bsd license', 'bsd', 'bsd 2-clause license', 'mozilla public license version 1.1', 'mozilla public license version 2.0', 'creative commons attribution license, version 2.5', 'cddl/gplv2+ce' ])
+#set($non_aggregate_fine = [ 'public domain', 'new bsd license', 'bsd license', 'bsd', 'bsd 2-clause license', 'mozilla public license version 1.1', 'mozilla public license version 2.0', 'creative commons attribution license, version 2.5' ])
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
 ## if there are no licenses we'll fail the build later, so

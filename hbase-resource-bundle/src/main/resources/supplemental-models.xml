@@ -1168,6 +1168,23 @@ Copyright (c) 2011 FuseSource Corp. All rights reserved.
   </supplement>
   <supplement>
     <project>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
+      <!-- javax.activation is also separately licensed under the GPL version 2 plus the Classpath Exception -->
+      <licenses>
+        <license>
+          <name>CDDL 1.1</name>
+          <url>https://github.com/javaee/activation/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 1997-2017 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>
       <name>JAXB API bundle for GlassFish V3</name>
