@@ -530,8 +530,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
             if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
               Cacheable original = result;
               result = ((HFileBlock) original).deepCloneOnHeap();
-              // deepClone an new one, so need to put the original one back to free it.
-              victimHandler.returnBlock(cacheKey, original);
+              // deepClone an new one, so need to release the original one to deallocate it.
+              original.release();
             }
             cacheBlock(cacheKey, result, /* inMemory = */ false);
           }
