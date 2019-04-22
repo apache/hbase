@@ -223,7 +223,7 @@ public class TestHFile  {
           Assert.assertTrue(hfb.isOnHeap());
         }
       } finally {
-        combined.returnBlock(key, cachedBlock);
+        cachedBlock.release();
       }
       block.release(); // return back the ByteBuffer back to allocator.
     }

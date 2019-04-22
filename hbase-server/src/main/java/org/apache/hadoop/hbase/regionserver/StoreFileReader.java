@@ -456,8 +456,10 @@ public class StoreFileReader {
       LOG.error("Bad bloom filter data -- proceeding without", e);
       setGeneralBloomFilterFaulty();
     } finally {
-      // Return the bloom block so that its ref count can be decremented.
-      reader.returnBlock(bloomBlock);
+      // Release the bloom block so that its ref count can be decremented.
+      if (bloomBlock != null) {
+        bloomBlock.release();
+      }
     }
     return true;
   }

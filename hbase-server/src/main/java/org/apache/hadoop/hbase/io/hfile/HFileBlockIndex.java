@@ -381,10 +381,9 @@ public class HFileBlockIndex {
             nextIndexedKey = tmpNextIndexKV;
           }
         } finally {
-          if (!dataBlock) {
-            // Return the block immediately if it is not the
-            // data block
-            cachingBlockReader.returnBlock(block);
+          if (!dataBlock && block != null) {
+            // Release the block immediately if it is not the data block
+            block.release();
           }
         }
       }
@@ -394,9 +393,11 @@ public class HFileBlockIndex {
         // Though we have retrieved a data block we have found an issue
         // in the retrieved data block. Hence returned the block so that
         // the ref count can be decremented
-        cachingBlockReader.returnBlock(block);
-        throw new IOException("Reached a data block at level " + lookupLevel +
-            " but the number of levels is " + searchTreeLevel);
+        if (block != null) {
+          block.release();
+        }
+        throw new IOException("Reached a data block at level " + lookupLevel
+            + " but the number of levels is " + searchTreeLevel);
       }
 
       // set the next indexed key for the current block.
@@ -436,7 +437,7 @@ public class HFileBlockIndex {
           byte[] bytes = b.toBytes(keyOffset, keyLen);
           targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
         } finally {
-          cachingBlockReader.returnBlock(midLeafBlock);
+          midLeafBlock.release();
         }
       } else {
         // The middle of the root-level index.
