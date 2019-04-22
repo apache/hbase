@@ -379,12 +379,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     this.l1Cache.setMaxSize(size);
   }
 
-  @Override
-  public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // returnBlock is meaningful for L2 cache alone.
-    this.l2Cache.returnBlock(cacheKey, block);
-  }
-
   @VisibleForTesting
   public int getRpcRefCount(BlockCacheKey cacheKey) {
     return (this.l2Cache instanceof BucketCache)

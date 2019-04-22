@@ -407,12 +407,6 @@ public class HFile {
         final boolean updateCacheMetrics, BlockType expectedBlockType,
         DataBlockEncoding expectedDataBlockEncoding)
         throws IOException;
-
-    /**
-     * Return the given block back to the cache, if it was obtained from cache.
-     * @param block Block to be returned.
-     */
-    void returnBlock(HFileBlock block);
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */

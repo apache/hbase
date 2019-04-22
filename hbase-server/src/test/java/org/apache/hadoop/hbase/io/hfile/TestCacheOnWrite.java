@@ -336,15 +336,15 @@ public class TestCacheOnWrite {
         // Call return twice because for the isCache cased the counter would have got incremented
         // twice. Notice that here we need to returnBlock with different blocks. see comments in
         // BucketCache#returnBlock.
-        blockCache.returnBlock(blockCacheKey, blockPair.getSecond());
+        blockPair.getSecond().release();
         if (cacheCompressedData) {
           if (this.compress == Compression.Algorithm.NONE
               || cowType == CacheOnWriteType.INDEX_BLOCKS
               || cowType == CacheOnWriteType.BLOOM_BLOCKS) {
-            blockCache.returnBlock(blockCacheKey, blockPair.getFirst());
+            blockPair.getFirst().release();
           }
         } else {
-          blockCache.returnBlock(blockCacheKey, blockPair.getFirst());
+          blockPair.getFirst().release();
         }
       }
     }
