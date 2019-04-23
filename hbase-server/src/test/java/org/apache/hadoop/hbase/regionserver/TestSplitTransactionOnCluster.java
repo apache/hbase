@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -328,7 +329,7 @@ public class TestSplitTransactionOnCluster {
       // We don't roll back here anymore. Instead we fail-fast on construction of the
       // split transaction. Catch the exception instead.
       try {
-        this.admin.splitRegionAsync(hri.getRegionName());
+        FutureUtils.get(this.admin.splitRegionAsync(hri.getRegionName()));
         fail();
       } catch (DoNotRetryRegionException e) {
         // Expected
