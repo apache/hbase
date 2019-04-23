@@ -6365,43 +6365,6 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testGetStartEndKeysWithRegionReplicas() throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    htd.addFamily(fam);
-    byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd, KEYS);
-    List<HRegionInfo> regions = admin.getTableRegions(htd.getTableName());
-
-    HRegionLocator locator =
-        (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
-    for (int regionReplication = 1; regionReplication < 4; regionReplication++) {
-      List<RegionLocations> regionLocations = new ArrayList<>();
-
-      // mock region locations coming from meta with multiple replicas
-      for (HRegionInfo region : regions) {
-        HRegionLocation[] arr = new HRegionLocation[regionReplication];
-        for (int i = 0; i < arr.length; i++) {
-          arr[i] = new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(region, i), null);
-        }
-        regionLocations.add(new RegionLocations(arr));
-      }
-
-      Pair<byte[][], byte[][]> startEndKeys = getStartEndKeys(regionLocations);
-
-      assertEquals(KEYS.length + 1, startEndKeys.getFirst().length);
-
-      for (int i = 0; i < KEYS.length + 1; i++) {
-        byte[] startKey = i == 0 ? HConstants.EMPTY_START_ROW : KEYS[i - 1];
-        byte[] endKey = i == KEYS.length ? HConstants.EMPTY_END_ROW : KEYS[i];
-        assertArrayEquals(startKey, startEndKeys.getFirst()[i]);
-        assertArrayEquals(endKey, startEndKeys.getSecond()[i]);
-      }
-    }
-  }
-
-  @Test
   public void testFilterAllRecords() throws IOException {
     Scan scan = new Scan();
     scan.setBatch(1);
