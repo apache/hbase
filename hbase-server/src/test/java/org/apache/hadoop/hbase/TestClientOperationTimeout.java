@@ -115,7 +115,7 @@ public class TestClientOperationTimeout {
    * Tests that a get on a table throws {@link SocketTimeoutException} when the operation takes
    * longer than 'hbase.client.operation.timeout'.
    */
-  @Test(expected = SocketTimeoutException.class)
+  @Test(expected = RetriesExhaustedException.class)
   public void testGetTimeout() throws Exception {
     DELAY_GET = 600;
     table.get(new Get(ROW));
@@ -125,7 +125,7 @@ public class TestClientOperationTimeout {
    * Tests that a put on a table throws {@link SocketTimeoutException} when the operation takes
    * longer than 'hbase.client.operation.timeout'.
    */
-  @Test(expected = SocketTimeoutException.class)
+  @Test(expected = RetriesExhaustedException.class)
   public void testPutTimeout() throws Exception {
     DELAY_MUTATE = 600;
 
