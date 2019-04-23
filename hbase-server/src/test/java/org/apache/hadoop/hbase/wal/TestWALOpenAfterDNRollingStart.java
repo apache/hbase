@@ -48,6 +48,7 @@ public class TestWALOpenAfterDNRollingStart {
         false);
     TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
         checkLowReplicationInterval);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.start.wait.for.namespacemanager", true);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.startMiniCluster(1);
 

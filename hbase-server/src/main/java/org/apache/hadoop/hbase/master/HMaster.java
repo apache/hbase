@@ -160,6 +160,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -312,6 +313,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // flag set after master services are started,
   // initialization may have not completed yet.
   volatile boolean serviceStarted = false;
+
+  // flag set after we complete asynchronized services and master initialization is done,
+  private final ProcedureEvent namespaceManagerInitialized =
+      new ProcedureEvent("master namespace manager initialized");
 
   // flag set after we complete assignMeta.
   private final ProcedureEvent serverCrashProcessingEnabled =
@@ -880,8 +885,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     periodicDoMetricsChore = new PeriodicDoMetrics(msgInterval, this);
     getChoreService().scheduleChore(periodicDoMetricsChore);
 
-    status.setStatus("Starting namespace manager");
-    initNamespace();
+
+    status.setStatus("Starting namespace manager and quota manager");
+    initNamespaceAndQuotaManager();
 
     if (this.cpHost != null) {
       try {
@@ -901,11 +907,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Set master as 'initialized'.
     setInitialized(true);
-
-    assignmentManager.checkIfShouldMoveSystemRegionAsync();
-
-    status.setStatus("Starting quota manager");
-    initQuotaManager();
 
     // assign the meta replicas
     Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
@@ -947,12 +948,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.debug("Balancer post startup initialization complete, took " + (
           (System.currentTimeMillis() - start) / 1000) + " seconds");
     }
-  }
-
-  private void initQuotaManager() throws IOException {
-    quotaManager = new MasterQuotaManager(this);
-    this.assignmentManager.setRegionStateListener((RegionStateListener) quotaManager);
-    quotaManager.start();
   }
 
   /**
@@ -1101,11 +1096,60 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  void initNamespace() throws IOException {
+  /*
+   * The main purpose is to start namespace manager and quota manager async to
+   * unblock overall master initialization
+   *
+   * @throws IOException
+  */
+  private void initNamespaceAndQuotaManager() throws IOException {
     //create namespace manager
     tableNamespaceManager = new TableNamespaceManager(this);
-    tableNamespaceManager.start();
+    //create quota manager
+    this.quotaManager = new MasterQuotaManager(this);
+    this.assignmentManager.setRegionStateListener((RegionStateListener)quotaManager);
+
+    if (conf.getBoolean("hbase.master.start.wait.for.namespacemanager", false)) {
+      // If being asked not to async start namespace manager, then just block
+      // master service starting until namespace manager is ready.
+      //
+      // Note: Quota manager depends on namespace manager.  Therefore, its starting
+      // method has to be in-sync with namespace manager.
+      LOG.info("Starting namespace manager and quota manager synchronously");
+
+      tableNamespaceManager.start();
+      setNamespaceManagerInitializedEvent(true);
+
+      quotaManager.start();
+    } else { // else asynchronously start namespace manager and quota manager
+      LOG.info("Starting namespace manager and quota manager asynchronously");
+      Threads.setDaemonThreadRunning(new Thread(new Runnable() {
+        @Override
+        public void run() {
+            // Start namespace manager and wait to it to be fully started.
+            try {
+              tableNamespaceManager.start();
+              setNamespaceManagerInitializedEvent(true);
+              LOG.info("Namespace manager started.");
+            } catch (IOException e) {
+              LOG.error("Namespace manager failed to start. ", e);
+              abort("Shutdown Master due to namespace manager failed to start. ", e);
+            }
+            // Quota Manager depends on Namespace manager to be fully initialized.
+            try {
+              quotaManager.start();
+              LOG.info("Quota manager started.");
+            } catch (IOException ie) {
+              LOG.error("Quota Manager failed to start. ", ie);
+              abort("Shutdown Master due to Quota Manager failure to start. ", ie);
+            }
+          }
+        }, "Init Namespace Manager and Quota Manager Async"));
+    }
+    assignmentManager.checkIfShouldMoveSystemRegionAsync();
   }
+
+
 
   boolean isCatalogJanitorEnabled() {
     return catalogJanitorChore != null ?
@@ -2665,11 +2709,28 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   void checkNamespaceManagerReady() throws IOException {
     checkInitialized();
-    if (tableNamespaceManager == null ||
-        !tableNamespaceManager.isTableAvailableAndInitialized(true)) {
+
+    if (tableNamespaceManager == null) {
       throw new IOException("Table Namespace Manager not ready yet, try again later");
+    } else if (!tableNamespaceManager.isTableAvailableAndInitialized(true)) {
+      try {
+        // Wait some time.
+        long startTime = EnvironmentEdgeManager.currentTime();
+        int timeout = conf.getInt("hbase.master.namespace.wait.for.ready", 30000);
+        while (!tableNamespaceManager.isTableNamespaceManagerStarted() &&
+            EnvironmentEdgeManager.currentTime() - startTime < timeout) {
+          Thread.sleep(100);
+        }
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
+      if (!tableNamespaceManager.isTableNamespaceManagerStarted()) {
+        throw new IOException("Table Namespace Manager not fully initialized, try again later");
+      }
     }
   }
+
+
   /**
    * Report whether this master is currently the active master or not.
    * If not active master, we are parked on ZK waiting to become active.
@@ -2716,6 +2777,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   public ProcedureEvent getInitializedEvent() {
     return initialized;
+  }
+
+  public void setNamespaceManagerInitializedEvent(boolean isNamespaceManagerInitialized) {
+    procedureExecutor.getEnvironment().setEventReady(
+        namespaceManagerInitialized,
+        isNamespaceManagerInitialized);
+  }
+
+  public ProcedureEvent getNamespaceManagerInitializedEvent() {
+    return namespaceManagerInitialized;
   }
 
   /**

@@ -193,21 +193,20 @@ public class CreateNamespaceProcedure
     sb.append(")");
   }
 
-  private boolean isBootstrapNamespace() {
+  private static boolean isBootstrapNamespace(final NamespaceDescriptor nsDescriptor) {
     return nsDescriptor.equals(NamespaceDescriptor.DEFAULT_NAMESPACE) ||
         nsDescriptor.equals(NamespaceDescriptor.SYSTEM_NAMESPACE);
   }
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (!env.getMasterServices().isInitialized()) {
-      // Namespace manager might not be ready if master is not fully initialized,
-      // return false to reject user namespace creation; return true for default
-      // and system namespace creation (this is part of master initialization).
-      if (!isBootstrapNamespace() && env.waitInitialized(this)) {
-        return false;
-      }
+    // Namespace manager might not be ready if master is not fully initialized,
+    // return false to reject user namespace creation; return true for default
+    // and system namespace creation (this is part of master initialization).
+    if (!isBootstrapNamespace(nsDescriptor) && env.waitNamespaceManagerInitialized(this)) {
+      return false;
     }
+
     return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
   }
 
@@ -331,7 +330,7 @@ public class CreateNamespaceProcedure
   protected static void setNamespaceQuota(
       final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) throws IOException {
-    if (env.getMasterServices().isInitialized()) {
+    if (env.getMasterServices().isInitialized() && !isBootstrapNamespace(nsDescriptor)) {
       env.getMasterServices().getMasterQuotaManager().setNamespaceQuota(nsDescriptor);
     }
   }
@@ -370,6 +369,6 @@ public class CreateNamespaceProcedure
   protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
     // hbase and default namespaces are created on bootstrap internally by the system
     // the client does not know about this procedures.
-    return !isBootstrapNamespace();
+    return !isBootstrapNamespace(nsDescriptor);
   }
 }
