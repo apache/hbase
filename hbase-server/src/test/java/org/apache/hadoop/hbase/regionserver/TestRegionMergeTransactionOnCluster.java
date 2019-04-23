@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -63,6 +62,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -312,7 +312,6 @@ public class TestRegionMergeTransactionOnCluster {
     LOG.info("Starting " + name.getMethodName());
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
-    final int syncWaitTimeout = 10 * 60000; // 10min
 
     try {
       // Create table and load data.
@@ -326,8 +325,8 @@ public class TestRegionMergeTransactionOnCluster {
       am.offlineRegion(b);
       try {
         // Merge offline region. Region a is offline here
-        admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false)
-                .get(syncWaitTimeout, TimeUnit.MILLISECONDS);
+        FutureUtils.get(
+          admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false));
         fail("Offline regions should not be able to merge");
       } catch (DoNotRetryRegionException ie) {
         System.out.println(ie);
@@ -336,21 +335,21 @@ public class TestRegionMergeTransactionOnCluster {
 
       try {
         // Merge the same region: b and b.
-        admin.mergeRegionsAsync(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true);
+        FutureUtils
+          .get(admin.mergeRegionsAsync(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true));
         fail("A region should not be able to merge with itself, even forcifully");
       } catch (IOException ie) {
         assertTrue("Exception should mention regions not online",
-          StringUtils.stringifyException(ie).contains("region to itself")
-            && ie instanceof MergeRegionException);
+          StringUtils.stringifyException(ie).contains("region to itself") &&
+            ie instanceof MergeRegionException);
       }
 
       try {
         // Merge unknown regions
-        admin.mergeRegionsAsync(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true);
+        FutureUtils.get(admin.mergeRegionsAsync(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true));
         fail("Unknown region could not be merged");
       } catch (IOException ie) {
-        assertTrue("UnknownRegionException should be thrown",
-          ie instanceof UnknownRegionException);
+        assertTrue("UnknownRegionException should be thrown", ie instanceof UnknownRegionException);
       }
       table.close();
     } finally {
