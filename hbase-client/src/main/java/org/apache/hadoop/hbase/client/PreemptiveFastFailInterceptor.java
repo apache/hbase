@@ -96,8 +96,11 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
         HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS,
         HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT);
     this.failureMapCleanupIntervalMilliSec = conf.getLong(
-        HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
-        HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
+            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS,
+            HConstants.HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT);
+    this.fastFailClearingTimeMilliSec = conf.getLong(
+            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS,
+            HConstants.HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT);
     lastFailureMapCleanupTimeMilliSec = EnvironmentEdgeManager.currentTime();
   }
 
