@@ -62,11 +62,12 @@ public class TestCoprocessorClassLoader {
     File tmpJarFile = new File(jarFile.getParent(), "/tmp/" + className + ".test.jar");
     if (tmpJarFile.exists()) tmpJarFile.delete();
     assertFalse("tmp jar file should not exist", tmpJarFile.exists());
+    ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
+    CoprocessorClassLoader.getClassLoader(new Path(jarFile.getParent()), parent, "112", conf);
     IOUtils.copyBytes(new FileInputStream(jarFile),
       new FileOutputStream(tmpJarFile), conf, true);
     assertTrue("tmp jar file should be created", tmpJarFile.exists());
     Path path = new Path(jarFile.getAbsolutePath());
-    ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     CoprocessorClassLoader.parentDirLockSet.clear(); // So that clean up can be triggered
     ClassLoader classLoader = CoprocessorClassLoader.getClassLoader(path, parent, "111", conf);
     assertNotNull("Classloader should be created", classLoader);
