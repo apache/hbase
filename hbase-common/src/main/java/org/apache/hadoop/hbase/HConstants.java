@@ -1313,6 +1313,12 @@ public final class HConstants {
   public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
       60000;
 
+  public static final String HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS =
+          "hbase.client.failure.map.cleanup.interval";
+
+  public static final long HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT =
+          600000;
+
   public static final String HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS =
       "hbase.client.fast.fail.cleanup.duration";
 
