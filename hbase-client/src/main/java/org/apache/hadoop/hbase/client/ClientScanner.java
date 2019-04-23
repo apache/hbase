@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.LeaseException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -336,7 +337,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     if ((cause != null && cause instanceof NotServingRegionException) ||
         (cause != null && cause instanceof RegionServerStoppedException) ||
         e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException ||
-        e instanceof ScannerResetException) {
+        e instanceof ScannerResetException || e instanceof LeaseException) {
       // Pass. It is easier writing the if loop test as list of what is allowed rather than
       // as a list of what is not allowed... so if in here, it means we do not throw.
       if (retriesLeft <= 0) {
