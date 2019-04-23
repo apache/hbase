@@ -322,8 +322,6 @@ public class RpcRetryingCallerWithReadReplicas {
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
 
     RegionLocations rl;
-    String errorMsg = "Cannot get the location for replica" + replicaId + " of region for "
-        + Bytes.toStringBinary(row) + " in " + tableName;
     try {
       if (useCache) {
         rl = cConnection.locateRegion(tableName, row, true, true, replicaId);
@@ -333,10 +331,12 @@ public class RpcRetryingCallerWithReadReplicas {
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
-      throw new RetriesExhaustedException(errorMsg, e);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName, e);
     }
     if (rl == null) {
-      throw new RetriesExhaustedException(errorMsg);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName);
     }
 
     return rl;
