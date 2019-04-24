@@ -40,9 +40,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 public class HBaseKerberosUtils {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseKerberosUtils.class);
 
-  public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
-  public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
-  public static final String KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
+  public static final String KRB_PRINCIPAL = SecurityConstants.REGIONSERVER_KRB_PRINCIPAL;
+  public static final String MASTER_KRB_PRINCIPAL = SecurityConstants.MASTER_KRB_PRINCIPAL;
+  public static final String KRB_KEYTAB_FILE = SecurityConstants.REGIONSERVER_KRB_KEYTAB_FILE;
   public static final String CLIENT_PRINCIPAL = AuthUtil.HBASE_CLIENT_KERBEROS_PRINCIPAL;
   public static final String CLIENT_KEYTAB = AuthUtil.HBASE_CLIENT_KEYTAB_FILE;
 
