@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -34,17 +36,17 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -330,10 +332,12 @@ public class RpcRetryingCallerWithReadReplicas {
     } catch (DoNotRetryIOException | InterruptedIOException | RetriesExhaustedException e) {
       throw e;
     } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId, e);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName, e);
     }
     if (rl == null) {
-      throw new RetriesExhaustedException("Can't get the location for replica " + replicaId);
+      throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
+          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName);
     }
 
     return rl;
