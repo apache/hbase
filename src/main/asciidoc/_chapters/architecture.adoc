@@ -1816,8 +1816,8 @@ Instead, the expired data is filtered out and is not written back to the compact
 
 [[compaction.and.versions]]
 .Compaction and Versions
-When you create a Column Family, you can specify the maximum number of versions to keep, by specifying `HColumnDescriptor.setMaxVersions(int versions)`.
-The default value is `3`.
+When you create a Column Family, you can specify the maximum number of versions to keep, by specifying `ColumnFamilyDescriptorBuilder.setMaxVersions(int versions)`.
+The default value is `1`.
 If more versions than the specified maximum exist, the excess versions are filtered out and not written back to the compacted StoreFile.
 
 .Major Compactions Can Impact Query Results
