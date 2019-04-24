@@ -349,14 +349,6 @@ public class WALKeyImpl implements WALKey {
     return tablename;
   }
 
-  /** @return log sequence number
-   * @deprecated Use {@link #getSequenceId()}
-   */
-  @Deprecated
-  public long getLogSeqNum() {
-    return getSequenceId();
-  }
-
   /**
    * Used to set original sequenceId for WALKeyImpl during WAL replay
    */
