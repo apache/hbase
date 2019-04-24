@@ -38,17 +38,17 @@ public class SecurityInfo {
   // populate info for known services
   static {
     infos.put(AdminProtos.AdminService.getDescriptor().getName(),
-        new SecurityInfo("hbase.regionserver.kerberos.principal",
+        new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL,
             Kind.HBASE_AUTH_TOKEN));
     infos.put(ClientProtos.ClientService.getDescriptor().getName(),
-        new SecurityInfo("hbase.regionserver.kerberos.principal",
+        new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL,
             Kind.HBASE_AUTH_TOKEN));
     infos.put(MasterService.getDescriptor().getName(),
-        new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(RegionServerStatusProtos.RegionServerStatusService.getDescriptor().getName(),
-        new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(MasterProtos.HbckService.getDescriptor().getName(),
-        new SecurityInfo("hbase.master.kerberos.principal", Kind.HBASE_AUTH_TOKEN));
+        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     // NOTE: IF ADDING A NEW SERVICE, BE SURE TO UPDATE HBasePolicyProvider ALSO ELSE
     // new Service will not be found when all is Kerberized!!!!
   }
