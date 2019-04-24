@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -273,7 +272,8 @@ public class TestHbck {
     FailingSplitAfterMetaUpdatedMasterObserver observer = master.getMasterCoprocessorHost()
         .findCoprocessor(FailingSplitAfterMetaUpdatedMasterObserver.class);
     assertNotNull(observer);
-    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+    try {
+      AsyncAdmin admin = TEST_UTIL.getAsyncConnection().getAdmin();
       byte[] splitKey = Bytes.toBytes("bcd");
       admin.split(TableName.valueOf(testTable), splitKey);
       observer.latch.await(5000, TimeUnit.MILLISECONDS);
