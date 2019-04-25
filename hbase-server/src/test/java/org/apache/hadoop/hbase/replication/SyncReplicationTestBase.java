@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -247,6 +250,12 @@ public class SyncReplicationTestBase {
     }
   }
 
+  private void assertRejection(Throwable error) {
+    assertThat(error, instanceOf(DoNotRetryIOException.class));
+    assertTrue(error.getMessage().contains("Reject to apply to sink cluster"));
+    assertTrue(error.getMessage().contains(TABLE_NAME.toString()));
+  }
+
   protected final void verifyReplicationRequestRejection(HBaseTestingUtility utility,
       boolean expectedRejection) throws Exception {
     HRegionServer regionServer = utility.getRSForFirstRegionInTable(TABLE_NAME);
@@ -264,9 +273,10 @@ public class SyncReplicationTestBase {
         ReplicationProtbufUtil.replicateWALEntry(
           connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null);
         fail("Should throw IOException when sync-replication state is in A or DA");
+      } catch (RemoteException e) {
+        assertRejection(e.unwrapRemoteException());
       } catch (DoNotRetryIOException e) {
-        assertTrue(e.getMessage().contains("Reject to apply to sink cluster"));
-        assertTrue(e.getMessage().contains(TABLE_NAME.toString()));
+        assertRejection(e);
       }
     }
   }
