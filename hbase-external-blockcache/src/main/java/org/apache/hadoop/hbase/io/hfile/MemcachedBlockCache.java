@@ -36,6 +36,7 @@ import net.spy.memcached.transcoders.Transcoder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -271,10 +272,10 @@ public class MemcachedBlockCache implements BlockCache {
     public HFileBlock decode(CachedData d) {
       try {
         ByteBuff buf = new SingleByteBuff(ByteBuffer.wrap(d.getData()));
-        return (HFileBlock) HFileBlock.BLOCK_DESERIALIZER.deserialize(buf, true,
+        return (HFileBlock) HFileBlock.BLOCK_DESERIALIZER.deserialize(buf, ByteBuffAllocator.HEAP,
           MemoryType.EXCLUSIVE);
       } catch (IOException e) {
-        LOG.warn("Error deserializing data from memcached",e);
+        LOG.warn("Failed to deserialize data from memcached", e);
       }
       return null;
     }

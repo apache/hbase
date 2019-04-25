@@ -225,29 +225,22 @@ public class CacheTestUtils {
   public static class ByteArrayCacheable implements Cacheable {
 
     static final CacheableDeserializer<Cacheable> blockDeserializer =
-      new CacheableDeserializer<Cacheable>() {
+        new CacheableDeserializer<Cacheable>() {
+          @Override
+          public int getDeserializerIdentifier() {
+            return deserializerIdentifier;
+          }
 
-      @Override
-      public Cacheable deserialize(ByteBuff b) throws IOException {
-        int len = b.getInt();
-        Thread.yield();
-        byte buf[] = new byte[len];
-        b.get(buf);
-        return new ByteArrayCacheable(buf);
-      }
-
-      @Override
-      public int getDeserialiserIdentifier() {
-        return deserializerIdentifier;
-      }
-
-
-      @Override
-      public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType)
-          throws IOException {
-        return deserialize(b);
-      }
-    };
+          @Override
+          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
+              throws IOException {
+            int len = b.getInt();
+            Thread.yield();
+            byte buf[] = new byte[len];
+            b.get(buf);
+            return new ByteArrayCacheable(buf);
+          }
+        };
 
     final byte[] buf;
 

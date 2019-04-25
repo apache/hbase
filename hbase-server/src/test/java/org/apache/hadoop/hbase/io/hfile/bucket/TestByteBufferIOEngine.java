@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -67,7 +68,7 @@ public class TestByteBufferIOEngine {
 
   static BucketEntry createBucketEntry(long offset, int len) {
     BucketEntry be = new MockBucketEntry(offset, len);
-    be.setDeserialiserReference(DESERIALIZER);
+    be.setDeserializerReference(DESERIALIZER);
     return be;
   }
 
@@ -126,12 +127,7 @@ public class TestByteBufferIOEngine {
     private int identifier;
 
     @Override
-    public Cacheable deserialize(ByteBuff b) throws IOException {
-      return null;
-    }
-
-    @Override
-    public Cacheable deserialize(final ByteBuff b, boolean reuse, MemoryType memType)
+    public Cacheable deserialize(final ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
         throws IOException {
       this.buf = b;
       return null;
@@ -142,7 +138,7 @@ public class TestByteBufferIOEngine {
     }
 
     @Override
-    public int getDeserialiserIdentifier() {
+    public int getDeserializerIdentifier() {
       return identifier;
     }
   }
