@@ -304,6 +304,17 @@
               <artifactId>hadoop-auth</artifactId>
               <scope>provided</scope>
             </dependency>
+            <dependency>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-mapreduce-client-core</artifactId>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>com.google.guava</groupId>
+                  <artifactId>guava</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
           </dependencies>
         </profile>
     </profiles>
