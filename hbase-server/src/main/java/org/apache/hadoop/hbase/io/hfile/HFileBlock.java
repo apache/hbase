@@ -264,41 +264,26 @@ public class HFileBlock implements Cacheable {
     }
 
     @Override
-    public HFileBlock deserialize(ByteBuff buf, boolean reuse, MemoryType memType)
+    public HFileBlock deserialize(ByteBuff buf, ByteBuffAllocator alloc, MemoryType memType)
         throws IOException {
       // The buf has the file block followed by block metadata.
       // Set limit to just before the BLOCK_METADATA_SPACE then rewind.
       buf.limit(buf.limit() - BLOCK_METADATA_SPACE).rewind();
       // Get a new buffer to pass the HFileBlock for it to 'own'.
-      ByteBuff newByteBuff;
-      if (reuse) {
-        newByteBuff = buf.slice();
-      } else {
-        int len = buf.limit();
-        newByteBuff = ByteBuff.wrap(ByteBuffer.allocate(len));
-        newByteBuff.put(0, buf, buf.position(), len);
-      }
+      ByteBuff newByteBuff = buf.slice();
       // Read out the BLOCK_METADATA_SPACE content and shove into our HFileBlock.
       buf.position(buf.limit());
       buf.limit(buf.limit() + HFileBlock.BLOCK_METADATA_SPACE);
       boolean usesChecksum = buf.get() == (byte) 1;
       long offset = buf.getLong();
       int nextBlockOnDiskSize = buf.getInt();
-      // TODO make the newly created HFileBlock use the off-heap allocator, Need change the
-      // deserializer or change the deserialize interface.
       return new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null,
-          ByteBuffAllocator.HEAP);
+          alloc);
     }
 
     @Override
-    public int getDeserialiserIdentifier() {
+    public int getDeserializerIdentifier() {
       return DESERIALIZER_IDENTIFIER;
-    }
-
-    @Override
-    public HFileBlock deserialize(ByteBuff b) throws IOException {
-      // Used only in tests
-      return deserialize(b, false, MemoryType.EXCLUSIVE);
     }
   }
 
@@ -561,6 +546,10 @@ public class HFileBlock implements Cacheable {
     ByteBuff dup = this.buf.duplicate();
     assert dup.position() == 0;
     return dup;
+  }
+
+  public ByteBuffAllocator getByteBuffAllocator() {
+    return this.allocator;
   }
 
   @VisibleForTesting

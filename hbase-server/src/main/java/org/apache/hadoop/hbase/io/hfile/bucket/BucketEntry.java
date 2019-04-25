@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
@@ -58,7 +59,7 @@ class BucketEntry implements HBaseReferenceCounted {
    * The index of the deserializer that can deserialize this BucketEntry content. See
    * {@link CacheableDeserializerIdManager} for hosting of index to serializers.
    */
-  byte deserialiserIndex;
+  byte deserializerIndex;
 
   private volatile long accessCounter;
   private BlockPriority priority;
@@ -80,6 +81,7 @@ class BucketEntry implements HBaseReferenceCounted {
    */
   private final RefCnt refCnt;
   final AtomicBoolean markedAsEvicted;
+  private final ByteBuffAllocator allocator;
 
   /**
    * Time this block was cached. Presumes we are created just before we are added to the cache.
@@ -87,16 +89,18 @@ class BucketEntry implements HBaseReferenceCounted {
   private final long cachedTime = System.nanoTime();
 
   BucketEntry(long offset, int length, long accessCounter, boolean inMemory) {
-    this(offset, length, accessCounter, inMemory, RefCnt.create());
+    this(offset, length, accessCounter, inMemory, RefCnt.create(), ByteBuffAllocator.HEAP);
   }
 
-  BucketEntry(long offset, int length, long accessCounter, boolean inMemory, RefCnt refCnt) {
+  BucketEntry(long offset, int length, long accessCounter, boolean inMemory, RefCnt refCnt,
+      ByteBuffAllocator allocator) {
     setOffset(offset);
     this.length = length;
     this.accessCounter = accessCounter;
     this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
     this.refCnt = refCnt;
     this.markedAsEvicted = new AtomicBoolean(false);
+    this.allocator = allocator;
   }
 
   long offset() {
@@ -120,11 +124,11 @@ class BucketEntry implements HBaseReferenceCounted {
   }
 
   CacheableDeserializer<Cacheable> deserializerReference() {
-    return CacheableDeserializerIdManager.getDeserializer(deserialiserIndex);
+    return CacheableDeserializerIdManager.getDeserializer(deserializerIndex);
   }
 
-  void setDeserialiserReference(CacheableDeserializer<Cacheable> deserializer) {
-    this.deserialiserIndex = (byte) deserializer.getDeserialiserIdentifier();
+  void setDeserializerReference(CacheableDeserializer<Cacheable> deserializer) {
+    this.deserializerIndex = (byte) deserializer.getDeserializerIdentifier();
   }
 
   long getAccessCounter() {
@@ -192,7 +196,7 @@ class BucketEntry implements HBaseReferenceCounted {
 
   Cacheable wrapAsCacheable(ByteBuffer[] buffers, MemoryType memoryType) throws IOException {
     ByteBuff buf = ByteBuff.wrap(buffers, this.refCnt);
-    return this.deserializerReference().deserialize(buf, true, memoryType);
+    return this.deserializerReference().deserialize(buf, allocator, memoryType);
   }
 
   interface BucketEntryHandler<T> {

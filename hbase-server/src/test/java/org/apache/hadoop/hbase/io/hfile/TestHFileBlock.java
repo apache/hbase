@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
 import static org.junit.Assert.*;
@@ -120,7 +121,7 @@ public class TestHFileBlock {
     this.includesMemstoreTS = includesMemstoreTS;
     this.includesTag = includesTag;
     this.useHeapAllocator = useHeapAllocator;
-    this.alloc = useHeapAllocator ? ByteBuffAllocator.HEAP : createOffHeapAlloc();
+    this.alloc = useHeapAllocator ? HEAP : createOffHeapAlloc();
     assertAllocator();
   }
 
@@ -524,16 +525,14 @@ public class TestHFileBlock {
             for (boolean reuseBuffer : new boolean[] { false, true }) {
               ByteBuffer serialized = ByteBuffer.allocate(blockFromHFile.getSerializedLength());
               blockFromHFile.serialize(serialized, true);
-              HFileBlock deserialized =
-                  (HFileBlock) blockFromHFile.getDeserializer().deserialize(
-                    new SingleByteBuff(serialized), reuseBuffer, MemoryType.EXCLUSIVE);
-              assertEquals(
-                "Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
+              HFileBlock deserialized = (HFileBlock) blockFromHFile.getDeserializer()
+                  .deserialize(new SingleByteBuff(serialized), HEAP, MemoryType.EXCLUSIVE);
+              assertEquals("Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
                 blockFromHFile, deserialized);
               // intentional reference comparison
               if (blockFromHFile != blockUnpacked) {
-                assertEquals("Deserializaed block cannot be unpacked correctly.",
-                  blockUnpacked, deserialized.unpack(meta, hbr));
+                assertEquals("Deserialized block cannot be unpacked correctly.", blockUnpacked,
+                  deserialized.unpack(meta, hbr));
               }
             }
             assertTrue(blockUnpacked.release());
@@ -916,7 +915,7 @@ public class TestHFileBlock {
                           .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                           .withChecksumType(ChecksumType.NULL).build();
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-          -1, 0, -1, meta, ByteBuffAllocator.HEAP);
+          -1, 0, -1, meta, HEAP);
       long byteBufferExpectedSize = ClassSize.align(ClassSize.estimateBase(
           new MultiByteBuff(buf).getClass(), true)
           + HConstants.HFILEBLOCK_HEADER_SIZE + size);

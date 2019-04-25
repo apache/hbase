@@ -77,18 +77,13 @@ public class TestCacheConfig {
     }
 
     @Override
-    public int getDeserialiserIdentifier() {
+    public int getDeserializerIdentifier() {
       return deserializedIdentifier;
     }
 
     @Override
-    public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType) throws IOException {
-      LOG.info("Deserialized " + b + ", reuse=" + reuse);
-      return cacheable;
-    }
-
-    @Override
-    public Cacheable deserialize(ByteBuff b) throws IOException {
+    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
+        throws IOException {
       LOG.info("Deserialized " + b);
       return cacheable;
     }
