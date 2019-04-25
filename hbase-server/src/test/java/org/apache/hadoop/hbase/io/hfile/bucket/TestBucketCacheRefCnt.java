@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -28,6 +27,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -65,8 +66,12 @@ public class TestBucketCacheRefCnt {
   }
 
   private static HFileBlock createBlock(int offset, int size) {
+    return createBlock(offset, size, ByteBuffAllocator.HEAP);
+  }
+
+  private static HFileBlock createBlock(int offset, int size, ByteBuffAllocator alloc) {
     return new HFileBlock(BlockType.DATA, size, size, -1, ByteBuffer.allocate(size),
-        HFileBlock.FILL_HEADER, offset, 52, size, CONTEXT, HEAP);
+        HFileBlock.FILL_HEADER, offset, 52, size, CONTEXT, alloc);
   }
 
   private static BlockCacheKey createKey(String hfileName, long offset) {
@@ -133,9 +138,10 @@ public class TestBucketCacheRefCnt {
 
   @Test
   public void testBlockInBackingMap() throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
     cache = create(1, 1000);
     try {
-      HFileBlock blk = createBlock(200, 1020);
+      HFileBlock blk = createBlock(200, 1020, alloc);
       BlockCacheKey key = createKey("testHFile-00", 200);
       cache.cacheBlock(key, blk);
       waitUntilFlushedToCache(key);
@@ -144,6 +150,7 @@ public class TestBucketCacheRefCnt {
       Cacheable block = cache.getBlock(key, false, false, false);
       assertTrue(block.getMemoryType() == MemoryType.SHARED);
       assertTrue(block instanceof HFileBlock);
+      assertTrue(((HFileBlock) block).getByteBuffAllocator() == alloc);
       assertEquals(2, block.refCnt());
 
       block.retain();
@@ -152,6 +159,7 @@ public class TestBucketCacheRefCnt {
       Cacheable newBlock = cache.getBlock(key, false, false, false);
       assertTrue(newBlock.getMemoryType() == MemoryType.SHARED);
       assertTrue(newBlock instanceof HFileBlock);
+      assertTrue(((HFileBlock) newBlock).getByteBuffAllocator() == alloc);
       assertEquals(4, newBlock.refCnt());
 
       // release the newBlock
@@ -173,6 +181,7 @@ public class TestBucketCacheRefCnt {
       newBlock = cache.getBlock(key, false, false, false);
       assertEquals(2, block.refCnt());
       assertEquals(2, newBlock.refCnt());
+      assertTrue(((HFileBlock) newBlock).getByteBuffAllocator() == alloc);
 
       // Release the block
       assertFalse(block.release());
@@ -188,17 +197,20 @@ public class TestBucketCacheRefCnt {
 
   @Test
   public void testInBucketCache() throws IOException {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
     cache = create(1, 1000);
     try {
-      HFileBlock blk = createBlock(200, 1020);
+      HFileBlock blk = createBlock(200, 1020, alloc);
       BlockCacheKey key = createKey("testHFile-00", 200);
       cache.cacheBlock(key, blk);
       assertTrue(blk.refCnt() == 1 || blk.refCnt() == 2);
 
       Cacheable block1 = cache.getBlock(key, false, false, false);
       assertTrue(block1.refCnt() >= 2);
+      assertTrue(((HFileBlock) block1).getByteBuffAllocator() == alloc);
 
       Cacheable block2 = cache.getBlock(key, false, false, false);
+      assertTrue(((HFileBlock) block2).getByteBuffAllocator() == alloc);
       assertTrue(block2.refCnt() >= 3);
 
       cache.evictBlock(key);
@@ -209,6 +221,7 @@ public class TestBucketCacheRefCnt {
       // Get key again
       Cacheable block3 = cache.getBlock(key, false, false, false);
       if (block3 != null) {
+        assertTrue(((HFileBlock) block3).getByteBuffAllocator() == alloc);
         assertTrue(block3.refCnt() >= 3);
         assertFalse(block3.release());
       }

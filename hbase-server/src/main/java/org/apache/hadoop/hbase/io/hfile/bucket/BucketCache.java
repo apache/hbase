@@ -53,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -1335,6 +1336,13 @@ public class BucketCache implements BlockCache, HeapSize {
       this.accessCounter = accessCounter;
     }
 
+    private ByteBuffAllocator getByteBuffAllocator() {
+      if (data instanceof HFileBlock) {
+        return ((HFileBlock) data).getByteBuffAllocator();
+      }
+      return ByteBuffAllocator.HEAP;
+    }
+
     public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator alloc,
         final LongAdder realCacheSize) throws IOException {
       int len = data.getSerializedLength();
@@ -1346,9 +1354,9 @@ public class BucketCache implements BlockCache, HeapSize {
       boolean succ = false;
       BucketEntry bucketEntry = null;
       try {
-        bucketEntry =
-            new BucketEntry(offset, len, accessCounter, inMemory, RefCnt.create(recycler));
-        bucketEntry.setDeserialiserReference(data.getDeserializer());
+        bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory, RefCnt.create(recycler),
+            getByteBuffAllocator());
+        bucketEntry.setDeserializerReference(data.getDeserializer());
         if (data instanceof HFileBlock) {
           // If an instance of HFileBlock, save on some allocations.
           HFileBlock block = (HFileBlock) data;
