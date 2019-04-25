@@ -103,6 +103,8 @@ public class TestFromClientSide3 {
 
   @Rule
   public TestName name = new TestName();
+  private Table table;
+  private TableName tableName;
 
   /**
    * @throws java.lang.Exception
@@ -122,7 +124,8 @@ public class TestFromClientSide3 {
 
   @Before
   public void setUp() throws Exception {
-    // Nothing to do.
+    tableName = TableName.valueOf(name.getMethodName());
+    table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
   }
 
   @After
@@ -130,6 +133,9 @@ public class TestFromClientSide3 {
     for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
+    }
+    if (table != null) {
+      table.close();
     }
   }
 
@@ -179,90 +185,76 @@ public class TestFromClientSide3 {
 
   @Test
   public void testScanAfterDeletingSpecifiedRow() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-            .build();
-    TEST_UTIL.getAdmin().createTable(desc);
     byte[] row = Bytes.toBytes("SpecifiedRow");
     byte[] value0 = Bytes.toBytes("value_0");
     byte[] value1 = Bytes.toBytes("value_1");
-    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-      Put put = new Put(row);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      t.put(put);
-      Delete d = new Delete(row);
-      t.delete(d);
-      put = new Put(row);
-      put.addColumn(FAMILY, null, value0);
-      t.put(put);
-      put = new Put(row);
-      put.addColumn(FAMILY, null, value1);
-      t.put(put);
-      List<Cell> cells = toList(t.getScanner(new Scan()));
-      assertEquals(1, cells.size());
-      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+    Put put = new Put(row);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+    Delete d = new Delete(row);
+    table.delete(d);
+    put = new Put(row);
+    put.addColumn(FAMILY, null, value0);
+    table.put(put);
+    put = new Put(row);
+    put.addColumn(FAMILY, null, value1);
+    table.put(put);
+    List<Cell> cells = toList(table.getScanner(new Scan()));
+    assertEquals(1, cells.size());
+    assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
 
-      cells = toList(t.getScanner(new Scan().addFamily(FAMILY)));
-      assertEquals(1, cells.size());
-      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+    cells = toList(table.getScanner(new Scan().addFamily(FAMILY)));
+    assertEquals(1, cells.size());
+    assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
 
-      cells = toList(t.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
-      assertEquals(0, cells.size());
+    cells = toList(table.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
+    assertEquals(0, cells.size());
 
-      TEST_UTIL.getAdmin().flush(tableName);
-      cells = toList(t.getScanner(new Scan()));
-      assertEquals(1, cells.size());
-      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+    TEST_UTIL.getAdmin().flush(tableName);
+    cells = toList(table.getScanner(new Scan()));
+    assertEquals(1, cells.size());
+    assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
 
-      cells = toList(t.getScanner(new Scan().addFamily(FAMILY)));
-      assertEquals(1, cells.size());
-      assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
+    cells = toList(table.getScanner(new Scan().addFamily(FAMILY)));
+    assertEquals(1, cells.size());
+    assertEquals("value_1", Bytes.toString(CellUtil.cloneValue(cells.get(0))));
 
-      cells = toList(t.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
-      assertEquals(0, cells.size());
-    }
+    cells = toList(table.getScanner(new Scan().addColumn(FAMILY, QUALIFIER)));
+    assertEquals(0, cells.size());
   }
 
   @Test
   public void testScanAfterDeletingSpecifiedRowV2() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-            .build();
-    TEST_UTIL.getAdmin().createTable(desc);
     byte[] row = Bytes.toBytes("SpecifiedRow");
     byte[] qual0 = Bytes.toBytes("qual0");
     byte[] qual1 = Bytes.toBytes("qual1");
-    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-      Delete d = new Delete(row);
-      t.delete(d);
+    Delete d = new Delete(row);
+    table.delete(d);
 
-      Put put = new Put(row);
-      put.addColumn(FAMILY, null, VALUE);
-      t.put(put);
+    Put put = new Put(row);
+    put.addColumn(FAMILY, null, VALUE);
+    table.put(put);
 
-      put = new Put(row);
-      put.addColumn(FAMILY, qual1, qual1);
-      t.put(put);
+    put = new Put(row);
+    put.addColumn(FAMILY, qual1, qual1);
+    table.put(put);
 
-      put = new Put(row);
-      put.addColumn(FAMILY, qual0, qual0);
-      t.put(put);
+    put = new Put(row);
+    put.addColumn(FAMILY, qual0, qual0);
+    table.put(put);
 
-      Result r = t.get(new Get(row));
-      assertEquals(3, r.size());
-      assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
-      assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
-      assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
+    Result r = table.get(new Get(row));
+    assertEquals(3, r.size());
+    assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+    assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
+    assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
 
-      TEST_UTIL.getAdmin().flush(tableName);
-      r = t.get(new Get(row));
-      assertEquals(3, r.size());
-      assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
-      assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
-      assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
-    }
+    TEST_UTIL.getAdmin().flush(tableName);
+    r = table.get(new Get(row));
+    assertEquals(3, r.size());
+    assertEquals("testValue", Bytes.toString(CellUtil.cloneValue(r.rawCells()[0])));
+    assertEquals("qual0", Bytes.toString(CellUtil.cloneValue(r.rawCells()[1])));
+    assertEquals("qual1", Bytes.toString(CellUtil.cloneValue(r.rawCells()[2])));
   }
 
   // override the config settings at the CF level and ensure priority
@@ -279,109 +271,106 @@ public class TestFromClientSide3 {
      */
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
-    Admin admin = TEST_UTIL.getAdmin();
-    ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
 
-    // Create 3 store files.
-    byte[] row = Bytes.toBytes(random.nextInt());
-    performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 100);
+      // Create 3 store files.
+      byte[] row = Bytes.toBytes(random.nextInt());
+      performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 100);
 
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      // Verify we have multiple store files.
-      HRegionLocation loc = locator.getRegionLocation(row, true);
-      byte[] regionName = loc.getRegionInfo().getRegionName();
-      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(loc.getServerName());
-      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
+      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        // Verify we have multiple store files.
+        HRegionLocation loc = locator.getRegionLocation(row, true);
+        byte[] regionName = loc.getRegionInfo().getRegionName();
+        AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(loc.getServerName());
+        assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
 
-      // Issue a compaction request
-      admin.compact(tableName);
+        // Issue a compaction request
+        admin.compact(tableName);
 
-      // poll wait for the compactions to happen
-      for (int i = 0; i < 10 * 1000 / 40; ++i) {
-        // The number of store files after compaction should be lesser.
-        loc = locator.getRegionLocation(row, true);
-        if (!loc.getRegionInfo().isOffline()) {
-          regionName = loc.getRegionInfo().getRegionName();
-          server = connection.getAdmin(loc.getServerName());
-          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
-            break;
+        // poll wait for the compactions to happen
+        for (int i = 0; i < 10 * 1000 / 40; ++i) {
+          // The number of store files after compaction should be lesser.
+          loc = locator.getRegionLocation(row, true);
+          if (!loc.getRegionInfo().isOffline()) {
+            regionName = loc.getRegionInfo().getRegionName();
+            server = connection.getAdmin(loc.getServerName());
+            if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
+              break;
+            }
           }
+          Thread.sleep(40);
         }
-        Thread.sleep(40);
-      }
-      // verify the compactions took place and that we didn't just time out
-      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
+        // verify the compactions took place and that we didn't just time out
+        assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
 
-      // change the compaction.min config option for this table to 5
-      LOG.info("hbase.hstore.compaction.min should now be 5");
-      HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
-      htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-      admin.modifyTable(htd);
-      LOG.info("alter status finished");
+        // change the compaction.min config option for this table to 5
+        LOG.info("hbase.hstore.compaction.min should now be 5");
+        HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
+        htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
+        admin.modifyTable(htd);
+        LOG.info("alter status finished");
 
-      // Create 3 more store files.
-      performMultiplePutAndFlush((HBaseAdmin) admin, hTable, row, FAMILY, 3, 10);
+        // Create 3 more store files.
+        performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 10);
 
-      // Issue a compaction request
-      admin.compact(tableName);
+        // Issue a compaction request
+        admin.compact(tableName);
 
-      // This time, the compaction request should not happen
-      Thread.sleep(10 * 1000);
-      loc = locator.getRegionLocation(row, true);
-      regionName = loc.getRegionInfo().getRegionName();
-      server = connection.getAdmin(loc.getServerName());
-      int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
-      assertTrue(sfCount > 1);
-
-      // change an individual CF's config option to 2 & online schema update
-      LOG.info("hbase.hstore.compaction.min should now be 2");
-      HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-      hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-      htd.modifyFamily(hcd);
-      admin.modifyTable(htd);
-      LOG.info("alter status finished");
-
-      // Issue a compaction request
-      admin.compact(tableName);
-
-      // poll wait for the compactions to happen
-      for (int i = 0; i < 10 * 1000 / 40; ++i) {
+        // This time, the compaction request should not happen
+        Thread.sleep(10 * 1000);
         loc = locator.getRegionLocation(row, true);
         regionName = loc.getRegionInfo().getRegionName();
-        try {
-          server = connection.getAdmin(loc.getServerName());
-          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
-            break;
+        server = connection.getAdmin(loc.getServerName());
+        int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
+        assertTrue(sfCount > 1);
+
+        // change an individual CF's config option to 2 & online schema update
+        LOG.info("hbase.hstore.compaction.min should now be 2");
+        HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+        hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
+        htd.modifyFamily(hcd);
+        admin.modifyTable(htd);
+        LOG.info("alter status finished");
+
+        // Issue a compaction request
+        admin.compact(tableName);
+
+        // poll wait for the compactions to happen
+        for (int i = 0; i < 10 * 1000 / 40; ++i) {
+          loc = locator.getRegionLocation(row, true);
+          regionName = loc.getRegionInfo().getRegionName();
+          try {
+            server = connection.getAdmin(loc.getServerName());
+            if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
+              break;
+            }
+          } catch (Exception e) {
+            LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
           }
-        } catch (Exception e) {
-          LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
+          Thread.sleep(40);
         }
-        Thread.sleep(40);
+
+        // verify the compaction took place and that we didn't just time out
+        assertTrue(ProtobufUtil.getStoreFiles(
+                server, regionName, FAMILY).size() < sfCount);
+
+        // Finally, ensure that we can remove a custom config value after we made it
+        LOG.info("Removing CF config value");
+        LOG.info("hbase.hstore.compaction.min should now be 5");
+        hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+        hcd.setValue("hbase.hstore.compaction.min", null);
+        htd.modifyFamily(hcd);
+        admin.modifyTable(htd);
+        LOG.info("alter status finished");
+        assertNull(table.getTableDescriptor().getFamily(FAMILY).getValue(
+                "hbase.hstore.compaction.min"));
       }
-
-      // verify the compaction took place and that we didn't just time out
-      assertTrue(ProtobufUtil.getStoreFiles(
-        server, regionName, FAMILY).size() < sfCount);
-
-      // Finally, ensure that we can remove a custom config value after we made it
-      LOG.info("Removing CF config value");
-      LOG.info("hbase.hstore.compaction.min should now be 5");
-      hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-      hcd.setValue("hbase.hstore.compaction.min", null);
-      htd.modifyFamily(hcd);
-      admin.modifyTable(htd);
-      LOG.info("alter status finished");
-      assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
-          "hbase.hstore.compaction.min"));
     }
   }
 
   @Test
   public void testHTableBatchWithEmptyPut ()throws Exception {
-      Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-          new byte[][] { FAMILY });
     try {
       List actions = (List) new ArrayList();
       Object[] results = new Object[2];
@@ -396,9 +385,6 @@ public class TestFromClientSide3 {
       table.batch(actions, results);
       fail("Empty Put should have failed the batch call");
     } catch (IllegalArgumentException iae) {
-
-    } finally {
-      table.close();
     }
   }
 
@@ -406,75 +392,62 @@ public class TestFromClientSide3 {
   // It used to trigger read lock's "Maximum lock count exceeded" Error.
   @Test
   public void testHTableWithLargeBatch() throws Exception {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        new byte[][] { FAMILY });
     int sixtyFourK = 64 * 1024;
-    try {
-      List actions = new ArrayList();
-      Object[] results = new Object[(sixtyFourK + 1) * 2];
+    List actions = new ArrayList();
+    Object[] results = new Object[(sixtyFourK + 1) * 2];
 
-      for (int i = 0; i < sixtyFourK + 1; i ++) {
-        Put put1 = new Put(ROW);
-        put1.addColumn(FAMILY, QUALIFIER, VALUE);
-        actions.add(put1);
+    for (int i = 0; i < sixtyFourK + 1; i ++) {
+      Put put1 = new Put(ROW);
+      put1.addColumn(FAMILY, QUALIFIER, VALUE);
+      actions.add(put1);
 
-        Put put2 = new Put(ANOTHERROW);
-        put2.addColumn(FAMILY, QUALIFIER, VALUE);
-        actions.add(put2);
-      }
-
-      table.batch(actions, results);
-    } finally {
-      table.close();
+      Put put2 = new Put(ANOTHERROW);
+      put2.addColumn(FAMILY, QUALIFIER, VALUE);
+      actions.add(put2);
     }
+
+    table.batch(actions, results);
   }
 
   @Test
   public void testBatchWithRowMutation() throws Exception {
     LOG.info("Starting testBatchWithRowMutation");
-    final TableName TABLENAME = TableName.valueOf("testBatchWithRowMutation");
-    try (Table t = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
-      byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b")
-      };
+    byte [][] QUALIFIERS = new byte [][] {
+      Bytes.toBytes("a"), Bytes.toBytes("b")
+    };
 
-      RowMutations arm = RowMutations.of(Collections.singletonList(
-        new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE)));
-      Object[] batchResult = new Object[1];
-      t.batch(Arrays.asList(arm), batchResult);
+    RowMutations arm = RowMutations.of(Collections.singletonList(
+      new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE)));
+    Object[] batchResult = new Object[1];
+    table.batch(Arrays.asList(arm), batchResult);
 
-      Get g = new Get(ROW);
-      Result r = t.get(g);
-      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+    Get g = new Get(ROW);
+    Result r = table.get(g);
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
 
-      arm = RowMutations.of(Arrays.asList(
-        new Put(ROW).addColumn(FAMILY, QUALIFIERS[1], VALUE),
-        new Delete(ROW).addColumns(FAMILY, QUALIFIERS[0])));
-      t.batch(Arrays.asList(arm), batchResult);
-      r = t.get(g);
-      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
-      assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+    arm = RowMutations.of(Arrays.asList(
+      new Put(ROW).addColumn(FAMILY, QUALIFIERS[1], VALUE),
+      new Delete(ROW).addColumns(FAMILY, QUALIFIERS[0])));
+    table.batch(Arrays.asList(arm), batchResult);
+    r = table.get(g);
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
+    assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
 
-      // Test that we get the correct remote exception for RowMutations from batch()
-      try {
-        arm = RowMutations.of(Collections.singletonList(
-          new Put(ROW).addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE)));
-        t.batch(Arrays.asList(arm), batchResult);
-        fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
-      } catch(RetriesExhaustedWithDetailsException e) {
-        String msg = e.getMessage();
-        assertTrue(msg.contains("NoSuchColumnFamilyException"));
-      }
+    // Test that we get the correct remote exception for RowMutations from batch()
+    try {
+      arm = RowMutations.of(Collections.singletonList(
+        new Put(ROW).addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE)));
+      table.batch(Arrays.asList(arm), batchResult);
+      fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
+    } catch(RetriesExhaustedWithDetailsException e) {
+      String msg = e.getMessage();
+      assertTrue(msg.contains("NoSuchColumnFamilyException"));
     }
   }
 
   @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
-      // Test with a single region table.
-      Table table = TEST_UTIL.createTable(
-          TableName.valueOf(name.getMethodName()),
-          new byte[][] { FAMILY });
-
+    // Test with a single region table.
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
 
@@ -491,9 +464,6 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsMethodSingleRegionMultipleGets() throws Exception {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(
-        name.getMethodName()), new byte[][] { FAMILY });
-
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
@@ -509,62 +479,51 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsBeforeGet() throws Exception {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        new byte[][] { FAMILY });
-    try {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
 
-      Get get = new Get(ROW);
+    Get get = new Get(ROW);
 
-      boolean exist = table.exists(get);
-      assertEquals(true, exist);
+    boolean exist = table.exists(get);
+    assertEquals(true, exist);
 
-      Result result = table.get(get);
-      assertEquals(false, result.isEmpty());
-      assertTrue(Bytes.equals(VALUE, result.getValue(FAMILY, QUALIFIER)));
-    } finally {
-      table.close();
-    }
+    Result result = table.get(get);
+    assertEquals(false, result.isEmpty());
+    assertTrue(Bytes.equals(VALUE, result.getValue(FAMILY, QUALIFIER)));
   }
 
   @Test
   public void testHTableExistsAllBeforeGet() throws Exception {
     final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
-    Table table = TEST_UTIL.createTable(
-        TableName.valueOf(name.getMethodName()), new byte[][] { FAMILY });
-    try {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-      put = new Put(ROW2);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
+    put = new Put(ROW2);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(put);
 
-      Get get = new Get(ROW);
-      Get get2 = new Get(ROW2);
-      ArrayList<Get> getList = new ArrayList(2);
-      getList.add(get);
-      getList.add(get2);
+    Get get = new Get(ROW);
+    Get get2 = new Get(ROW2);
+    ArrayList<Get> getList = new ArrayList(2);
+    getList.add(get);
+    getList.add(get2);
 
-      boolean[] exists = table.existsAll(getList);
-      assertEquals(true, exists[0]);
-      assertEquals(true, exists[1]);
+    boolean[] exists = table.existsAll(getList);
+    assertEquals(true, exists[0]);
+    assertEquals(true, exists[1]);
 
-      Result[] result = table.get(getList);
-      assertEquals(false, result[0].isEmpty());
-      assertTrue(Bytes.equals(VALUE, result[0].getValue(FAMILY, QUALIFIER)));
-      assertEquals(false, result[1].isEmpty());
-      assertTrue(Bytes.equals(VALUE, result[1].getValue(FAMILY, QUALIFIER)));
-    } finally {
-      table.close();
-    }
+    Result[] result = table.get(getList);
+    assertEquals(false, result[0].isEmpty());
+    assertTrue(Bytes.equals(VALUE, result[0].getValue(FAMILY, QUALIFIER)));
+    assertEquals(false, result[1].isEmpty());
+    assertTrue(Bytes.equals(VALUE, result[1].getValue(FAMILY, QUALIFIER)));
   }
 
   @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
-    Table table = TEST_UTIL.createTable(
+    TEST_UTIL.deleteTable(tableName);
+    table = TEST_UTIL.createTable(
       TableName.valueOf(name.getMethodName()), new byte[][] { FAMILY },
       1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
@@ -583,7 +542,8 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
-    Table table = TEST_UTIL.createTable(
+    TEST_UTIL.deleteTable(tableName);
+    table = TEST_UTIL.createTable(
       TableName.valueOf(name.getMethodName()),
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
@@ -633,12 +593,6 @@ public class TestFromClientSide3 {
   @Test
   public void testGetEmptyRow() throws Exception {
     //Create a table and put in 1 row
-    Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    admin.createTable(desc);
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
-
     Put put = new Put(ROW_BYTES);
     put.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(put);
@@ -656,7 +610,6 @@ public class TestFromClientSide3 {
     assertTrue(res.isEmpty() == true);
     res = table.get(new Get(ROW_BYTES));
     assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
-    table.close();
   }
 
   @Test
@@ -667,10 +620,9 @@ public class TestFromClientSide3 {
 
   @Test
   public void testPutWithPreBatchMutate() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.deleteTable(tableName);
     testPreBatchMutate(tableName, () -> {
-      try {
-        Table t = TEST_UTIL.getConnection().getTable(tableName);
+      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         t.put(put);
@@ -682,11 +634,10 @@ public class TestFromClientSide3 {
 
   @Test
   public void testRowMutationsWithPreBatchMutate() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.deleteTable(tableName);
     testPreBatchMutate(tableName, () -> {
-      try {
+      try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
         RowMutations rm = new RowMutations(ROW, 1);
-        Table t = TEST_UTIL.getConnection().getTable(tableName);
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         rm.add(put);
@@ -709,11 +660,12 @@ public class TestFromClientSide3 {
       try {
         // waiting for update.
         TimeUnit.SECONDS.sleep(3);
-        Table t = TEST_UTIL.getConnection().getTable(tableName);
-        Scan scan = new Scan();
-        try (ResultScanner scanner = t.getScanner(scan)) {
-          for (Result r : scanner) {
-            cells.addAll(Arrays.asList(r.rawCells()));
+        try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
+          Scan scan = new Scan();
+          try (ResultScanner scanner = t.getScanner(scan)) {
+            for (Result r : scanner) {
+              cells.addAll(Arrays.asList(r.rawCells()));
+            }
           }
         }
       } catch (IOException | InterruptedException ex) {
@@ -724,12 +676,11 @@ public class TestFromClientSide3 {
     service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
     assertEquals("The write is blocking by RegionObserver#postBatchMutate"
       + ", so the data is invisible to reader", 0, cells.size());
-    TEST_UTIL.deleteTable(tableName);
   }
 
   @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.deleteTable(tableName);
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
@@ -782,7 +733,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testMultiRowMutations() throws Exception, Throwable {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.deleteTable(tableName);
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
     desc.addCoprocessor(WaitingForMultiMutationsObserver.class.getName());
@@ -879,13 +830,6 @@ public class TestFromClientSide3 {
    */
   @Test
   public void testMVCCUsingMVCCPreAssign() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    htd.addFamily(fam);
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
-    Table table = admin.getConnection().getTable(TableName.valueOf(name.getMethodName()));
     //put two row first to init the scanner
     Put put = new Put(Bytes.toBytes("0"));
     put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes("0"));
@@ -917,57 +861,54 @@ public class TestFromClientSide3 {
     }
     // the new scanner should see all rows
     assertEquals(1001, rowNum);
-
-
   }
 
   @Test
   public void testPutThenGetWithMultipleThreads() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int THREAD_NUM = 20;
     final int ROUND_NUM = 10;
     for (int round = 0; round < ROUND_NUM; round++) {
+      TEST_UTIL.deleteTable(tableName);
       ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
       final AtomicInteger successCnt = new AtomicInteger(0);
-      Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-      for (int i = 0; i < THREAD_NUM; i++) {
-        final int index = i;
-        Thread t = new Thread(new Runnable() {
+      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+        for (int i = 0; i < THREAD_NUM; i++) {
+          final int index = i;
+          Thread t = new Thread(new Runnable() {
 
-          @Override
-          public void run() {
-            final byte[] row = Bytes.toBytes("row-" + index);
-            final byte[] value = Bytes.toBytes("v" + index);
-            try {
-              Put put = new Put(row);
-              put.addColumn(FAMILY, QUALIFIER, value);
-              ht.put(put);
-              Get get = new Get(row);
-              Result result = ht.get(get);
-              byte[] returnedValue = result.getValue(FAMILY, QUALIFIER);
-              if (Bytes.equals(value, returnedValue)) {
-                successCnt.getAndIncrement();
-              } else {
-                LOG.error("Should be equal but not, original value: " + Bytes.toString(value)
-                    + ", returned value: "
-                    + (returnedValue == null ? "null" : Bytes.toString(returnedValue)));
+            @Override
+            public void run() {
+              final byte[] row = Bytes.toBytes("row-" + index);
+              final byte[] value = Bytes.toBytes("v" + index);
+              try {
+                Put put = new Put(row);
+                put.addColumn(FAMILY, QUALIFIER, value);
+                ht.put(put);
+                Get get = new Get(row);
+                Result result = ht.get(get);
+                byte[] returnedValue = result.getValue(FAMILY, QUALIFIER);
+                if (Bytes.equals(value, returnedValue)) {
+                  successCnt.getAndIncrement();
+                } else {
+                  LOG.error("Should be equal but not, original value: " + Bytes.toString(value)
+                          + ", returned value: "
+                          + (returnedValue == null ? "null" : Bytes.toString(returnedValue)));
+                }
+              } catch (Throwable e) {
+                // do nothing
               }
-            } catch (Throwable e) {
-              // do nothing
             }
-          }
-        });
-        threads.add(t);
+          });
+          threads.add(t);
+        }
+        for (Thread t : threads) {
+          t.start();
+        }
+        for (Thread t : threads) {
+          t.join();
+        }
+        assertEquals("Not equal in round " + round, THREAD_NUM, successCnt.get());
       }
-      for (Thread t : threads) {
-        t.start();
-      }
-      for (Thread t : threads) {
-        t.join();
-      }
-      assertEquals("Not equal in round " + round, THREAD_NUM, successCnt.get());
-      ht.close();
-      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -1050,13 +991,6 @@ public class TestFromClientSide3 {
 
   @Test
   public void testScanWithBatchSizeReturnIncompleteCells() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
-        .build();
-
-    Table table = TEST_UTIL.createTable(hd, null);
-
     Put put = new Put(ROW);
     put.addColumn(FAMILY, Bytes.toBytes(0), generateHugeValue(3 * 1024 * 1024));
     table.put(put);
