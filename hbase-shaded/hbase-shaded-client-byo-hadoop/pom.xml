@@ -58,4 +58,62 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+      <!-- These hadoop profiles should be derived from those in the hbase-client
+           module. Essentially, you must list the same hadoop-* dependencies
+           so provided dependencies will not be transitively included.
+      -->
+      <profile>
+        <id>hadoop-2.0</id>
+        <activation>
+          <property>
+              <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+              <!--h2--><name>!hadoop.profile</name>
+          </property>
+        </activation>
+        <dependencies>
+          <dependency>
+             <groupId>com.github.stephenc.findbugs</groupId>
+             <artifactId>findbugs-annotations</artifactId>
+             <optional>true</optional>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
+          </dependency>
+        </dependencies>
+      </profile>
+
+      <!--
+        profile for building against Hadoop 3.0.x. Activate using:
+         mvn -Dhadoop.profile=3.0
+      -->
+      <profile>
+        <id>hadoop-3.0</id>
+        <activation>
+          <property>
+            <name>hadoop.profile</name>
+            <value>3.0</value>
+          </property>
+        </activation>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
+          </dependency>
+        </dependencies>
+      </profile>
+    </profiles>
 </project>
