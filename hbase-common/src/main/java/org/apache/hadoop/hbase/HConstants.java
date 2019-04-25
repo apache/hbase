@@ -1336,33 +1336,72 @@ public final class HConstants {
    */
   /**
    * Config for enabling/disabling the fast fail mode.
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
    */
+  @Deprecated
   public static final String HBASE_CLIENT_FAST_FAIL_MODE_ENABLED =
-      "hbase.client.fast.fail.mode.enabled";
+    "hbase.client.fast.fail.mode.enabled";
 
-  public static final boolean HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT =
-      false;
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final boolean HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT = false;
 
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
   public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
-      "hbase.client.fastfail.threshold";
+    "hbase.client.fastfail.threshold";
 
-  public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
-      60000;
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT = 60000;
 
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
   public static final String HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS =
-          "hbase.client.failure.map.cleanup.interval";
+    "hbase.client.failure.map.cleanup.interval";
 
-  public static final long HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT =
-          600000;
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final long HBASE_CLIENT_FAILURE_MAP_CLEANUP_INTERVAL_MS_DEFAULT = 600000;
 
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
   public static final String HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS =
-      "hbase.client.fast.fail.cleanup.duration";
+    "hbase.client.fast.fail.cleanup.duration";
 
-  public static final long HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT =
-      600000;
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final long HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT = 600000;
 
+  /**
+   * @deprecated since 2.3.0, and in 3.0.0 the actually implementation will be removed so config
+   *             this value will have no effect. The constants itself will be removed in 4.0.0.
+   */
+  @Deprecated
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
-      "hbase.client.fast.fail.interceptor.impl";
+    "hbase.client.fast.fail.interceptor.impl";
 
   public static final String HBASE_SPLIT_WAL_COORDINATED_BY_ZK = "hbase.split.wal.zk.coordinated";
 
