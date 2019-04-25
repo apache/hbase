@@ -39,11 +39,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.AsyncTable;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ScanPerNextResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -58,10 +63,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -75,11 +80,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * the client when the server has exceeded the time limit during the processing of the scan. When
  * the time limit is reached, the server will return to the Client whatever Results it has
  * accumulated (potentially empty).
- * <p/>
- * TODO: with async client based sync client, we will fetch result in background which makes this
- * test broken. We need to find another way to implement the test.
  */
-@Ignore
 @Category(MediumTests.class)
 public class TestScannerHeartbeatMessages {
 
@@ -89,7 +90,7 @@ public class TestScannerHeartbeatMessages {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static Table TABLE = null;
+  private static AsyncConnection CONN;
 
   /**
    * Table configuration
@@ -141,16 +142,19 @@ public class TestScannerHeartbeatMessages {
     conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 1);
     TEST_UTIL.startMiniCluster(1);
 
-    TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
+    createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
+
+    Configuration newConf = new Configuration(conf);
+    newConf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
+    newConf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, CLIENT_TIMEOUT);
+    CONN = ConnectionFactory.createAsyncConnection(newConf).get();
   }
 
-  static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
-      byte[][] qualifiers, byte[] cellValue) throws IOException {
+  static void createTestTable(TableName name, byte[][] rows, byte[][] families, byte[][] qualifiers,
+      byte[] cellValue) throws IOException {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
-    ht.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
-    return ht;
   }
 
   /**
@@ -177,6 +181,7 @@ public class TestScannerHeartbeatMessages {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -311,26 +316,28 @@ public class TestScannerHeartbeatMessages {
         scan.setMaxResultSize(Long.MAX_VALUE);
         scan.setCaching(Integer.MAX_VALUE);
         scan.setFilter(new SparseCellFilter());
-        ResultScanner scanner = TABLE.getScanner(scan);
-        int num = 0;
-        while (scanner.next() != null) {
-          num++;
+        try (ScanPerNextResultScanner scanner =
+          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+          int num = 0;
+          while (scanner.next() != null) {
+            num++;
+          }
+          assertEquals(1, num);
         }
-        assertEquals(1, num);
-        scanner.close();
 
         scan = new Scan();
         scan.setMaxResultSize(Long.MAX_VALUE);
         scan.setCaching(Integer.MAX_VALUE);
         scan.setFilter(new SparseCellFilter());
         scan.setAllowPartialResults(true);
-        scanner = TABLE.getScanner(scan);
-        num = 0;
-        while (scanner.next() != null) {
-          num++;
+        try (ScanPerNextResultScanner scanner =
+          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+          int num = 0;
+          while (scanner.next() != null) {
+            num++;
+          }
+          assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, num);
         }
-        assertEquals(NUM_FAMILIES * NUM_QUALIFIERS, num);
-        scanner.close();
 
         return null;
       }
@@ -349,13 +356,14 @@ public class TestScannerHeartbeatMessages {
         scan.setMaxResultSize(Long.MAX_VALUE);
         scan.setCaching(Integer.MAX_VALUE);
         scan.setFilter(new SparseRowFilter());
-        ResultScanner scanner = TABLE.getScanner(scan);
-        int num = 0;
-        while (scanner.next() != null) {
-          num++;
+        try (ScanPerNextResultScanner scanner =
+          new ScanPerNextResultScanner(CONN.getTable(TABLE_NAME), scan)) {
+          int num = 0;
+          while (scanner.next() != null) {
+            num++;
+          }
+          assertEquals(1, num);
         }
-        assertEquals(1, num);
-        scanner.close();
 
         return null;
       }
@@ -374,8 +382,9 @@ public class TestScannerHeartbeatMessages {
   private void testEquivalenceOfScanWithHeartbeats(final Scan scan, int rowSleepTime,
       int cfSleepTime, boolean sleepBeforeCf) throws Exception {
     disableSleeping();
-    final ResultScanner scanner = TABLE.getScanner(scan);
-    final ResultScanner scannerWithHeartbeats = TABLE.getScanner(scan);
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
+    final ResultScanner scanner = new ScanPerNextResultScanner(table, scan);
+    final ResultScanner scannerWithHeartbeats = new ScanPerNextResultScanner(table, scan);
 
     Result r1 = null;
     Result r2 = null;
