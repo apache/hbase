@@ -30,7 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  *
  * On receiving such an exception. The ConnectionManager will skip all
  * retries and fast fail the operation.
+ * @deprecated since 2.3.0, and will be removed in 4.0.0.
  */
+@Deprecated
 @InterfaceAudience.Public
 public class PreemptiveFastFailException extends ConnectException {
   private static final long serialVersionUID = 7129103682617007177L;
