@@ -105,7 +105,7 @@ final class BucketProtoUtils {
     return BucketCacheProtos.BucketEntry.newBuilder()
         .setOffset(entry.offset())
         .setLength(entry.getLength())
-        .setDeserialiserIndex(entry.deserialiserIndex)
+        .setDeserialiserIndex(entry.deserializerIndex)
         .setAccessCounter(entry.getAccessCounter())
         .setPriority(toPB(entry.getPriority()))
         .build();
@@ -146,8 +146,8 @@ final class BucketProtoUtils {
       }
       // Convert it to the identifier for the deserializer that we have in this runtime
       if (deserializerClass.equals(HFileBlock.BlockDeserializer.class.getName())) {
-        int actualIndex = HFileBlock.BLOCK_DESERIALIZER.getDeserialiserIdentifier();
-        value.deserialiserIndex = (byte) actualIndex;
+        int actualIndex = HFileBlock.BLOCK_DESERIALIZER.getDeserializerIdentifier();
+        value.deserializerIndex = (byte) actualIndex;
       } else {
         // We could make this more plugable, but right now HFileBlock is the only implementation
         // of Cacheable outside of tests, so this might not ever matter.
