@@ -697,6 +697,7 @@ public class HttpServer implements FilterContainer {
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output");
     } else {
+      addServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +
         "not specified. Disabling /prof endpoint.");
     }
