@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
@@ -79,7 +78,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
@@ -539,9 +537,9 @@ public class RegionCoprocessorHost
    */
   public InternalScanner preCompactScannerOpen(final Store store,
       final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
-      final CompactionRequest request, final long readPoint, final User user) throws IOException {
+      final CompactionRequest request, final long readPoint) throws IOException {
     return execOperationWithResult(null,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>(user) {
+        coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -561,8 +559,8 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public boolean preCompactSelection(final Store store, final List<StoreFile> candidates,
-      final CompactionRequest request, final User user) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+      final CompactionRequest request) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -579,9 +577,9 @@ public class RegionCoprocessorHost
    * @param request custom compaction
    */
   public void postCompactSelection(final Store store, final ImmutableList<StoreFile> selected,
-      final CompactionRequest request, final User user) {
+      final CompactionRequest request) {
     try {
-      execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+      execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
         @Override
         public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
             throws IOException {
@@ -602,10 +600,9 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public InternalScanner preCompact(final Store store, final InternalScanner scanner,
-      final ScanType scanType, final CompactionRequest request, final User user)
-      throws IOException {
+      final ScanType scanType, final CompactionRequest request) throws IOException {
     return execOperationWithResult(false, scanner,
-        coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>(user) {
+        coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -622,8 +619,8 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public void postCompact(final Store store, final StoreFile resultFile,
-      final CompactionRequest request, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+      final CompactionRequest request) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -712,8 +709,8 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   // TODO: Deprecate this
-  public void preSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void preSplit() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -726,8 +723,8 @@ public class RegionCoprocessorHost
    * Invoked just before a split
    * @throws IOException
    */
-  public void preSplit(final byte[] splitRow, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void preSplit(final byte[] splitRow) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -742,8 +739,8 @@ public class RegionCoprocessorHost
    * @param r the new right-hand daughter region
    * @throws IOException
    */
-  public void postSplit(final Region l, final Region r, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void postSplit(final Region l, final Region r) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -753,8 +750,8 @@ public class RegionCoprocessorHost
   }
 
   public boolean preSplitBeforePONR(final byte[] splitKey,
-      final List<Mutation> metaEntries, final User user) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+      final List<Mutation> metaEntries) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -763,8 +760,8 @@ public class RegionCoprocessorHost
     });
   }
 
-  public void preSplitAfterPONR(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void preSplitAfterPONR() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -777,8 +774,8 @@ public class RegionCoprocessorHost
    * Invoked just before the rollback of a failed split is started
    * @throws IOException
    */
-  public void preRollBackSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void preRollBackSplit() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -791,8 +788,8 @@ public class RegionCoprocessorHost
    * Invoked just after the rollback of a failed split is done
    * @throws IOException
    */
-  public void postRollBackSplit(final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
+  public void postRollBackSplit() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
@@ -1693,14 +1690,6 @@ public class RegionCoprocessorHost
 
   private static abstract class CoprocessorOperation
       extends ObserverContext<RegionCoprocessorEnvironment> {
-    public CoprocessorOperation() {
-      this(RpcServer.getRequestUser());
-    }
-
-    public CoprocessorOperation(User user) {
-      super(user);
-    }
-
     public abstract void call(Coprocessor observer,
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
     public abstract boolean hasCall(Coprocessor observer);
@@ -1708,13 +1697,6 @@ public class RegionCoprocessorHost
   }
 
   private static abstract class RegionOperation extends CoprocessorOperation {
-    public RegionOperation() {
-    }
-
-    public RegionOperation(User user) {
-      super(user);
-    }
-
     public abstract void call(RegionObserver observer,
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
 
@@ -1731,13 +1713,6 @@ public class RegionCoprocessorHost
   }
 
   private static abstract class RegionOperationWithResult<T> extends RegionOperation {
-    public RegionOperationWithResult() {
-    }
-
-    public RegionOperationWithResult(User user) {
-      super(user);
-    }
-
     private T result = null;
     public void setResult(final T result) { this.result = result; }
     public T getResult() { return this.result; }

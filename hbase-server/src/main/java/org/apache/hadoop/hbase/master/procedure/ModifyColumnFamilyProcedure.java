@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyColumnFamilyState;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * The procedure to modify a column family from an existing table.
@@ -54,7 +55,7 @@ public class ModifyColumnFamilyProcedure
   private TableName tableName;
   private HTableDescriptor unmodifiedHTableDescriptor;
   private HColumnDescriptor cfDescriptor;
-  private User user;
+  private UserGroupInformation user;
 
   private Boolean traceEnabled;
 
@@ -67,8 +68,8 @@ public class ModifyColumnFamilyProcedure
       final HColumnDescriptor cfDescriptor) {
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
+    this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
     this.unmodifiedHTableDescriptor = null;
     this.traceEnabled = null;
   }
@@ -355,16 +356,22 @@ public class ModifyColumnFamilyProcedure
       final ModifyColumnFamilyState state) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      switch (state) {
-        case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
-          cpHost.preModifyColumnHandler(tableName, cfDescriptor, user);
-          break;
-        case MODIFY_COLUMN_FAMILY_POST_OPERATION:
-          cpHost.postModifyColumnHandler(tableName, cfDescriptor, user);
-          break;
-        default:
-          throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      }
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          switch (state) {
+          case MODIFY_COLUMN_FAMILY_PRE_OPERATION:
+            cpHost.preModifyColumnHandler(tableName, cfDescriptor);
+            break;
+          case MODIFY_COLUMN_FAMILY_POST_OPERATION:
+            cpHost.postModifyColumnHandler(tableName, cfDescriptor);
+            break;
+          default:
+            throw new UnsupportedOperationException(this + " unhandled state=" + state);
+          }
+          return null;
+        }
+      });
     }
   }
 }

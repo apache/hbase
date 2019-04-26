@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,8 +53,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
@@ -62,7 +63,7 @@ public class DeleteTableProcedure
   private static final Log LOG = LogFactory.getLog(DeleteTableProcedure.class);
 
   private List<HRegionInfo> regions;
-  private User user;
+  private UserGroupInformation user;
   private TableName tableName;
 
   // used for compatibility with old clients
@@ -80,8 +81,8 @@ public class DeleteTableProcedure
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
       final ProcedurePrepareLatch syncLatch) {
     this.tableName = tableName;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
+    this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
 
     // used for compatibility with clients without procedures
     // they need a sync TableNotFoundException, TableNotDisabledException, ...
@@ -262,7 +263,13 @@ public class DeleteTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
-      cpHost.preDeleteTableHandler(tableName, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.preDeleteTableHandler(tableName);
+          return null;
+        }
+      });
     }
     return true;
   }
@@ -274,7 +281,13 @@ public class DeleteTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
-      cpHost.postDeleteTableHandler(tableName, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.postDeleteTableHandler(tableName);
+          return null;
+        }
+      });
     }
   }
 

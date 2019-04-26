@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -33,27 +35,28 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class MasterProcedureUtil {
+  private static final Log LOG = LogFactory.getLog(MasterProcedureUtil.class);
 
   private MasterProcedureUtil() {}
 
-  public static UserInformation toProtoUserInfo(User user) {
+  public static UserInformation toProtoUserInfo(UserGroupInformation ugi) {
     UserInformation.Builder userInfoPB = UserInformation.newBuilder();
-    userInfoPB.setEffectiveUser(user.getName());
-    if (user.getUGI().getRealUser() != null) {
-      userInfoPB.setRealUser(user.getUGI().getRealUser().getUserName());
+    userInfoPB.setEffectiveUser(ugi.getUserName());
+    if (ugi.getRealUser() != null) {
+      userInfoPB.setRealUser(ugi.getRealUser().getUserName());
     }
     return userInfoPB.build();
   }
 
-  public static User toUserInfo(UserInformation userInfoProto) {
+  public static UserGroupInformation toUserInfo(UserInformation userInfoProto) {
     if (userInfoProto.hasEffectiveUser()) {
       String effectiveUser = userInfoProto.getEffectiveUser();
       if (userInfoProto.hasRealUser()) {
         String realUser = userInfoProto.getRealUser();
         UserGroupInformation realUserUgi = UserGroupInformation.createRemoteUser(realUser);
-        return User.create(UserGroupInformation.createProxyUser(effectiveUser, realUserUgi));
+        return UserGroupInformation.createProxyUser(effectiveUser, realUserUgi);
       }
-      return User.create(UserGroupInformation.createRemoteUser(effectiveUser));
+      return UserGroupInformation.createRemoteUser(effectiveUser);
     }
     return null;
   }

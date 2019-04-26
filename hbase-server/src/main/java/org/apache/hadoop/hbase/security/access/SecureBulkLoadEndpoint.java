@@ -198,20 +198,24 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   @Override
-  public void prepareBulkLoad(RpcController controller, PrepareBulkLoadRequest request,
-      RpcCallback<PrepareBulkLoadResponse> done) {
+  public void prepareBulkLoad(RpcController controller,
+                                                 PrepareBulkLoadRequest request,
+                                                 RpcCallback<PrepareBulkLoadResponse> done){
     try {
       List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
-      if (bulkLoadObservers != null) {
+
+      if(bulkLoadObservers != null) {
         ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>(RpcServer.getRequestUser());
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
         ctx.prepare(env);
-        for (BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
           bulkLoadObserver.prePrepareBulkLoad(ctx, request);
         }
       }
-      String bulkToken = createStagingDir(baseStagingDir, getActiveUser(),
-        ProtobufUtil.toTableName(request.getTableName())).toString();
+
+      String bulkToken = createStagingDir(baseStagingDir,
+          getActiveUser(), ProtobufUtil.toTableName(request.getTableName())).toString();
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -220,18 +224,22 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   @Override
-  public void cleanupBulkLoad(RpcController controller, CleanupBulkLoadRequest request,
-      RpcCallback<CleanupBulkLoadResponse> done) {
+  public void cleanupBulkLoad(RpcController controller,
+                              CleanupBulkLoadRequest request,
+                              RpcCallback<CleanupBulkLoadResponse> done) {
     try {
       List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
-      if (bulkLoadObservers != null) {
+
+      if(bulkLoadObservers != null) {
         ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>(RpcServer.getRequestUser());
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
         ctx.prepare(env);
-        for (BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
           bulkLoadObserver.preCleanupBulkLoad(ctx, request);
         }
       }
+
       Path path = new Path(request.getBulkToken());
       if (!fs.delete(path, true)) {
         if (fs.exists(path)) {
@@ -259,13 +267,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   interface Consumer<T> {
     void accept(T t);
   }
-
   private static Consumer<Region> fsCreatedListener;
 
   @VisibleForTesting
   static void setFsCreatedListener(Consumer<Region> listener) {
     fsCreatedListener = listener;
   }
+
 
   private void incrementUgiReference(UserGroupInformation ugi) {
     synchronized (ugiReferenceCounter) {

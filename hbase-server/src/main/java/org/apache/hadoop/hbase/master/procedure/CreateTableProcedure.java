@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,11 +48,11 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.collect.Lists;
 
@@ -68,7 +69,7 @@ public class CreateTableProcedure
 
   private HTableDescriptor hTableDescriptor;
   private List<HRegionInfo> newRegions;
-  private User user;
+  private UserGroupInformation user;
 
   public CreateTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -85,8 +86,8 @@ public class CreateTableProcedure
       final ProcedurePrepareLatch syncLatch) {
     this.hTableDescriptor = hTableDescriptor;
     this.newRegions = newRegions != null ? Lists.newArrayList(newRegions) : null;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
+    this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
 
     // used for compatibility with clients without procedures
     // they need a sync TableExistsException
@@ -326,7 +327,13 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = newRegions == null ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.preCreateTableHandler(hTableDescriptor, regions, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.preCreateTableHandler(hTableDescriptor, regions);
+          return null;
+        }
+      });
     }
   }
 
@@ -336,7 +343,13 @@ public class CreateTableProcedure
     if (cpHost != null) {
       final HRegionInfo[] regions = (newRegions == null) ? null :
         newRegions.toArray(new HRegionInfo[newRegions.size()]);
-      cpHost.postCreateTableHandler(hTableDescriptor, regions, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.postCreateTableHandler(hTableDescriptor, regions);
+          return null;
+        }
+      });
     }
   }
 

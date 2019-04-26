@@ -98,9 +98,8 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public boolean preMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+  public boolean preMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -109,9 +108,9 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void postMerge(final HRegion regionA, final HRegion regionB, final HRegion mergedRegion,
-      final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+  public void postMerge(final HRegion regionA, final HRegion regionB, final HRegion mergedRegion)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -121,9 +120,8 @@ public class RegionServerCoprocessorHost extends
   }
 
   public boolean preMergeCommit(final HRegion regionA, final HRegion regionB,
-      final @MetaMutationAnnotation List<Mutation> metaEntries, final User user)
-      throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      final @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -133,8 +131,8 @@ public class RegionServerCoprocessorHost extends
   }
 
   public void postMergeCommit(final HRegion regionA, final HRegion regionB,
-      final HRegion mergedRegion, final User user) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      final HRegion mergedRegion) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -143,9 +141,8 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void preRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+  public void preRollBackMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -154,9 +151,8 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void postRollBackMerge(final HRegion regionA, final HRegion regionB, final User user)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+  public void postRollBackMerge(final HRegion regionA, final HRegion regionB) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
@@ -231,11 +227,6 @@ public class RegionServerCoprocessorHost extends
   private static abstract class CoprocessorOperation
       extends ObserverContext<RegionServerCoprocessorEnvironment> {
     public CoprocessorOperation() {
-      this(RpcServer.getRequestUser());
-    }
-
-    public CoprocessorOperation(User user) {
-      super(user);
     }
 
     public abstract void call(RegionServerObserver oserver,

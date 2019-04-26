@@ -22,10 +22,10 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 @InterfaceAudience.Private
 public class TruncateTableProcedure
@@ -52,7 +52,7 @@ public class TruncateTableProcedure
 
   private boolean preserveSplits;
   private List<HRegionInfo> regions;
-  private User user;
+  private UserGroupInformation user;
   private HTableDescriptor hTableDescriptor;
   private TableName tableName;
 
@@ -64,8 +64,8 @@ public class TruncateTableProcedure
       boolean preserveSplits) {
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
-    this.user = env.getRequestUser();
-    this.setOwner(this.user.getShortName());
+    this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
   }
 
   @Override
@@ -273,7 +273,13 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      cpHost.preTruncateTableHandler(tableName, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.preTruncateTableHandler(tableName);
+          return null;
+        }
+      });
     }
     return true;
   }
@@ -283,7 +289,13 @@ public class TruncateTableProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
-      cpHost.postTruncateTableHandler(tableName, user);
+      user.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          cpHost.postTruncateTableHandler(tableName);
+          return null;
+        }
+      });
     }
   }
 
