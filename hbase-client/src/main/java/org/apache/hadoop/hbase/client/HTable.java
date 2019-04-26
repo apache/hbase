@@ -1366,7 +1366,7 @@ public class HTable implements HTableInterface, RegionLocator {
     throws IOException {
     final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
     PayloadCarryingServerCallable<MultiResponse> callable =
-      new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
+      new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), row,
         rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
@@ -1391,7 +1391,7 @@ public class HTable implements HTableInterface, RegionLocator {
                 throw (IOException)ex;
               }
               throw new IOException("Failed to checkAndMutate row: "+
-                                    Bytes.toStringBinary(rm.getRow()), ex);
+                Bytes.toStringBinary(row), ex);
             }
             return ResponseConverter.getResults(request, response, controller.cellScanner());
           } catch (ServiceException se) {
