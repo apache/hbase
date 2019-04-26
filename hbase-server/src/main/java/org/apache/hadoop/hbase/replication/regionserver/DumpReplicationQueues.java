@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -205,9 +204,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
   }
 
   private int dumpReplicationQueues(DumpOptions opts) throws Exception {
-
     Configuration conf = getConf();
-    HBaseAdmin.available(conf);
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 

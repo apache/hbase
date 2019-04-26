@@ -30,8 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
- * regionName. Intended to be used with {@link AsyncProcess}.
+ * Container for Actions (i.e. Get, Delete, or Put), which are grouped by regionName.
  */
 @InterfaceAudience.Private
 public final class MultiAction {

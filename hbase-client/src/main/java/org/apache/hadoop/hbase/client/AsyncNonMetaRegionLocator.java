@@ -654,4 +654,14 @@ class AsyncNonMetaRegionLocator {
     }
     return locateRowInCache(tableCache, tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
+
+  // only used for testing whether we have cached the location for a table.
+  @VisibleForTesting
+  int getNumberOfCachedRegionLocations(TableName tableName) {
+    TableCache tableCache = cache.get(tableName);
+    if (tableCache == null) {
+      return 0;
+    }
+    return tableCache.cache.values().stream().mapToInt(RegionLocations::numNonNullElements).sum();
+  }
 }

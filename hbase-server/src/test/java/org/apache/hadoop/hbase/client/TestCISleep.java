@@ -17,16 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Before;
@@ -83,62 +79,6 @@ public class TestCISleep extends AbstractTestCITimeout {
         fail("We expect an exception here");
       } catch (RetriesExhaustedException e) {
         LOG.info("We received an exception, as expected ", e);
-      }
-    }
-  }
-
-  @Test
-  public void testCallableSleep() throws Exception {
-    long pauseTime;
-    long baseTime = 100;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(tableName, FAM_NAM);
-    try (ConnectionImplementation conn =
-      ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
-        UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent())) {
-      ClientServiceCallable<Object> regionServerCallable = new ClientServiceCallable<Object>(conn,
-        tableName, FAM_NAM, new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
-        HConstants.PRIORITY_UNSET) {
-        @Override
-        protected Object rpcCall() throws Exception {
-          return null;
-        }
-      };
-
-      regionServerCallable.prepare(false);
-      for (int i = 0; i < HConstants.RETRY_BACKOFF.length; i++) {
-        pauseTime = regionServerCallable.sleep(baseTime, i);
-        assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[i]));
-        assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
-      }
-      RegionAdminServiceCallable<Object> regionAdminServiceCallable =
-        new RegionAdminServiceCallable<Object>(conn,
-          new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, FAM_NAM) {
-          @Override
-          public Object call(HBaseRpcController controller) throws Exception {
-            return null;
-          }
-        };
-
-      regionAdminServiceCallable.prepare(false);
-      for (int i = 0; i < HConstants.RETRY_BACKOFF.length; i++) {
-        pauseTime = regionAdminServiceCallable.sleep(baseTime, i);
-        assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[i]));
-        assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
-      }
-
-      try (MasterCallable<Object> masterCallable =
-        new MasterCallable<Object>(conn, new RpcControllerFactory(TEST_UTIL.getConfiguration())) {
-          @Override
-          protected Object rpcCall() throws Exception {
-            return null;
-          }
-        }) {
-        for (int i = 0; i < HConstants.RETRY_BACKOFF.length; i++) {
-          pauseTime = masterCallable.sleep(baseTime, i);
-          assertTrue(pauseTime >= (baseTime * HConstants.RETRY_BACKOFF[i]));
-          assertTrue(pauseTime <= (baseTime * HConstants.RETRY_BACKOFF[i] * 1.01f));
-        }
       }
     }
   }

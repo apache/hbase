@@ -232,14 +232,6 @@ public class ConnectionFactory {
   }
 
   /**
-   * Create a {@link ConnectionImplementation}, internal use only.
-   */
-  static ConnectionImplementation createConnectionImpl(Configuration conf, ExecutorService pool,
-      User user) throws IOException {
-    return new ConnectionImplementation(conf, pool, user);
-  }
-
-  /**
    * Call {@link #createAsyncConnection(Configuration)} using default HBaseConfiguration.
    * @see #createAsyncConnection(Configuration)
    * @return AsyncConnection object wrapped by CompletableFuture
