@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,8 +72,6 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
@@ -91,7 +88,6 @@ public class TestAdmin1 {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin1.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static ConnectionImplementation CONN;
   private static Admin ADMIN;
 
   @Rule
@@ -105,13 +101,10 @@ public class TestAdmin1 {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
     ADMIN = TEST_UTIL.getAdmin();
-    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
-      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -642,9 +635,9 @@ public class TestAdmin1 {
     assertFalse(ADMIN.tableExists(tableName));
   }
 
-  private void verifyRoundRobinDistribution(ConnectionImplementation c,
-      RegionLocator regionLocator, int expectedRegions) throws IOException {
-    int numRS = c.getCurrentNrHRS();
+  private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
+      throws IOException {
+    int numRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {
@@ -788,7 +781,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 
@@ -848,7 +841,7 @@ public class TestAdmin1 {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -871,7 +864,7 @@ public class TestAdmin1 {
           "but only found " + regions.size(), expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
 

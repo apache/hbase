@@ -20,23 +20,23 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -122,7 +122,7 @@ public class TableRecordReaderImpl {
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
     logScannerActivity = conf.getBoolean(
-      ScannerCallable.LOG_SCANNER_ACTIVITY, false);
+      ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
