@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,9 +44,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -65,6 +62,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 
 /**
  * Class to test HBaseAdmin.
@@ -506,30 +504,6 @@ public class TestAdmin2 extends TestAdminBase {
     return regionServer;
   }
 
-  /**
-   * Check that we have an exception if the cluster is not there.
-   */
-  @Test
-  public void testCheckHBaseAvailableWithoutCluster() {
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-
-    // Change the ZK address to go to something not used.
-    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
-      conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);
-
-    long start = System.currentTimeMillis();
-    try {
-      HBaseAdmin.available(conf);
-      assertTrue(false);
-    } catch (ZooKeeperConnectionException ignored) {
-    } catch (IOException ignored) {
-    }
-    long end = System.currentTimeMillis();
-
-    LOG.info("It took "+(end-start)+" ms to find out that" +
-      " HBase was not available");
-  }
-
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
@@ -709,10 +683,12 @@ public class TestAdmin2 extends TestAdminBase {
     long expectedStoreFilesSize = store.getStorefilesSize();
     Assert.assertNotNull(store);
     Assert.assertEquals(expectedStoreFilesSize, store.getSize());
-    HBaseRpcController controller = CONN.getRpcControllerFactory().newController();
     for (int i = 0; i < 10; i++) {
-      RegionInfo ri =
-          ProtobufUtil.getRegionInfo(controller, CONN.getAdmin(rs.getServerName()), regionName);
+      RegionInfo ri = ProtobufUtil
+        .toRegionInfo(TEST_UTIL.getAsyncConnection().getRegionServerAdmin(rs.getServerName())
+          .getRegionInfo(RequestConverter.buildGetRegionInfoRequest(regionName)).get()
+          .getRegionInfo());
+
       Assert.assertEquals(region.getRegionInfo(), ri);
 
       // Make sure that the store size is still the actual file system's store size.

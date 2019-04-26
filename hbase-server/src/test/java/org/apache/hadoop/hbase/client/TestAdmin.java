@@ -215,7 +215,7 @@ public class TestAdmin extends TestAdminBase {
       assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Now test using start/end with a number of regions
@@ -272,7 +272,7 @@ public class TestAdmin extends TestAdminBase {
       assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
       assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Try once more with something that divides into something infinite
@@ -293,7 +293,7 @@ public class TestAdmin extends TestAdminBase {
         expectedRegions, regions.size());
       System.err.println("Found " + regions.size() + " regions");
 
-      verifyRoundRobinDistribution(CONN, l, expectedRegions);
+      verifyRoundRobinDistribution(l, expectedRegions);
     }
 
     // Try an invalid case where there are duplicate split keys
@@ -342,9 +342,9 @@ public class TestAdmin extends TestAdminBase {
     }
   }
 
-  private void verifyRoundRobinDistribution(ConnectionImplementation c, RegionLocator regionLocator,
-      int expectedRegions) throws IOException {
-    int numRS = c.getCurrentNrHRS();
+  private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
+      throws IOException {
+    int numRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     for (HRegionLocation loc : regions) {

@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -62,7 +61,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -113,16 +111,6 @@ public final class ConnectionUtils {
   }
 
   /**
-   * @param conn The connection for which to replace the generator.
-   * @param cnm Replaces the nonce generator used, for testing.
-   * @return old nonce generator.
-   */
-  public static NonceGenerator injectNonceGeneratorForTesting(ConnectionImplementation conn,
-      NonceGenerator cnm) {
-    return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
-  }
-
-  /**
    * Changes the configuration to set the number of retries needed when using Connection internally,
    * e.g. for updating catalog tables, etc. Call this method before we create any Connections.
    * @param c The Configuration instance to set the retries into.
@@ -140,31 +128,6 @@ public final class ConnectionUtils {
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
-  }
-
-  /**
-   * Setup the connection class, so that it will not depend on master being online. Used for testing
-   * @param conf configuration to set
-   */
-  @VisibleForTesting
-  public static void setupMasterlessConnection(Configuration conf) {
-    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL, MasterlessConnection.class.getName());
-  }
-
-  /**
-   * Some tests shut down the master. But table availability is a master RPC which is performed on
-   * region re-lookups.
-   */
-  static class MasterlessConnection extends ConnectionImplementation {
-    MasterlessConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
-      super(conf, pool, user);
-    }
-
-    @Override
-    public boolean isTableDisabled(TableName tableName) throws IOException {
-      // treat all tables as enabled
-      return false;
-    }
   }
 
   /**

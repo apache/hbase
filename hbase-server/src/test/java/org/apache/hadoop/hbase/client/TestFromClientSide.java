@@ -172,8 +172,8 @@ public class TestFromClientSide {
   public void testDuplicateAppend() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getMethodName());
     Map<String, String> kvs = new HashMap<>();
-    kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
+    kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
+    hdt.addCoprocessor(SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
     TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
@@ -6389,32 +6389,6 @@ public class TestFromClientSide {
     try (Table table = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner s = table.getScanner(scan)) {
         assertNull(s.next());
-      }
-    }
-  }
-
-  // to be removed
-  @Ignore
-  @Test
-  public void testRegionCache() throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
-    htd.addFamily(fam);
-    byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    try (Admin admin = TEST_UTIL.getAdmin()) {
-      admin.createTable(htd, KEYS);
-      HRegionLocator locator =
-              (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
-      List<HRegionLocation> results = locator.getAllRegionLocations();
-      int number = ((ConnectionImplementation) admin.getConnection())
-              .getNumberOfCachedRegionLocations(htd.getTableName());
-      assertEquals(results.size(), number);
-      ConnectionImplementation conn = ((ConnectionImplementation) admin.getConnection());
-      assertNotNull("Can't get cached location for row aaa",
-              conn.getCachedLocation(htd.getTableName(), Bytes.toBytes("aaa")));
-      for (byte[] startKey : HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE) {
-        assertNotNull("Can't get cached location for row " +
-                Bytes.toString(startKey), (conn.getCachedLocation(htd.getTableName(), startKey)));
       }
     }
   }
