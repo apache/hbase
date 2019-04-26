@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -127,12 +128,55 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
       metrics.incrementSnapshotFetchTime((System.nanoTime() - start) / 1_000_000);
     }
 
+    // Remove old table snapshots data
+    pruneTableSnapshots(snapshotsToComputeSize);
+
+    // Remove old namespace snapshots data
+    pruneNamespaceSnapshots(snapshotsToComputeSize);
+
     // For each table, compute the size of each snapshot
     Multimap<TableName,SnapshotWithSize> snapshotsWithSize = computeSnapshotSizes(
         snapshotsToComputeSize);
 
     // Write the size data to the quota table.
     persistSnapshotSizes(snapshotsWithSize);
+  }
+
+  /**
+   * Removes the snapshot entries that are present in Quota table but not in snapshotsToComputeSize
+   *
+   * @param snapshotsToComputeSize list of snapshots to be persisted
+   */
+  void pruneTableSnapshots(Multimap<TableName, String> snapshotsToComputeSize) throws IOException {
+    Multimap<TableName, String> existingSnapshotEntries = QuotaTableUtil.getTableSnapshots(conn);
+    Multimap<TableName, String> snapshotEntriesToRemove = HashMultimap.create();
+    for (Entry<TableName, Collection<String>> entry : existingSnapshotEntries.asMap().entrySet()) {
+      TableName tn = entry.getKey();
+      Set<String> setOfSnapshots = new HashSet<>(entry.getValue());
+      for (String snapshot : snapshotsToComputeSize.get(tn)) {
+        setOfSnapshots.remove(snapshot);
+      }
+
+      for (String snapshot : setOfSnapshots) {
+        snapshotEntriesToRemove.put(tn, snapshot);
+      }
+    }
+    removeExistingTableSnapshotSizes(snapshotEntriesToRemove);
+  }
+
+  /**
+   * Removes the snapshot entries that are present in Quota table but not in snapshotsToComputeSize
+   *
+   * @param snapshotsToComputeSize list of snapshots to be persisted
+   */
+  void pruneNamespaceSnapshots(Multimap<TableName, String> snapshotsToComputeSize)
+      throws IOException {
+    Set<String> existingSnapshotEntries = QuotaTableUtil.getNamespaceSnapshots(conn);
+    for (TableName tableName : snapshotsToComputeSize.keySet()) {
+      existingSnapshotEntries.remove(tableName.getNamespaceAsString());
+    }
+    // here existingSnapshotEntries is left with the entries to be removed
+    removeExistingNamespaceSnapshotSizes(existingSnapshotEntries);
   }
 
   /**
@@ -505,6 +549,24 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
       StringBuilder sb = new StringBuilder();
       return sb.append("StoreFileReference[region=").append(regionName).append(", files=")
           .append(familyToFiles).append("]").toString();
+    }
+  }
+
+  void removeExistingTableSnapshotSizes(Multimap<TableName, String> snapshotEntriesToRemove)
+      throws IOException {
+    removeExistingSnapshotSizes(
+        QuotaTableUtil.createDeletesForExistingTableSnapshotSizes(snapshotEntriesToRemove));
+  }
+
+  void removeExistingNamespaceSnapshotSizes(Set<String> snapshotEntriesToRemove)
+      throws IOException {
+    removeExistingSnapshotSizes(
+        QuotaTableUtil.createDeletesForExistingNamespaceSnapshotSizes(snapshotEntriesToRemove));
+  }
+
+  void removeExistingSnapshotSizes(List<Delete> deletes) throws IOException {
+    try (Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+      quotaTable.delete(deletes);
     }
   }
 
