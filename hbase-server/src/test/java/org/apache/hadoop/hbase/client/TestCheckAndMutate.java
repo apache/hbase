@@ -18,19 +18,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category(MediumTests.class)
 public class TestCheckAndMutate {
@@ -117,6 +119,41 @@ public class TestCheckAndMutate {
       }
     } finally {
       table.close();
+    }
+  }
+
+  @Test
+  public void testCheckRowAndMutateDifferentRow() throws IOException {
+    TableName tableName = TableName.valueOf("TestCheckRowAndMutateDifferentRow");
+    byte[] family = Bytes.toBytes("f");
+    TEST_UTIL.createTable(tableName, family);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      byte[] row1 = Bytes.toBytes("row1");
+      byte[] qualifier = Bytes.toBytes("q1");
+      byte[] value1 = Bytes.toBytes("value1");
+
+      Put put = new Put(row1);
+      put.addColumn(family, qualifier, value1);
+      table.put(put);
+
+      Result result = table.get(new Get(row1));
+      assertArrayEquals("the value of column q in row1 should be value1",
+          value1, result.getValue(family, qualifier));
+
+      byte[] row2 = Bytes.toBytes("row2");
+      byte[] value2 = Bytes.toBytes("value2");
+      RowMutations mutations = new RowMutations(row2);
+      put = new Put(row2);
+      put.addColumn(family, qualifier, value2);
+      mutations.add(put);
+
+      // check row1 and put row2
+      assertTrue(table.checkAndMutate(row1, family, qualifier,
+          CompareFilter.CompareOp.GREATER, value2, mutations));
+
+      result = table.get(new Get(row2));
+      assertArrayEquals("the value of column q in row2 should be value2",
+          value2, result.getValue(family, qualifier));
     }
   }
 }
