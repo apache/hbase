@@ -179,4 +179,24 @@ class AsyncRegionLocator {
   AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
     return nonMetaRegionLocator;
   }
+
+  // only used for testing whether we have cached the location for a region.
+  @VisibleForTesting
+  RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
+    if (TableName.isMetaTableName(tableName)) {
+      return metaRegionLocator.getRegionLocationInCache();
+    } else {
+      return nonMetaRegionLocator.getRegionLocationInCache(tableName, row);
+    }
+  }
+
+  // only used for testing whether we have cached the location for a table.
+  @VisibleForTesting
+  int getNumberOfCachedRegionLocations(TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return metaRegionLocator.getNumberOfCachedRegionLocations();
+    } else {
+      return nonMetaRegionLocator.getNumberOfCachedRegionLocations(tableName);
+    }
+  }
 }

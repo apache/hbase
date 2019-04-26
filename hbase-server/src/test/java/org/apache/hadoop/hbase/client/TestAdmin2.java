@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,9 +45,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -74,6 +71,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 
 /**
  * Class to test HBaseAdmin.
@@ -89,7 +87,7 @@ public class TestAdmin2 {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin2.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static ConnectionImplementation CONN;
+  private static Connection CONN;
   private static Admin ADMIN;
 
   @Rule
@@ -104,7 +102,7 @@ public class TestAdmin2 {
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 30);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
-    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
+    CONN = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), null,
       UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
     ADMIN = TEST_UTIL.getAdmin();
   }
@@ -549,30 +547,6 @@ public class TestAdmin2 {
     return regionServer;
   }
 
-  /**
-   * Check that we have an exception if the cluster is not there.
-   */
-  @Test
-  public void testCheckHBaseAvailableWithoutCluster() {
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-
-    // Change the ZK address to go to something not used.
-    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
-      conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);
-
-    long start = System.currentTimeMillis();
-    try {
-      HBaseAdmin.available(conf);
-      assertTrue(false);
-    } catch (ZooKeeperConnectionException ignored) {
-    } catch (IOException ignored) {
-    }
-    long end = System.currentTimeMillis();
-
-    LOG.info("It took "+(end-start)+" ms to find out that" +
-      " HBase was not available");
-  }
-
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
@@ -752,10 +726,12 @@ public class TestAdmin2 {
     long expectedStoreFilesSize = store.getStorefilesSize();
     Assert.assertNotNull(store);
     Assert.assertEquals(expectedStoreFilesSize, store.getSize());
-    HBaseRpcController controller = CONN.getRpcControllerFactory().newController();
     for (int i = 0; i < 10; i++) {
-      RegionInfo ri =
-          ProtobufUtil.getRegionInfo(controller, CONN.getAdmin(rs.getServerName()), regionName);
+      RegionInfo ri = ProtobufUtil
+        .toRegionInfo(TEST_UTIL.getAsyncConnection().getRegionServerAdmin(rs.getServerName())
+          .getRegionInfo(RequestConverter.buildGetRegionInfoRequest(regionName)).get()
+          .getRegionInfo());
+
       Assert.assertEquals(region.getRegionInfo(), ri);
 
       // Make sure that the store size is still the actual file system's store size.

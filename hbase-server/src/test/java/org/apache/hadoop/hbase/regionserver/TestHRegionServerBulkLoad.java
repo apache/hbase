@@ -52,8 +52,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RpcRetryingCaller;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -212,8 +210,6 @@ public class TestHRegionServerBulkLoad {
       final Connection conn = UTIL.getConnection();
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 5 == 0) {
-        RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
-        RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
         // 5 * 50 = 250 open file handles!
         try (RegionLocator locator = conn.getRegionLocator(tableName)) {
           HRegionLocation loc = locator.getRegionLocation(Bytes.toBytes("aaa"), true);
