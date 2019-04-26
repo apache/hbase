@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
@@ -43,12 +42,10 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -478,106 +475,6 @@ public class TestMultiParallel {
     validateResult(multiRes[0], QUAL2, Bytes.toBytes(2L));
     validateResult(multiRes[0], QUAL3, Bytes.toBytes(1L));
     table.close();
-  }
-
-  @Test
-  public void testNonceCollision() throws Exception {
-    LOG.info("test=testNonceCollision");
-    try (
-      ConnectionImplementation connection =
-        ConnectionFactory.createConnectionImpl(UTIL.getConfiguration(), null,
-          UserProvider.instantiate(UTIL.getConfiguration()).getCurrent());
-      Table table = connection.getTable(TEST_TABLE)) {
-      Put put = new Put(ONE_ROW);
-      put.addColumn(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
-
-      // Replace nonce manager with the one that returns each nonce twice.
-      NonceGenerator cnm = new NonceGenerator() {
-
-        private final PerClientRandomNonceGenerator delegate = PerClientRandomNonceGenerator.get();
-
-        private long lastNonce = -1;
-
-        @Override
-        public synchronized long newNonce() {
-          long nonce = 0;
-          if (lastNonce == -1) {
-            nonce = delegate.newNonce();
-            lastNonce = nonce;
-          } else {
-            nonce = lastNonce;
-            lastNonce = -1L;
-          }
-          return nonce;
-        }
-
-        @Override
-        public long getNonceGroup() {
-          return delegate.getNonceGroup();
-        }
-      };
-
-      NonceGenerator oldCnm =
-        ConnectionUtils.injectNonceGeneratorForTesting((ConnectionImplementation) connection, cnm);
-
-      // First test sequential requests.
-      Increment inc = new Increment(ONE_ROW);
-      inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
-      table.increment(inc);
-
-      // duplicate increment
-      inc = new Increment(ONE_ROW);
-      inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
-      Result result = table.increment(inc);
-      validateResult(result, QUALIFIER, Bytes.toBytes(1L));
-
-      Get get = new Get(ONE_ROW);
-      get.addColumn(BYTES_FAMILY, QUALIFIER);
-      result = table.get(get);
-      validateResult(result, QUALIFIER, Bytes.toBytes(1L));
-
-      // Now run a bunch of requests in parallel, exactly half should succeed.
-      int numRequests = 40;
-      final CountDownLatch startedLatch = new CountDownLatch(numRequests);
-      final CountDownLatch startLatch = new CountDownLatch(1);
-      final CountDownLatch doneLatch = new CountDownLatch(numRequests);
-      for (int i = 0; i < numRequests; ++i) {
-        Runnable r = new Runnable() {
-          @Override
-          public void run() {
-            Table table = null;
-            try {
-              table = connection.getTable(TEST_TABLE);
-            } catch (IOException e) {
-              fail("Not expected");
-            }
-            Increment inc = new Increment(ONE_ROW);
-            inc.addColumn(BYTES_FAMILY, QUALIFIER, 1L);
-            startedLatch.countDown();
-            try {
-              startLatch.await();
-            } catch (InterruptedException e) {
-              fail("Not expected");
-            }
-            try {
-              table.increment(inc);
-            } catch (IOException ioEx) {
-              fail("Not expected");
-            }
-            doneLatch.countDown();
-          }
-        };
-        Threads.setDaemonThreadRunning(new Thread(r));
-      }
-      startedLatch.await(); // Wait until all threads are ready...
-      startLatch.countDown(); // ...and unleash the herd!
-      doneLatch.await();
-      // Now verify
-      get = new Get(ONE_ROW);
-      get.addColumn(BYTES_FAMILY, QUALIFIER);
-      result = table.get(get);
-      validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
-    }
   }
 
   @Test

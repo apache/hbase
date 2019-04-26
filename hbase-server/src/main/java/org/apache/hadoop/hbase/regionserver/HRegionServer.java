@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
@@ -366,7 +365,6 @@ public class HRegionServer extends HasThread implements
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
 
-  private RpcRetryingCallerFactory rpcRetryingCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
 
   private UncaughtExceptionHandler uncaughtExceptionHandler;
@@ -604,7 +602,6 @@ public class HRegionServer extends HasThread implements
       serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
 
       rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
-      rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
 
       // login the zookeeper client principal (if using security)
       ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,

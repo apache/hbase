@@ -17,33 +17,17 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.ServerMetricsBuilder;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -53,17 +37,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -80,7 +57,6 @@ public class TestMasterNoCluster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
   @Rule
@@ -123,9 +99,6 @@ public class TestMasterNoCluster {
 
   /**
    * Test starting master then stopping it before its fully up.
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
    */
   @Test
   public void testStopDuringStart()
@@ -135,173 +108,6 @@ public class TestMasterNoCluster {
     // Immediately have it stop.  We used hang in assigning meta.
     master.stopMaster();
     master.join();
-  }
-
-  /**
-   * Test master failover.
-   * Start up three fake regionservers and a master.
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
-   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
-   */
-  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
-  public void testFailover() throws Exception {
-    final long now = System.currentTimeMillis();
-    // Names for our three servers.  Make the port numbers match hostname.
-    // Will come in use down in the server when we need to figure how to respond.
-    final ServerName sn0 = ServerName.valueOf("0.example.org", 0, now);
-    final ServerName sn1 = ServerName.valueOf("1.example.org", 1, now);
-    final ServerName sn2 = ServerName.valueOf("2.example.org", 2, now);
-    final ServerName [] sns = new ServerName [] {sn0, sn1, sn2};
-    // Put up the mock servers
-    final Configuration conf = TESTUTIL.getConfiguration();
-    final MockRegionServer rs0 = new MockRegionServer(conf, sn0);
-    final MockRegionServer rs1 = new MockRegionServer(conf, sn1);
-    final MockRegionServer rs2 = new MockRegionServer(conf, sn2);
-    // Put some data into the servers.  Make it look like sn0 has the metaH
-    // Put data into sn2 so it looks like it has a few regions for a table named 't'.
-    MetaTableLocator.setMetaLocation(rs0.getZooKeeper(),
-      rs0.getServerName(), RegionState.State.OPEN);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    Result [] results = new Result [] {
-      MetaMockingUtil.getMetaTableRowResult(
-        new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HBaseTestingUtility.KEYS[1]),
-        rs2.getServerName()),
-      MetaMockingUtil.getMetaTableRowResult(
-        new HRegionInfo(tableName, HBaseTestingUtility.KEYS[1], HBaseTestingUtility.KEYS[2]),
-        rs2.getServerName()),
-      MetaMockingUtil.getMetaTableRowResult(new HRegionInfo(tableName, HBaseTestingUtility.KEYS[2],
-          HConstants.EMPTY_END_ROW),
-        rs2.getServerName())
-    };
-    rs1.setNextResults(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), results);
-
-    // Create master.  Subclass to override a few methods so we can insert mocks
-    // and get notification on transitions.  We need to fake out any rpcs the
-    // master does opening/closing regions.  Also need to fake out the address
-    // of the 'remote' mocked up regionservers.
-    // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
-    // the conf from the master; the conf will already have an ClusterConnection
-    // associate so the below mocking of a connection will fail.
-    final Connection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
-        TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
-        HRegionInfo.FIRST_META_REGIONINFO);
-    HMaster master = new HMaster(conf) {
-      @Override
-      InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
-      throws UnknownHostException {
-        // Return different address dependent on port passed.
-        if (port > sns.length) {
-          return super.getRemoteInetAddress(port, serverStartCode);
-        }
-        ServerName sn = sns[port];
-        return InetAddress.getByAddress(sn.getHostname(),
-          new byte [] {10, 0, 0, (byte)sn.getPort()});
-      }
-
-      @Override
-      protected void initClusterSchemaService() throws IOException, InterruptedException {}
-
-      @Override
-      protected ServerManager createServerManager(MasterServices master) throws IOException {
-        ServerManager sm = super.createServerManager(master);
-        // Spy on the created servermanager
-        ServerManager spy = Mockito.spy(sm);
-        return spy;
-      }
-
-      @Override
-      public Connection getConnection() {
-        return mockedConnection;
-      }
-    };
-    master.start();
-
-    try {
-      // Wait till master is up ready for RPCs.
-      while (!master.serviceStarted) Threads.sleep(10);
-      // Fake master that there are regionservers out there.  Report in.
-      for (int i = 0; i < sns.length; i++) {
-        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
-        ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
-        request.setServer(ProtobufUtil.toServerName(sn));
-        request.setLoad(ServerMetricsBuilder.toServerLoad(ServerMetricsBuilder.of(sn)));
-        master.getMasterRpcServices().regionServerReport(null, request.build());
-      }
-       // Master should now come up.
-      while (!master.isInitialized()) {
-        Threads.sleep(100);
-      }
-      assertTrue(master.isInitialized());
-    } finally {
-      rs0.stop("Test is done");
-      rs1.stop("Test is done");
-      rs2.stop("Test is done");
-      master.stopMaster();
-      master.join();
-    }
-  }
-
-  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
-  public void testNotPullingDeadRegionServerFromZK()
-      throws IOException, KeeperException, InterruptedException {
-    final Configuration conf = TESTUTIL.getConfiguration();
-    final ServerName newServer = ServerName.valueOf("test.sample", 1, 101);
-    final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
-    final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
-
-    HMaster master = new HMaster(conf) {
-      @Override
-      protected MasterMetaBootstrap createMetaBootstrap() {
-        return new MasterMetaBootstrap(this) {
-          @Override
-          protected void assignMetaReplicas()
-              throws IOException, InterruptedException, KeeperException {
-            // Nothing to do.
-          }
-        };
-      }
-
-      @Override
-      protected void initClusterSchemaService() throws IOException, InterruptedException {}
-
-      @Override
-      protected void initializeZKBasedSystemTrackers() throws IOException, InterruptedException,
-          KeeperException, ReplicationException {
-        super.initializeZKBasedSystemTrackers();
-        // Record a newer server in server manager at first
-        getServerManager().recordNewServerWithLock(newServer,
-          new ServerLoad(ServerMetricsBuilder.of(newServer)));
-      }
-
-      @Override
-      public Connection getConnection() {
-        // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
-        // the conf from the master; the conf will already have a Connection
-        // associate so the below mocking of a connection will fail.
-        try {
-          return HConnectionTestingUtility.getMockedConnectionAndDecorate(
-            TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
-            HRegionInfo.FIRST_META_REGIONINFO);
-        } catch (IOException e) {
-          return null;
-        }
-      }
-    };
-    master.start();
-
-    try {
-      // Wait till master is initialized.
-      while (!master.isInitialized()) Threads.sleep(10);
-      LOG.info("Master is initialized");
-
-      assertFalse("The dead server should not be pulled in",
-        master.getServerManager().isServerOnline(deadServer));
-    } finally {
-      master.stopMaster();
-      master.join();
-    }
   }
 
   @Test

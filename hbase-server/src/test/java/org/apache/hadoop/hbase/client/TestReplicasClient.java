@@ -19,13 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import com.codahale.metrics.Counter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,10 +34,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -52,7 +47,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,7 +57,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -199,7 +192,6 @@ public class TestReplicasClient {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    ConnectionUtils.setupMasterlessConnection(HTU.getConfiguration());
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.
@@ -332,21 +324,20 @@ public class TestReplicasClient {
     byte[] b1 = Bytes.toBytes("testLocations");
     openRegion(hriSecondary);
 
-    try (
-        ConnectionImplementation hc = ConnectionFactory.createConnectionImpl(HTU.getConfiguration(),
-          null, UserProvider.instantiate(HTU.getConfiguration()).getCurrent())) {
-      hc.clearRegionLocationCache();
-      RegionLocations rl = hc.locateRegion(table.getName(), b1, false, false);
+    try (Connection conn = ConnectionFactory.createConnection(HTU.getConfiguration());
+        RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
+      conn.clearRegionLocationCache();
+      List<HRegionLocation> rl = locator.getRegionLocations(b1, true);
       Assert.assertEquals(2, rl.size());
 
-      rl = hc.locateRegion(table.getName(), b1, true, false);
+      rl = locator.getRegionLocations(b1, false);
       Assert.assertEquals(2, rl.size());
 
-      hc.clearRegionLocationCache();
-      rl = hc.locateRegion(table.getName(), b1, true, false);
+      conn.clearRegionLocationCache();
+      rl = locator.getRegionLocations(b1, false);
       Assert.assertEquals(2, rl.size());
 
-      rl = hc.locateRegion(table.getName(), b1, false, false);
+      rl = locator.getRegionLocations(b1, true);
       Assert.assertEquals(2, rl.size());
     } finally {
       closeRegion(hriSecondary);
@@ -555,10 +546,6 @@ public class TestReplicasClient {
     }
   }
 
-  /**
-   * To be rewrite without ConnectionImplementation
-   */
-  @Ignore
   @Test
   public void testHedgedRead() throws Exception {
     byte[] b1 = Bytes.toBytes("testHedgedRead");
@@ -579,16 +566,18 @@ public class TestReplicasClient {
       LOG.info("get works and is not stale done");
 
       //reset
-      ConnectionImplementation connection = (ConnectionImplementation) HTU.getConnection();
-      Counter hedgedReadOps = connection.getConnectionMetrics().hedgedReadOps;
-      Counter hedgedReadWin = connection.getConnectionMetrics().hedgedReadWin;
+      AsyncConnectionImpl conn = (AsyncConnectionImpl) HTU.getConnection().toAsyncConnection();
+      Counter hedgedReadOps = conn.getConnectionMetrics().get().hedgedReadOps;
+      Counter hedgedReadWin = conn.getConnectionMetrics().get().hedgedReadWin;
       hedgedReadOps.dec(hedgedReadOps.getCount());
       hedgedReadWin.dec(hedgedReadWin.getCount());
 
       // Wait a little on the main region, just enough to happen once hedged read
       // and hedged read did not returned faster
-      int primaryCallTimeoutMicroSecond = connection.getConnectionConfiguration().getPrimaryCallTimeoutMicroSecond();
-      SlowMeCopro.sleepTime.set(TimeUnit.MICROSECONDS.toMillis(primaryCallTimeoutMicroSecond));
+      long primaryCallTimeoutNs = conn.connConf.getPrimaryCallTimeoutNs();
+      // The resolution of our timer is 10ms, so we need to sleep a bit more otherwise we may not
+      // trigger the hedged read...
+      SlowMeCopro.sleepTime.set(TimeUnit.NANOSECONDS.toMillis(primaryCallTimeoutNs) + 100);
       SlowMeCopro.getSecondaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
@@ -610,7 +599,9 @@ public class TestReplicasClient {
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
       Assert.assertEquals(2, hedgedReadOps.getCount());
-      Assert.assertEquals(1, hedgedReadWin.getCount());
+      // we update the metrics after we finish the request so we use a waitFor here, use assert
+      // directly may cause failure if we run too fast.
+      HTU.waitFor(10000, () -> hedgedReadWin.getCount() == 1);
       SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("hedged read occurred and faster");
 
@@ -621,301 +612,6 @@ public class TestReplicasClient {
       Delete d = new Delete(b1);
       table.delete(d);
       closeRegion(hriSecondary);
-    }
-  }
-
-  @Ignore // Disabled because it is flakey. Fails 17% on constrained GCE. %3 on Apache.
-  @Test
-  public void testCancelOfMultiGet() throws Exception {
-    openRegion(hriSecondary);
-    try {
-      List<Put> puts = new ArrayList<>(2);
-      byte[] b1 = Bytes.toBytes("testCancelOfMultiGet" + 0);
-      Put p = new Put(b1);
-      p.addColumn(f, b1, b1);
-      puts.add(p);
-
-      byte[] b2 = Bytes.toBytes("testCancelOfMultiGet" + 1);
-      p = new Put(b2);
-      p.addColumn(f, b2, b2);
-      puts.add(p);
-      table.put(puts);
-      LOG.debug("PUT done");
-      flushRegion(hriPrimary);
-      LOG.info("flush done");
-
-      Thread.sleep(1000 + REFRESH_PERIOD * 2);
-
-      AsyncProcess ap = ((ConnectionImplementation) HTU.getConnection()).getAsyncProcess();
-
-      // Make primary slowdown
-      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
-
-      List<Get> gets = new ArrayList<>();
-      Get g = new Get(b1);
-      g.setCheckExistenceOnly(true);
-      g.setConsistency(Consistency.TIMELINE);
-      gets.add(g);
-      g = new Get(b2);
-      g.setCheckExistenceOnly(true);
-      g.setConsistency(Consistency.TIMELINE);
-      gets.add(g);
-      Object[] results = new Object[2];
-
-      int operationTimeout = ((ConnectionImplementation) HTU.getConnection())
-        .getConnectionConfiguration().getOperationTimeout();
-      int readTimeout = ((ConnectionImplementation) HTU.getConnection())
-        .getConnectionConfiguration().getReadRpcTimeout();
-      AsyncProcessTask task =
-        AsyncProcessTask.newBuilder().setPool(HTable.getDefaultExecutor(HTU.getConfiguration()))
-          .setTableName(table.getName()).setRowAccess(gets).setResults(results)
-          .setOperationTimeout(operationTimeout).setRpcTimeout(readTimeout).build();
-      AsyncRequestFuture reqs = ap.submit(task);
-      reqs.waitUntilDone();
-      // verify we got the right results back
-      for (Object r : results) {
-        Assert.assertTrue(((Result)r).isStale());
-        Assert.assertTrue(((Result)r).getExists());
-      }
-      Set<CancellableRegionServerCallable> set =
-          ((AsyncRequestFutureImpl<?>)reqs).getCallsInProgress();
-      // verify we did cancel unneeded calls
-      Assert.assertTrue(!set.isEmpty());
-      for (CancellableRegionServerCallable m : set) {
-        Assert.assertTrue(m.isCancelled());
-      }
-    } finally {
-      SlowMeCopro.getPrimaryCdl().get().countDown();
-      SlowMeCopro.sleepTime.set(0);
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-      for (int i = 0; i < 2; i++) {
-        byte[] b1 = Bytes.toBytes("testCancelOfMultiGet" + i);
-        Delete d = new Delete(b1);
-        table.delete(d);
-      }
-      closeRegion(hriSecondary);
-    }
-  }
-
-  /**
-   * To be rewrite
-   */
-  @Ignore
-  @Test
-  public void testScanWithReplicas() throws Exception {
-    //simple scan
-    runMultipleScansOfOneType(false, false);
-  }
-
-  /**
-   * To be rewrite
-   */
-  @Ignore
-  @Test
-  public void testSmallScanWithReplicas() throws Exception {
-    //small scan
-    runMultipleScansOfOneType(false, true);
-  }
-
-  /**
-   * To be rewrite
-   */
-  @Ignore
-  @Test
-  public void testReverseScanWithReplicas() throws Exception {
-    //reverse scan
-    runMultipleScansOfOneType(true, false);
-  }
-
-  /**
-   * To be rewrite
-   */
-  @Ignore
-  @Test
-  public void testCancelOfScan() throws Exception {
-    openRegion(hriSecondary);
-    int NUMROWS = 100;
-    try {
-      for (int i = 0; i < NUMROWS; i++) {
-        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
-        Put p = new Put(b1);
-        p.addColumn(f, b1, b1);
-        table.put(p);
-      }
-      LOG.debug("PUT done");
-      int caching = 20;
-      byte[] start;
-      start = Bytes.toBytes("testUseRegionWithReplica" + 0);
-
-      flushRegion(hriPrimary);
-      LOG.info("flush done");
-      Thread.sleep(1000 + REFRESH_PERIOD * 2);
-
-      // now make some 'next' calls slow
-      SlowMeCopro.slowDownNext.set(true);
-      SlowMeCopro.countOfNext.set(0);
-      SlowMeCopro.sleepTime.set(5000);
-
-      Scan scan = new Scan(start);
-      scan.setCaching(caching);
-      scan.setConsistency(Consistency.TIMELINE);
-      ResultScanner scanner = table.getScanner(scan);
-      Iterator<Result> iter = scanner.iterator();
-      iter.next();
-      Assert.assertTrue(((ClientScanner)scanner).isAnyRPCcancelled());
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-    } finally {
-      SlowMeCopro.getPrimaryCdl().get().countDown();
-      SlowMeCopro.sleepTime.set(0);
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-      for (int i = 0; i < NUMROWS; i++) {
-        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
-        Delete d = new Delete(b1);
-        table.delete(d);
-      }
-      closeRegion(hriSecondary);
-    }
-  }
-
-  private void runMultipleScansOfOneType(boolean reversed, boolean small) throws Exception {
-    openRegion(hriSecondary);
-    int NUMROWS = 100;
-    int NUMCOLS = 10;
-    try {
-      for (int i = 0; i < NUMROWS; i++) {
-        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
-        for (int col = 0; col < NUMCOLS; col++) {
-          Put p = new Put(b1);
-          String qualifier = "qualifer" + col;
-          KeyValue kv = new KeyValue(b1, f, Bytes.toBytes(qualifier));
-          p.add(kv);
-          table.put(p);
-        }
-      }
-      LOG.debug("PUT done");
-      int caching = 20;
-      long maxResultSize = Long.MAX_VALUE;
-
-      byte[] start;
-      if (reversed) start = Bytes.toBytes("testUseRegionWithReplica" + (NUMROWS - 1));
-      else start = Bytes.toBytes("testUseRegionWithReplica" + 0);
-
-      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, maxResultSize,
-        start, NUMROWS, NUMCOLS, false, false);
-
-      // Even if we were to slow the server down, unless we ask for stale
-      // we won't get it
-      SlowMeCopro.sleepTime.set(5000);
-      scanWithReplicas(reversed, small, Consistency.STRONG, caching, maxResultSize, start, NUMROWS,
-        NUMCOLS, false, false);
-      SlowMeCopro.sleepTime.set(0);
-
-      flushRegion(hriPrimary);
-      LOG.info("flush done");
-      Thread.sleep(1000 + REFRESH_PERIOD * 2);
-
-      //Now set the flag to get a response even if stale
-      SlowMeCopro.sleepTime.set(5000);
-      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, maxResultSize,
-        start, NUMROWS, NUMCOLS, true, false);
-      SlowMeCopro.sleepTime.set(0);
-
-      // now make some 'next' calls slow
-      SlowMeCopro.slowDownNext.set(true);
-      SlowMeCopro.countOfNext.set(0);
-      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, maxResultSize, start,
-        NUMROWS, NUMCOLS, true, true);
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-
-      // Make sure we do not get stale data..
-      SlowMeCopro.sleepTime.set(5000);
-      scanWithReplicas(reversed, small, Consistency.STRONG, caching, maxResultSize,
-        start, NUMROWS, NUMCOLS, false, false);
-      SlowMeCopro.sleepTime.set(0);
-
-      // While the next calls are slow, set maxResultSize to 1 so that some partial results will be
-      // returned from the server before the replica switch occurs.
-      maxResultSize = 1;
-      SlowMeCopro.slowDownNext.set(true);
-      SlowMeCopro.countOfNext.set(0);
-      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, maxResultSize, start,
-        NUMROWS, NUMCOLS, true, true);
-      maxResultSize = Long.MAX_VALUE;
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-    } finally {
-      SlowMeCopro.getPrimaryCdl().get().countDown();
-      SlowMeCopro.sleepTime.set(0);
-      SlowMeCopro.slowDownNext.set(false);
-      SlowMeCopro.countOfNext.set(0);
-      for (int i = 0; i < NUMROWS; i++) {
-        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
-        Delete d = new Delete(b1);
-        table.delete(d);
-      }
-      closeRegion(hriSecondary);
-    }
-  }
-
-  private void scanWithReplicas(boolean reversed, boolean small, Consistency consistency,
-      int caching, long maxResultSize, byte[] startRow, int numRows, int numCols,
-      boolean staleExpected, boolean slowNext)
-          throws Exception {
-    Scan scan = new Scan(startRow);
-    scan.setCaching(caching);
-    scan.setMaxResultSize(maxResultSize);
-    scan.setReversed(reversed);
-    scan.setSmall(small);
-    scan.setConsistency(consistency);
-    ResultScanner scanner = table.getScanner(scan);
-    Iterator<Result> iter = scanner.iterator();
-
-    // Maps of row keys that we have seen so far
-    HashMap<String, Boolean> map = new HashMap<>();
-
-    // Tracked metrics
-    int rowCount = 0;
-    int cellCount = 0;
-    int countOfStale = 0;
-
-    while (iter.hasNext()) {
-      rowCount++;
-      Result r = iter.next();
-      String row = new String(r.getRow());
-
-      if (map.containsKey(row)) {
-        throw new Exception("Unexpected scan result. Repeated row " + Bytes.toString(r.getRow()));
-      }
-
-      map.put(row, true);
-
-      for (Cell cell : r.rawCells()) {
-        cellCount++;
-      }
-
-      if (!slowNext) Assert.assertTrue(r.isStale() == staleExpected);
-      if (r.isStale()) countOfStale++;
-    }
-    Assert.assertTrue("Count of rows " + rowCount + " num rows expected " + numRows,
-      rowCount == numRows);
-    Assert.assertTrue("Count of cells: " + cellCount + " cells expected: " + numRows * numCols,
-      cellCount == (numRows * numCols));
-
-    if (slowNext) {
-      LOG.debug("Count of Stale " + countOfStale);
-      Assert.assertTrue(countOfStale > 1);
-
-      // If the scan was configured in such a way that a full row was NOT retrieved before the
-      // replica switch occurred, then it is possible that all rows were stale
-      if (maxResultSize != Long.MAX_VALUE) {
-        Assert.assertTrue(countOfStale <= numRows);
-      } else {
-        Assert.assertTrue(countOfStale < numRows);
-      }
     }
   }
 }

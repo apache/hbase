@@ -63,7 +63,7 @@ public class TestResultSizeEstimation {
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
     // effectively limit max result size to one entry if it has tags
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, SCANNER_DATA_LIMIT);
-    conf.setBoolean(ScannerCallable.LOG_SCANNER_ACTIVITY, true);
+    conf.setBoolean(ConnectionConfiguration.LOG_SCANNER_ACTIVITY, true);
     TEST_UTIL.startMiniCluster(1);
   }
 

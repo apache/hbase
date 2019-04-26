@@ -44,6 +44,7 @@ public class ConnectionConfiguration {
   public static final String PRIMARY_SCAN_TIMEOUT_MICROSECOND =
     "hbase.client.replicaCallTimeout.scan";
   public static final int PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT = 1000000; // 1s
+  public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;

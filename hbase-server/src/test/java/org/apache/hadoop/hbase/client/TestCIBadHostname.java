@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -34,25 +33,24 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests that we fail fast when hostname resolution is not working and do not cache
- * unresolved InetSocketAddresses.
+ * Tests that we fail fast when hostname resolution is not working and do not cache unresolved
+ * InetSocketAddresses.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestCIBadHostname {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCIBadHostname.class);
+    HBaseClassTestRule.forClass(TestCIBadHostname.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
-  private static ConnectionImplementation CONN;
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static AsyncConnectionImpl CONN;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     TEST_UTIL.startMiniCluster();
-    CONN = ConnectionFactory.createConnectionImpl(TEST_UTIL.getConfiguration(), null,
-      UserProvider.instantiate(TEST_UTIL.getConfiguration()).getCurrent());
+    CONN = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
   @AfterClass
@@ -66,17 +64,16 @@ public class TestCIBadHostname {
     // verify that we can get an instance with the cluster hostname
     ServerName master = TEST_UTIL.getHBaseCluster().getMaster().getServerName();
     try {
-      CONN.getAdmin(master);
+      CONN.getAdminStub(master);
     } catch (UnknownHostException uhe) {
       fail("Obtaining admin to the cluster master should have succeeded");
     }
 
     // test that we fail to get a client to an unresolvable hostname, which
     // means it won't be cached
-    ServerName badHost =
-        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT,
-        System.currentTimeMillis());
-    CONN.getAdmin(badHost);
+    ServerName badHost = ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_MASTER_PORT,
+      System.currentTimeMillis());
+    CONN.getAdminStub(badHost);
     fail("Obtaining admin to unresolvable hostname should have failed");
   }
 
@@ -85,17 +82,16 @@ public class TestCIBadHostname {
     // verify that we can get an instance with the cluster hostname
     ServerName rs = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     try {
-      CONN.getClient(rs);
+      CONN.getRegionServerStub(rs);
     } catch (UnknownHostException uhe) {
       fail("Obtaining client to the cluster regionserver should have succeeded");
     }
 
     // test that we fail to get a client to an unresolvable hostname, which
     // means it won't be cached
-    ServerName badHost =
-        ServerName.valueOf("unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT,
-        System.currentTimeMillis());
-    CONN.getAdmin(badHost);
+    ServerName badHost = ServerName.valueOf(
+      "unknownhost.invalid:" + HConstants.DEFAULT_REGIONSERVER_PORT, System.currentTimeMillis());
+    CONN.getRegionServerStub(badHost);
     fail("Obtaining client to unresolvable hostname should have failed");
   }
 }
