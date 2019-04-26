@@ -21,11 +21,14 @@ package org.apache.hadoop.hbase.quotas;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.QuotaStatusCalls;
@@ -55,6 +59,14 @@ import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -492,6 +504,87 @@ public class QuotaTableUtil {
   }
 
   /**
+   * Returns a list of {@code Delete} to remove given table snapshot
+   * entries to remove from quota table
+   * @param snapshotEntriesToRemove the entries to remove
+   */
+  static List<Delete> createDeletesForExistingTableSnapshotSizes(
+      Multimap<TableName, String> snapshotEntriesToRemove) {
+    List<Delete> deletes = new ArrayList<>();
+    for (Map.Entry<TableName, Collection<String>> entry : snapshotEntriesToRemove.asMap()
+        .entrySet()) {
+      for (String snapshot : entry.getValue()) {
+        Delete d = new Delete(getTableRowKey(entry.getKey()));
+        d.addColumns(QUOTA_FAMILY_USAGE,
+            Bytes.add(QUOTA_SNAPSHOT_SIZE_QUALIFIER, Bytes.toBytes(snapshot)));
+        deletes.add(d);
+      }
+    }
+    return deletes;
+  }
+
+  /**
+   * Returns a list of {@code Delete} to remove all table snapshot entries from quota table.
+   * @param connection connection to re-use
+   */
+  static List<Delete> createDeletesForExistingTableSnapshotSizes(Connection connection)
+      throws IOException {
+    return createDeletesForExistingSnapshotsFromScan(connection, createScanForSpaceSnapshotSizes());
+  }
+
+  /**
+   * Returns a list of {@code Delete} to remove given namespace snapshot
+   * entries to removefrom quota table
+   * @param snapshotEntriesToRemove the entries to remove
+   */
+  static List<Delete> createDeletesForExistingNamespaceSnapshotSizes(
+      Set<String> snapshotEntriesToRemove) {
+    List<Delete> deletes = new ArrayList<>();
+    for (String snapshot : snapshotEntriesToRemove) {
+      Delete d = new Delete(getNamespaceRowKey(snapshot));
+      d.addColumns(QUOTA_FAMILY_USAGE, QUOTA_SNAPSHOT_SIZE_QUALIFIER);
+      deletes.add(d);
+    }
+    return deletes;
+  }
+
+  /**
+   * Returns a list of {@code Delete} to remove all namespace snapshot entries from quota table.
+   * @param connection connection to re-use
+   */
+  static List<Delete> createDeletesForExistingNamespaceSnapshotSizes(Connection connection)
+      throws IOException {
+    return createDeletesForExistingSnapshotsFromScan(connection,
+        createScanForNamespaceSnapshotSizes());
+  }
+
+  /**
+   * Returns a list of {@code Delete} to remove all entries returned by the passed scanner.
+   * @param connection connection to re-use
+   * @param scan the scanner to use to generate the list of deletes
+   */
+  static List<Delete> createDeletesForExistingSnapshotsFromScan(Connection connection, Scan scan)
+      throws IOException {
+    List<Delete> deletes = new ArrayList<>();
+    try (Table quotaTable = connection.getTable(QUOTA_TABLE_NAME);
+        ResultScanner rs = quotaTable.getScanner(scan)) {
+      for (Result r : rs) {
+        CellScanner cs = r.cellScanner();
+        while (cs.advance()) {
+          Cell c = cs.current();
+          byte[] family = Bytes.copy(c.getFamilyArray(), c.getFamilyOffset(), c.getFamilyLength());
+          byte[] qual =
+              Bytes.copy(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength());
+          Delete d = new Delete(r.getRow());
+          d.addColumns(family, qual);
+          deletes.add(d);
+        }
+      }
+      return deletes;
+    }
+  }
+
+  /**
    * Fetches the computed size of all snapshots against tables in a namespace for space quotas.
    */
   static long getNamespaceSnapshotSize(
@@ -524,6 +617,34 @@ public class QuotaTableUtil {
     ByteString bs = UnsafeByteOperations.unsafeWrap(
         c.getValueArray(), c.getValueOffset(), c.getValueLength());
     return QuotaProtos.SpaceQuotaSnapshot.parseFrom(bs).getQuotaUsage();
+  }
+
+  /**
+   * Returns a scanner for all existing namespace snapshot entries.
+   */
+  static Scan createScanForNamespaceSnapshotSizes() {
+    return createScanForNamespaceSnapshotSizes(null);
+  }
+
+  /**
+   * Returns a scanner for all namespace snapshot entries of the given namespace
+   * @param namespace name of the namespace whose snapshot entries are to be scanned
+   */
+  static Scan createScanForNamespaceSnapshotSizes(String namespace) {
+    Scan s = new Scan();
+    if (namespace == null || namespace.isEmpty()) {
+      // Read all namespaces, just look at the row prefix
+      s.setRowPrefixFilter(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
+    } else {
+      // Fetch the exact row for the table
+      byte[] rowkey = getNamespaceRowKey(namespace);
+      // Fetch just this one row
+      s.withStartRow(rowkey).withStopRow(rowkey, true);
+    }
+
+    // Just the usage family and only the snapshot size qualifiers
+    return s.addFamily(QUOTA_FAMILY_USAGE)
+        .setFilter(new ColumnPrefixFilter(QUOTA_SNAPSHOT_SIZE_QUALIFIER));
   }
 
   static Scan createScanForSpaceSnapshotSizes() {
@@ -569,6 +690,46 @@ public class QuotaTableUtil {
         }
       }
       return snapshotSizes;
+    }
+  }
+
+  /**
+   * Returns a multimap for all existing table snapshot entries.
+   * @param conn connection to re-use
+   */
+  public static Multimap<TableName, String> getTableSnapshots(Connection conn) throws IOException {
+    try (Table quotaTable = conn.getTable(QUOTA_TABLE_NAME);
+        ResultScanner rs = quotaTable.getScanner(createScanForSpaceSnapshotSizes())) {
+      Multimap<TableName, String> snapshots = HashMultimap.create();
+      for (Result r : rs) {
+        CellScanner cs = r.cellScanner();
+        while (cs.advance()) {
+          Cell c = cs.current();
+
+          final String snapshot = extractSnapshotNameFromSizeCell(c);
+          snapshots.put(getTableFromRowKey(r.getRow()), snapshot);
+        }
+      }
+      return snapshots;
+    }
+  }
+
+  /**
+   * Returns a set of the names of all namespaces containing snapshot entries.
+   * @param conn connection to re-use
+   */
+  public static Set<String> getNamespaceSnapshots(Connection conn) throws IOException {
+    try (Table quotaTable = conn.getTable(QUOTA_TABLE_NAME);
+        ResultScanner rs = quotaTable.getScanner(createScanForNamespaceSnapshotSizes())) {
+      Set<String> snapshots = new HashSet<>();
+      for (Result r : rs) {
+        CellScanner cs = r.cellScanner();
+        while (cs.advance()) {
+          cs.current();
+          snapshots.add(getNamespaceFromRowKey(r.getRow()));
+        }
+      }
+      return snapshots;
     }
   }
 
