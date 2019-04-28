@@ -77,7 +77,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
-import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TCompressionAlgorithm;
 import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
 import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
@@ -783,7 +783,7 @@ public final class ThriftUtilities {
     }
   }
 
-  public static CompareOperator compareOpFromThrift(TCompareOp tCompareOp) {
+  public static CompareOperator compareOpFromThrift(TCompareOperator tCompareOp) {
     switch (tCompareOp.getValue()) {
       case 0: return CompareOperator.LESS;
       case 1: return CompareOperator.LESS_OR_EQUAL;
@@ -1432,15 +1432,15 @@ public final class ThriftUtilities {
     return tRowMutations;
   }
 
-  public static TCompareOp compareOpFromHBase(CompareOperator compareOp) {
+  public static TCompareOperator compareOpFromHBase(CompareOperator compareOp) {
     switch (compareOp) {
-      case LESS: return TCompareOp.LESS;
-      case LESS_OR_EQUAL: return TCompareOp.LESS_OR_EQUAL;
-      case EQUAL: return TCompareOp.EQUAL;
-      case NOT_EQUAL: return TCompareOp.NOT_EQUAL;
-      case GREATER_OR_EQUAL: return TCompareOp.GREATER_OR_EQUAL;
-      case GREATER: return TCompareOp.GREATER;
-      case NO_OP: return TCompareOp.NO_OP;
+      case LESS: return TCompareOperator.LESS;
+      case LESS_OR_EQUAL: return TCompareOperator.LESS_OR_EQUAL;
+      case EQUAL: return TCompareOperator.EQUAL;
+      case NOT_EQUAL: return TCompareOperator.NOT_EQUAL;
+      case GREATER_OR_EQUAL: return TCompareOperator.GREATER_OR_EQUAL;
+      case GREATER: return TCompareOperator.GREATER;
+      case NO_OP: return TCompareOperator.NO_OP;
       default: return null;
     }
   }
