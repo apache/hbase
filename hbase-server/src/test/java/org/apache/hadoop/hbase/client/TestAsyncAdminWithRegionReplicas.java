@@ -54,7 +54,8 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TestAsyncAdminBase.setUpBeforeClass();
     try (AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
-      RegionReplicaTestHelper.waitUntilAllMetaReplicasHavingRegionLocation(registry, 3);
+      RegionReplicaTestHelper
+        .waitUntilAllMetaReplicasHavingRegionLocation(TEST_UTIL.getConfiguration(), registry, 3);
     }
   }
 

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.NINES;
+import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
@@ -86,6 +88,8 @@ class AsyncNonMetaRegionLocator {
   private final int maxConcurrentLocateRequestPerTable;
 
   private final int locatePrefetchLimit;
+
+  private final boolean useMetaReplicas;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
 
@@ -193,6 +197,8 @@ class AsyncNonMetaRegionLocator {
       MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
     this.locatePrefetchLimit =
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
+    this.useMetaReplicas =
+      conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
   }
 
   private TableCache getTableCache(TableName tableName) {
@@ -421,69 +427,72 @@ class AsyncNonMetaRegionLocator {
     }
     byte[] metaStopKey =
       RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
-    conn.getTable(META_TABLE_NAME)
-      .scan(new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
-        .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(locatePrefetchLimit)
-        .setReadType(ReadType.PREAD), new AdvancedScanResultConsumer() {
+    Scan scan = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
+      .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(locatePrefetchLimit)
+      .setReadType(ReadType.PREAD);
+    if (useMetaReplicas) {
+      scan.setConsistency(Consistency.TIMELINE);
+    }
+    conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
 
-          private boolean completeNormally = false;
+      private boolean completeNormally = false;
 
-          private boolean tableNotFound = true;
+      private boolean tableNotFound = true;
 
-          @Override
-          public void onError(Throwable error) {
-            complete(tableName, req, null, error);
+      @Override
+      public void onError(Throwable error) {
+        complete(tableName, req, null, error);
+      }
+
+      @Override
+      public void onComplete() {
+        if (tableNotFound) {
+          complete(tableName, req, null, new TableNotFoundException(tableName));
+        } else if (!completeNormally) {
+          complete(tableName, req, null, new IOException(
+            "Unable to find region for '" + Bytes.toStringBinary(req.row) + "' in " + tableName));
+        }
+      }
+
+      @Override
+      public void onNext(Result[] results, ScanController controller) {
+        if (results.length == 0) {
+          return;
+        }
+        tableNotFound = false;
+        int i = 0;
+        for (; i < results.length; i++) {
+          if (onScanNext(tableName, req, results[i])) {
+            completeNormally = true;
+            controller.terminate();
+            i++;
+            break;
           }
-
-          @Override
-          public void onComplete() {
-            if (tableNotFound) {
-              complete(tableName, req, null, new TableNotFoundException(tableName));
-            } else if (!completeNormally) {
-              complete(tableName, req, null, new IOException("Unable to find region for '" +
-                Bytes.toStringBinary(req.row) + "' in " + tableName));
+        }
+        // Add the remaining results into cache
+        if (i < results.length) {
+          TableCache tableCache = getTableCache(tableName);
+          for (; i < results.length; i++) {
+            RegionLocations locs = MetaTableAccessor.getRegionLocations(results[i]);
+            if (locs == null) {
+              continue;
+            }
+            HRegionLocation loc = locs.getDefaultRegionLocation();
+            if (loc == null) {
+              continue;
+            }
+            RegionInfo info = loc.getRegion();
+            if (info == null || info.isOffline() || info.isSplitParent()) {
+              continue;
+            }
+            RegionLocations addedLocs = addToCache(tableCache, locs);
+            synchronized (tableCache) {
+              tableCache.clearCompletedRequests(Optional.of(addedLocs));
             }
           }
-
-          @Override
-          public void onNext(Result[] results, ScanController controller) {
-            if (results.length == 0) {
-              return;
-            }
-            tableNotFound = false;
-            int i = 0;
-            for (; i < results.length; i++) {
-              if (onScanNext(tableName, req, results[i])) {
-                completeNormally = true;
-                controller.terminate();
-                i++;
-                break;
-              }
-            }
-            // Add the remaining results into cache
-            if (i < results.length) {
-              TableCache tableCache = getTableCache(tableName);
-              for (; i < results.length; i++) {
-                RegionLocations locs = MetaTableAccessor.getRegionLocations(results[i]);
-                if (locs == null) {
-                  continue;
-                }
-                HRegionLocation loc = locs.getDefaultRegionLocation();
-                if (loc == null) {
-                  continue;
-                }
-                RegionInfo info = loc.getRegion();
-                if (info == null || info.isOffline() || info.isSplitParent()) {
-                  continue;
-                }
-                RegionLocations addedLocs = addToCache(tableCache, locs);
-                synchronized (tableCache) {
-                  tableCache.clearCompletedRequests(Optional.of(addedLocs));
-                }
-              }
-            }
-          }
-        });
+        }
+      }
+    });
   }
 
   private RegionLocations locateInCache(TableCache tableCache, TableName tableName, byte[] row,
