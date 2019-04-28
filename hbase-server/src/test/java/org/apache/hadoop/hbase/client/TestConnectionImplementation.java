@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -1070,6 +1069,24 @@ public class TestConnectionImplementation {
       }
     } finally {
       TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testMetaLookupThreadPoolCreated() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
+    if (TEST_UTIL.getAdmin().tableExists(tableName)) {
+      TEST_UTIL.getAdmin().disableTable(tableName);
+      TEST_UTIL.getAdmin().deleteTable(tableName);
+    }
+    try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES)) {
+      byte[] row = Bytes.toBytes("test");
+      ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
+      // check that metalookup pool would get created
+      c.relocateRegion(tableName, row);
+      ExecutorService ex = c.getCurrentMetaLookupPool();
+      assertNotNull(ex);
     }
   }
 }
