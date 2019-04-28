@@ -80,7 +80,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
-import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TConsistency;
 import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
@@ -1544,7 +1544,7 @@ public class TestThriftHBaseServiceHandler {
 
     // checkAndMutate -- condition should fail because the value doesn't exist.
     assertFalse("Expected condition to not pass",
-        handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value,
+        handler.checkAndMutate(table, row, family, qualifier, TCompareOperator.EQUAL, value,
             tRowMutations));
 
     List<TColumnValue> columnValuesA = new ArrayList<>(1);
@@ -1561,7 +1561,7 @@ public class TestThriftHBaseServiceHandler {
 
     // checkAndMutate -- condition should pass since we added the value
     assertTrue("Expected condition to pass",
-        handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value,
+        handler.checkAndMutate(table, row, family, qualifier, TCompareOperator.EQUAL, value,
             tRowMutations));
 
     result = handler.get(table, new TGet(row));
