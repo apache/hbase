@@ -1071,4 +1071,22 @@ public class TestConnectionImplementation {
       TEST_UTIL.deleteTable(tableName);
     }
   }
+
+  @Test
+  public void testMetaLookupThreadPoolCreated() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
+    if (TEST_UTIL.getAdmin().tableExists(tableName)) {
+      TEST_UTIL.getAdmin().disableTable(tableName);
+      TEST_UTIL.getAdmin().deleteTable(tableName);
+    }
+    try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES)) {
+      byte[] row = Bytes.toBytes("test");
+      ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
+      // check that metalookup pool would get created
+      c.relocateRegion(tableName, row);
+      ExecutorService ex = c.getCurrentMetaLookupPool();
+      assertNotNull(ex);
+    }
+  }
 }
