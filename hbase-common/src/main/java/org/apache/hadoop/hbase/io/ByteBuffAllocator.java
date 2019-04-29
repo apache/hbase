@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+
 import sun.nio.ch.DirectBuffer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -95,6 +97,13 @@ public class ByteBuffAllocator {
 
   private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
+  // Metrics to track the pool allocation number and heap allocation number. If heap allocation
+  // number is increasing so much, then we may need to increase the max.buffer.count .
+  private final LongAdder poolAllocationNum = new LongAdder();
+  private final LongAdder heapAllocationNum = new LongAdder();
+  private long lastPoolAllocationNum = 0;
+  private long lastHeapAllocationNum = 0;
+
   /**
    * Initialize an {@link ByteBuffAllocator} which will try to allocate ByteBuffers from off-heap if
    * reservoir is enabled and the reservoir has enough buffers, otherwise the allocator will just
@@ -152,9 +161,33 @@ public class ByteBuffAllocator {
     return reservoirEnabled;
   }
 
+  public long getHeapAllocationNum() {
+    return heapAllocationNum.sum();
+  }
+
+  public long getPoolAllocationNum() {
+    return poolAllocationNum.sum();
+  }
+
   @VisibleForTesting
-  public int getQueueSize() {
+  public int getFreeBufferCount() {
     return this.buffers.size();
+  }
+
+  public int getTotalBufferCount() {
+    return maxBufCount;
+  }
+
+  public double getHeapAllocationRatio() {
+    long heapAllocNum = heapAllocationNum.sum(), poolAllocNum = poolAllocationNum.sum();
+    double heapDelta = heapAllocNum - lastHeapAllocationNum;
+    double poolDelta = poolAllocNum - lastPoolAllocationNum;
+    lastHeapAllocationNum = heapAllocNum;
+    lastPoolAllocationNum = poolAllocNum;
+    if (Math.abs(heapDelta + poolDelta) < 1e-3) {
+      return 0.0;
+    }
+    return heapDelta / (heapDelta + poolDelta) * 100;
   }
 
   /**
@@ -171,11 +204,12 @@ public class ByteBuffAllocator {
       }
     }
     // Allocated from heap, let the JVM free its memory.
-    return allocateOnHeap(this.bufSize);
+    return (SingleByteBuff) ByteBuff.wrap(allocateOnHeap(bufSize));
   }
 
-  private static SingleByteBuff allocateOnHeap(int size) {
-    return new SingleByteBuff(NONE, ByteBuffer.allocate(size));
+  private ByteBuffer allocateOnHeap(int size) {
+    heapAllocationNum.increment();
+    return ByteBuffer.allocate(size);
   }
 
   /**
@@ -190,7 +224,7 @@ public class ByteBuffAllocator {
     }
     // If disabled the reservoir, just allocate it from on-heap.
     if (!isReservoirEnabled() || size == 0) {
-      return allocateOnHeap(size);
+      return ByteBuff.wrap(allocateOnHeap(size));
     }
     int reminder = size % bufSize;
     int len = size / bufSize + (reminder > 0 ? 1 : 0);
@@ -210,7 +244,7 @@ public class ByteBuffAllocator {
     if (remain > 0) {
       // If the last ByteBuffer is too small or the reservoir can not provide more ByteBuffers, we
       // just allocate the ByteBuffer from on-heap.
-      bbs.add(ByteBuffer.allocate(remain));
+      bbs.add(allocateOnHeap(remain));
     }
     ByteBuff bb = ByteBuff.wrap(bbs, () -> {
       for (int i = 0; i < lenFromReservoir; i++) {
@@ -248,6 +282,7 @@ public class ByteBuffAllocator {
     if (bb != null) {
       // To reset the limit to capacity and position to 0, must clear here.
       bb.clear();
+      poolAllocationNum.increment();
       return bb;
     }
     while (true) {
@@ -264,6 +299,7 @@ public class ByteBuffAllocator {
       if (!this.usedBufCount.compareAndSet(c, c + 1)) {
         continue;
       }
+      poolAllocationNum.increment();
       return ByteBuffer.allocateDirect(bufSize);
     }
   }
