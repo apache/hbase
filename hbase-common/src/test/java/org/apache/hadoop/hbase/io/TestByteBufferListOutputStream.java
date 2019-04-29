@@ -55,7 +55,7 @@ public class TestByteBufferListOutputStream {
     bb1.release();
     bbos.writeInt(123);
     bbos.writeInt(124);
-    assertEquals(0, alloc.getQueueSize());
+    assertEquals(0, alloc.getFreeBufferCount());
     List<ByteBuffer> allBufs = bbos.getByteBuffers();
     assertEquals(4, allBufs.size());
     assertEquals(4, bbos.allBufs.size());
@@ -80,6 +80,6 @@ public class TestByteBufferListOutputStream {
     assertEquals(4, b4.remaining());
     assertEquals(124, b4.getInt());
     bbos.releaseResources();
-    assertEquals(3, alloc.getQueueSize());
+    assertEquals(3, alloc.getFreeBufferCount());
   }
 }
