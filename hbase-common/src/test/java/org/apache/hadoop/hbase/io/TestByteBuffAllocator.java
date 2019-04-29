@@ -48,19 +48,26 @@ public class TestByteBuffAllocator {
     int bufSize = 6 * 1024;
     ByteBuffAllocator alloc = new ByteBuffAllocator(true, maxBuffersInPool, bufSize, bufSize / 6);
     ByteBuff buff = alloc.allocate(10 * bufSize);
+    assertEquals(10, alloc.getPoolAllocationNum());
+    assertEquals(0, alloc.getHeapAllocationNum());
     buff.release();
     // When the request size is less than 1/6th of the pool buffer size. We should use on demand
     // created on heap Buffer
     buff = alloc.allocate(200);
     assertTrue(buff.hasArray());
-    assertEquals(maxBuffersInPool, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
+    assertEquals(maxBuffersInPool, alloc.getTotalBufferCount());
+    assertEquals(10, alloc.getPoolAllocationNum());
+    assertEquals(1, alloc.getHeapAllocationNum());
     buff.release();
     // When the request size is > 1/6th of the pool buffer size.
     buff = alloc.allocate(1024);
     assertFalse(buff.hasArray());
-    assertEquals(maxBuffersInPool - 1, alloc.getQueueSize());
-    buff.release();// ByteBuffDeallocaor#free should put back the BB to pool.
-    assertEquals(maxBuffersInPool, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool - 1, alloc.getFreeBufferCount());
+    assertEquals(11, alloc.getPoolAllocationNum());
+    assertEquals(1, alloc.getHeapAllocationNum());
+    buff.release();// ByteBuff Recycler#free should put back the BB to pool.
+    assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
     // Request size> pool buffer size
     buff = alloc.allocate(7 * 1024);
     assertFalse(buff.hasArray());
@@ -71,9 +78,11 @@ public class TestByteBuffAllocator {
     assertTrue(bbs[1].isDirect());
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(1024, bbs[1].limit());
-    assertEquals(maxBuffersInPool - 2, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool - 2, alloc.getFreeBufferCount());
+    assertEquals(13, alloc.getPoolAllocationNum());
+    assertEquals(1, alloc.getHeapAllocationNum());
     buff.release();
-    assertEquals(maxBuffersInPool, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
 
     buff = alloc.allocate(6 * 1024 + 200);
     assertFalse(buff.hasArray());
@@ -84,11 +93,16 @@ public class TestByteBuffAllocator {
     assertFalse(bbs[1].isDirect());
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(200, bbs[1].limit());
-    assertEquals(maxBuffersInPool - 1, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool - 1, alloc.getFreeBufferCount());
+    assertEquals(14, alloc.getPoolAllocationNum());
+    assertEquals(2, alloc.getHeapAllocationNum());
     buff.release();
-    assertEquals(maxBuffersInPool, alloc.getQueueSize());
+    assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
 
     alloc.allocate(bufSize * (maxBuffersInPool - 1));
+    assertEquals(23, alloc.getPoolAllocationNum());
+    assertEquals(2, alloc.getHeapAllocationNum());
+
     buff = alloc.allocate(20 * 1024);
     assertFalse(buff.hasArray());
     assertTrue(buff instanceof MultiByteBuff);
@@ -98,23 +112,29 @@ public class TestByteBuffAllocator {
     assertFalse(bbs[1].isDirect());
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(14 * 1024, bbs[1].limit());
-    assertEquals(0, alloc.getQueueSize());
+    assertEquals(0, alloc.getFreeBufferCount());
+    assertEquals(24, alloc.getPoolAllocationNum());
+    assertEquals(3, alloc.getHeapAllocationNum());
+
     buff.release();
-    assertEquals(1, alloc.getQueueSize());
+    assertEquals(1, alloc.getFreeBufferCount());
     alloc.allocateOneBuffer();
+    assertEquals(25, alloc.getPoolAllocationNum());
+    assertEquals(3, alloc.getHeapAllocationNum());
 
     buff = alloc.allocate(7 * 1024);
     assertTrue(buff.hasArray());
     assertTrue(buff instanceof SingleByteBuff);
     assertEquals(7 * 1024, buff.nioByteBuffers()[0].limit());
+    assertEquals(25, alloc.getPoolAllocationNum());
+    assertEquals(4, alloc.getHeapAllocationNum());
     buff.release();
   }
 
   @Test
   public void testNegativeAllocatedSize() {
     int maxBuffersInPool = 10;
-    ByteBuffAllocator allocator =
-        new ByteBuffAllocator(true, maxBuffersInPool, 6 * 1024, 1024);
+    ByteBuffAllocator allocator = new ByteBuffAllocator(true, maxBuffersInPool, 6 * 1024, 1024);
     try {
       allocator.allocate(-1);
       fail("Should throw exception when size < 0");
@@ -122,6 +142,7 @@ public class TestByteBuffAllocator {
       // expected exception
     }
     ByteBuff bb = allocator.allocate(0);
+    assertEquals(1, allocator.getHeapAllocationNum());
     bb.release();
   }
 
@@ -169,7 +190,7 @@ public class TestByteBuffAllocator {
     dup2.release();
     assertEquals(0, buf2.refCnt());
     assertEquals(0, dup2.refCnt());
-    assertEquals(0, alloc.getQueueSize());
+    assertEquals(0, alloc.getFreeBufferCount());
     assertException(dup2::position);
     assertException(buf2::position);
 
@@ -178,7 +199,7 @@ public class TestByteBuffAllocator {
     dup1.release();
     assertEquals(0, buf1.refCnt());
     assertEquals(0, dup1.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
     assertException(dup1::position);
     assertException(buf1::position);
 
@@ -189,7 +210,7 @@ public class TestByteBuffAllocator {
     slice3.release();
     assertEquals(0, buf3.refCnt());
     assertEquals(0, slice3.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // slice the buf4, if the slice4 released, buf4 will also be released (MultipleByteBuffer)
     ByteBuff buf4 = alloc.allocate(bufSize * 2);
@@ -198,7 +219,7 @@ public class TestByteBuffAllocator {
     slice4.release();
     assertEquals(0, buf4.refCnt());
     assertEquals(0, slice4.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // Test multiple reference for the same ByteBuff (SingleByteBuff)
     ByteBuff buf5 = alloc.allocateOneBuffer();
@@ -206,7 +227,7 @@ public class TestByteBuffAllocator {
     slice5.release();
     assertEquals(0, buf5.refCnt());
     assertEquals(0, slice5.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
     assertException(slice5::position);
     assertException(buf5::position);
 
@@ -216,7 +237,7 @@ public class TestByteBuffAllocator {
     slice6.release();
     assertEquals(0, buf6.refCnt());
     assertEquals(0, slice6.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // Test retain the parent SingleByteBuff (duplicate)
     ByteBuff parent = alloc.allocateOneBuffer();
@@ -225,11 +246,11 @@ public class TestByteBuffAllocator {
     parent.release();
     assertEquals(1, child.refCnt());
     assertEquals(1, parent.refCnt());
-    assertEquals(1, alloc.getQueueSize());
+    assertEquals(1, alloc.getFreeBufferCount());
     parent.release();
     assertEquals(0, child.refCnt());
     assertEquals(0, parent.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // Test retain parent MultiByteBuff (duplicate)
     parent = alloc.allocate(bufSize << 1);
@@ -238,11 +259,11 @@ public class TestByteBuffAllocator {
     parent.release();
     assertEquals(1, child.refCnt());
     assertEquals(1, parent.refCnt());
-    assertEquals(0, alloc.getQueueSize());
+    assertEquals(0, alloc.getFreeBufferCount());
     parent.release();
     assertEquals(0, child.refCnt());
     assertEquals(0, parent.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // Test retain the parent SingleByteBuff (slice)
     parent = alloc.allocateOneBuffer();
@@ -251,11 +272,11 @@ public class TestByteBuffAllocator {
     parent.release();
     assertEquals(1, child.refCnt());
     assertEquals(1, parent.refCnt());
-    assertEquals(1, alloc.getQueueSize());
+    assertEquals(1, alloc.getFreeBufferCount());
     parent.release();
     assertEquals(0, child.refCnt());
     assertEquals(0, parent.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
 
     // Test retain parent MultiByteBuff (slice)
     parent = alloc.allocate(bufSize << 1);
@@ -264,11 +285,11 @@ public class TestByteBuffAllocator {
     parent.release();
     assertEquals(1, child.refCnt());
     assertEquals(1, parent.refCnt());
-    assertEquals(0, alloc.getQueueSize());
+    assertEquals(0, alloc.getFreeBufferCount());
     parent.release();
     assertEquals(0, child.refCnt());
     assertEquals(0, parent.refCnt());
-    assertEquals(2, alloc.getQueueSize());
+    assertEquals(2, alloc.getFreeBufferCount());
   }
 
   @Test
@@ -282,7 +303,7 @@ public class TestByteBuffAllocator {
     buf1.release();
     assertEquals(0, buf1.refCnt());
     assertEquals(0, dup1.refCnt());
-    assertEquals(1, alloc.getQueueSize());
+    assertEquals(1, alloc.getFreeBufferCount());
     assertException(buf1::position);
     assertException(dup1::position);
   }
