@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -50,12 +51,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 
 /**
@@ -92,12 +90,10 @@ public class TestRSStatusServlet {
     rs = Mockito.mock(HRegionServer.class);
     rpcServices = Mockito.mock(RSRpcServices.class);
     rpcServer = Mockito.mock(RpcServerInterface.class);
-    Mockito.doReturn(HBaseConfiguration.create())
-      .when(rs).getConfiguration();
+    Mockito.doReturn(HBaseConfiguration.create()).when(rs).getConfiguration();
     Mockito.doReturn(rpcServices).when(rs).getRSRpcServices();
     Mockito.doReturn(rpcServer).when(rs).getRpcServer();
-    Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(
-      (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
+    Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(Mockito.any(), Mockito.any());
     // Fake ZKW
     ZKWatcher zkw = Mockito.mock(ZKWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
@@ -119,6 +115,7 @@ public class TestRSStatusServlet {
     MetricsHBaseServer ms = Mockito.mock(MetricsHBaseServer.class);
     Mockito.doReturn(new MetricsHBaseServerWrapperStub()).when(ms).getHBaseServerWrapper();
     Mockito.doReturn(ms).when(rpcServer).getMetrics();
+    Mockito.doReturn(ByteBuffAllocator.HEAP).when(rpcServer).getByteBuffAllocator();
   }
 
   @Test
@@ -130,18 +127,12 @@ public class TestRSStatusServlet {
   public void testWithRegions() throws IOException, ServiceException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     List<RegionInfo> regions = Lists.newArrayList(
-        RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(Bytes.toBytes("a"))
-            .setEndKey(Bytes.toBytes("d"))
-            .build(),
-        RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(Bytes.toBytes("d"))
-            .setEndKey(Bytes.toBytes("z"))
-            .build()
-        );
-    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(
-      regions)).when(rpcServices).getOnlineRegion((RpcController)Mockito.any(),
-        (GetOnlineRegionRequest)Mockito.any());
+      RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("a"))
+          .setEndKey(Bytes.toBytes("d")).build(),
+      RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("d"))
+          .setEndKey(Bytes.toBytes("z")).build());
+    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(regions)).when(rpcServices)
+        .getOnlineRegion(Mockito.any(), Mockito.any());
     new RSStatusTmpl().render(new StringWriter(), rs);
   }
 }

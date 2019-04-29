@@ -123,10 +123,10 @@ public class TestHFile  {
     List<ByteBuff> buffs = new ArrayList<>();
     for (int i = 0; i < bufCount; i++) {
       buffs.add(alloc.allocateOneBuffer());
-      Assert.assertEquals(alloc.getQueueSize(), 0);
+      Assert.assertEquals(alloc.getFreeBufferCount(), 0);
     }
     buffs.forEach(ByteBuff::release);
-    Assert.assertEquals(alloc.getQueueSize(), bufCount);
+    Assert.assertEquals(alloc.getFreeBufferCount(), bufCount);
   }
 
   @Test
@@ -143,7 +143,7 @@ public class TestHFile  {
       // fail test
       assertTrue(false);
     }
-    Assert.assertEquals(bufCount, alloc.getQueueSize());
+    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 
@@ -171,11 +171,11 @@ public class TestHFile  {
       Assert.assertTrue(cachedBlock instanceof HFileBlock);
       Assert.assertTrue(((HFileBlock) cachedBlock).isOnHeap());
       // Should never allocate off-heap block from allocator because ensure that it's LRU.
-      Assert.assertEquals(bufCount, alloc.getQueueSize());
+      Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
       block.release(); // return back the ByteBuffer back to allocator.
     }
     reader.close();
-    Assert.assertEquals(bufCount, alloc.getQueueSize());
+    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
   }
@@ -229,7 +229,7 @@ public class TestHFile  {
     }
     reader.close();
     combined.shutdown();
-    Assert.assertEquals(bufCount, alloc.getQueueSize());
+    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 

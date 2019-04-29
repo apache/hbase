@@ -156,7 +156,7 @@ public class TestHFileBlock {
 
   private void assertAllocator() {
     if (!useHeapAllocator) {
-      assertEquals(MAX_BUFFER_COUNT, alloc.getQueueSize());
+      assertEquals(MAX_BUFFER_COUNT, alloc.getFreeBufferCount());
     }
   }
 

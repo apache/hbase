@@ -549,7 +549,22 @@ public class MetricsRegionServerSourceImpl
             .addGauge(Interns.info(READ_REQUEST_RATE_PER_SECOND, READ_REQUEST_RATE_DESC),
                     rsWrap.getReadRequestsRatePerSecond())
             .addGauge(Interns.info(WRITE_REQUEST_RATE_PER_SECOND, WRITE_REQUEST_RATE_DESC),
-                    rsWrap.getWriteRequestsRatePerSecond());
+                    rsWrap.getWriteRequestsRatePerSecond())
+            .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_NUM,
+                BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_NUM_DESC),
+                rsWrap.getByteBuffAllocatorHeapAllocationNum())
+            .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_NUM,
+                BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_NUM_DESC),
+                rsWrap.getByteBuffAllocatorPoolAllocationNum())
+            .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_HEAP_ALLOACTION_RATIO,
+                BYTE_BUFF_ALLOCATOR_HEAP_ALLOACTION_RATIO_DESC),
+                rsWrap.getByteBuffAllocatorHeapAllocRatio())
+            .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT,
+                BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT_DESC),
+                rsWrap.getByteBuffAllocatorTotalBufferCount())
+            .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_FREE_BUFFER_COUNT,
+                BYTE_BUFF_ALLOCATOR_FREE_BUFFER_COUNT_DESC),
+                rsWrap.getByteBuffAllocatorFreeBufferCount());
   }
 
   @Override

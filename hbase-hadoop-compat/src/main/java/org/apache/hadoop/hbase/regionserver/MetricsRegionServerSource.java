@@ -552,4 +552,19 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String AVERAGE_REGION_SIZE = "averageRegionSize";
   String AVERAGE_REGION_SIZE_DESC =
       "Average region size over the RegionServer including memstore and storefile sizes.";
+
+  /** Metrics for {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} **/
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_NUM = "ByteBuffAllocatorHeapAllocationNum";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOCATION_NUM_DESC =
+      "Number of heap allocation from ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_NUM = "ByteBuffAllocatorPoolAllocationNum";
+  String BYTE_BUFF_ALLOCATOR_POOL_ALLOCATION_NUM_DESC =
+      "Number of pool allocation from ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOACTION_RATIO = "ByteBuffAllocatorHeapAllocationRatio";
+  String BYTE_BUFF_ALLOCATOR_HEAP_ALLOACTION_RATIO_DESC =
+      "Ratio of heap allocation from ByteBuffAllocator, means heapAllocation/totalAllocation";
+  String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT = "ByteBuffAllocatorTotalBufferCount";
+  String BYTE_BUFF_ALLOCATOR_TOTAL_BUFFER_COUNT_DESC = "Total buffer count in ByteBuffAllocator";
+  String BYTE_BUFF_ALLOCATOR_FREE_BUFFER_COUNT = "ByteBuffAllocatorFreeBufferCount";
+  String BYTE_BUFF_ALLOCATOR_FREE_BUFFER_COUNT_DESC = "Free buffer count in ByteBuffAllocator";
 }
