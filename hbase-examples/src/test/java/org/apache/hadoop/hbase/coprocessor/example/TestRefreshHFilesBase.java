@@ -55,7 +55,8 @@ public class TestRefreshHFilesBase {
       CONF.set(HConstants.REGION_IMPL, regionImpl);
       CONF.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
 
-      CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, RefreshHFilesEndpoint.class.getName());
+      CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+              RefreshHFilesEndpoint.class.getName());
       cluster = HTU.startMiniCluster(NUM_RS);
 
       // Create table
@@ -80,9 +81,9 @@ public class TestRefreshHFilesBase {
     for (Region region : cluster.getRegions(TABLE_NAME)) {
       Path regionDir = new Path(tableDir, region.getRegionInfo().getEncodedName());
       Path familyDir = new Path(regionDir, Bytes.toString(FAMILY));
-      HFileTestUtil
-          .createHFile(HTU.getConfiguration(), HTU.getTestFileSystem(), new Path(familyDir, HFILE_NAME), FAMILY,
-              QUALIFIER, Bytes.toBytes("50"), Bytes.toBytes("60"), NUM_ROWS);
+      HFileTestUtil.createHFile(HTU.getConfiguration(), HTU.getTestFileSystem(),
+              new Path(familyDir, HFILE_NAME), FAMILY, QUALIFIER, Bytes.toBytes("50"),
+              Bytes.toBytes("60"), NUM_ROWS);
     }
   }
 }

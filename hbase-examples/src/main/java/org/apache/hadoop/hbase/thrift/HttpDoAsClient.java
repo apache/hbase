@@ -68,9 +68,7 @@ public class HttpDoAsClient {
   static protected String principal = null;
 
   public static void main(String[] args) throws Exception {
-
     if (args.length < 3 || args.length > 4) {
-
       System.out.println("Invalid arguments!");
       System.out.println("Usage: HttpDoAsClient host port doAsUserName [security=true]");
       System.exit(-1);
@@ -146,8 +144,6 @@ public class HttpDoAsClient {
       }
     }
 
-
-
     //
     // Create the demo table with two column families, entry: and unused:
     //
@@ -175,7 +171,7 @@ public class HttpDoAsClient {
     Map<ByteBuffer, ColumnDescriptor> columnMap = refresh(client, httpClient)
         .getColumnDescriptors(ByteBuffer.wrap(t));
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + Integer.toString(col2.maxVersions));
+      System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
     }
 
     transport.close();
@@ -184,7 +180,7 @@ public class HttpDoAsClient {
 
   private Hbase.Client refresh(Hbase.Client client, THttpClient httpClient) {
     httpClient.setCustomHeader("doAs", doAsUser);
-    if(secure) {
+    if (secure) {
       try {
         httpClient.setCustomHeader("Authorization", generateTicket());
       } catch (GSSException e) {
@@ -235,7 +231,6 @@ public class HttpDoAsClient {
 
   private void printRow(TRowResult rowResult) {
     // copy values into a TreeMap to get them in sorted order
-
     TreeMap<String, TCell> sorted = new TreeMap<>();
     for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
       sorted.put(utf8(column.getKey().array()), column.getValue());
@@ -252,7 +247,10 @@ public class HttpDoAsClient {
   }
 
   static Subject getSubject() throws Exception {
-    if (!secure) return new Subject();
+    if (!secure) {
+      return new Subject();
+    }
+
     /*
      * To authenticate the DemoClient, kinit should be invoked ahead.
      * Here we try to get the Kerberos credential from the ticket cache.
@@ -276,9 +274,9 @@ public class HttpDoAsClient {
             options.put("debug", "true");
 
             return new AppConfigurationEntry[]{
-                new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                    options)};
+              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                            options)};
           }
         });
     context.login();

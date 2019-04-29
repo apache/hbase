@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
@@ -94,7 +93,8 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
   }
 
   @Override
-  public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName) throws IOException {
+  public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
     // Increment the Counter for disable table operations
     this.disableTableCounter.increment();
   }
