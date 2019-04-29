@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import com.google.protobuf.RpcCallback;
@@ -57,8 +56,9 @@ public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesServ
   }
 
   @Override
-  public void refreshHFiles(RpcController controller, RefreshHFilesProtos.RefreshHFilesRequest request,
-                            RpcCallback<RefreshHFilesProtos.RefreshHFilesResponse> done) {
+  public void refreshHFiles(RpcController controller,
+      RefreshHFilesProtos.RefreshHFilesRequest request,
+      RpcCallback<RefreshHFilesProtos.RefreshHFilesResponse> done) {
     try {
       for (Store store : env.getRegion().getStores()) {
         LOG.debug("Refreshing HFiles for region: " + store.getRegionInfo().getRegionNameAsString() +
