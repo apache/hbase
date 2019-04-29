@@ -66,16 +66,12 @@ public class SampleUploader extends Configured implements Tool {
 
   private static final String NAME = "SampleUploader";
 
-  static class Uploader
-  extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
-
+  static class Uploader extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
     private long checkpoint = 100;
     private long count = 0;
 
     @Override
-    public void map(LongWritable key, Text line, Context context)
-    throws IOException {
-
+    public void map(LongWritable key, Text line, Context context) throws IOException {
       // Input is a CSV file
       // Each map() is a single line, where the key is the line number
       // Each line is comma-delimited; row,family,qualifier,value
@@ -117,8 +113,7 @@ public class SampleUploader extends Configured implements Tool {
   /**
    * Job configuration.
    */
-  public static Job configureJob(Configuration conf, String [] args)
-  throws IOException {
+  public static Job configureJob(Configuration conf, String [] args) throws IOException {
     Path inputPath = new Path(args[0]);
     String tableName = args[1];
     Job job = new Job(conf, NAME + "_" + tableName);
