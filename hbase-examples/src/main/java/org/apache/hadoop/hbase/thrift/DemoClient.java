@@ -194,11 +194,11 @@ public class DemoClient {
 
     // Test UTF-8 handling
     byte[] invalid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-',
-            (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1};
+                      (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1};
     byte[] valid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-',
-            (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83,
-            (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3,
-            (byte) 0x83, (byte) 0xAB};
+                    (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83,
+                    (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3,
+                    (byte) 0x83, (byte) 0xAB};
 
     ArrayList<Mutation> mutations;
     // non-utf8 is fine for data
@@ -423,9 +423,9 @@ public class DemoClient {
             options.put("debug", "true");
 
             return new AppConfigurationEntry[]{
-                new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                    options)};
+              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                            options)};
           }
         });
 

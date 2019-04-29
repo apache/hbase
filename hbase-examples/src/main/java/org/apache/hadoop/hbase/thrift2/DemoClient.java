@@ -45,7 +45,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class DemoClient {
-
   private static String host = "localhost";
   private static int port = 9090;
   private static boolean secure = false;
@@ -54,7 +53,8 @@ public class DemoClient {
   public static void main(String[] args) throws Exception {
     System.out.println("Thrift2 Demo");
     System.out.println("Usage: DemoClient [host=localhost] [port=9090] [secure=false]");
-    System.out.println("This demo assumes you have a table called \"example\" with a column family called \"family1\"");
+    System.out.println("This demo assumes you have a table called \"example\" with a column " +
+            "family called \"family1\"");
 
     // use passed in arguments instead of defaults
     if (args.length >= 1) {
@@ -95,7 +95,7 @@ public class DemoClient {
     if (framed) {
       transport = new TFramedTransport(transport);
     } else if (secure) {
-      /**
+      /*
        * The Thrift server the DemoClient is trying to connect to
        * must have a matching principal, and support authentication.
        *
@@ -148,7 +148,9 @@ public class DemoClient {
   }
 
   static Subject getSubject() throws Exception {
-    if (!secure) return new Subject();
+    if (!secure) {
+      return new Subject();
+    }
 
     /*
      * To authenticate the DemoClient, kinit should be invoked ahead.
@@ -173,9 +175,9 @@ public class DemoClient {
           options.put("debug", "true");
 
           return new AppConfigurationEntry[]{
-              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                  AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                  options)};
+            new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                          AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                          options)};
         }
       });
     context.login();

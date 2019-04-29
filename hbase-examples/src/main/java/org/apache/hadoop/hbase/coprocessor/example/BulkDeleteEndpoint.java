@@ -87,8 +87,8 @@ import org.slf4j.LoggerFactory;
  *     return rpcCallback.get();
  *   }
  * };
- * Map&lt;byte[], BulkDeleteResponse&gt; result = ht.coprocessorService(BulkDeleteService.class, scan
- *     .getStartRow(), scan.getStopRow(), callable);
+ * Map&lt;byte[], BulkDeleteResponse&gt; result = ht.coprocessorService(BulkDeleteService.class,
+ *  scan.getStartRow(), scan.getStopRow(), callable);
  * for (BulkDeleteResponse response : result.values()) {
  *   noOfDeletedRows += response.getRowsDeleted();
  * }
@@ -225,7 +225,8 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
       int noOfVersionsToDelete = 0;
       if (timestamp == null) {
         for (Cell kv : deleteRow) {
-          delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv.getTimestamp());
+          delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
+                  kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {
