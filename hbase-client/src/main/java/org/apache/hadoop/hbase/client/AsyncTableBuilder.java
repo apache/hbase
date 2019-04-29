@@ -76,8 +76,21 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
    * retrying.
+   * @see #setRetryPauseForCQTBE(long, TimeUnit)
    */
   AsyncTableBuilder<C> setRetryPause(long pause, TimeUnit unit);
+
+  /**
+   * Set the base pause time for retrying when we hit {@code CallQueueTooBigException}. We use an
+   * exponential policy to generate sleep time when retrying.
+   * <p/>
+   * This value should be greater than the normal pause value which could be set with the above
+   * {@link #setRetryPause(long, TimeUnit)} method, as usually {@code CallQueueTooBigException}
+   * means the server is overloaded. We just use the normal pause value for
+   * {@code CallQueueTooBigException} if here you specify a smaller value.
+   * @see #setRetryPause(long, TimeUnit)
+   */
+  AsyncTableBuilder<C> setRetryPauseForCQTBE(long pause, TimeUnit unit);
 
   /**
    * Set the max retry times for an operation. Usually it is the max attempt times minus 1.

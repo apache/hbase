@@ -73,6 +73,8 @@ class AsyncClientScanner {
 
   private final long pauseNs;
 
+  private final long pauseForCQTBENs;
+
   private final int maxAttempts;
 
   private final long scanTimeoutNs;
@@ -84,8 +86,8 @@ class AsyncClientScanner {
   private final ScanResultCache resultCache;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
-      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, int maxAttempts, long scanTimeoutNs,
-      long rpcTimeoutNs, int startLogErrorsCnt) {
+      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseForCQTBENs,
+      int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
     }
@@ -98,6 +100,7 @@ class AsyncClientScanner {
     this.conn = conn;
     this.retryTimer = retryTimer;
     this.pauseNs = pauseNs;
+    this.pauseForCQTBENs = pauseForCQTBENs;
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -160,14 +163,16 @@ class AsyncClientScanner {
   }
 
   private void startScan(OpenScannerResponse resp) {
-    addListener(conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId())
-      .location(resp.loc).remote(resp.isRegionServerRemote)
-      .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
-      .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
-      .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-      .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
-      .start(resp.controller, resp.resp), (hasMore, error) -> {
+    addListener(
+      conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
+        .remote(resp.isRegionServerRemote)
+        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+        .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
+        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
+      (hasMore, error) -> {
         if (error != null) {
           consumer.onError(error);
           return;
@@ -185,8 +190,8 @@ class AsyncClientScanner {
       .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner)
-      .call();
+      .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+      .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
   }
 
   private long getPrimaryTimeoutNs() {

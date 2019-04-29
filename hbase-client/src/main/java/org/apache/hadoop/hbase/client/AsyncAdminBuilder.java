@@ -36,16 +36,12 @@ public interface AsyncAdminBuilder {
    * Set timeout for a whole admin operation. Operation timeout and max attempt times(or max retry
    * times) are both limitations for retrying, we will stop retrying when we reach any of the
    * limitations.
-   * @param timeout
-   * @param unit
    * @return this for invocation chaining
    */
   AsyncAdminBuilder setOperationTimeout(long timeout, TimeUnit unit);
 
   /**
    * Set timeout for each rpc request.
-   * @param timeout
-   * @param unit
    * @return this for invocation chaining
    */
   AsyncAdminBuilder setRpcTimeout(long timeout, TimeUnit unit);
@@ -53,17 +49,27 @@ public interface AsyncAdminBuilder {
   /**
    * Set the base pause time for retrying. We use an exponential policy to generate sleep time when
    * retrying.
-   * @param timeout
-   * @param unit
    * @return this for invocation chaining
+   * @see #setRetryPauseForCQTBE(long, TimeUnit)
    */
   AsyncAdminBuilder setRetryPause(long timeout, TimeUnit unit);
+
+  /**
+   * Set the base pause time for retrying when we hit {@code CallQueueTooBigException}. We use an
+   * exponential policy to generate sleep time when retrying.
+   * <p/>
+   * This value should be greater than the normal pause value which could be set with the above
+   * {@link #setRetryPause(long, TimeUnit)} method, as usually {@code CallQueueTooBigException}
+   * means the server is overloaded. We just use the normal pause value for
+   * {@code CallQueueTooBigException} if here you specify a smaller value.
+   * @see #setRetryPause(long, TimeUnit)
+   */
+  AsyncAdminBuilder setRetryPauseForCQTBE(long pause, TimeUnit unit);
 
   /**
    * Set the max retry times for an admin operation. Usually it is the max attempt times minus 1.
    * Operation timeout and max attempt times(or max retry times) are both limitations for retrying,
    * we will stop retrying when we reach any of the limitations.
-   * @param maxRetries
    * @return this for invocation chaining
    */
   default AsyncAdminBuilder setMaxRetries(int maxRetries) {
@@ -74,14 +80,12 @@ public interface AsyncAdminBuilder {
    * Set the max attempt times for an admin operation. Usually it is the max retry times plus 1.
    * Operation timeout and max attempt times(or max retry times) are both limitations for retrying,
    * we will stop retrying when we reach any of the limitations.
-   * @param maxAttempts
    * @return this for invocation chaining
    */
   AsyncAdminBuilder setMaxAttempts(int maxAttempts);
 
   /**
    * Set the number of retries that are allowed before we start to log.
-   * @param startLogErrorsCnt
    * @return this for invocation chaining
    */
   AsyncAdminBuilder setStartLogErrorsCnt(int startLogErrorsCnt);
