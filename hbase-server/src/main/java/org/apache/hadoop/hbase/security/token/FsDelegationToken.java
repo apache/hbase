@@ -20,6 +20,11 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 
+import java.util.Objects;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -54,18 +59,46 @@ public class FsDelegationToken {
   }
 
   /**
-   * Acquire the delegation token for the specified filesytem.
+   * Acquire the delegation token for the specified filesystem.
    * Before requesting a new delegation token, tries to find one already available.
+   * Currently supports checking existing delegation tokens for swebhdfs, webhdfs and hdfs.
    *
    * @param fs the filesystem that requires the delegation token
    * @throws IOException on fs.getDelegationToken() failure
    */
   public void acquireDelegationToken(final FileSystem fs)
       throws IOException {
+    String tokenKind;
+    String scheme = fs.getUri().getScheme();
+    if (SWebHdfsFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = SWebHdfsFileSystem.TOKEN_KIND.toString();
+    } else if (WebHdfsFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = WebHdfsFileSystem.TOKEN_KIND.toString();
+    } else if (HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = DelegationTokenIdentifier.HDFS_DELEGATION_KIND.toString();
+    } else {
+      LOG.warn("Unknown FS URI scheme: " + scheme);
+      // Preserve default behavior
+      tokenKind = DelegationTokenIdentifier.HDFS_DELEGATION_KIND.toString();
+    }
+
+    acquireDelegationToken(tokenKind, fs);
+  }
+
+  /**
+   * Acquire the delegation token for the specified filesystem and token kind.
+   * Before requesting a new delegation token, tries to find one already available.
+   *
+   * @param tokenKind non-null token kind to get delegation token from the {@link UserProvider}
+   * @param fs the filesystem that requires the delegation token
+   * @throws IOException on fs.getDelegationToken() failure
+   */
+  public void acquireDelegationToken(final String tokenKind, final FileSystem fs)
+      throws IOException {
+    Objects.requireNonNull(tokenKind, "tokenKind:null");
     if (userProvider.isHadoopSecurityEnabled()) {
       this.fs = fs;
-      userToken = userProvider.getCurrent().getToken("HDFS_DELEGATION_TOKEN",
-                                                      fs.getCanonicalServiceName());
+      userToken = userProvider.getCurrent().getToken(tokenKind, fs.getCanonicalServiceName());
       if (userToken == null) {
         hasForwardedToken = false;
         try {
