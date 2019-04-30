@@ -486,6 +486,134 @@ public class TestMultiRowRangeFilter {
     ht.close();
   }
 
+  @Test
+  public void testReverseMultiRowRangeFilterWithinTable() throws IOException {
+    tableName = Bytes.toBytes("testReverseMultiRowRangeFilterWithinTable");
+    HTable ht = TEST_UTIL.createTable(tableName, family);
+    generateRows(numRows, ht, family, qf, value);
+
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    List<RowRange> ranges = Arrays.asList(
+        new RowRange(Bytes.toBytes(20), true, Bytes.toBytes(30), true),
+        new RowRange(Bytes.toBytes(50), true, Bytes.toBytes(60), true)
+    );
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
+    scan.setFilter(filter);
+
+    List<Integer> expectedResults = new ArrayList<>();
+    for (int i = 60; i >= 50; i--) {
+      expectedResults.add(i);
+    }
+    for (int i = 30; i >= 20; i--) {
+      expectedResults.add(i);
+    }
+
+    List<Cell> results = getResults(ht, scan);
+    List<Integer> actualResults = new ArrayList<>();
+    StringBuilder sb = new StringBuilder();
+    for (Cell result : results) {
+      int observedValue = Bytes.toInt(
+          result.getRowArray(), result.getRowOffset(), result.getRowLength());
+      actualResults.add(observedValue);
+      if (sb.length() > 0) {
+        sb.append(", ");
+      }
+      sb.append(observedValue);
+    }
+    assertEquals("Saw results: " + sb.toString(), 22, results.size());
+  }
+
+  @Test
+  public void testReverseMultiRowRangeFilterIncludingMaxRow() throws IOException {
+    tableName = Bytes.toBytes("testReverseMultiRowRangeFilterIncludingMaxRow");
+    HTable ht = TEST_UTIL.createTable(tableName, family);
+    for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
+      byte[] row = Bytes.toBytes(rowkey);
+      Put p = new Put(row);
+      p.addColumn(family, qf, value);
+      ht.put(p);
+    }
+    TEST_UTIL.flush();
+
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    List<RowRange> ranges = Arrays.asList(
+        new RowRange(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true),
+        new RowRange(Bytes.toBytes("f"), true, Bytes.toBytes("h"), true)
+    );
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
+    scan.setFilter(filter);
+
+    List<String> expected = Arrays.asList("h", "g", "f", "c", "b");
+    List<String> actual = new ArrayList<>();
+    for (Cell cell : getResults(ht, scan)) {
+      actual.add(Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    }
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testReverseMultiRowRangeFilterIncludingMinRow() throws IOException {
+    tableName = Bytes.toBytes("testReverseMultiRowRangeFilterIncludingMinRow");
+    HTable ht = TEST_UTIL.createTable(tableName, family);
+    for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
+      byte[] row = Bytes.toBytes(rowkey);
+      Put p = new Put(row);
+      p.addColumn(family, qf, value);
+      ht.put(p);
+    }
+    TEST_UTIL.flush();
+
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    List<RowRange> ranges = Arrays.asList(
+        new RowRange(Bytes.toBytes("a"), true, Bytes.toBytes("c"), true),
+        new RowRange(Bytes.toBytes("f"), true, Bytes.toBytes("g"), true)
+    );
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
+    scan.setFilter(filter);
+
+    List<String> expected = Arrays.asList("g", "f", "c", "b", "a");
+    List<String> actual = new ArrayList<>();
+    for (Cell cell : getResults(ht, scan)) {
+      actual.add(Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    }
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testReverseMultiRowRangeFilterIncludingMinAndMaxRow() throws IOException {
+    tableName = Bytes.toBytes("testReverseMultiRowRangeFilterIncludingMinAndMaxRow");
+    HTable ht = TEST_UTIL.createTable(tableName, family);
+    for (String rowkey : Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h")) {
+      byte[] row = Bytes.toBytes(rowkey);
+      Put p = new Put(row);
+      p.addColumn(family, qf, value);
+      ht.put(p);
+    }
+    TEST_UTIL.flush();
+
+    Scan scan = new Scan();
+    scan.setReversed(true);
+    List<RowRange> ranges = Arrays.asList(
+        new RowRange(Bytes.toBytes("a"), true, Bytes.toBytes("c"), true),
+        new RowRange(Bytes.toBytes("f"), true, Bytes.toBytes("h"), true)
+    );
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
+    scan.setFilter(filter);
+
+    List<String> expected = Arrays.asList("h", "g", "f", "c", "b", "a");
+    List<String> actual = new ArrayList<>();
+    for (Cell cell : getResults(ht, scan)) {
+      actual.add(Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    }
+
+    assertEquals(expected, actual);
+  }
+
   private void generateRows(int numberOfRows, HTable ht, byte[] family, byte[] qf, byte[] value)
       throws IOException {
     for (int i = 0; i < numberOfRows; i++) {
@@ -518,7 +646,7 @@ public class TestMultiRowRangeFilter {
     return kvList;
   }
 
-  private int getResultsSize(HTable ht, Scan scan) throws IOException {
+  private List<Cell> getResults(HTable ht, Scan scan) throws IOException {
     ResultScanner scanner = ht.getScanner(scan);
     List<Cell> results = new ArrayList<Cell>();
     Result r;
@@ -528,6 +656,10 @@ public class TestMultiRowRangeFilter {
       }
     }
     scanner.close();
-    return results.size();
+    return results;
+  }
+
+  private int getResultsSize(HTable ht, Scan scan) throws IOException {
+    return getResults(ht, scan).size();
   }
 }
