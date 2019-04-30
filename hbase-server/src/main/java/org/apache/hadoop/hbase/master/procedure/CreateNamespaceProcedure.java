@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import java.io.IOException;import java.io.InterruptedIOException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;

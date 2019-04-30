@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;import java.io.InterruptedIOException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
