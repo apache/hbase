@@ -195,10 +195,12 @@ public class CloneSnapshotProcedure
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (InterruptedIOException e) {
-      // Handle interrupted IO; master is probably shutting down, no reason to retry.
-      throw new InterruptedException(e.getMessage());
     } catch (IOException e) {
+      // Check for a specific class; IIoEx is thrown for interrupted thread but not its subclasses.
+      // Handle interrupted IO; master is probably shutting down, no reason to retry.
+      if (e.getClass() == InterruptedIOException.class) {
+        throw new InterruptedException(e.getMessage());
+      }
       if (isRollbackSupported(state)) {
         setFailure("master-clone-snapshot", e);
       } else {
