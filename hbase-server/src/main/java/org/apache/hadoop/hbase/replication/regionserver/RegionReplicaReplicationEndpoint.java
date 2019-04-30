@@ -151,21 +151,23 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private void getRegionLocations(CompletableFuture<RegionLocations> future,
       TableDescriptor tableDesc, byte[] encodedRegionName, byte[] row, boolean reload) {
     FutureUtils.addListener(connection.getRegionLocations(tableDesc.getTableName(), row, reload),
-      (r, e) -> {
+      (locs, e) -> {
         if (e != null) {
           future.completeExceptionally(e);
           return;
         }
         // if we are not loading from cache, just return
         if (reload) {
-          future.complete(r);
+          future.complete(locs);
           return;
         }
         // check if the number of region replicas is correct, and also the primary region name
-        // matches
-        if (r.size() == tableDesc.getRegionReplication() && Bytes.equals(
-          r.getDefaultRegionLocation().getRegion().getEncodedNameAsBytes(), encodedRegionName)) {
-          future.complete(r);
+        // matches, and also there is no null elements in the returned RegionLocations
+        if (locs.size() == tableDesc.getRegionReplication() &&
+          locs.size() == locs.numNonNullElements() &&
+          Bytes.equals(locs.getDefaultRegionLocation().getRegion().getEncodedNameAsBytes(),
+            encodedRegionName)) {
+          future.complete(locs);
         } else {
           // reload again as the information in cache maybe stale
           getRegionLocations(future, tableDesc, encodedRegionName, row, true);
