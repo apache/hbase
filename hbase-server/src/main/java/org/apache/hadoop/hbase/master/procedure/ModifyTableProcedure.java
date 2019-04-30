@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -135,6 +136,9 @@ public class ModifyTableProcedure
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
+    } catch (InterruptedIOException e) {
+      // Handle interrupted IO; master is probably shutting down, no reason to retry.
+      throw new InterruptedException(e.getMessage());
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-modify-table", e);

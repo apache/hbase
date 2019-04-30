@@ -1551,7 +1551,7 @@ public class MasterRpcServices extends RSRpcServices
       StopMasterRequest request) throws ServiceException {
     LOG.info(master.getClientIdAuditPrefix() + " stop");
     try {
-      master.stopMaster();
+      master.stopMaster(true);
     } catch (IOException e) {
       LOG.error("Exception occurred while stopping master", e);
       throw new ServiceException(e);

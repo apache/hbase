@@ -314,7 +314,9 @@ public class HRegionServer extends HasThread implements
   // Set when a report to the master comes back with a message asking us to
   // shutdown. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
+  // TODO: both of those are not protected by any lock...
   private volatile boolean stopped = false;
+  private volatile boolean stoppedFromRpc = false;
 
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
@@ -580,6 +582,7 @@ public class HRegionServer extends HasThread implements
 
       this.abortRequested = false;
       this.stopped = false;
+      this.stoppedFromRpc = false;
 
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
@@ -1062,6 +1065,27 @@ public class HRegionServer extends HasThread implements
       }
     }
 
+    // First, shut down RCP services so we minimize race potential if we respond to requests
+    // in the middle of abort, from partial/invalid state.
+    if (this.rpcServices != null) {
+      // Note: if we were stopped from an RPC message, this is a race, but previously we'd have
+      //       enough time to respond to that message while all the other stuff was shutting down.
+      //       We don't have that artificial wait anymore, so if stopped from RCP wait explicitly.
+      //       It's still a race so the client may receive a disconnect.
+      //       There seems to be no way to wait for a particular response to be sent out...
+      if (stoppedFromRpc) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // Ignore, we will complete shutdown.
+        }
+      }
+      this.rpcServices.stop();
+    }
+
+    // Then, shut down procedures for the same reason; avoid persisting procedures in bad state.
+    stopProcedureExecutorAndStore();
+
     if (this.leases != null) {
       this.leases.closeAfterLeasesExpire();
     }
@@ -1093,7 +1117,6 @@ public class HRegionServer extends HasThread implements
     if (this.hMemManager != null) this.hMemManager.stop();
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
-    sendShutdownInterrupt();
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
     if (rspmHost != null) {
@@ -1171,10 +1194,6 @@ public class HRegionServer extends HasThread implements
 
     if (!killed) {
       stopServiceThreads();
-    }
-
-    if (this.rpcServices != null) {
-      this.rpcServices.stop();
     }
 
     try {
@@ -2187,7 +2206,11 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void stop(final String msg) {
-    stop(msg, false, RpcServer.getRequestUser().orElse(null));
+    stop(msg, false);
+  }
+
+  public void stop(final String msg, boolean isRpc) {
+    stop(msg, false, RpcServer.getRequestUser().orElse(null), isRpc);
   }
 
   /**
@@ -2196,7 +2219,7 @@ public class HRegionServer extends HasThread implements
    * @param force True if this is a regionserver abort
    * @param user The user executing the stop request, or null if no user is associated
    */
-  public void stop(final String msg, final boolean force, final User user) {
+  public void stop(final String msg, final boolean force, final User user, boolean isRpc) {
     if (!this.stopped) {
       LOG.info("***** STOPPING region server '" + this + "' *****");
       if (this.rsHost != null) {
@@ -2211,6 +2234,7 @@ public class HRegionServer extends HasThread implements
           LOG.warn("Skipping coprocessor exception on preStop() due to forced shutdown", ioe);
         }
       }
+      this.stoppedFromRpc = isRpc || this.stoppedFromRpc;
       this.stopped = true;
       LOG.info("STOPPED: " + msg);
       // Wakes run() if it is sleeping
@@ -2400,6 +2424,10 @@ public class HRegionServer extends HasThread implements
     return rpcServices;
   }
 
+  protected void stopProcedureExecutorAndStore() {
+    // No-op in RS; there's no procedure store so we don't have to shut the executor down early.
+  }
+
   /**
    * Cause the server to exit without closing the regions it is serving, the log
    * it is using and without notifying the master. Used unit testing and on
@@ -2449,7 +2477,7 @@ public class HRegionServer extends HasThread implements
       LOG.warn("Unable to report fatal error to master", t);
     }
     // shutdown should be run as the internal user
-    stop(reason, true, null);
+    stop(reason, true, null, false);
   }
 
   /**
@@ -2473,12 +2501,6 @@ public class HRegionServer extends HasThread implements
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
-  }
-
-  /**
-   * Called on stop/abort before closing the cluster connection and meta locator.
-   */
-  protected void sendShutdownInterrupt() {
   }
 
   /**

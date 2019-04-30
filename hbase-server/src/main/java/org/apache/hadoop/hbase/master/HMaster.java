@@ -1516,8 +1516,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.assignmentManager.stop();
     }
 
-    stopProcedureExecutor();
-
     if (this.walManager != null) {
       this.walManager.stop();
     }
@@ -1565,7 +1563,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     procedureExecutor.startWorkers();
   }
 
-  private void stopProcedureExecutor() {
+  @Override
+  protected void stopProcedureExecutorAndStore() {
+    super.stopProcedureExecutorAndStore();
     if (procedureExecutor != null) {
       configurationManager.deregisterObserver(procedureExecutor.getEnvironment());
       procedureExecutor.getEnvironment().getRemoteDispatcher().stop();
@@ -2968,7 +2968,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     try {
-      stopMaster();
+      stopMaster(false);
     } catch (IOException e) {
       LOG.error("Exception occurred while stopping master", e);
     }
@@ -3050,16 +3050,25 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public void stopMaster() throws IOException {
+    stopMaster(false);
+  }
+
+  public void stopMaster(boolean isRpc) throws IOException {
     if (cpHost != null) {
       cpHost.preStopMaster();
     }
-    stop("Stopped by " + Thread.currentThread().getName());
+    stop("Stopped by " + Thread.currentThread().getName(), isRpc);
   }
 
   @Override
   public void stop(String msg) {
+    stop(msg, false);
+  }
+
+  @Override
+  public void stop(String msg, boolean isRpc) {
     if (!isStopped()) {
-      super.stop(msg);
+      super.stop(msg, isRpc);
       if (this.activeMasterManager != null) {
         this.activeMasterManager.stop();
       }

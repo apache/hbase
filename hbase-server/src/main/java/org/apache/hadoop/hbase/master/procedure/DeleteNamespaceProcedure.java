@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.IOException;import java.io.InterruptedIOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -94,6 +94,9 @@ public class DeleteNamespaceProcedure
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
+    } catch (InterruptedIOException e) {
+      // Handle interrupted IO; master is probably shutting down, no reason to retry.
+      throw new InterruptedException(e.getMessage());
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-delete-namespace", e);

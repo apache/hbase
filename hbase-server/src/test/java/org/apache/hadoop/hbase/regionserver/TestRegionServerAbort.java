@@ -127,7 +127,7 @@ public class TestRegionServerAbort {
    * Test that a regionserver is able to abort properly, even when a coprocessor
    * throws an exception in preStopRegionServer().
    */
-  @Test
+  @Test(timeout = 20000L)
   public void testAbortFromRPC() throws Exception {
     TableName tableName = TableName.valueOf("testAbortFromRPC");
     // create a test table
@@ -147,14 +147,26 @@ public class TestRegionServerAbort {
 
     List<HRegion> regions = cluster.findRegionsForTable(tableName);
     HRegion firstRegion = cluster.findRegionsForTable(tableName).get(0);
-    table.put(put);
-    // Verify that the regionserver is stopped
+
+    // Shutting down RS will shut down RPC endpoint before a put can return, in most cases.
+    // So, don't wait for the put to finish.
+    Thread t = new Thread(() -> {
+      try {
+        table.put(put);
+      } catch (IOException e) {
+        LOG.info("Put failed", e);
+      }
+    });
+    t.setDaemon(true);
+    t.start();
+
+    // Wait for the regionserver is stopped
     assertNotNull(firstRegion);
-    assertNotNull(firstRegion.getRegionServerServices());
-    LOG.info("isAborted = " + firstRegion.getRegionServerServices().isAborted());
-    assertTrue(firstRegion.getRegionServerServices().isAborted());
-    LOG.info("isStopped = " + firstRegion.getRegionServerServices().isStopped());
-    assertTrue(firstRegion.getRegionServerServices().isStopped());
+    RegionServerServices rss = firstRegion.getRegionServerServices();
+    assertNotNull(rss);
+    while (!rss.isAborted() || !rss.isStopped()) {
+      Thread.sleep(100);
+    }
   }
 
   /**

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import java.io.IOException;
+import java.io.IOException;import java.io.InterruptedIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -86,6 +86,9 @@ public class CreateNamespaceProcedure
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
+    } catch (InterruptedIOException e) {
+     // Handle interrupted IO; master is probably shutting down, no reason to retry.
+      throw new InterruptedException(e.getMessage());
     } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-create-namespace", e);

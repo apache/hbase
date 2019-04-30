@@ -2355,8 +2355,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public StopServerResponse stopServer(final RpcController controller,
       final StopServerRequest request) throws ServiceException {
     requestCount.increment();
-    String reason = request.getReason();
-    regionServer.stop(reason);
+    regionServer.stop(request.getReason(), true);
     return StopServerResponse.newBuilder().build();
   }
 
