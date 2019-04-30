@@ -60,6 +60,8 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
     RegionCoprocessorEnvironment env = ctx.getEnvironment();
     Configuration c = env.getConfiguration();
     if (pairs == null || pairs.isEmpty() ||
+        env.getRegion().getTableDescriptor().getColumnFamily(family).getScope()
+          != HConstants.REPLICATION_SCOPE_GLOBAL ||
         !c.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT)) {
       LOG.debug("Skipping recording bulk load entries in preCommitStoreFile for bulkloaded "
