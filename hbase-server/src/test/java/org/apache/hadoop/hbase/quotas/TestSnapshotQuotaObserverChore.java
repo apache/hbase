@@ -324,6 +324,92 @@ public class TestSnapshotQuotaObserverChore {
   }
 
   @Test
+  public void testRemovedSnapshots() throws Exception {
+    // Create a table and set a quota
+    TableName tn1 = helper.createTableWithRegions(1);
+    admin.setQuota(QuotaSettingsFactory.limitTableSpace(tn1, SpaceQuotaHelperForTests.ONE_GIGABYTE,
+        SpaceViolationPolicy.NO_INSERTS));
+
+    // Write some data and flush it
+    helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE); // 256 KB
+
+    final AtomicReference<Long> lastSeenSize = new AtomicReference<>();
+    // Wait for the Master chore to run to see the usage (with a fudge factor)
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        lastSeenSize.set(snapshot.getUsage());
+        return snapshot.getUsage() > 230L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
+      }
+    });
+
+    // Create a snapshot on the table
+    final String snapshotName1 = tn1 + "snapshot1";
+    admin.snapshot(new SnapshotDescription(snapshotName1, tn1, SnapshotType.SKIPFLUSH));
+
+    // Snapshot size has to be 0 as the snapshot shares the data with the table
+    final Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME);
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName1);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        return QuotaTableUtil.parseSnapshotSize(c) == 0;
+      }
+    });
+    // Total usage has to remain same as what we saw before taking a snapshot
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() == lastSeenSize.get();
+      }
+    });
+
+    // Major compact the table to force a rewrite
+    TEST_UTIL.compact(tn1, true);
+    // Now the snapshot size has to prev total size
+    TEST_UTIL.waitFor(30_000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Get g = QuotaTableUtil.makeGetForSnapshotSize(tn1, snapshotName1);
+        Result r = quotaTable.get(g);
+        if (r == null || r.isEmpty()) {
+          return false;
+        }
+        r.advance();
+        Cell c = r.current();
+        // The compaction result file has an additional compaction event tracker
+        return lastSeenSize.get() == QuotaTableUtil.parseSnapshotSize(c);
+      }
+    });
+    // The total size now has to be equal/more than double of prev total size
+    // as double the number of store files exist now.
+    final AtomicReference<Long> sizeAfterCompaction = new AtomicReference<>();
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        sizeAfterCompaction.set(snapshot.getUsage());
+        return snapshot.getUsage() >= 2 * lastSeenSize.get();
+      }
+    });
+
+    // Delete the snapshot
+    admin.deleteSnapshot(snapshotName1);
+    // Total size has to come down to prev totalsize - snapshot size(which was removed)
+    TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() == (sizeAfterCompaction.get() - lastSeenSize.get());
+      }
+    });
+  }
+
+  @Test
   public void testBucketingFilesToSnapshots() throws Exception {
     // Create a table and set a quota
     TableName tn1 = helper.createTableWithRegions(1);

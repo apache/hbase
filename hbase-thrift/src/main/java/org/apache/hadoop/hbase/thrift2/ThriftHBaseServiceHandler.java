@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -340,7 +340,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   
   @Override
   public boolean checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family,
-      ByteBuffer qualifier, TCompareOp compareOp, ByteBuffer value, TRowMutations rowMutations)
+      ByteBuffer qualifier, TCompareOperator compareOp, ByteBuffer value,
+      TRowMutations rowMutations)
           throws TIOError, TException {
     checkReadOnlyMode();
     try (final Table htable = getTable(table)) {

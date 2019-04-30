@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
-import org.apache.hadoop.hbase.thrift2.generated.TCompareOp;
+import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
@@ -337,7 +337,7 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
 
     boolean exceptionCaught = false;
     try {
-      handler.checkAndMutate(table, row, family, qualifier, TCompareOp.EQUAL, value,
+      handler.checkAndMutate(table, row, family, qualifier, TCompareOperator.EQUAL, value,
           tRowMutations);
     } catch (TIOError e) {
       exceptionCaught = true;

@@ -30,6 +30,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY;
@@ -54,12 +55,16 @@ import static org.apache.hadoop.hbase.client.ConnectionConfiguration.WRITE_BUFFE
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Timeout configs.
  */
 @InterfaceAudience.Private
 class AsyncConnectionConfiguration {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionConfiguration.class);
 
   private final long metaOperationTimeoutNs;
 
@@ -78,6 +83,8 @@ class AsyncConnectionConfiguration {
   private final long writeRpcTimeoutNs;
 
   private final long pauseNs;
+
+  private final long pauseForCQTBENs;
 
   private final int maxRetries;
 
@@ -121,8 +128,16 @@ class AsyncConnectionConfiguration {
       TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeoutNs));
     this.writeRpcTimeoutNs =
       TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, rpcTimeoutNs));
-    this.pauseNs =
-      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE));
+    long pauseMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
+    long pauseForCQTBEMs = conf.getLong(HBASE_CLIENT_PAUSE_FOR_CQTBE, pauseMs);
+    if (pauseForCQTBEMs < pauseMs) {
+      LOG.warn(
+        "The {} setting: {} ms is less than the {} setting: {} ms, use the greater one instead",
+        HBASE_CLIENT_PAUSE_FOR_CQTBE, pauseForCQTBEMs, HBASE_CLIENT_PAUSE, pauseMs);
+      pauseForCQTBEMs = pauseMs;
+    }
+    this.pauseNs = TimeUnit.MILLISECONDS.toNanos(pauseMs);
+    this.pauseForCQTBENs = TimeUnit.MILLISECONDS.toNanos(pauseForCQTBEMs);
     this.maxRetries = conf.getInt(HBASE_CLIENT_RETRIES_NUMBER, DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.startLogErrorsCnt =
       conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
@@ -171,6 +186,10 @@ class AsyncConnectionConfiguration {
 
   long getPauseNs() {
     return pauseNs;
+  }
+
+  long getPauseForCQTBENs() {
+    return pauseForCQTBENs;
   }
 
   int getMaxRetries() {

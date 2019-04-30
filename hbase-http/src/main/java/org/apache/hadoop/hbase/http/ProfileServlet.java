@@ -85,6 +85,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
  */
 @InterfaceAudience.Private
 public class ProfileServlet extends HttpServlet {
+
   private static final long serialVersionUID = 1L;
   private static final Logger LOG = LoggerFactory.getLogger(ProfileServlet.class);
 
@@ -176,7 +177,10 @@ public class ProfileServlet extends HttpServlet {
     if (asyncProfilerHome == null || asyncProfilerHome.trim().isEmpty()) {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
-      resp.getWriter().write("ASYNC_PROFILER_HOME env is not set.");
+      resp.getWriter().write("ASYNC_PROFILER_HOME env is not set.\n\n" +
+        "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n" +
+        "environment is properly configured. For more information please see\n" +
+        "http://hbase.apache.org/book.html#profiler\n");
       return;
     }
 
@@ -357,7 +361,7 @@ public class ProfileServlet extends HttpServlet {
     return Output.SVG;
   }
 
-  private void setResponseHeader(final HttpServletResponse response) {
+  private static void setResponseHeader(final HttpServletResponse response) {
     response.setHeader(ACCESS_CONTROL_ALLOW_METHODS, ALLOWED_METHODS);
     response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     response.setContentType(CONTENT_TYPE_TEXT);
@@ -372,4 +376,23 @@ public class ProfileServlet extends HttpServlet {
 
     return asyncProfilerHome;
   }
+
+  public static class DisabledServlet extends HttpServlet {
+
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
+        throws IOException {
+      resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      setResponseHeader(resp);
+      resp.getWriter().write("The profiler servlet was disabled at startup.\n\n" +
+        "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n" +
+        "environment is properly configured. For more information please see\n" +
+        "http://hbase.apache.org/book.html#profiler\n");
+      return;
+    }
+
+  }
+
 }
