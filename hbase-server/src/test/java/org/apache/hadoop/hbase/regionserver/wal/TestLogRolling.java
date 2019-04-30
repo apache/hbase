@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -64,7 +66,9 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -146,9 +150,15 @@ public class TestLogRolling  {
     TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
-     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
+    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+
+    // For slow sync threshold test: roll after 5 slow syncs in 10 seconds
+    TEST_UTIL.getConfiguration().setInt(FSHLog.SLOW_SYNC_ROLL_THRESHOLD, 5);
+    TEST_UTIL.getConfiguration().setInt(FSHLog.SLOW_SYNC_ROLL_INTERVAL_MS, 10 * 1000);
+    // For slow sync threshold test: roll once after a sync above this threshold
+    TEST_UTIL.getConfiguration().setInt(FSHLog.ROLL_ON_SYNC_TIME_MS, 5000);
   }
 
   @Before
@@ -223,17 +233,185 @@ public class TestLogRolling  {
     LOG.info("after writing there are " + DefaultWALProvider.getNumRolledLogFiles(log) +
         " log files");
 
-      // flush all regions
-      for (Region r: server.getOnlineRegionsLocalContext()) {
-        r.flush(true);
-      }
+    // flush all regions
+    for (Region r: server.getOnlineRegionsLocalContext()) {
+      r.flush(true);
+    }
 
-      // Now roll the log
-      log.rollWriter();
+    // Now roll the log
+    log.rollWriter();
 
     int count = DefaultWALProvider.getNumRolledLogFiles(log);
     LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
       assertTrue(("actual count: " + count), count <= 2);
+  }
+
+  @Test
+  public void testSlowSyncLogRolling() throws Exception {
+    // Create the test table
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(getName()));
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc);
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
+    int row = 1;
+    try {
+      assertTrue(((HTable) table).isAutoFlush());
+
+      // Get a reference to the FSHLog
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
+      HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
+      final FSHLog log = (FSHLog) server.getWAL(region);
+
+      // Register a WALActionsListener to observe if a SLOW_SYNC roll is requested
+
+      final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
+      log.registerWALActionsListener(new WALActionsListener.Base() {
+        @Override
+        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
+          switch (reason) {
+            case SLOW_SYNC:
+              slowSyncHookCalled.lazySet(true);
+              break;
+            default:
+              break;
+          }
+        }
+      });
+
+      // Write some data
+
+      for (int i = 0; i < 10; i++) {
+        writeData(table, row++);
+      }
+
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
+        slowSyncHookCalled.get());
+
+      // Set up for test
+      slowSyncHookCalled.set(false);
+
+      // Wrap the current writer with the anonymous class below that adds 200 ms of
+      // latency to any sync on the hlog. This should be more than sufficient to trigger
+      // slow sync warnings.
+      final Writer oldWriter1 = log.getWriter();
+      final Writer newWriter1 = new Writer() {
+        @Override
+        public void close() throws IOException {
+          oldWriter1.close();
+        }
+        @Override
+        public void sync(boolean forceSync) throws IOException {
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException e) {
+            InterruptedIOException ex = new InterruptedIOException();
+            ex.initCause(e);
+            throw ex;
+          }
+          oldWriter1.sync(forceSync);
+        }
+        @Override
+        public void append(Entry entry) throws IOException {
+          oldWriter1.append(entry);
+        }
+        @Override
+        public long getLength() throws IOException {
+          return oldWriter1.getLength();
+        }
+      };
+      log.setWriter(newWriter1);
+
+      // Write some data.
+      // We need to write at least 5 times, but double it. We should only request
+      // a SLOW_SYNC roll once in the current interval.
+      for (int i = 0; i < 10; i++) {
+        writeData(table, row++);
+      }
+
+      // Wait for our wait injecting writer to get rolled out, as needed.
+
+      TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return log.getWriter() != newWriter1;
+        }
+        @Override
+        public String explainFailure() throws Exception {
+          return "Waited too long for our test writer to get rolled out";
+        }
+      });
+
+      assertTrue("Should have triggered log roll due to SLOW_SYNC",
+        slowSyncHookCalled.get());
+
+      // Set up for test
+      slowSyncHookCalled.set(false);
+
+      // Wrap the current writer with the anonymous class below that adds 5000 ms of
+      // latency to any sync on the hlog.
+      // This will trip the other threshold.
+      final Writer oldWriter2 = log.getWriter();
+      final Writer newWriter2 = new Writer() {
+        @Override
+        public void close() throws IOException {
+          oldWriter2.close();
+        }
+        @Override
+        public void sync(boolean forceSync) throws IOException {
+          try {
+            Thread.sleep(5000);
+          } catch (InterruptedException e) {
+            InterruptedIOException ex = new InterruptedIOException();
+            ex.initCause(e);
+            throw ex;
+          }
+          oldWriter2.sync(forceSync);
+        }
+        @Override
+        public void append(Entry entry) throws IOException {
+          oldWriter2.append(entry);
+        }
+        @Override
+        public long getLength() throws IOException {
+          return oldWriter2.getLength();
+        }
+      };
+      log.setWriter(newWriter2);
+
+      // Write some data. Should only take one sync.
+
+      writeData(table, row++);
+
+      // Wait for our wait injecting writer to get rolled out, as needed.
+
+      TEST_UTIL.waitFor(10000, 100, new Waiter.ExplainingPredicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return log.getWriter() != newWriter2;
+        }
+        @Override
+        public String explainFailure() throws Exception {
+          return "Waited too long for our test writer to get rolled out";
+        }
+      });
+
+      assertTrue("Should have triggered log roll due to SLOW_SYNC",
+        slowSyncHookCalled.get());
+
+      // Set up for test
+      slowSyncHookCalled.set(false);
+
+      // Write some data
+      for (int i = 0; i < 10; i++) {
+        writeData(table, row++);
+      }
+
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
+        slowSyncHookCalled.get());
+
+    } finally {
+      table.close();
+    }
   }
 
   private String getName() {
@@ -316,12 +494,15 @@ public class TestLogRolling  {
     HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
     final FSHLog log = (FSHLog) server.getWAL(region);
     final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
-
     log.registerWALActionsListener(new WALActionsListener.Base() {
       @Override
-      public void logRollRequested(boolean lowReplication) {
-        if (lowReplication) {
-          lowReplicationHookCalled.lazySet(true);
+      public void logRollRequested(WALActionsListener.RollRequestReason reason) {
+        switch (reason) {
+          case LOW_REPLICATION:
+            lowReplicationHookCalled.lazySet(true);
+            break;
+          default:
+            break;
         }
       }
     });

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.ERROR;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.LOW_REPLICATION;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
 import static org.apache.hadoop.hbase.wal.DefaultWALProvider.WAL_FILE_NAME_DELIMITER;
 
 import java.io.FileNotFoundException;
@@ -160,9 +164,18 @@ public class FSHLog implements WAL {
 
   private static final Log LOG = LogFactory.getLog(FSHLog.class);
 
-  private static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
+  static final String SLOW_SYNC_TIME_MS ="hbase.regionserver.wal.slowsync.ms";
+  static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
+  static final String ROLL_ON_SYNC_TIME_MS = "hbase.regionserver.wal.roll.on.sync.ms";
+  static final int DEFAULT_ROLL_ON_SYNC_TIME_MS = 10000; // in ms
+  static final String SLOW_SYNC_ROLL_THRESHOLD = "hbase.regionserver.wal.slowsync.roll.threshold";
+  static final int DEFAULT_SLOW_SYNC_ROLL_THRESHOLD = 100; // 100 slow sync warnings
+  static final String SLOW_SYNC_ROLL_INTERVAL_MS =
+    "hbase.regionserver.wal.slowsync.roll.interval.ms";
+  static final int DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS = 60 * 1000; // in ms, 1 minute
 
-  private static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
+  static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
+  static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
   /**
    * The nexus at which all incoming handlers meet.  Does appends and sync with an ordering.
@@ -280,7 +293,10 @@ public class FSHLog implements WAL {
 
   private final boolean useHsync;
 
-  private final int slowSyncNs;
+  private final long slowSyncNs, rollOnSyncNs;
+  private final int slowSyncRollThreshold;
+  private final int slowSyncCheckInterval;
+  private final AtomicInteger slowSyncCount = new AtomicInteger();
 
   private final long walSyncTimeout;
 
@@ -350,9 +366,13 @@ public class FSHLog implements WAL {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
 
+  protected volatile boolean rollRequested;
+
   // Last time to check low replication on hlog's pipeline
   private volatile long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
 
+  // Last time we asked to roll the log due to a slow sync
+  private volatile long lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();
 
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
@@ -540,11 +560,16 @@ public class FSHLog implements WAL {
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
-    this.slowSyncNs =
-        1000000 * conf.getInt("hbase.regionserver.hlog.slowsync.ms",
-          DEFAULT_SLOW_SYNC_TIME_MS);
-    this.walSyncTimeout = conf.getLong("hbase.regionserver.hlog.sync.timeout",
-        DEFAULT_WAL_SYNC_TIMEOUT_MS);
+    this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
+      conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS)));
+    this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
+      DEFAULT_ROLL_ON_SYNC_TIME_MS));
+    this.slowSyncRollThreshold = conf.getInt(SLOW_SYNC_ROLL_THRESHOLD,
+      DEFAULT_SLOW_SYNC_ROLL_THRESHOLD);
+    this.slowSyncCheckInterval = conf.getInt(SLOW_SYNC_ROLL_INTERVAL_MS,
+      DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS);
+    this.walSyncTimeout = conf.getLong(WAL_SYNC_TIMEOUT_MS,
+      conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
 
     // This is the 'writer' -- a single threaded executor.  This single thread 'consumes' what is
     // put on the ring buffer.
@@ -720,6 +745,11 @@ public class FSHLog implements WAL {
         // NewPath could be equal to oldPath if replaceWriter fails.
         newPath = replaceWriter(oldPath, newPath, nextWriter, nextHdfsOut);
         tellListenersAboutPostLogRoll(oldPath, newPath);
+        // Reset rollRequested status
+        rollRequested = false;
+        // We got a new writer, so reset the slow sync count
+        lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();
+        slowSyncCount.set(0);
         // Can we delete any of the old log files?
         if (getNumRolledLogFiles() > 0) {
           cleanOldLogs();
@@ -1303,8 +1333,11 @@ public class FSHLog implements WAL {
             syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, lastException);
             // Can we release other syncs?
             syncCount += releaseSyncFutures(currentSequence, lastException);
-            if (lastException != null) requestLogRoll();
-            else checkLogRoll();
+            if (lastException != null) {
+              requestLogRoll();
+            } else {
+              checkLogRoll();
+            }
           }
           postSync(System.nanoTime() - start, syncCount);
         } catch (InterruptedException e) {
@@ -1321,24 +1354,37 @@ public class FSHLog implements WAL {
    * Schedule a log roll if needed.
    */
   public void checkLogRoll() {
+    // If we have already requested a roll, do nothing
+    if (isLogRollRequested()) {
+      return;
+    }
     // Will return immediately if we are in the middle of a WAL log roll currently.
-    if (!rollWriterLock.tryLock()) return;
-    boolean lowReplication;
-    try {
-      lowReplication = checkLowReplication();
-    } finally {
-      rollWriterLock.unlock();
+    if (!rollWriterLock.tryLock()) {
+      return;
     }
     try {
-      if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
-        requestLogRoll(lowReplication);
+      if (checkLowReplication()) {
+        LOG.warn("Requesting log roll because of low replication, current pipeline: " +
+            Arrays.toString(getPipeLine()));
+        requestLogRoll(LOW_REPLICATION);
+      } else if (writer != null && writer.getLength() > logrollsize) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Requesting log roll because of file size threshold; length=" +
+            writer.getLength() + ", logrollsize=" + logrollsize);
+        }
+        requestLogRoll(SIZE);
+      } else if (checkSlowSync()) {
+        // We log this already in checkSlowSync
+        requestLogRoll(SLOW_SYNC);
       }
     } catch (IOException e) {
       LOG.warn("Writer.getLength() failed; continuing", e);
+    } finally {
+      rollWriterLock.unlock();
     }
   }
 
-  /*
+  /**
    * @return true if number of replicas for the WAL is lower than threshold
    */
   private boolean checkLowReplication() {
@@ -1387,6 +1433,41 @@ public class FSHLog implements WAL {
         ", continuing...");
     }
     return logRollNeeded;
+  }
+
+  /**
+   * @return true if we exceeded the slow sync roll threshold over the last check
+   *              interval
+   */
+  private boolean checkSlowSync() {
+    boolean result = false;
+    long now = EnvironmentEdgeManager.currentTime();
+    long elapsedTime = now - lastTimeCheckSlowSync;
+    if (elapsedTime >= slowSyncCheckInterval) {
+      if (slowSyncCount.get() >= slowSyncRollThreshold) {
+        if (elapsedTime >= (2 * slowSyncCheckInterval)) {
+          // If two or more slowSyncCheckInterval have elapsed this is a corner case
+          // where a train of slow syncs almost triggered us but then there was a long
+          // interval from then until the one more that pushed us over. If so, we
+          // should do nothing and let the count reset.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("checkSlowSync triggered but we decided to ignore it; " +
+              "count=" + slowSyncCount.get() + ", threshold=" + slowSyncRollThreshold +
+              ", elapsedTime=" + elapsedTime +  " ms, slowSyncCheckInterval=" +
+              slowSyncCheckInterval + " ms");
+          }
+          // Fall through to count reset below
+        } else {
+          LOG.warn("Requesting log roll because we exceeded slow sync threshold; count=" +
+            slowSyncCount.get() + ", threshold=" + slowSyncRollThreshold +
+            ", current pipeline: " + Arrays.toString(getPipeLine()));
+          result = true;
+        }
+      }
+      lastTimeCheckSlowSync = now;
+      slowSyncCount.set(0);
+    }
+    return result;
   }
 
   private SyncFuture publishSyncOnRingBuffer(long sequence) {
@@ -1452,10 +1533,23 @@ public class FSHLog implements WAL {
     if (timeInNanos > this.slowSyncNs) {
       String msg =
           new StringBuilder().append("Slow sync cost: ")
-              .append(timeInNanos / 1000000).append(" ms, current pipeline: ")
+              .append(TimeUnit.NANOSECONDS.toMillis(timeInNanos))
+              .append(" ms, current pipeline: ")
               .append(Arrays.toString(getPipeLine())).toString();
       Trace.addTimelineAnnotation(msg);
       LOG.info(msg);
+      // A single sync took too long.
+      // Elsewhere in checkSlowSync, called from checkLogRoll, we will look at cumulative
+      // effects. Here we have a single data point that indicates we should take immediate
+      // action, so do so.
+      if (timeInNanos > this.rollOnSyncNs) {
+        LOG.warn("Requesting log roll because we exceeded slow sync threshold; time=" +
+          TimeUnit.NANOSECONDS.toMillis(timeInNanos) + " ms, threshold=" +
+          TimeUnit.NANOSECONDS.toMillis(rollOnSyncNs) + " ms, current pipeline: " +
+          Arrays.toString(getPipeLine()));
+        requestLogRoll(SLOW_SYNC);
+      }
+      slowSyncCount.incrementAndGet(); // it's fine to unconditionally increment this
     }
     if (!listeners.isEmpty()) {
       for (WALActionsListener listener : listeners) {
@@ -1539,15 +1633,24 @@ public class FSHLog implements WAL {
     }
   }
 
-  // public only until class moves to o.a.h.h.wal
-  public void requestLogRoll() {
-    requestLogRoll(false);
+  protected boolean isLogRollRequested() {
+    return rollRequested;
   }
 
-  private void requestLogRoll(boolean tooFewReplicas) {
+  // public only until class moves to o.a.h.h.wal
+  public void requestLogRoll() {
+    requestLogRoll(ERROR);
+  }
+
+  private void requestLogRoll(final WALActionsListener.RollRequestReason reason) {
+    // If we have already requested a roll, don't do it again
+    if (rollRequested) {
+      return;
+    }
     if (!this.listeners.isEmpty()) {
+      rollRequested = true; // No point to assert this unless there is a registered listener
       for (WALActionsListener i: this.listeners) {
-        i.logRollRequested(tooFewReplicas);
+        i.logRollRequested(reason);
       }
     }
   }
@@ -1599,8 +1702,7 @@ public class FSHLog implements WAL {
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
     ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
-    ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
-
+    ClassSize.ATOMIC_INTEGER + (3 * Bytes.SIZEOF_INT) + (4 * Bytes.SIZEOF_LONG));
 
   private static void split(final Configuration conf, final Path p) throws IOException {
     FileSystem fs = FSUtils.getWALFileSystem(conf);
@@ -2082,5 +2184,15 @@ public class FSHLog implements WAL {
    */
   public long getLastTimeCheckLowReplication() {
     return this.lastTimeCheckLowReplication;
+  }
+
+  @VisibleForTesting
+  Writer getWriter() {
+    return this.writer;
+  }
+
+  @VisibleForTesting
+  void setWriter(Writer writer) {
+    this.writer = writer;
   }
 }
