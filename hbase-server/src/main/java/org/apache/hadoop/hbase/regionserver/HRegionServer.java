@@ -3786,6 +3786,11 @@ public class HRegionServer extends HasThread implements
       old.stop("configuration change");
     }
     this.flushThroughputController = FlushThroughputControllerFactory.create(this, newConf);
+    try {
+      Superusers.initialize(newConf);
+    } catch (IOException e) {
+      LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
+    }
   }
 
   @Override
