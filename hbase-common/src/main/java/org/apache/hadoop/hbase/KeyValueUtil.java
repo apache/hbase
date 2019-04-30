@@ -35,12 +35,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Function;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * static convenience methods for dealing with KeyValues and collections of KeyValues
@@ -640,40 +640,7 @@ public class KeyValueUtil {
         // withTags is true but no tag in the cell.
         return;
       }
-      if (pos + Bytes.SIZEOF_SHORT > endOffset) {
-        String msg = "Overflow when reading tags length at position=" + pos +
-            bytesToHex(buf, offset, length);
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      short tagsLen = Bytes.toShort(buf, pos);
-      pos += Bytes.SIZEOF_SHORT;
-      if (tagsLen < 0 || pos + tagsLen > endOffset) {
-        String msg = "Invalid tags length in KeyValue at position=" + (pos - Bytes.SIZEOF_SHORT)
-            + bytesToHex(buf, offset, length);
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      int tagsEndOffset = pos + tagsLen;
-      for (; pos < tagsEndOffset;) {
-        if (pos + Tag.TAG_LENGTH_SIZE > endOffset) {
-          String msg = "Overflow when reading tag length at position=" + pos +
-              bytesToHex(buf, offset, length);
-          LOG.warn(msg);
-          throw new IllegalArgumentException(msg);
-        }
-        short tagLen = Bytes.toShort(buf, pos);
-        pos += Tag.TAG_LENGTH_SIZE;
-        // tagLen contains one byte tag type, so must be not less than 1.
-        if (tagLen < 1 || pos + tagLen > endOffset) {
-          String msg =
-              "Invalid tag length at position=" + (pos - Tag.TAG_LENGTH_SIZE) + ", tagLength="
-                  + tagLen + bytesToHex(buf, offset, length);
-          LOG.warn(msg);
-          throw new IllegalArgumentException(msg);
-        }
-        pos += tagLen;
-      }
+      pos = checkKeyValueTagBytes(buf, offset, length, pos, endOffset);
     }
     if (pos != endOffset) {
       String msg = "Some redundant bytes in KeyValue's buffer, startOffset=" + pos + ", endOffset="
@@ -681,6 +648,45 @@ public class KeyValueUtil {
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
+  }
+
+  private static int checkKeyValueTagBytes(byte[] buf, int offset, int length, int pos,
+      int endOffset) {
+    if (pos + Bytes.SIZEOF_SHORT > endOffset) {
+      String msg = "Overflow when reading tags length at position=" + pos +
+          bytesToHex(buf, offset, length);
+      LOG.warn(msg);
+      throw new IllegalArgumentException(msg);
+    }
+    short tagsLen = Bytes.toShort(buf, pos);
+    pos += Bytes.SIZEOF_SHORT;
+    if (tagsLen < 0 || pos + tagsLen > endOffset) {
+      String msg = "Invalid tags length in KeyValue at position=" + (pos - Bytes.SIZEOF_SHORT)
+          + bytesToHex(buf, offset, length);
+      LOG.warn(msg);
+      throw new IllegalArgumentException(msg);
+    }
+    int tagsEndOffset = pos + tagsLen;
+    for (; pos < tagsEndOffset;) {
+      if (pos + Tag.TAG_LENGTH_SIZE > endOffset) {
+        String msg = "Overflow when reading tag length at position=" + pos +
+            bytesToHex(buf, offset, length);
+        LOG.warn(msg);
+        throw new IllegalArgumentException(msg);
+      }
+      short tagLen = Bytes.toShort(buf, pos);
+      pos += Tag.TAG_LENGTH_SIZE;
+      // tagLen contains one byte tag type, so must be not less than 1.
+      if (tagLen < 1 || pos + tagLen > endOffset) {
+        String msg =
+            "Invalid tag length at position=" + (pos - Tag.TAG_LENGTH_SIZE) + ", tagLength="
+                + tagLen + bytesToHex(buf, offset, length);
+        LOG.warn(msg);
+        throw new IllegalArgumentException(msg);
+      }
+      pos += tagLen;
+    }
+    return pos;
   }
 
   /**
