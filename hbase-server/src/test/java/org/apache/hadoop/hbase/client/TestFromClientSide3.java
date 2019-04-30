@@ -997,6 +997,12 @@ public class TestFromClientSide3 {
 
   @Test
   public void testScanWithBatchSizeReturnIncompleteCells() throws IOException {
+    TEST_UTIL.deleteTable(tableName);
+    TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
+      .build();
+    table = TEST_UTIL.createTable(hd, null);
+
     Put put = new Put(ROW);
     put.addColumn(FAMILY, Bytes.toBytes(0), generateHugeValue(3 * 1024 * 1024));
     table.put(put);
