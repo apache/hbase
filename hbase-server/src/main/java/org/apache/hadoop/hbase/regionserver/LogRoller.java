@@ -70,7 +70,7 @@ public class LogRoller extends HasThread implements Closeable {
     if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
       wal.registerWALActionsListener(new WALActionsListener() {
         @Override
-        public void logRollRequested(boolean lowReplicas) {
+        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
           walNeedsRoll.put(wal, Boolean.TRUE);
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {

@@ -73,10 +73,23 @@ public class MetricsWAL implements WALActionsListener {
   }
 
   @Override
-  public void logRollRequested(boolean underReplicated) {
+  public void logRollRequested(WALActionsListener.RollRequestReason reason) {
     source.incrementLogRollRequested();
-    if (underReplicated) {
-      source.incrementLowReplicationLogRoll();
+    switch (reason) {
+      case ERROR:
+        source.incrementErrorLogRoll();
+        break;
+      case LOW_REPLICATION:
+        source.incrementLowReplicationLogRoll();
+        break;
+      case SIZE:
+        source.incrementSizeLogRoll();
+        break;
+      case SLOW_SYNC:
+        source.incrementSlowSyncLogRoll();
+        break;
+      default:
+        break;
     }
   }
 }

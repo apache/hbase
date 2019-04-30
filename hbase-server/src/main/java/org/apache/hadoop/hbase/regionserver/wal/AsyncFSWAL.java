@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.ERROR;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SIZE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.lmax.disruptor.RingBuffer;
@@ -167,9 +169,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   // notice that, modification to this field is only allowed under the protection of consumeLock.
   private volatile int epochAndState;
 
-  // used to guard the log roll request when we exceed the log roll size.
-  private boolean rollRequested;
-
   private boolean readyForRolling;
 
   private final Condition readyForRollingCond = consumeLock.newCondition();
@@ -318,7 +317,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     highestUnsyncedTxid = highestSyncedTxid.get();
     if (shouldRequestLogRoll) {
       // request a roll.
-      requestLogRoll();
+      requestLogRoll(ERROR);
     }
   }
 
@@ -337,11 +336,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       // closed soon.
       return;
     }
-    if (writer.getLength() < logrollsize || rollRequested) {
-      return;
+    // If we haven't already requested a roll, check if we have exceeded logrollsize
+    if (!isLogRollRequested() && writer.getLength() > logrollsize) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Requesting log roll because of file size threshold; length=" +
+          writer.getLength() + ", logrollsize=" + logrollsize);
+      }
+      requestLogRoll(SIZE);
     }
-    rollRequested = true;
-    requestLogRoll();
   }
 
   private void sync(AsyncWriter writer) {
@@ -663,7 +665,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
     }
     this.fileLengthAtLastSync = nextWriter.getLength();
-    this.rollRequested = false;
     this.highestProcessedAppendTxidAtLastSync = 0L;
     consumeLock.lock();
     try {

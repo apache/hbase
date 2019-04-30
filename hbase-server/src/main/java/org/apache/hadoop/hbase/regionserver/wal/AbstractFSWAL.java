@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.ERROR;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.LOW_REPLICATION;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
@@ -112,9 +115,19 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWAL.class);
 
+  protected static final String SLOW_SYNC_TIME_MS ="hbase.regionserver.wal.slowsync.ms";
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
+  protected static final String ROLL_ON_SYNC_TIME_MS = "hbase.regionserver.wal.roll.on.sync.ms";
+  protected static final int DEFAULT_ROLL_ON_SYNC_TIME_MS = 10000; // in ms
+  protected static final String SLOW_SYNC_ROLL_THRESHOLD =
+    "hbase.regionserver.wal.slowsync.roll.threshold";
+  protected static final int DEFAULT_SLOW_SYNC_ROLL_THRESHOLD = 100; // 100 slow sync warnings
+  protected static final String SLOW_SYNC_ROLL_INTERVAL_MS =
+    "hbase.regionserver.wal.slowsync.roll.interval.ms";
+  protected static final int DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS = 60 * 1000; // in ms, 1 minute
 
-  private static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
+  protected static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.wal.sync.timeout";
+  protected static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
   /**
    * file system instance
@@ -168,7 +181,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected final SequenceIdAccounting sequenceIdAccounting = new SequenceIdAccounting();
 
-  protected final long slowSyncNs;
+  protected final long slowSyncNs, rollOnSyncNs;
+  protected final int slowSyncRollThreshold;
+  protected final int slowSyncCheckInterval;
+  protected final AtomicInteger slowSyncCount = new AtomicInteger();
 
   private final long walSyncTimeoutNs;
 
@@ -225,7 +241,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   volatile W writer;
 
   // Last time to check low replication on hlog's pipeline
-  private long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+  private volatile long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+
+  // Last time we asked to roll the log due to a slow sync
+  private volatile long lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();
 
   protected volatile boolean closed = false;
 
@@ -279,6 +298,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * </p>
    */
   protected final String implClassName;
+
+  protected volatile boolean rollRequested;
 
   public long getFilenum() {
     return this.filenum.get();
@@ -414,10 +435,16 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
       walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
-    this.slowSyncNs = TimeUnit.MILLISECONDS
-        .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
-    this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
-        .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
+    this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
+      conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS)));
+    this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
+      DEFAULT_ROLL_ON_SYNC_TIME_MS));
+    this.slowSyncRollThreshold = conf.getInt(SLOW_SYNC_ROLL_THRESHOLD,
+      DEFAULT_SLOW_SYNC_ROLL_THRESHOLD);
+    this.slowSyncCheckInterval = conf.getInt(SLOW_SYNC_ROLL_INTERVAL_MS,
+      DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS);
+    this.walSyncTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf.getLong(WAL_SYNC_TIMEOUT_MS,
+      conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS)));
     this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
       @Override
       protected SyncFuture initialValue() {
@@ -757,11 +784,16 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         tellListenersAboutPreLogRoll(oldPath, newPath);
         // NewPath could be equal to oldPath if replaceWriter fails.
         newPath = replaceWriter(oldPath, newPath, nextWriter);
+        // Reset rollRequested status
+        rollRequested = false;
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Create new " + implClassName + " writer with pipeline: " +
             Arrays.toString(getPipeline()));
         }
+        // We got a new writer, so reset the slow sync count
+        lastTimeCheckSlowSync = EnvironmentEdgeManager.currentTime();
+        slowSyncCount.set(0);
         // Can we delete any of the old log files?
         if (getNumRolledLogFiles() > 0) {
           cleanOldLogs();
@@ -788,7 +820,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   // public only until class moves to o.a.h.h.wal
   public void requestLogRoll() {
-    requestLogRoll(false);
+    requestLogRoll(ERROR);
   }
 
   /**
@@ -868,10 +900,19 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return cachedSyncFutures.get().reset(sequence);
   }
 
-  protected final void requestLogRoll(boolean tooFewReplicas) {
+  protected boolean isLogRollRequested() {
+    return rollRequested;
+  }
+
+  protected final void requestLogRoll(final WALActionsListener.RollRequestReason reason) {
+    // If we have already requested a roll, don't do it again
+    if (rollRequested) {
+      return;
+    }
     if (!this.listeners.isEmpty()) {
+      rollRequested = true; // No point to assert this unless there is a registered listener
       for (WALActionsListener i : this.listeners) {
-        i.logRollRequested(tooFewReplicas);
+        i.logRollRequested(reason);
       }
     }
   }
@@ -942,10 +983,24 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected final void postSync(final long timeInNanos, final int handlerSyncs) {
     if (timeInNanos > this.slowSyncNs) {
-      String msg = new StringBuilder().append("Slow sync cost: ").append(timeInNanos / 1000000)
-          .append(" ms, current pipeline: ").append(Arrays.toString(getPipeline())).toString();
+      String msg = new StringBuilder().append("Slow sync cost: ")
+          .append(TimeUnit.NANOSECONDS.toMillis(timeInNanos))
+          .append(" ms, current pipeline: ")
+          .append(Arrays.toString(getPipeline())).toString();
       TraceUtil.addTimelineAnnotation(msg);
       LOG.info(msg);
+      // A single sync took too long.
+      // Elsewhere in checkSlowSync, called from checkLogRoll, we will look at cumulative
+      // effects. Here we have a single data point that indicates we should take immediate
+      // action, so do so.
+      if (timeInNanos > this.rollOnSyncNs) {
+        LOG.warn("Requesting log roll because we exceeded slow sync threshold; time=" +
+          TimeUnit.NANOSECONDS.toMillis(timeInNanos) + " ms, threshold=" +
+          TimeUnit.NANOSECONDS.toMillis(rollOnSyncNs) + " ms, current pipeline: " +
+          Arrays.toString(getPipeline()));
+        requestLogRoll(SLOW_SYNC);
+      }
+      slowSyncCount.incrementAndGet(); // it's fine to unconditionally increment this
     }
     if (!listeners.isEmpty()) {
       for (WALActionsListener listener : listeners) {
@@ -1031,6 +1086,41 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected abstract boolean doCheckLogLowReplication();
 
+  /**
+   * @return true if we exceeded the slow sync roll threshold over the last check
+   *              interval
+   */
+  protected boolean doCheckSlowSync() {
+    boolean result = false;
+    long now = EnvironmentEdgeManager.currentTime();
+    long elapsedTime = now - lastTimeCheckSlowSync;
+    if (elapsedTime >= slowSyncCheckInterval) {
+      if (slowSyncCount.get() >= slowSyncRollThreshold) {
+        if (elapsedTime >= (2 * slowSyncCheckInterval)) {
+          // If two or more slowSyncCheckInterval have elapsed this is a corner case
+          // where a train of slow syncs almost triggered us but then there was a long
+          // interval from then until the one more that pushed us over. If so, we
+          // should do nothing and let the count reset.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("checkSlowSync triggered but we decided to ignore it; " +
+                "count=" + slowSyncCount.get() + ", threshold=" + slowSyncRollThreshold +
+                ", elapsedTime=" + elapsedTime +  " ms, slowSyncCheckInterval=" +
+                slowSyncCheckInterval + " ms");
+          }
+          // Fall through to count reset below
+        } else {
+          LOG.warn("Requesting log roll because we exceeded slow sync threshold; count=" +
+            slowSyncCount.get() + ", threshold=" + slowSyncRollThreshold +
+            ", current pipeline: " + Arrays.toString(getPipeline()));
+          result = true;
+        }
+      }
+      lastTimeCheckSlowSync = now;
+      slowSyncCount.set(0);
+    }
+    return result;
+  }
+
   public void checkLogLowReplication(long checkInterval) {
     long now = EnvironmentEdgeManager.currentTime();
     if (now - lastTimeCheckLowReplication < checkInterval) {
@@ -1043,7 +1133,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try {
       lastTimeCheckLowReplication = now;
       if (doCheckLogLowReplication()) {
-        requestLogRoll(true);
+        requestLogRoll(LOW_REPLICATION);
       }
     } finally {
       rollWriterLock.unlock();
