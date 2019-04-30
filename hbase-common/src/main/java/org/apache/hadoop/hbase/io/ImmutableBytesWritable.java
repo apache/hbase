@@ -117,7 +117,9 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /**
    * @return the number of valid bytes in the buffer
-   * @deprecated use {@link #getLength()} instead
+   * @deprecated since 0.98.5. Use {@link #getLength()} instead
+   * @see #getLength()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11561">HBASE-11561</a>
    */
   @Deprecated
   public int getSize() {

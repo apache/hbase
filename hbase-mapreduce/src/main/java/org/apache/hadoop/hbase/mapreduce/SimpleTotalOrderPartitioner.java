@@ -49,8 +49,17 @@ public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableByt
 implements Configurable {
   private final static Logger LOG = LoggerFactory.getLogger(SimpleTotalOrderPartitioner.class);
 
+  /**
+   * @deprecated since 0.90.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
+   */
   @Deprecated
   public static final String START = "hbase.simpletotalorder.start";
+
+  /**
+   * @deprecated since 0.90.0
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-1923">HBASE-1923</a>
+   */
   @Deprecated
   public static final String END = "hbase.simpletotalorder.end";
 

@@ -182,7 +182,9 @@ public class Scan extends Query {
   public Scan() {}
 
   /**
-   * @deprecated use {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow).setFilter(filter)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow, Filter filter) {
@@ -196,7 +198,9 @@ public class Scan extends Query {
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
    * @param startRow row to start scanner at or after
-   * @deprecated use {@code new Scan().withStartRow(startRow)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow) {
@@ -207,7 +211,9 @@ public class Scan extends Query {
    * Create a Scan operation for the range of rows specified.
    * @param startRow row to start scanner at or after (inclusive)
    * @param stopRow row to stop scanner before (exclusive)
-   * @deprecated use {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@code new Scan().withStartRow(startRow).withStopRow(stopRow)} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan(byte[] startRow, byte[] stopRow) {
@@ -409,8 +415,11 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStartRow(byte[])} instead. This method may change the inclusive of
-   *             the stop row to keep compatible with the old behavior.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStartRow(byte[])}
+   *   instead. This method may change the inclusive of the stop row to keep compatible with the old
+   *   behavior.
+   * @see #withStartRow(byte[])
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan setStartRow(byte[] startRow) {
@@ -469,8 +478,11 @@ public class Scan extends Query {
    * @return this
    * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
    *           exceeds {@link HConstants#MAX_ROW_LENGTH})
-   * @deprecated use {@link #withStopRow(byte[])} instead. This method may change the inclusive of
-   *             the stop row to keep compatible with the old behavior.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStopRow(byte[])} instead.
+   *   This method may change the inclusive of the stop row to keep compatible with the old
+   *   behavior.
+   * @see #withStopRow(byte[])
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17320">HBASE-17320</a>
    */
   @Deprecated
   public Scan setStopRow(byte[] stopRow) {
@@ -587,8 +599,10 @@ public class Scan extends Query {
   /**
    * Get all available versions.
    * @return this
-   * @deprecated It is easy to misunderstand with column family's max versions, so use
-   *             {@link #readAllVersions()} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *   family's max versions, so use {@link #readAllVersions()} instead.
+   * @see #readAllVersions()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
   @Deprecated
   public Scan setMaxVersions() {
@@ -599,8 +613,10 @@ public class Scan extends Query {
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @return this
-   * @deprecated It is easy to misunderstand with column family's max versions, so use
-   *             {@link #readVersions(int)} instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *   family's max versions, so use {@link #readVersions(int)} instead.
+   * @see #readVersions(int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
   @Deprecated
   public Scan setMaxVersions(int maxVersions) {
@@ -1023,12 +1039,13 @@ public class Scan extends Query {
    * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
    * data block(64KB), it could be considered as a small scan.
    * @param small
-   * @deprecated since 2.0.0. Use {@link #setLimit(int)} and {@link #setReadType(ReadType)} instead.
-   *             And for the one rpc optimization, now we will also fetch data when openScanner, and
-   *             if the number of rows reaches the limit then we will close the scanner
-   *             automatically which means we will fall back to one rpc.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
+   *   {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we will also
+   *   fetch data when openScanner, and if the number of rows reaches the limit then we will close
+   *   the scanner automatically which means we will fall back to one rpc.
    * @see #setLimit(int)
    * @see #setReadType(ReadType)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
    */
   @Deprecated
   public Scan setSmall(boolean small) {
@@ -1040,7 +1057,9 @@ public class Scan extends Query {
   /**
    * Get whether this scan is a small scan
    * @return true if small scan
-   * @deprecated since 2.0.0. See the comment of {@link #setSmall(boolean)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. See the comment of
+   *   {@link #setSmall(boolean)}
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
    */
   @Deprecated
   public boolean isSmall() {

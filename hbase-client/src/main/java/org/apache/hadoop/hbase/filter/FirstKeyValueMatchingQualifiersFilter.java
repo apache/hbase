@@ -43,7 +43,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
  * caveat, this filter is only useful for special cases
  * like org.apache.hadoop.hbase.mapreduce.RowCounter.
  * <p>
- * @deprecated Deprecated in 2.0. See HBASE-13347
+ * @deprecated Deprecated in 2.0.0 and will be removed in 3.0.0.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-13347">HBASE-13347</a>
  */
 @InterfaceAudience.Public
 @Deprecated
