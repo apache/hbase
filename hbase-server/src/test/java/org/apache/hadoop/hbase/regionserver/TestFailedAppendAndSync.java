@@ -114,15 +114,15 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
-      byte[][] regions = super.rollWriter(force);
+    public byte[][] rollWriter(boolean force, boolean syncFailed) throws FailedLogCloseException, IOException {
+      byte[][] regions = super.rollWriter(force, syncFailed);
       rolls.getAndIncrement();
       return regions;
     }
 
     @Override
-    protected Writer createWriterInstance(Path path) throws IOException {
-      final Writer w = super.createWriterInstance(path);
+    protected Writer createWriterInstance(Path path, Path oldPath) throws IOException {
+      final Writer w = super.createWriterInstance(path, oldPath);
       return new Writer() {
         @Override
         public void close() throws IOException {

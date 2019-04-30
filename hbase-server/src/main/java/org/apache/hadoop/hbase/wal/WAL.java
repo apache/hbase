@@ -80,7 +80,8 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException;
+  byte[][] rollWriter(boolean force, boolean syncFailed)
+      throws FailedLogCloseException, IOException;
 
   /**
    * Stop accepting new writes. If we have unsynced writes still in buffer, sync them.

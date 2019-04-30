@@ -43,12 +43,12 @@ public final class AsyncFSOutputHelper {
    * Create {@link FanOutOneBlockAsyncDFSOutput} for {@link DistributedFileSystem}, and a simple
    * implementation for other {@link FileSystem} which wraps around a {@link FSDataOutputStream}.
    */
-  public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
+  public static AsyncFSOutput createOutput(FileSystem fs, Path f, Path oldPath, boolean overwrite,
       boolean createParent, short replication, long blockSize, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass)
       throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     if (fs instanceof DistributedFileSystem) {
-      return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
+      return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f, oldPath,
         overwrite, createParent, replication, blockSize, eventLoopGroup, channelClass);
     }
     final FSDataOutputStream out;

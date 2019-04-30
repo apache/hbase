@@ -119,7 +119,7 @@ class DisabledWALProvider implements WALProvider {
     public byte[][] rollWriter() {
       if (!listeners.isEmpty()) {
         for (WALActionsListener listener : listeners) {
-          listener.logRollRequested(false);
+          listener.logRollRequested(false, false);
         }
         for (WALActionsListener listener : listeners) {
           try {
@@ -140,7 +140,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) {
+    public byte[][] rollWriter(boolean force, boolean syncFailed) {
       return rollWriter();
     }
 

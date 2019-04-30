@@ -65,7 +65,7 @@ public interface WALActionsListener {
   /**
    * A request was made that the WAL be rolled.
    */
-  default void logRollRequested(boolean tooFewReplicas) {}
+  default void logRollRequested(boolean tooFewReplicas, boolean syncFaild) {}
 
   /**
    * The WAL is about to close.

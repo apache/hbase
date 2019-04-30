@@ -36,6 +36,6 @@ public class TestProtobufLog extends AbstractTestProtobufLog {
 
   @Override
   protected Writer createWriter(Path path) throws IOException {
-    return FSHLogProvider.createWriter(TEST_UTIL.getConfiguration(), fs, path, false);
+    return FSHLogProvider.createWriter(TEST_UTIL.getConfiguration(), fs, path, null, false);
   }
 }

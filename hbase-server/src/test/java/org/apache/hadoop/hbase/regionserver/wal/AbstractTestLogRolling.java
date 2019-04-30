@@ -169,7 +169,7 @@ public abstract class AbstractTestLogRolling  {
     final WAL newLog = wals.getWAL(null);
     try {
       // Now roll the log before we write anything.
-      newLog.rollWriter(true);
+      newLog.rollWriter(true, false);
     } finally {
       wals.close();
     }

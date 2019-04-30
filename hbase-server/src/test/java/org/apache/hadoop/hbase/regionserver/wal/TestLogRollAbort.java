@@ -167,7 +167,7 @@ public class TestLogRollAbort {
       LOG.info("Restarted datanodes");
 
       try {
-        log.rollWriter(true);
+        log.rollWriter(true, false);
       } catch (FailedLogCloseException flce) {
         // Expected exception.  We used to expect that there would be unsynced appends but this
         // not reliable now that sync plays a roll in wall rolling.  The above puts also now call

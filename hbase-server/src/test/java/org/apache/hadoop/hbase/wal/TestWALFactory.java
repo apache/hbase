@@ -212,7 +212,7 @@ public class TestWALFactory {
           walKey.getWriteEntry();
         }
         log.sync();
-        log.rollWriter(true);
+        log.rollWriter(true, false);
       }
     }
     wals.shutdown();

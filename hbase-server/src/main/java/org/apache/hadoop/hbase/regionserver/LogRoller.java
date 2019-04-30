@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALClosedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,7 +58,8 @@ public class LogRoller extends HasThread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
-  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<WAL, Pair<Boolean,Boolean>> walNeedsRoll =
+      new ConcurrentHashMap<WAL, Pair<Boolean, Boolean>>();
   private final Server server;
   protected final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();
@@ -70,11 +72,15 @@ public class LogRoller extends HasThread implements Closeable {
   private volatile boolean running = true;
 
   public void addWAL(final WAL wal) {
-    if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
+    if (null == walNeedsRoll.putIfAbsent(wal, new Pair<Boolean,Boolean>(Boolean.FALSE, Boolean.FALSE))) {
       wal.registerWALActionsListener(new WALActionsListener() {
         @Override
-        public void logRollRequested(boolean lowReplicas) {
-          walNeedsRoll.put(wal, Boolean.TRUE);
+        public void logRollRequested(boolean lowReplicas, boolean syncFaild) {
+          Pair<Boolean,Boolean> walInfo = walNeedsRoll.get(wal);
+          walInfo.setFirst(Boolean.TRUE);
+          if (syncFaild) {
+            walInfo.setSecond(Boolean.TRUE);
+          }
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {
             rollLog.set(true);
@@ -87,7 +93,7 @@ public class LogRoller extends HasThread implements Closeable {
 
   public void requestRollAll() {
     for (WAL wal : walNeedsRoll.keySet()) {
-      walNeedsRoll.put(wal, Boolean.TRUE);
+      walNeedsRoll.put(wal, new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.FALSE));
     }
     synchronized(rollLog) {
       rollLog.set(true);
@@ -122,9 +128,9 @@ public class LogRoller extends HasThread implements Closeable {
    */
   void checkLowReplication(long now) {
     try {
-      for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+      for (Entry<WAL, Pair<Boolean, Boolean>> entry : walNeedsRoll.entrySet()) {
         WAL wal = entry.getKey();
-        boolean needRollAlready = entry.getValue();
+        boolean needRollAlready = entry.getValue().getFirst();
         if (needRollAlready || !(wal instanceof AbstractFSWAL)) {
           continue;
         }
@@ -180,16 +186,18 @@ public class LogRoller extends HasThread implements Closeable {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
+        for (Iterator<Entry<WAL, Pair<Boolean,Boolean>>> iter = walNeedsRoll.entrySet().iterator(); iter
             .hasNext();) {
-          Entry<WAL, Boolean> entry = iter.next();
+          Entry<WAL, Pair<Boolean,Boolean>> entry = iter.next();
           final WAL wal = entry.getKey();
+          Pair<Boolean, Boolean> walInfo = entry.getValue();
+          boolean syncFailed = walInfo.getSecond().booleanValue();
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
           // The returned value is an array of actual region names.
           try {
-            final byte[][] regionsToFlush =
-                wal.rollWriter(periodic || entry.getValue().booleanValue());
-            walNeedsRoll.put(wal, Boolean.FALSE);
+            final byte[][] regionsToFlush = wal.rollWriter(periodic ||
+                walInfo.getFirst().booleanValue() || syncFailed, syncFailed);
+            walInfo.setFirst(Boolean.FALSE);
             if (regionsToFlush != null) {
               for (byte[] r : regionsToFlush) {
                 scheduleFlush(r);
@@ -247,8 +255,8 @@ public class LogRoller extends HasThread implements Closeable {
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    for (boolean needRoll : walNeedsRoll.values()) {
-      if (needRoll) {
+    for (Pair<Boolean,Boolean> walInfo : walNeedsRoll.values()) {
+      if (walInfo.getFirst().booleanValue()) {
         return false;
       }
     }
@@ -271,7 +279,7 @@ public class LogRoller extends HasThread implements Closeable {
   }
 
   @VisibleForTesting
-  Map<WAL, Boolean> getWalNeedsRoll() {
+  Map<WAL, Pair<Boolean,Boolean>> getWalNeedsRoll() {
     return this.walNeedsRoll;
   }
 }

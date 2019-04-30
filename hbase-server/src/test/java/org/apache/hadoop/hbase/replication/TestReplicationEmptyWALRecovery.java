@@ -109,7 +109,7 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
       RegionInfo regionInfo =
         utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = hrs.getWAL(regionInfo);
-      wal.rollWriter(true);
+      wal.rollWriter(true, false);
     }
 
     // ReplicationSource should advance past the empty wal, or else the test will fail

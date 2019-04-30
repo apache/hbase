@@ -73,10 +73,13 @@ public class MetricsWAL implements WALActionsListener {
   }
 
   @Override
-  public void logRollRequested(boolean underReplicated) {
+  public void logRollRequested(boolean underReplicated, boolean syncFailed) {
     source.incrementLogRollRequested();
     if (underReplicated) {
       source.incrementLowReplicationLogRoll();
+    }
+    if (syncFailed) {
+      source.incrementSyncFailedLogRoll();
     }
   }
 }

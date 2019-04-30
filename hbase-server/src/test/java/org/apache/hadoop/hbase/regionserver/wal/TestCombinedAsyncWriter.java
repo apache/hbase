@@ -105,9 +105,9 @@ public class TestCombinedAsyncWriter {
     FileSystem fs = UTIL.getTestFileSystem();
     Configuration conf = UTIL.getConfiguration();
     try (
-      AsyncWriter writer1 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path1, false,
+      AsyncWriter writer1 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path1, null, false,
         EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
-      AsyncWriter writer2 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path2, false,
+      AsyncWriter writer2 = AsyncFSWALProvider.createAsyncWriter(conf, fs, path2, null, false,
         EVENT_LOOP_GROUP.next(), CHANNEL_CLASS);
       CombinedAsyncWriter writer = CombinedAsyncWriter.create(writer1, writer2)) {
       ProtobufLogTestHelper.doWrite(new WriterOverAsyncWriter(writer), withTrailer, tableName,

@@ -60,7 +60,7 @@ public class TestLocalAsyncOutput {
       FSUtils.StreamLacksCapabilityException {
     Path f = new Path(TEST_UTIL.getDataTestDir(), "test");
     FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
-    AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, false, true,
+    AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, null, false, true,
       fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP, CHANNEL_CLASS);
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(fs, f, out);
   }

@@ -393,7 +393,7 @@ public class TestWALObserver {
     assertFalse(cp.isPreWALRollCalled());
     assertFalse(cp.isPostWALRollCalled());
 
-    wal.rollWriter(true);
+    wal.rollWriter(true, false);
     assertTrue(cp.isPreWALRollCalled());
     assertTrue(cp.isPostWALRollCalled());
   }

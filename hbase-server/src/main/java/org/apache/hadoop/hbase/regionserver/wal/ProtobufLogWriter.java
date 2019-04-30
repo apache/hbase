@@ -92,7 +92,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @SuppressWarnings("deprecation")
   @Override
-  protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
+  protected void initOutput(FileSystem fs, Path path, Path oldPath, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
         blockSize, false);

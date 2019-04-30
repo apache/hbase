@@ -164,9 +164,9 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   @Override
-  protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
+  protected void initOutput(FileSystem fs, Path path, Path oldPath, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
-    this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
+    this.output = AsyncFSOutputHelper.createOutput(fs, path, oldPath, overwritable, false, replication,
         blockSize, eventLoopGroup, channelClass);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }

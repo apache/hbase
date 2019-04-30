@@ -273,8 +273,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @return Writer instance
    */
   @Override
-  protected Writer createWriterInstance(final Path path) throws IOException {
-    Writer writer = FSHLogProvider.createWriter(conf, fs, path, false, this.blocksize);
+  protected Writer createWriterInstance(final Path path, final Path oldPath) throws IOException {
+    Writer writer = FSHLogProvider.createWriter(conf, fs, path, oldPath, false, this.blocksize);
     if (writer instanceof ProtobufLogWriter) {
       preemptiveSync((ProtobufLogWriter) writer);
     }
@@ -601,14 +601,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             syncCount += releaseSyncFutures(currentSequence, lastException);
             if (lastException != null) {
               wasRollRequested = true;
-              requestLogRoll();
+              requestLogRoll(false, true);
             } else {
               wasRollRequested = checkLogRoll();
             }
           }
           boolean doRequestRoll = postSync(System.nanoTime() - start, syncCount);
           if (!wasRollRequested && doRequestRoll) {
-            requestLogRoll();
+            requestLogRoll(false, false);
           }
         } catch (InterruptedException e) {
           // Presume legit interrupt.
@@ -635,7 +635,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       rollWriterLock.unlock();
     }
     if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
-      requestLogRoll(lowReplication);
+      requestLogRoll(lowReplication, false);
       return true;
     }
     return false;
@@ -1023,7 +1023,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
               this.syncFuturesCount.get());
           } catch (Exception e) {
             // Should NEVER get here.
-            requestLogRoll();
+            requestLogRoll(false, false);
             this.exception = new DamagedWALException("Failed offering sync", e);
           }
         }
@@ -1090,7 +1090,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         String msg = "Append sequenceId=" + entry.getKey().getSequenceId()
             + ", requesting roll of WAL";
         LOG.warn(msg, e);
-        requestLogRoll();
+        requestLogRoll(false, false);
         throw new DamagedWALException(msg, e);
       }
     }

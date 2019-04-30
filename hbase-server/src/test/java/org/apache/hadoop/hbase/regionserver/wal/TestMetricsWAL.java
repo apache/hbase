@@ -41,8 +41,8 @@ public class TestMetricsWAL {
   public void testLogRollRequested() throws Exception {
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
-    metricsWAL.logRollRequested(false);
-    metricsWAL.logRollRequested(true);
+    metricsWAL.logRollRequested(false, false);
+    metricsWAL.logRollRequested(true, false);
 
     // Log roll was requested twice
     verify(source, times(2)).incrementLogRollRequested();

@@ -144,12 +144,16 @@ public class TestLogRolling extends AbstractTestLogRolling {
     RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
     final FSHLog log = (FSHLog) server.getWAL(region);
     final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
+    final AtomicBoolean syncFailedHookCalled = new AtomicBoolean(false);
 
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
-      public void logRollRequested(boolean lowReplication) {
+      public void logRollRequested(boolean lowReplication, boolean syncFailed) {
         if (lowReplication) {
           lowReplicationHookCalled.lazySet(true);
+        }
+        if (syncFailed) {
+          syncFailedHookCalled.lazySet(true);
         }
       }
     });
@@ -218,7 +222,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     // Force roll writer. The new log file will have the default replications,
     // and the LowReplication Roller will be enabled.
-    log.rollWriter(true);
+    log.rollWriter(true, false);
     batchWriteAndWait(table, log, 13, true, 10000);
     replication = log.getLogReplication();
     assertTrue("New log file should have the default replication instead of " + replication,
@@ -308,7 +312,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       writeData(table, 1005);
 
       // force a log roll to read back and verify previously written logs
-      log.rollWriter(true);
+      log.rollWriter(true, false);
       assertTrue("preLogRolledCalled has size of " + preLogRolledCalled.size(),
         preLogRolledCalled.size() >= 1);
 

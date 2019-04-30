@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -53,7 +57,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
 
   @Test
   public void testLogRollOnDatanodeDeath() throws IOException, InterruptedException {
-    dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 3, true, null, null);
+    dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 2, true, null, null);
     tableName = getName();
     Table table = createTestTable(tableName);
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
@@ -67,5 +71,13 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     TEST_UTIL.getDFSCluster().restartDataNode(dnProp);
     doPut(table, 2);
     assertEquals(numRolledLogFiles + 1, AsyncFSWALProvider.getNumRolledLogFiles(wal));
+
+    // Test HBASE-20902
+    DatanodeInfo[] newDNs = wal.getPipeline();
+    Set<DatanodeInfo> dns = new HashSet<>();
+    Collections.addAll(dns, dnInfos);
+    Collections.addAll(dns, newDNs);
+    // when syncfailed choose diff dns
+    assertEquals(dns.size(), dnInfos.length + newDNs.length);
   }
 }

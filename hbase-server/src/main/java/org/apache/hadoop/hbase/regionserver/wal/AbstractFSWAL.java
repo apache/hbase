@@ -122,8 +122,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   private static final String ROLL_ON_SYNC_TIME_MS = "hbase.regionserver.hlog.roll.on.sync.ms";
   protected static final int DEFAULT_ROLL_ON_SYNC_TIME_MS = 10000; // in ms
 
-  private static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.hlog.sync.timeout";
-  private static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
+  public static final String WAL_SYNC_TIMEOUT_MS = "hbase.regionserver.hlog.sync.timeout";
+  public static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 60 * 1000; // in ms, 5min
 
   /**
    * file system instance
@@ -516,7 +516,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   @Override
   public byte[][] rollWriter() throws FailedLogCloseException, IOException {
-    return rollWriter(false);
+    return rollWriter(false, false);
   }
 
   /**
@@ -795,22 +795,25 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
+  public byte[][] rollWriter(boolean force, boolean syncFailed) throws FailedLogCloseException, IOException {
     rollWriterLock.lock();
     try {
       if (this.closed) {
         throw new WALClosedException("WAL has been closed");
       }
       // Return if nothing to flush.
-      if (!force && this.writer != null && this.numEntries.get() <= 0) {
+      if (!force && !syncFailed && (this.writer != null && this.numEntries.get() <= 0)) {
         return null;
       }
       byte[][] regionsToFlush = null;
       try (TraceScope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
+        if (syncFailed){
+          LOG.info(oldPath + " rolled because of syncFailed!");
+        }
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
-        W nextWriter = this.createWriterInstance(newPath);
+        W nextWriter = this.createWriterInstance(newPath, syncFailed ? oldPath : null);
         tellListenersAboutPreLogRoll(oldPath, newPath);
         // NewPath could be equal to oldPath if replaceWriter fails.
         newPath = replaceWriter(oldPath, newPath, nextWriter);
@@ -841,11 +844,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /** @return the size of log files in use */
   public long getLogFileSize() {
     return this.totalLogSize.get();
-  }
-
-  // public only until class moves to o.a.h.h.wal
-  public void requestLogRoll() {
-    requestLogRoll(false);
   }
 
   /**
@@ -925,10 +923,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return cachedSyncFutures.get().reset(sequence);
   }
 
-  protected final void requestLogRoll(boolean tooFewReplicas) {
+   // public only until class moves to o.a.h.h.wal
+  public final void requestLogRoll(boolean tooFewReplicas, boolean syncFaild) {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
-        i.logRollRequested(tooFewReplicas);
+        i.logRollRequested(tooFewReplicas, syncFaild);
       }
     }
   }
@@ -1083,7 +1082,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;
 
-  protected abstract W createWriterInstance(Path path)
+  protected abstract W createWriterInstance(Path path, Path oldPath)
       throws IOException, CommonFSUtils.StreamLacksCapabilityException;
 
   protected abstract void doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
@@ -1105,7 +1104,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try {
       lastTimeCheckLowReplication = now;
       if (doCheckLogLowReplication()) {
-        requestLogRoll(true);
+        requestLogRoll(true, false);
       }
     } finally {
       rollWriterLock.unlock();

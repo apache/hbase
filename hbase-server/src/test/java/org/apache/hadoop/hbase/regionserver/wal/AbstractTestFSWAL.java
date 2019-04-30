@@ -297,7 +297,7 @@ public abstract class AbstractTestFSWAL {
       assertEquals(1, wal.getNumRolledLogFiles());
       // flush the second region
       flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getColumnFamilyNames());
-      wal.rollWriter(true);
+      wal.rollWriter(true, false);
       // no wal should remain now.
       assertEquals(0, wal.getNumRolledLogFiles());
       // add edits both to region 1 and region 2, and roll.
@@ -315,7 +315,7 @@ public abstract class AbstractTestFSWAL {
       // flush both regions
       flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
       flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getColumnFamilyNames());
-      wal.rollWriter(true);
+      wal.rollWriter(true, false);
       assertEquals(0, wal.getNumRolledLogFiles());
       // Add an edit to region1, and roll the wal.
       addEdits(wal, hri1, t1, 2, mvcc, scopes1);
@@ -339,12 +339,12 @@ public abstract class AbstractTestFSWAL {
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = System.currentTimeMillis();
     Path path = wal.computeFilename(filenum);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(path, null);
     Path parent = path.getParent();
     path = wal.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     FS.rename(parent, newPath);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(path, null);
     fail("It should fail to create the new WAL");
   }
 

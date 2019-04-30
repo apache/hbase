@@ -317,7 +317,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     highestUnsyncedTxid = highestSyncedTxid.get();
     if (shouldRequestLogRoll) {
       // request a roll.
-      requestLogRoll();
+      requestLogRoll(false, true);
     }
   }
 
@@ -341,7 +341,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       return;
     }
     rollRequested = true;
-    requestLogRoll();
+    requestLogRoll(false, false);
   }
 
   private void sync(AsyncWriter writer) {
@@ -659,14 +659,15 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path) throws IOException {
-    return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, this.blocksize,
+  protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path, Path oldPath)
+      throws IOException {
+    return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, oldPath, false, this.blocksize,
       eventLoopGroup, channelClass);
   }
 
   @Override
-  protected AsyncWriter createWriterInstance(Path path) throws IOException {
-    return createAsyncWriter(fs, path);
+  protected AsyncWriter createWriterInstance(Path path, Path oldPath) throws IOException {
+    return createAsyncWriter(fs, path, oldPath);
   }
 
   private void waitForSafePoint() {

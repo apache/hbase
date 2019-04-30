@@ -236,7 +236,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   @VisibleForTesting
   static void requestLogRoll(final WAL wal) {
-    ((AbstractFSWAL<?>) wal).requestLogRoll();
+    ((AbstractFSWAL<?>) wal).requestLogRoll(false, false);
   }
 
   // should be package private; more visible for use in AbstractFSWAL
