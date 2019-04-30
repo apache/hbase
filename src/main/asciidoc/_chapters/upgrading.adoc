@@ -67,7 +67,8 @@ In addition to the usual API versioning considerations HBase has other compatibi
 
 .Client API compatibility
 * Allow changing or removing existing client APIs.
-* An API needs to be deprecated for a major version before we will change/remove it.
+* An API needs to be deprecated for a whole major version before we will change/remove it.
+** An example: An API was deprecated in 2.0.1 and will be marked for deletion in 4.0.0. On the other hand, an API deprecated in 2.0.0 can be removed in 3.0.0.
 * APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
 * New APIs introduced in a patch version will only be added in a source compatible way footnote:[See 'Source Compatibility' https://blogs.oracle.com/darcy/entry/kinds_of_compatibility]: i.e. code that implements public APIs will continue to compile.
 ** Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
