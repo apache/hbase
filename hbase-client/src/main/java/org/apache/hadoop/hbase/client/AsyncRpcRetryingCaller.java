@@ -117,7 +117,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     resetController(controller, callTimeoutNs);
   }
 
-  private void tryScheduleRetry(Throwable error, Consumer<Throwable> updateCachedLocation) {
+  private void tryScheduleRetry(Throwable error) {
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
@@ -182,19 +182,21 @@ public abstract class AsyncRpcRetryingCaller<T> {
               future.completeExceptionally(e);
             } else {
               // failed to test whether the table is disabled, not a big deal, continue retrying
-              tryScheduleRetry(error, updateCachedLocation);
+              tryScheduleRetry(error);
             }
             return;
           }
           if (disabled) {
             future.completeExceptionally(new TableNotEnabledException(tableName.get()));
           } else {
-            tryScheduleRetry(error, updateCachedLocation);
+            tryScheduleRetry(error);
           }
         });
+      } else {
+        tryScheduleRetry(error);
       }
     } else {
-      tryScheduleRetry(error, updateCachedLocation);
+      tryScheduleRetry(error);
     }
   }
 
