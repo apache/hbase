@@ -1328,7 +1328,8 @@ public class TestFromClientSide {
 
       delete = new Delete(ROW);
       delete.addColumns(FAMILY, null);
-      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate")).thenDelete(delete);
+      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate"))
+              .thenDelete(delete);
     }
   }
 
@@ -1453,9 +1454,10 @@ public class TestFromClientSide {
       scan.setMaxVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-              new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-              0, 7);
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},0, 7);
 
     get = new Get(ROW);
     get.readAllVersions();
@@ -1469,9 +1471,10 @@ public class TestFromClientSide {
       scan.setMaxVersions();
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-              new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-              0, 7);
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},0, 7);
 
       // Verify we can get each one properly
       getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -1515,9 +1518,10 @@ public class TestFromClientSide {
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-              new byte[][]{VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-              0, 9);
+          new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},0, 9);
 
       // Delete a version in the memstore and a version in a storefile
       Delete delete = new Delete(ROW);
@@ -1540,9 +1544,10 @@ public class TestFromClientSide {
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-              new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-              0, 9);
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},0, 9);
     }
   }
 
@@ -3659,9 +3664,9 @@ public class TestFromClientSide {
       scan.setMaxVersions(7);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-              new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-              0, 6);
+        new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+        new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+        0, 6);
 
     get = new Get(ROW);
     get.readVersions(7);
@@ -3675,9 +3680,9 @@ public class TestFromClientSide {
       scan.setMaxVersions(7);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-              new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-              0, 6);
+        new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+        new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+        0, 6);
 
       // Verify we can get each one properly
       getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -3721,9 +3726,10 @@ public class TestFromClientSide {
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-              new byte[][]{VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-              0, 9);
+          new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},0, 9);
 
       // Delete a version in the memstore and a version in a storefile
       Delete delete = new Delete(ROW);
@@ -3746,9 +3752,10 @@ public class TestFromClientSide {
       scan.setMaxVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-              new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-              new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-              0, 9);
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},0,9);
     }
   }
 
@@ -4069,8 +4076,9 @@ public class TestFromClientSide {
       try (ResultScanner scanner = table.getScanner(scan)) {
         int nbRows = 0;
         for (@SuppressWarnings("unused")
-                Result row : scanner)
+                Result row : scanner) {
           nbRows++;
+        }
         assertEquals(NB_BATCH_ROWS, nbRows);
       }
     }
@@ -4099,8 +4107,9 @@ public class TestFromClientSide {
       try (ResultScanner scanner = table.getScanner(scan)) {
         int nbRows = 0;
         for (@SuppressWarnings("unused")
-                Result row : scanner)
+                Result row : scanner) {
           nbRows++;
+        }
         assertEquals(NB_BATCH_ROWS * 10, nbRows);
       }
     }
@@ -4170,7 +4179,7 @@ public class TestFromClientSide {
       put.addColumn(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
       table.put(put);
 
-      long times[] = new long[3];
+      long[] times = new long[3];
 
       // First scan the memstore
 
@@ -4355,8 +4364,9 @@ public class TestFromClientSide {
         // add a user attribute to HTD
         desc.setValue(attrName, attrValue);
         // add a user attribute to HCD
-        for (HColumnDescriptor c : desc.getFamilies())
+        for (HColumnDescriptor c : desc.getFamilies()) {
           c.setValue(attrName, attrValue);
+        }
         // update metadata for all regions of this table
         admin.modifyTable(desc);
         // enable the table
@@ -4644,7 +4654,8 @@ public class TestFromClientSide {
   }
   private List<Result> doAppend(final boolean walUsed) throws IOException {
     LOG.info("Starting testAppend, walUsed is " + walUsed);
-    final TableName TABLENAME = TableName.valueOf(walUsed ? "testAppendWithWAL" : "testAppendWithoutWAL");
+    final TableName TABLENAME =
+            TableName.valueOf(walUsed ? "testAppendWithWAL" : "testAppendWithoutWAL");
     try (Table t = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
       final byte[] row1 = Bytes.toBytes("c");
       final byte[] row2 = Bytes.toBytes("b");
@@ -4696,10 +4707,14 @@ public class TestFromClientSide {
       for (int j = 0; j != resultWithWal.rawCells().length; ++j) {
         Cell cellWithWal = resultWithWal.rawCells()[j];
         Cell cellWithoutWal = resultWithoutWal.rawCells()[j];
-        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal), CellUtil.cloneFamily(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal), CellUtil.cloneQualifier(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal), CellUtil.cloneValue(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal),
+                CellUtil.cloneRow(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal),
+                CellUtil.cloneFamily(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal),
+                CellUtil.cloneQualifier(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal),
+                CellUtil.cloneValue(cellWithoutWal)));
       }
     }
   }
@@ -4714,7 +4729,8 @@ public class TestFromClientSide {
     conf.set(HConstants.HBASE_CLIENT_IPC_POOL_TYPE, "round-robin");
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
-    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, Integer.MAX_VALUE)) {
+    try (Table table =
+                 TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, Integer.MAX_VALUE)) {
 
     final long ts = EnvironmentEdgeManager.currentTime();
     Get get = new Get(ROW);
@@ -4794,7 +4810,7 @@ public class TestFromClientSide {
                       .get(FAMILY).get(QUALIFIER);
 
               assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
-                              + Bytes.toString(QUALIFIER) + " did not match " + versionsCopy, versionsCopy,
+                      + Bytes.toString(QUALIFIER) + " did not match " + versionsCopy, versionsCopy,
                       navigableMap.size());
               for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
                 assertTrue("The value at time " + entry.getKey()
@@ -4936,7 +4952,8 @@ public class TestFromClientSide {
       put3.addColumn(FAMILY, QUALIFIER, value3);
 
       // row doesn't exist, so using "ifNotExists" should be considered "match".
-      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put2);
+      boolean ok =
+              table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put2);
       assertTrue(ok);
 
       // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
@@ -5231,7 +5248,8 @@ public class TestFromClientSide {
        scanMetricsWithoutClose.countOfRegions.get());
        */
 
-      // finally, test that the metrics are collected correctly if you both run past all the records,
+      // finally,
+      // test that the metrics are collected correctly if you both run past all the records,
       // AND close the scanner
       Scan scanWithClose = new Scan();
       // make sure we can set caching up to the number of a scanned values
@@ -5602,7 +5620,8 @@ public class TestFromClientSide {
       // KeyValue should allow negative timestamps for backwards compat. Otherwise, if the user
       // already has negative timestamps in cluster data, HBase won't be able to handle that
       try {
-        new KeyValue(Bytes.toBytes(42), Bytes.toBytes(42), Bytes.toBytes(42), -1, Bytes.toBytes(42));
+        new KeyValue(Bytes.toBytes(42), Bytes.toBytes(42), Bytes.toBytes(42), -1,
+                Bytes.toBytes(42));
       } catch (IllegalArgumentException ex) {
         fail("KeyValue SHOULD allow negative timestamps");
       }
@@ -5641,11 +5660,12 @@ public class TestFromClientSide {
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
-          assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
           count++;
         }
-        assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-                count);
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
       }
 
       // then if we decrease the number of versions, but keep the scan raw, we should see exactly that
@@ -5655,11 +5675,12 @@ public class TestFromClientSide {
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
-          assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
           count++;
         }
-        assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-                count);
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
       }
 
       // finally, if we turn off raw scanning, but max out the number of versions, we should go back
@@ -5669,11 +5690,12 @@ public class TestFromClientSide {
       try (ResultScanner scanner = table.getScanner(s)) {
         int count = 0;
         for (Result r : scanner) {
-          assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
           count++;
         }
-        assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-                count);
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
       }
 
     }
@@ -5708,10 +5730,14 @@ public class TestFromClientSide {
       for (int i = 0; i != scanResult.rawCells().length; ++i) {
         Cell scanCell = scanResult.rawCells()[i];
         Cell getCell = getResult.rawCells()[i];
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell), CellUtil.cloneRow(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell), CellUtil.cloneFamily(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell), CellUtil.cloneQualifier(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell), CellUtil.cloneValue(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell),
+                CellUtil.cloneRow(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell),
+                CellUtil.cloneFamily(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell),
+                CellUtil.cloneQualifier(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell),
+                CellUtil.cloneValue(getCell)));
       }
     }
   }
@@ -5834,7 +5860,8 @@ public class TestFromClientSide {
           assertTrue(Bytes.equals(c.getRowArray(), c.getRowOffset(), c.getRowLength(),
                   ROWS[expectedIndex], 0, ROWS[expectedIndex].length));
           assertTrue(Bytes.equals(c.getQualifierArray(), c.getQualifierOffset(),
-                  c.getQualifierLength(), QUALIFIERS[expectedIndex], 0, QUALIFIERS[expectedIndex].length));
+                  c.getQualifierLength(), QUALIFIERS[expectedIndex], 0,
+                  QUALIFIERS[expectedIndex].length));
           expectedIndex--;
         }
         assertEquals(0, expectedIndex);
@@ -6620,7 +6647,8 @@ public class TestFromClientSide {
         table.put(put);
 
         Scan scan =
-                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
                         .setMaxVersions(3);
         ResultScanner scanner = table.getScanner(scan);
         Result result = scanner.next();
@@ -6630,7 +6658,8 @@ public class TestFromClientSide {
 
         Get get =
                 new Get(ROW)
-                        .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
                         .readVersions(3);
         result = table.get(get);
         // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -6639,7 +6668,8 @@ public class TestFromClientSide {
 
         // Test with max versions 1, it should still read ts[1]
         scan =
-                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
                         .setMaxVersions(1);
         scanner = table.getScanner(scan);
         result = scanner.next();
@@ -6650,7 +6680,8 @@ public class TestFromClientSide {
         // Test with max versions 1, it should still read ts[1]
         get =
                 new Get(ROW)
-                        .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
                         .readVersions(1);
         result = table.get(get);
         // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
@@ -6659,7 +6690,8 @@ public class TestFromClientSide {
 
         // Test with max versions 5, it should still read ts[1]
         scan =
-                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
                         .setMaxVersions(5);
         scanner = table.getScanner(scan);
         result = scanner.next();
@@ -6670,7 +6702,8 @@ public class TestFromClientSide {
         // Test with max versions 5, it should still read ts[1]
         get =
                 new Get(ROW)
-                        .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
                         .readVersions(5);
         result = table.get(get);
         // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3

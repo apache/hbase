@@ -282,7 +282,8 @@ public class TestFromClientSide3 {
         // Verify we have multiple store files.
         HRegionLocation loc = locator.getRegionLocation(row, true);
         byte[] regionName = loc.getRegionInfo().getRegionName();
-        AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(loc.getServerName());
+        AdminProtos.AdminService.BlockingInterface server =
+                connection.getAdmin(loc.getServerName());
         assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
 
         // Issue a compaction request
@@ -715,7 +716,8 @@ public class TestFromClientSide3 {
       });
       appendService.shutdown();
       appendService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-      WaitingForMultiMutationsObserver observer = find(tableName, WaitingForMultiMutationsObserver.class);
+      WaitingForMultiMutationsObserver observer =
+              find(tableName, WaitingForMultiMutationsObserver.class);
       observer.latch.countDown();
       putService.shutdown();
       putService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -772,9 +774,11 @@ public class TestFromClientSide3 {
           MultiRowMutationProtos.MutateRowsRequest request
             = MultiRowMutationProtos.MutateRowsRequest.newBuilder()
               .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.PUT, put1))
+                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
+                              .MutationType.PUT, put1))
               .addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.PUT, put2))
+                      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto
+                              .MutationType.PUT, put2))
               .build();
           table.coprocessorService(MultiRowMutationProtos.MultiRowMutationService.class,
               ROW, ROW,
@@ -783,7 +787,8 @@ public class TestFromClientSide3 {
               CoprocessorRpcUtils.BlockingRpcCallback<MultiRowMutationProtos.MutateRowsResponse>
                 rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
               exe.mutateRows(controller, request, rpcCallback);
-              if (controller.failedOnException() && !(controller.getFailedOn() instanceof UnknownProtocolException)) {
+              if (controller.failedOnException() &&
+                      !(controller.getFailedOn() instanceof UnknownProtocolException)) {
                 exceptionDuringMutateRows.set(true);
               }
               return rpcCallback.get();
@@ -912,7 +917,8 @@ public class TestFromClientSide3 {
     }
   }
 
-  private static void assertNoLocks(final TableName tableName) throws IOException, InterruptedException {
+  private static void assertNoLocks(final TableName tableName)
+          throws IOException, InterruptedException {
     HRegion region = (HRegion) find(tableName);
     assertEquals(0, region.getLockedRows().size());
   }
