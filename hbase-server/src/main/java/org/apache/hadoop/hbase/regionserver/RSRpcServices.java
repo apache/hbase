@@ -437,17 +437,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final HRegion r;
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
+    private final Lease lease;
     private byte[] rowOfLastPartialResult;
     private boolean needCursor;
 
     public RegionScannerHolder(String scannerName, RegionScanner s, HRegion r,
-        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor) {
+        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor, Lease lease) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
       this.needCursor = needCursor;
+      this.lease = lease;
+    }
+
+    public long getExpirationDelayMs() {
+      return lease == null ? 0 : lease.getDelay(TimeUnit.MILLISECONDS);
     }
 
     public long getNextCallSeq() {
@@ -1332,14 +1338,27 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return scanners.size();
   }
 
-  public
-  RegionScanner getScanner(long scannerId) {
+  public RegionScanner getScanner(long scannerId) {
     String scannerIdString = Long.toString(scannerId);
     RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
     if (scannerHolder != null) {
       return scannerHolder.s;
     }
     return null;
+  }
+
+  public long getScannerExpirationDelayMs(Long scannerId) {
+    if (scannerId == null) {
+      return this.scannerLeaseTimeoutPeriod; // This is a new scanner.
+    }
+    RegionScannerHolder scannerHolder = scanners.get(Long.toString(scannerId));
+    if (scannerHolder != null) {
+      return scannerHolder.getExpirationDelayMs();
+    }
+    // This is a missing/expired scanner.
+    // Return a large value; ideally it should be Long.MAX_VALUE but we don't want to rely on
+    // the correct overflow handling by the caller when the code there changes.
+    return TimeUnit.DAYS.toMillis(1);
   }
 
   public String getScanDetailsWithId(long scannerId) {
@@ -1418,8 +1437,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       closeCallback = new RegionScannerCloseCallBack(s);
     }
-    RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback, needCursor);
+    RegionScannerHolder rsh = new RegionScannerHolder(
+      scannerName, s, r, closeCallback, shippedCallback, needCursor, lease);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle! " +
       scannerName;
@@ -3794,5 +3813,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   protected ZKPermissionWatcher getZkPermissionWatcher() {
     return zkPermissionWatcher;
+  }
+
+  public boolean isMaster() {
+    return false;
   }
 }

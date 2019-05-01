@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.security.User;
@@ -65,6 +69,7 @@ import org.apache.hadoop.hbase.security.User;
 //All the argument classes declare a 'getRegion' method that returns a
 //RegionSpecifier object. Methods can be invoked on the returned object
 //to figure out whether it is a meta region or not.
+// TODO: split the priority and deadline parts; they are currently completely unrelated
 @InterfaceAudience.Private
 public class AnnotationReadingPriorityFunction implements PriorityFunction {
   private static final Logger LOG =
@@ -72,6 +77,18 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
+
+  /** When to use the actual time-based deadline for scanners */
+  public static final String SCAN_DEADLINE_PRIORITY = "hbase.ipc.server.scan.deadline.only";
+  private static final ScanDeadlineOnly SCAN_DEADLINE_PRIORITY_DEFAULT = ScanDeadlineOnly.NEVER;
+  enum ScanDeadlineOnly {
+    ALWAYS,
+    META,
+    NEVER
+  }
+
+  private static final ByteString META_PREFIX = ByteString.copyFrom(
+    TableName.META_TABLE_NAME.toBytes());
 
   protected final Map<String, Integer> annotatedQos;
   //We need to mock the regionserver instance for some unit tests (set via
@@ -94,6 +111,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
   private final Map<String, Map<Class<? extends Message>, Method>> methodMap = new HashMap<>();
 
   private final float scanVirtualTimeWeight;
+  private final ScanDeadlineOnly scanDeadlineOnly;
 
   /**
    * Calls {@link #AnnotationReadingPriorityFunction(RSRpcServices, Class)} using the result of
@@ -148,6 +166,26 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
 
     Configuration conf = rpcServices.getConfiguration();
     scanVirtualTimeWeight = conf.getFloat(SCAN_VTIME_WEIGHT_CONF_KEY, 1.0f);
+    scanDeadlineOnly = getScanDeadlineOnlyConf(rpcServices, conf);
+  }
+
+  private static ScanDeadlineOnly getScanDeadlineOnlyConf(
+      RSRpcServices rpcServices, Configuration conf) {
+    ScanDeadlineOnly result = SCAN_DEADLINE_PRIORITY_DEFAULT;
+    String val = conf.get(SCAN_DEADLINE_PRIORITY, SCAN_DEADLINE_PRIORITY_DEFAULT.name());
+    try {
+      result = ScanDeadlineOnly.valueOf(val.toUpperCase());
+    } catch (IllegalArgumentException ex) {
+      LOG.warn("Invalid value for {} ({}); using the default", SCAN_DEADLINE_PRIORITY, val);
+    }
+    if (result == ScanDeadlineOnly.META && LoadBalancer.isTablesOnMaster(conf)
+        && LoadBalancer.isSystemTablesOnlyOnMaster(conf) && rpcServices.isMaster()) {
+      result = ScanDeadlineOnly.ALWAYS;
+    }
+    if (result != ScanDeadlineOnly.NEVER) {
+      LOG.info("Using deadline-based scanner priority {}", result);
+    }
+    return result;
   }
 
   private String capitalize(final String s) {
@@ -262,21 +300,63 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
   public long getDeadline(RequestHeader header, Message param) {
     if (param instanceof ScanRequest) {
       ScanRequest request = (ScanRequest)param;
-      if (!request.hasScannerId()) {
-        return 0;
+      boolean useDeadline;
+      long addToVTime = 0;
+      switch (scanDeadlineOnly) {
+        case ALWAYS: useDeadline = true; break;
+        case NEVER: useDeadline = false; break;
+        case META: {
+            useDeadline = isMetaScan(request);
+            // Make sure non-meta scans are generally after meta scans; add the default scanner delay.
+            if (!useDeadline) {
+              addToVTime = rpcServices.getScannerExpirationDelayMs(null);
+            }
+            break;
+        }
+        default: throw new AssertionError(scanDeadlineOnly);
       }
-
-      // get the 'virtual time' of the scanner, and applies sqrt() to get a
-      // nice curve for the delay. More a scanner is used the less priority it gets.
-      // The weight is used to have more control on the delay.
-      long vtime = rpcServices.getScannerVirtualTime(request.getScannerId());
-      return Math.round(Math.sqrt(vtime * scanVirtualTimeWeight));
+      if (useDeadline) {
+        return rpcServices.getScannerExpirationDelayMs(
+          request.hasScannerId() ? request.getScannerId() : null);
+      } else if (!request.hasScannerId()) {
+        return addToVTime;
+      } else {
+        // get the 'virtual time' of the scanner, and applies sqrt() to get a
+        // nice curve for the delay. More a scanner is used the less priority it gets.
+        // The weight is used to have more control on the delay.
+        long vtime = rpcServices.getScannerVirtualTime(request.getScannerId());
+        return addToVTime + Math.round(Math.sqrt(vtime * scanVirtualTimeWeight));
+      }
     }
     return 0;
+  }
+
+  private boolean isMetaScan(ScanRequest request) {
+    if (request.hasScannerId()) {
+      RegionScanner rs = rpcServices.getScanner(request.getScannerId());
+      return (rs != null) && rs.getRegionInfo().isMetaRegion();
+    } else if (request.hasRegion()) {
+      RegionSpecifier r = request.getRegion();
+      if (r.hasType() && r.getType() == RegionSpecifier.RegionSpecifierType.REGION_NAME) {
+        return r.getValue().startsWith(META_PREFIX); // Common case shortcut.
+      } else {
+        try {
+          return rpcServices.getRegion(r).getTableDescriptor().isMetaRegion();
+        } catch (IOException e) {
+          // Ignore NotServing; let's allow the scan to fail later, for consistency.
+        }
+      }
+    }
+    return false;
   }
 
   @VisibleForTesting
   void setRegionServer(final HRegionServer hrs) {
     this.rpcServices = hrs.getRSRpcServices();
+  }
+
+  @VisibleForTesting
+  ScanDeadlineOnly getScanDeadlineOnly() {
+    return scanDeadlineOnly;
   }
 }

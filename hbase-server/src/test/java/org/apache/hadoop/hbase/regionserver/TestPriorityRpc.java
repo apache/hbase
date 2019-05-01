@@ -29,7 +29,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction.ScanDeadlineOnly;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -116,9 +119,7 @@ public class TestPriorityRpc {
     //known argument classes (it uses one random request class)
     //(known argument classes are listed in
     //HRegionServer.QosFunctionImpl.knownArgumentClasses)
-    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
-    headerBuilder.setMethodName("foo");
-    RequestHeader header = headerBuilder.build();
+    RequestHeader header = createRequestHeader("foo");
     PriorityFunction qosFunc = regionServer.rpcServices.getPriority();
     assertEquals(HConstants.NORMAL_QOS, qosFunc.getPriority(header, null,
       User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
@@ -126,9 +127,7 @@ public class TestPriorityRpc {
 
   @Test
   public void testQosFunctionForScanMethod() throws IOException {
-    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
-    headerBuilder.setMethodName("Scan");
-    RequestHeader header = headerBuilder.build();
+    RequestHeader header = createRequestHeader("Scan");
 
     //build an empty scan request
     ScanRequest.Builder scanBuilder = ScanRequest.newBuilder();
@@ -171,5 +170,125 @@ public class TestPriorityRpc {
     Mockito.when(mockRegionInfo.getTable()).thenReturn(TableName.valueOf("testQosFunctionForScanMethod"));
     assertEquals(HConstants.NORMAL_QOS, priority.getPriority(header, scanRequest,
       User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
+  }
+
+  private static HRegionServer prepareDeadlineTest(
+    TableName tableName, boolean isMeta, long newDelay) throws Exception {
+    HRegionServer mockRS = Mockito.mock(HRegionServer.class);
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.testing.nocluster", true);
+    HRegion mockRegion = Mockito.mock(HRegion.class);
+    RSRpcServices mockRpc = Mockito.mock(RSRpcServices.class);
+    Mockito.when(mockRS.getRSRpcServices()).thenReturn(mockRpc);
+    RegionInfo mockRegionInfo = Mockito.mock(RegionInfo.class);
+    Mockito.when(mockRpc.getRegion(Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRpc.isMaster()).thenReturn(false);
+    Mockito.when(mockRpc.getConfiguration()).thenReturn(conf);
+    Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
+    Mockito.when(mockRegionInfo.getTable()).thenReturn(tableName);
+    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(isMeta);
+    TableDescriptor td = Mockito.mock(TableDescriptor.class);
+    Mockito.when(td.isMetaRegion()).thenReturn(isMeta);
+    Mockito.when(mockRegion.getTableDescriptor()).thenReturn(td);
+    Mockito.when(mockRpc.getScannerExpirationDelayMs(null)).thenReturn(newDelay);
+    return mockRS;
+  }
+
+  private void addMockScanner(
+      RSRpcServices mockRpc, long id, long delayMs, long vtime) throws Exception {
+    RegionScanner mockRegionScanner = Mockito.mock(RegionScanner.class);
+    Mockito.when(mockRpc.getScanner(id)).thenReturn(mockRegionScanner);
+    HRegion mockRegion = mockRpc.getRegion(null);
+    RegionInfo mockRi = mockRegion.getRegionInfo();
+    Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRi);
+    Mockito.when(mockRpc.getScannerExpirationDelayMs(id)).thenReturn(delayMs);
+    Mockito.when(mockRpc.getScannerVirtualTime(id)).thenReturn(vtime);
+  }
+
+  private AnnotationReadingPriorityFunction prepareDeadlineTestFn(
+    AnnotationReadingPriorityFunction.ScanDeadlineOnly cfg, RSRpcServices rpc) {
+    rpc.getConfiguration().set(
+      AnnotationReadingPriorityFunction.SCAN_DEADLINE_PRIORITY, cfg.name());
+    return new AnnotationReadingPriorityFunction(rpc);
+  }
+
+  private static RequestHeader createRequestHeader(String type) {
+    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
+    headerBuilder.setMethodName(type);
+    return headerBuilder.build();
+  }
+
+  @Test
+  public void testScanDeadline() throws Exception {
+    RequestHeader header = createRequestHeader("Scan");
+
+    ScanRequest.Builder scanBuilder = ScanRequest.newBuilder();
+    RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
+    // Hack-ish - ERN will be passed directly to the mock and ignored, so we can supply no value.
+    regionSpecifierBuilder.setType(RegionSpecifierType.ENCODED_REGION_NAME);
+    regionSpecifierBuilder.setValue(ByteString.EMPTY);
+    scanBuilder.setRegion(regionSpecifierBuilder.build());
+    ScanRequest newReqNoMeta = scanBuilder.build();
+
+    scanBuilder = ScanRequest.newBuilder();
+    regionSpecifierBuilder = RegionSpecifier.newBuilder();
+    regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
+    regionSpecifierBuilder.setValue(UnsafeByteOperations.unsafeWrap(
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()));
+    scanBuilder.setRegion(regionSpecifierBuilder.build());
+    ScanRequest newReqMeta = scanBuilder.build();
+
+    final long SCANNER_ID = 1;
+    scanBuilder = ScanRequest.newBuilder();
+    scanBuilder.setScannerId(SCANNER_ID);
+    ScanRequest oldReq = scanBuilder.build(); // Meta-ness is derived from RSRpcServices
+
+    final long VTIMESQRT = 10, ACTUAL_DELAY = 123, DEFAULT_DELAY = 456;
+
+    HRegionServer mockRS = prepareDeadlineTest(TableName.valueOf("a"), false, DEFAULT_DELAY);
+    addMockScanner(mockRS.getRSRpcServices(), SCANNER_ID, ACTUAL_DELAY, VTIMESQRT * VTIMESQRT);
+
+    // Test new reqs and non-meta scan here, as well as old non-meta scanner.
+    AnnotationReadingPriorityFunction fn = prepareDeadlineTestFn(
+      ScanDeadlineOnly.NEVER, mockRS.getRSRpcServices());
+    assertEquals(0L, fn.getDeadline(header, newReqNoMeta));
+    assertEquals(0L, fn.getDeadline(header, newReqMeta));
+    assertEquals(VTIMESQRT, fn.getDeadline(header, oldReq));
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqNoMeta));
+    assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqMeta));
+    assertEquals(DEFAULT_DELAY + VTIMESQRT, fn.getDeadline(header, oldReq));
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALWAYS, mockRS.getRSRpcServices());
+    assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqNoMeta));
+    assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqMeta));
+    assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
+
+    // Old scanner against meta.
+    mockRS = prepareDeadlineTest(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(),
+      true, DEFAULT_DELAY);
+    addMockScanner(mockRS.getRSRpcServices(), SCANNER_ID, ACTUAL_DELAY, VTIMESQRT * VTIMESQRT);
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.NEVER, mockRS.getRSRpcServices());
+    assertEquals(VTIMESQRT, fn.getDeadline(header, oldReq));
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALWAYS, mockRS.getRSRpcServices());
+    assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
+
+    // Meta on master shortcut - just check the config.
+    mockRS = prepareDeadlineTest(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(),
+      true, DEFAULT_DELAY);
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
+    Configuration conf = mockRS.getRSRpcServices().getConfiguration();
+    conf.setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    conf.setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
+    Mockito.when(mockRS.getRSRpcServices().isMaster()).thenReturn(true);
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.ALWAYS, fn.getScanDeadlineOnly());
+    conf.setBoolean(LoadBalancer.TABLES_ON_MASTER, false);
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
   }
 }

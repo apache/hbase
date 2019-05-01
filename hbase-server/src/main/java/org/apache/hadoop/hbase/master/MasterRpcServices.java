@@ -2862,4 +2862,9 @@ public class MasterRpcServices extends RSRpcServices
     }
     return true;
   }
+
+  @Override
+  public boolean isMaster() {
+    return true;
+  }
 }
