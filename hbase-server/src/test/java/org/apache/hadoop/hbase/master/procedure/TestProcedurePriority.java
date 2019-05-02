@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -107,6 +108,7 @@ public class TestProcedurePriority {
     UTIL.getConfiguration().setLong(ProcedureExecutor.WORKER_KEEP_ALIVE_TIME_CONF_KEY, 5000);
     UTIL.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 4);
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MyCP.class.getName());
+    UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 100);
     UTIL.startMiniCluster(3);
     CORE_POOL_SIZE =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
@@ -118,7 +120,7 @@ public class TestProcedurePriority {
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build()));
     }
     for (Future<?> future : futures) {
-      future.get(1, TimeUnit.MINUTES);
+      future.get(3, TimeUnit.MINUTES);
     }
     UTIL.getAdmin().balance(true);
     UTIL.waitUntilNoRegionsInTransition();
