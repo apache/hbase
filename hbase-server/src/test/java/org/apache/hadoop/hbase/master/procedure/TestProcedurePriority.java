@@ -22,12 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -112,13 +114,17 @@ public class TestProcedurePriority {
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getCorePoolSize();
     TABLE_COUNT = 50 * CORE_POOL_SIZE;
     List<Future<?>> futures = new ArrayList<>();
+    AsyncAdmin admin = UTIL.getAsyncConnection().getAdmin();
+    Semaphore concurrency = new Semaphore(10);
     for (int i = 0; i < TABLE_COUNT; i++) {
-      futures.add(UTIL.getAdmin().createTableAsync(
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build()));
+      concurrency.acquire();
+      futures.add(admin
+        .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_PREFIX + i))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build())
+        .whenComplete((r, e) -> concurrency.release()));
     }
     for (Future<?> future : futures) {
-      future.get(1, TimeUnit.MINUTES);
+      future.get(3, TimeUnit.MINUTES);
     }
     UTIL.getAdmin().balance(true);
     UTIL.waitUntilNoRegionsInTransition();
