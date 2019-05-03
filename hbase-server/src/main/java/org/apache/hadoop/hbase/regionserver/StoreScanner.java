@@ -157,6 +157,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   final List<KeyValueScanner> currentScanners = new ArrayList<>();
   // flush update lock
   private final ReentrantLock flushLock = new ReentrantLock();
+  // lock for closing.
+  private final ReentrantLock closeLock = new ReentrantLock();
 
   protected final long readPt;
   private boolean topChanged = false;
@@ -473,31 +475,38 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   private void close(boolean withDelayedScannersClose) {
-    if (this.closing) {
-      return;
-    }
-    if (withDelayedScannersClose) {
-      this.closing = true;
-    }
-    // For mob compaction, we do not have a store.
-    if (this.store != null) {
-      this.store.deleteChangedReaderObserver(this);
-    }
-    if (withDelayedScannersClose) {
-      clearAndClose(scannersForDelayedClose);
-      clearAndClose(memStoreScannersAfterFlush);
-      clearAndClose(flushedstoreFileScanners);
-      if (this.heap != null) {
-        this.heap.close();
-        this.currentScanners.clear();
-        this.heap = null; // CLOSED!
+    closeLock.lock();
+    // If the closeLock is acquired then any subsequent updateReaders()
+    // call is ignored.
+    try {
+      if (this.closing) {
+        return;
       }
-    } else {
-      if (this.heap != null) {
-        this.scannersForDelayedClose.add(this.heap);
-        this.currentScanners.clear();
-        this.heap = null;
+      if (withDelayedScannersClose) {
+        this.closing = true;
       }
+      // For mob compaction, we do not have a store.
+      if (this.store != null) {
+        this.store.deleteChangedReaderObserver(this);
+      }
+      if (withDelayedScannersClose) {
+        clearAndClose(scannersForDelayedClose);
+        clearAndClose(memStoreScannersAfterFlush);
+        clearAndClose(flushedstoreFileScanners);
+        if (this.heap != null) {
+          this.heap.close();
+          this.currentScanners.clear();
+          this.heap = null; // CLOSED!
+        }
+      } else {
+        if (this.heap != null) {
+          this.scannersForDelayedClose.add(this.heap);
+          this.currentScanners.clear();
+          this.heap = null;
+        }
+      }
+    } finally {
+      closeLock.unlock();
     }
   }
 
@@ -876,8 +885,25 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (CollectionUtils.isEmpty(sfs) && CollectionUtils.isEmpty(memStoreScanners)) {
       return;
     }
+    boolean updateReaders = false;
     flushLock.lock();
     try {
+      if (!closeLock.tryLock()) {
+        // The reason for doing this is that when the current store scanner does not retrieve
+        // any new cells, then the scanner is considered to be done. The heap of this scanner
+        // is not closed till the shipped() call is completed. Hence in that case if at all
+        // the partial close (close (false)) has been called before updateReaders(), there is no
+        // need for the updateReaders() to happen.
+        LOG.debug("StoreScanner already has the close lock. There is no need to updateReaders");
+        // no lock acquired.
+        return;
+      }
+      // lock acquired
+      updateReaders = true;
+      if (this.closing) {
+        LOG.debug("StoreScanner already closing. There is no need to updateReaders");
+        return;
+      }
       flushed = true;
       final boolean isCompaction = false;
       boolean usePread = get || scanUsePread;
@@ -896,6 +922,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       }
     } finally {
       flushLock.unlock();
+      if (updateReaders) {
+        closeLock.unlock();
+      }
     }
     // Let the next() call handle re-creating and seeking
   }
