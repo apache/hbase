@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.LongConsumer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +64,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   // The sleep interval when waiting table to be enabled or disabled.
   protected static final int SLEEP_INTERVAL_MS = 1000;
 
-  private int attemps;
+  private RetryCounter retryCounter;
 
   protected ModifyPeerProcedure() {
   }
@@ -261,8 +264,13 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     return false;
   }
 
-  private ProcedureSuspendedException suspend(long backoff) throws ProcedureSuspendedException {
-    attemps++;
+  private ProcedureSuspendedException suspend(Configuration conf,
+      LongConsumer backoffConsumer) throws ProcedureSuspendedException {
+    if (retryCounter == null) {
+      retryCounter = ProcedureUtil.createRetryCounter(conf);
+    }
+    long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+    backoffConsumer.accept(backoff);
     setTimeout(Math.toIntExact(backoff));
     setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
     skipPersistence();
@@ -283,24 +291,22 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
           releaseLatch();
           return Flow.NO_MORE_STATE;
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} failed to call prePeerModification for peer {}, sleep {} secs",
-            getClass().getName(), peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("{} failed to call prePeerModification for peer {}, sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         }
-        attemps = 0;
+        retryCounter = null;
         setNextState(PeerModificationState.UPDATE_PEER_STORAGE);
         return Flow.HAS_MORE_STATE;
       case UPDATE_PEER_STORAGE:
         try {
           updatePeerStorage(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} update peer storage for peer {} failed, sleep {} secs", getClass().getName(),
-            peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("{} update peer storage for peer {} failed, sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         }
-        attemps = 0;
+        retryCounter = null;
         setNextState(PeerModificationState.REFRESH_PEER_ON_RS);
         return Flow.HAS_MORE_STATE;
       case REFRESH_PEER_ON_RS:
@@ -311,24 +317,22 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           reopenRegions(env);
         } catch (Exception e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} reopen regions for peer {} failed,  sleep {} secs", getClass().getName(),
-            peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("{} reopen regions for peer {} failed,  sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         }
-        attemps = 0;
+        retryCounter = null;
         setNextState(PeerModificationState.SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_UPDATE_LAST_PUSHED_SEQ_ID:
         try {
           updateLastPushedSequenceIdForSerialPeer(env);
         } catch (Exception e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} set last sequence id for peer {} failed,  sleep {} secs",
-            getClass().getName(), peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("{} set last sequence id for peer {} failed,  sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         }
-        attemps = 0;
+        retryCounter = null;
         setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
           : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
@@ -336,12 +340,11 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           enablePeer(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} enable peer before finish for peer {} failed,  sleep {} secs",
-            getClass().getName(), peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("{} enable peer before finish for peer {} failed,  sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         }
-        attemps = 0;
+        retryCounter = null;
         setNextState(PeerModificationState.SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_ENABLE_PEER_REFRESH_PEER_ON_RS:
@@ -352,10 +355,10 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           postPeerModification(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attemps);
-          LOG.warn("{} failed to call postPeerModification for peer {},  sleep {} secs",
-            getClass().getName(), peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "{} failed to call postPeerModification for peer {},  sleep {} secs",
+              getClass().getName(), peerId, backoff / 1000, e));
         } catch (IOException e) {
           LOG.warn("{} failed to call post CP hook for peer {}, " +
             "ignore since the procedure has already done", getClass().getName(), peerId, e);
