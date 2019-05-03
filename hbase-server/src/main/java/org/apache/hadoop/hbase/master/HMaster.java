@@ -2850,6 +2850,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (isAborted() || isStopped()) {
       return;
     }
+    setAbortRequested();
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
       LOG.error(HBaseMarkers.FATAL, "Master server abort: loaded coprocessors are: " +
