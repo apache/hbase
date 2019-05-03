@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   private CountDownLatch latch = new CountDownLatch(1);
 
-  private int attempts;
+  private RetryCounter retryCounter;
 
   @Override
   public TableName getTableName() {
@@ -85,7 +86,10 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           insertNamespaceToMeta(env.getMasterServices().getConnection(), DEFAULT_NAMESPACE);
           insertNamespaceToMeta(env.getMasterServices().getConnection(), SYSTEM_NAMESPACE);
         } catch (IOException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(this.attempts++);
+          if (retryCounter == null) {
+            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+          }
+          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
           LOG.warn("Failed to init default and system namespaces, suspend {}secs", backoff, e);
           setTimeout(Math.toIntExact(backoff));
           setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
