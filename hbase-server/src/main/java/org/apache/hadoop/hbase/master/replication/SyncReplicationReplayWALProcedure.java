@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,10 +74,9 @@ public class SyncReplicationReplayWALProcedure
         try {
           finished = syncReplicationReplayWALManager.isReplayWALFinished(wals.get(0));
         } catch (IOException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
-            ", sleep {} secs and retry", wals, peerId, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn("Failed to check whether replay wals {} finished for peer id={}" +
+              ", sleep {} secs and retry", wals, peerId, backoff / 1000, e));
         }
         syncReplicationReplayWALManager.releasePeerWorker(peerId, worker,
           env.getProcedureScheduler());
