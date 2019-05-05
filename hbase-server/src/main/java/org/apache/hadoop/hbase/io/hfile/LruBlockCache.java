@@ -669,7 +669,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         bucketQueue.add(bucketMulti);
         bucketQueue.add(bucketMemory);
 
-        int remainingBuckets = 3;
+        int remainingBuckets = bucketQueue.size();
 
         BlockBucket bucket;
         while((bucket = bucketQueue.poll()) != null) {
