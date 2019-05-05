@@ -742,7 +742,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
         bucketQueue.add(bucketMulti);
         bucketQueue.add(bucketMemory);
 
-        int remainingBuckets = 3;
+        int remainingBuckets = bucketQueue.size();
 
         BlockBucket bucket;
         while ((bucket = bucketQueue.poll()) != null) {
