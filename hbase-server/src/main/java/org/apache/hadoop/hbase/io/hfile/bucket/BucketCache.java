@@ -798,7 +798,7 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketQueue.add(bucketMulti);
       bucketQueue.add(bucketMemory);
 
-      int remainingBuckets = 3;
+      int remainingBuckets = bucketQueue.size();
       long bytesFreed = 0;
 
       BucketEntryGroup bucketGroup;
