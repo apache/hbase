@@ -79,8 +79,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private int storeOffset = 0;
 
   // Used to indicate that the scanner has closed (see HBASE-1107)
-  // Do not need to be volatile because it's always accessed via synchronized methods
-  private boolean closing = false;
+  private volatile boolean closing = false;
   private final boolean get;
   private final boolean explicitColumnQuery;
   private final boolean useRowColBloom;
