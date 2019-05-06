@@ -80,11 +80,11 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   /** When to use the actual time-based deadline for scanners */
   public static final String SCAN_DEADLINE_PRIORITY = "hbase.ipc.server.scan.deadline.only";
-  private static final ScanDeadlineOnly SCAN_DEADLINE_PRIORITY_DEFAULT = ScanDeadlineOnly.NEVER;
+  private static final ScanDeadlineOnly SCAN_DEADLINE_PRIORITY_DEFAULT = ScanDeadlineOnly.NONE;
   enum ScanDeadlineOnly {
-    ALWAYS,
-    META,
-    NEVER
+    ALL,
+    META_ONLY,
+    NONE
   }
 
   private static final ByteString META_PREFIX = ByteString.copyFrom(
@@ -178,11 +178,11 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
     } catch (IllegalArgumentException ex) {
       LOG.warn("Invalid value for {} ({}); using the default", SCAN_DEADLINE_PRIORITY, val);
     }
-    if (result == ScanDeadlineOnly.META && LoadBalancer.isTablesOnMaster(conf)
+    if (result == ScanDeadlineOnly.META_ONLY && LoadBalancer.isTablesOnMaster(conf)
         && LoadBalancer.isSystemTablesOnlyOnMaster(conf) && rpcServices.isMaster()) {
-      result = ScanDeadlineOnly.ALWAYS;
+      result = ScanDeadlineOnly.ALL;
     }
-    if (result != ScanDeadlineOnly.NEVER) {
+    if (result != ScanDeadlineOnly.NONE) {
       LOG.info("Using deadline-based scanner priority {}", result);
     }
     return result;
@@ -301,15 +301,17 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
     if (param instanceof ScanRequest) {
       ScanRequest request = (ScanRequest)param;
       boolean useDeadline;
-      long addToVTime = 0;
+      long baseTime = 0;
       switch (scanDeadlineOnly) {
-        case ALWAYS: useDeadline = true; break;
-        case NEVER: useDeadline = false; break;
-        case META: {
+        case ALL: useDeadline = true; break;
+        case NONE: useDeadline = false; break;
+        case META_ONLY: {
             useDeadline = isMetaScan(request);
-            // Make sure non-meta scans are generally after meta scans; add the default scanner delay.
+            // If meta regions use real time and non-meta use vtime, make sure they are comparable
+            // and that non-meta scans are generally after meta scans; add the default scanner
+            // delay to map the former to real time.
             if (!useDeadline) {
-              addToVTime = rpcServices.getScannerExpirationDelayMs(null);
+              baseTime = rpcServices.getScannerExpirationDelayMs(null);
             }
             break;
         }
@@ -319,13 +321,13 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
         return rpcServices.getScannerExpirationDelayMs(
           request.hasScannerId() ? request.getScannerId() : null);
       } else if (!request.hasScannerId()) {
-        return addToVTime;
+        return baseTime;
       } else {
         // get the 'virtual time' of the scanner, and applies sqrt() to get a
-        // nice curve for the delay. More a scanner is used the less priority it gets.
+        // nice curve for the delay. The more a scanner is used the less priority it gets.
         // The weight is used to have more control on the delay.
         long vtime = rpcServices.getScannerVirtualTime(request.getScannerId());
-        return addToVTime + Math.round(Math.sqrt(vtime * scanVirtualTimeWeight));
+        return baseTime + Math.round(Math.sqrt(vtime * scanVirtualTimeWeight));
       }
     }
     return 0;

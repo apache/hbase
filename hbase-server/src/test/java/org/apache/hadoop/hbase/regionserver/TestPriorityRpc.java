@@ -250,15 +250,15 @@ public class TestPriorityRpc {
 
     // Test new reqs and non-meta scan here, as well as old non-meta scanner.
     AnnotationReadingPriorityFunction fn = prepareDeadlineTestFn(
-      ScanDeadlineOnly.NEVER, mockRS.getRSRpcServices());
+      ScanDeadlineOnly.NONE, mockRS.getRSRpcServices());
     assertEquals(0L, fn.getDeadline(header, newReqNoMeta));
     assertEquals(0L, fn.getDeadline(header, newReqMeta));
     assertEquals(VTIMESQRT, fn.getDeadline(header, oldReq));
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
     assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqNoMeta));
     assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqMeta));
     assertEquals(DEFAULT_DELAY + VTIMESQRT, fn.getDeadline(header, oldReq));
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALWAYS, mockRS.getRSRpcServices());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALL, mockRS.getRSRpcServices());
     assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqNoMeta));
     assertEquals(DEFAULT_DELAY, fn.getDeadline(header, newReqMeta));
     assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
@@ -267,28 +267,28 @@ public class TestPriorityRpc {
     mockRS = prepareDeadlineTest(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(),
       true, DEFAULT_DELAY);
     addMockScanner(mockRS.getRSRpcServices(), SCANNER_ID, ACTUAL_DELAY, VTIMESQRT * VTIMESQRT);
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.NEVER, mockRS.getRSRpcServices());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.NONE, mockRS.getRSRpcServices());
     assertEquals(VTIMESQRT, fn.getDeadline(header, oldReq));
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
     assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALWAYS, mockRS.getRSRpcServices());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.ALL, mockRS.getRSRpcServices());
     assertEquals(ACTUAL_DELAY, fn.getDeadline(header, oldReq));
 
     // Meta on master shortcut - just check the config.
     mockRS = prepareDeadlineTest(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable(),
       true, DEFAULT_DELAY);
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
-    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META_ONLY, fn.getScanDeadlineOnly());
     Configuration conf = mockRS.getRSRpcServices().getConfiguration();
     conf.setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
     conf.setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
-    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META_ONLY, fn.getScanDeadlineOnly());
     Mockito.when(mockRS.getRSRpcServices().isMaster()).thenReturn(true);
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
-    assertEquals(ScanDeadlineOnly.ALWAYS, fn.getScanDeadlineOnly());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.ALL, fn.getScanDeadlineOnly());
     conf.setBoolean(LoadBalancer.TABLES_ON_MASTER, false);
-    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META, mockRS.getRSRpcServices());
-    assertEquals(ScanDeadlineOnly.META, fn.getScanDeadlineOnly());
+    fn = prepareDeadlineTestFn(ScanDeadlineOnly.META_ONLY, mockRS.getRSRpcServices());
+    assertEquals(ScanDeadlineOnly.META_ONLY, fn.getScanDeadlineOnly());
   }
 }
