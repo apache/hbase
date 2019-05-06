@@ -47,7 +47,7 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
     super(compactionKVMax);
     // create the list of scanners to traverse over all the data
     // no dirty reads here as these are immutable segments
-    AbstractMemStore.addToScanners(segments, Integer.MAX_VALUE, scanners);
+    AbstractMemStore.addToScanners(segments, Long.MAX_VALUE, scanners);
     heap = new KeyValueHeap(scanners, comparator);
   }
 
