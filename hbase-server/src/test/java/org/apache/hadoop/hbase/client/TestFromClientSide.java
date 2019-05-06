@@ -1409,15 +1409,15 @@ public class TestFromClientSide {
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(2);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(2);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -1459,13 +1459,13 @@ public class TestFromClientSide {
           new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
                   VALUES[8]},0, 7);
 
-    get = new Get(ROW);
-    get.readAllVersions();
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      get = new Get(ROW);
+      get.readAllVersions();
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          0, 7);
 
       scan = new Scan(ROW);
       scan.setMaxVersions();
@@ -1529,15 +1529,15 @@ public class TestFromClientSide {
       delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
       ht.delete(delete);
 
-    // Test that it's gone
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
+      // Test that it's gone
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+          0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -1757,9 +1757,11 @@ public class TestFromClientSide {
       try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
 
         Put put = new Put(ROW);
-        for (int q = 0; q < 1; q++)
-          for (int t = 0; t < 5; t++)
+        for (int q = 0; q < 1; q++) {
+          for (int t = 0; t < 5; t++) {
             put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+          }
+        }
         ht.put(put);
         admin.flush(tableName);
 
@@ -1893,10 +1895,11 @@ public class TestFromClientSide {
         get.addColumn(FAMILY, QUALIFIERS[i]);
         get.readVersions(Integer.MAX_VALUE);
         result = ht.get(get);
-        assertNResult(result, ROW, FAMILY, QUALIFIERS[4],
-                new long[]{ts[2]},
-                new byte[][]{VALUES[2]},
-                0, 0);
+        // verify version '1000'/'3000'/'5000' remains for all columns
+        assertNResult(result, ROW2, FAMILY, QUALIFIERS[i],
+                new long[]{ts[0], ts[2], ts[4]},
+                new byte[][]{VALUES[0], VALUES[2], VALUES[4]},
+                0, 2);
       }
     }
   }
@@ -5668,8 +5671,8 @@ public class TestFromClientSide {
                 1, count);
       }
 
-      // then if we decrease the number of versions, but keep the scan raw, we should see exactly that
-      // number of versions
+      // then if we decrease the number of versions, but keep the scan raw, we should see exactly
+      // that number of versions
       versions = 2;
       s.setMaxVersions(versions);
       try (ResultScanner scanner = table.getScanner(s)) {
