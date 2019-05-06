@@ -953,11 +953,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
         "accesses=" + stats.getRequestCount() + ", " +
         "hits=" + stats.getHitCount() + ", " +
         "hitRatio=" + (stats.getHitCount() == 0 ?
-          "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
+          "0%" : (StringUtils.formatPercent(stats.getHitRatio(), 2))) + ", " +
         "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
         "cachingHits=" + stats.getHitCachingCount() + ", " +
         "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
-          "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
+          "0%": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2))) + ", " +
         "evictions=" + stats.getEvictionCount() + ", " +
         "evicted=" + stats.getEvictedCount() + ", " +
         "evictedPerRun=" + stats.evictedPerEviction());
