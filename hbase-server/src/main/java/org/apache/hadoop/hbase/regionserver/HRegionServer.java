@@ -2418,7 +2418,7 @@ public class HRegionServer extends HasThread implements
     } else {
       LOG.error(HBaseMarkers.FATAL, msg);
     }
-    this.abortRequested = true;
+    setAbortRequested();
     // HBASE-4014: show list of coprocessors that were loaded to help debug
     // regionserver crashes.Note that we're implicitly using
     // java.util.HashSet's toString() method to print the coprocessor names.
@@ -2450,6 +2450,10 @@ public class HRegionServer extends HasThread implements
     }
     // shutdown should be run as the internal user
     stop(reason, true, null);
+  }
+
+  protected final void setAbortRequested() {
+    this.abortRequested = true;
   }
 
   /**

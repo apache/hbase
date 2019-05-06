@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public class ReopenTableRegionsProcedure
 
   private List<HRegionLocation> regions = Collections.emptyList();
 
-  private int attempt;
+  private RetryCounter retryCounter;
 
   public ReopenTableRegionsProcedure() {
   }
@@ -125,13 +126,16 @@ public class ReopenTableRegionsProcedure
           return Flow.NO_MORE_STATE;
         }
         if (regions.stream().anyMatch(loc -> canSchedule(env, loc))) {
-          attempt = 0;
+          retryCounter = null;
           setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
           return Flow.HAS_MORE_STATE;
         }
         // We can not schedule TRSP for all the regions need to reopen, wait for a while and retry
         // again.
-        long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
+        if (retryCounter == null) {
+          retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+        }
+        long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
         LOG.info(
           "There are still {} region(s) which need to be reopened for table {} are in " +
             "OPENING state, suspend {}secs and try again later",

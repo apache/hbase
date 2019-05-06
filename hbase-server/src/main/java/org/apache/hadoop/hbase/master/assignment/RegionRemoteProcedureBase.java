@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   private long seqId;
 
-  private int attempt;
+  private RetryCounter retryCounter;
 
   protected RegionRemoteProcedureBase() {
   }
@@ -268,7 +269,10 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
           throw new IllegalStateException("Unknown state: " + state);
       }
     } catch (IOException e) {
-      long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
+      if (retryCounter == null) {
+        retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+      }
+      long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
       LOG.warn("Failed updating meta, suspend {}secs {}; {};", backoff / 1000, this, regionNode, e);
       setTimeout(Math.toIntExact(backoff));
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);

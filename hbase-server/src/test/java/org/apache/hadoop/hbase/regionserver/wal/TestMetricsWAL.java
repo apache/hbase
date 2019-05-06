@@ -41,13 +41,21 @@ public class TestMetricsWAL {
   public void testLogRollRequested() throws Exception {
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
-    metricsWAL.logRollRequested(false);
-    metricsWAL.logRollRequested(true);
+    metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.ERROR);
+    metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.LOW_REPLICATION);
+    metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.SLOW_SYNC);
+    metricsWAL.logRollRequested(WALActionsListener.RollRequestReason.SIZE);
 
-    // Log roll was requested twice
-    verify(source, times(2)).incrementLogRollRequested();
+    // Log roll was requested four times
+    verify(source, times(4)).incrementLogRollRequested();
+    // One was because of an IO error.
+    verify(source, times(1)).incrementErrorLogRoll();
     // One was because of low replication on the hlog.
     verify(source, times(1)).incrementLowReplicationLogRoll();
+    // One was because of slow sync on the hlog.
+    verify(source, times(1)).incrementSlowSyncLogRoll();
+    // One was because of hlog file length limit.
+    verify(source, times(1)).incrementSizeLogRoll();
   }
 
   @Test

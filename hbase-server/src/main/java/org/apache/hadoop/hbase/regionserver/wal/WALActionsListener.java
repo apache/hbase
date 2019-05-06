@@ -32,6 +32,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface WALActionsListener {
 
+  /** The reason for the log roll request. */
+  static enum RollRequestReason {
+    /** The length of the log exceeds the roll size threshold. */
+    SIZE,
+    /** Too few replicas in the writer pipeline. */
+    LOW_REPLICATION,
+    /** Too much time spent waiting for sync. */
+    SLOW_SYNC,
+    /** I/O or other error. */
+    ERROR
+  };
+
   /**
    * The WAL is going to be rolled. The oldPath can be null if this is
    * the first log file from the regionserver.
@@ -65,7 +77,7 @@ public interface WALActionsListener {
   /**
    * A request was made that the WAL be rolled.
    */
-  default void logRollRequested(boolean tooFewReplicas) {}
+  default void logRollRequested(RollRequestReason reason) {}
 
   /**
    * The WAL is about to close.
