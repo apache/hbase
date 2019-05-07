@@ -553,6 +553,7 @@ public class HStore implements Store {
       totalValidStoreFile++;
     }
 
+    Set<String> compactedStoreFiles = new HashSet<>();
     ArrayList<StoreFile> results = new ArrayList<StoreFile>(files.size());
     IOException ioe = null;
     try {
@@ -565,6 +566,7 @@ public class HStore implements Store {
               LOG.debug("loaded " + storeFile.toStringDetailed());
             }
             results.add(storeFile);
+            compactedStoreFiles.addAll(storeFile.getCompactedStoreFiles());
           }
         } catch (InterruptedException e) {
           if (ioe == null) ioe = new InterruptedIOException(e.getMessage());
@@ -587,6 +589,21 @@ public class HStore implements Store {
         }
       }
       throw ioe;
+    }
+
+    // Remove the compacted files from result
+    List<StoreFile> filesToRemove = new ArrayList<>(compactedStoreFiles.size());
+    for (StoreFile storeFile : results) {
+      if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
+        LOG.warn("Clearing the compacted storefile " + storeFile + " from this store");
+        storeFile.getReader().close(true);
+        filesToRemove.add(storeFile);
+      }
+    }
+    results.removeAll(filesToRemove);
+    if (!filesToRemove.isEmpty() && this.isPrimaryReplicaStore()) {
+      LOG.debug("Moving the files " + filesToRemove + " to archive");
+      this.fs.removeStoreFiles(this.getColumnFamilyName(), filesToRemove);
     }
 
     return results;
@@ -874,7 +891,7 @@ public class HStore implements Store {
           storeEngine.getStoreFileManager().clearCompactedFiles();
       // clear the compacted files
       if (compactedfiles != null && !compactedfiles.isEmpty()) {
-        removeCompactedfiles(compactedfiles, true);
+        removeCompactedfiles(compactedfiles);
       }
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
@@ -1082,7 +1099,8 @@ public class HStore implements Store {
             .withMaxKeyCount(maxKeyCount)
             .withFavoredNodes(favoredNodes)
             .withFileContext(hFileContext)
-            .withShouldDropCacheBehind(shouldDropBehind);
+            .withShouldDropCacheBehind(shouldDropBehind)
+            .withCompactedFiles(this.getCompactedfiles());
     if (trt != null) {
       builder.withTimeRangeTracker(trt);
     }
@@ -2731,11 +2749,6 @@ public class HStore implements Store {
 
   @Override
   public synchronized void closeAndArchiveCompactedFiles() throws IOException {
-    closeAndArchiveCompactedFiles(false);
-  }
-
-  @VisibleForTesting
-  public synchronized void closeAndArchiveCompactedFiles(boolean storeClosing) throws IOException {
     // ensure other threads do not attempt to archive the same files on close()
     archiveLock.lock();
     try {
@@ -2756,7 +2769,7 @@ public class HStore implements Store {
         lock.readLock().unlock();
       }
       if (copyCompactedfiles != null && !copyCompactedfiles.isEmpty()) {
-        removeCompactedfiles(copyCompactedfiles, storeClosing);
+        removeCompactedfiles(copyCompactedfiles);
       }
     } finally {
       archiveLock.unlock();
@@ -2768,23 +2781,13 @@ public class HStore implements Store {
    * @param compactedfiles The compacted files in this store that are not active in reads
    * @throws IOException
    */
-  private void removeCompactedfiles(Collection<StoreFile> compactedfiles, boolean storeClosing)
+  private void removeCompactedfiles(Collection<StoreFile> compactedfiles)
       throws IOException {
     final List<StoreFile> filesToRemove = new ArrayList<StoreFile>(compactedfiles.size());
     for (final StoreFile file : compactedfiles) {
       synchronized (file) {
         try {
           StoreFile.Reader r = file.getReader();
-
-          //Compacted files in the list should always be marked compacted away. In the event
-          //they're contradicting in order to guarantee data consistency
-          //should we choose one and ignore the other?
-          if (storeClosing && r != null && !r.isCompactedAway()) {
-            String msg =
-                "Region closing but StoreFile is in compacted list but not compacted away: " +
-                    file.getPath();
-            throw new IllegalStateException(msg);
-          }
 
           if (r == null) {
             if (LOG.isDebugEnabled()) {
@@ -2793,13 +2796,7 @@ public class HStore implements Store {
             filesToRemove.add(file);
           }
 
-          //If store is closing we're ignoring any references to keep things consistent
-          //and remove compacted storefiles from the region directory
-          if (r != null && file.isCompactedAway() && (!r.isReferencedInReads() || storeClosing)) {
-            if (storeClosing && r.isReferencedInReads()) {
-              LOG.warn("Region closing but StoreFile still has references: file=" +
-                  file.getPath() + ", refCount=" + r.getRefCount());
-            }
+          if (r != null && r.isCompactedAway() && !r.isReferencedInReads()) {
             // Even if deleting fails we need not bother as any new scanners won't be
             // able to use the compacted file as the status is already compactedAway
             if (LOG.isTraceEnabled()) {
@@ -2815,16 +2812,8 @@ public class HStore implements Store {
                 + ", refCount=" + r.getRefCount() + ", skipping for now.");
           }
         } catch (Exception e) {
-          String msg = "Exception while trying to close the compacted store file " +
-              file.getPath();
-          if (storeClosing) {
-            msg = "Store is closing. " + msg;
-          }
-          LOG.error(msg, e);
-          //if we get an exception let caller know so it can abort the server
-          if (storeClosing) {
-            throw new IOException(msg, e);
-          }
+          LOG.error(
+            "Exception while trying to close the compacted store file " + file.getPath().getName());
         }
       }
     }

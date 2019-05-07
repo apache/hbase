@@ -87,7 +87,7 @@ public class DefaultCompactor extends Compactor<Writer> {
   protected List<Path> commitWriter(Writer writer, FileDetails fd,
       CompactionRequest request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
-    writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
+    writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();
     return newFiles;
   }
