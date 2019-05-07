@@ -22,8 +22,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.Random;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -44,7 +45,7 @@ public class TestMobFileName {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private String uuid;
-  private Date date;
+  private LocalDate date;
   private String dateStr;
   private byte[] startKey;
 
@@ -52,7 +53,7 @@ public class TestMobFileName {
   public void setUp() {
     Random random = new Random();
     uuid = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
-    date = new Date();
+    date = LocalDate.now();
     dateStr = MobUtils.formatDate(date);
     startKey = Bytes.toBytes(random.nextInt());
   }
@@ -76,8 +77,8 @@ public class TestMobFileName {
     MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid);
     assertEquals(MD5Hash.getMD5AsHex(startKey, 0, startKey.length), mobFileName.getStartKey());
     assertEquals(dateStr, mobFileName.getDate());
-    assertEquals(mobFileName.getFileName(), MD5Hash.getMD5AsHex(startKey, 0, startKey.length)
-        + dateStr + uuid);
+    assertEquals(mobFileName.getFileName(),
+        MD5Hash.getMD5AsHex(startKey, 0, startKey.length) + dateStr + uuid);
   }
 
   @Test

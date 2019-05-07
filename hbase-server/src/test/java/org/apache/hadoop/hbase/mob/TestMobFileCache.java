@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
-import java.util.Date;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,7 +61,7 @@ public class TestMobFileCache {
   private HRegion region;
   private Configuration conf;
   private MobFileCache mobFileCache;
-  private Date currentDate = new Date();
+  private long currentTimeMillis = System.currentTimeMillis();
   private static final String TEST_CACHE_SIZE = "2";
   private static final int EXPECTED_CACHE_SIZE_ZERO = 0;
   private static final int EXPECTED_CACHE_SIZE_ONE = 1;
@@ -133,8 +133,7 @@ public class TestMobFileCache {
   /**
    * Create the mob store file
    */
-  private Path createMobStoreFile(HColumnDescriptor hcd)
-      throws IOException {
+  private Path createMobStoreFile(HColumnDescriptor hcd) throws IOException {
     // Setting up a Store
     TableName tn = TableName.valueOf(TABLE);
     HTableDescriptor htd = new HTableDescriptor(tn);
@@ -146,15 +145,16 @@ public class TestMobFileCache {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     HRegionInfo regionInfo = new HRegionInfo(tn);
-    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
-        maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey(), false);
+    StoreFileWriter mobWriter = mobStore
+        .createWriterInTmp(currentTimeMillis, maxKeyCount, hcd.getCompactionCompression(),
+            regionInfo.getStartKey(), false);
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();
     mobWriter.append(key1);
     mobWriter.append(key2);
     mobWriter.append(key3);
     mobWriter.close();
-    String targetPathName = MobUtils.formatDate(currentDate);
+    String targetPathName = MobUtils.formatDate(currentTimeMillis);
     Path targetPath = new Path(mobStore.getPath(), targetPathName);
     mobStore.commitFile(mobFilePath, targetPath);
     return new Path(targetPath, fileName);
@@ -171,8 +171,7 @@ public class TestMobFileCache {
     // Before open one file by the MobFileCache
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     // Open one file by the MobFileCache
-    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertNotNull(cachedMobFile1);
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
@@ -191,14 +190,11 @@ public class TestMobFileCache {
     cachedMobFile1.close();  // Close the cached mob file
 
     // Reopen three cached file
-    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(
-        fs, file2Path, cacheConf);
+    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(fs, file2Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_TWO, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(
-        fs, file3Path, cacheConf);
+    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(fs, file3Path, cacheConf);
     // Before the evict
     // Evict the cache, should close the first file 1
     assertEquals(EXPECTED_CACHE_SIZE_THREE, mobFileCache.getCacheSize());

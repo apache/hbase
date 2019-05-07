@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -109,18 +108,19 @@ public class HMobStore extends HStore {
     this.family = family;
     this.mobFileCache = region.getMobFileCache();
     this.homePath = MobUtils.getMobHome(conf);
-    this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
-        family.getNameAsString());
+    this.mobFamilyPath =
+        MobUtils.getMobFamilyPath(conf, this.getTableName(), family.getNameAsString());
     List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDescriptor().getTableName();
-    locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
-        .getEncodedName(), family.getNameAsString()));
+    locations.add(HFileArchiveUtil
+        .getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn).getEncodedName(),
+            family.getNameAsString()));
     map.put(Bytes.toString(tn.getName()), locations);
     List<Tag> tags = new ArrayList<>(2);
     tags.add(MobConstants.MOB_REF_TAG);
-    Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
-        getTableName().getName());
+    Tag tableNameTag =
+        new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, getTableName().getName());
     tags.add(tableNameTag);
     this.refCellTags = TagUtil.fromList(tags);
   }
@@ -148,8 +148,9 @@ public class HMobStore extends HStore {
         scan.setFilter(refOnlyFilter);
       }
     }
-    return scan.isReversed() ? new ReversedMobStoreScanner(this, scanInfo, scan, targetCols, readPt)
-        : new MobStoreScanner(this, scanInfo, scan, targetCols, readPt);
+    return scan.isReversed() ?
+        new ReversedMobStoreScanner(this, scanInfo, scan, targetCols, readPt) :
+        new MobStoreScanner(this, scanInfo, scan, targetCols, readPt);
   }
 
   /**
@@ -165,6 +166,7 @@ public class HMobStore extends HStore {
 
   /**
    * Gets the temp directory.
+   *
    * @return The temp directory.
    */
   private Path getTempDir() {
@@ -173,87 +175,89 @@ public class HMobStore extends HStore {
 
   /**
    * Creates the writer for the mob file in temp directory.
-   * @param date The latest date of written cells.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
-   * @param isCompaction If the writer is used in compaction.
+   *
+   * @param latestWriteTimestamp The latest unix timestamp of written cells by millisecond.
+   * @param maxKeyCount          The key count.
+   * @param compression          The compression algorithm.
+   * @param startKey             The start key.
+   * @param isCompaction         If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
-  public StoreFileWriter createWriterInTmp(Date date, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey,
-      boolean isCompaction) throws IOException {
+  public StoreFileWriter createWriterInTmp(long latestWriteTimestamp, long maxKeyCount,
+      Compression.Algorithm compression, byte[] startKey, boolean isCompaction) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
     }
     Path path = getTempDir();
-    return createWriterInTmp(MobUtils.formatDate(date), path, maxKeyCount, compression, startKey,
-      isCompaction);
+    return createWriterInTmp(MobUtils.formatDate(latestWriteTimestamp), path, maxKeyCount,
+        compression, startKey, isCompaction);
   }
 
   /**
    * Creates the writer for the del file in temp directory.
    * The del file keeps tracking the delete markers. Its name has a suffix _del,
    * the format is [0-9a-f]+(_del)?.
-   * @param date The latest date of written cells.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
+   *
+   * @param latestWriteTimestamp The latest timestamp of written cells by millisecond.
+   * @param maxKeyCount          The key count.
+   * @param compression          The compression algorithm.
+   * @param startKey             The start key.
    * @return The writer for the del file.
    * @throws IOException
    */
-  public StoreFileWriter createDelFileWriterInTmp(Date date, long maxKeyCount,
+  public StoreFileWriter createDelFileWriterInTmp(long latestWriteTimestamp, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
     }
     Path path = getTempDir();
-    String suffix = UUID
-        .randomUUID().toString().replaceAll("-", "") + "_del";
-    MobFileName mobFileName = MobFileName.create(startKey, MobUtils.formatDate(date), suffix);
+    String suffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+    MobFileName mobFileName =
+        MobFileName.create(startKey, MobUtils.formatDate(latestWriteTimestamp), suffix);
     return createWriterInTmp(mobFileName, path, maxKeyCount, compression, true);
   }
 
   /**
    * Creates the writer for the mob file in temp directory.
-   * @param date The date string, its format is yyyymmmdd.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
+   *
+   * @param date         The date string, its format is yyyymmmdd.
+   * @param basePath     The basic path for a temp directory.
+   * @param maxKeyCount  The key count.
+   * @param compression  The compression algorithm.
+   * @param startKey     The start key.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey,
-      boolean isCompaction) throws IOException {
-    MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID()
-        .toString().replaceAll("-", ""));
+      Compression.Algorithm compression, byte[] startKey, boolean isCompaction) throws IOException {
+    MobFileName mobFileName =
+        MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
   }
 
   /**
    * Creates the writer for the mob file in temp directory.
-   * @param mobFileName The mob file name.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
+   *
+   * @param mobFileName  The mob file name.
+   * @param basePath     The basic path for a temp directory.
+   * @param maxKeyCount  The key count.
+   * @param compression  The compression algorithm.
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
-  public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
-      long maxKeyCount, Compression.Algorithm compression,
-      boolean isCompaction) throws IOException {
+  public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, boolean isCompaction) throws IOException {
     return MobUtils.createWriter(conf, region.getFilesystem(), family,
-      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConf,
-      cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
+        new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConf,
+        cryptoContext, checksumType, bytesPerChecksum, blocksize, BloomType.NONE, isCompaction);
   }
 
   /**
    * Commits the mob file.
+   *
    * @param sourceFile The source file.
    * @param targetPath The directory path where the source file is renamed to.
    * @throws IOException
@@ -283,8 +287,8 @@ public class HMobStore extends HStore {
   private void validateMobFile(Path path) throws IOException {
     HStoreFile storeFile = null;
     try {
-      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.cacheConf,
-          BloomType.NONE, isPrimaryReplicaStore());
+      storeFile = new HStoreFile(region.getFilesystem(), path, conf, this.cacheConf, BloomType.NONE,
+          isPrimaryReplicaStore());
       storeFile.initReader();
     } catch (IOException e) {
       LOG.error("Fail to open mob file[" + path + "], keep it in temp directory.", e);
@@ -299,7 +303,8 @@ public class HMobStore extends HStore {
   /**
    * Reads the cell from the mob file, and the read point does not count.
    * This is used for DefaultMobStoreCompactor where we can read empty value for the missing cell.
-   * @param reference The cell found in the HBase, its value is a path to a mob file.
+   *
+   * @param reference   The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
    * @return The cell found in the mob file.
    * @throws IOException
@@ -310,16 +315,17 @@ public class HMobStore extends HStore {
 
   /**
    * Reads the cell from the mob file.
-   * @param reference The cell found in the HBase, its value is a path to a mob file.
-   * @param cacheBlocks Whether the scanner should cache blocks.
-   * @param readPt the read point.
+   *
+   * @param reference                   The cell found in the HBase, its value is a path to a mob file.
+   * @param cacheBlocks                 Whether the scanner should cache blocks.
+   * @param readPt                      the read point.
    * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is
-   *        missing or corrupt.
+   *                                    missing or corrupt.
    * @return The cell found in the mob file.
    * @throws IOException
    */
   public Cell resolve(Cell reference, boolean cacheBlocks, long readPt,
-    boolean readEmptyValueOnMobCellMiss) throws IOException {
+      boolean readEmptyValueOnMobCellMiss) throws IOException {
     Cell result = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
@@ -335,8 +341,9 @@ public class HMobStore extends HStore {
               locations = new ArrayList<>(2);
               TableName tn = TableName.valueOf(tableNameString);
               locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
-              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
-                  .getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
+              locations.add(HFileArchiveUtil
+                  .getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn).getEncodedName(),
+                      family.getNameAsString()));
               map.put(tableNameString, locations);
             }
           } finally {
@@ -344,24 +351,21 @@ public class HMobStore extends HStore {
           }
         }
         result = readCell(locations, fileName, reference, cacheBlocks, readPt,
-          readEmptyValueOnMobCellMiss);
+            readEmptyValueOnMobCellMiss);
       }
     }
     if (result == null) {
       LOG.warn("The Cell result is null, assemble a new Cell with the same row,family,"
           + "qualifier,timestamp,type and tags but with an empty value to return.");
       result = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
-              .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(),
-                reference.getFamilyLength())
-              .setQualifier(reference.getQualifierArray(),
-                reference.getQualifierOffset(), reference.getQualifierLength())
-              .setTimestamp(reference.getTimestamp())
-              .setType(reference.getTypeByte())
-              .setValue(HConstants.EMPTY_BYTE_ARRAY)
-              .setTags(reference.getTagsArray(), reference.getTagsOffset(),
-                reference.getTagsLength())
-              .build();
+          .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
+          .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(),
+              reference.getFamilyLength())
+          .setQualifier(reference.getQualifierArray(), reference.getQualifierOffset(),
+              reference.getQualifierLength()).setTimestamp(reference.getTimestamp())
+          .setType(reference.getTypeByte()).setValue(HConstants.EMPTY_BYTE_ARRAY)
+          .setTags(reference.getTagsArray(), reference.getTagsOffset(), reference.getTagsLength())
+          .build();
     }
     return result;
   }
@@ -372,18 +376,19 @@ public class HMobStore extends HStore {
    * 1. The working directory.
    * 2. The archive directory.
    * Reads the cell from the files located in both of the above directories.
-   * @param locations The possible locations where the mob files are saved.
-   * @param fileName The file to be read.
-   * @param search The cell to be searched.
-   * @param cacheMobBlocks Whether the scanner should cache blocks.
-   * @param readPt the read point.
+   *
+   * @param locations                   The possible locations where the mob files are saved.
+   * @param fileName                    The file to be read.
+   * @param search                      The cell to be searched.
+   * @param cacheMobBlocks              Whether the scanner should cache blocks.
+   * @param readPt                      the read point.
    * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is
-   *        missing or corrupt.
+   *                                    missing or corrupt.
    * @return The found cell. Null if there's no such a cell.
    * @throws IOException
    */
   private Cell readCell(List<Path> locations, String fileName, Cell search, boolean cacheMobBlocks,
-    long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {
+      long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {
     FileSystem fs = getFileSystem();
     Throwable throwable = null;
     for (Path location : locations) {
@@ -391,13 +396,14 @@ public class HMobStore extends HStore {
       Path path = new Path(location, fileName);
       try {
         file = mobFileCache.openFile(fs, path, cacheConf);
-        return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt) : file.readCell(search,
-          cacheMobBlocks);
+        return readPt != -1 ?
+            file.readCell(search, cacheMobBlocks, readPt) :
+            file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {
         mobFileCache.evictFile(fileName);
         throwable = e;
-        if ((e instanceof FileNotFoundException) ||
-            (e.getCause() instanceof FileNotFoundException)) {
+        if ((e instanceof FileNotFoundException) || (e
+            .getCause() instanceof FileNotFoundException)) {
           LOG.debug("Fail to read the cell, the mob file " + path + " doesn't exist", e);
         } else if (e instanceof CorruptHFileException) {
           LOG.error("The mob file " + path + " is corrupt", e);
@@ -420,11 +426,11 @@ public class HMobStore extends HStore {
       }
     }
     LOG.error("The mob file " + fileName + " could not be found in the locations " + locations
-      + " or it is corrupt");
+        + " or it is corrupt");
     if (readEmptyValueOnMobCellMiss) {
       return null;
-    } else if ((throwable instanceof FileNotFoundException)
-        || (throwable.getCause() instanceof FileNotFoundException)) {
+    } else if ((throwable instanceof FileNotFoundException) || (throwable
+        .getCause() instanceof FileNotFoundException)) {
       // The region is re-opened when FileNotFoundException is thrown.
       // This is not necessary when MOB files cannot be found, because the store files
       // in a region only contain the references to MOB files and a re-open on a region
@@ -439,6 +445,7 @@ public class HMobStore extends HStore {
 
   /**
    * Gets the mob file path.
+   *
    * @return The mob file path.
    */
   public Path getPath() {

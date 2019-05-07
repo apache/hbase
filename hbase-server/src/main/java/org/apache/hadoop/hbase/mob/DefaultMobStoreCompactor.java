@@ -20,15 +20,14 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -86,7 +85,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             boolean shouldDropBehind) throws IOException {
           // make this writer with tags always because of possible new cells with tags.
           return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
-            shouldDropBehind);
+              shouldDropBehind);
         }
       };
 
@@ -104,8 +103,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
   @Override
-  public List<Path> compact(CompactionRequestImpl request, ThroughputController throughputController,
-      User user) throws IOException {
+  public List<Path> compact(CompactionRequestImpl request,
+      ThroughputController throughputController, User user) throws IOException {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
 
@@ -191,27 +190,29 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
-    KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+    KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
+    long shippedCallSizeLimit =
+        (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
-        mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
-          compactionCompression, store.getRegionInfo().getStartKey(), true);
+        mobFileWriter = mobStore
+            .createWriterInTmp(fd.latestPutTs, fd.maxKeyCount, compactionCompression,
+                store.getRegionInfo().getStartKey(), true);
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
       } catch (IOException e) {
         LOG.warn("Failed to create mob writer, "
-               + "we will continue the compaction by writing MOB cells directly in store files", e);
+            + "we will continue the compaction by writing MOB cells directly in store files", e);
       }
       if (major) {
         try {
-          delFileWriter = mobStore.createDelFileWriterInTmp(new Date(fd.latestPutTs),
-            fd.maxKeyCount, compactionCompression, store.getRegionInfo().getStartKey());
+          delFileWriter = mobStore
+              .createDelFileWriterInTmp(fd.latestPutTs, fd.maxKeyCount, compactionCompression,
+                  store.getRegionInfo().getStartKey());
         } catch (IOException e) {
-          LOG.warn(
-            "Failed to create del writer, "
-            + "we will continue the compaction by writing delete markers directly in store files",
-            e);
+          LOG.warn("Failed to create del writer, "
+                  + "we will continue the compaction by writing delete markers directly in store files",
+              e);
         }
       }
       do {
@@ -260,8 +261,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 }
               }
             } else {
-              LOG.warn("The value format of the KeyValue " + c
-                  + " is wrong, its length is less than " + Bytes.SIZEOF_INT);
+              LOG.warn(
+                  "The value format of the KeyValue " + c + " is wrong, its length is less than "
+                      + Bytes.SIZEOF_INT);
               writer.append(c);
             }
           } else if (c.getValueLength() <= mobSizeThreshold) {
@@ -273,8 +275,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             mobCells++;
             // append the original keyValue in the mob file.
             mobFileWriter.append(c);
-            Cell reference = MobUtils.createMobRefCell(c, fileName,
-                this.mobStore.getRefCellTags());
+            Cell reference = MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             cellsCountCompactedToMob++;
@@ -300,7 +301,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             }
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-            ((ShipperListener)writer).beforeShipped();
+            ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
             bytesWrittenProgressForShippedCall = 0;
           }
@@ -309,13 +310,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         // logging at DEBUG level
         if (LOG.isDebugEnabled()) {
           if ((now - lastMillis) >= COMPACTION_PROGRESS_LOG_INTERVAL) {
-            LOG.debug("Compaction progress: "
-                + compactionName
-                + " "
-                + progress
-                + String.format(", rate=%.2f kB/sec", (bytesWrittenProgressForLog / 1024.0)
-                    / ((now - lastMillis) / 1000.0)) + ", throughputController is "
-                + throughputController);
+            LOG.debug("Compaction progress: " + compactionName + " " + progress + String
+                .format(", rate=%.2f kB/sec",
+                    (bytesWrittenProgressForLog / 1024.0) / ((now - lastMillis) / 1000.0))
+                + ", throughputController is " + throughputController);
             lastMillis = now;
             bytesWrittenProgressForLog = 0;
           }

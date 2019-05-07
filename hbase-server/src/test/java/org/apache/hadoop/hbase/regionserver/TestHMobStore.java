@@ -22,15 +22,16 @@ import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import java.io.IOException;
 import java.security.Key;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
+
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
@@ -91,25 +92,26 @@ public class TestHMobStore {
       HBaseClassTestRule.forClass(TestHMobStore.class);
 
   public static final Logger LOG = LoggerFactory.getLogger(TestHMobStore.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private HMobStore store;
   private HRegion region;
   private FileSystem fs;
-  private byte [] table = Bytes.toBytes("table");
-  private byte [] family = Bytes.toBytes("family");
-  private byte [] row = Bytes.toBytes("row");
-  private byte [] row2 = Bytes.toBytes("row2");
-  private byte [] qf1 = Bytes.toBytes("qf1");
-  private byte [] qf2 = Bytes.toBytes("qf2");
-  private byte [] qf3 = Bytes.toBytes("qf3");
-  private byte [] qf4 = Bytes.toBytes("qf4");
-  private byte [] qf5 = Bytes.toBytes("qf5");
-  private byte [] qf6 = Bytes.toBytes("qf6");
+  private byte[] table = Bytes.toBytes("table");
+  private byte[] family = Bytes.toBytes("family");
+  private byte[] row = Bytes.toBytes("row");
+  private byte[] row2 = Bytes.toBytes("row2");
+  private byte[] qf1 = Bytes.toBytes("qf1");
+  private byte[] qf2 = Bytes.toBytes("qf2");
+  private byte[] qf3 = Bytes.toBytes("qf3");
+  private byte[] qf4 = Bytes.toBytes("qf4");
+  private byte[] qf5 = Bytes.toBytes("qf5");
+  private byte[] qf6 = Bytes.toBytes("qf6");
   private byte[] value = Bytes.toBytes("value");
   private byte[] value2 = Bytes.toBytes("value2");
   private Path mobFilePath;
-  private Date currentDate = new Date();
+  private long currentTimeMillis = System.currentTimeMillis();
   private Cell seekKey1;
   private Cell seekKey2;
   private Cell seekKey3;
@@ -122,6 +124,7 @@ public class TestHMobStore {
 
   /**
    * Setup
+   *
    * @throws Exception
    */
   @Before
@@ -131,8 +134,8 @@ public class TestHMobStore {
     qualifiers.add(qf5);
 
     Iterator<byte[]> iter = qualifiers.iterator();
-    while(iter.hasNext()){
-      byte [] next = iter.next();
+    while (iter.hasNext()) {
+      byte[] next = iter.next();
       expected.add(new KeyValue(row, family, next, 1, value));
       get.addColumn(family, next);
       get.readAllVersions();
@@ -172,12 +175,11 @@ public class TestHMobStore {
     }
   }
 
-  private void init(Configuration conf, ColumnFamilyDescriptor cfd)
-      throws IOException {
+  private void init(Configuration conf, ColumnFamilyDescriptor cfd) throws IOException {
     Path basedir = FSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
-    Path homePath = new Path(basedir, Bytes.toString(family) + Path.SEPARATOR
-        + Bytes.toString(family));
+    Path homePath =
+        new Path(basedir, Bytes.toString(family) + Path.SEPARATOR + Bytes.toString(family));
     fs.mkdirs(homePath);
 
     KeyValue key1 = new KeyValue(row, family, qf1, 1, value);
@@ -185,8 +187,9 @@ public class TestHMobStore {
     KeyValue key3 = new KeyValue(row2, family, qf3, 1, value2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
-    StoreFileWriter mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
-        cfd.getCompactionCompressionType(), region.getRegionInfo().getStartKey(), false);
+    StoreFileWriter mobWriter = store
+        .createWriterInTmp(currentTimeMillis, maxKeyCount, cfd.getCompactionCompressionType(),
+            region.getRegionInfo().getStartKey(), false);
     mobFilePath = mobWriter.getPath();
 
     mobWriter.append(key1);
@@ -194,10 +197,10 @@ public class TestHMobStore {
     mobWriter.append(key3);
     mobWriter.close();
 
-    String targetPathName = MobUtils.formatDate(currentDate);
+    String targetPathName = MobUtils.formatDate(currentTimeMillis);
     byte[] referenceValue = Bytes.toBytes(targetPathName + Path.SEPARATOR + mobFilePath.getName());
-    Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
-        store.getTableName().getName());
+    Tag tableNameTag =
+        new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName().getName());
     KeyValue kv1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, referenceValue);
     KeyValue kv2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, referenceValue);
     KeyValue kv3 = new KeyValue(row2, family, qf3, Long.MAX_VALUE, referenceValue);
@@ -208,6 +211,7 @@ public class TestHMobStore {
 
   /**
    * Getting data from memstore
+   *
    * @throws IOException
    */
   @Test
@@ -224,9 +228,8 @@ public class TestHMobStore {
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
 
     Scan scan = new Scan(get);
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
@@ -235,7 +238,7 @@ public class TestHMobStore {
 
     //Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       // Verify the values
       Assert.assertEquals(expected.get(i), results.get(i));
     }
@@ -243,6 +246,7 @@ public class TestHMobStore {
 
   /**
    * Getting MOB data from files
+   *
    * @throws IOException
    */
   @Test
@@ -269,9 +273,8 @@ public class TestHMobStore {
     flush(3);
 
     Scan scan = new Scan(get);
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
@@ -280,13 +283,14 @@ public class TestHMobStore {
 
     //Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
   }
 
   /**
    * Getting the reference data from files
+   *
    * @throws IOException
    */
   @Test
@@ -314,9 +318,8 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-      0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
@@ -325,7 +328,7 @@ public class TestHMobStore {
 
     //Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
       Assert.assertTrue(MobUtils.isMobReferenceCell(cell));
     }
@@ -333,6 +336,7 @@ public class TestHMobStore {
 
   /**
    * Getting data from memstore and files
+   *
    * @throws IOException
    */
   @Test
@@ -359,9 +363,8 @@ public class TestHMobStore {
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
 
     Scan scan = new Scan(get);
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
@@ -370,13 +373,14 @@ public class TestHMobStore {
 
     //Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
   }
 
   /**
    * Getting data from memstore and files
+   *
    * @throws IOException
    */
   @Test
@@ -407,9 +411,8 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-      0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
@@ -418,7 +421,7 @@ public class TestHMobStore {
 
     //Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
       //this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
@@ -431,9 +434,9 @@ public class TestHMobStore {
   public void testCommitFile() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
     init(name.getMethodName(), conf, true);
-    String targetPathName = MobUtils.formatDate(new Date());
-    Path targetPath = new Path(store.getPath(), (targetPathName
-        + Path.SEPARATOR + mobFilePath.getName()));
+    String targetPathName = MobUtils.formatDate(LocalDate.now());
+    Path targetPath =
+        new Path(store.getPath(), (targetPathName + Path.SEPARATOR + mobFilePath.getName()));
     fs.delete(targetPath, true);
     Assert.assertFalse(fs.exists(targetPath));
     //commit file
@@ -445,7 +448,7 @@ public class TestHMobStore {
   public void testResolve() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
     init(name.getMethodName(), conf, true);
-    String targetPathName = MobUtils.formatDate(currentDate);
+    String targetPathName = MobUtils.formatDate(currentTimeMillis);
     Path targetPath = new Path(store.getPath(), targetPathName);
     store.commitFile(mobFilePath, targetPath);
     //resolve
@@ -453,28 +456,27 @@ public class TestHMobStore {
     Cell resultCell2 = store.resolve(seekKey2, false);
     Cell resultCell3 = store.resolve(seekKey3, false);
     //compare
-    Assert.assertEquals(Bytes.toString(value),
-        Bytes.toString(CellUtil.cloneValue(resultCell1)));
-    Assert.assertEquals(Bytes.toString(value),
-        Bytes.toString(CellUtil.cloneValue(resultCell2)));
-    Assert.assertEquals(Bytes.toString(value2),
-        Bytes.toString(CellUtil.cloneValue(resultCell3)));
+    Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell1)));
+    Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell2)));
+    Assert.assertEquals(Bytes.toString(value2), Bytes.toString(CellUtil.cloneValue(resultCell3)));
   }
 
   /**
    * Flush the memstore
+   *
    * @param storeFilesSize
    * @throws IOException
    */
-  private void flush(int storeFilesSize) throws IOException{
+  private void flush(int storeFilesSize) throws IOException {
     this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
+    Assert.assertEquals(0, ((AbstractMemStore) this.store.memstore).getActive().getCellsCount());
   }
 
   /**
    * Flush the memstore
+   *
    * @param store
    * @param id
    * @throws IOException
@@ -520,16 +522,15 @@ public class TestHMobStore {
 
     // Scan the values
     Scan scan = new Scan(get);
-    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+    InternalScanner scanner = (InternalScanner) store
+        .getScanner(scan, scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
 

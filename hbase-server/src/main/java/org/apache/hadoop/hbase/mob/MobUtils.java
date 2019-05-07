@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +20,16 @@ package org.apache.hadoop.hbase.mob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,15 +94,11 @@ public final class MobUtils {
   private final static long WEEKLY_THRESHOLD_MULTIPLIER = 7;
   private final static long MONTHLY_THRESHOLD_MULTIPLIER = 4 * WEEKLY_THRESHOLD_MULTIPLIER;
 
-  private static final ThreadLocal<SimpleDateFormat> LOCAL_FORMAT =
-      new ThreadLocal<SimpleDateFormat>() {
-    @Override
-    protected SimpleDateFormat initialValue() {
-      return new SimpleDateFormat("yyyyMMdd");
-    }
-  };
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyyMMdd");
 
   private static final byte[] REF_DELETE_MARKER_TAG_BYTES;
+
   static {
     List<Tag> tags = new ArrayList<>();
     tags.add(MobConstants.MOB_REF_TAG);
@@ -113,79 +113,71 @@ public final class MobUtils {
 
   /**
    * Formats a date to a string.
+   *
    * @param date The date.
    * @return The string format of the date, it's yyyymmdd.
    */
-  public static String formatDate(Date date) {
-    return LOCAL_FORMAT.get().format(date);
+  public static String formatDate(LocalDate date) {
+    return DATE_TIME_FORMATTER.format(date);
+  }
+
+  public static String formatDate(long millisecond) {
+    return formatDate(toLocalDate(millisecond));
+  }
+
+  private static LocalDate toLocalDate(long millisecond) {
+    return Instant.ofEpochMilli(millisecond).atZone(ZoneId.systemDefault()).toLocalDate();
+  }
+
+  private static long toMillisecond(LocalDate localDate) {
+    return localDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
   }
 
   /**
    * Parses the string to a date.
+   *
    * @param dateString The string format of a date, it's yyyymmdd.
-   * @return A date.
+   * @return A LocalDate.
    * @throws ParseException
    */
-  public static Date parseDate(String dateString) throws ParseException {
-    return LOCAL_FORMAT.get().parse(dateString);
+  public static LocalDate parseDate(String dateString) throws ParseException {
+    return LocalDate.parse(dateString, DATE_TIME_FORMATTER);
   }
 
   /**
    * Get the first day of the input date's month
-   * @param calendar Calendar object
+   *
    * @param date The date to find out its first day of that month
    * @return The first day in the month
    */
-  public static Date getFirstDayOfMonth(final Calendar calendar, final Date date) {
-
-    calendar.setTime(date);
-    calendar.set(Calendar.HOUR_OF_DAY, 0);
-    calendar.set(Calendar.MINUTE, 0);
-    calendar.set(Calendar.SECOND, 0);
-    calendar.set(Calendar.MILLISECOND, 0);
-    calendar.set(Calendar.DAY_OF_MONTH, 1);
-
-    Date firstDayInMonth = calendar.getTime();
-    return firstDayInMonth;
+  public static LocalDate getFirstDayOfMonth(LocalDate date) {
+    return date.with(TemporalAdjusters.firstDayOfMonth());
   }
 
   /**
    * Get the first day of the input date's week
-   * @param calendar Calendar object
+   * FIXME: Monday may NOT be the first day of the week in some countries of the world.
+   *
    * @param date The date to find out its first day of that week
    * @return The first day in the week
    */
-  public static Date getFirstDayOfWeek(final Calendar calendar, final Date date) {
-
-    calendar.setTime(date);
-    calendar.set(Calendar.HOUR_OF_DAY, 0);
-    calendar.set(Calendar.MINUTE, 0);
-    calendar.set(Calendar.SECOND, 0);
-    calendar.set(Calendar.MILLISECOND, 0);
-    calendar.setFirstDayOfWeek(Calendar.MONDAY);
-    calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-
-    Date firstDayInWeek = calendar.getTime();
-    return firstDayInWeek;
+  public static LocalDate getFirstDayOfWeek(LocalDate date) {
+    return date.with(DayOfWeek.MONDAY);
   }
 
   /**
    * Whether the current cell is a mob reference cell.
+   *
    * @param cell The current cell.
    * @return True if the cell has a mob reference tag, false if it doesn't.
    */
   public static boolean isMobReferenceCell(Cell cell) {
-    if (cell.getTagsLength() > 0) {
-      Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
-      if (tag.isPresent()) {
-        return true;
-      }
-    }
-    return false;
+    return PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE).isPresent();
   }
 
   /**
    * Gets the table name tag.
+   *
    * @param cell The current cell.
    * @return The table name tag.
    */
@@ -201,18 +193,12 @@ public final class MobUtils {
 
   /**
    * Whether the tag list has a mob reference tag.
+   *
    * @param tags The tag list.
    * @return True if the list has a mob reference tag, false if it doesn't.
    */
   public static boolean hasMobReferenceTag(List<Tag> tags) {
-    if (!tags.isEmpty()) {
-      for (Tag tag : tags) {
-        if (tag.getType() == TagType.MOB_REFERENCE_TAG_TYPE) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return tags.stream().anyMatch(tag -> TagType.MOB_REFERENCE_TAG_TYPE == tag.getType());
   }
 
   /**
@@ -221,58 +207,51 @@ public final class MobUtils {
    * For a mob cell, in a normal scan the scanners retrieves the mob cell from the mob file.
    * In a raw scan, the scanner directly returns cell in HBase without retrieve the one in
    * the mob file.
+   *
    * @param scan The current scan.
    * @return True if it's a raw scan.
    */
   public static boolean isRawMobScan(Scan scan) {
     byte[] raw = scan.getAttribute(MobConstants.MOB_SCAN_RAW);
-    try {
-      return raw != null && Bytes.toBoolean(raw);
-    } catch (IllegalArgumentException e) {
-      return false;
-    }
+    return toBoolean(raw);
   }
 
   /**
    * Indicates whether it's a reference only scan.
    * The information is set in the attribute "hbase.mob.scan.ref.only" of scan.
    * If it's a ref only scan, only the cells with ref tag are returned.
+   *
    * @param scan The current scan.
    * @return True if it's a ref only scan.
    */
   public static boolean isRefOnlyScan(Scan scan) {
     byte[] refOnly = scan.getAttribute(MobConstants.MOB_SCAN_REF_ONLY);
-    try {
-      return refOnly != null && Bytes.toBoolean(refOnly);
-    } catch (IllegalArgumentException e) {
-      return false;
-    }
+    return toBoolean(refOnly);
   }
 
   /**
    * Indicates whether the scan contains the information of caching blocks.
    * The information is set in the attribute "hbase.mob.cache.blocks" of scan.
+   *
    * @param scan The current scan.
    * @return True when the Scan attribute specifies to cache the MOB blocks.
    */
   public static boolean isCacheMobBlocks(Scan scan) {
     byte[] cache = scan.getAttribute(MobConstants.MOB_CACHE_BLOCKS);
-    try {
-      return cache != null && Bytes.toBoolean(cache);
-    } catch (IllegalArgumentException e) {
-      return false;
-    }
+    return toBoolean(cache);
+  }
+
+  private static boolean toBoolean(byte[] byteArray) {
+    return byteArray != null && byteArray.length == 1 && byteArray[0] != (byte) 0;
   }
 
   /**
    * Sets the attribute of caching blocks in the scan.
    *
-   * @param scan
-   *          The current scan.
-   * @param cacheBlocks
-   *          True, set the attribute of caching blocks into the scan, the scanner with this scan
-   *          caches blocks.
-   *          False, the scanner doesn't cache blocks for this scan.
+   * @param scan        The current scan.
+   * @param cacheBlocks True, set the attribute of caching blocks into the scan, the scanner with this scan
+   *                    caches blocks.
+   *                    False, the scanner doesn't cache blocks for this scan.
    */
   public static void setCacheMobBlocks(Scan scan, boolean cacheBlocks) {
     scan.setAttribute(MobConstants.MOB_CACHE_BLOCKS, Bytes.toBytes(cacheBlocks));
@@ -282,12 +261,13 @@ public final class MobUtils {
    * Cleans the expired mob files.
    * Cleans the files whose creation date is older than (current - columnFamily.ttl), and
    * the minVersions of that column family is 0.
-   * @param fs The current file system.
-   * @param conf The current configuration.
-   * @param tableName The current table name.
+   *
+   * @param fs               The current file system.
+   * @param conf             The current configuration.
+   * @param tableName        The current table name.
    * @param columnDescriptor The descriptor of the current column family.
-   * @param cacheConfig The cacheConfig that disables the block cache.
-   * @param current The current time.
+   * @param cacheConfig      The cacheConfig that disables the block cache.
+   * @param current          The current time.
    * @throws IOException
    */
   public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableName tableName,
@@ -299,16 +279,7 @@ public final class MobUtils {
       return;
     }
 
-    Calendar calendar = Calendar.getInstance();
-    calendar.setTimeInMillis(current - timeToLive * 1000);
-    calendar.set(Calendar.HOUR_OF_DAY, 0);
-    calendar.set(Calendar.MINUTE, 0);
-    calendar.set(Calendar.SECOND, 0);
-
-    Date expireDate = calendar.getTime();
-
-    LOG.info("MOB HFiles older than " + expireDate.toGMTString() + " will be deleted!");
-
+    LOG.info("MOB HFiles before than {} will be deleted!", formatDate(current - timeToLive * 1000));
     FileStatus[] stats = null;
     Path mobTableDir = FSUtils.getTableDir(getMobHome(conf), tableName);
     Path path = getMobFamilyPath(conf, tableName, columnDescriptor.getNameAsString());
@@ -331,12 +302,12 @@ public final class MobUtils {
           fileName = hfileLink.getOriginPath().getName();
         }
 
-        Date fileDate = parseDate(MobFileName.getDateFromName(fileName));
-
+        LocalDate fileDate = parseDate(MobFileName.getDateFromName(fileName));
+        long fileTimestamp = toMillisecond(fileDate);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Checking file " + fileName);
         }
-        if (fileDate.getTime() < expireDate.getTime()) {
+        if (fileTimestamp + timeToLive * 1000 < current) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(fileName + " is an expired file");
           }
@@ -349,8 +320,7 @@ public final class MobUtils {
     }
     if (!filesToClean.isEmpty()) {
       try {
-        removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(),
-            filesToClean);
+        removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(), filesToClean);
         deletedFileCount = filesToClean.size();
       } catch (IOException e) {
         LOG.error("Failed to delete the mob files " + filesToClean, e);
@@ -362,6 +332,7 @@ public final class MobUtils {
   /**
    * Gets the root dir of the mob files.
    * It's {HBASE_DIR}/mobdir.
+   *
    * @param conf The current configuration.
    * @return the root dir of the mob file.
    */
@@ -373,6 +344,7 @@ public final class MobUtils {
   /**
    * Gets the root dir of the mob files under the qualified HBase root dir.
    * It's {rootDir}/mobdir.
+   *
    * @param rootDir The qualified path of HBase root directory.
    * @return The root dir of the mob file.
    */
@@ -382,6 +354,7 @@ public final class MobUtils {
 
   /**
    * Gets the qualified root dir of the mob files.
+   *
    * @param conf The current configuration.
    * @return The qualified root dir.
    * @throws IOException
@@ -396,7 +369,8 @@ public final class MobUtils {
   /**
    * Gets the table dir of the mob files under the qualified HBase root dir.
    * It's {rootDir}/mobdir/data/${namespace}/${tableName}
-   * @param rootDir The qualified path of HBase root directory.
+   *
+   * @param rootDir   The qualified path of HBase root directory.
    * @param tableName The name of table.
    * @return The table dir of the mob file.
    */
@@ -407,7 +381,8 @@ public final class MobUtils {
   /**
    * Gets the region dir of the mob files.
    * It's {HBASE_DIR}/mobdir/data/{namespace}/{tableName}/{regionEncodedName}.
-   * @param conf The current configuration.
+   *
+   * @param conf      The current configuration.
    * @param tableName The current table name.
    * @return The region dir of the mob files.
    */
@@ -418,7 +393,8 @@ public final class MobUtils {
   /**
    * Gets the region dir of the mob files under the specified root dir.
    * It's {rootDir}/mobdir/data/{namespace}/{tableName}/{regionEncodedName}.
-   * @param rootDir The qualified path of HBase root directory.
+   *
+   * @param rootDir   The qualified path of HBase root directory.
    * @param tableName The current table name.
    * @return The region dir of the mob files.
    */
@@ -431,8 +407,9 @@ public final class MobUtils {
   /**
    * Gets the family dir of the mob files.
    * It's {HBASE_DIR}/mobdir/{namespace}/{tableName}/{regionEncodedName}/{columnFamilyName}.
-   * @param conf The current configuration.
-   * @param tableName The current table name.
+   *
+   * @param conf       The current configuration.
+   * @param tableName  The current table name.
    * @param familyName The current family name.
    * @return The family dir of the mob files.
    */
@@ -443,6 +420,7 @@ public final class MobUtils {
   /**
    * Gets the family dir of the mob files.
    * It's {HBASE_DIR}/mobdir/{namespace}/{tableName}/{regionEncodedName}/{columnFamilyName}.
+   *
    * @param regionPath The path of mob region which is a dummy one.
    * @param familyName The current family name.
    * @return The family dir of the mob files.
@@ -455,31 +433,30 @@ public final class MobUtils {
    * Gets the RegionInfo of the mob files.
    * This is a dummy region. The mob files are not saved in a region in HBase.
    * This is only used in mob snapshot. It's internally used only.
+   *
    * @param tableName
    * @return A dummy mob region info.
    */
   public static RegionInfo getMobRegionInfo(TableName tableName) {
-    return RegionInfoBuilder.newBuilder(tableName)
-        .setStartKey(MobConstants.MOB_REGION_NAME_BYTES)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(0)
-        .build();
+    return RegionInfoBuilder.newBuilder(tableName).setStartKey(MobConstants.MOB_REGION_NAME_BYTES)
+        .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(0).build();
   }
 
   /**
    * Gets whether the current RegionInfo is a mob one.
+   *
    * @param regionInfo The current RegionInfo.
    * @return If true, the current RegionInfo is a mob one.
    */
   public static boolean isMobRegionInfo(RegionInfo regionInfo) {
-    return regionInfo == null ? false : getMobRegionInfo(regionInfo.getTable()).getEncodedName()
+    return regionInfo != null && getMobRegionInfo(regionInfo.getTable()).getEncodedName()
         .equals(regionInfo.getEncodedName());
   }
 
   /**
    * Gets whether the current region name follows the pattern of a mob region name.
-   * @param tableName The current table name.
+   *
+   * @param tableName  The current table name.
    * @param regionName The current region name.
    * @return True if the current region name follows the pattern of a mob region name.
    */
@@ -489,7 +466,8 @@ public final class MobUtils {
 
   /**
    * Gets the working directory of the mob compaction.
-   * @param root The root directory of the mob compaction.
+   *
+   * @param root    The root directory of the mob compaction.
    * @param jobName The current job name.
    * @return The directory of the mob compaction for the current job.
    */
@@ -499,27 +477,29 @@ public final class MobUtils {
 
   /**
    * Archives the mob files.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param tableName The table name.
-   * @param tableDir The table directory.
-   * @param family The name of the column family.
+   *
+   * @param conf       The current configuration.
+   * @param fs         The current file system.
+   * @param tableName  The table name.
+   * @param tableDir   The table directory.
+   * @param family     The name of the column family.
    * @param storeFiles The files to be deleted.
    * @throws IOException
    */
   public static void removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
       Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) throws IOException {
-    HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
-        storeFiles);
+    HFileArchiver
+        .archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family, storeFiles);
   }
 
   /**
    * Creates a mob reference KeyValue.
    * The value of the mob reference KeyValue is mobCellValueSize + mobFileName.
-   * @param cell The original Cell.
-   * @param fileName The mob file name where the mob reference KeyValue is written.
+   *
+   * @param cell         The original Cell.
+   * @param fileName     The mob file name where the mob reference KeyValue is written.
    * @param tableNameTag The tag of the current table name. It's very important in
-   *                        cloning the snapshot.
+   *                     cloning the snapshot.
    * @return The mob reference KeyValue.
    */
   public static Cell createMobRefCell(Cell cell, byte[] fileName, Tag tableNameTag) {
@@ -544,93 +524,93 @@ public final class MobUtils {
 
   /**
    * Creates a writer for the mob file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param date The date string, its format is yyyymmmdd.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The hex string of the start key.
-   * @param cacheConfig The current cache config.
+   *
+   * @param conf          The current configuration.
+   * @param fs            The current file system.
+   * @param family        The descriptor of the current column family.
+   * @param date          The date string, its format is yyyymmmdd.
+   * @param basePath      The basic path for a temp directory.
+   * @param maxKeyCount   The key count.
+   * @param compression   The compression algorithm.
+   * @param startKey      The hex string of the start key.
+   * @param cacheConfig   The current cache config.
    * @param cryptoContext The encryption context.
-   * @param isCompaction If the writer is used in compaction.
+   * @param isCompaction  If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, String startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext, boolean isCompaction)
-      throws IOException {
-    MobFileName mobFileName = MobFileName.create(startKey, date,
-        UUID.randomUUID().toString().replaceAll("-", ""));
+      Encryption.Context cryptoContext, boolean isCompaction) throws IOException {
+    MobFileName mobFileName =
+        MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
         cacheConfig, cryptoContext, isCompaction);
   }
 
   /**
    * Creates a writer for the ref file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param cacheConfig The current cache config.
+   *
+   * @param conf          The current configuration.
+   * @param fs            The current file system.
+   * @param family        The descriptor of the current column family.
+   * @param basePath      The basic path for a temp directory.
+   * @param maxKeyCount   The key count.
+   * @param cacheConfig   The current cache config.
    * @param cryptoContext The encryption context.
-   * @param isCompaction If the writer is used in compaction.
+   * @param isCompaction  If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createRefFileWriter(Configuration conf, FileSystem fs,
-    ColumnFamilyDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
-    Encryption.Context cryptoContext, boolean isCompaction)
-    throws IOException {
+      ColumnFamilyDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext, boolean isCompaction) throws IOException {
     return createWriter(conf, fs, family,
-      new Path(basePath, UUID.randomUUID().toString().replaceAll("-", "")), maxKeyCount,
-      family.getCompactionCompressionType(), cacheConfig, cryptoContext,
-      HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf), family.getBlocksize(),
-      family.getBloomFilterType(), isCompaction);
+        new Path(basePath, UUID.randomUUID().toString().replaceAll("-", "")), maxKeyCount,
+        family.getCompactionCompressionType(), cacheConfig, cryptoContext,
+        HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf), family.getBlocksize(),
+        family.getBloomFilterType(), isCompaction);
   }
 
   /**
    * Creates a writer for the mob file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param date The date string, its format is yyyymmmdd.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
-   * @param cacheConfig The current cache config.
+   *
+   * @param conf          The current configuration.
+   * @param fs            The current file system.
+   * @param family        The descriptor of the current column family.
+   * @param date          The date string, its format is yyyyMMdd.
+   * @param basePath      The basic path for a temp directory.
+   * @param maxKeyCount   The key count.
+   * @param compression   The compression algorithm.
+   * @param startKey      The start key.
+   * @param cacheConfig   The current cache config.
    * @param cryptoContext The encryption context.
-   * @param isCompaction If the writer is used in compaction.
+   * @param isCompaction  If the writer is used in compaction.
    * @return The writer for the mob file.
-   * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext, boolean isCompaction)
-      throws IOException {
-    MobFileName mobFileName = MobFileName.create(startKey, date,
-        UUID.randomUUID().toString().replaceAll("-", ""));
+      Encryption.Context cryptoContext, boolean isCompaction) throws IOException {
+    MobFileName mobFileName =
+        MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig, cryptoContext, isCompaction);
+        cacheConfig, cryptoContext, isCompaction);
   }
 
   /**
    * Creates a writer for the del file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param date The date string, its format is yyyymmmdd.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
-   * @param cacheConfig The current cache config.
+   *
+   * @param conf          The current configuration.
+   * @param fs            The current file system.
+   * @param family        The descriptor of the current column family.
+   * @param date          The date string, its format is yyyymmmdd.
+   * @param basePath      The basic path for a temp directory.
+   * @param maxKeyCount   The key count.
+   * @param compression   The compression algorithm.
+   * @param startKey      The start key.
+   * @param cacheConfig   The current cache config.
    * @param cryptoContext The encryption context.
    * @return The writer for the del file.
    * @throws IOException
@@ -638,64 +618,61 @@ public final class MobUtils {
   public static StoreFileWriter createDelFileWriter(Configuration conf, FileSystem fs,
       ColumnFamilyDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext)
-      throws IOException {
-    String suffix = UUID
-      .randomUUID().toString().replaceAll("-", "") + "_del";
+      Encryption.Context cryptoContext) throws IOException {
+    String suffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
     MobFileName mobFileName = MobFileName.create(startKey, date, suffix);
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig, cryptoContext, true);
+        cacheConfig, cryptoContext, true);
   }
 
   /**
    * Creates a writer for the mob file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param mobFileName The mob file name.
-   * @param basePath The basic path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param cacheConfig The current cache config.
+   *
+   * @param conf          The current configuration.
+   * @param fs            The current file system.
+   * @param family        The descriptor of the current column family.
+   * @param mobFileName   The mob file name.
+   * @param basePath      The basic path for a temp directory.
+   * @param maxKeyCount   The key count.
+   * @param compression   The compression algorithm.
+   * @param cacheConfig   The current cache config.
    * @param cryptoContext The encryption context.
-   * @param isCompaction If the writer is used in compaction.
+   * @param isCompaction  If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-                                             ColumnFamilyDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
+      ColumnFamilyDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
-      boolean isCompaction)
-      throws IOException {
-    return createWriter(conf, fs, family,
-      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConfig,
-      cryptoContext, HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf),
-      family.getBlocksize(), BloomType.NONE, isCompaction);
+      boolean isCompaction) throws IOException {
+    return createWriter(conf, fs, family, new Path(basePath, mobFileName.getFileName()),
+        maxKeyCount, compression, cacheConfig, cryptoContext, HStore.getChecksumType(conf),
+        HStore.getBytesPerChecksum(conf), family.getBlocksize(), BloomType.NONE, isCompaction);
   }
 
   /**
    * Creates a writer for the mob file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param path The path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param cacheConfig The current cache config.
-   * @param cryptoContext The encryption context.
-   * @param checksumType The checksum type.
+   *
+   * @param conf             The current configuration.
+   * @param fs               The current file system.
+   * @param family           The descriptor of the current column family.
+   * @param path             The path for a temp directory.
+   * @param maxKeyCount      The key count.
+   * @param compression      The compression algorithm.
+   * @param cacheConfig      The current cache config.
+   * @param cryptoContext    The encryption context.
+   * @param checksumType     The checksum type.
    * @param bytesPerChecksum The bytes per checksum.
-   * @param blocksize The HFile block size.
-   * @param bloomType The bloom filter type.
-   * @param isCompaction If the writer is used in compaction.
+   * @param blocksize        The HFile block size.
+   * @param bloomType        The bloom filter type.
+   * @param isCompaction     If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-      ColumnFamilyDescriptor family, Path path, long maxKeyCount,
-      Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
-      ChecksumType checksumType, int bytesPerChecksum, int blocksize, BloomType bloomType,
-      boolean isCompaction)
+      ColumnFamilyDescriptor family, Path path, long maxKeyCount, Compression.Algorithm compression,
+      CacheConfig cacheConfig, Encryption.Context cryptoContext, ChecksumType checksumType,
+      int bytesPerChecksum, int blocksize, BloomType bloomType, boolean isCompaction)
       throws IOException {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
@@ -707,18 +684,16 @@ public final class MobUtils {
     } else {
       writerCacheConf = cacheConfig;
     }
-    HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-        .withIncludesMvcc(true).withIncludesTags(true)
-        .withCompressTags(family.isCompressTags())
-        .withChecksumType(checksumType)
-        .withBytesPerCheckSum(bytesPerChecksum)
-        .withBlockSize(blocksize)
-        .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
-        .withEncryptionContext(cryptoContext)
-        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
+    HFileContext hFileContext =
+        new HFileContextBuilder().withCompression(compression).withIncludesMvcc(true)
+            .withIncludesTags(true).withCompressTags(family.isCompressTags())
+            .withChecksumType(checksumType).withBytesPerCheckSum(bytesPerChecksum)
+            .withBlockSize(blocksize).withHBaseCheckSum(true)
+            .withDataBlockEncoding(family.getDataBlockEncoding())
+            .withEncryptionContext(cryptoContext)
+            .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
-        .withFilePath(path)
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs).withFilePath(path)
         .withComparator(CellComparator.getInstance()).withBloomType(bloomType)
         .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
@@ -726,10 +701,11 @@ public final class MobUtils {
 
   /**
    * Commits the mob file.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param sourceFile The path where the mob file is saved.
-   * @param targetPath The directory path where the source file is renamed to.
+   *
+   * @param conf        The current configuration.
+   * @param fs          The current file system.
+   * @param sourceFile  The path where the mob file is saved.
+   * @param targetPath  The directory path where the source file is renamed to.
    * @param cacheConfig The current cache config.
    * @return The target file path the source file is renamed to.
    * @throws IOException
@@ -755,9 +731,10 @@ public final class MobUtils {
 
   /**
    * Validates a mob file by opening and closing it.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param path The path where the mob file is saved.
+   *
+   * @param conf        The current configuration.
+   * @param fs          The current file system.
+   * @param path        The path where the mob file is saved.
    * @param cacheConfig The current cache config.
    */
   private static void validateMobFile(Configuration conf, FileSystem fs, Path path,
@@ -782,6 +759,7 @@ public final class MobUtils {
    * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
    * The real mob value length takes 4 bytes.
    * The remaining part is the mob file name.
+   *
    * @param cell The mob ref cell.
    * @return True if the cell has a valid value.
    */
@@ -795,6 +773,7 @@ public final class MobUtils {
    * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
    * The real mob value length takes 4 bytes.
    * The remaining part is the mob file name.
+   *
    * @param cell The mob ref cell.
    * @return The real mob value length.
    */
@@ -808,6 +787,7 @@ public final class MobUtils {
    * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
    * The real mob value length takes 4 bytes.
    * The remaining part is the mob file name.
+   *
    * @param cell The mob ref cell.
    * @return The mob file name.
    */
@@ -819,6 +799,7 @@ public final class MobUtils {
   /**
    * Gets the table name used in the table lock.
    * The table lock name is a dummy one, it's not a table name. It's tableName + ".mobLock".
+   *
    * @param tn The table name.
    * @return The table name used in table lock.
    */
@@ -829,24 +810,26 @@ public final class MobUtils {
 
   /**
    * Performs the mob compaction.
-   * @param conf the Configuration
-   * @param fs the file system
+   *
+   * @param conf      the Configuration
+   * @param fs        the file system
    * @param tableName the table the compact
-   * @param hcd the column descriptor
-   * @param pool the thread pool
-   * @param allFiles Whether add all mob files into the compaction.
+   * @param hcd       the column descriptor
+   * @param pool      the thread pool
+   * @param allFiles  Whether add all mob files into the compaction.
    */
   public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-                                     ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
-      throws IOException {
-    String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
-        PartitionedMobCompactor.class.getName());
+      ColumnFamilyDescriptor hcd, ExecutorService pool, boolean allFiles,
+      LockManager.MasterLock lock) throws IOException {
+    String className =
+        conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY, PartitionedMobCompactor.class.getName());
     // instantiate the mob compactor.
     MobCompactor compactor = null;
     try {
-      compactor = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
-        Configuration.class, FileSystem.class, TableName.class, ColumnFamilyDescriptor.class,
-        ExecutorService.class }, new Object[] { conf, fs, tableName, hcd, pool });
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className,
+          new Class[] { Configuration.class, FileSystem.class, TableName.class,
+              ColumnFamilyDescriptor.class, ExecutorService.class },
+          new Object[] { conf, fs, tableName, hcd, pool });
     } catch (Exception e) {
       throw new IOException("Unable to load configured mob file compactor '" + className + "'", e);
     }
@@ -866,6 +849,7 @@ public final class MobUtils {
 
   /**
    * Creates a thread pool.
+   *
    * @param conf the Configuration
    * @return A thread pool.
    */
@@ -877,54 +861,47 @@ public final class MobUtils {
     }
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS, queue,
-      Threads.newDaemonThreadFactory("MobCompactor"), new RejectedExecutionHandler() {
-        @Override
-        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-          try {
-            // waiting for a thread to pick up instead of throwing exceptions.
-            queue.put(r);
-          } catch (InterruptedException e) {
-            throw new RejectedExecutionException(e);
-          }
+        Threads.newDaemonThreadFactory("MobCompactor"), new RejectedExecutionHandler() {
+      @Override
+      public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+        try {
+          // waiting for a thread to pick up instead of throwing exceptions.
+          queue.put(r);
+        } catch (InterruptedException e) {
+          throw new RejectedExecutionException(e);
         }
-      });
+      }
+    });
     ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
     return pool;
   }
 
   /**
    * Checks whether this table has mob-enabled columns.
+   *
    * @param htd The current table descriptor.
    * @return Whether this table has mob-enabled columns.
    */
   public static boolean hasMobColumns(TableDescriptor htd) {
-    ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
-    for (ColumnFamilyDescriptor hcd : hcds) {
-      if (hcd.isMobEnabled()) {
-        return true;
-      }
-    }
-    return false;
+    return Arrays.stream(htd.getColumnFamilies()).anyMatch(ColumnFamilyDescriptor::isMobEnabled);
   }
 
   /**
    * Indicates whether return null value when the mob file is missing or corrupt.
    * The information is set in the attribute "empty.value.on.mobcell.miss" of scan.
+   *
    * @param scan The current scan.
    * @return True if the readEmptyValueOnMobCellMiss is enabled.
    */
   public static boolean isReadEmptyValueOnMobCellMiss(Scan scan) {
     byte[] readEmptyValueOnMobCellMiss =
-      scan.getAttribute(MobConstants.EMPTY_VALUE_ON_MOBCELL_MISS);
-    try {
-      return readEmptyValueOnMobCellMiss != null && Bytes.toBoolean(readEmptyValueOnMobCellMiss);
-    } catch (IllegalArgumentException e) {
-      return false;
-    }
+        scan.getAttribute(MobConstants.EMPTY_VALUE_ON_MOBCELL_MISS);
+    return toBoolean(readEmptyValueOnMobCellMiss);
   }
 
   /**
    * Creates a mob ref delete marker.
+   *
    * @param cell The current delete marker.
    * @return A delete marker with the ref tag.
    */
@@ -934,12 +911,14 @@ public final class MobUtils {
 
   /**
    * Checks if the mob file is expired.
-   * @param column The descriptor of the current column family.
-   * @param current The current time.
+   *
+   * @param column   The descriptor of the current column family.
+   * @param current  The current time in millisecond.
    * @param fileDate The date string parsed from the mob file name.
    * @return True if the mob file is expired.
    */
-  public static boolean isMobFileExpired(ColumnFamilyDescriptor column, long current, String fileDate) {
+  public static boolean isMobFileExpired(ColumnFamilyDescriptor column, long current,
+      String fileDate) {
     if (column.getMinVersions() > 0) {
       return false;
     }
@@ -947,35 +926,29 @@ public final class MobUtils {
     if (Integer.MAX_VALUE == timeToLive) {
       return false;
     }
-
-    Date expireDate = new Date(current - timeToLive * 1000);
-    expireDate = new Date(expireDate.getYear(), expireDate.getMonth(), expireDate.getDate());
+    LocalDate currentDate = toLocalDate(current);
     try {
-      Date date = parseDate(fileDate);
-      if (date.getTime() < expireDate.getTime()) {
-        return true;
-      }
-    } catch (ParseException e) {
+      return parseDate(fileDate).plus(timeToLive, ChronoUnit.SECONDS).isBefore(currentDate);
+    } catch (Exception e) {
       LOG.warn("Failed to parse the date " + fileDate, e);
       return false;
     }
-    return false;
   }
 
   /**
    * fill out partition id based on compaction policy and date, threshold...
-   * @param id Partition id to be filled out
+   *
+   * @param id                     Partition id to be filled out
    * @param firstDayOfCurrentMonth The first day in the current month
-   * @param firstDayOfCurrentWeek The first day in the current week
-   * @param dateStr Date string from the mob file
-   * @param policy Mob compaction policy
-   * @param calendar Calendar object
-   * @param threshold Mob compaciton threshold configured
+   * @param firstDayOfCurrentWeek  The first day in the current week
+   * @param dateStr                Date string from the mob file
+   * @param policy                 Mob compaction policy
+   * @param threshold              Mob compaciton threshold configured
    * @return true if the file needs to be excluded from compaction
    */
   public static boolean fillPartitionId(final CompactionPartitionId id,
-      final Date firstDayOfCurrentMonth, final Date firstDayOfCurrentWeek, final String dateStr,
-      final MobCompactPartitionPolicy policy, final Calendar calendar, final long threshold) {
+      LocalDate firstDayOfCurrentMonth, LocalDate firstDayOfCurrentWeek, final String dateStr,
+      final MobCompactPartitionPolicy policy, final long threshold) {
 
     boolean skipCompcation = false;
     id.setThreshold(threshold);
@@ -985,10 +958,10 @@ public final class MobUtils {
     }
 
     long finalThreshold;
-    Date date;
+    LocalDate date;
     try {
-      date = MobUtils.parseDate(dateStr);
-    } catch (ParseException e)  {
+      date = parseDate(dateStr);
+    } catch (Exception e) {
       LOG.warn("Failed to parse date " + dateStr, e);
       id.setDate(dateStr);
       return true;
@@ -1006,7 +979,7 @@ public final class MobUtils {
      *       1). apply threshold
      */
     if (policy == MobCompactPartitionPolicy.MONTHLY) {
-      if (date.before(firstDayOfCurrentMonth)) {
+      if (date.isBefore(firstDayOfCurrentMonth)) {
         // Check overflow
         if (threshold < (Long.MAX_VALUE / MONTHLY_THRESHOLD_MULTIPLIER)) {
           finalThreshold = MONTHLY_THRESHOLD_MULTIPLIER * threshold;
@@ -1016,15 +989,15 @@ public final class MobUtils {
         id.setThreshold(finalThreshold);
 
         // set to the date for the first day of that month
-        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfMonth(calendar, date)));
+        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfMonth(date)));
         return skipCompcation;
       }
     }
 
-    if ((policy == MobCompactPartitionPolicy.MONTHLY) ||
-        (policy == MobCompactPartitionPolicy.WEEKLY)) {
+    if ((policy == MobCompactPartitionPolicy.MONTHLY) || (policy
+        == MobCompactPartitionPolicy.WEEKLY)) {
       // Check if it needs to apply weekly multiplier
-      if (date.before(firstDayOfCurrentWeek)) {
+      if (date.isBefore(firstDayOfCurrentWeek)) {
         // Check overflow
         if (threshold < (Long.MAX_VALUE / WEEKLY_THRESHOLD_MULTIPLIER)) {
           finalThreshold = WEEKLY_THRESHOLD_MULTIPLIER * threshold;
@@ -1033,7 +1006,7 @@ public final class MobUtils {
         }
         id.setThreshold(finalThreshold);
 
-        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfWeek(calendar, date)));
+        id.setDate(MobUtils.formatDate(MobUtils.getFirstDayOfWeek(date)));
         return skipCompcation;
       } else if (policy == MobCompactPartitionPolicy.MONTHLY) {
         skipCompcation = true;
