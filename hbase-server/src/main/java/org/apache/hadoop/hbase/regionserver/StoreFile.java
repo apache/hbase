@@ -26,7 +26,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -117,6 +120,11 @@ public class StoreFile {
   /** Key for timestamp of earliest-put in metadata*/
   public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
+  /**
+   * Key for compaction event which contains the compacted storefiles in FileInfo
+   */
+  public static final byte[] COMPACTION_EVENT_KEY = Bytes.toBytes("COMPACTION_EVENT_KEY");
+
   private final StoreFileInfo fileInfo;
   private final FileSystem fs;
 
@@ -169,6 +177,9 @@ public class StoreFile {
   // If true, this file should not be included in minor compactions.
   // It's set whenever you get a Reader.
   private boolean excludeFromMinorCompaction = false;
+
+  // This file was product of these compacted store files
+  private final Set<String> compactedStoreFiles = new HashSet<>();
 
   /** Meta key set when store file is a result of a bulk load */
   public static final byte[] BULKLOAD_TASK_KEY =
@@ -512,6 +523,14 @@ public class StoreFile {
           "proceeding without", e);
       this.reader.timeRange = null;
     }
+
+    try {
+      byte[] data = metadataMap.get(COMPACTION_EVENT_KEY);
+      this.compactedStoreFiles.addAll(ProtobufUtil.toCompactedStoreFiles(data));
+    } catch (IOException e) {
+      LOG.error("Error reading compacted storefiles from meta data", e);
+    }
+
     // initialize so we can reuse them after reader closed.
     firstKey = reader.getFirstKey();
     lastKey = reader.getLastKey();
@@ -624,6 +643,7 @@ public class StoreFile {
     private HFileContext fileContext;
     private TimeRangeTracker trt;
     private boolean shouldDropCacheBehind;
+    private Collection<StoreFile> compactedFiles = Collections.emptySet();
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
@@ -707,6 +727,11 @@ public class StoreFile {
       return this;
     }
 
+    public WriterBuilder withCompactedFiles(Collection<StoreFile> compactedFiles) {
+      this.compactedFiles = compactedFiles;
+      return this;
+    }
+
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -748,7 +773,7 @@ public class StoreFile {
       }
       return new Writer(fs, filePath,
           conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,
-          shouldDropCacheBehind, trt);
+          shouldDropCacheBehind, trt, compactedFiles);
     }
   }
 
@@ -808,6 +833,10 @@ public class StoreFile {
     return null;
   }
 
+  Set<String> getCompactedStoreFiles() {
+    return Collections.unmodifiableSet(this.compactedStoreFiles);
+  }
+
   /**
    * A StoreFile writer.  Use this to read/write HBase Store Files. It is package
    * local because it is an implementation detail of the HBase regionserver.
@@ -835,6 +864,7 @@ public class StoreFile {
     final TimeRangeTracker timeRangeTracker;
 
     protected HFile.Writer writer;
+    private final Collection<StoreFile> compactedFiles;
 
     /**
      * Creates an HFile.Writer that also write helpful meta data.
@@ -857,7 +887,7 @@ public class StoreFile {
         InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind)
             throws IOException {
       this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
-          shouldDropCacheBehind, null);
+          shouldDropCacheBehind, null, Collections.<StoreFile>emptySet());
     }
 
     /**
@@ -873,6 +903,7 @@ public class StoreFile {
      * @param fileContext - The HFile context
      * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
      * @param trt Ready-made timetracker to use.
+     * @param compactedFilesSupplier Compacted files which not archived
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path,
@@ -880,8 +911,11 @@ public class StoreFile {
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext,
-        boolean shouldDropCacheBehind, final TimeRangeTracker trt)
-            throws IOException {
+        boolean shouldDropCacheBehind, final TimeRangeTracker trt,
+        Collection<StoreFile> compactedFiles)
+        throws IOException {
+      this.compactedFiles =
+          (compactedFiles == null ? Collections.<StoreFile> emptySet() : compactedFiles);
       // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
       // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
       // it no longer writable.
@@ -926,18 +960,58 @@ public class StoreFile {
     }
 
     /**
-     * Writes meta data.
-     * Call before {@link #close()} since its written as meta data to this file.
+     * Writes meta data. Call before {@link #close()} since its written as meta data to this file.
      * @param maxSequenceId Maximum sequence id.
      * @param majorCompaction True if this file is product of a major compaction
      * @throws IOException problem writing to FS
      */
     public void appendMetadata(final long maxSequenceId, final boolean majorCompaction)
-    throws IOException {
+        throws IOException {
+      appendMetadata(maxSequenceId, majorCompaction, Collections.<StoreFile> emptySet());
+    }
+
+    /**
+     * Writes meta data. Call before {@link #close()} since its written as meta data to this file.
+     * @param maxSequenceId Maximum sequence id.
+     * @param majorCompaction True if this file is product of a major compaction
+     * @param storeFiles The compacted store files to generate this new file
+     * @throws IOException problem writing to FS
+     */
+    public void appendMetadata(final long maxSequenceId, final boolean majorCompaction,
+        final Collection<StoreFile> storeFiles) throws IOException {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-      writer.appendFileInfo(MAJOR_COMPACTION_KEY,
-          Bytes.toBytes(majorCompaction));
+      writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+      writer.appendFileInfo(COMPACTION_EVENT_KEY, toCompactionEventTrackerBytes(storeFiles));
       appendTrackedTimestampsToMetadata();
+    }
+
+    /**
+     * Used when write {@link HStoreFile#COMPACTION_EVENT_KEY} to new file's file info. The
+     * compacted store files's name is needed. But if the compacted store file is a result of
+     * compaction, it's compacted files which still not archived is needed, too. And don't need to
+     * add compacted files recursively. If file A, B, C compacted to new file D, and file D
+     * compacted to new file E, will write A, B, C, D to file E's compacted files. So if file E
+     * compacted to new file F, will add E to F's compacted files first, then add E's compacted
+     * files: A, B, C, D to it. And no need to add D's compacted file, as D's compacted files has
+     * been in E's compacted files, too. See HBASE-20724 for more details.
+     * @param storeFiles The compacted store files to generate this new file
+     * @return bytes of CompactionEventTracker
+     */
+    private byte[] toCompactionEventTrackerBytes(Collection<StoreFile> storeFiles) {
+      Set<String> notArchivedCompactedStoreFiles = new HashSet<>();
+      for (StoreFile sf : this.compactedFiles) {
+        notArchivedCompactedStoreFiles.add(sf.getPath().getName());
+      }
+      Set<String> compactedStoreFiles = new HashSet<>();
+      for (StoreFile storeFile : storeFiles) {
+        compactedStoreFiles.add(storeFile.getFileInfo().getPath().getName());
+        for (String csf : storeFile.getCompactedStoreFiles()) {
+          if (notArchivedCompactedStoreFiles.contains(csf)) {
+            compactedStoreFiles.add(csf);
+          }
+        }
+      }
+      return ProtobufUtil.toCompactionEventTrackerBytes(compactedStoreFiles);
     }
 
     /**

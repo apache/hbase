@@ -8,6 +8,503 @@ public final class HFileProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public interface CompactionEventTrackerOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated bytes compacted_store_file = 1;
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getCompactedStoreFileList();
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    int getCompactedStoreFileCount();
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    com.google.protobuf.ByteString getCompactedStoreFile(int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.CompactionEventTracker}
+   */
+  public static final class CompactionEventTracker extends
+      com.google.protobuf.GeneratedMessage
+      implements CompactionEventTrackerOrBuilder {
+    // Use CompactionEventTracker.newBuilder() to construct.
+    private CompactionEventTracker(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private CompactionEventTracker(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final CompactionEventTracker defaultInstance;
+    public static CompactionEventTracker getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public CompactionEventTracker getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CompactionEventTracker(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                compactedStoreFile_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              compactedStoreFile_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          compactedStoreFile_ = java.util.Collections.unmodifiableList(compactedStoreFile_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_CompactionEventTracker_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_CompactionEventTracker_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<CompactionEventTracker> PARSER =
+        new com.google.protobuf.AbstractParser<CompactionEventTracker>() {
+      public CompactionEventTracker parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CompactionEventTracker(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CompactionEventTracker> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated bytes compacted_store_file = 1;
+    public static final int COMPACTED_STORE_FILE_FIELD_NUMBER = 1;
+    private java.util.List<com.google.protobuf.ByteString> compactedStoreFile_;
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getCompactedStoreFileList() {
+      return compactedStoreFile_;
+    }
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    public int getCompactedStoreFileCount() {
+      return compactedStoreFile_.size();
+    }
+    /**
+     * <code>repeated bytes compacted_store_file = 1;</code>
+     */
+    public com.google.protobuf.ByteString getCompactedStoreFile(int index) {
+      return compactedStoreFile_.get(index);
+    }
+
+    private void initFields() {
+      compactedStoreFile_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < compactedStoreFile_.size(); i++) {
+        output.writeBytes(1, compactedStoreFile_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < compactedStoreFile_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(compactedStoreFile_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getCompactedStoreFileList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker other = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker) obj;
+
+      boolean result = true;
+      result = result && getCompactedStoreFileList()
+          .equals(other.getCompactedStoreFileList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getCompactedStoreFileCount() > 0) {
+        hash = (37 * hash) + COMPACTED_STORE_FILE_FIELD_NUMBER;
+        hash = (53 * hash) + getCompactedStoreFileList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.CompactionEventTracker}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTrackerOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_CompactionEventTracker_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_CompactionEventTracker_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        compactedStoreFile_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_CompactionEventTracker_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker build() {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker result = new org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          compactedStoreFile_ = java.util.Collections.unmodifiableList(compactedStoreFile_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.compactedStoreFile_ = compactedStoreFile_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker.getDefaultInstance()) return this;
+        if (!other.compactedStoreFile_.isEmpty()) {
+          if (compactedStoreFile_.isEmpty()) {
+            compactedStoreFile_ = other.compactedStoreFile_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureCompactedStoreFileIsMutable();
+            compactedStoreFile_.addAll(other.compactedStoreFile_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HFileProtos.CompactionEventTracker) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated bytes compacted_store_file = 1;
+      private java.util.List<com.google.protobuf.ByteString> compactedStoreFile_ = java.util.Collections.emptyList();
+      private void ensureCompactedStoreFileIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          compactedStoreFile_ = new java.util.ArrayList<com.google.protobuf.ByteString>(compactedStoreFile_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getCompactedStoreFileList() {
+        return java.util.Collections.unmodifiableList(compactedStoreFile_);
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public int getCompactedStoreFileCount() {
+        return compactedStoreFile_.size();
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public com.google.protobuf.ByteString getCompactedStoreFile(int index) {
+        return compactedStoreFile_.get(index);
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public Builder setCompactedStoreFile(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCompactedStoreFileIsMutable();
+        compactedStoreFile_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public Builder addCompactedStoreFile(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCompactedStoreFileIsMutable();
+        compactedStoreFile_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public Builder addAllCompactedStoreFile(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureCompactedStoreFileIsMutable();
+        super.addAll(values, compactedStoreFile_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes compacted_store_file = 1;</code>
+       */
+      public Builder clearCompactedStoreFile() {
+        compactedStoreFile_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CompactionEventTracker)
+    }
+
+    static {
+      defaultInstance = new CompactionEventTracker(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.CompactionEventTracker)
+  }
+
   public interface FileInfoProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -2338,6 +2835,11 @@ public final class HFileProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_CompactionEventTracker_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_CompactionEventTracker_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_FileInfoProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -2356,35 +2858,42 @@ public final class HFileProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HFile.proto\022\010hbase.pb\032\013HBase.proto\"<\n\r" +
-      "FileInfoProto\022+\n\tmap_entry\030\001 \003(\0132\030.hbase" +
-      ".pb.BytesBytesPair\"\221\003\n\020FileTrailerProto\022" +
-      "\030\n\020file_info_offset\030\001 \001(\004\022 \n\030load_on_ope" +
-      "n_data_offset\030\002 \001(\004\022$\n\034uncompressed_data" +
-      "_index_size\030\003 \001(\004\022 \n\030total_uncompressed_" +
-      "bytes\030\004 \001(\004\022\030\n\020data_index_count\030\005 \001(\r\022\030\n" +
-      "\020meta_index_count\030\006 \001(\r\022\023\n\013entry_count\030\007" +
-      " \001(\004\022\035\n\025num_data_index_levels\030\010 \001(\r\022\037\n\027f" +
-      "irst_data_block_offset\030\t \001(\004\022\036\n\026last_dat",
-      "a_block_offset\030\n \001(\004\022\035\n\025comparator_class" +
-      "_name\030\013 \001(\t\022\031\n\021compression_codec\030\014 \001(\r\022\026" +
-      "\n\016encryption_key\030\r \001(\014BA\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\013HFileProto" +
-      "sH\001\210\001\001\240\001\001"
+      "\n\013HFile.proto\022\010hbase.pb\032\013HBase.proto\"6\n\026" +
+      "CompactionEventTracker\022\034\n\024compacted_stor" +
+      "e_file\030\001 \003(\014\"<\n\rFileInfoProto\022+\n\tmap_ent" +
+      "ry\030\001 \003(\0132\030.hbase.pb.BytesBytesPair\"\221\003\n\020F" +
+      "ileTrailerProto\022\030\n\020file_info_offset\030\001 \001(" +
+      "\004\022 \n\030load_on_open_data_offset\030\002 \001(\004\022$\n\034u" +
+      "ncompressed_data_index_size\030\003 \001(\004\022 \n\030tot" +
+      "al_uncompressed_bytes\030\004 \001(\004\022\030\n\020data_inde" +
+      "x_count\030\005 \001(\r\022\030\n\020meta_index_count\030\006 \001(\r\022" +
+      "\023\n\013entry_count\030\007 \001(\004\022\035\n\025num_data_index_l",
+      "evels\030\010 \001(\r\022\037\n\027first_data_block_offset\030\t" +
+      " \001(\004\022\036\n\026last_data_block_offset\030\n \001(\004\022\035\n\025" +
+      "comparator_class_name\030\013 \001(\t\022\031\n\021compressi" +
+      "on_codec\030\014 \001(\r\022\026\n\016encryption_key\030\r \001(\014BA" +
+      "\n*org.apache.hadoop.hbase.protobuf.gener" +
+      "atedB\013HFileProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_hbase_pb_FileInfoProto_descriptor =
+          internal_static_hbase_pb_CompactionEventTracker_descriptor =
             getDescriptor().getMessageTypes().get(0);
+          internal_static_hbase_pb_CompactionEventTracker_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_CompactionEventTracker_descriptor,
+              new java.lang.String[] { "CompactedStoreFile", });
+          internal_static_hbase_pb_FileInfoProto_descriptor =
+            getDescriptor().getMessageTypes().get(1);
           internal_static_hbase_pb_FileInfoProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FileInfoProto_descriptor,
               new java.lang.String[] { "MapEntry", });
           internal_static_hbase_pb_FileTrailerProto_descriptor =
-            getDescriptor().getMessageTypes().get(1);
+            getDescriptor().getMessageTypes().get(2);
           internal_static_hbase_pb_FileTrailerProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FileTrailerProto_descriptor,

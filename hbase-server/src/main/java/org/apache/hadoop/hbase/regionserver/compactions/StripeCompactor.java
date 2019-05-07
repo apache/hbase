@@ -126,7 +126,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
   @Override
   protected List<Path> commitWriter(StripeMultiFileWriter writer, FileDetails fd,
       CompactionRequest request) throws IOException {
-    List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor());
+    List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor(), request.getFiles());
     assert !newFiles.isEmpty() : "Should have produced an empty file to preserve metadata.";
     return newFiles;
   }
