@@ -940,6 +940,10 @@ service THBaseService {
    * region gets splitted, the api may return false.
    *
    * @return true if table is available, false if not
+   *
+   * @deprecated Since 2.2.0. Because the same method in Table interface has been deprecated
+   * since 2.0.0, we will remove it in 3.0.0 release.
+   * Use {@link #isTableAvailable(TTableName tableName)} instead
   **/
   bool isTableAvailableWithSplit(
     /** the tablename to check */
