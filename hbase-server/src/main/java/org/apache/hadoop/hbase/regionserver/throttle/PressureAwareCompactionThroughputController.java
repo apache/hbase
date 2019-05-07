@@ -100,8 +100,13 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
               * compactionPressure;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("compactionPressure is " + compactionPressure + ", tune compaction throughput to "
-          + throughputDesc(maxThroughputToSet));
+      if (maxThroughputToSet != getMaxThroughput()) {
+        LOG.debug("CompactionPressure is " + compactionPressure + ", tune throughput to "
+            + throughputDesc(maxThroughputToSet));
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("CompactionPressure is " + compactionPressure + ", keep throughput throttling to "
+            + throughputDesc(maxThroughputToSet));
+      }
     }
     this.setMaxThroughput(maxThroughputToSet);
   }
