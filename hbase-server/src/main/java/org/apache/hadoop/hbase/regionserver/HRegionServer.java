@@ -537,6 +537,9 @@ public class HRegionServer extends HasThread implements
   /**regionserver codec list **/
   public static final String REGIONSERVER_CODEC = "hbase.regionserver.codecs";
 
+  // A timer to shutdown the process if abort takes too long
+  private Timer abortMonitor;
+
   /**
    * Starts a HRegionServer at the default location
    */
@@ -1044,21 +1047,6 @@ public class HRegionServer extends HasThread implements
       if (!rpcServices.checkOOME(t)) {
         String prefix = t instanceof YouAreDeadException? "": "Unhandled: ";
         abort(prefix + t.getMessage(), t);
-      }
-    }
-
-    if (abortRequested) {
-      Timer abortMonitor = new Timer("Abort regionserver monitor", true);
-      TimerTask abortTimeoutTask = null;
-      try {
-        abortTimeoutTask =
-            Class.forName(conf.get(ABORT_TIMEOUT_TASK, SystemExitWhenAbortTimeout.class.getName()))
-                .asSubclass(TimerTask.class).getDeclaredConstructor().newInstance();
-      } catch (Exception e) {
-        LOG.warn("Initialize abort timeout task failed", e);
-      }
-      if (abortTimeoutTask != null) {
-        abortMonitor.schedule(abortTimeoutTask, conf.getLong(ABORT_TIMEOUT, DEFAULT_ABORT_TIMEOUT));
       }
     }
 
@@ -2448,6 +2436,8 @@ public class HRegionServer extends HasThread implements
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
     }
+
+    scheduleAbortTimer();
     // shutdown should be run as the internal user
     stop(reason, true, null);
   }
@@ -2483,6 +2473,24 @@ public class HRegionServer extends HasThread implements
    * Called on stop/abort before closing the cluster connection and meta locator.
    */
   protected void sendShutdownInterrupt() {
+  }
+
+  // Limits the time spent in the shutdown process.
+  private void scheduleAbortTimer() {
+    if (this.abortMonitor == null) {
+      this.abortMonitor = new Timer("Abort regionserver monitor", true);
+      TimerTask abortTimeoutTask = null;
+      try {
+        abortTimeoutTask =
+          Class.forName(conf.get(ABORT_TIMEOUT_TASK, SystemExitWhenAbortTimeout.class.getName()))
+            .asSubclass(TimerTask.class).getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
+        LOG.warn("Initialize abort timeout task failed", e);
+      }
+      if (abortTimeoutTask != null) {
+        abortMonitor.schedule(abortTimeoutTask, conf.getLong(ABORT_TIMEOUT, DEFAULT_ABORT_TIMEOUT));
+      }
+    }
   }
 
   /**
