@@ -1445,8 +1445,10 @@ public class TestFromClientSide {
       get.readAllVersions();
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
           0, 7);
 
       scan = new Scan(ROW);
@@ -1463,8 +1465,10 @@ public class TestFromClientSide {
       get.readAllVersions();
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
           0, 7);
 
       scan = new Scan(ROW);
@@ -1509,8 +1513,10 @@ public class TestFromClientSide {
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-          new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},
           0, 9);
 
       scan = new Scan(ROW);
@@ -1535,8 +1541,10 @@ public class TestFromClientSide {
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},
           0, 9);
 
       scan = new Scan(ROW);
@@ -3659,7 +3667,8 @@ public class TestFromClientSide {
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
           new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
           0, 6);
 
       scan = new Scan(ROW);
@@ -3676,7 +3685,8 @@ public class TestFromClientSide {
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
           new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
           0, 6);
 
       scan = new Scan(ROW);
@@ -3720,8 +3730,10 @@ public class TestFromClientSide {
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-          new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8],
+                  VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
           0, 9);
 
       scan = new Scan(ROW);
@@ -3746,8 +3758,10 @@ public class TestFromClientSide {
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
       assertNResult(result, ROW, FAMILY, QUALIFIER,
-          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6],
+                  VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
           0, 9);
 
       scan = new Scan(ROW);
