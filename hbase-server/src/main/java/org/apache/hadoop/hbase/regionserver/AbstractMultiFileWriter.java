@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -65,18 +66,23 @@ public abstract class AbstractMultiFileWriter implements CellSink {
    * comments in HBASE-15400 for more details.
    */
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction) throws IOException {
+    return commitWriters(maxSeqId, majorCompaction, Collections.<StoreFile>emptySet());
+  }
+
+  public List<Path> commitWriters(long maxSeqId, boolean majorCompaction,
+      Collection<StoreFile> storeFiles) throws IOException {
     preCommitWriters();
     Collection<StoreFile.Writer> writers = this.writers();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId
-          + ", majorCompaction=" + majorCompaction);
+      LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction="
+          + majorCompaction);
     }
     List<Path> paths = new ArrayList<Path>();
     for (Writer writer : writers) {
       if (writer == null) {
         continue;
       }
-      writer.appendMetadata(maxSeqId, majorCompaction);
+      writer.appendMetadata(maxSeqId, majorCompaction, storeFiles);
       preCloseWriter(writer);
       paths.add(writer.getPath());
       writer.close();
