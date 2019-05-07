@@ -1368,15 +1368,15 @@ public class TestFromClientSide {
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(2);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(2);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
       Scan scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -1439,15 +1439,15 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
       ht.put(put);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readAllVersions();
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readAllVersions();
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          0, 7);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -1504,14 +1504,14 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
       ht.put(put);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
+          0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -1581,23 +1581,23 @@ public class TestFromClientSide {
 
       // Family0
 
-    Get get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      Get get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {STAMPS[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {STAMPS[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
 
       Scan scan = new Scan(ROW);
       scan.addColumn(FAMILIES[0], QUALIFIER);
@@ -1619,23 +1619,23 @@ public class TestFromClientSide {
 
       // Family1
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[1], QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[1], QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[1]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[1]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[1], QUALIFIER);
@@ -1657,23 +1657,23 @@ public class TestFromClientSide {
 
       // Family2
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[2], QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[2], QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+          0, 4);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+          0, 4);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[2], QUALIFIER);
@@ -1695,29 +1695,29 @@ public class TestFromClientSide {
 
       // Try all families
 
-    get = new Get(ROW);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.addColumn(FAMILIES[1], QUALIFIER);
-    get.addColumn(FAMILIES[2], QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.addColumn(FAMILIES[1], QUALIFIER);
+      get.addColumn(FAMILIES[2], QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
       scan = new Scan(ROW);
       scan.setMaxVersions(Integer.MAX_VALUE);
@@ -1950,14 +1950,14 @@ public class TestFromClientSide {
       delete.addFamily(FAMILIES[0], ts[0]);
       ht.delete(delete);
 
-    Get get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.readVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      Get get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.readVersions(Integer.MAX_VALUE);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
 
       Scan scan = new Scan(ROW);
       scan.addFamily(FAMILIES[0]);
@@ -1982,14 +1982,14 @@ public class TestFromClientSide {
       delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
       ht.delete(delete);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1], ts[2], ts[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILIES[0], QUALIFIER);
@@ -2019,17 +2019,17 @@ public class TestFromClientSide {
       ht.put(put);
 
 
-    // It used to be due to the internal implementation of Get, that
-    // the Get() call would return ts[4] UNLIKE the Scan below. With
-    // the switch to using Scan for Get this is no longer the case.
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      // It used to be due to the internal implementation of Get, that
+      // the Get() call would return ts[4] UNLIKE the Scan below. With
+      // the switch to using Scan for Get this is no longer the case.
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1], ts[2], ts[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
       // The Scanner returns the previous values, the expected-naive-unexpected behavior
 
@@ -2065,14 +2065,14 @@ public class TestFromClientSide {
       put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
       ht.put(put);
 
-    // Assert that above went in.
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 4 key but received " + result.size() + ": " + result,
-        result.size() == 4);
+      // Assert that above went in.
+      get = new Get(ROWS[2]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 4 key but received " + result.size() + ": " + result,
+          result.size() == 4);
 
       delete = new Delete(ROWS[0]);
       delete.addFamily(FAMILIES[2]);
@@ -2088,17 +2088,17 @@ public class TestFromClientSide {
       delete.addColumn(FAMILIES[2], QUALIFIER);
       ht.delete(delete);
 
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
-        new long [] {ts[0], ts[1]},
-        new byte[][] {VALUES[0], VALUES[1]},
-        0, 1);
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
+      assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
+          new long [] {ts[0], ts[1]},
+          new byte[][] {VALUES[0], VALUES[1]},
+          0, 1);
 
       scan = new Scan(ROWS[0]);
       scan.addFamily(FAMILIES[1]);
@@ -2112,13 +2112,13 @@ public class TestFromClientSide {
               new byte[][]{VALUES[0], VALUES[1]},
               0, 1);
 
-    get = new Get(ROWS[1]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
+      get = new Get(ROWS[1]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
 
       scan = new Scan(ROWS[1]);
       scan.addFamily(FAMILIES[1]);
@@ -2128,16 +2128,16 @@ public class TestFromClientSide {
       assertTrue("Expected 2 keys but received " + result.size(),
               result.size() == 2);
 
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertEquals(1, result.size());
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
-        new long [] {ts[2]},
-        new byte[][] {VALUES[2]},
-        0, 0);
+      get = new Get(ROWS[2]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertEquals(1, result.size());
+      assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
+          new long [] {ts[2]},
+          new byte[][] {VALUES[2]},
+          0, 0);
 
       scan = new Scan(ROWS[2]);
       scan.addFamily(FAMILIES[1]);
@@ -2165,21 +2165,21 @@ public class TestFromClientSide {
       put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
       ht.put(put);
 
-    get = new Get(ROWS[3]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
+      get = new Get(ROWS[3]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 1 key but received " + result.size(),
+          result.size() == 1);
 
-    get = new Get(ROWS[4]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
+      get = new Get(ROWS[4]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
 
       scan = new Scan(ROWS[3]);
       scan.addFamily(FAMILIES[1]);
@@ -3580,15 +3580,15 @@ public class TestFromClientSide {
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(2);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(2);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
       Scan scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -3621,15 +3621,15 @@ public class TestFromClientSide {
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
       scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(2);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(2);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -3652,15 +3652,15 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
       ht.put(put);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(7);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 6);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(7);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          0, 6);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -3671,13 +3671,13 @@ public class TestFromClientSide {
         new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
 
-    get = new Get(ROW);
-    get.readVersions(7);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 6);
+      get = new Get(ROW);
+      get.readVersions(7);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+          0, 6);
 
       scan = new Scan(ROW);
       scan.setMaxVersions(7);
@@ -3715,14 +3715,14 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
       ht.put(put);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
+          0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -3740,15 +3740,15 @@ public class TestFromClientSide {
       delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
       ht.delete(delete);
 
-    // Test that it's gone
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
+      // Test that it's gone
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+          0, 9);
 
       scan = new Scan(ROW);
       scan.addColumn(FAMILY, QUALIFIER);
@@ -3782,9 +3782,9 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
       hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.readAllVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.readAllVersions();
 
       // Check that the column indeed has the right values at timestamps 1 and
       // 2
@@ -3833,9 +3833,9 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
       hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.readAllVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.readAllVersions();
 
       // Check that the column indeed has the right values at timestamps 1 and
       // 2
@@ -3894,9 +3894,9 @@ public class TestFromClientSide {
       put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
       hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.readAllVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.readAllVersions();
 
       // Check that the column indeed has the right values at timestamps 1 and
       // 2
@@ -4735,10 +4735,10 @@ public class TestFromClientSide {
     try (Table table =
                  TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, Integer.MAX_VALUE)) {
 
-    final long ts = EnvironmentEdgeManager.currentTime();
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readAllVersions();
+      final long ts = EnvironmentEdgeManager.currentTime();
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readAllVersions();
 
       for (int versions = 1; versions <= numVersions; versions++) {
         Put put = new Put(ROW);
@@ -4772,10 +4772,10 @@ public class TestFromClientSide {
 
     try (final Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },  3)) {
 
-    final long ts = EnvironmentEdgeManager.currentTime();
-    final Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.readAllVersions();
+      final long ts = EnvironmentEdgeManager.currentTime();
+      final Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.readAllVersions();
 
       for (int versions = 1; versions <= numVersions; versions++) {
         Put put = new Put(ROW);
