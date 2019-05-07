@@ -1,0 +1,8 @@
+Naming/HeredocDelimiterNaming:
+  Enabled: false
+
+Layout/IndentHeredoc:
+  Enabled: false
+
+Metrics/LineLength:
+  Max: 100
