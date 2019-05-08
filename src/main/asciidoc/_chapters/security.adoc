@@ -1274,15 +1274,15 @@ public static void addLabels() throws Exception {
 ----
 hbase> set_auths 'service', [ 'service' ]
 ----
-
++
 ----
 hbase> set_auths 'testuser', [ 'test' ]
 ----
-
++
 ----
 hbase> set_auths 'qa', [ 'test', 'developer' ]
 ----
-
++
 ----
 hbase> set_auths '@qagroup', [ 'test' ]
 ----
@@ -1312,15 +1312,15 @@ public void testSetAndGetUserAuths() throws Throwable {
 ----
 hbase> clear_auths 'service', [ 'service' ]
 ----
-
++
 ----
 hbase> clear_auths 'testuser', [ 'test' ]
 ----
-
++
 ----
 hbase> clear_auths 'qa', [ 'test', 'developer' ]
 ----
-
++
 ----
 hbase> clear_auths '@qagroup', [ 'test', 'developer' ]
 ----
@@ -1350,11 +1350,11 @@ The label is associated with a given version of the cell.
 ----
 hbase> set_visibility 'user', 'admin|service|developer', { COLUMNS => 'i' }
 ----
-
++
 ----
 hbase> set_visibility 'user', 'admin|service', { COLUMNS => 'pii' }
 ----
-
++
 ----
 hbase> set_visibility 'user', 'test', { COLUMNS => [ 'i', 'pii' ], FILTER => "(PrefixFilter ('test'))" }
 ----
