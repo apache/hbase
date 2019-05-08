@@ -27,6 +27,8 @@ import java.net.URLConnection;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +42,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.LogManager;
@@ -59,10 +62,12 @@ import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 @InterfaceAudience.Private
 public final class LogLevel {
   private static final String USAGES = "\nUsage: General options are:\n"
-      + "\t[-getlevel <host:port> <classname>\n"
-      + "\t[-setlevel <host:port> <classname> <level> ";
+      + "\t[-getlevel <host:port> <classname> [-protocol (http|https)]\n"
+      + "\t[-setlevel <host:port> <classname> <level> [-protocol (http|https)]";
 
   public static final String PROTOCOL_HTTP = "http";
+  public static final String PROTOCOL_HTTPS = "https";
+
   /**
    * A command line implementation
    */
@@ -85,9 +90,15 @@ public final class LogLevel {
     System.exit(-1);
   }
 
+  public static boolean isValidProtocol(String protocol) {
+    return ((protocol.equals(PROTOCOL_HTTP) ||
+        protocol.equals(PROTOCOL_HTTPS)));
+  }
+
   @VisibleForTesting
   static class CLI extends Configured implements Tool {
     private Operations operation = Operations.UNKNOWN;
+    private String protocol;
     private String hostName;
     private String className;
     private String level;
@@ -141,6 +152,9 @@ public final class LogLevel {
           case "-setlevel":
             nextArgIndex = parseSetLevelArgs(args, nextArgIndex);
             break;
+          case "-protocol":
+            nextArgIndex = parseProtocolArgs(args, nextArgIndex);
+            break;
           default:
             throw new HadoopIllegalArgumentException(
                 "Unexpected argument " + args[nextArgIndex]);
@@ -151,6 +165,11 @@ public final class LogLevel {
       if (operation == Operations.UNKNOWN) {
         throw new HadoopIllegalArgumentException(
             "Must specify either -getlevel or -setlevel");
+      }
+
+      // if protocol is unspecified, set it as http.
+      if (protocol == null) {
+        protocol = PROTOCOL_HTTP;
       }
     }
 
@@ -187,6 +206,27 @@ public final class LogLevel {
       return index + 4;
     }
 
+    private int parseProtocolArgs(String[] args, int index) throws
+        HadoopIllegalArgumentException {
+      // make sure only -protocol is specified
+      if (protocol != null) {
+        throw new HadoopIllegalArgumentException(
+            "Redundant -protocol command");
+      }
+      // check number of arguments is sufficient
+      if (index + 1 >= args.length) {
+        throw new HadoopIllegalArgumentException(
+            "-protocol needs one parameter");
+      }
+      // check protocol is valid
+      protocol = args[index + 1];
+      if (!isValidProtocol(protocol)) {
+        throw new HadoopIllegalArgumentException(
+            "Invalid protocol: " + protocol);
+      }
+      return index + 2;
+    }
+
     /**
      * Send HTTP request to get log level.
      *
@@ -194,7 +234,7 @@ public final class LogLevel {
      * @throws Exception if unable to connect
      */
     private void doGetLevel() throws Exception {
-      process(PROTOCOL_HTTP + "://" + hostName + "/logLevel?log=" + className);
+      process(protocol + "://" + hostName + "/logLevel?log=" + className);
     }
 
     /**
@@ -204,7 +244,7 @@ public final class LogLevel {
      * @throws Exception if unable to connect
      */
     private void doSetLevel() throws Exception {
-      process(PROTOCOL_HTTP + "://" + hostName + "/logLevel?log=" + className
+      process(protocol + "://" + hostName + "/logLevel?log=" + className
           + "&level=" + level);
     }
 
@@ -220,10 +260,22 @@ public final class LogLevel {
     private URLConnection connect(URL url) throws Exception {
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
       AuthenticatedURL aUrl;
+      SSLFactory clientSslFactory;
       URLConnection connection;
+      // If https is chosen, configures SSL client.
+      if (PROTOCOL_HTTPS.equals(url.getProtocol())) {
+        clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, this.getConf());
+        clientSslFactory.init();
+        SSLSocketFactory sslSocketF = clientSslFactory.createSSLSocketFactory();
 
-      aUrl = new AuthenticatedURL(new KerberosAuthenticator());
-      connection = aUrl.openConnection(url, token);
+        aUrl = new AuthenticatedURL(new KerberosAuthenticator(), clientSslFactory);
+        connection = aUrl.openConnection(url, token);
+        HttpsURLConnection httpsConn = (HttpsURLConnection) connection;
+        httpsConn.setSSLSocketFactory(sslSocketF);
+      } else {
+        aUrl = new AuthenticatedURL(new KerberosAuthenticator());
+        connection = aUrl.openConnection(url, token);
+      }
       connection.connect();
       return connection;
     }
