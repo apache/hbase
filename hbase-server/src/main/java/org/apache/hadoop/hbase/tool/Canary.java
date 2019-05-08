@@ -1245,7 +1245,7 @@ public final class Canary implements Tool {
       LOG.debug("Reading list of tables");
       List<Future<Void>> taskFutures = new LinkedList<>();
       for (TableDescriptor td: admin.listTableDescriptors()) {
-        if (admin.isTableEnabled(td.getTableName()) &&
+        if (admin.tableExists(td.getTableName()) && admin.isTableEnabled(td.getTableName()) &&
             (!td.getTableName().equals(writeTableName))) {
           LongAdder readLatency =
               regionSink.initializeAndGetReadLatencyForTable(td.getTableName().getNameAsString());
