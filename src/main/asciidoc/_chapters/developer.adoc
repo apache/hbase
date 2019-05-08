@@ -861,14 +861,19 @@ It will put a snapshot up into the apache snapshot repository for you.
 
 Everyone is encouraged to try and vote on HBase release candidates.
 Only the votes of PMC members are binding.
-PMC members, please read this WIP doc on policy voting for a release candidate, link:https://github.com/rectang/asfrelease/blob/master/release.md[Release
-                Policy]. [quote]_Before casting +1 binding votes, individuals are required to
-                download the signed source code package onto their own hardware, compile it as
-                provided, and test the resulting executable on their own platform, along with also
-                validating cryptographic signatures and verifying that the package meets the
-                requirements of the ASF policy on releases._ Regards the latter, run +mvn apache-rat:check+ to verify all files are suitably licensed.
-See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On
-                recent discussion clarifying ASF release policy].
+PMC members, please read this WIP doc on policy voting for a release candidate, link:https://github.com/rectang/asfrelease/blob/master/release.md[Release Policy].
+
+[quote]
+____
+Before casting +1 binding votes, individuals are required to
+download the signed source code package onto their own hardware, compile it as
+provided, and test the resulting executable on their own platform, along with also
+validating cryptographic signatures and verifying that the package meets the
+requirements of the ASF policy on releases.
+____
+
+Regards the latter, run `mvn apache-rat:check` to verify all files are suitably licensed.
+See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On recent discussion clarifying ASF release policy]
 for how we arrived at this process.
 
 [[hbase.release.announcement]]
