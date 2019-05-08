@@ -34,12 +34,14 @@ import java.util.NavigableSet;
 import java.util.OptionalInt;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -74,6 +76,7 @@ public class TestStoreScanner {
   private static final String CF_STR = "cf";
   private static final byte[] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
 
@@ -846,7 +849,6 @@ public class TestStoreScanner {
       scan.peek();
     }
   }
-
 
   @Test @Ignore("this fails, since we don't handle deletions, etc, in peek")
   public void testPeek() throws Exception {
