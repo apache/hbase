@@ -1175,7 +1175,7 @@ public final class Canary implements Tool {
       }
       List<Future<Void>> taskFutures = new LinkedList<>();
       for (HTableDescriptor table : admin.listTables()) {
-        if (admin.isTableEnabled(table.getTableName())
+        if (admin.tableExists(table.getTableName()) && admin.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
           AtomicLong readLatency = regionSink.initializeAndGetReadLatencyForTable(table.getNameAsString());
           taskFutures.addAll(Canary.sniff(admin, sink, table, executor, taskType, this.rawScanEnabled, readLatency));
