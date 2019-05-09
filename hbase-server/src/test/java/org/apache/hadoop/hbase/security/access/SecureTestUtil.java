@@ -168,7 +168,7 @@ public class SecureTestUtil {
    * To indicate the action was not allowed, either throw an AccessDeniedException
    * or return an empty list of KeyValues.
    */
-  static interface AccessTestAction extends PrivilegedExceptionAction<Object> { }
+  public static interface AccessTestAction extends PrivilegedExceptionAction<Object> { }
 
   /** This fails only in case of ADE or empty list for any of the actions. */
   public static void verifyAllowed(User user, AccessTestAction... actions) throws Exception {
@@ -440,7 +440,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -461,7 +461,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -529,7 +529,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -550,7 +550,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -595,7 +595,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -616,7 +616,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }

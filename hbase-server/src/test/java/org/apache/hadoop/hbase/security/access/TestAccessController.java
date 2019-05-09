@@ -2052,7 +2052,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          null, null);
+          snapshot, null);
         return null;
       }
     };
@@ -2123,7 +2123,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          null, null);
+          snapshot, null);
         return null;
       }
     };
