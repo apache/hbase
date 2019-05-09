@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * http://www.vldb.org/conf/2002/S10P03.pdf
  */
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class LossyCounting {
   private static final Logger LOG = LoggerFactory.getLogger(LossyCounting.class);
   private long bucketSize;
