@@ -182,13 +182,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void usage() {
-    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename -loadTable"
-        + "\n -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by "
-        + "this tool\n  Note: if you set this to 'no', then the target table must already exist "
-        + "in HBase\n -loadTable implies your baseDirectory to store file has a depth of 3 ,you"
-        + " must have an existing table\n-D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes - can be used "
-        + "to ignore unmatched column families\n" +
-        "\n");
+    System.err.println("usage: " + "bin/hbase completebulkload <-Dargs> "
+      + "</path/to/hfileoutputformat-output> <tablename>\n"
+      + "\t-D" + CREATE_TABLE_CONF_KEY + "=no can be used to avoid creation "
+      + "of a table by this tool.\n"
+      + "\t Note: if you set this to 'no', then target table must already exist.\n"
+      + "\t-D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes can be used to ignore "
+      + "unmatched column families.\n"
+      + "\t-loadTable switch implies your baseDirectory to store file has a "
+      + "depth of 3, table must exist\n"
+      + "\t and -loadTable switch is the last option on the command line.\n\n");
   }
 
   /**

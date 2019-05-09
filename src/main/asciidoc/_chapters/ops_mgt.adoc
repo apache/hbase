@@ -841,7 +841,7 @@ $ bin/hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles <hdfs://storefile
 
 .Driver
 ----
-HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar completebulkload <hdfs://storefileoutput> <tablename>
+HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar completebulkload <hdfs://storefileoutput> <tablename>
 ----
 
 [[completebulkload.warning]]
