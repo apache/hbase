@@ -88,7 +88,7 @@ public class TestCleanupCompactedFileAfterFailover {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    TEST_UTIL.waitTableAvailable(TABLE_NAME, 30000);
     table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
@@ -161,7 +161,7 @@ public class TestCleanupCompactedFileAfterFailover {
     rsServedTable.kill();
     // Sleep to wait failover
     Thread.sleep(3000);
-    TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    TEST_UTIL.waitTableAvailable(TABLE_NAME, 30000);
 
     regions.clear();
     for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
