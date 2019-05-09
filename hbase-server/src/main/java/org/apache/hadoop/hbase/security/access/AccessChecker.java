@@ -24,8 +24,10 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -34,7 +36,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public final class AccessChecker {
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
