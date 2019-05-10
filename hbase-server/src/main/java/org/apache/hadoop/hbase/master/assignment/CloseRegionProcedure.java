@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -90,8 +91,8 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected void reportTransition(RegionStateNode regionNode, TransitionCode transitionCode,
-      long seqId) throws IOException {
+  protected void checkTransition(RegionStateNode regionNode, TransitionCode transitionCode,
+      long seqId) throws UnexpectedStateException {
     if (transitionCode != TransitionCode.CLOSED) {
       throw new UnexpectedStateException("Received report unexpected " + transitionCode +
         " transition, " + regionNode.toShortString() + ", " + this + ", expected CLOSED.");
@@ -99,8 +100,19 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected void updateTransition(MasterProcedureEnv env, RegionStateNode regionNode,
-      TransitionCode transitionCode, long seqId) throws IOException {
-    env.getAssignmentManager().regionClosed(regionNode, true);
+  protected void updateTransitionWithoutPersistingToMeta(MasterProcedureEnv env,
+      RegionStateNode regionNode, TransitionCode transitionCode, long seqId) throws IOException {
+    assert transitionCode == TransitionCode.CLOSED;
+    env.getAssignmentManager().regionClosedWithoutPersistingToMeta(regionNode);
+  }
+
+  @Override
+  protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode, long seqId)
+      throws IOException {
+    if (regionNode.getState() == State.CLOSED) {
+      // should have already been persisted, ignore
+      return;
+    }
+    am.regionClosedWithoutPersistingToMeta(regionNode);
   }
 }
