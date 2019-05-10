@@ -2558,7 +2558,7 @@ public class HStore implements Store {
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
-            ", sequenceid=" +  + storeFile.getReader().getSequenceID() +
+            ", sequenceid=" + storeFile.getReader().getSequenceID() +
             ", filesize=" + StringUtils.humanReadableInt(storeFile.getReader().length()));
         }
       }
