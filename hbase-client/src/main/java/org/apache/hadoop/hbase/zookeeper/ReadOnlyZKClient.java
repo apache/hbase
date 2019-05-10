@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
@@ -279,6 +280,22 @@ public final class ReadOnlyZKClient implements Closeable {
       @Override
       protected void doExec(ZooKeeper zk) {
         zk.exists(path, false, (rc, path, ctx, stat) -> onComplete(zk, rc, stat, false), null);
+      }
+    });
+    return future;
+  }
+
+  public CompletableFuture<List<String>> list(String path) {
+    if (closed.get()) {
+      return FutureUtils.failedFuture(new DoNotRetryIOException("Client already closed"));
+    }
+    CompletableFuture<List<String>> future = new CompletableFuture<>();
+    tasks.add(new ZKTask<List<String>>(path, future, "list") {
+
+      @Override
+      protected void doExec(ZooKeeper zk) {
+        zk.getChildren(path, false, (rc, path, ctx, children) -> onComplete(zk, rc, children, true),
+          null);
       }
     });
     return future;
