@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionOpenOperation;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -77,19 +78,31 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
     return env.getAssignmentManager().getAssignmentManagerMetrics().getOpenProcMetrics();
   }
 
+  private void regionOpenedWithoutPersistingToMeta(AssignmentManager am, RegionStateNode regionNode,
+      TransitionCode transitionCode, long openSeqNum) throws IOException {
+    if (openSeqNum < regionNode.getOpenSeqNum()) {
+      LOG.warn(
+        "Received report {} transition from {} for {}, pid={} but the new openSeqNum {}" +
+          " is less than the current one {}, ignoring...",
+        transitionCode, targetServer, regionNode, getProcId(), openSeqNum,
+        regionNode.getOpenSeqNum());
+    } else {
+      regionNode.setOpenSeqNum(openSeqNum);
+    }
+    am.regionOpenedWithoutPersistingToMeta(regionNode);
+  }
+
   @Override
-  protected void reportTransition(RegionStateNode regionNode, TransitionCode transitionCode,
-      long seqId) throws IOException {
+  protected void checkTransition(RegionStateNode regionNode, TransitionCode transitionCode,
+      long openSeqNum) throws UnexpectedStateException {
     switch (transitionCode) {
       case OPENED:
-        // this is the openSeqNum
-        if (seqId < 0) {
+        if (openSeqNum < 0) {
           throw new UnexpectedStateException("Received report unexpected " + TransitionCode.OPENED +
-            " transition openSeqNum=" + seqId + ", " + regionNode + ", proc=" + this);
+            " transition openSeqNum=" + openSeqNum + ", " + regionNode + ", proc=" + this);
         }
         break;
       case FAILED_OPEN:
-        // nothing to check
         break;
       default:
         throw new UnexpectedStateException(
@@ -99,27 +112,26 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected void updateTransition(MasterProcedureEnv env, RegionStateNode regionNode,
-      TransitionCode transitionCode, long openSeqNum) throws IOException {
-    switch (transitionCode) {
-      case OPENED:
-        if (openSeqNum < regionNode.getOpenSeqNum()) {
-          LOG.warn(
-            "Received report {} transition from {} for {}, pid={} but the new openSeqNum {}" +
-              " is less than the current one {}, ignoring...",
-            transitionCode, targetServer, regionNode, getProcId(), openSeqNum,
-            regionNode.getOpenSeqNum());
-        } else {
-          regionNode.setOpenSeqNum(openSeqNum);
-        }
-        env.getAssignmentManager().regionOpened(regionNode);
-        break;
-      case FAILED_OPEN:
-        env.getAssignmentManager().regionFailedOpen(regionNode, false);
-        break;
-      default:
-        throw new UnexpectedStateException("Unexpected transition code: " + transitionCode);
+  protected void updateTransitionWithoutPersistingToMeta(MasterProcedureEnv env,
+      RegionStateNode regionNode, TransitionCode transitionCode, long openSeqNum)
+      throws IOException {
+    if (transitionCode == TransitionCode.OPENED) {
+      regionOpenedWithoutPersistingToMeta(env.getAssignmentManager(), regionNode, transitionCode,
+        openSeqNum);
+    } else {
+      assert transitionCode == TransitionCode.FAILED_OPEN;
+      // will not persist to meta if giveUp is false
+      env.getAssignmentManager().regionFailedOpen(regionNode, false);
     }
+  }
 
+  @Override
+  protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
+      long openSeqNum) throws IOException {
+    if (regionNode.getState() == State.OPEN) {
+      // should have already been persisted, ignore
+      return;
+    }
+    regionOpenedWithoutPersistingToMeta(am, regionNode, TransitionCode.OPENED, openSeqNum);
   }
 }
