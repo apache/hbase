@@ -2335,7 +2335,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           perCfExtras.append("=").append(StringUtils.byteDesc(store.getMemStoreSize()));
         }
       }
-      LOG.info("Flushing " + + storesToFlush.size() + "/" + stores.size() +
+      LOG.info("Flushing " + storesToFlush.size() + "/" + stores.size() +
         " column families, memstore=" + StringUtils.byteDesc(this.memstoreSize.get()) +
         ((perCfExtras != null && perCfExtras.length() > 0)? perCfExtras.toString(): "") +
         ((wal != null) ? "" : "; WAL is null, using passed sequenceid=" + myseqid));
