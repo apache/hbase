@@ -226,7 +226,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     return this.replicationManager;
   }
 
-  void addHFileRefsToQueue(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+  public void addHFileRefsToQueue(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws IOException {
     try {
       this.replicationManager.addHFileRefs(tableName, family, pairs);

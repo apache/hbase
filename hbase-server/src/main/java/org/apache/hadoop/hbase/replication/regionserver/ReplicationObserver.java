@@ -72,7 +72,7 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
     // just going to break. This is all private. Not allowed. Regions shouldn't assume they are
     // hosted in a RegionServer. TODO: fix.
     RegionServerServices rss = ((HasRegionServerServices)env).getRegionServerServices();
-    Replication rep = (Replication)((HRegionServer)rss).getReplicationSourceService();
+    Replication rep = (Replication)rss.getReplicationSourceService();
     rep.addHFileRefsToQueue(env.getRegionInfo().getTable(), family, pairs);
   }
 }
