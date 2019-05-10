@@ -2335,7 +2335,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
-              ", sequenceid=" + +storeFile.getReader().getSequenceID() + ", filesize="
+              ", sequenceid=" + storeFile.getReader().getSequenceID() + ", filesize="
               + TraditionalBinaryPrefix.long2String(storeFile.getReader().length(), "", 1));
         }
       }
