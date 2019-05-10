@@ -7835,7 +7835,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 tags = carryForwardTTLTag(tags, mutate);
 
                 newCell = getNewCell(row, ts, cell, oldCell, Tag.fromList(tags));
-
+                int newCellSize = CellUtil.estimatedSerializedSizeOf(newCell);
+                if (newCellSize > this.maxCellSize) {
+                  String msg = "Cell with size " + newCellSize + " exceeds limit of " +
+                      this.maxCellSize + " bytes";
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug(msg);
+                  }
+                  throw new DoNotRetryIOException(msg);
+                }
                 idx++;
               } else {
                 // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP
