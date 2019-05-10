@@ -38,6 +38,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutionException;
@@ -126,9 +128,15 @@ public class TestReadOnlyZKClient {
   }
 
   @Test
-  public void testGetAndExists() throws Exception {
+  public void testRead() throws Exception {
     assertArrayEquals(DATA, RO_ZK.get(PATH).get());
     assertEquals(CHILDREN, RO_ZK.exists(PATH).get().getNumChildren());
+    List<String> children = RO_ZK.list(PATH).get();
+    assertEquals(CHILDREN, children.size());
+    Collections.sort(children);
+    for (int i = 0; i < CHILDREN; i++) {
+      assertEquals("c" + i, children.get(i));
+    }
     assertNotNull(RO_ZK.zookeeper);
     waitForIdleConnectionClosed();
   }
@@ -138,6 +146,15 @@ public class TestReadOnlyZKClient {
     String pathNotExists = PATH + "_whatever";
     try {
       RO_ZK.get(pathNotExists).get();
+      fail("should fail because of " + pathNotExists + " does not exist");
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(KeeperException.class));
+      KeeperException ke = (KeeperException) e.getCause();
+      assertEquals(Code.NONODE, ke.code());
+      assertEquals(pathNotExists, ke.getPath());
+    }
+    try {
+      RO_ZK.list(pathNotExists).get();
       fail("should fail because of " + pathNotExists + " does not exist");
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(KeeperException.class));
