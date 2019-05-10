@@ -1007,7 +1007,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       this.serverManager.loadLastFlushedSequenceIds();
     } catch (IOException e) {
-      LOG.debug("Failed to load last flushed sequence id of regions"
+      LOG.info("Failed to load last flushed sequence id of regions"
           + " from file system", e);
     }
     // Set ourselves as active Master now our claim has succeeded up in zk.
