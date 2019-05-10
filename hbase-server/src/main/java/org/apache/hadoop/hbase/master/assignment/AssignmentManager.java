@@ -213,6 +213,9 @@ public class AssignmentManager {
       try {
         regionNode.setRegionLocation(regionState.getServerName());
         regionNode.setState(regionState.getState());
+        if (regionNode.getProcedure() != null) {
+          regionNode.getProcedure().stateLoaded(this, regionNode);
+        }
         setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
       } finally {
         regionNode.unlock();
@@ -235,14 +238,12 @@ public class AssignmentManager {
       TransitRegionStateProcedure existingProc = regionNode.getProcedure();
       if (existingProc != null) {
         // This is possible, as we will detach the procedure from the RSN before we
-        // actually finish the procedure. This is because that, we will update the region state
-        // directly in the reportTransition method for TRSP, and theoretically the region transition
-        // has been done, so we need to detach the procedure from the RSN. But actually the
-        // procedure has not been marked as done in the pv2 framework yet, so it is possible that we
-        // schedule a new TRSP immediately and when arriving here, we will find out that there are
-        // multiple TRSPs for the region. But we can make sure that, only the last one can take the
-        // charge, the previous ones should have all been finished already.
-        // So here we will compare the proc id, the greater one will win.
+        // actually finish the procedure. This is because that, we will detach the TRSP from the RSN
+        // during execution, at that time, the procedure has not been marked as done in the pv2
+        // framework yet, so it is possible that we schedule a new TRSP immediately and when
+        // arriving here, we will find out that there are multiple TRSPs for the region. But we can
+        // make sure that, only the last one can take the charge, the previous ones should have all
+        // been finished already. So here we will compare the proc id, the greater one will win.
         if (existingProc.getProcId() < proc.getProcId()) {
           // the new one wins, unset and set it to the new one below
           regionNode.unsetProcedure(existingProc);
@@ -1301,7 +1302,6 @@ public class AssignmentManager {
           // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
           // cases where we need to probe more to be sure this correct; TODO informed by experience.
           LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
-
           localState = State.OFFLINE;
         }
         RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
@@ -1321,6 +1321,9 @@ public class AssignmentManager {
           regionStates.addRegionToServer(regionNode);
         } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
           regionStates.addToOfflineRegions(regionNode);
+        }
+        if (regionNode.getProcedure() != null) {
+          regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
         }
       }
     });
@@ -1482,8 +1485,9 @@ public class AssignmentManager {
   private static final State[] STATES_EXPECTED_ON_UNASSIGN_OR_MOVE = { State.OPEN };
 
   // ============================================================================================
-  //  Region Status update
-  //  Should only be called in TransitRegionStateProcedure
+  // Region Status update
+  // Should only be called in TransitRegionStateProcedure(and related procedures), as the locking
+  // and pre-assumptions are very tricky.
   // ============================================================================================
   private void transitStateAndUpdate(RegionStateNode regionNode, RegionState.State newState,
       RegionState.State... expectedStates) throws IOException {
@@ -1512,7 +1516,7 @@ public class AssignmentManager {
     metrics.incrementOperationCounter();
   }
 
-  // should be called within the synchronized block of RegionStateNode.
+  // should be called under the RegionStateNode lock
   // The parameter 'giveUp' means whether we will try to open the region again, if it is true, then
   // we will persist the FAILED_OPEN state into hbase:meta.
   void regionFailedOpen(RegionStateNode regionNode, boolean giveUp) throws IOException {
@@ -1538,24 +1542,7 @@ public class AssignmentManager {
     }
   }
 
-  // should be called within the synchronized block of RegionStateNode
-  void regionOpened(RegionStateNode regionNode) throws IOException {
-    // TODO: OPENING Updates hbase:meta too... we need to do both here and there?
-    // That is a lot of hbase:meta writing.
-    transitStateAndUpdate(regionNode, State.OPEN, STATES_EXPECTED_ON_OPEN);
-    RegionInfo hri = regionNode.getRegionInfo();
-    if (isMetaRegion(hri)) {
-      // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
-      // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
-      // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
-      // on table that contains state.
-      setMetaAssigned(hri, true);
-    }
-    regionStates.addRegionToServer(regionNode);
-    regionStates.removeFromFailedOpen(hri);
-  }
-
-  // should be called within the synchronized block of RegionStateNode
+  // should be called under the RegionStateNode lock
   void regionClosing(RegionStateNode regionNode) throws IOException {
     transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING);
 
@@ -1569,18 +1556,36 @@ public class AssignmentManager {
     metrics.incrementOperationCounter();
   }
 
-  // should be called within the synchronized block of RegionStateNode
-  // The parameter 'normally' means whether we are closed cleanly, if it is true, then it means that
-  // we are closed due to a RS crash.
-  void regionClosed(RegionStateNode regionNode, boolean normally) throws IOException {
+  // for open and close, they will first be persist to the procedure store in
+  // RegionRemoteProcedureBase. So here we will first change the in memory state as it is considered
+  // as succeeded if the persistence to procedure store is succeeded, and then when the
+  // RegionRemoteProcedureBase is woken up, we will persist the RegionStateNode to hbase:meta.
+
+  // should be called under the RegionStateNode lock
+  void regionOpenedWithoutPersistingToMeta(RegionStateNode regionNode) throws IOException {
+    regionNode.transitionState(State.OPEN, STATES_EXPECTED_ON_OPEN);
+    RegionInfo regionInfo = regionNode.getRegionInfo();
+    regionStates.addRegionToServer(regionNode);
+    regionStates.removeFromFailedOpen(regionInfo);
+  }
+
+  // should be called under the RegionStateNode lock
+  void regionClosedWithoutPersistingToMeta(RegionStateNode regionNode) throws IOException {
+    ServerName regionLocation = regionNode.getRegionLocation();
+    regionNode.transitionState(State.CLOSED, STATES_EXPECTED_ON_CLOSED);
+    regionNode.setRegionLocation(null);
+    if (regionLocation != null) {
+      regionNode.setLastHost(regionLocation);
+      regionStates.removeRegionFromServer(regionLocation, regionNode);
+    }
+  }
+
+  // should be called under the RegionStateNode lock
+  // for SCP
+  void regionClosedAbnormally(RegionStateNode regionNode) throws IOException {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
-    if (normally) {
-      regionNode.transitionState(State.CLOSED, STATES_EXPECTED_ON_CLOSED);
-    } else {
-      // For SCP
-      regionNode.transitionState(State.ABNORMALLY_CLOSED);
-    }
+    regionNode.transitionState(State.ABNORMALLY_CLOSED);
     regionNode.setRegionLocation(null);
     boolean succ = false;
     try {
@@ -1598,6 +1603,22 @@ public class AssignmentManager {
       regionStates.removeRegionFromServer(regionLocation, regionNode);
     }
   }
+
+  void persistToMeta(RegionStateNode regionNode) throws IOException {
+    regionStateStore.updateRegionLocation(regionNode);
+    RegionInfo regionInfo = regionNode.getRegionInfo();
+    if (isMetaRegion(regionInfo) && regionNode.getState() == State.OPEN) {
+      // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
+      // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
+      // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
+      // on table that contains state.
+      setMetaAssigned(regionInfo, true);
+    }
+  }
+
+  // ============================================================================================
+  // The above methods can only be called in TransitRegionStateProcedure(and related procedures)
+  // ============================================================================================
 
   public void markRegionAsSplit(final RegionInfo parent, final ServerName serverName,
       final RegionInfo daughterA, final RegionInfo daughterB) throws IOException {
