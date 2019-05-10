@@ -8045,6 +8045,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           break;
         default: throw new UnsupportedOperationException(op.toString());
       }
+      int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
+      if (newCellSize > this.maxCellSize) {
+        String msg = "Cell with size " + newCellSize + " exceeds limit of " +
+            this.maxCellSize + " bytes";
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(msg);
+        }
+        throw new DoNotRetryIOException(msg);
+      }
 
       cellPairs.add(new Pair<>(currentValue, newCell));
       // Add to results to get returned to the Client. If null, cilent does not want results.
