@@ -6454,7 +6454,7 @@ public class TestFromClientSide {
         // expected
       }
       try {
-        t.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[10 * 1024]));
+        t.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[2 * 1024]));
         fail("Oversize cell failed to trigger exception");
       } catch (IOException e) {
         // expected
