@@ -403,7 +403,7 @@ public class TransitRegionStateProcedure
       remoteProc.serverCrashed(env, regionNode, serverName);
     } else {
       // we are in RUNNING state, just update the region state, and we will process it later.
-      env.getAssignmentManager().regionClosed(regionNode, false);
+      env.getAssignmentManager().regionClosedAbnormally(regionNode);
     }
   }
 
@@ -414,6 +414,15 @@ public class TransitRegionStateProcedure
   void unattachRemoteProc(RegionRemoteProcedureBase proc) {
     assert this.remoteProc == proc;
     this.remoteProc = null;
+  }
+
+  // will be called after we finish loading the meta entry for this region.
+  // used to change the state of the region node if we have a sub procedure, as we may not persist
+  // the state to meta yet. See the code in RegionRemoteProcedureBase.execute for more details.
+  void stateLoaded(AssignmentManager am, RegionStateNode regionNode) {
+    if (remoteProc != null) {
+      remoteProc.stateLoaded(am, regionNode);
+    }
   }
 
   @Override
