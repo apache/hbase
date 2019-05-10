@@ -405,7 +405,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // need to reload split keys each iteration.
       final Pair<byte[][], byte[][]> startEndKeys = regionLocator.getStartEndKeys();
       if (count != 0) {
-        LOG.info("Split occurred while grouping HFiles, retry attempt " + +count + " with " +
+        LOG.info("Split occurred while grouping HFiles, retry attempt " + count + " with " +
             queue.size() + " files remaining to group or split");
       }
 
