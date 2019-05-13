@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -107,6 +109,8 @@ public interface MetricsTableWrapperAggregate {
    */
   long getNumReferenceFiles(String table);
 
-
-
+  /**
+   * @return Get HBase configuration; allows reflection-based classes to have access to it.
+   */
+  Configuration getConf();
 }

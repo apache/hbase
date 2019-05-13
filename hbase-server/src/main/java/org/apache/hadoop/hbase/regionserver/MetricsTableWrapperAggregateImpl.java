@@ -20,14 +20,19 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,8 +41,13 @@ import org.apache.hadoop.metrics2.MetricsExecutor;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
 public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggregate, Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsTableWrapperAggregateImpl.class);
+
   private final HRegionServer regionServer;
   private ScheduledExecutorService executor;
   private Runnable runnable;
@@ -60,58 +70,72 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     @Override
     public void run() {
+      LOG.debug("Starting to publish the table metrics");
       Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
 
-      for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-        TableName tbl = r.getTableDescriptor().getTableName();
-        MetricsTableValues mt = localMetricsTableMap.get(tbl);
-        if (mt == null) {
-          mt = new MetricsTableValues();
-          localMetricsTableMap.put(tbl, mt);
-        }
-        if (r.getStores() != null) {
-          for (Store store : r.getStores()) {
-            mt.storeFileCount += store.getStorefilesCount();
-            mt.memstoreSize += (store.getMemStoreSize().getDataSize() +
-              store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
-            mt.storeFileSize += store.getStorefilesSize();
-            mt.referenceFileCount += store.getNumReferenceFiles();
-
-            mt.maxStoreFileAge = Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
-            mt.minStoreFileAge = Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
-            mt.totalStoreFileAge = (long)store.getAvgStoreFileAge().getAsDouble() *
-                store.getStorefilesCount();
-            mt.storeCount += 1;
+      try {
+        for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+          TableName tbl = r.getTableDescriptor().getTableName();
+          MetricsTableValues mt = localMetricsTableMap.get(tbl);
+          if (mt == null) {
+            mt = new MetricsTableValues();
+            localMetricsTableMap.put(tbl, mt);
           }
-          mt.regionCount += 1;
+          mt.cpRequestCount += r.getCpRequestsCount();
+          if (r.getStores() != null) {
+            for (Store store : r.getStores()) {
+              mt.storeFileCount += store.getStorefilesCount();
+              mt.memstoreSize += (store.getMemStoreSize().getDataSize() +
+                store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
+              mt.storeFileSize += store.getStorefilesSize();
+              mt.referenceFileCount += store.getNumReferenceFiles();
 
-          mt.readRequestCount += r.getReadRequestsCount();
-          mt.filteredReadRequestCount += getFilteredReadRequestCount(tbl.getNameAsString());
-          mt.writeRequestCount += r.getWriteRequestsCount();
+              OptionalLong ol = store.getMaxStoreFileAge();
+              if (ol.isPresent()) {
+                mt.maxStoreFileAge = Math.max(mt.maxStoreFileAge, ol.getAsLong());
+              }
+              ol = store.getMaxStoreFileAge();
+              if (ol.isPresent()) {
+                mt.minStoreFileAge = Math.max(mt.minStoreFileAge, ol.getAsLong());
+              }
+              OptionalDouble od = store.getAvgStoreFileAge();
+              if (od.isPresent()) {
+                mt.totalStoreFileAge = (long)od.getAsDouble() * store.getStorefilesCount();
+              }
+              mt.storeCount += 1;
+            }
+            mt.regionCount += 1;
 
+            mt.readRequestCount += r.getReadRequestsCount();
+            mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
+            mt.writeRequestCount += r.getWriteRequestsCount();
+          }
         }
-      }
 
-      for (Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
-        TableName tbl = entry.getKey();
-        if (metricsTableMap.get(tbl) == null) {
-          // this will add the Wrapper to the list of TableMetrics
-          CompatibilitySingletonFactory
-              .getInstance(MetricsRegionServerSourceFactory.class)
-              .getTableAggregate()
-              .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
+        for (Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
+          TableName tbl = entry.getKey();
+          if (metricsTableMap.get(tbl) == null) {
+            // this will add the Wrapper to the list of TableMetrics
+            CompatibilitySingletonFactory
+                .getInstance(MetricsRegionServerSourceFactory.class)
+                .getTableAggregate()
+                .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
+          }
+          metricsTableMap.put(entry.getKey(), entry.getValue());
         }
-        metricsTableMap.put(entry.getKey(), entry.getValue());
-      }
-      Set<TableName> existingTableNames = Sets.newHashSet(metricsTableMap.keySet());
-      existingTableNames.removeAll(localMetricsTableMap.keySet());
-      MetricsTableAggregateSource agg = CompatibilitySingletonFactory
-          .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
-      for (TableName table : existingTableNames) {
-        agg.deleteTableSource(table.getNameAsString());
-        if (metricsTableMap.get(table) != null) {
-          metricsTableMap.remove(table);
+        Set<TableName> existingTableNames = Sets.newHashSet(metricsTableMap.keySet());
+        existingTableNames.removeAll(localMetricsTableMap.keySet());
+        MetricsTableAggregateSource agg = CompatibilitySingletonFactory
+            .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
+        for (TableName table : existingTableNames) {
+          agg.deleteTableSource(table.getNameAsString());
+          if (metricsTableMap.get(table) != null) {
+            metricsTableMap.remove(table);
+          }
         }
+      } catch (Exception e) {
+        // Don't let it fail or it will never run again...
+        LOG.warn("Metrics publishing task has failed; ignoring the failure", e);
       }
     }
   }
@@ -276,6 +300,11 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     }
     return metricsTable.cpRequestCount;
+  }
+
+  @Override
+  public Configuration getConf() {
+    return regionServer.conf;
   }
 
   @Override

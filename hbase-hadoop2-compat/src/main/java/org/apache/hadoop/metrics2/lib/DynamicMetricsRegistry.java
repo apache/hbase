@@ -46,10 +46,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
  *       thread-safe map, as we allow dynamic metrics additions/removals.
  */
 @InterfaceAudience.Private
-public class DynamicMetricsRegistry {
+public class DynamicMetricsRegistry extends MetricsFactory {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicMetricsRegistry.class);
 
   private final ConcurrentMap<String, MutableMetric> metricsMap =
+      Maps.newConcurrentMap();
+  private final ConcurrentMap<String, ConcurrentMap<String, MutableMetric>> scopedMetricsMap =
       Maps.newConcurrentMap();
   private final ConcurrentMap<String, MetricsTag> tagsMap =
       Maps.newConcurrentMap();
@@ -113,8 +115,57 @@ public class DynamicMetricsRegistry {
    * @param iVal  initial value
    * @return a new counter object
    */
+  @Override
   public MutableFastCounter newCounter(String name, String desc, long iVal) {
     return newCounter(new MetricsInfoImpl(name, desc), iVal);
+  }
+
+  public MutableFastCounter newScopedCounter(String scope, String name, String desc, long iVal) {
+    MutableFastCounter ret = super.newCounter(new MetricsInfoImpl(name, desc), iVal);
+    return addNewScopedMetricIfAbsent(scope, name, ret, MutableFastCounter.class);
+  }
+
+  public MutableHistogram newScopedHistogram(String scope, String name, String desc) {
+    MutableHistogram ret = super.newHistogram(name, desc);
+    return addNewScopedMetricIfAbsent(scope, name, ret, MutableHistogram.class);
+  }
+
+  public MutableTimeHistogram newScopedTimeHistogram(String scope, String name, String desc) {
+    MutableTimeHistogram ret = super.newTimeHistogram(name, desc);
+    return addNewScopedMetricIfAbsent(scope, name, ret, MutableTimeHistogram.class);
+  }
+
+  public MutableSizeHistogram newScopedSizeHistogram(String scope, String name, String desc) {
+    MutableSizeHistogram ret = super.newSizeHistogram(name, desc);
+    return addNewScopedMetricIfAbsent(scope, name, ret, MutableSizeHistogram.class);
+  }
+
+  public void removeScopedMetric(String scope, String name) {
+    // Note: don't call helper.removeObjectName on scoped metrics, they all have the same name.
+    ConcurrentMap<String, MutableMetric> map = scopedMetricsMap.getOrDefault(scope, null);
+    if (map == null) {
+      LOG.warn("Cannot remove metric {} - scope {} not found", name, scope);
+      return;
+    }
+    map.remove(name);
+    if (map.isEmpty()) {
+      scopedMetricsMap.computeIfPresent(scope, (k, v) -> v.isEmpty() ? null : v);
+    }
+  }
+
+  public void removeScopedHistogramMetrics(String scope, String baseName) {
+    // Note: don't call helper.removeObjectName on scoped metrics, they all have the same name.
+    ConcurrentMap<String, MutableMetric> map = scopedMetricsMap.getOrDefault(scope, null);
+    if (map == null) {
+      LOG.warn("Cannot remove metric {} - scope {} not found", baseName, scope);
+      return;
+    }
+    for (String suffix : histogramSuffixes) {
+      map.remove(baseName + suffix);
+    }
+    if (map.isEmpty()) {
+      scopedMetricsMap.computeIfPresent(scope, (k, v) -> v.isEmpty() ? null : v);
+    }
   }
 
   /**
@@ -124,7 +175,7 @@ public class DynamicMetricsRegistry {
    * @return a new counter object
    */
   public MutableFastCounter newCounter(MetricsInfo info, long iVal) {
-    MutableFastCounter ret = new MutableFastCounter(info, iVal);
+    MutableFastCounter ret = super.newCounter(info, iVal);
     return addNewMetricIfAbsent(info.name(), ret, MutableFastCounter.class);
   }
 
@@ -146,94 +197,8 @@ public class DynamicMetricsRegistry {
    * @return a new gauge object
    */
   public MutableGaugeLong newGauge(MetricsInfo info, long iVal) {
-    MutableGaugeLong ret = new MutableGaugeLong(info, iVal);
+    MutableGaugeLong ret = super.newGauge(info, iVal);
     return addNewMetricIfAbsent(info.name(), ret, MutableGaugeLong.class);
-  }
-
-  /**
-   * Create a mutable metric with stats
-   * @param name  of the metric
-   * @param desc  metric description
-   * @param sampleName  of the metric (e.g., "Ops")
-   * @param valueName   of the metric (e.g., "Time" or "Latency")
-   * @param extended    produce extended stat (stdev, min/max etc.) if true.
-   * @return a new mutable stat metric object
-   */
-  public MutableStat newStat(String name, String desc,
-      String sampleName, String valueName, boolean extended) {
-    MutableStat ret =
-        new MutableStat(name, desc, sampleName, valueName, extended);
-    return addNewMetricIfAbsent(name, ret, MutableStat.class);
-  }
-
-  /**
-   * Create a mutable metric with stats
-   * @param name  of the metric
-   * @param desc  metric description
-   * @param sampleName  of the metric (e.g., "Ops")
-   * @param valueName   of the metric (e.g., "Time" or "Latency")
-   * @return a new mutable metric object
-   */
-  public MutableStat newStat(String name, String desc,
-                             String sampleName, String valueName) {
-    return newStat(name, desc, sampleName, valueName, false);
-  }
-
-  /**
-   * Create a mutable rate metric
-   * @param name  of the metric
-   * @return a new mutable metric object
-   */
-  public MutableRate newRate(String name) {
-    return newRate(name, name, false);
-  }
-
-  /**
-   * Create a mutable rate metric
-   * @param name  of the metric
-   * @param description of the metric
-   * @return a new mutable rate metric object
-   */
-  public MutableRate newRate(String name, String description) {
-    return newRate(name, description, false);
-  }
-
-  /**
-   * Create a mutable rate metric (for throughput measurement)
-   * @param name  of the metric
-   * @param desc  description
-   * @param extended  produce extended stat (stdev/min/max etc.) if true
-   * @return a new mutable rate metric object
-   */
-  public MutableRate newRate(String name, String desc, boolean extended) {
-    return newRate(name, desc, extended, true);
-  }
-
-  @InterfaceAudience.Private
-  public MutableRate newRate(String name, String desc,
-      boolean extended, boolean returnExisting) {
-    if (returnExisting) {
-      MutableMetric rate = metricsMap.get(name);
-      if (rate != null) {
-        if (rate instanceof MutableRate) {
-          return (MutableRate) rate;
-        }
-
-        throw new MetricsException("Unexpected metrics type "+ rate.getClass()
-                                   +" for "+ name);
-      }
-    }
-    MutableRate ret = new MutableRate(name, desc, extended);
-    return addNewMetricIfAbsent(name, ret, MutableRate.class);
-  }
-
-  /**
-   * Create a new histogram.
-   * @param name Name of the histogram.
-   * @return A new MutableHistogram
-   */
-  public MutableHistogram newHistogram(String name) {
-    return newHistogram(name, "");
   }
 
   /**
@@ -243,7 +208,7 @@ public class DynamicMetricsRegistry {
    * @return A new MutableHistogram
    */
   public MutableHistogram newHistogram(String name, String desc) {
-    MutableHistogram histo = new MutableHistogram(name, desc);
+    MutableHistogram histo = super.newHistogram(name, desc);
     return addNewMetricIfAbsent(name, histo, MutableHistogram.class);
   }
   
@@ -263,10 +228,10 @@ public class DynamicMetricsRegistry {
    * @return A new MutableTimeHistogram
    */
   public MutableTimeHistogram newTimeHistogram(String name, String desc) {
-    MutableTimeHistogram histo = new MutableTimeHistogram(name, desc);
+    MutableTimeHistogram histo = super.newTimeHistogram(name, desc);
     return addNewMetricIfAbsent(name, histo, MutableTimeHistogram.class);
   }
-  
+
   /**
    * Create a new histogram with size range counts.
    * @param name Name of the histogram.
@@ -283,35 +248,8 @@ public class DynamicMetricsRegistry {
    * @return A new MutableSizeHistogram
    */
   public MutableSizeHistogram newSizeHistogram(String name, String desc) {
-    MutableSizeHistogram histo = new MutableSizeHistogram(name, desc);
+    MutableSizeHistogram histo = super.newSizeHistogram(name, desc);
     return addNewMetricIfAbsent(name, histo, MutableSizeHistogram.class);
-  }
-
-
-  synchronized void add(String name, MutableMetric metric) {
-    addNewMetricIfAbsent(name, metric, MutableMetric.class);
-  }
-
-  /**
-   * Add sample to a stat metric by name.
-   * @param name  of the metric
-   * @param value of the snapshot to add
-   */
-  public void add(String name, long value) {
-    MutableMetric m = metricsMap.get(name);
-
-    if (m != null) {
-      if (m instanceof MutableStat) {
-        ((MutableStat) m).add(value);
-      }
-      else {
-        throw new MetricsException("Unsupported add(value) for metric "+ name);
-      }
-    }
-    else {
-      metricsMap.put(name, newRate(name)); // default is a rate metric
-      add(name, value);
-    }
   }
 
   /**
@@ -392,6 +330,25 @@ public class DynamicMetricsRegistry {
       builder.add(tag);
     }
     for (MutableMetric metric : metrics()) {
+      metric.snapshot(builder, all);
+    }
+  }
+
+  /**
+   * Sample all the scoped metrics for a given scope and put the snapshot in the builder.
+   * @param scope scope to snapshot
+   * @param builder to contain the metrics snapshot
+   * @param all get all the metrics even if the values are not changed.
+   */
+  public void snapshotScoped(String scope, MetricsRecordBuilder builder, boolean all) {
+    for (MetricsTag tag : tags()) {
+      builder.add(tag);
+    }
+    ConcurrentMap<String, MutableMetric> map = scopedMetricsMap.getOrDefault(scope, null);
+    if (map == null) {
+      return;
+    }
+    for (MutableMetric metric : map.values()) {
       metric.snapshot(builder, all);
     }
   }
@@ -502,10 +459,15 @@ public class DynamicMetricsRegistry {
 
   private<T extends MutableMetric> T addNewMetricIfAbsent(String name, T ret,
       Class<T> metricClass) {
+    return addNewMetricToMapIfAbsent(metricsMap, name, ret, metricClass);
+  }
+
+  private static <T extends MutableMetric> T addNewMetricToMapIfAbsent(
+      ConcurrentMap<String, MutableMetric> map, String name, T ret, Class<T> metricClass) {
     //If the value we get back is null then the put was successful and we will
     // return that. Otherwise metric should contain the thing that was in
     // before the put could be completed.
-    MutableMetric metric = metricsMap.putIfAbsent(name, ret);
+    MutableMetric metric = map.putIfAbsent(name, ret);
     if (metric == null) {
       return ret;
     }
@@ -513,8 +475,16 @@ public class DynamicMetricsRegistry {
     return returnExistingWithCast(metric, metricClass, name);
   }
 
+
+  private<T extends MutableMetric> T addNewScopedMetricIfAbsent(
+      String scope, String name, T ret, Class<T> metricClass) {
+    ConcurrentMap<String, MutableMetric> map = scopedMetricsMap.computeIfAbsent(
+        scope, k -> Maps.newConcurrentMap());
+    return addNewMetricToMapIfAbsent(map, name, ret, metricClass);
+  }
+
   @SuppressWarnings("unchecked")
-  private<T> T returnExistingWithCast(MutableMetric metric,
+  private static <T> T returnExistingWithCast(MutableMetric metric,
                                       Class<T> metricClass, String name) {
     if (!metricClass.isAssignableFrom(metric.getClass())) {
       throw new MetricsException("Metric already exists in registry for metric name: " +

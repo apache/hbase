@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -23,14 +24,20 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Captures operation metrics by table. Separates metrics collection for table metrics away from
  * {@link MetricsRegionServer} for encapsulation and ease of testing.
+ * TODO: why does this use a different flow from very similar, other per-table metrics?
  */
 @InterfaceAudience.Private
 public class RegionServerTableMetrics {
 
   private final MetricsTableLatencies latencies;
 
-  public RegionServerTableMetrics() {
+  public RegionServerTableMetrics(Configuration conf) {
     latencies = CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
+    // Unlike the other table counters, this doesn't give us an opportunity to supply config
+    // after we get the object from CompatibilitySingletonFactory...
+    if (latencies instanceof MetricsTableLatenciesImpl) {
+      ((MetricsTableLatenciesImpl)latencies).setConf(conf);
+    }
   }
 
   public void updatePut(TableName table, long time) {
@@ -67,5 +74,9 @@ public class RegionServerTableMetrics {
 
   public void updateScanSize(TableName table, long size) {
     latencies.updateScanSize(table.getNameAsString(), size);
+  }
+
+  public boolean isScoped() {
+    return latencies.isScoped();
   }
 }

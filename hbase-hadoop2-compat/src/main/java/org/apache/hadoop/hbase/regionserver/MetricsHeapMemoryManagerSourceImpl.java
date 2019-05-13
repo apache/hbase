@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implements
     MetricsHeapMemoryManagerSource {
-
+  // TODO: it may make sense to add some table-scoped metrics for these.
   private final MetricHistogram blockedFlushHistogram;
   private final MetricHistogram unblockedFlushHistogram;
   private final MetricHistogram incMemStoreSizeHistogram;

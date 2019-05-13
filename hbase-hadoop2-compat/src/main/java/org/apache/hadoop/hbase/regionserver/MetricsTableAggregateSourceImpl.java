@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
@@ -32,6 +35,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
         implements MetricsTableAggregateSource {
+  public static final String TABLE_METRICS_TAGS = "hbase.metrics.table.via.tags";
+  public static final boolean TABLE_METRICS_TAGS_DEFAULT = false;
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableAggregateSourceImpl.class);
   private ConcurrentHashMap<String, MetricsTableSource> tableSources = new ConcurrentHashMap<>();
@@ -47,8 +52,17 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
-  private void register(MetricsTableSource source) {
-    source.registerMetrics();
+  public static boolean areTablesViaTags(MetricsTableWrapperAggregate wrapper) {
+    return areTablesViaTags(wrapper.getConf());
+  }
+
+  public static boolean areTablesViaTags(MetricsRegionServerWrapper wrapper) {
+    return Boolean.parseBoolean(wrapper.getConfVar(
+        TABLE_METRICS_TAGS, Boolean.toString(TABLE_METRICS_TAGS_DEFAULT)));
+  }
+
+  public static boolean areTablesViaTags(Configuration conf) {
+    return conf != null && conf.getBoolean(TABLE_METRICS_TAGS, TABLE_METRICS_TAGS_DEFAULT);
   }
 
   @Override
@@ -92,14 +106,33 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
     MetricsRecordBuilder mrb = collector.addRecord(metricsName);
+    Map<String, MetricsRecordBuilder> scopedMrbs = new HashMap<>();
+
+    // Note that there are two metrics models in one being merged here...
+    // 1) MetricsTableSource.snapshot writes a subset of metrics
+    // 2) DynamicMetricsRegistry.snapshot writes a DIFFERENT set of metrics via a different model.
+    // See MetricsTableSourceImpl of registerMetrics and snapshot for the example of two models.
 
     if (tableSources != null) {
       for (MetricsTableSource tableMetricSource : tableSources.values()) {
         if (tableMetricSource instanceof MetricsTableSourceImpl) {
-          ((MetricsTableSourceImpl) tableMetricSource).snapshot(mrb, all);
+          MetricsTableSourceImpl impl = (MetricsTableSourceImpl) tableMetricSource;
+          MetricsRecordBuilder scopedMrb = mrb;
+          String scope = impl.getScope();
+          if (scope != null) {
+            scopedMrb = collector.addRecord(metricsName + "." + scope);
+            if (scopedMrbs.put(scope, scopedMrb) != null) {
+              LOG.error("Found multiple collectors for " + scope);
+            }
+          }
+          impl.snapshot(scopedMrb, all);
         }
       }
       mrb.addGauge(Interns.info(NUM_TABLES, NUMBER_OF_TABLES_DESC), tableSources.size());
+
+      for (Map.Entry<String, MetricsRecordBuilder> e : scopedMrbs.entrySet()) {
+        metricsRegistry.snapshotScoped(e.getKey(), e.getValue(), all);
+      }
       metricsRegistry.snapshot(mrb, all);
     }
   }

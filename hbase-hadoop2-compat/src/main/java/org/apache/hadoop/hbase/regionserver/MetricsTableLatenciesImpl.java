@@ -16,14 +16,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentMap;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableSizeHistogram;
+import org.apache.hadoop.metrics2.lib.MutableTimeHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;import org.slf4j.Logger;import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link MetricsTableLatencies} to track latencies for one table in a
@@ -31,8 +41,12 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  */
 @InterfaceAudience.Private
 public class MetricsTableLatenciesImpl extends BaseSourceImpl implements MetricsTableLatencies {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsTableLatenciesImpl.class);
 
-  private final HashMap<TableName,TableHistograms> histogramsByTable = new HashMap<>();
+  private final ConcurrentMap<TableName, TableHistograms> histogramsByTable =
+    Maps.newConcurrentMap();
+  private Configuration conf;
+  private boolean useTags;
 
   @VisibleForTesting
   public static class TableHistograms {
@@ -46,18 +60,27 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     final MetricHistogram scanTimeHisto;
     final MetricHistogram scanSizeHisto;
 
+    // TODO: this doesn't appear to remove metrics like the other impl
     TableHistograms(DynamicMetricsRegistry registry, TableName tn) {
-      getTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, GET_TIME));
-      incrementTimeHisto = registry.newTimeHistogram(
-          qualifyMetricsName(tn, INCREMENT_TIME));
-      appendTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, APPEND_TIME));
-      putTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, PUT_TIME));
-      putBatchTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, PUT_BATCH_TIME));
-      deleteTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, DELETE_TIME));
-      deleteBatchTimeHisto = registry.newTimeHistogram(
-          qualifyMetricsName(tn, DELETE_BATCH_TIME));
-      scanTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, SCAN_TIME));
-      scanSizeHisto = registry.newSizeHistogram(qualifyMetricsName(tn, SCAN_SIZE));
+      getTimeHisto = newTimeHistogram(registry, tn, GET_TIME);
+      incrementTimeHisto = newTimeHistogram(registry, tn, INCREMENT_TIME);
+      appendTimeHisto = newTimeHistogram(registry, tn, APPEND_TIME);
+      putTimeHisto = newTimeHistogram(registry, tn, PUT_TIME);
+      putBatchTimeHisto = newTimeHistogram(registry, tn, PUT_BATCH_TIME);
+      deleteTimeHisto = newTimeHistogram(registry, tn, DELETE_TIME);
+      deleteBatchTimeHisto = newTimeHistogram(registry, tn, DELETE_BATCH_TIME);
+      scanTimeHisto = newTimeHistogram(registry, tn, SCAN_TIME);
+      scanSizeHisto = newSizeHistogram(registry, tn, SCAN_SIZE);
+    }
+
+    protected MutableTimeHistogram newTimeHistogram(
+        DynamicMetricsRegistry registry, TableName tn, String name) {
+      return registry.newTimeHistogram(qualifyMetricsName(tn, name));
+    }
+
+    protected MutableSizeHistogram newSizeHistogram(
+        DynamicMetricsRegistry registry, TableName tn, String name) {
+      return registry.newSizeHistogram(qualifyMetricsName(tn, name));
     }
 
     public void updatePut(long time) {
@@ -97,6 +120,24 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     }
   }
 
+  private static class TableHistogramsWithTags extends TableHistograms {
+    TableHistogramsWithTags(DynamicMetricsRegistry registry, TableName tn) {
+      super(registry, tn);
+    }
+
+    @Override
+    protected MutableSizeHistogram newSizeHistogram(
+        DynamicMetricsRegistry registry, TableName tn, String name) {
+      return registry.newScopedSizeHistogram(tn.getNameAsString(), name, "");
+    }
+
+    @Override
+    protected MutableTimeHistogram newTimeHistogram(
+        DynamicMetricsRegistry registry, TableName tn, String name) {
+      return registry.newScopedTimeHistogram(tn.getNameAsString(), name, "");
+    }
+  }
+
   @VisibleForTesting
   public static String qualifyMetricsName(TableName tableName, String metric) {
     StringBuilder sb = new StringBuilder();
@@ -112,7 +153,8 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     final TableName tn = TableName.valueOf(tableName);
     TableHistograms latency = histogramsByTable.get(tn);
     if (latency == null) {
-      latency = new TableHistograms(getMetricsRegistry(), tn);
+      DynamicMetricsRegistry reg = getMetricsRegistry();
+      latency = useTags ? new TableHistogramsWithTags(reg, tn) : new TableHistograms(reg, tn);
       histogramsByTable.put(tn, latency);
     }
     return latency;
@@ -170,5 +212,35 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   @Override
   public void updateScanTime(String tableName, long t) {
     getOrCreateTableHistogram(tableName).updateScanTime(t);
+  }
+
+  public void setConf(Configuration conf) {
+    if (this.conf != null) {
+      LOG.warn("The object was already initialized with {}", this.useTags);
+      return;
+    }
+    this.conf = conf;
+    this.useTags = MetricsTableAggregateSourceImpl.areTablesViaTags(conf);
+  }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    if (!useTags) {
+      super.getMetrics(metricsCollector, all);
+    } else {
+      for (TableName tn : histogramsByTable.keySet()) {
+        String scope = tn.getNameAsString();
+        String recName = metricsRegistry.info().name() + "." + scope;
+        MetricsRecordBuilder mrb = metricsCollector.addRecord(recName);
+        mrb.add(new MetricsTag(MetricsTableSourceImplWithTags.TABLE_TAG_INFO, scope));
+        metricsRegistry.snapshotScoped(scope, mrb, all);
+      }
+      // There are no metrics here not scoped to the table, so don't snapshot().
+    }
+  }
+
+  @Override
+  public boolean isScoped() {
+    return useTags;
   }
 }

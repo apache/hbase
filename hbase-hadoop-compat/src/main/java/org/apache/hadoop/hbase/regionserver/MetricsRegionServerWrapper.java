@@ -523,4 +523,6 @@ public interface MetricsRegionServerWrapper {
   long getTrailerHitCount();
 
   long getTotalRowActionRequestCount();
+
+  String getConfVar(String name, String defaultValue);
 }

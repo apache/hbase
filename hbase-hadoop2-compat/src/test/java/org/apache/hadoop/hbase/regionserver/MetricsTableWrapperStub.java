@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
+
 public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
 
   private String tableName;
@@ -98,6 +100,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   @Override
   public long getNumReferenceFiles(String table) {
     return 77;
+  }
+
+  @Override
+  public Configuration getConf() {
+    return null;
   }
 
   @Override

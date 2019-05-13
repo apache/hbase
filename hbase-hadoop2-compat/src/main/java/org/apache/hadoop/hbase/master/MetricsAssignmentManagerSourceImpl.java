@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MetricsAssignmentManagerSourceImpl
     extends BaseSourceImpl
     implements MetricsAssignmentManagerSource {
-
+  // TODO: it may make sense to add some table-scoped metrics for these.
   private MutableGaugeLong ritGauge;
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;

@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MetricsMasterFilesystemSourceImpl
     extends BaseSourceImpl
     implements MetricsMasterFileSystemSource {
-
+  // TODO: it may make sense to add some table-scoped metrics for these.
   private MetricHistogram splitSizeHisto;
   private MetricHistogram splitTimeHisto;
   private MetricHistogram metaSplitTimeHisto;

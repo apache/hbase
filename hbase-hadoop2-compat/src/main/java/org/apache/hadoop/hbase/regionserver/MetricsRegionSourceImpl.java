@@ -65,6 +65,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   private final int hashCode;
 
+  // TODO: add tagged region metrics option, similar to the tables one?
+  //       Note that this would require refactoring them together to avoid metrics duplication.
+  //       See also the ugly way server-level metrics handle duplication now - all of these
+  //       could be merged and handled nicely and consistently.
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
                                  MetricsRegionAggregateSourceImpl aggregate) {
     this.regionWrapper = regionWrapper;

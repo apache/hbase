@@ -62,20 +62,29 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
+import org.apache.hadoop.metrics2.lib.MutableSizeHistogram;
+import org.apache.hadoop.metrics2.lib.MutableTimeHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
-
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableSourceImpl.class);
+
+
+  public static final String RS_ENABLE_TABLE_METRICS_KEY =
+      "hbase.regionserver.enable.table.latencies";
+  public static final boolean RS_ENABLE_TABLE_METRICS_DEFAULT = true;
 
   private AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -85,7 +94,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   // tableWrapper around too long.
   private MetricsTableWrapperAggregate tableWrapperAgg;
   private final MetricsTableAggregateSourceImpl agg;
-  private final DynamicMetricsRegistry registry;
+  protected final DynamicMetricsRegistry registry;
   private final String tableNamePrefix;
   private final TableName tableName;
   private final int hashCode;
@@ -132,77 +141,93 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     this.hashCode = this.tableName.hashCode();
   }
 
+
+  public static boolean areTableLatenciesEnabled(Configuration conf) {
+    return conf.getBoolean(RS_ENABLE_TABLE_METRICS_KEY, RS_ENABLE_TABLE_METRICS_DEFAULT);
+  }
+
+
   @Override
   public synchronized void registerMetrics() {
-    flushTimeHisto = registry.newTimeHistogram(tableNamePrefix + FLUSH_TIME, FLUSH_TIME_DESC);
-    flushMemstoreSizeHisto =
-        registry.newSizeHistogram(tableNamePrefix + FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
-    flushOutputSizeHisto =
-        registry.newSizeHistogram(tableNamePrefix + FLUSH_OUTPUT_SIZE, FLUSH_OUTPUT_SIZE_DESC);
-    flushedOutputBytes =
-        registry.newCounter(tableNamePrefix + FLUSHED_OUTPUT_BYTES, FLUSHED_OUTPUT_BYTES_DESC, 0L);
-    flushedMemstoreBytes = registry.newCounter(tableNamePrefix + FLUSHED_MEMSTORE_BYTES,
-      FLUSHED_MEMSTORE_BYTES_DESC, 0L);
+    flushTimeHisto = newTimeHisto(FLUSH_TIME, FLUSH_TIME_DESC);
+    flushMemstoreSizeHisto = newSizeHisto(FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
+    flushOutputSizeHisto = newSizeHisto(FLUSH_OUTPUT_SIZE, FLUSH_OUTPUT_SIZE_DESC);
+    flushedOutputBytes = newCounter(FLUSHED_OUTPUT_BYTES, FLUSHED_OUTPUT_BYTES_DESC);
+    flushedMemstoreBytes = newCounter(FLUSHED_MEMSTORE_BYTES, FLUSHED_MEMSTORE_BYTES_DESC);
 
-    compactionTimeHisto =
-        registry.newTimeHistogram(tableNamePrefix + COMPACTION_TIME, COMPACTION_TIME_DESC);
-    compactionInputFileCountHisto = registry.newHistogram(
-      tableNamePrefix + COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
-    compactionInputSizeHisto = registry.newSizeHistogram(tableNamePrefix + COMPACTION_INPUT_SIZE,
-      COMPACTION_INPUT_SIZE_DESC);
-    compactionOutputFileCountHisto = registry.newHistogram(
-      tableNamePrefix + COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
-    compactionOutputSizeHisto = registry.newSizeHistogram(tableNamePrefix + COMPACTION_OUTPUT_SIZE,
-      COMPACTION_OUTPUT_SIZE_DESC);
-    compactedInputBytes = registry.newCounter(tableNamePrefix + COMPACTED_INPUT_BYTES,
-      COMPACTED_INPUT_BYTES_DESC, 0L);
-    compactedOutputBytes = registry.newCounter(tableNamePrefix + COMPACTED_OUTPUT_BYTES,
-      COMPACTED_OUTPUT_BYTES_DESC, 0L);
+    compactionTimeHisto = newTimeHisto(COMPACTION_TIME, COMPACTION_TIME_DESC);
+    compactionInputFileCountHisto = newHistogram(COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
+    compactionInputSizeHisto = newSizeHisto(COMPACTION_INPUT_SIZE, COMPACTION_INPUT_SIZE_DESC);
+    compactionOutputFileCountHisto = newHistogram(COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    compactionOutputSizeHisto = newSizeHisto(COMPACTION_OUTPUT_SIZE, COMPACTION_OUTPUT_SIZE_DESC);
+    compactedInputBytes = newCounter(COMPACTED_INPUT_BYTES, COMPACTED_INPUT_BYTES_DESC);
+    compactedOutputBytes = newCounter(COMPACTED_OUTPUT_BYTES, COMPACTED_OUTPUT_BYTES_DESC);
 
-    majorCompactionTimeHisto = registry.newTimeHistogram(tableNamePrefix + MAJOR_COMPACTION_TIME,
-      MAJOR_COMPACTION_TIME_DESC);
-    majorCompactionInputFileCountHisto = registry.newHistogram(
-      tableNamePrefix + MAJOR_COMPACTION_INPUT_FILE_COUNT, MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC);
-    majorCompactionInputSizeHisto = registry.newSizeHistogram(
-      tableNamePrefix + MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
+    majorCompactionTimeHisto = newTimeHisto(MAJOR_COMPACTION_TIME, MAJOR_COMPACTION_TIME_DESC);
+    majorCompactionInputFileCountHisto = newHistogram(MAJOR_COMPACTION_INPUT_FILE_COUNT, MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC);
+    majorCompactionInputSizeHisto = newSizeHisto(MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
     majorCompactionOutputFileCountHisto =
-        registry.newHistogram(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_FILE_COUNT,
-          MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
-    majorCompactionOutputSizeHisto = registry.newSizeHistogram(
-      tableNamePrefix + MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
-    majorCompactedInputBytes = registry.newCounter(tableNamePrefix + MAJOR_COMPACTED_INPUT_BYTES,
-      MAJOR_COMPACTED_INPUT_BYTES_DESC, 0L);
-    majorCompactedOutputBytes = registry.newCounter(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES,
-      MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
+        newHistogram(MAJOR_COMPACTION_OUTPUT_FILE_COUNT, MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    majorCompactionOutputSizeHisto = newSizeHisto(MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
+    majorCompactedInputBytes = newCounter(MAJOR_COMPACTED_INPUT_BYTES, MAJOR_COMPACTED_INPUT_BYTES_DESC);
+    majorCompactedOutputBytes = newCounter(MAJOR_COMPACTED_OUTPUT_BYTES, MAJOR_COMPACTED_OUTPUT_BYTES_DESC);
 
-    splitTimeHisto = registry.newTimeHistogram(tableNamePrefix + SPLIT_KEY);
-    splitRequest = registry.newCounter(tableNamePrefix + SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = registry.newCounter(tableNamePrefix + SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
+    splitTimeHisto = newTimeHisto(tableNamePrefix + SPLIT_KEY, "");
+    splitRequest = newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC);
+    splitSuccess = newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC);
+  }
+
+  protected MutableHistogram newHistogram(String name, String desc) {
+    return registry.newHistogram(tableNamePrefix + name, desc);
+  }
+
+  protected MutableFastCounter newCounter(String name, String desc) {
+    return registry.newCounter(tableNamePrefix + name, desc, 0L);
+  }
+
+  protected MutableSizeHistogram newSizeHisto(String name, String desc) {
+    return registry.newSizeHistogram(tableNamePrefix + name, desc);
+  }
+
+  protected MutableTimeHistogram newTimeHisto(String name, String desc) {
+    return registry.newTimeHistogram(tableNamePrefix + name, desc);
+  }
+
+  protected void removeNonHistogram(String name) {
+    registry.removeMetric(tableNamePrefix + name);
+  }
+
+  protected void removeHistogram(String name) {
+    registry.removeHistogramMetrics(tableNamePrefix + name);
+  }
+
+  protected MetricsInfo createMetricsInfo(String name, String desc) {
+    return Interns.info(tableNamePrefix + name, desc);
   }
 
   private void deregisterMetrics() {
-    registry.removeHistogramMetrics(tableNamePrefix + FLUSH_TIME);
-    registry.removeHistogramMetrics(tableNamePrefix + FLUSH_MEMSTORE_SIZE);
-    registry.removeHistogramMetrics(tableNamePrefix + FLUSH_OUTPUT_SIZE);
-    registry.removeMetric(tableNamePrefix + FLUSHED_OUTPUT_BYTES);
-    registry.removeMetric(tableNamePrefix + FLUSHED_MEMSTORE_BYTES);
-    registry.removeHistogramMetrics(tableNamePrefix + COMPACTION_TIME);
-    registry.removeHistogramMetrics(tableNamePrefix + COMPACTION_INPUT_FILE_COUNT);
-    registry.removeHistogramMetrics(tableNamePrefix + COMPACTION_INPUT_SIZE);
-    registry.removeHistogramMetrics(tableNamePrefix + COMPACTION_OUTPUT_FILE_COUNT);
-    registry.removeHistogramMetrics(tableNamePrefix + COMPACTION_OUTPUT_SIZE);
-    registry.removeMetric(tableNamePrefix + COMPACTED_INPUT_BYTES);
-    registry.removeMetric(tableNamePrefix + COMPACTED_OUTPUT_BYTES);
-    registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_TIME);
-    registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_INPUT_FILE_COUNT);
-    registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_INPUT_SIZE);
-    registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_FILE_COUNT);
-    registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_SIZE);
-    registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_INPUT_BYTES);
-    registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES);
-    registry.removeHistogramMetrics(tableNamePrefix + SPLIT_KEY);
-    registry.removeMetric(tableNamePrefix + SPLIT_REQUEST_KEY);
-    registry.removeMetric(tableNamePrefix + SPLIT_SUCCESS_KEY);
+    removeHistogram(FLUSH_TIME);
+    removeHistogram(FLUSH_MEMSTORE_SIZE);
+    removeHistogram(FLUSH_OUTPUT_SIZE);
+    removeNonHistogram(FLUSHED_OUTPUT_BYTES);
+    removeNonHistogram(FLUSHED_MEMSTORE_BYTES);
+    removeHistogram(COMPACTION_TIME);
+    removeHistogram(COMPACTION_INPUT_FILE_COUNT);
+    removeHistogram(COMPACTION_INPUT_SIZE);
+    removeHistogram(COMPACTION_OUTPUT_FILE_COUNT);
+    removeHistogram(COMPACTION_OUTPUT_SIZE);
+    removeNonHistogram(COMPACTED_INPUT_BYTES);
+    removeNonHistogram(COMPACTED_OUTPUT_BYTES);
+    removeHistogram(MAJOR_COMPACTION_TIME);
+    removeHistogram(MAJOR_COMPACTION_INPUT_FILE_COUNT);
+    removeHistogram(MAJOR_COMPACTION_INPUT_SIZE);
+    removeHistogram(MAJOR_COMPACTION_OUTPUT_FILE_COUNT);
+    removeHistogram(MAJOR_COMPACTION_OUTPUT_SIZE);
+    removeNonHistogram(MAJOR_COMPACTED_INPUT_BYTES);
+    removeNonHistogram(MAJOR_COMPACTED_OUTPUT_BYTES);
+    removeHistogram(SPLIT_KEY);
+    removeNonHistogram(SPLIT_REQUEST_KEY);
+    removeNonHistogram(SPLIT_SUCCESS_KEY);
   }
 
   @Override
@@ -260,57 +285,59 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       if (closed.get()) {
         return;
       }
-
+      // Make sure that these metrics are skipped in MetricsRegionServerSourceImpl;
+      // see skipTableMetrics and the comment there.
       if (this.tableWrapperAgg != null) {
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
+        mrb.addCounter(createMetricsInfo(MetricsRegionServerSource.CP_REQUEST_COUNT,
             MetricsRegionServerSource.CP_REQUEST_COUNT_DESC),
           tableWrapperAgg.getCpRequestsCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
+        mrb.addCounter(createMetricsInfo(MetricsRegionServerSource.READ_REQUEST_COUNT,
             MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getReadRequestCount(tableName.getNameAsString()));
-        mrb.addCounter(
-            Interns.info(tableNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
-                MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getFilteredReadRequestCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
+          tableWrapperAgg.getReadRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(createMetricsInfo(MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
+            MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
+          tableWrapperAgg.getFilteredReadRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(createMetricsInfo(MetricsRegionServerSource.WRITE_REQUEST_COUNT,
             MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
             tableWrapperAgg.getWriteRequestCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.TOTAL_REQUEST_COUNT,
+        mrb.addCounter(createMetricsInfo(MetricsRegionServerSource.TOTAL_REQUEST_COUNT,
             MetricsRegionServerSource.TOTAL_REQUEST_COUNT_DESC),
             tableWrapperAgg.getTotalRequestsCount(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.MEMSTORE_SIZE,
             MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
             tableWrapperAgg.getMemStoreSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.STOREFILE_COUNT,
             MetricsRegionServerSource.STOREFILE_COUNT_DESC),
             tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.STOREFILE_SIZE,
             MetricsRegionServerSource.STOREFILE_SIZE_DESC),
             tableWrapperAgg.getStoreFileSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.TABLE_SIZE,
-          MetricsTableSource.TABLE_SIZE_DESC),
+        mrb.addGauge(createMetricsInfo(MetricsTableSource.TABLE_SIZE,
+            MetricsTableSource.TABLE_SIZE_DESC),
           tableWrapperAgg.getTableSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.AVERAGE_REGION_SIZE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.AVERAGE_REGION_SIZE,
             MetricsRegionServerSource.AVERAGE_REGION_SIZE_DESC),
             tableWrapperAgg.getAvgRegionSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.REGION_COUNT,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.REGION_COUNT,
             MetricsRegionServerSource.REGION_COUNT_DESC),
             tableWrapperAgg.getNumRegions(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STORE_COUNT,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.STORE_COUNT,
             MetricsRegionServerSource.STORE_COUNT_DESC),
             tableWrapperAgg.getNumStores(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.MAX_STORE_FILE_AGE,
             MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
             tableWrapperAgg.getMaxStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.MIN_STORE_FILE_AGE,
             MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC),
             tableWrapperAgg.getMinStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.AVG_STORE_FILE_AGE,
             MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
             tableWrapperAgg.getAvgStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
+        mrb.addGauge(createMetricsInfo(MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
+
+        addTags(mrb);
       }
     }
   }
@@ -340,10 +367,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
 
   public MetricsTableWrapperAggregate getTableWrapper() {
     return tableWrapperAgg;
-  }
-
-  public String getTableNamePrefix() {
-    return tableNamePrefix;
   }
 
   @Override
@@ -420,5 +443,12 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       majorCompactionOutputSizeHisto.add(bytes);
       majorCompactedOutputBytes.incr(bytes);
     }
+  }
+
+  public String getScope() {
+    return null;
+  }
+
+  protected void addTags(MetricsRecordBuilder mrb) {
   }
 }

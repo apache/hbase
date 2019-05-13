@@ -77,7 +77,11 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   @Override
   public MetricsTableSource createTable(String table, MetricsTableWrapperAggregate wrapper) {
-    return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
+    if (MetricsTableAggregateSourceImpl.areTablesViaTags(wrapper)) {
+      return new MetricsTableSourceImplWithTags(table, getTableAggregate(), wrapper);
+    } else {
+      return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
+    }
   }
 
   public MetricsIOSource createIO(MetricsIOWrapper wrapper) {

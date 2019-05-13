@@ -87,4 +87,8 @@ public class MetricsTable {
     tableSourceAgg.getOrCreateTableSource(table, wrapper)
       .updateCompactionOutputSize(isMajor, bytes);
   }
+
+  public boolean isScoped() {
+    return MetricsTableAggregateSourceImpl.areTablesViaTags(wrapper);
+  }
 }

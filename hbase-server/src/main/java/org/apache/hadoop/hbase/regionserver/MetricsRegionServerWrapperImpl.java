@@ -1006,4 +1006,9 @@ class MetricsRegionServerWrapperImpl
   public long getTrailerHitCount() {
     return this.cacheStats.map(CacheStats::getTrailerHitCount).orElse(0L);
   }
+
+  @Override
+  public String getConfVar(String name, String defaultValue) {
+    return regionServer.getConfiguration().get(name, defaultValue);
+  }
 }

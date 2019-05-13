@@ -44,15 +44,15 @@ public interface MetricsTableLatencies {
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
-  String GET_TIME = "getTime";
+  String GET_TIME = "get";
   String SCAN_TIME = "scanTime";
   String SCAN_SIZE = "scanSize";
-  String PUT_TIME = "putTime";
-  String PUT_BATCH_TIME = "putBatchTime";
-  String DELETE_TIME = "deleteTime";
-  String DELETE_BATCH_TIME = "deleteBatchTime";
-  String INCREMENT_TIME = "incrementTime";
-  String APPEND_TIME = "appendTime";
+  String PUT_TIME = "put";
+  String PUT_BATCH_TIME = "putBatch";
+  String DELETE_TIME = "delete";
+  String DELETE_BATCH_TIME = "deleteBatch";
+  String INCREMENT_TIME = "increment";
+  String APPEND_TIME = "append";
 
   /**
    * Update the Put time histogram
@@ -125,4 +125,9 @@ public interface MetricsTableLatencies {
    * @param t time it took
    */
   void updateScanTime(String tableName, long t);
+
+  /**
+   * @return Whether this metrics writer creates scoped metrics (see DynamicMetricsRegistry).
+   */
+  boolean isScoped();
 }

@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ExceptionTrackingSourceImpl extends BaseSourceImpl
     implements ExceptionTrackingSource {
+  // TODO: it may make sense to add some table-scoped metrics for these.
   protected MutableFastCounter exceptions;
   protected MutableFastCounter exceptionsOOO;
   protected MutableFastCounter exceptionsBusy;

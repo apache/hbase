@@ -18,13 +18,25 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.channels.ClosedByInterruptException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MetricsFactory;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Hadoop2 implementation of MetricsRegionServerSource.
@@ -34,6 +46,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionServerSourceImpl.class);
+
 
   final MetricsRegionServerWrapper rsWrap;
   private final MetricHistogram putHisto;
@@ -102,73 +116,80 @@ public class MetricsRegionServerSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.rsWrap = rsWrap;
 
-    putHisto = getMetricsRegistry().newTimeHistogram(PUT_KEY);
-    putBatchHisto = getMetricsRegistry().newTimeHistogram(PUT_BATCH_KEY);
+    // See the comment in getMetrics. This is similar but for registry-based metrics;
+    // if tables are via tags, don't output the same metrics as MetricsTableSourceImpl.
+    boolean areTablesViaTags = MetricsTableAggregateSourceImpl.areTablesViaTags(rsWrap);
+    boolean areLatenciesViaTags = areTablesViaTags && Boolean.parseBoolean(rsWrap.getConfVar(
+      MetricsTableSourceImpl.RS_ENABLE_TABLE_METRICS_KEY,
+      Boolean.toString(MetricsTableSourceImpl.RS_ENABLE_TABLE_METRICS_DEFAULT)));
+    MetricsFactory tableFactory = areTablesViaTags? new MetricsFactory() : getMetricsRegistry();
+    MetricsFactory tableLatencyFactory = areLatenciesViaTags ? tableFactory : getMetricsRegistry();
+
+    putHisto = tableLatencyFactory.newTimeHistogram(PUT_KEY, "");
+    putBatchHisto = tableLatencyFactory.newTimeHistogram(PUT_BATCH_KEY, "");
+    deleteHisto = tableLatencyFactory.newTimeHistogram(DELETE_KEY, "");
+    deleteBatchHisto = tableLatencyFactory.newTimeHistogram(DELETE_BATCH_KEY, "");
+    scanSizeHisto = tableLatencyFactory.newSizeHistogram(SCAN_SIZE_KEY, "");
+    scanTimeHisto = tableLatencyFactory.newTimeHistogram(SCAN_TIME_KEY, "");
+    getHisto = tableLatencyFactory.newTimeHistogram(GET_KEY, "");
+    incrementHisto = tableLatencyFactory.newTimeHistogram(INCREMENT_KEY, "");
+    appendHisto = tableLatencyFactory.newTimeHistogram(APPEND_KEY, "");
+
+    flushTimeHisto = tableFactory.newTimeHistogram(FLUSH_TIME, FLUSH_TIME_DESC);
+    flushMemstoreSizeHisto = tableFactory
+        .newSizeHistogram(FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
+    flushOutputSizeHisto = tableFactory.newSizeHistogram(FLUSH_OUTPUT_SIZE,
+        FLUSH_OUTPUT_SIZE_DESC);
+    flushedOutputBytes = tableFactory.newCounter(FLUSHED_OUTPUT_BYTES,
+        FLUSHED_OUTPUT_BYTES_DESC, 0L);
+    flushedMemstoreBytes = tableFactory.newCounter(FLUSHED_MEMSTORE_BYTES,
+        FLUSHED_MEMSTORE_BYTES_DESC, 0L);
+
+    compactionTimeHisto = tableFactory
+        .newTimeHistogram(COMPACTION_TIME, COMPACTION_TIME_DESC);
+    compactionInputFileCountHisto = tableFactory
+      .newHistogram(COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
+    compactionInputSizeHisto = tableFactory
+        .newSizeHistogram(COMPACTION_INPUT_SIZE, COMPACTION_INPUT_SIZE_DESC);
+    compactionOutputFileCountHisto = tableFactory
+        .newHistogram(COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    compactionOutputSizeHisto = tableFactory
+      .newSizeHistogram(COMPACTION_OUTPUT_SIZE, COMPACTION_OUTPUT_SIZE_DESC);
+    compactedInputBytes = tableFactory
+        .newCounter(COMPACTED_INPUT_BYTES, COMPACTED_INPUT_BYTES_DESC, 0L);
+    compactedOutputBytes = tableFactory
+        .newCounter(COMPACTED_OUTPUT_BYTES, COMPACTED_OUTPUT_BYTES_DESC, 0L);
+
+    majorCompactionTimeHisto = tableFactory
+        .newTimeHistogram(MAJOR_COMPACTION_TIME, MAJOR_COMPACTION_TIME_DESC);
+    majorCompactionInputFileCountHisto = tableFactory
+      .newHistogram(MAJOR_COMPACTION_INPUT_FILE_COUNT, MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC);
+    majorCompactionInputSizeHisto = tableFactory
+        .newSizeHistogram(MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
+    majorCompactionOutputFileCountHisto = tableFactory
+        .newHistogram(MAJOR_COMPACTION_OUTPUT_FILE_COUNT, MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
+    majorCompactionOutputSizeHisto = tableFactory
+      .newSizeHistogram(MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
+    majorCompactedInputBytes = tableFactory
+        .newCounter(MAJOR_COMPACTED_INPUT_BYTES, MAJOR_COMPACTED_INPUT_BYTES_DESC, 0L);
+    majorCompactedOutputBytes = tableFactory
+        .newCounter(MAJOR_COMPACTED_OUTPUT_BYTES, MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
+
+    splitTimeHisto = tableFactory.newTimeHistogram(SPLIT_KEY, "");
+    splitRequest = tableFactory.newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
+    splitSuccess = tableFactory.newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
+
+    // End metrics we currently output per table. The rest are always output by server.
+
     slowPut = getMetricsRegistry().newCounter(SLOW_PUT_KEY, SLOW_PUT_DESC, 0L);
-
-    deleteHisto = getMetricsRegistry().newTimeHistogram(DELETE_KEY);
     slowDelete = getMetricsRegistry().newCounter(SLOW_DELETE_KEY, SLOW_DELETE_DESC, 0L);
-
-    deleteBatchHisto = getMetricsRegistry().newTimeHistogram(DELETE_BATCH_KEY);
     checkAndDeleteHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_DELETE_KEY);
     checkAndPutHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_PUT_KEY);
-
-    getHisto = getMetricsRegistry().newTimeHistogram(GET_KEY);
     slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0L);
-
-    incrementHisto = getMetricsRegistry().newTimeHistogram(INCREMENT_KEY);
     slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0L);
-
-    appendHisto = getMetricsRegistry().newTimeHistogram(APPEND_KEY);
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0L);
 
     replayHisto = getMetricsRegistry().newTimeHistogram(REPLAY_KEY);
-    scanSizeHisto = getMetricsRegistry().newSizeHistogram(SCAN_SIZE_KEY);
-    scanTimeHisto = getMetricsRegistry().newTimeHistogram(SCAN_TIME_KEY);
-
-    flushTimeHisto = getMetricsRegistry().newTimeHistogram(FLUSH_TIME, FLUSH_TIME_DESC);
-    flushMemstoreSizeHisto = getMetricsRegistry()
-        .newSizeHistogram(FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
-    flushOutputSizeHisto = getMetricsRegistry().newSizeHistogram(FLUSH_OUTPUT_SIZE,
-      FLUSH_OUTPUT_SIZE_DESC);
-    flushedOutputBytes = getMetricsRegistry().newCounter(FLUSHED_OUTPUT_BYTES,
-      FLUSHED_OUTPUT_BYTES_DESC, 0L);
-    flushedMemstoreBytes = getMetricsRegistry().newCounter(FLUSHED_MEMSTORE_BYTES,
-      FLUSHED_MEMSTORE_BYTES_DESC, 0L);
-
-    compactionTimeHisto = getMetricsRegistry()
-        .newTimeHistogram(COMPACTION_TIME, COMPACTION_TIME_DESC);
-    compactionInputFileCountHisto = getMetricsRegistry()
-      .newHistogram(COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
-    compactionInputSizeHisto = getMetricsRegistry()
-        .newSizeHistogram(COMPACTION_INPUT_SIZE, COMPACTION_INPUT_SIZE_DESC);
-    compactionOutputFileCountHisto = getMetricsRegistry()
-        .newHistogram(COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
-    compactionOutputSizeHisto = getMetricsRegistry()
-      .newSizeHistogram(COMPACTION_OUTPUT_SIZE, COMPACTION_OUTPUT_SIZE_DESC);
-    compactedInputBytes = getMetricsRegistry()
-        .newCounter(COMPACTED_INPUT_BYTES, COMPACTED_INPUT_BYTES_DESC, 0L);
-    compactedOutputBytes = getMetricsRegistry()
-        .newCounter(COMPACTED_OUTPUT_BYTES, COMPACTED_OUTPUT_BYTES_DESC, 0L);
-
-    majorCompactionTimeHisto = getMetricsRegistry()
-        .newTimeHistogram(MAJOR_COMPACTION_TIME, MAJOR_COMPACTION_TIME_DESC);
-    majorCompactionInputFileCountHisto = getMetricsRegistry()
-      .newHistogram(MAJOR_COMPACTION_INPUT_FILE_COUNT, MAJOR_COMPACTION_INPUT_FILE_COUNT_DESC);
-    majorCompactionInputSizeHisto = getMetricsRegistry()
-        .newSizeHistogram(MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
-    majorCompactionOutputFileCountHisto = getMetricsRegistry()
-        .newHistogram(MAJOR_COMPACTION_OUTPUT_FILE_COUNT, MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
-    majorCompactionOutputSizeHisto = getMetricsRegistry()
-      .newSizeHistogram(MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
-    majorCompactedInputBytes = getMetricsRegistry()
-        .newCounter(MAJOR_COMPACTED_INPUT_BYTES, MAJOR_COMPACTED_INPUT_BYTES_DESC, 0L);
-    majorCompactedOutputBytes = getMetricsRegistry()
-        .newCounter(MAJOR_COMPACTED_OUTPUT_BYTES, MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
-
-    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
-    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
 
     // pause monitor metrics
     infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
@@ -334,19 +355,16 @@ public class MetricsRegionServerSourceImpl
 
     // rsWrap can be null because this function is called inside of init.
     if (rsWrap != null) {
-      addGaugesToMetricsRecordBuilder(mrb)
-              .addCounter(Interns.info(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC),
-                      rsWrap.getTotalRequestCount())
+      // TODO: this is rather ugly... there are too many ways to handle metrics in HBase.
+      //       There needs to be refactoring where ALL the metrics are in one place,
+      //       handled the same, and the e.g. same request count is handled in exactly one place.
+      //       For now here we'd make an assumption of how the independent table-metrics thingie
+      //       handles a subset of its metrics (others that go thru registry are handled this way
+      //       via "TableMetrics" and "MetricsTable"). Sigh..
+      boolean skipTableMetrics = MetricsTableAggregateSourceImpl.areTablesViaTags(rsWrap);
+      mrb = addGaugesToMetricsRecordBuilder(mrb, skipTableMetrics)
               .addCounter(Interns.info(TOTAL_ROW_ACTION_REQUEST_COUNT,
                       TOTAL_ROW_ACTION_REQUEST_COUNT_DESC), rsWrap.getTotalRowActionRequestCount())
-              .addCounter(Interns.info(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC),
-                      rsWrap.getReadRequestsCount())
-              .addCounter(Interns.info(CP_REQUEST_COUNT, CP_REQUEST_COUNT_DESC),
-                      rsWrap.getCpRequestsCount())
-              .addCounter(Interns.info(FILTERED_READ_REQUEST_COUNT,
-                      FILTERED_READ_REQUEST_COUNT_DESC), rsWrap.getFilteredReadRequestsCount())
-              .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),
-                      rsWrap.getWriteRequestsCount())
               .addCounter(Interns.info(RPC_GET_REQUEST_COUNT, RPC_GET_REQUEST_COUNT_DESC),
                       rsWrap.getRpcGetRequestsCount())
               .addCounter(Interns.info(RPC_SCAN_REQUEST_COUNT, RPC_SCAN_REQUEST_COUNT_DESC),
@@ -462,6 +480,20 @@ public class MetricsRegionServerSourceImpl
                       rsWrap.getZookeeperQuorum())
               .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())
               .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), rsWrap.getClusterId());
+
+      if (!skipTableMetrics) {
+        // See MetricsTableSourceImpl.snapshot for the list, and the TO-DO above
+        mrb.addCounter(Interns.info(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC),
+            rsWrap.getTotalRequestCount())
+          .addCounter(Interns.info(READ_REQUEST_COUNT, READ_REQUEST_COUNT_DESC),
+            rsWrap.getReadRequestsCount())
+          .addCounter(Interns.info(CP_REQUEST_COUNT, CP_REQUEST_COUNT_DESC),
+            rsWrap.getCpRequestsCount())
+          .addCounter(Interns.info(FILTERED_READ_REQUEST_COUNT,
+            FILTERED_READ_REQUEST_COUNT_DESC), rsWrap.getFilteredReadRequestsCount())
+          .addCounter(Interns.info(WRITE_REQUEST_COUNT, WRITE_REQUEST_COUNT_DESC),
+            rsWrap.getWriteRequestsCount());
+      }
     }
 
     metricsRegistry.snapshot(mrb, all);
@@ -473,28 +505,13 @@ public class MetricsRegionServerSourceImpl
     }
   }
 
-  private MetricsRecordBuilder addGaugesToMetricsRecordBuilder(MetricsRecordBuilder mrb) {
-    return mrb.addGauge(Interns.info(REGION_COUNT, REGION_COUNT_DESC), rsWrap.getNumOnlineRegions())
-            .addGauge(Interns.info(STORE_COUNT, STORE_COUNT_DESC), rsWrap.getNumStores())
-            .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
+  private MetricsRecordBuilder addGaugesToMetricsRecordBuilder(
+       MetricsRecordBuilder mrb, boolean skipTableMetrics) {
+    mrb = mrb.addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
             .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
-            .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC),
-                    rsWrap.getNumStoreFiles())
-            .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
-            .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
             .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
-                    rsWrap.getStoreFileSizeGrowthRate())
-            .addGauge(Interns.info(MAX_STORE_FILE_AGE, MAX_STORE_FILE_AGE_DESC),
-                    rsWrap.getMaxStoreFileAge())
-            .addGauge(Interns.info(MIN_STORE_FILE_AGE, MIN_STORE_FILE_AGE_DESC),
-                    rsWrap.getMinStoreFileAge())
-            .addGauge(Interns.info(AVG_STORE_FILE_AGE, AVG_STORE_FILE_AGE_DESC),
-                    rsWrap.getAvgStoreFileAge())
-            .addGauge(Interns.info(NUM_REFERENCE_FILES, NUM_REFERENCE_FILES_DESC),
-                    rsWrap.getNumReferenceFiles())
+              rsWrap.getStoreFileSizeGrowthRate())
             .addGauge(Interns.info(RS_START_TIME_NAME, RS_START_TIME_DESC), rsWrap.getStartCode())
-            .addGauge(Interns.info(AVERAGE_REGION_SIZE, AVERAGE_REGION_SIZE_DESC),
-                    rsWrap.getAverageRegionSize())
             .addGauge(Interns.info(STOREFILE_INDEX_SIZE, STOREFILE_INDEX_SIZE_DESC),
                     rsWrap.getStoreFileIndexSize())
             .addGauge(Interns.info(STATIC_INDEX_SIZE, STATIC_INDEX_SIZE_DESC),
@@ -554,6 +571,25 @@ public class MetricsRegionServerSourceImpl
                     rsWrap.getReadRequestsRatePerSecond())
             .addGauge(Interns.info(WRITE_REQUEST_RATE_PER_SECOND, WRITE_REQUEST_RATE_DESC),
                     rsWrap.getWriteRequestsRatePerSecond());
+    // See MetricsTableSourceImpl.snapshot for the list, and the TO-DO in the caller
+    if (!skipTableMetrics) {
+      mrb.addGauge(Interns.info(REGION_COUNT, REGION_COUNT_DESC), rsWrap.getNumOnlineRegions())
+        .addGauge(Interns.info(STORE_COUNT, STORE_COUNT_DESC), rsWrap.getNumStores())
+        .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC), rsWrap.getNumStoreFiles())
+        .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
+        .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
+        .addGauge(Interns.info(MAX_STORE_FILE_AGE, MAX_STORE_FILE_AGE_DESC),
+          rsWrap.getMaxStoreFileAge())
+        .addGauge(Interns.info(MIN_STORE_FILE_AGE, MIN_STORE_FILE_AGE_DESC),
+          rsWrap.getMinStoreFileAge())
+        .addGauge(Interns.info(AVG_STORE_FILE_AGE, AVG_STORE_FILE_AGE_DESC),
+          rsWrap.getAvgStoreFileAge())
+        .addGauge(Interns.info(AVERAGE_REGION_SIZE, AVERAGE_REGION_SIZE_DESC),
+          rsWrap.getAverageRegionSize())
+        .addGauge(Interns.info(NUM_REFERENCE_FILES, NUM_REFERENCE_FILES_DESC),
+          rsWrap.getNumReferenceFiles());
+    }
+    return mrb;
   }
 
   @Override

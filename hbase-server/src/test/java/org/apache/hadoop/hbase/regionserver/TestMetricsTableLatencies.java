@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -50,7 +51,7 @@ public class TestMetricsTableLatencies {
     assertTrue("'latencies' is actually " + latencies.getClass(),
         latencies instanceof MetricsTableLatenciesImpl);
     MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
-    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics();
+    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(new Configuration());
 
     // Metrics to each table should be disjoint
     // N.B. each call to assertGauge removes all previously acquired metrics so we have to
