@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -127,6 +129,10 @@ public class AssignmentManager {
       "hbase.assignment.rit.chore.interval.msec";
   private static final int DEFAULT_RIT_CHORE_INTERVAL_MSEC = 60 * 1000;
 
+  public static final String NONLIVE_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY =
+      "hbase.assignment.nonlive.metric.chore.interval.msec";
+  private static final int DEFAULT_NONLIVE_METRIC_CHORE_INTERVAL_MSEC = 120 * 1000;
+
   public static final String ASSIGN_MAX_ATTEMPTS =
       "hbase.assignment.maximum.attempts";
   private static final int DEFAULT_ASSIGN_MAX_ATTEMPTS = Integer.MAX_VALUE;
@@ -145,6 +151,7 @@ public class AssignmentManager {
 
   private final MetricsAssignmentManager metrics;
   private final RegionInTransitionChore ritChore;
+  private final NonLiveServerMetricRegionChore nonLiveMetricChore;
   private final MasterServices master;
 
   private final AtomicBoolean running = new AtomicBoolean(false);
@@ -190,6 +197,14 @@ public class AssignmentManager {
     int ritChoreInterval = conf.getInt(RIT_CHORE_INTERVAL_MSEC_CONF_KEY,
         DEFAULT_RIT_CHORE_INTERVAL_MSEC);
     this.ritChore = new RegionInTransitionChore(ritChoreInterval);
+
+    int nonLiveChoreInterval = conf.getInt(NONLIVE_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY,
+        DEFAULT_NONLIVE_METRIC_CHORE_INTERVAL_MSEC);
+    if (nonLiveChoreInterval > 0) {
+      this.nonLiveMetricChore = new NonLiveServerMetricRegionChore(nonLiveChoreInterval);
+    } else {
+      this.nonLiveMetricChore = null;
+    }
   }
 
   public void start() throws IOException, KeeperException {
@@ -271,6 +286,9 @@ public class AssignmentManager {
     // Remove the RIT chore
     if (hasProcExecutor) {
       master.getMasterProcedureExecutor().removeChore(this.ritChore);
+      if (this.nonLiveMetricChore != null) {
+        master.getMasterProcedureExecutor().removeChore(this.nonLiveMetricChore);
+      }
     }
 
     // Stop the Assignment Thread
@@ -1130,6 +1148,65 @@ public class AssignmentManager {
     }
   }
 
+  private static class NonLiveServerMetricRegionChore extends ProcedureInMemoryChore<MasterProcedureEnv> {
+    public NonLiveServerMetricRegionChore(final int timeoutMsec) {
+      super(timeoutMsec);
+    }
+
+    @Override
+    protected void periodicExecute(final MasterProcedureEnv env) {
+      final ServerManager sm = env.getMasterServices().getServerManager();
+      final AssignmentManager am = env.getAssignmentManager();
+      // To minimize inconsistencies we are not going to snapshot live servers in advance in case
+      // new servers are added; OTOH we don't want to add heavy sync for a consistent view since
+      // this is for metrics. Instead, we're going to check each regions as we go; to avoid making
+      // too many checks, we maintain a local lists of server, limiting us to false negatives. If
+      // we miss some recently-dead server, we'll just see it next time.
+      Set<ServerName> recentlyLiveServers = new HashSet<>();
+      int deadRegions = 0, unknownRegions = 0;
+      for (RegionStateNode rsn : am.getRegionStates().getRegionStateNodes()) {
+        if (rsn.getState() != State.OPEN) {
+          continue; // Opportunistic check, should quickly skip RITs, offline tables, etc.
+        }
+        ServerName sn;
+        State state;
+        synchronized (rsn.getState()) {
+          sn = rsn.getRegionLocation();
+          state = rsn.getState();
+        }
+        if (state != State.OPEN) {
+          continue; // Mostly skipping RITs that are already being take care of.
+        }
+        if (sn == null) {
+          ++unknownRegions; // Opened on null?
+          continue;
+        }
+        if (recentlyLiveServers.contains(sn)) {
+          continue;
+        }
+        ServerManager.ServerLiveState sls = sm.isServerKnownAndOnline(sn);
+        switch (sls) {
+          case LIVE:
+            recentlyLiveServers.add(sn);
+            break;
+          case DEAD:
+            ++deadRegions;
+            break;
+          case UNKNOWN:
+            ++unknownRegions;
+            break;
+          default: throw new AssertionError("Unexpected " + sls);
+        }
+      }
+      if (deadRegions > 0 || unknownRegions > 0) {
+        LOG.info("Found {} OPEN regions on dead servers and {} OPEN regions on unknown servers",
+          deadRegions, unknownRegions);
+      }
+
+      am.updateNonLiveServerRegionMetrics(deadRegions, unknownRegions);
+    }
+  }
+
   public RegionInTransitionStat computeRegionInTransitionStat() {
     final RegionInTransitionStat rit = new RegionInTransitionStat(getConfiguration());
     rit.update(this);
@@ -1236,6 +1313,11 @@ public class AssignmentManager {
     metrics.updateRITCountOverThreshold(ritStat.getTotalRITsOverThreshold());
   }
 
+  private void updateNonLiveServerRegionMetrics(int nonLiveRegions, int unknownRegions) {
+    metrics.updateDeadServerOpenRegions(nonLiveRegions);
+    metrics.updateUnknownServerOpenRegions(unknownRegions);
+  }
+
   private void handleRegionOverStuckWarningThreshold(final RegionInfo regionInfo) {
     final RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     //if (regionNode.isStuck()) {
@@ -1261,8 +1343,9 @@ public class AssignmentManager {
     }
     LOG.info("Number of RegionServers={}", master.getServerManager().countOfRegionServers());
 
-    // Start the RIT chore
+    // Start the chores
     master.getMasterProcedureExecutor().addChore(this.ritChore);
+    master.getMasterProcedureExecutor().addChore(this.nonLiveMetricChore);
 
     long costMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
     LOG.info("Joined the cluster in {}", StringUtils.humanTimeDiff(costMs));
