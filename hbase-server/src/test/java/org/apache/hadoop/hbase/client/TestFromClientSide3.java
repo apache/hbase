@@ -90,6 +90,7 @@ public class TestFromClientSide3 {
   private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide3.class);
   private final static HBaseTestingUtility TEST_UTIL
     = new HBaseTestingUtility();
+  private static final int WAITTABLE_MILLIS = 10000;
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static Random random = new Random();
   private static int SLAVES = 3;
@@ -126,6 +127,7 @@ public class TestFromClientSide3 {
   public void setUp() throws Exception {
     tableName = TableName.valueOf(name.getMethodName());
     table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
   }
 
   @After
@@ -527,6 +529,8 @@ public class TestFromClientSide3 {
     table = TEST_UTIL.createTable(
       TableName.valueOf(name.getMethodName()), new byte[][] { FAMILY },
       1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
 
@@ -547,6 +551,8 @@ public class TestFromClientSide3 {
     table = TEST_UTIL.createTable(
       TableName.valueOf(name.getMethodName()),
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put (put);
@@ -622,6 +628,8 @@ public class TestFromClientSide3 {
   @Test
   public void testPutWithPreBatchMutate() throws Exception {
     TEST_UTIL.deleteTable(tableName);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     testPreBatchMutate(tableName, () -> {
       try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
         Put put = new Put(ROW);
@@ -654,6 +662,8 @@ public class TestFromClientSide3 {
     desc.addCoprocessor(WaitingForScanObserver.class.getName());
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     ExecutorService service = Executors.newFixedThreadPool(2);
     service.execute(rn);
     final List<Cell> cells = new ArrayList<>();
@@ -687,6 +697,8 @@ public class TestFromClientSide3 {
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     // new a connection for lower retry number.
     Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
@@ -742,6 +754,8 @@ public class TestFromClientSide3 {
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.getAdmin().createTable(desc);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
     // new a connection for lower retry number.
     Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
     copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
@@ -877,6 +891,8 @@ public class TestFromClientSide3 {
       ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
       final AtomicInteger successCnt = new AtomicInteger(0);
       try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+        TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
+
         for (int i = 0; i < THREAD_NUM; i++) {
           final int index = i;
           Thread t = new Thread(new Runnable() {
@@ -996,12 +1012,13 @@ public class TestFromClientSide3 {
   }
 
   @Test
-  public void testScanWithBatchSizeReturnIncompleteCells() throws IOException {
+  public void testScanWithBatchSizeReturnIncompleteCells() throws IOException, InterruptedException {
     TEST_UTIL.deleteTable(tableName);
     TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
       .build();
     table = TEST_UTIL.createTable(hd, null);
+    TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
     Put put = new Put(ROW);
     put.addColumn(FAMILY, Bytes.toBytes(0), generateHugeValue(3 * 1024 * 1024));
