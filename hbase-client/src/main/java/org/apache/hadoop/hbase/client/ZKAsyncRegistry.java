@@ -138,6 +138,9 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   private void getMetaRegionLocation(CompletableFuture<RegionLocations> future,
       List<String> metaReplicaZNodes) {
+    if (metaReplicaZNodes.isEmpty()) {
+      future.completeExceptionally(new IOException("No meta znode available"));
+    }
     HRegionLocation[] locs = new HRegionLocation[metaReplicaZNodes.size()];
     MutableInt remaining = new MutableInt(locs.length);
     for (String metaReplicaZNode : metaReplicaZNodes) {
