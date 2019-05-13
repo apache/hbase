@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -113,6 +116,20 @@ public class TestZKAsyncRegistry {
       }
     } finally {
       LOG.info("DONE!");
+    }
+  }
+
+  @Test
+  public void testNoMetaAvailable() throws InterruptedException {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set("zookeeper.znode.metaserver", "whatever");
+    try (ZKAsyncRegistry registry = new ZKAsyncRegistry(conf)) {
+      try {
+        registry.getMetaRegionLocation().get();
+        fail("Should have failed since we set an incorrect meta znode prefix");
+      } catch (ExecutionException e) {
+        assertThat(e.getCause(), instanceOf(IOException.class));
+      }
     }
   }
 }
