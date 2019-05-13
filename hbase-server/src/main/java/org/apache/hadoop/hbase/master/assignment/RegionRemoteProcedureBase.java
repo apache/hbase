@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -80,6 +83,19 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     this.targetServer = targetServer;
     parent.attachRemoteProc(this);
   }
+
+  @Override
+  public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
+      ServerName remote) {
+    // REPORT_SUCCEED means that this remote open/close request already executed in RegionServer.
+    // So return empty operation and RSProcedureDispatcher no need to send it again.
+    if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
+      return Optional.empty();
+    }
+    return Optional.of(newRemoteOperation());
+  }
+
+  protected abstract RemoteProcedureDispatcher.RemoteOperation newRemoteOperation();
 
   @Override
   public void remoteOperationCompleted(MasterProcedureEnv env) {

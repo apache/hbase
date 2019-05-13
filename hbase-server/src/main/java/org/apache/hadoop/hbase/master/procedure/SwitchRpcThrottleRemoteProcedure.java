@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -74,15 +75,13 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  public RemoteProcedureDispatcher.RemoteOperation
-      remoteCallBuild(MasterProcedureEnv masterProcedureEnv, ServerName remote) {
+  public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(
+      MasterProcedureEnv masterProcedureEnv, ServerName remote) {
     assert targetServer.equals(remote);
-    return new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-        SwitchRpcThrottleRemoteCallable.class,
-        SwitchRpcThrottleRemoteStateData.newBuilder()
-            .setTargetServer(ProtobufUtil.toServerName(remote))
-            .setRpcThrottleEnabled(rpcThrottleEnabled).build()
-            .toByteArray());
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
+        SwitchRpcThrottleRemoteCallable.class, SwitchRpcThrottleRemoteStateData.newBuilder()
+        .setTargetServer(ProtobufUtil.toServerName(remote))
+        .setRpcThrottleEnabled(rpcThrottleEnabled).build().toByteArray()));
   }
 
   @Override

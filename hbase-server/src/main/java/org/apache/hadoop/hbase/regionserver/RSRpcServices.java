@@ -3721,8 +3721,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.updateRegionFavoredNodesMapping(regionInfo.getEncodedName(),
           regionOpenInfo.getFavoredNodesList());
       }
-      regionServer.executorService.submit(AssignRegionHandler.create(regionServer, regionInfo,
-        regionOpenInfo.getOpenProcId(), tableDesc, masterSystemTime));
+      long procId = regionOpenInfo.getOpenProcId();
+      if (regionServer.submitRegionProcedure(procId)) {
+        regionServer.executorService.submit(AssignRegionHandler
+            .create(regionServer, regionInfo, procId, tableDesc,
+                masterSystemTime));
+      }
     }
   }
 
@@ -3733,11 +3737,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (DoNotRetryIOException e) {
       throw new UncheckedIOException("Should not happen", e);
     }
-    ServerName destination =
-      request.hasDestinationServer() ? ProtobufUtil.toServerName(request.getDestinationServer())
-        : null;
-    regionServer.executorService.submit(UnassignRegionHandler.create(regionServer, encodedName,
-      request.getCloseProcId(), false, destination));
+    ServerName destination = request.hasDestinationServer() ?
+        ProtobufUtil.toServerName(request.getDestinationServer()) :
+        null;
+    long procId = request.getCloseProcId();
+    if (regionServer.submitRegionProcedure(procId)) {
+      regionServer.executorService.submit(UnassignRegionHandler
+          .create(regionServer, encodedName, procId, false, destination));
+    }
   }
 
   private void executeProcedures(RemoteProcedureRequest request) {
