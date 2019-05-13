@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-import org.mortbay.util.IO;
 
 import com.google.common.util.concurrent.AtomicLongMap;
 
@@ -318,6 +317,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
         for (String queueId : queueIds) {
           ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
           List<String> wals = queuesClient.getLogsInQueue(regionserver, queueId);
+          Collections.sort(wals);
           if (!peerIds.contains(queueInfo.getPeerId())) {
             deletedQueues.add(regionserver + "/" + queueId);
             sb.append(formatQueue(regionserver, replicationQueues, queueInfo, queueId, wals, true, hdfs));
