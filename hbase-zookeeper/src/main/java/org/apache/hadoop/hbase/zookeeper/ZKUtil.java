@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -1808,6 +1809,7 @@ public final class ZKUtil {
     // do a ls -r on this znode
     sb.append("\n").append(replicationZnode).append(": ");
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
+    Collections.sort(children);
     for (String child : children) {
       String znode = ZNodePaths.joinZNode(replicationZnode, child);
       if (znode.equals(zkw.getZNodePaths().peersZNode)) {

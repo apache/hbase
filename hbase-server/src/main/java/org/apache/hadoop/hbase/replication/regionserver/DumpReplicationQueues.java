@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -325,6 +326,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
       for (String queueId : queueIds) {
         ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
         List<String> wals = queueStorage.getWALsInQueue(regionserver, queueId);
+        Collections.sort(wals);
         if (!peerIds.contains(queueInfo.getPeerId())) {
           deletedQueues.add(regionserver + "/" + queueId);
           sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
