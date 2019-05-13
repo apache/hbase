@@ -35,7 +35,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
        shellcheck \
        wget \
        && \
-    gem install rake rubocop ruby-lint
+    gem install --no-document rake rubocop ruby-lint
 
 ENV FINDBUGS_HOME /usr
 
