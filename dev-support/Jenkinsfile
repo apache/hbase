@@ -116,7 +116,7 @@ pipeline {
         }
         stage ('hadoop 2 cache') {
           environment {
-            HADOOP2_VERSION="2.7.1"
+            HADOOP2_VERSION="2.8.2"
           }
           steps {
             // directory must be unique for each parallel stage, because jenkins runs them in the same workspace :(
