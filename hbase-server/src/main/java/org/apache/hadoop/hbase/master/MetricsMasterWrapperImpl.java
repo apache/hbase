@@ -135,6 +135,15 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
+  public int getNumServersBelowExpected() {
+    ServerManager serverManager = this.master.getServerManager();
+    if (serverManager == null) {
+      return 0;
+    }
+    return serverManager.getNumServersBelowExpected();
+  }
+
+  @Override
   public String getServerName() {
     ServerName serverName = master.getServerName();
     if (serverName == null) {

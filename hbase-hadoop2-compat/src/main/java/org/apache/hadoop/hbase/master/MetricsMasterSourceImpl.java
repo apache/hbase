@@ -106,6 +106,8 @@ public class MetricsMasterSourceImpl
               regionNumberPair.getFirst())
           .addGauge(Interns.info(OFFLINE_REGION_COUNT_NAME, OFFLINE_REGION_COUNT_DESC),
               regionNumberPair.getSecond())
+          .addGauge(Interns.info(SERVERS_BELOW_EXPECTED_COUNT_NAME,
+              SERVERS_BELOW_EXPECTED_COUNT_DESC), masterWrapper.getNumServersBelowExpected())
           .tag(Interns.info(LIVE_REGION_SERVERS_NAME, LIVE_REGION_SERVERS_DESC),
                 masterWrapper.getRegionServers())
           .addGauge(Interns.info(NUM_REGION_SERVERS_NAME,

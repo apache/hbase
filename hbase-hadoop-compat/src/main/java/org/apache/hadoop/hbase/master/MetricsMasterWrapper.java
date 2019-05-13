@@ -149,4 +149,10 @@ public interface MetricsMasterWrapper {
    * @return pair of count for online regions and offline regions
    */
   PairOfSameType<Integer> getRegionCounts();
+
+  /**
+   * @return Number of region servers missing to reach
+   *         the expected value specified in master configuration
+   */
+  int getNumServersBelowExpected();
 }

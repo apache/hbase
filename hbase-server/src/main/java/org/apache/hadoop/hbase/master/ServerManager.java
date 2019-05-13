@@ -131,6 +131,18 @@ public class ServerManager {
   public static final int FLUSHEDSEQUENCEID_FLUSHER_INTERVAL_DEFAULT =
       3 * 60 * 60 * 1000; // 3 hours
 
+
+  /**
+    * The count of region servers master expects to be present; for use in "cloud" use-cases. When
+    * running on a fixed set of machines, currently the dead server accounting replaces a dead
+    * server when a new live one comes up on the same host+port; however, this may never happen if
+    * HBase is running on smth like YARN with many more machines than RS. Instead, one can tell
+    * master how many region servers to expect in total, so it could report an alternative metric.
+    * -1 (the default) disables this feature.
+    */
+  public static final String REGIONSERVERS_EXPECTED_COUNT = "hbase.master.expected.regionservers";
+  public static final int REGIONSERVERS_EXPECTED_COUNT_DEFAULT = -1;
+
   private static final Logger LOG = LoggerFactory.getLogger(ServerManager.class);
 
   // Set if we are to shutdown the cluster.
@@ -147,6 +159,8 @@ public class ServerManager {
   /** File on hdfs to store last flushed sequence id of regions */
   private static final String LAST_FLUSHED_SEQ_ID_FILE = ".lastflushedseqids";
   private  FlushedSequenceIdFlusher flushedSeqIdFlusher;
+  /** Expected RS count, for metrics; negative means no expectations. */
+  private final int expectedRsCount;
 
 
   /**
@@ -193,6 +207,7 @@ public class ServerManager {
     this.rpcControllerFactory = this.connection == null? null: connection.getRpcControllerFactory();
     persistFlushedSequenceId = c.getBoolean(PERSIST_FLUSHEDSEQUENCEID,
         PERSIST_FLUSHEDSEQUENCEID_DEFAULT);
+    expectedRsCount = c.getInt(REGIONSERVERS_EXPECTED_COUNT, REGIONSERVERS_EXPECTED_COUNT_DEFAULT);
   }
 
   /**
@@ -1169,6 +1184,13 @@ public class ServerManager {
         storeFlushedSequenceIdsByRegion.remove(regionEncodedName);
       }
     }
+  }
+
+  public int getNumServersBelowExpected() {
+    if (expectedRsCount <= 0) {
+      return 0;
+    }
+    return Math.max(0, expectedRsCount - this.onlineServers.size());
   }
 
   private class FlushedSequenceIdFlusher extends ScheduledChore {

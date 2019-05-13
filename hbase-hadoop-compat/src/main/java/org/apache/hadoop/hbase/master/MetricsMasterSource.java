@@ -55,6 +55,7 @@ public interface MetricsMasterSource extends BaseSource {
   String AVERAGE_LOAD_NAME = "averageLoad";
   String LIVE_REGION_SERVERS_NAME = "liveRegionServers";
   String DEAD_REGION_SERVERS_NAME = "deadRegionServers";
+  String SERVERS_BELOW_EXPECTED_COUNT_NAME = "serversBelowExpectedCount";
   String NUM_REGION_SERVERS_NAME = "numRegionServers";
   String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
@@ -74,6 +75,8 @@ public interface MetricsMasterSource extends BaseSource {
   String AVERAGE_LOAD_DESC = "AverageLoad";
   String LIVE_REGION_SERVERS_DESC = "Names of live RegionServers";
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
+  String SERVERS_BELOW_EXPECTED_COUNT_DESC = "Number of region servers missing to reach"
+    + " the expected value specified in master configuration";
   String DEAD_REGION_SERVERS_DESC = "Names of dead RegionServers";
   String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
   String ZOOKEEPER_QUORUM_DESC = "ZooKeeper Quorum";
