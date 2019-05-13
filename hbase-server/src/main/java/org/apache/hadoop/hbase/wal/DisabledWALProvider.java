@@ -119,7 +119,7 @@ class DisabledWALProvider implements WALProvider {
     public byte[][] rollWriter() {
       if (!listeners.isEmpty()) {
         for (WALActionsListener listener : listeners) {
-          listener.logRollRequested(false);
+          listener.logRollRequested(WALActionsListener.RollRequestReason.ERROR);
         }
         for (WALActionsListener listener : listeners) {
           try {

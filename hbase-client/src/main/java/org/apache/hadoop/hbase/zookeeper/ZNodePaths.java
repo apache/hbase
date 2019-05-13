@@ -166,7 +166,7 @@ public class ZNodePaths {
 
   /**
    * Parse the meta replicaId from the passed znode
-   * @param znode
+   * @param znode the name of the znode, does not include baseZNode
    * @return replicaId
    */
   public int getMetaReplicaIdFromZnode(String znode) {
@@ -178,7 +178,7 @@ public class ZNodePaths {
 
   /**
    * Is it the default meta replica's znode
-   * @param znode
+   * @param znode the name of the znode, does not include baseZNode
    * @return true or false
    */
   public boolean isDefaultMetaReplicaZnode(String znode) {

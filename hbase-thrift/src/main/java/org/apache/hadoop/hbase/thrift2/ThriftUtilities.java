@@ -143,7 +143,7 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetMaxVersions()) {
-      out.setMaxVersions(in.getMaxVersions());
+      out.readVersions(in.getMaxVersions());
     }
 
     if (in.isSetFilterString()) {

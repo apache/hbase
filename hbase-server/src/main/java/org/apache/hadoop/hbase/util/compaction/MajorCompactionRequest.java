@@ -44,25 +44,27 @@ class MajorCompactionRequest {
 
   private static final Logger LOG = LoggerFactory.getLogger(MajorCompactionRequest.class);
 
-  private final Configuration configuration;
-  private final RegionInfo region;
+  protected final Configuration configuration;
+  protected final RegionInfo region;
   private Set<String> stores;
-  private final long timestamp;
+
+  MajorCompactionRequest(Configuration configuration, RegionInfo region) {
+    this.configuration = configuration;
+    this.region = region;
+  }
 
   @VisibleForTesting
   MajorCompactionRequest(Configuration configuration, RegionInfo region,
-      Set<String> stores, long timestamp) {
-    this.configuration = configuration;
-    this.region = region;
+      Set<String> stores) {
+    this(configuration, region);
     this.stores = stores;
-    this.timestamp = timestamp;
   }
 
   static Optional<MajorCompactionRequest> newRequest(Configuration configuration, RegionInfo info,
       Set<String> stores, long timestamp) throws IOException {
     MajorCompactionRequest request =
-        new MajorCompactionRequest(configuration, info, stores, timestamp);
-    return request.createRequest(configuration, stores);
+        new MajorCompactionRequest(configuration, info, stores);
+    return request.createRequest(configuration, stores, timestamp);
   }
 
   RegionInfo getRegion() {
@@ -79,53 +81,66 @@ class MajorCompactionRequest {
 
   @VisibleForTesting
   Optional<MajorCompactionRequest> createRequest(Configuration configuration,
-      Set<String> stores) throws IOException {
-    Set<String> familiesToCompact = getStoresRequiringCompaction(stores);
+      Set<String> stores, long timestamp) throws IOException {
+    Set<String> familiesToCompact = getStoresRequiringCompaction(stores, timestamp);
     MajorCompactionRequest request = null;
     if (!familiesToCompact.isEmpty()) {
-      request = new MajorCompactionRequest(configuration, region, familiesToCompact, timestamp);
+      request = new MajorCompactionRequest(configuration, region, familiesToCompact);
     }
     return Optional.ofNullable(request);
   }
 
-  Set<String> getStoresRequiringCompaction(Set<String> requestedStores) throws IOException {
+  Set<String> getStoresRequiringCompaction(Set<String> requestedStores, long timestamp)
+      throws IOException {
     try(Connection connection = getConnection(configuration)) {
       HRegionFileSystem fileSystem = getFileSystem(connection);
       Set<String> familiesToCompact = Sets.newHashSet();
       for (String family : requestedStores) {
-        // do we have any store files?
-        Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
-        if (storeFiles == null) {
-          LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
-              .getRegionInfo().getEncodedName(), " has no store files");
-          continue;
-        }
-        // check for reference files
-        if (fileSystem.hasReferences(family) && familyHasReferenceFile(fileSystem, family)) {
+        if (shouldCFBeCompacted(fileSystem, family, timestamp)) {
           familiesToCompact.add(family);
-          LOG.info("Including store: " + family + " with: " + storeFiles.size()
-              + " files for compaction for region: " + fileSystem.getRegionInfo().getEncodedName());
-          continue;
-        }
-        // check store file timestamps
-        boolean includeStore = false;
-        for (StoreFileInfo storeFile : storeFiles) {
-          if (storeFile.getModificationTime() < timestamp) {
-            LOG.info("Including store: " + family + " with: " + storeFiles.size()
-                + " files for compaction for region: "
-                + fileSystem.getRegionInfo().getEncodedName());
-            familiesToCompact.add(family);
-            includeStore = true;
-            break;
-          }
-        }
-        if (!includeStore) {
-          LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
-              .getRegionInfo().getEncodedName(), " already compacted");
         }
       }
       return familiesToCompact;
     }
+  }
+
+  boolean shouldCFBeCompacted(HRegionFileSystem fileSystem, String family, long ts)
+      throws IOException {
+
+    // do we have any store files?
+    Collection<StoreFileInfo> storeFiles = fileSystem.getStoreFiles(family);
+    if (storeFiles == null) {
+      LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
+          .getRegionInfo().getEncodedName(), " has no store files");
+      return false;
+    }
+    // check for reference files
+    if (fileSystem.hasReferences(family) && familyHasReferenceFile(fileSystem, family, ts)) {
+      LOG.info("Including store: " + family + " with: " + storeFiles.size()
+          + " files for compaction for region: " + fileSystem.getRegionInfo().getEncodedName());
+      return true;
+    }
+    // check store file timestamps
+    boolean includeStore = this.shouldIncludeStore(fileSystem, family, storeFiles, ts);
+    if (!includeStore) {
+      LOG.info("Excluding store: " + family + " for compaction for region:  " + fileSystem
+          .getRegionInfo().getEncodedName() + " already compacted");
+    }
+    return includeStore;
+  }
+
+  protected boolean shouldIncludeStore(HRegionFileSystem fileSystem, String family,
+      Collection<StoreFileInfo> storeFiles, long ts) throws IOException {
+
+    for (StoreFileInfo storeFile : storeFiles) {
+      if (storeFile.getModificationTime() < ts) {
+        LOG.info("Including store: " + family + " with: " + storeFiles.size()
+            + " files for compaction for region: "
+            + fileSystem.getRegionInfo().getEncodedName());
+        return true;
+      }
+    }
+    return false;
   }
 
   @VisibleForTesting
@@ -133,13 +148,13 @@ class MajorCompactionRequest {
     return ConnectionFactory.createConnection(configuration);
   }
 
-  private boolean familyHasReferenceFile(HRegionFileSystem fileSystem, String family)
+  protected boolean familyHasReferenceFile(HRegionFileSystem fileSystem, String family, long ts)
       throws IOException {
     List<Path> referenceFiles =
         getReferenceFilePaths(fileSystem.getFileSystem(), fileSystem.getStoreDir(family));
     for (Path referenceFile : referenceFiles) {
       FileStatus status = fileSystem.getFileSystem().getFileLinkStatus(referenceFile);
-      if (status.getModificationTime() < timestamp) {
+      if (status.getModificationTime() < ts) {
         LOG.info("Including store: " + family + " for compaction for region:  " + fileSystem
             .getRegionInfo().getEncodedName() + " (reference store files)");
         return true;

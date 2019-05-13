@@ -175,7 +175,7 @@ public class TestGet {
     get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.setCheckExistenceOnly(true);
     get.setTimeRange(3, 4);
-    get.setMaxVersions(11);
+    get.readVersions(11);
     get.setMaxResultsPerColumnFamily(10);
     get.setRowOffsetPerColumnFamily(11);
     get.setCacheBlocks(true);

@@ -355,7 +355,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       } else {
         get.addColumn(family, qualifier);
       }
-      get.setMaxVersions(numVersions);
+      get.readVersions(numVersions);
       Result result = table.get(get);
       return ThriftUtilities.cellFromHBase(result.rawCells());
     } catch (IOException e) {
@@ -402,7 +402,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
         get.addColumn(family, qualifier);
       }
       get.setTimeRange(0, timestamp);
-      get.setMaxVersions(numVersions);
+      get.readVersions(numVersions);
       Result result = table.get(get);
       return ThriftUtilities.cellFromHBase(result.rawCells());
     } catch (IOException e) {

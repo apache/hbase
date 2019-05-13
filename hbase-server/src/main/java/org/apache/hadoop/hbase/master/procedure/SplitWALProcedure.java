@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public class SplitWALProcedure
   private String walPath;
   private ServerName worker;
   private ServerName crashedServer;
-  private int attempts = 0;
+  private RetryCounter retryCounter;
 
   public SplitWALProcedure() {
   }
@@ -82,11 +83,16 @@ public class SplitWALProcedure
         try {
           finished = splitWALManager.isSplitWALFinished(walPath);
         } catch (IOException ioe) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts++);
-          LOG.warn(
-            "Failed to check whether splitting wal {} success, wait {} seconds to retry",
+          if (retryCounter == null) {
+            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+          }
+          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+          LOG.warn("Failed to check whether splitting wal {} success, wait {} seconds to retry",
             walPath, backoff / 1000, ioe);
-          throw suspend(backoff);
+          setTimeout(Math.toIntExact(backoff));
+          setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+          skipPersistence();
+          throw new ProcedureSuspendedException();
         }
         splitWALManager.releaseSplitWALWorker(worker, env.getProcedureScheduler());
         if (!finished) {
@@ -155,15 +161,6 @@ public class SplitWALProcedure
     setState(ProcedureProtos.ProcedureState.RUNNABLE);
     env.getProcedureScheduler().addFront(this);
     return false;
-  }
-
-  protected final ProcedureSuspendedException suspend(long backoff)
-      throws ProcedureSuspendedException {
-    attempts++;
-    setTimeout(Math.toIntExact(backoff));
-    setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-    skipPersistence();
-    throw new ProcedureSuspendedException();
   }
 
   public String getWAL() {

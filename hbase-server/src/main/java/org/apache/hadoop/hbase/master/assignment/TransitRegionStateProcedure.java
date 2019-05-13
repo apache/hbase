@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,7 +116,7 @@ public class TransitRegionStateProcedure
 
   private boolean forceNewPlan;
 
-  private int attempt;
+  private RetryCounter retryCounter;
 
   private RegionRemoteProcedureBase remoteProc;
 
@@ -210,7 +211,7 @@ public class TransitRegionStateProcedure
   private Flow confirmOpened(MasterProcedureEnv env, RegionStateNode regionNode)
       throws IOException {
     if (regionNode.isInState(State.OPEN)) {
-      attempt = 0;
+      retryCounter = null;
       if (lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED) {
         // we are the last state, finish
         regionNode.unsetProcedure(this);
@@ -271,7 +272,7 @@ public class TransitRegionStateProcedure
   private Flow confirmClosed(MasterProcedureEnv env, RegionStateNode regionNode)
       throws IOException {
     if (regionNode.isInState(State.CLOSED)) {
-      attempt = 0;
+      retryCounter = null;
       if (lastState == RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED) {
         // we are the last state, finish
         regionNode.unsetProcedure(this);
@@ -300,7 +301,7 @@ public class TransitRegionStateProcedure
       regionNode.unsetProcedure(this);
       return Flow.NO_MORE_STATE;
     }
-    attempt = 0;
+    retryCounter = null;
     setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
     return Flow.HAS_MORE_STATE;
   }
@@ -347,7 +348,10 @@ public class TransitRegionStateProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (IOException e) {
-      long backoff = ProcedureUtil.getBackoffTimeMs(this.attempt++);
+      if (retryCounter == null) {
+        retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+      }
+      long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
       LOG.warn(
         "Failed transition, suspend {}secs {}; {}; waiting on rectified condition fixed " +
           "by other Procedure or operator intervention",
@@ -399,7 +403,7 @@ public class TransitRegionStateProcedure
       remoteProc.serverCrashed(env, regionNode, serverName);
     } else {
       // we are in RUNNING state, just update the region state, and we will process it later.
-      env.getAssignmentManager().regionClosed(regionNode, false);
+      env.getAssignmentManager().regionClosedAbnormally(regionNode);
     }
   }
 
@@ -410,6 +414,15 @@ public class TransitRegionStateProcedure
   void unattachRemoteProc(RegionRemoteProcedureBase proc) {
     assert this.remoteProc == proc;
     this.remoteProc = null;
+  }
+
+  // will be called after we finish loading the meta entry for this region.
+  // used to change the state of the region node if we have a sub procedure, as we may not persist
+  // the state to meta yet. See the code in RegionRemoteProcedureBase.execute for more details.
+  void stateLoaded(AssignmentManager am, RegionStateNode regionNode) {
+    if (remoteProc != null) {
+      remoteProc.stateLoaded(am, regionNode);
+    }
   }
 
   @Override

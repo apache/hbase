@@ -67,7 +67,6 @@
           <dependencySet>
             <excludes>
             <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
-              <exclude>javax.annotation:javax.annotation-api</exclude>
               <exclude>com.sun.xml.ws:jaxws-ri</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>

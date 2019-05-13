@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util.compaction;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -42,7 +43,8 @@ public class TestMajorCompactor {
       HBaseClassTestRule.forClass(TestMajorCompactor.class);
 
   public static final byte[] FAMILY = Bytes.toBytes("a");
-  private HBaseTestingUtility utility;
+  protected HBaseTestingUtility utility;
+  protected Admin admin;
 
   @Before public void setUp() throws Exception {
     utility = new HBaseTestingUtility();

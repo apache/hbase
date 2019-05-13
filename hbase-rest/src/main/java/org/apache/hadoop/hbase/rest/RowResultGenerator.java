@@ -62,7 +62,7 @@ public class RowResultGenerator extends ResultGenerator {
         }
       }
       get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
-      get.setMaxVersions(rowspec.getMaxVersions());
+      get.readVersions(rowspec.getMaxVersions());
       if (filter != null) {
         get.setFilter(filter);
       }

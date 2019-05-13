@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
-import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -255,14 +254,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           setPeerNewSyncReplicationState(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to update peer storage for peer {} when starting transiting sync " +
-              "replication peer state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to update peer storage for peer {} when starting transiting sync " +
+                "replication peer state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
-        attempts = 0;
+        resetRetry();
         setNextState(
           PeerSyncReplicationStateTransitionState.REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_BEGIN);
         return Flow.HAS_MORE_STATE;
@@ -287,13 +285,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           setLastPushedSequenceId(env, env.getReplicationPeerManager().getPeerConfig(peerId).get());
         } catch (Exception e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to update last pushed sequence id for peer {} when transiting sync " +
-              "replication peer state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to update last pushed sequence id for peer {} when transiting sync " +
+                "replication peer state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
+        resetRetry();
         setNextState(PeerSyncReplicationStateTransitionState.REPLAY_REMOTE_WAL_IN_PEER);
         return Flow.HAS_MORE_STATE;
       case REPLAY_REMOTE_WAL_IN_PEER:
@@ -305,14 +303,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           removeAllReplicationQueues(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to remove all replication queues peer {} when starting transiting" +
-              " sync replication peer state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to remove all replication queues peer {} when starting transiting" +
+                " sync replication peer state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
-        attempts = 0;
+        resetRetry();
         setNextState(fromState.equals(SyncReplicationState.ACTIVE)
           ? PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER
           : PeerSyncReplicationStateTransitionState.TRANSIT_PEER_NEW_SYNC_REPLICATION_STATE);
@@ -321,14 +318,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           transitPeerSyncReplicationState(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to update peer storage for peer {} when ending transiting sync " +
-              "replication peer state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to update peer storage for peer {} when ending transiting sync " +
+                "replication peer state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
-        attempts = 0;
+        resetRetry();
         setNextState(
           PeerSyncReplicationStateTransitionState.REFRESH_PEER_SYNC_REPLICATION_STATE_ON_RS_END);
         return Flow.HAS_MORE_STATE;
@@ -342,14 +338,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           enablePeer(env);
         } catch (ReplicationException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to set peer enabled for peer {} when transiting sync replication peer " +
-              "state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to set peer enabled for peer {} when transiting sync replication peer " +
+                "state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
-        attempts = 0;
+        resetRetry();
         setNextState(
           PeerSyncReplicationStateTransitionState.SYNC_REPLICATION_ENABLE_PEER_REFRESH_PEER_ON_RS);
         return Flow.HAS_MORE_STATE;
@@ -361,14 +356,13 @@ public class TransitPeerSyncReplicationStateProcedure
         try {
           createDirForRemoteWAL(env);
         } catch (IOException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(attempts);
-          LOG.warn(
-            "Failed to create remote wal dir for peer {} when transiting sync replication " +
-              "peer state from {} to {}, sleep {} secs and retry",
-            peerId, fromState, toState, backoff / 1000, e);
-          throw suspend(backoff);
+          throw suspend(env.getMasterConfiguration(),
+            backoff -> LOG.warn(
+              "Failed to create remote wal dir for peer {} when transiting sync replication " +
+                "peer state from {} to {}, sleep {} secs and retry",
+              peerId, fromState, toState, backoff / 1000, e));
         }
-        attempts = 0;
+        resetRetry();
         setNextState(
           PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
         return Flow.HAS_MORE_STATE;

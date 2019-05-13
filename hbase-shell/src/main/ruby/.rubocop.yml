@@ -3,3 +3,9 @@ Naming/HeredocDelimiterNaming:
 
 Layout/IndentHeredoc:
   Enabled: false
+
+Metrics/LineLength:
+  Max: 100
+
+Metrics/MethodLength:
+  Max: 75

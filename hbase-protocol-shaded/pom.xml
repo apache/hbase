@@ -162,7 +162,8 @@
               </relocations>
               <artifactSet>
                 <excludes>
-                  <!-- exclude J2EE modules that come in for JDK11+ -->
+                  <!-- exclude J2EE modules that come in for JDK11+ or modules that come in for
+                  JDK8+ but need not be included -->
                   <exclude>javax.annotation:javax.annotation-api</exclude>
                   <!--Exclude protobuf itself. We get a patched version from hbase-thirdparty.
                     -->
