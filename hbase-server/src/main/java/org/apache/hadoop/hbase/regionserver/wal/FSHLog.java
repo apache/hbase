@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.ERROR;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.LOW_REPLICATION;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
+
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.ExceptionHandler;
@@ -257,10 +262,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     long startTimeNanos = System.nanoTime();
     try {
       nextWriter.sync(useHsync);
-      boolean doRequestRoll = postSync(System.nanoTime() - startTimeNanos, 0);
-      if (doRequestRoll) {
-        LOG.info("Ignoring a roll request after a sync for a new file");
-      }
+      postSync(System.nanoTime() - startTimeNanos, 0);
     } catch (IOException e) {
       // optimization failed, no need to abort here.
       LOG.warn("pre-sync failed but an optimization so keep going", e);
@@ -579,7 +581,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
-          boolean wasRollRequested = false;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
             writer.sync(useHsync);
@@ -600,16 +601,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // Can we release other syncs?
             syncCount += releaseSyncFutures(currentSequence, lastException);
             if (lastException != null) {
-              wasRollRequested = true;
-              requestLogRoll(false, true);
+              requestLogRoll(ERROR);
             } else {
-              wasRollRequested = checkLogRoll();
+              checkLogRoll();
             }
           }
-          boolean doRequestRoll = postSync(System.nanoTime() - start, syncCount);
-          if (!wasRollRequested && doRequestRoll) {
-            requestLogRoll(false, false);
-          }
+          postSync(System.nanoTime() - start, syncCount);
         } catch (InterruptedException e) {
           // Presume legit interrupt.
           Thread.currentThread().interrupt();
@@ -624,19 +621,34 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * Schedule a log roll if needed.
    */
   private boolean checkLogRoll() {
+    // If we have already requested a roll, do nothing
+    if (isLogRollRequested()) {
+      return false;
+    }
     // Will return immediately if we are in the middle of a WAL log roll currently.
     if (!rollWriterLock.tryLock()) {
       return false;
     }
-    boolean lowReplication;
     try {
-      lowReplication = doCheckLogLowReplication();
+      if (doCheckLogLowReplication()) {
+        LOG.warn("Requesting log roll because of low replication, current pipeline: " +
+          Arrays.toString(getPipeline()));
+        requestLogRoll(LOW_REPLICATION);
+        return true;
+      } else if (writer != null && writer.getLength() > logrollsize) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Requesting log roll because of file size threshold; length=" +
+            writer.getLength() + ", logrollsize=" + logrollsize);
+        }
+        requestLogRoll(SIZE);
+        return true;
+      } else if (doCheckSlowSync()) {
+        // We log this already in checkSlowSync
+        requestLogRoll(SLOW_SYNC);
+        return true;
+      }
     } finally {
       rollWriterLock.unlock();
-    }
-    if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
-      requestLogRoll(lowReplication, false);
-      return true;
     }
     return false;
   }
@@ -774,8 +786,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize
-      .align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + ClassSize.ATOMIC_INTEGER
-          + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
+      .align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + (2 * ClassSize.ATOMIC_INTEGER)
+          + (3 * Bytes.SIZEOF_INT) + (4 * Bytes.SIZEOF_LONG));
 
   /**
    * This class is used coordinating two threads holding one thread at a 'safe point' while the
@@ -1023,7 +1035,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
               this.syncFuturesCount.get());
           } catch (Exception e) {
             // Should NEVER get here.
-            requestLogRoll(false, false);
+            requestLogRoll(ERROR);
             this.exception = new DamagedWALException("Failed offering sync", e);
           }
         }
@@ -1090,7 +1102,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         String msg = "Append sequenceId=" + entry.getKey().getSequenceId()
             + ", requesting roll of WAL";
         LOG.warn(msg, e);
-        requestLogRoll(false, false);
+        requestLogRoll(ERROR);
         throw new DamagedWALException(msg, e);
       }
     }
@@ -1121,5 +1133,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
     }
     return new DatanodeInfo[0];
+  }
+
+  @VisibleForTesting
+  Writer getWriter() {
+    return this.writer;
+  }
+
+  @VisibleForTesting
+  void setWriter(Writer writer) {
+    this.writer = writer;
   }
 }

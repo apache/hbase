@@ -38,8 +38,10 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MutableFastCounter appendCount;
   private final MutableFastCounter slowAppendCount;
   private final MutableFastCounter logRollRequested;
-  private final MutableFastCounter lowReplicationLogRollRequested;
-  private final MutableFastCounter syncFailedLogRollRequested;
+  private final MutableFastCounter errorRollRequested;
+  private final MutableFastCounter lowReplicationRollRequested;
+  private final MutableFastCounter slowSyncRollRequested;
+  private final MutableFastCounter sizeRollRequested;
   private final MutableFastCounter writtenBytes;
 
   public MetricsWALSourceImpl() {
@@ -61,10 +63,14 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     syncTimeHisto = this.getMetricsRegistry().newTimeHistogram(SYNC_TIME, SYNC_TIME_DESC);
     logRollRequested =
         this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
-    lowReplicationLogRollRequested = this.getMetricsRegistry()
+    errorRollRequested = this.getMetricsRegistry()
+        .newCounter(ERROR_ROLL_REQUESTED, ERROR_ROLL_REQUESTED_DESC, 0L);
+    lowReplicationRollRequested = this.getMetricsRegistry()
         .newCounter(LOW_REPLICA_ROLL_REQUESTED, LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
-    syncFailedLogRollRequested = this.getMetricsRegistry()
-        .newCounter(SYNC_FAILED_ROLL_REQUESTED, SYNC_FAILED_ROLL_REQUESTED_DESC, 0L);
+    slowSyncRollRequested = this.getMetricsRegistry()
+        .newCounter(SLOW_SYNC_ROLL_REQUESTED, SLOW_SYNC_ROLL_REQUESTED_DESC, 0L);
+    sizeRollRequested = this.getMetricsRegistry()
+        .newCounter(SIZE_ROLL_REQUESTED, SIZE_ROLL_REQUESTED_DESC, 0L);
     writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0L);
   }
 
@@ -99,13 +105,23 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   }
 
   @Override
-  public void incrementLowReplicationLogRoll() {
-    lowReplicationLogRollRequested.incr();
+  public void incrementErrorLogRoll() {
+    errorRollRequested.incr();
   }
 
   @Override
-  public void incrementSyncFailedLogRoll() {
-    syncFailedLogRollRequested.incr();
+  public void incrementLowReplicationLogRoll() {
+    lowReplicationRollRequested.incr();
+  }
+
+  @Override
+  public void incrementSlowSyncLogRoll() {
+    slowSyncRollRequested.incr();
+  }
+
+  @Override
+  public void incrementSizeLogRoll() {
+    sizeRollRequested.incr();
   }
 
   @Override

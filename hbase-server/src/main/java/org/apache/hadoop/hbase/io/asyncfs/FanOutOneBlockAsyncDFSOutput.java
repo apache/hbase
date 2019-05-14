@@ -345,7 +345,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.alloc = alloc;
     this.buf = alloc.directBuffer(sendBufSizePRedictor.initialSize());
     this.state = State.STREAMING;
-    setupReceiver(conf.getInt(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS, AbstractFSWAL.DEFAULT_WAL_SYNC_TIMEOUT_MS));
+    setupReceiver(conf.getInt(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS,
+        AbstractFSWAL.DEFAULT_WAL_SYNC_TIMEOUT_MS));
   }
 
   @Override

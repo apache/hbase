@@ -19,17 +19,15 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
@@ -73,13 +71,23 @@ public class MetricsWAL implements WALActionsListener {
   }
 
   @Override
-  public void logRollRequested(boolean underReplicated, boolean syncFailed) {
+  public void logRollRequested(WALActionsListener.RollRequestReason reason) {
     source.incrementLogRollRequested();
-    if (underReplicated) {
-      source.incrementLowReplicationLogRoll();
-    }
-    if (syncFailed) {
-      source.incrementSyncFailedLogRoll();
+    switch (reason) {
+      case ERROR:
+        source.incrementErrorLogRoll();
+        break;
+      case LOW_REPLICATION:
+        source.incrementLowReplicationLogRoll();
+        break;
+      case SIZE:
+        source.incrementSizeLogRoll();
+        break;
+      case SLOW_SYNC:
+        source.incrementSlowSyncLogRoll();
+        break;
+      default:
+        break;
     }
   }
 }

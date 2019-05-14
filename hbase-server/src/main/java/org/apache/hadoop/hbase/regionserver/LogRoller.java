@@ -59,7 +59,7 @@ public class LogRoller extends HasThread implements Closeable {
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final ConcurrentHashMap<WAL, Pair<Boolean,Boolean>> walNeedsRoll =
-      new ConcurrentHashMap<WAL, Pair<Boolean, Boolean>>();
+      new ConcurrentHashMap<>(); // wal -> <rollRequesting, syncFailed>
   private final Server server;
   protected final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();
@@ -72,13 +72,15 @@ public class LogRoller extends HasThread implements Closeable {
   private volatile boolean running = true;
 
   public void addWAL(final WAL wal) {
-    if (null == walNeedsRoll.putIfAbsent(wal, new Pair<Boolean,Boolean>(Boolean.FALSE, Boolean.FALSE))) {
+    if (null == walNeedsRoll.putIfAbsent(wal, 
+        new Pair<Boolean,Boolean>(Boolean.FALSE, Boolean.FALSE))) {
       wal.registerWALActionsListener(new WALActionsListener() {
         @Override
-        public void logRollRequested(boolean lowReplicas, boolean syncFaild) {
+        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
           Pair<Boolean,Boolean> walInfo = walNeedsRoll.get(wal);
           walInfo.setFirst(Boolean.TRUE);
-          if (syncFaild) {
+          if (reason.equals(WALActionsListener.RollRequestReason.SLOW_SYNC) ||
+              reason.equals(WALActionsListener.RollRequestReason.ERROR)) {
             walInfo.setSecond(Boolean.TRUE);
           }
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
@@ -186,8 +188,8 @@ public class LogRoller extends HasThread implements Closeable {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        for (Iterator<Entry<WAL, Pair<Boolean,Boolean>>> iter = walNeedsRoll.entrySet().iterator(); iter
-            .hasNext();) {
+        for (Iterator<Entry<WAL, Pair<Boolean,Boolean>>> iter
+            = walNeedsRoll.entrySet().iterator(); iter.hasNext();) {
           Entry<WAL, Pair<Boolean,Boolean>> entry = iter.next();
           final WAL wal = entry.getKey();
           Pair<Boolean, Boolean> walInfo = entry.getValue();
