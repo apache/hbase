@@ -47,9 +47,12 @@ public class TestByteBuffAllocator {
     int maxBuffersInPool = 10;
     int bufSize = 6 * 1024;
     ByteBuffAllocator alloc = new ByteBuffAllocator(true, maxBuffersInPool, bufSize, bufSize / 6);
+    assertEquals(0, alloc.getUsedBufferCount());
+
     ByteBuff buff = alloc.allocate(10 * bufSize);
-    assertEquals(10, alloc.getPoolAllocationNum());
-    assertEquals(0, alloc.getHeapAllocationNum());
+    assertEquals(61440, alloc.getPoolAllocationBytes());
+    assertEquals(0, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();
     // When the request size is less than 1/6th of the pool buffer size. We should use on demand
     // created on heap Buffer
@@ -57,15 +60,17 @@ public class TestByteBuffAllocator {
     assertTrue(buff.hasArray());
     assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
     assertEquals(maxBuffersInPool, alloc.getTotalBufferCount());
-    assertEquals(10, alloc.getPoolAllocationNum());
-    assertEquals(1, alloc.getHeapAllocationNum());
+    assertEquals(61440, alloc.getPoolAllocationBytes());
+    assertEquals(200, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();
     // When the request size is > 1/6th of the pool buffer size.
     buff = alloc.allocate(1024);
     assertFalse(buff.hasArray());
     assertEquals(maxBuffersInPool - 1, alloc.getFreeBufferCount());
-    assertEquals(11, alloc.getPoolAllocationNum());
-    assertEquals(1, alloc.getHeapAllocationNum());
+    assertEquals(67584, alloc.getPoolAllocationBytes());
+    assertEquals(200, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();// ByteBuff Recycler#free should put back the BB to pool.
     assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
     // Request size> pool buffer size
@@ -79,8 +84,9 @@ public class TestByteBuffAllocator {
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(1024, bbs[1].limit());
     assertEquals(maxBuffersInPool - 2, alloc.getFreeBufferCount());
-    assertEquals(13, alloc.getPoolAllocationNum());
-    assertEquals(1, alloc.getHeapAllocationNum());
+    assertEquals(79872, alloc.getPoolAllocationBytes());
+    assertEquals(200, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();
     assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
 
@@ -94,14 +100,16 @@ public class TestByteBuffAllocator {
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(200, bbs[1].limit());
     assertEquals(maxBuffersInPool - 1, alloc.getFreeBufferCount());
-    assertEquals(14, alloc.getPoolAllocationNum());
-    assertEquals(2, alloc.getHeapAllocationNum());
+    assertEquals(86016, alloc.getPoolAllocationBytes());
+    assertEquals(400, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();
     assertEquals(maxBuffersInPool, alloc.getFreeBufferCount());
 
     alloc.allocate(bufSize * (maxBuffersInPool - 1));
-    assertEquals(23, alloc.getPoolAllocationNum());
-    assertEquals(2, alloc.getHeapAllocationNum());
+    assertEquals(141312, alloc.getPoolAllocationBytes());
+    assertEquals(400, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
 
     buff = alloc.allocate(20 * 1024);
     assertFalse(buff.hasArray());
@@ -113,21 +121,24 @@ public class TestByteBuffAllocator {
     assertEquals(6 * 1024, bbs[0].limit());
     assertEquals(14 * 1024, bbs[1].limit());
     assertEquals(0, alloc.getFreeBufferCount());
-    assertEquals(24, alloc.getPoolAllocationNum());
-    assertEquals(3, alloc.getHeapAllocationNum());
+    assertEquals(147456, alloc.getPoolAllocationBytes());
+    assertEquals(14736, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
 
     buff.release();
     assertEquals(1, alloc.getFreeBufferCount());
     alloc.allocateOneBuffer();
-    assertEquals(25, alloc.getPoolAllocationNum());
-    assertEquals(3, alloc.getHeapAllocationNum());
+    assertEquals(153600, alloc.getPoolAllocationBytes());
+    assertEquals(14736, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
 
     buff = alloc.allocate(7 * 1024);
     assertTrue(buff.hasArray());
     assertTrue(buff instanceof SingleByteBuff);
     assertEquals(7 * 1024, buff.nioByteBuffers()[0].limit());
-    assertEquals(25, alloc.getPoolAllocationNum());
-    assertEquals(4, alloc.getHeapAllocationNum());
+    assertEquals(153600, alloc.getPoolAllocationBytes());
+    assertEquals(21904, alloc.getHeapAllocationBytes());
+    assertEquals(10, alloc.getUsedBufferCount());
     buff.release();
   }
 
@@ -142,7 +153,7 @@ public class TestByteBuffAllocator {
       // expected exception
     }
     ByteBuff bb = allocator.allocate(0);
-    assertEquals(1, allocator.getHeapAllocationNum());
+    assertEquals(0, allocator.getHeapAllocationBytes());
     bb.release();
   }
 
