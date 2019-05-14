@@ -1032,4 +1032,10 @@ service THBaseService {
   **/
   list<TNamespaceDescriptor> listNamespaceDescriptors(
   ) throws (1: TIOError io)
+
+  /**
+  * @return all namespace names
+  **/
+  list<string> listNamespaces(
+  ) throws (1: TIOError io)
 }

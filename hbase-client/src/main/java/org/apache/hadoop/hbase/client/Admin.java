@@ -112,7 +112,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * @param tableName Table to check.
    * @return <code>true</code> if table exists already.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   boolean tableExists(TableName tableName) throws IOException;
 
@@ -486,7 +486,7 @@ public interface Admin extends Abortable, Closeable {
    * Get all the online regions on a region server.
    *
    * @return List of {@link RegionInfo}
-   * @throws java.io.IOException
+   * @throws IOException if a remote or network exception occurs
    */
   List<RegionInfo> getRegions(ServerName serverName) throws IOException;
 
@@ -1130,8 +1130,18 @@ public interface Admin extends Abortable, Closeable {
       throws NamespaceNotFoundException, IOException;
 
   /**
-   * List available namespace descriptors.
+   * List available namespaces
+   *
+   * @return List of namespace names
+   * @throws IOException if a remote or network exception occurs
+   */
+  String[] listNamespaces() throws IOException;
+
+  /**
+   * List available namespace descriptors
+   *
    * @return List of descriptors
+   * @throws IOException if a remote or network exception occurs
    */
   NamespaceDescriptor[] listNamespaceDescriptors() throws IOException;
 
@@ -1139,6 +1149,7 @@ public interface Admin extends Abortable, Closeable {
    * Get list of table descriptors by namespace.
    * @param name namespace name
    * @return returns a list of TableDescriptors
+   * @throws IOException if a remote or network exception occurs
    */
   List<TableDescriptor> listTableDescriptorsByNamespace(byte[] name) throws IOException;
 
@@ -1146,6 +1157,7 @@ public interface Admin extends Abortable, Closeable {
    * Get list of table names by namespace.
    * @param name namespace name
    * @return The list of table names in the namespace
+   * @throws IOException if a remote or network exception occurs
    */
   TableName[] listTableNamesByNamespace(String name) throws IOException;
 
@@ -1154,6 +1166,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName the name of the table
    * @return List of {@link RegionInfo}.
+   * @throws IOException if a remote or network exception occurs
    */
   List<RegionInfo> getRegions(TableName tableName) throws IOException;
 
@@ -1178,7 +1191,7 @@ public interface Admin extends Abortable, Closeable {
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return <code>true</code> if aborted, <code>false</code> if procedure already completed or does
    *         not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @deprecated Since 2.1.1 -- to be removed.
    */
   @Deprecated
@@ -1198,7 +1211,7 @@ public interface Admin extends Abortable, Closeable {
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return <code>true</code> if aborted, <code>false</code> if procedure already completed or does not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @deprecated Since 2.1.1 -- to be removed.
    */
   @Deprecated
@@ -1208,7 +1221,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Get procedures.
    * @return procedure list in JSON
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   String getProcedures() throws IOException;
 

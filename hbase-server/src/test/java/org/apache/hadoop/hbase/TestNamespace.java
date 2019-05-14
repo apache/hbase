@@ -110,6 +110,7 @@ public class TestNamespace {
     assertNotNull(ns);
     assertEquals(ns.getName(), NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
 
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
     //verify existence of system tables
@@ -175,9 +176,11 @@ public class TestNamespace {
 
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
+    assertEquals(3, admin.listNamespaces().length);
     assertEquals(3, admin.listNamespaceDescriptors().length);
     //remove namespace and verify
     admin.deleteNamespace(nsName);
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
   }
 

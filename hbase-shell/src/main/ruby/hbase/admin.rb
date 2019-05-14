@@ -1244,7 +1244,7 @@ module Hbase
     # Returns a list of namespaces in hbase
     def list_namespace(regex = '.*')
       pattern = java.util.regex.Pattern.compile(regex)
-      list = @admin.listNamespaceDescriptors.map(&:getName)
+      list = @admin.listNamespaces
       list.select { |s| pattern.match(s) }
     end
 
