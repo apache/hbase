@@ -219,6 +219,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<String>> listNamespaces() {
+    return wrap(rawAdmin.listNamespaces());
+  }
+
+  @Override
   public CompletableFuture<List<NamespaceDescriptor>> listNamespaceDescriptors() {
     return wrap(rawAdmin.listNamespaceDescriptors());
   }

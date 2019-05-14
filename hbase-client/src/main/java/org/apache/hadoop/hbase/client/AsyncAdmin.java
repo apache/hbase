@@ -279,6 +279,12 @@ public interface AsyncAdmin {
   CompletableFuture<NamespaceDescriptor> getNamespaceDescriptor(String name);
 
   /**
+   * List available namespaces
+   * @return List of namespaces wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<String>> listNamespaces();
+
+  /**
    * List available namespace descriptors
    * @return List of descriptors wrapped by a {@link CompletableFuture}.
    */

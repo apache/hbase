@@ -488,6 +488,16 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public String[] listNamespaces() throws IOException {
+    try {
+      List<String> tNamespaces = client.listNamespaces();
+      return tNamespaces.toArray(new String[tNamespaces.size()]);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   public NamespaceDescriptor[] listNamespaceDescriptors() throws IOException {
     try {
       List<TNamespaceDescriptor> tNamespaceDescriptors = client.listNamespaceDescriptors();

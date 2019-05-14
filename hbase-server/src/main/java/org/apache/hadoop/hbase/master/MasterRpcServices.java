@@ -233,6 +233,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecomm
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -985,6 +987,19 @@ public class MasterRpcServices extends RSRpcServices
         builder.addSnapshots(snapshot);
       }
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListNamespacesResponse listNamespaces(
+      RpcController controller, ListNamespacesRequest request)
+      throws ServiceException {
+    try {
+      return ListNamespacesResponse.newBuilder()
+        .addAllNamespaceName(master.listNamespaces())
+        .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -1177,6 +1177,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void postListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> namespaces) throws IOException {
+    /* always allow namespace listing */
+  }
+
+  @Override
   public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<NamespaceDescriptor> descriptors) throws IOException {
     // Retains only those which passes authorization checks, as the checks weren't done as part

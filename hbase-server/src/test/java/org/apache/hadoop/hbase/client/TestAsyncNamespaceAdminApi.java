@@ -81,6 +81,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
 
     // create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build()).join();
+    assertEquals(3, admin.listNamespaces().get().size());
     assertEquals(3, admin.listNamespaceDescriptors().get().size());
     TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
@@ -91,6 +92,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     assertNotNull(zkNamespaceManager.get(nsName));
     // delete namespace and verify
     admin.deleteNamespace(nsName).join();
+    assertEquals(2, admin.listNamespaces().get().size());
     assertEquals(2, admin.listNamespaceDescriptors().get().size());
     assertEquals(2, zkNamespaceManager.list().size());
     assertNull(zkNamespaceManager.get(nsName));
