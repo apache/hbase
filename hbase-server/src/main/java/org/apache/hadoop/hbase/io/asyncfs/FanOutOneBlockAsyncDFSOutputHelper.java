@@ -21,7 +21,6 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_CREATE;
@@ -48,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -682,7 +682,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     DatanodeInfo[] datanodeInfos = locatedBlock.getLocations();
     boolean connectToDnViaHostname =
         conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME, DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
-    int timeoutMs = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT);
+    int timeoutMs = conf.getInt(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS,
+        AbstractFSWAL.DEFAULT_WAL_SYNC_TIMEOUT_MS);
     ExtendedBlock blockCopy = new ExtendedBlock(locatedBlock.getBlock());
     blockCopy.setNumBytes(locatedBlock.getBlockSize());
     ClientOperationHeaderProto header = ClientOperationHeaderProto.newBuilder()
@@ -741,7 +742,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
-      boolean overwrite, boolean createParent, short replication, long blockSize,
+      Path oldPath, boolean overwrite, boolean createParent, short replication, long blockSize,
       EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
     Configuration conf = dfs.getConf();
     FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
@@ -751,6 +752,25 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     int createMaxRetries = conf.getInt(ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES,
       DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES);
     DatanodeInfo[] excludesNodes = EMPTY_DN_ARRAY;
+    if (oldPath != null) {
+      String oldPathStr = oldPath.toUri().getPath();
+      long len = namenode.getFileInfo(oldPathStr).getLen();
+      for(LocatedBlock block : namenode.getBlockLocations(oldPathStr, Math.max(0, len - 1), len)
+          .getLocatedBlocks()) {
+        for(DatanodeInfo dn : block.getLocations()) {
+          excludesNodes = ArrayUtils.add(excludesNodes, dn);
+        }
+      }
+      if (LOG.isDebugEnabled()) {
+        StringBuilder sb =
+            new StringBuilder("create new output because old wal sync failed, old path is: ");
+        sb.append(oldPathStr).append(", newPath excludesNodes are :");
+        for(DatanodeInfo info : excludesNodes) {
+          sb.append(info.getInfoAddr()).append(";");
+        }
+        LOG.debug(sb.toString());
+      }
+    }
     for (int retry = 0;; retry++) {
       HdfsFileStatus stat;
       try {
@@ -838,14 +858,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
    * inside an {@link EventLoop}.
    */
   public static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, Path f,
-      boolean overwrite, boolean createParent, short replication, long blockSize,
+      Path oldPath, boolean overwrite, boolean createParent, short replication, long blockSize,
       EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
     return new FileSystemLinkResolver<FanOutOneBlockAsyncDFSOutput>() {
 
       @Override
       public FanOutOneBlockAsyncDFSOutput doCall(Path p)
           throws IOException, UnresolvedLinkException {
-        return createOutput(dfs, p.toUri().getPath(), overwrite, createParent, replication,
+        return createOutput(dfs, p.toUri().getPath(), oldPath, overwrite, createParent, replication,
           blockSize, eventLoopGroup, channelClass);
       }
 

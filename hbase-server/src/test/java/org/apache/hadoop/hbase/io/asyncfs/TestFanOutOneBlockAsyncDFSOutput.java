@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -87,6 +88,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT_MS);
+    TEST_UTIL.getConfiguration().setInt(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS, READ_TIMEOUT_MS);
     TEST_UTIL.startMiniDFSCluster(3);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
@@ -135,8 +137,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   public void test() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+      null, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     writeAndVerify(FS, f, out);
   }
 
@@ -144,8 +146,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   public void testRecover() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+      null, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
     out.write(b, 0, b.length);
@@ -173,8 +175,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   public void testHeartbeat() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+      null, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     Thread.sleep(READ_TIMEOUT_MS * 2);
     // the connection to datanode should still alive.
     writeAndVerify(FS, f, out);
@@ -188,7 +190,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     Path f = new Path("/" + name.getMethodName() + "/test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     try {
-      FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
+      FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, null, true, false, (short) 3,
         FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
       fail("should fail with parent does not exist");
     } catch (RemoteException e) {
@@ -212,7 +214,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     Path f = new Path("/test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
-      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS)) {
+      f, null, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS)) {
       // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
       assertEquals(2, output.getPipeline().length);
     } finally {
@@ -224,8 +226,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   public void testWriteLargeChunk() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS);
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, null,
+      true, false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS);
     byte[] b = new byte[50 * 1024 * 1024];
     ThreadLocalRandom.current().nextBytes(b);
     out.write(b);

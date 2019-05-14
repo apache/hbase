@@ -202,7 +202,7 @@ public class IOTestProvider implements WALProvider {
     // creatWriterInstance is where the new pipeline is set up for doing file rolls
     // if we are skipping it, just keep returning the same writer.
     @Override
-    protected Writer createWriterInstance(final Path path) throws IOException {
+    protected Writer createWriterInstance(final Path path, final Path oldPath) throws IOException {
       // we get called from the FSHLog constructor (!); always roll in this case since
       // we don't know yet if we're supposed to generally roll and
       // we need an initial file in the case of doing appends but no rolls.
@@ -210,7 +210,7 @@ public class IOTestProvider implements WALProvider {
         LOG.info("creating new writer instance.");
         final ProtobufLogWriter writer = new IOTestWriter();
         try {
-          writer.init(fs, path, conf, false, this.blocksize);
+          writer.init(fs, path, oldPath, conf, false, this.blocksize);
         } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
           throw new IOException("Can't create writer instance because underlying FileSystem " +
               "doesn't support needed stream capabilities.", exception);
@@ -237,8 +237,9 @@ public class IOTestProvider implements WALProvider {
     private boolean doSyncs;
 
     @Override
-    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+    public void init(FileSystem fs, Path path, Path oldPath, Configuration conf,
+        boolean overwritable, long blocksize)
+            throws IOException, CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;
@@ -250,7 +251,7 @@ public class IOTestProvider implements WALProvider {
       }
       LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled") +
           " and syncs " + (doSyncs ? "enabled" : "disabled"));
-      super.init(fs, path, conf, overwritable, blocksize);
+      super.init(fs, path, oldPath, conf, overwritable, blocksize);
     }
 
     @Override

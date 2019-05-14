@@ -275,8 +275,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @return Writer instance
    */
   @Override
-  protected Writer createWriterInstance(final Path path) throws IOException {
-    Writer writer = FSHLogProvider.createWriter(conf, fs, path, false, this.blocksize);
+  protected Writer createWriterInstance(final Path path, final Path oldPath) throws IOException {
+    Writer writer = FSHLogProvider.createWriter(conf, fs, path, oldPath, false, this.blocksize);
     if (writer instanceof ProtobufLogWriter) {
       preemptiveSync((ProtobufLogWriter) writer);
     }
@@ -581,7 +581,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
-          boolean wasRollRequested = false;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
             writer.sync(useHsync);

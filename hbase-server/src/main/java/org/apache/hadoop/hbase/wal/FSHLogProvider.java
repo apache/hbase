@@ -48,8 +48,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+    void init(FileSystem fs, Path path, Path oldPath, Configuration c, boolean overwritable,
+        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   /**
@@ -58,8 +58,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
    *          for WAL it is false. Thus we can distinguish WAL and recovered edits by this.
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-      final boolean overwritable) throws IOException {
-    return createWriter(conf, fs, path, overwritable,
+      final Path oldPath, final boolean overwritable) throws IOException {
+    return createWriter(conf, fs, path, oldPath, overwritable,
       WALUtil.getWALBlockSize(conf, fs, path, overwritable));
   }
 
@@ -67,7 +67,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
    * Public because of FSHLog. Should be package-private
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-    final boolean overwritable, long blocksize) throws IOException {
+      final Path oldPath, final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
         conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
@@ -76,7 +76,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
       FileSystem rootFs = FileSystem.get(path.toUri(), conf);
-      writer.init(rootFs, path, conf, overwritable, blocksize);
+      writer.init(rootFs, path, oldPath, conf, overwritable, blocksize);
       return writer;
     } catch (Exception e) { 
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {

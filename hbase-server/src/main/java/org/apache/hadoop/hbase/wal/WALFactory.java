@@ -385,7 +385,7 @@ public class WALFactory {
    * @return A WAL writer. Close when done with it.
    */
   public Writer createWALWriter(final FileSystem fs, final Path path) throws IOException {
-    return FSHLogProvider.createWriter(conf, fs, path, false);
+    return FSHLogProvider.createWriter(conf, fs, path, null, false);
   }
 
   /**
@@ -396,7 +396,7 @@ public class WALFactory {
   @VisibleForTesting
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
       throws IOException {
-    return FSHLogProvider.createWriter(conf, fs, path, true);
+    return FSHLogProvider.createWriter(conf, fs, path, null, true);
   }
 
   // These static methods are currently used where it's impractical to
@@ -465,7 +465,7 @@ public class WALFactory {
   static Writer createRecoveredEditsWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {
-    return FSHLogProvider.createWriter(configuration, fs, path, true);
+    return FSHLogProvider.createWriter(configuration, fs, path, null, true);
   }
 
   /**
@@ -477,7 +477,7 @@ public class WALFactory {
   public static Writer createWALWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {
-    return FSHLogProvider.createWriter(configuration, fs, path, false);
+    return FSHLogProvider.createWriter(configuration, fs, path, null, false);
   }
 
   public final WALProvider getWALProvider() {

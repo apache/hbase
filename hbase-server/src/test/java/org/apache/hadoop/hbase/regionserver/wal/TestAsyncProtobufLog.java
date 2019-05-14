@@ -61,6 +61,7 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog {
   @Override
   protected Writer createWriter(Path path) throws IOException {
     return new WriterOverAsyncWriter(AsyncFSWALProvider.createAsyncWriter(
-      TEST_UTIL.getConfiguration(), fs, path, false, EVENT_LOOP_GROUP.next(), CHANNEL_CLASS));
+      TEST_UTIL.getConfiguration(), fs, path, null, false,
+      EVENT_LOOP_GROUP.next(), CHANNEL_CLASS));
   }
 }

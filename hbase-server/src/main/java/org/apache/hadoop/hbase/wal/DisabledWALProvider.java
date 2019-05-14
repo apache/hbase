@@ -140,7 +140,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) {
+    public byte[][] rollWriter(boolean force, boolean syncFailed) {
       return rollWriter();
     }
 

@@ -154,8 +154,8 @@ public abstract class AbstractProtobufLogWriter {
     return doCompress;
   }
 
-  public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-      long blocksize) throws IOException, StreamLacksCapabilityException {
+  public void init(FileSystem fs, Path path, Path oldPath, Configuration conf,
+      boolean overwritable, long blocksize) throws IOException, StreamLacksCapabilityException {
     this.conf = conf;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
@@ -163,7 +163,7 @@ public abstract class AbstractProtobufLogWriter {
     short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
       FSUtils.getDefaultReplication(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
+    initOutput(fs, path, oldPath, overwritable, bufferSize, replication, blocksize);
 
     boolean doTagCompress = doCompress
         && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
@@ -239,8 +239,9 @@ public abstract class AbstractProtobufLogWriter {
     }
   }
 
-  protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException;
+  protected abstract void initOutput(FileSystem fs, Path path, Path oldPath,
+      boolean overwritable, int bufferSize, short replication, long blockSize)
+          throws IOException, StreamLacksCapabilityException;
 
   /**
    * return the file length after written.

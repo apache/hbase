@@ -162,8 +162,8 @@ public class TestWALLockup {
     }
 
     @Override
-    protected Writer createWriterInstance(Path path) throws IOException {
-      final Writer w = super.createWriterInstance(path);
+    protected Writer createWriterInstance(Path newPath, Path oldPath) throws IOException {
+      final Writer w = super.createWriterInstance(newPath, oldPath);
       return new Writer() {
         @Override
         public void close() throws IOException {
@@ -353,8 +353,8 @@ public class TestWALLockup {
       }
 
       @Override
-      protected Writer createWriterInstance(Path path) throws IOException {
-        final Writer w = super.createWriterInstance(path);
+      protected Writer createWriterInstance(Path path, Path oldPath) throws IOException {
+        final Writer w = super.createWriterInstance(path, oldPath);
         return new Writer() {
           @Override
           public void close() throws IOException {

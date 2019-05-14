@@ -213,7 +213,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   private void test(Path file) throws IOException, InterruptedException, ExecutionException {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
-      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+      null, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(FS, file, out);
   }
 

@@ -521,7 +521,7 @@ public class TestPerColumnFamilyFlush {
       assertEquals(MutableSegment.DEEP_OVERHEAD,
         desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize());
       // let WAL cleanOldLogs
-      assertNull(getWAL(desiredRegion).rollWriter(true));
+      assertNull(getWAL(desiredRegion).rollWriter(true, false));
       assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);
     } finally {
       TEST_UTIL.shutdownMiniCluster();

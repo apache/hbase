@@ -112,7 +112,7 @@ class DualAsyncFSWALForTest extends DualAsyncFSWAL {
   }
 
   @Override
-  protected AsyncWriter createWriterInstance(Path path) throws IOException {
+  protected AsyncWriter createWriterInstance(Path path, Path oldPath) throws IOException {
     if (arrive != null) {
       arrive.countDown();
       try {
@@ -123,7 +123,7 @@ class DualAsyncFSWALForTest extends DualAsyncFSWAL {
     if (localBroken || remoteBroken) {
       throw new IOException("WAL broken");
     }
-    return super.createWriterInstance(path);
+    return super.createWriterInstance(path, oldPath);
   }
 
   public void setLocalBroken() {

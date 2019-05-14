@@ -55,8 +55,8 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+    void init(FileSystem fs, Path path, Path oldPath, Configuration c, boolean overwritable,
+        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   private EventLoopGroup eventLoopGroup;
@@ -84,17 +84,17 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
    * Public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, EventLoopGroup eventLoopGroup,
+      Path oldPath, boolean overwritable, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws IOException {
-    return createAsyncWriter(conf, fs, path, overwritable, WALUtil.getWALBlockSize(conf, fs, path),
-        eventLoopGroup, channelClass);
+    return createAsyncWriter(conf, fs, path, oldPath, overwritable,
+        WALUtil.getWALBlockSize(conf, fs, path), eventLoopGroup, channelClass);
   }
 
   /**
    * Public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, long blocksize, EventLoopGroup eventLoopGroup,
+      Path oldPath, boolean overwritable, long blocksize, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends AsyncWriter> logWriterClass = conf.getClass(
@@ -102,7 +102,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
     try {
       AsyncWriter writer = logWriterClass.getConstructor(EventLoopGroup.class, Class.class)
           .newInstance(eventLoopGroup, channelClass);
-      writer.init(fs, path, conf, overwritable, blocksize);
+      writer.init(fs, path, oldPath, conf, overwritable, blocksize);
       return writer;
     } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {

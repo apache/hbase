@@ -68,8 +68,8 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
   }
 
   @Override
-  protected AsyncWriter createWriterInstance(Path path) throws IOException {
-    AsyncWriter localWriter = super.createWriterInstance(path);
+  protected AsyncWriter createWriterInstance(Path path, Path oldPath) throws IOException {
+    AsyncWriter localWriter = super.createWriterInstance(path, oldPath);
     // retry forever if we can not create the remote writer to prevent aborting the RS due to log
     // rolling error, unless the skipRemoteWal is set to true.
     // TODO: since for now we only have one thread doing log rolling, this may block the rolling for
@@ -81,7 +81,7 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
       }
       AsyncWriter remoteWriter;
       try {
-        remoteWriter = createAsyncWriter(remoteFs, remoteWAL);
+        remoteWriter = createAsyncWriter(remoteFs, remoteWAL, null);
       } catch (IOException e) {
         LOG.warn("create remote writer {} failed, retry = {}", remoteWAL, retry, e);
         try {

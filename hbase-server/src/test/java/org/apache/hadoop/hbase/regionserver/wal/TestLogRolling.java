@@ -398,7 +398,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
 
     // Force roll writer. The new log file will have the default replications,
     // and the LowReplication Roller will be enabled.
-    log.rollWriter(true);
+    log.rollWriter(true, false);
     batchWriteAndWait(table, log, 13, true, 10000);
     replication = log.getLogReplication();
     assertTrue("New log file should have the default replication instead of " + replication,
@@ -488,7 +488,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       writeData(table, 1005);
 
       // force a log roll to read back and verify previously written logs
-      log.rollWriter(true);
+      log.rollWriter(true, false);
       assertTrue("preLogRolledCalled has size of " + preLogRolledCalled.size(),
         preLogRolledCalled.size() >= 1);
 
