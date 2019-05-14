@@ -524,13 +524,13 @@ public interface MetricsRegionServerWrapper {
 
   long getTotalRowActionRequestCount();
 
-  long getByteBuffAllocatorHeapAllocationNum();
+  long getByteBuffAllocatorHeapAllocationBytes();
 
-  long getByteBuffAllocatorPoolAllocationNum();
+  long getByteBuffAllocatorPoolAllocationBytes();
 
   double getByteBuffAllocatorHeapAllocRatio();
 
   long getByteBuffAllocatorTotalBufferCount();
 
-  long getByteBuffAllocatorFreeBufferCount();
+  long getByteBuffAllocatorUsedBufferCount();
 }
