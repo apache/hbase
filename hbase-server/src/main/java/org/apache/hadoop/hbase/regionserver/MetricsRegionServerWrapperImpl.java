@@ -993,13 +993,13 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getByteBuffAllocatorHeapAllocationNum() {
-    return this.allocator.getHeapAllocationNum();
+  public long getByteBuffAllocatorHeapAllocationBytes() {
+    return this.allocator.getHeapAllocationBytes();
   }
 
   @Override
-  public long getByteBuffAllocatorPoolAllocationNum() {
-    return this.allocator.getPoolAllocationNum();
+  public long getByteBuffAllocatorPoolAllocationBytes() {
+    return this.allocator.getPoolAllocationBytes();
   }
 
   @Override
@@ -1013,7 +1013,7 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getByteBuffAllocatorFreeBufferCount() {
-    return this.allocator.getFreeBufferCount();
+  public long getByteBuffAllocatorUsedBufferCount() {
+    return this.allocator.getUsedBufferCount();
   }
 }
