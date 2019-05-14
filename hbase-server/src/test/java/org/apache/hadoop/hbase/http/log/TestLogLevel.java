@@ -267,7 +267,6 @@ public class TestLogLevel {
         }
       });
     } finally {
-      clientUGI.logoutUserFromKeytab();
       server.stop();
     }
 
