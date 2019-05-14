@@ -213,6 +213,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public boolean preListNamespaces(final List<String> namespaces) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preListNamespaces(ctx, namespaces);
+      }
+    });
+  }
+
+  public boolean postListNamespaces(final List<String> namespaces) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postListNamespaces(ctx, namespaces);
+      }
+    });
+  }
+
   public boolean preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
       throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

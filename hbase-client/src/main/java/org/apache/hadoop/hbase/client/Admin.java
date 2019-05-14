@@ -85,7 +85,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   boolean tableExists(final TableName tableName) throws IOException;
 
@@ -223,7 +223,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
       throws IOException;
@@ -240,7 +240,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void createTable(final HTableDescriptor desc, byte[][] splitKeys) throws IOException;
 
@@ -275,7 +275,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #deleteTables(java.util.regex.Pattern)
    * @see #deleteTable(org.apache.hadoop.hbase.TableName)
    */
@@ -289,7 +289,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] deleteTables(Pattern pattern) throws IOException;
 
@@ -326,7 +326,7 @@ public interface Admin extends Abortable, Closeable {
    * when table is fully online.  If table is taking too long to online, check server logs.
    *
    * @param tableName
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @since 0.90.0
    */
   void enableTableAsync(final TableName tableName) throws IOException;
@@ -337,7 +337,7 @@ public interface Admin extends Abortable, Closeable {
    * #listTables(java.lang.String)} and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param regex The regular expression to match table names against
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #enableTables(java.util.regex.Pattern)
    * @see #enableTable(org.apache.hadoop.hbase.TableName)
    */
@@ -350,7 +350,7 @@ public interface Admin extends Abortable, Closeable {
    * {@link #enableTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param pattern The pattern to match table names against
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] enableTables(Pattern pattern) throws IOException;
 
@@ -388,7 +388,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be disabled
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #disableTables(java.util.regex.Pattern)
    * @see #disableTable(org.apache.hadoop.hbase.TableName)
    */
@@ -402,7 +402,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be disabled
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] disableTables(Pattern pattern) throws IOException;
 
@@ -536,7 +536,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param sn
    * @param hri
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void closeRegion(final ServerName sn, final HRegionInfo hri) throws IOException;
 
@@ -650,7 +650,7 @@ public interface Admin extends Abortable, Closeable {
    * Compact all regions on the region server
    * @param sn the region server name
    * @param major if it's major compaction
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
   public void compactRegionServer(final ServerName sn, boolean major)
@@ -674,6 +674,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * @param regionName Region name to assign.
+   * @throws IOException if a remote or network exception occurs
    */
   void assign(final byte[] regionName)
       throws IOException;
@@ -686,6 +687,7 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName Region to unassign. Will clear any existing RegionPlan if one found.
    * @param force If true, force unassign (Will remove region from regions-in-transition too if
    * present. If results in double assignment use hbck -fix to resolve. To be used by experts).
+   * @throws IOException if a remote or network exception occurs
    */
   void unassign(final byte[] regionName, final boolean force)
       throws IOException;
@@ -698,7 +700,7 @@ public interface Admin extends Abortable, Closeable {
    * experts or hbck.
    *
    * @param regionName Region to offline.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void offline(final byte[] regionName) throws IOException;
 
@@ -707,6 +709,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param synchronous If true, it waits until current balance() call, if outstanding, to return.
    * @return Previous balancer value
+   * @throws IOException if a remote or network exception occurs
    */
   boolean setBalancerRunning(final boolean on, final boolean synchronous)
       throws IOException;
@@ -716,6 +719,7 @@ public interface Admin extends Abortable, Closeable {
    * reassignments.  Can NOT run for various reasons.  Check logs.
    *
    * @return True if balancer ran, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean balancer() throws IOException;
 
@@ -726,6 +730,7 @@ public interface Admin extends Abortable, Closeable {
    * logs.
    * @param force whether we should force balance even if there is region in transition
    * @return True if balancer ran, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean balancer(boolean force) throws IOException;
   
@@ -733,6 +738,7 @@ public interface Admin extends Abortable, Closeable {
    * Query the current state of the balancer
    *
    * @return true if the balancer is enabled, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean isBalancerEnabled() throws IOException;
 
@@ -740,6 +746,7 @@ public interface Admin extends Abortable, Closeable {
    * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
    *
    * @return True if region normalizer ran, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean normalize() throws IOException;
 
@@ -747,6 +754,7 @@ public interface Admin extends Abortable, Closeable {
    * Query the current state of the region normalizer
    *
    * @return true if region normalizer is enabled, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean isNormalizerEnabled() throws IOException;
 
@@ -754,6 +762,7 @@ public interface Admin extends Abortable, Closeable {
    * Turn region normalizer on or off.
    *
    * @return Previous normalizer value
+   * @throws IOException if a remote or network exception occurs
    */
   boolean setNormalizerRunning(final boolean on)
     throws IOException;
@@ -763,6 +772,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param enable if true enables the catalog janitor
    * @return the previous state
+   * @throws IOException if a remote or network exception occurs
    */
   boolean enableCatalogJanitor(boolean enable) throws IOException;
 
@@ -770,12 +780,14 @@ public interface Admin extends Abortable, Closeable {
    * Ask for a scan of the catalog table
    *
    * @return the number of entries cleaned
+   * @throws IOException if a remote or network exception occurs
    */
   int runCatalogScan() throws IOException;
 
   /**
    * Query on the catalog janitor state (Enabled/Disabled?)
    *
+   * @throws IOException if a remote or network exception occurs
    */
   boolean isCatalogJanitorEnabled() throws IOException;
 
@@ -784,7 +796,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param on if true enables the cleaner chore
    * @return the previous state
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean setCleanerChoreRunning(final boolean on) throws IOException;
 
@@ -792,14 +804,14 @@ public interface Admin extends Abortable, Closeable {
    * Ask for cleaner chore to run
    *
    * @return True if cleaner chore ran, false otherwise
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean runCleanerChore() throws IOException;
 
   /**
    * Query on the cleaner chore state (Enabled/Disabled?)
    *
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isCleanerChoreEnabled() throws IOException;
 
@@ -810,7 +822,7 @@ public interface Admin extends Abortable, Closeable {
    * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
    * regions
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void mergeRegions(final byte[] nameOfRegionA, final byte[] nameOfRegionB,
       final boolean forcible) throws IOException;
@@ -908,7 +920,7 @@ public interface Admin extends Abortable, Closeable {
    * Create a new namespace
    *
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void createNamespace(final NamespaceDescriptor descriptor)
       throws IOException;
@@ -917,7 +929,7 @@ public interface Admin extends Abortable, Closeable {
    * Modify an existing namespace
    *
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void modifyNamespace(final NamespaceDescriptor descriptor)
       throws IOException;
@@ -926,7 +938,7 @@ public interface Admin extends Abortable, Closeable {
    * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
    *
    * @param name namespace name
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void deleteNamespace(final String name) throws IOException;
 
@@ -942,10 +954,18 @@ public interface Admin extends Abortable, Closeable {
       throws NamespaceNotFoundException, IOException;
 
   /**
+   * List available namespaces
+   *
+   * @return List of descriptors
+   * @throws IOException if a remote or network exception occurs
+   */
+  String[] listNamespaces() throws IOException;
+
+  /**
    * List available namespace descriptors
    *
    * @return List of descriptors
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   NamespaceDescriptor[] listNamespaceDescriptors()
     throws IOException;
@@ -955,7 +975,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param name namespace name
    * @return A descriptor
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   HTableDescriptor[] listTableDescriptorsByNamespace(final String name)
       throws IOException;
@@ -965,7 +985,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param name namespace name
    * @return The list of table names in the namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   TableName[] listTableNamesByNamespace(final String name)
       throws IOException;
@@ -975,7 +995,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName the name of the table
    * @return List of {@link HRegionInfo}.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   List<HRegionInfo> getTableRegions(final TableName tableName)
     throws IOException;
@@ -1008,7 +1028,7 @@ public interface Admin extends Abortable, Closeable {
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   boolean abortProcedure(
       final long procId,
@@ -1017,7 +1037,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * List procedures
    * @return procedure list
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   ProcedureInfo[] listProcedures() throws IOException;
 
@@ -1031,7 +1051,7 @@ public interface Admin extends Abortable, Closeable {
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   Future<Boolean> abortProcedureAsync(
     final long procId,
@@ -1345,7 +1365,7 @@ public interface Admin extends Abortable, Closeable {
    * @param instance The instance name of the procedure. For some procedures, this parameter is
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void execProcedure(String signature, String instance, Map<String, String> props)
       throws IOException;
@@ -1359,7 +1379,7 @@ public interface Admin extends Abortable, Closeable {
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
    * @return data returned after procedure execution. null if no return data.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   byte[] execProcedureWithRet(String signature, String instance, Map<String, String> props)
       throws IOException;
@@ -1540,20 +1560,18 @@ public interface Admin extends Abortable, Closeable {
    */
   CoprocessorRpcChannel coprocessorService(ServerName sn);
 
-
   /**
    * Update the configuration and trigger an online config change
    * on the regionserver
    * @param server : The server whose config needs to be updated.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void updateConfiguration(ServerName server) throws IOException;
-
 
   /**
    * Update the configuration and trigger an online config change
    * on all the regionservers
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   void updateConfiguration() throws IOException;
 
@@ -1566,13 +1584,13 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Get the info port of the current master if one is available.
    * @return master info port
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public int getMasterInfoPort() throws IOException;
 
   /**
    * Return the set of supported security capabilities.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @throws UnsupportedOperationException
    */
   List<SecurityCapability> getSecurityCapabilities() throws IOException;
@@ -1584,6 +1602,7 @@ public interface Admin extends Abortable, Closeable {
    * @param synchronous If true, it waits until current split() call, if outstanding, to return.
    * @param switchTypes switchType list {@link MasterSwitchType}
    * @return Previous switch value array
+   * @throws IOException if a remote or network exception occurs
    */
   boolean[] setSplitOrMergeEnabled(final boolean enabled, final boolean synchronous,
                                    final MasterSwitchType... switchTypes) throws IOException;
@@ -1592,6 +1611,7 @@ public interface Admin extends Abortable, Closeable {
    * Query the current state of the switch
    *
    * @return true if the switch is enabled, false otherwise.
+   * @throws IOException if a remote or network exception occurs
    */
   boolean isSplitOrMergeEnabled(final MasterSwitchType switchType) throws IOException;
 
@@ -1606,6 +1626,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * List dead region servers.
    * @return List of dead region servers.
+   * @throws IOException if a remote or network exception occurs
    */
   List<ServerName> listDeadServers() throws IOException;
 

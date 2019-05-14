@@ -111,6 +111,7 @@ public class TestNamespace {
     assertEquals(ns.getName(), NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     assertNotNull(zkNamespaceManager.get(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR));
 
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
     //verify existence of system tables
@@ -178,6 +179,7 @@ public class TestNamespace {
 
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
+    assertEquals(3, admin.listNamespaces().length);
     assertEquals(3, admin.listNamespaceDescriptors().length);
     TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
@@ -188,6 +190,7 @@ public class TestNamespace {
     assertNotNull(zkNamespaceManager.get(nsName));
     //remove namespace and verify
     admin.deleteNamespace(nsName);
+    assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
     assertEquals(2, zkNamespaceManager.list().size());
     assertNull(zkNamespaceManager.get(nsName));

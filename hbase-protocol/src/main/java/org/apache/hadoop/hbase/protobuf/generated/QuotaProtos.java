@@ -2197,19 +2197,19 @@ public final class QuotaProtos {
         }
         if (hasReqCapacityUnit()) {
           if (!getReqCapacityUnit().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasWriteCapacityUnit()) {
           if (!getWriteCapacityUnit().isInitialized()) {
-
+            
             return false;
           }
         }
         if (hasReadCapacityUnit()) {
           if (!getReadCapacityUnit().isInitialized()) {
-
+            
             return false;
           }
         }
@@ -3041,7 +3041,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota req_capacity_unit = 7;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReqCapacityUnitFieldBuilder() {
         if (reqCapacityUnitBuilder_ == null) {
           reqCapacityUnitBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3158,7 +3158,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota write_capacity_unit = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getWriteCapacityUnitFieldBuilder() {
         if (writeCapacityUnitBuilder_ == null) {
           writeCapacityUnitBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3275,7 +3275,7 @@ public final class QuotaProtos {
        * <code>optional .hbase.pb.TimedQuota read_capacity_unit = 9;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder>
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuotaOrBuilder> 
           getReadCapacityUnitFieldBuilder() {
         if (readCapacityUnitBuilder_ == null) {
           readCapacityUnitBuilder_ = new com.google.protobuf.SingleFieldBuilder<

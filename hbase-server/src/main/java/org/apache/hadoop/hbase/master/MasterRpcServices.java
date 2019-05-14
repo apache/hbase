@@ -125,6 +125,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
@@ -822,6 +824,19 @@ public class MasterRpcServices extends RSRpcServices
         builder.addSnapshots(snapshot);
       }
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListNamespacesResponse listNamespaces(
+      RpcController controller, ListNamespacesRequest request)
+      throws ServiceException {
+    try {
+      return ListNamespacesResponse.newBuilder()
+        .addAllNamespaceName(master.listNamespaces())
+        .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

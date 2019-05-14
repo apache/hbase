@@ -3065,6 +3065,25 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
+  public List<String> listNamespaces() throws IOException {
+    checkNamespaceManagerReady();
+    List<String> namespaces = new ArrayList<>();
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preListNamespaces(namespaces);
+    }
+    if (!bypass) {
+      for (NamespaceDescriptor namespace : tableNamespaceManager.list()) {
+        namespaces.add(namespace.getName());
+      }
+    }
+    if (cpHost != null) {
+      bypass = cpHost.postListNamespaces(namespaces);
+    }
+    return namespaces;
+  }
+
+  @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
     checkNamespaceManagerReady();
 

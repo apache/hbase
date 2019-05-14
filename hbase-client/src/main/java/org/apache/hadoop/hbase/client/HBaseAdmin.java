@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -306,7 +307,7 @@ public class HBaseAdmin implements Admin {
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public boolean abortProcedure(
@@ -338,7 +339,7 @@ public class HBaseAdmin implements Admin {
    * @param procId ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public Future<Boolean> abortProcedureAsync(
@@ -404,7 +405,7 @@ public class HBaseAdmin implements Admin {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public boolean tableExists(final TableName tableName) throws IOException {
@@ -634,7 +635,7 @@ public class HBaseAdmin implements Admin {
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void createTable(HTableDescriptor desc, byte [] startKey,
@@ -671,7 +672,7 @@ public class HBaseAdmin implements Admin {
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
@@ -708,7 +709,7 @@ public class HBaseAdmin implements Admin {
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void createTableAsync(final HTableDescriptor desc, final byte [][] splitKeys)
@@ -999,7 +1000,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #deleteTables(java.util.regex.Pattern)
    * @see #deleteTable(java.lang.String)
    */
@@ -1017,7 +1018,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
@@ -1145,7 +1146,7 @@ public class HBaseAdmin implements Admin {
    * {@link #isTableEnabled(byte[])} to learn when table is fully online.  If
    * table is taking too long to online, check server logs.
    * @param tableName
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @since 0.90.0
    */
   @Override
@@ -1255,7 +1256,7 @@ public class HBaseAdmin implements Admin {
    * {@link #enableTable(byte[])}
    *
    * @param regex The regular expression to match table names against
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #enableTables(java.util.regex.Pattern)
    * @see #enableTable(java.lang.String)
    */
@@ -1272,7 +1273,7 @@ public class HBaseAdmin implements Admin {
    * {@link #enableTable(byte[])}
    *
    * @param pattern The pattern to match table names against
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
@@ -1322,7 +1323,7 @@ public class HBaseAdmin implements Admin {
    * instead.
    * The table has to be in enabled state for it to be disabled.
    * @param tableName
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * There could be couple types of IOException
    * TableNotFoundException means the table doesn't exist.
    * TableNotEnabledException means the table isn't in enabled state.
@@ -1443,7 +1444,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be disabled
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @see #disableTables(java.util.regex.Pattern)
    * @see #disableTable(java.lang.String)
    */
@@ -1461,7 +1462,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param pattern The pattern to match table names against
    * @return Table descriptors for tables that couldn't be disabled
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
@@ -1876,7 +1877,7 @@ public class HBaseAdmin implements Admin {
    * master will not be informed of the close.
    * @param sn
    * @param hri
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
@@ -2318,7 +2319,7 @@ public class HBaseAdmin implements Admin {
    *          Region name to assign.
    * @throws MasterNotRunningException
    * @throws ZooKeeperConnectionException
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void assign(final byte[] regionName) throws MasterNotRunningException,
@@ -2354,7 +2355,7 @@ public class HBaseAdmin implements Admin {
    * use hbck -fix to resolve. To be used by experts).
    * @throws MasterNotRunningException
    * @throws ZooKeeperConnectionException
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void unassign(final byte [] regionName, final boolean force)
@@ -2387,7 +2388,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param regionName
    *          Region to offline.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void offline(final byte [] regionName)
@@ -2651,7 +2652,7 @@ public class HBaseAdmin implements Admin {
    * @param nameOfRegionB encoded or full name of region b
    * @param forcible true if do a compulsory merge, otherwise we will only merge
    *          two adjacent regions
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void mergeRegions(final byte[] nameOfRegionA,
@@ -2866,7 +2867,7 @@ public class HBaseAdmin implements Admin {
    *  MetaTableAccessor#getRegion(HConnection, byte[])}
    *  else null.
    * Throw IllegalArgumentException if <code>regionName</code> is null.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   Pair<HRegionInfo, ServerName> getRegion(final byte[] regionName) throws IOException {
     if (regionName == null) {
@@ -3053,7 +3054,7 @@ public class HBaseAdmin implements Admin {
   /**
    * Create a new namespace
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void createNamespace(final NamespaceDescriptor descriptor) throws IOException {
@@ -3076,7 +3077,7 @@ public class HBaseAdmin implements Admin {
   /**
    * Modify an existing namespace
    * @param descriptor descriptor which describes the new namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException {
@@ -3095,7 +3096,7 @@ public class HBaseAdmin implements Admin {
   /**
    * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
    * @param name namespace name
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void deleteNamespace(final String name) throws IOException {
@@ -3115,7 +3116,7 @@ public class HBaseAdmin implements Admin {
    * Get a namespace descriptor by name
    * @param name name of namespace descriptor
    * @return A descriptor
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public NamespaceDescriptor getNamespaceDescriptor(final String name)
@@ -3134,9 +3135,32 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * List available namespaces
+   * @return List of namespace names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public String[] listNamespaces() throws IOException {
+    return executeCallable(new MasterCallable<String[]>(getConnection()) {
+      @Override
+      public String[] call(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        controller.setCallTimeout(callTimeout);
+        List<String> list = master.listNamespaces(controller,
+          ListNamespacesRequest.newBuilder().build()).getNamespaceNameList();
+        String[] res = new String[list.size()];
+        for(int i = 0; i < list.size(); i++) {
+          res[i] = list.get(i);
+        }
+        return res;
+      }
+    });
+  }
+
+  /**
    * List available namespace descriptors
    * @return List of descriptors
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public NamespaceDescriptor[] listNamespaceDescriptors() throws IOException {
@@ -3162,7 +3186,7 @@ public class HBaseAdmin implements Admin {
   /**
    * List procedures
    * @return procedure list
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public ProcedureInfo[] listProcedures() throws IOException {
@@ -3187,7 +3211,7 @@ public class HBaseAdmin implements Admin {
    * Get list of table descriptors by namespace
    * @param name namespace name
    * @return A descriptor
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException {
@@ -3215,7 +3239,7 @@ public class HBaseAdmin implements Admin {
    * Get list of table names by namespace
    * @param name namespace name
    * @return The list of table names in the namespace
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public TableName[] listTableNamesByNamespace(final String name) throws IOException {
@@ -3282,7 +3306,7 @@ public class HBaseAdmin implements Admin {
    *
    * @param tableName the name of the table
    * @return Ordered list of {@link HRegionInfo}.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public List<HRegionInfo> getTableRegions(final TableName tableName)
@@ -4046,7 +4070,7 @@ public class HBaseAdmin implements Admin {
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
    * @return data returned after procedure execution. null if no return data.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public byte[] execProcedureWithRet(String signature, String instance,
@@ -4082,7 +4106,7 @@ public class HBaseAdmin implements Admin {
    * @param instance The instance name of the procedure. For some procedures, this parameter is
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @Override
   public void execProcedure(String signature, String instance,

@@ -207,6 +207,16 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> namespaces) throws IOException {
+  }
+
+  @Override
+  public void postListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> namespaces) throws IOException {
+  }
+
+  @Override
   public void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<NamespaceDescriptor> descriptors) throws IOException {
   }

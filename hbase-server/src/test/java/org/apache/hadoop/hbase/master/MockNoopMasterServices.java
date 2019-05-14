@@ -215,6 +215,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public List<String> listNamespaces() throws IOException {
+    return null;
+  }
+
+  @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
     return null;
   }

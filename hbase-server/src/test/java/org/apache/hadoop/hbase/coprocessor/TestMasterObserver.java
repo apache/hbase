@@ -106,6 +106,8 @@ public class TestMasterObserver {
     private boolean postModifyNamespaceCalled;
     private boolean preGetNamespaceDescriptorCalled;
     private boolean postGetNamespaceDescriptorCalled;
+    private boolean preListNamespacesCalled;
+    private boolean postListNamespacesCalled;
     private boolean preListNamespaceDescriptorsCalled;
     private boolean postListNamespaceDescriptorsCalled;
     private boolean preAddColumnCalled;
@@ -196,6 +198,8 @@ public class TestMasterObserver {
       postModifyNamespaceCalled = false;
       preGetNamespaceDescriptorCalled = false;
       postGetNamespaceDescriptorCalled = false;
+      preListNamespacesCalled = false;
+      postListNamespacesCalled = false;
       preListNamespaceDescriptorsCalled = false;
       postListNamespaceDescriptorsCalled = false;
       preAddColumnCalled = false;
@@ -485,6 +489,18 @@ public class TestMasterObserver {
 
     public boolean wasGetNamespaceDescriptorCalled() {
       return preGetNamespaceDescriptorCalled && postGetNamespaceDescriptorCalled;
+    }
+
+    @Override
+    public void preListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<String> namespaces) {
+      preListNamespacesCalled = true;
+    }
+
+    @Override
+    public void postListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<String> namespaces) {
+      postListNamespacesCalled = true;
     }
 
     @Override
@@ -1350,6 +1366,7 @@ public class TestMasterObserver {
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
         String groupName, boolean balancerRan) throws IOException {
     }
+
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -1644,9 +1661,13 @@ public class TestMasterObserver {
     cp.enableBypass(false);
     cp.resetStates();
 
-
     // create a table
     Admin admin = UTIL.getHBaseAdmin();
+
+    admin.listNamespaces();
+    assertTrue("preListNamespaces should have been called", cp.preListNamespacesCalled);
+    assertTrue("postListNamespaces should have been called", cp.postListNamespacesCalled);
+
     admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
     assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
 

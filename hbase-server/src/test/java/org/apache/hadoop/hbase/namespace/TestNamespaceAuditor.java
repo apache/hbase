@@ -143,6 +143,7 @@ public class TestNamespaceAuditor {
             .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertEquals(ADMIN.listNamespaces().length, 3);
     assertEquals(ADMIN.listNamespaceDescriptors().length, 3);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
 
@@ -689,6 +690,7 @@ public class TestNamespaceAuditor {
             .build();
     ADMIN.createNamespace(nspDesc);
     assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertEquals(ADMIN.listNamespaces().length, 3);
     assertEquals(ADMIN.listNamespaceDescriptors().length, 3);
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HTableDescriptor tableDescOne =

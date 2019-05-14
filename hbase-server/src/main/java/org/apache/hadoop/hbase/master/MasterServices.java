@@ -371,6 +371,13 @@ public interface MasterServices extends Server {
   public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException;
 
   /**
+   * List available namespaces
+   * @return List of namespaces
+   * @throws IOException
+   */
+  public List<String> listNamespaces() throws IOException;
+
+  /**
    * List available namespace descriptors
    * @return A descriptor
    * @throws IOException

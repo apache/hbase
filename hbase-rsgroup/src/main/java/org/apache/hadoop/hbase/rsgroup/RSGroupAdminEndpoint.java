@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.TableAuthManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 public class RSGroupAdminEndpoint extends RSGroupAdminService
@@ -962,6 +961,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> namespaces) {
+  }
+
+  @Override
+  public void postListNamespaces(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> namespaces) {
+  }
+
+  @Override
   public void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                           List<NamespaceDescriptor> descriptors)
       throws IOException {
@@ -1185,4 +1194,5 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     }
     return user;
   }
+
 }

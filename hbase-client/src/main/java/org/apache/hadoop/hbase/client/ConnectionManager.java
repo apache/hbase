@@ -143,6 +143,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -2122,6 +2124,12 @@ class ConnectionManager {
         public GetNamespaceDescriptorResponse getNamespaceDescriptor(RpcController controller,
             GetNamespaceDescriptorRequest request) throws ServiceException {
           return stub.getNamespaceDescriptor(controller, request);
+        }
+
+        @Override
+        public ListNamespacesResponse listNamespaces(RpcController controller,
+            ListNamespacesRequest request) throws ServiceException {
+          return stub.listNamespaces(controller, request);
         }
 
         @Override

@@ -436,6 +436,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public List<String> listNamespaces() throws IOException {
+      return null;
+    }
+
+    @Override
     public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
       return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
