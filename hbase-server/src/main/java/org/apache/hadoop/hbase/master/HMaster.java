@@ -3392,6 +3392,25 @@ public class HMaster extends HRegionServer implements MasterServices {
     return nsds;
   }
 
+  /**
+   * List namespace names
+   * @return All namespace names
+   */
+  public List<String> listNamespaces() throws IOException {
+    checkInitialized();
+    List<String> namespaces = new ArrayList<>();
+    if (cpHost != null) {
+      cpHost.preListNamespaces(namespaces);
+    }
+    for (NamespaceDescriptor namespace : clusterSchemaService.getNamespaces()) {
+      namespaces.add(namespace.getName());
+    }
+    if (cpHost != null) {
+      cpHost.postListNamespaces(namespaces);
+    }
+    return namespaces;
+  }
+
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
     checkInitialized();

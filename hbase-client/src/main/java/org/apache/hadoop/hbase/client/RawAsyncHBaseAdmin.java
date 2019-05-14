@@ -214,6 +214,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecomm
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -826,6 +828,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 controller, stub, RequestConverter.buildGetNamespaceDescriptorRequest(name), (s, c,
                     req, done) -> s.getNamespaceDescriptor(c, req, done), (resp) -> ProtobufUtil
                     .toNamespaceDescriptor(resp.getNamespaceDescriptor()))).call();
+  }
+
+  @Override
+  public CompletableFuture<List<String>> listNamespaces() {
+    return this
+        .<List<String>> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<ListNamespacesRequest, ListNamespacesResponse, List<String>> call(
+                controller, stub, ListNamespacesRequest.newBuilder().build(), (s, c, req,
+                  done) -> s.listNamespaces(c, req, done),
+                (resp) -> resp.getNamespaceNameList())).call();
   }
 
   @Override

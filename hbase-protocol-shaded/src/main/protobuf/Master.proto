@@ -237,6 +237,13 @@ message GetNamespaceDescriptorResponse {
   required NamespaceDescriptor namespaceDescriptor = 1;
 }
 
+message ListNamespacesRequest {
+}
+
+message ListNamespacesResponse {
+  repeated string namespaceName = 1;
+}
+
 message ListNamespaceDescriptorsRequest {
 }
 
@@ -916,7 +923,7 @@ service MasterService {
   rpc GetNamespaceDescriptor(GetNamespaceDescriptorRequest)
     returns(GetNamespaceDescriptorResponse);
 
-  /** returns a list of namespaces */
+  /** returns a list of namespace descriptors */
   rpc ListNamespaceDescriptors(ListNamespaceDescriptorsRequest)
     returns(ListNamespaceDescriptorsResponse);
 
@@ -1035,6 +1042,10 @@ service MasterService {
   rpc GetUserPermissions (GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
 
   rpc HasUserPermissions (HasUserPermissionsRequest) returns (HasUserPermissionsResponse);
+
+  /** returns a list of namespace names */
+  rpc ListNamespaces(ListNamespacesRequest)
+    returns(ListNamespacesResponse);
 }
 
 // HBCK Service definitions.

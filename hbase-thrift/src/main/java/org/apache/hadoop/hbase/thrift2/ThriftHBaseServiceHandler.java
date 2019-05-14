@@ -794,6 +794,20 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
+  public List<String> listNamespaces() throws TIOError, TException {
+    try {
+      String[] namespaces = connectionCache.getAdmin().listNamespaces();
+      List<String> result = new ArrayList<>(namespaces.length);
+      for (String ns: namespaces) {
+        result.add(ns);
+      }
+      return result;
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+  }
+
+  @Override
   public List<TNamespaceDescriptor> listNamespaceDescriptors() throws TIOError, TException {
     try {
       NamespaceDescriptor[] descriptors = connectionCache.getAdmin().listNamespaceDescriptors();

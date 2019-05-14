@@ -1562,6 +1562,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.ListNamespacesResponse listNamespaces(
+          RpcController controller,
+          MasterProtos.ListNamespacesRequest request) throws ServiceException {
+        return stub.listNamespaces(controller, request);
+      }
+
+      @Override
       public MasterProtos.GetNamespaceDescriptorResponse getNamespaceDescriptor(
           RpcController controller,
           MasterProtos.GetNamespaceDescriptorRequest request) throws ServiceException {
