@@ -171,7 +171,7 @@ public class TestMultiVersions {
     assertTrue(Bytes.equals(value, value2));
     // Now check getRow with multiple versions
     get = new Get(row);
-    get.setMaxVersions();
+    get.readAllVersions();
     r = table.get(get);
     assertTrue(r.size() == 2);
     value = r.getValue(contents, contents);

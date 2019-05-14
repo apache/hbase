@@ -1126,6 +1126,10 @@ public class ServerManager {
     try {
       FlushedSequenceId flushedSequenceId =
           FlushedSequenceId.parseDelimitedFrom(in);
+      if (flushedSequenceId == null) {
+        LOG.info(".lastflushedseqids found at {} is empty", lastFlushedSeqIdPath);
+        return;
+      }
       for (FlushedRegionSequenceId flushedRegionSequenceId : flushedSequenceId
           .getRegionSequenceIdList()) {
         byte[] encodedRegionName = flushedRegionSequenceId

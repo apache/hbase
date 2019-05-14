@@ -1007,7 +1007,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       this.serverManager.loadLastFlushedSequenceIds();
     } catch (IOException e) {
-      LOG.debug("Failed to load last flushed sequence id of regions"
+      LOG.info("Failed to load last flushed sequence id of regions"
           + " from file system", e);
     }
     // Set ourselves as active Master now our claim has succeeded up in zk.
@@ -2955,6 +2955,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (isAborted() || isStopped()) {
       return;
     }
+    setAbortRequested();
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
       LOG.error(HBaseMarkers.FATAL, "Master server abort: loaded coprocessors are: " +

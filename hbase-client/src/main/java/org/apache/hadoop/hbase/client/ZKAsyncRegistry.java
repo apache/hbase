@@ -26,7 +26,9 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
@@ -134,12 +136,13 @@ class ZKAsyncRegistry implements AsyncRegistry {
       ServerName.valueOf(snProto.getHostName(), snProto.getPort(), snProto.getStartCode()));
   }
 
-  @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
-    CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-    HRegionLocation[] locs = new HRegionLocation[znodePaths.metaReplicaZNodes.size()];
+  private void getMetaRegionLocation(CompletableFuture<RegionLocations> future,
+      List<String> metaReplicaZNodes) {
+    HRegionLocation[] locs = new HRegionLocation[metaReplicaZNodes.size()];
     MutableInt remaining = new MutableInt(locs.length);
-    znodePaths.metaReplicaZNodes.forEach((replicaId, path) -> {
+    for (String metaReplicaZNode : metaReplicaZNodes) {
+      int replicaId = znodePaths.getMetaReplicaIdFromZnode(metaReplicaZNode);
+      String path = ZNodePaths.joinZNode(znodePaths.baseZNode, metaReplicaZNode);
       if (replicaId == DEFAULT_REPLICA_ID) {
         addListener(getAndConvert(path, ZKAsyncRegistry::getMetaProto), (proto, error) -> {
           if (error != null) {
@@ -186,7 +189,23 @@ class ZKAsyncRegistry implements AsyncRegistry {
           tryComplete(remaining, locs, future);
         });
       }
-    });
+    }
+  }
+
+  @Override
+  public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+    CompletableFuture<RegionLocations> future = new CompletableFuture<>();
+    addListener(
+      zk.list(znodePaths.baseZNode)
+        .thenApply(children -> children.stream()
+          .filter(c -> c.startsWith(znodePaths.metaZNodePrefix)).collect(Collectors.toList())),
+      (metaReplicaZNodes, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        getMetaRegionLocation(future, metaReplicaZNodes);
+      });
     return future;
   }
 

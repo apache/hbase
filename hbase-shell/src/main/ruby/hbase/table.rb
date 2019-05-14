@@ -401,8 +401,8 @@ EOF
           end
 
           # Additional params
-          get.setMaxVersions(vers)
-          get.setTimeStamp(args[TIMESTAMP]) if args[TIMESTAMP]
+          get.readVersions(vers)
+          get.setTimestamp(args[TIMESTAMP]) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         else
           if attributes
@@ -416,9 +416,9 @@ EOF
             end
           end
 
-          get.setMaxVersions(vers)
+          get.readVersions(vers)
           # Set the timestamp/timerange
-          get.setTimeStamp(ts.to_i) if args[TIMESTAMP]
+          get.setTimestamp(ts.to_i) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         end
         set_attributes(get, attributes) if attributes
@@ -473,7 +473,7 @@ EOF
       # Format get request
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       get.addColumn(family, qualifier)
-      get.setMaxVersions(1)
+      get.readVersions(1)
 
       # Call hbase
       result = @table.get(get)
@@ -553,7 +553,7 @@ EOF
         scan.setCacheBlocks(cache_blocks)
         scan.setReversed(reversed)
         scan.setCaching(cache) if cache > 0
-        scan.setMaxVersions(versions) if versions > 1
+        scan.readVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
         scan.setRaw(raw)
         scan.setLimit(limit) if limit > 0

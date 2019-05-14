@@ -193,7 +193,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
-        get.setMaxVersions(10);
+        get.readVersions(10);
         try(Connection connection = ConnectionFactory.createConnection(conf);
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
@@ -205,7 +205,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
-        get.setMaxVersions(10);
+        get.readVersions(10);
         try(Connection connection = ConnectionFactory.createConnection(conf);
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();

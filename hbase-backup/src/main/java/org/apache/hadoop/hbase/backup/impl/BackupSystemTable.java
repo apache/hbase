@@ -1405,7 +1405,7 @@ public final class BackupSystemTable implements Closeable {
   private Get createGetForBackupInfo(String backupId) throws IOException {
     Get get = new Get(rowkey(BACKUP_INFO_PREFIX, backupId));
     get.addFamily(BackupSystemTable.SESSIONS_FAMILY);
-    get.setMaxVersions(1);
+    get.readVersions(1);
     return get;
   }
 
@@ -1440,7 +1440,7 @@ public final class BackupSystemTable implements Closeable {
   private Get createGetForStartCode(String rootPath) throws IOException {
     Get get = new Get(rowkey(START_CODE_ROW, rootPath));
     get.addFamily(BackupSystemTable.META_FAMILY);
-    get.setMaxVersions(1);
+    get.readVersions(1);
     return get;
   }
 
@@ -1463,7 +1463,7 @@ public final class BackupSystemTable implements Closeable {
   private Get createGetForIncrBackupTableSet(String backupRoot) throws IOException {
     Get get = new Get(rowkey(INCR_BACKUP_SET, backupRoot));
     get.addFamily(BackupSystemTable.META_FAMILY);
-    get.setMaxVersions(1);
+    get.readVersions(1);
     return get;
   }
 

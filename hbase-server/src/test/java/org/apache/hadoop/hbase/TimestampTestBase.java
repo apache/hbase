@@ -108,7 +108,7 @@ public class TimestampTestBase {
     Get get = null;
     get = new Get(ROW);
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-    get.setMaxVersions(3);
+    get.readVersions(3);
     Result result = incommon.get(get);
     Assert.assertEquals(1, result.size());
     long time = Bytes.toLong(CellUtil.cloneValue(result.rawCells()[0]));
@@ -138,7 +138,7 @@ public class TimestampTestBase {
     // order.
     get = new Get(ROW);
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-    get.setMaxVersions(tss.length);
+    get.readVersions(tss.length);
     Result result = incommon.get(get);
     Cell [] kvs = result.rawCells();
     Assert.assertEquals(kvs.length, tss.length);
@@ -154,7 +154,7 @@ public class TimestampTestBase {
     get = new Get(ROW);
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     get.setTimeRange(0, maxStamp);
-    get.setMaxVersions(kvs.length - 1);
+    get.readVersions(kvs.length - 1);
     result = incommon.get(get);
     kvs = result.rawCells();
     Assert.assertEquals(kvs.length, tss.length - 1);

@@ -181,9 +181,9 @@ public class TestMinorCompaction {
       r.flush(true);
     }
 
-    Result result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
+    Result result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).readVersions(100));
     assertEquals(compactionThreshold, result.size());
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).readVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // Now add deletes to memstore and then flush it.  That will put us over
@@ -193,10 +193,10 @@ public class TestMinorCompaction {
     r.delete(delete);
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).readVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).readVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     r.flush(true);
@@ -204,10 +204,10 @@ public class TestMinorCompaction {
     // Let us check again
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).readVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).readVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // do a compaction
@@ -222,10 +222,10 @@ public class TestMinorCompaction {
     assertTrue("Was not supposed to be a major compaction", numFiles2 > 1);
 
     // Make sure that we have only deleted family2 from secondRowBytes
-    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).readVersions(100));
     assertEquals(expectedResultsAfterDelete, result.size());
     // but we still have firstrow
-    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
+    result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).readVersions(100));
     assertEquals(compactionThreshold, result.size());
   }
 }

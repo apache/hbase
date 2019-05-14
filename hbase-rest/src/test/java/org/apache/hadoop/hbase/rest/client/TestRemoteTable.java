@@ -249,7 +249,7 @@ public class TestRemoteTable {
 
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
-    get.setMaxVersions(2);
+    get.readVersions(2);
     result = remoteTable.get(get);
     int count = 0;
     for (Cell kv: result.listCells()) {
@@ -279,7 +279,7 @@ public class TestRemoteTable {
     //Test Versions
     gets = new ArrayList<>(2);
     Get g = new Get(ROW_1);
-    g.setMaxVersions(3);
+    g.readVersions(3);
     gets.add(g);
     gets.add(new Get(ROW_2));
     results = remoteTable.get(gets);

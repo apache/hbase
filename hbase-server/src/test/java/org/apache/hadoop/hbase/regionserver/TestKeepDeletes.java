@@ -132,7 +132,7 @@ public class TestKeepDeletes {
 
     // get something *before* the delete marker
     Get g = new Get(T1);
-    g.setMaxVersions();
+    g.readAllVersions();
     g.setTimeRange(0L, ts+2);
     Result r = region.get(g);
     checkResult(r, c0, c0, T2,T1);
@@ -256,7 +256,7 @@ public class TestKeepDeletes {
     region.put(p);
 
     Get gOne = new Get(T1);
-    gOne.setMaxVersions();
+    gOne.readAllVersions();
     gOne.setTimeRange(0L, ts + 1);
     Result rOne = region.get(gOne);
     assertFalse(rOne.isEmpty());
@@ -268,7 +268,7 @@ public class TestKeepDeletes {
 
     // "past" get does not see rows behind delete marker
     Get g = new Get(T1);
-    g.setMaxVersions();
+    g.readAllVersions();
     g.setTimeRange(0L, ts+1);
     Result r = region.get(g);
     assertTrue(r.isEmpty());
@@ -854,7 +854,7 @@ public class TestKeepDeletes {
     region.delete(d);
 
     Get g = new Get(T1);
-    g.setMaxVersions();
+    g.readAllVersions();
     g.setTimeRange(0L, ts-2);
     Result r = region.get(g);
     checkResult(r, c0, c0, T1,T0);
@@ -946,7 +946,7 @@ public class TestKeepDeletes {
       long time, byte[]... vals) throws IOException {
     Get g = new Get(row);
     g.addColumn(fam, col);
-    g.setMaxVersions();
+    g.readAllVersions();
     g.setTimeRange(0L, time);
     Result r = region.get(g);
     checkResult(r, fam, col, vals);

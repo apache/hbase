@@ -300,7 +300,7 @@ public class TestSerialization {
     Get get = new Get(row);
     get.addColumn(fam, qf1);
     get.setTimeRange(ts, ts+1);
-    get.setMaxVersions(maxVersions);
+    get.readVersions(maxVersions);
 
     ClientProtos.Get getProto = ProtobufUtil.toGet(get);
     Get desGet = ProtobufUtil.toGet(getProto);
