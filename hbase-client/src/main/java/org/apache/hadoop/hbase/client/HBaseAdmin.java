@@ -3148,11 +3148,7 @@ public class HBaseAdmin implements Admin {
         controller.setCallTimeout(callTimeout);
         List<String> list = master.listNamespaces(controller,
           ListNamespacesRequest.newBuilder().build()).getNamespaceNameList();
-        String[] res = new String[list.size()];
-        for(int i = 0; i < list.size(); i++) {
-          res[i] = list.get(i);
-        }
-        return res;
+        return list.toArray(new String[list.size()]);
       }
     });
   }
