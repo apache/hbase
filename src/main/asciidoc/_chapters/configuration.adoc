@@ -342,20 +342,6 @@ Standalone mode is what is described in the <<quickstart,quickstart>> section.
 In standalone mode, HBase does not use HDFS -- it uses the local filesystem instead -- and it runs all HBase daemons and a local ZooKeeper all up in the same JVM.
 Zookeeper binds to a well known port so clients may talk to HBase.
 
-[source,xml]
-----
-<configuration>
-  <property>
-    <name>hbase.rootdir</name>
-    <value>hdfs://namenode.example.org:8020/hbase</value>
-  </property>
-  <property>
-    <name>hbase.cluster.distributed</name>
-    <value>false</value>
-  </property>
-</configuration>
-----
-
 [[distributed]]
 === Distributed
 
