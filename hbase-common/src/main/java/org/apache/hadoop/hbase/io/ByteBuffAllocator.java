@@ -97,12 +97,12 @@ public class ByteBuffAllocator {
 
   private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
-  // Metrics to track the pool allocation number and heap allocation number. If heap allocation
-  // number is increasing so much, then we may need to increase the max.buffer.count .
-  private final LongAdder poolAllocationNum = new LongAdder();
-  private final LongAdder heapAllocationNum = new LongAdder();
-  private long lastPoolAllocationNum = 0;
-  private long lastHeapAllocationNum = 0;
+  // Metrics to track the pool allocation bytes and heap allocation bytes. If heap allocation
+  // bytes is increasing so much, then we may need to increase the max.buffer.count .
+  private final LongAdder poolAllocationBytes = new LongAdder();
+  private final LongAdder heapAllocationBytes = new LongAdder();
+  private long lastPoolAllocationBytes = 0;
+  private long lastHeapAllocationBytes = 0;
 
   /**
    * Initialize an {@link ByteBuffAllocator} which will try to allocate ByteBuffers from off-heap if
@@ -161,14 +161,26 @@ public class ByteBuffAllocator {
     return reservoirEnabled;
   }
 
-  public long getHeapAllocationNum() {
-    return heapAllocationNum.sum();
+  public long getHeapAllocationBytes() {
+    return heapAllocationBytes.sum();
   }
 
-  public long getPoolAllocationNum() {
-    return poolAllocationNum.sum();
+  public long getPoolAllocationBytes() {
+    return poolAllocationBytes.sum();
   }
 
+  public int getBufferSize() {
+    return this.bufSize;
+  }
+
+  public int getUsedBufferCount() {
+    return this.usedBufCount.intValue();
+  }
+
+  /**
+   * The {@link ConcurrentLinkedQueue#size()} is O(N) complexity and time-consuming, so DO NOT use
+   * the method except in UT.
+   */
   @VisibleForTesting
   public int getFreeBufferCount() {
     return this.buffers.size();
@@ -179,15 +191,15 @@ public class ByteBuffAllocator {
   }
 
   public double getHeapAllocationRatio() {
-    long heapAllocNum = heapAllocationNum.sum(), poolAllocNum = poolAllocationNum.sum();
-    double heapDelta = heapAllocNum - lastHeapAllocationNum;
-    double poolDelta = poolAllocNum - lastPoolAllocationNum;
-    lastHeapAllocationNum = heapAllocNum;
-    lastPoolAllocationNum = poolAllocNum;
+    long heapAllocBytes = heapAllocationBytes.sum(), poolAllocBytes = poolAllocationBytes.sum();
+    double heapDelta = heapAllocBytes - lastHeapAllocationBytes;
+    double poolDelta = poolAllocBytes - lastPoolAllocationBytes;
+    lastHeapAllocationBytes = heapAllocBytes;
+    lastPoolAllocationBytes = poolAllocBytes;
     if (Math.abs(heapDelta + poolDelta) < 1e-3) {
       return 0.0;
     }
-    return heapDelta / (heapDelta + poolDelta) * 100;
+    return heapDelta / (heapDelta + poolDelta);
   }
 
   /**
@@ -208,7 +220,7 @@ public class ByteBuffAllocator {
   }
 
   private ByteBuffer allocateOnHeap(int size) {
-    heapAllocationNum.increment();
+    heapAllocationBytes.add(size);
     return ByteBuffer.allocate(size);
   }
 
@@ -282,7 +294,7 @@ public class ByteBuffAllocator {
     if (bb != null) {
       // To reset the limit to capacity and position to 0, must clear here.
       bb.clear();
-      poolAllocationNum.increment();
+      poolAllocationBytes.add(bufSize);
       return bb;
     }
     while (true) {
@@ -299,7 +311,7 @@ public class ByteBuffAllocator {
       if (!this.usedBufCount.compareAndSet(c, c + 1)) {
         continue;
       }
-      poolAllocationNum.increment();
+      poolAllocationBytes.add(bufSize);
       return ByteBuffer.allocateDirect(bufSize);
     }
   }
