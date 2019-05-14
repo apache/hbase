@@ -1390,10 +1390,10 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
-      <groupId>com.codahale.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-      <version>3.0.1</version>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>3.9</version>
       <licenses>
         <license>
           <name>Apache License, Version 2.0</name>
@@ -1404,7 +1404,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
       <groupId>com.squareup.okhttp</groupId>
       <artifactId>okhttp</artifactId>
       <version>2.4.0</version>
@@ -1418,7 +1418,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
       <groupId>com.squareup.okio</groupId>
       <artifactId>okio</artifactId>
       <version>1.4.0</version>
@@ -1461,7 +1461,7 @@ Copyright 2006 Envoi Solutions LLC
   </supplement>
 
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
       <groupId>de.ruedigermoeller</groupId>
       <artifactId>fst</artifactId>
       <version>2.24</version>
@@ -1480,7 +1480,7 @@ Copyright 2006 Envoi Solutions LLC
   </supplement>
 
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
       <groupId>org.objenesis</groupId>
       <artifactId>objenesis</artifactId>
       <version>2.1</version>
@@ -1631,7 +1631,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </project>
   </supplement>
   <supplement>
-    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha4 -->
       <groupId>org.codehaus.woodstox</groupId>
       <artifactId>stax2-api</artifactId>
       <version>3.1.4</version>
