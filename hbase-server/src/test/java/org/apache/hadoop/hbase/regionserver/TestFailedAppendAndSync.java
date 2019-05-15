@@ -114,7 +114,8 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force, boolean syncFailed) throws FailedLogCloseException, IOException {
+    public byte[][] rollWriter(boolean force, boolean syncFailed)
+        throws FailedLogCloseException, IOException {
       byte[][] regions = super.rollWriter(force, syncFailed);
       rolls.getAndIncrement();
       return regions;

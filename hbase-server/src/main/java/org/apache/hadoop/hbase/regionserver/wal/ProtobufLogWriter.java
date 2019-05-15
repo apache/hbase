@@ -92,8 +92,9 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @SuppressWarnings("deprecation")
   @Override
-  protected void initOutput(FileSystem fs, Path path, Path oldPath, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
+  protected void initOutput(FileSystem fs, Path path, Path oldPath, boolean overwritable,
+      int bufferSize,short replication, long blockSize)
+          throws IOException, StreamLacksCapabilityException {
     this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
         blockSize, false);
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {

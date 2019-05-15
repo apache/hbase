@@ -77,12 +77,12 @@ public class LogRoller extends HasThread implements Closeable {
       wal.registerWALActionsListener(new WALActionsListener() {
         @Override
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
-          Pair<Boolean,Boolean> walInfo = walNeedsRoll.get(wal);
-          walInfo.setFirst(Boolean.TRUE);
+          Pair<Boolean,Boolean> walInfo = new Pair<>(Boolean.TRUE, Boolean.FALSE);
           if (reason.equals(WALActionsListener.RollRequestReason.SLOW_SYNC) ||
               reason.equals(WALActionsListener.RollRequestReason.ERROR)) {
             walInfo.setSecond(Boolean.TRUE);
           }
+          walNeedsRoll.put(wal, walInfo);
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {
             rollLog.set(true);
@@ -199,7 +199,7 @@ public class LogRoller extends HasThread implements Closeable {
           try {
             final byte[][] regionsToFlush = wal.rollWriter(periodic ||
                 walInfo.getFirst().booleanValue() || syncFailed, syncFailed);
-            walInfo.setFirst(Boolean.FALSE);
+            walNeedsRoll.put(wal, new Pair<>(Boolean.FALSE, Boolean.FALSE));
             if (regionsToFlush != null) {
               for (byte[] r : regionsToFlush) {
                 scheduleFlush(r);

@@ -123,8 +123,10 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   public static final String ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = "hbase.fs.async.create.retries";
-
+  public static final String ASYNC_DFS_OUTPUT_SKIP_FAILED_DN = "hbase.fs.async.skipFailedDn";
   public static final int DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = 10;
+  public static final boolean DEFAULT_ASYNC_DFS_OUTPUT_SKIP_FAILED_DN = false;
+
   // use pooled allocator for performance.
   private static final ByteBufAllocator ALLOC = PooledByteBufAllocator.DEFAULT;
 
@@ -751,8 +753,10 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     ClientProtocol namenode = client.getNamenode();
     int createMaxRetries = conf.getInt(ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES,
       DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES);
+    boolean skipFailedDn = conf.getBoolean(ASYNC_DFS_OUTPUT_SKIP_FAILED_DN,
+      DEFAULT_ASYNC_DFS_OUTPUT_SKIP_FAILED_DN);
     DatanodeInfo[] excludesNodes = EMPTY_DN_ARRAY;
-    if (oldPath != null) {
+    if (skipFailedDn && oldPath != null) {
       String oldPathStr = oldPath.toUri().getPath();
       long len = namenode.getFileInfo(oldPathStr).getLen();
       for(LocatedBlock block : namenode.getBlockLocations(oldPathStr, Math.max(0, len - 1), len)
