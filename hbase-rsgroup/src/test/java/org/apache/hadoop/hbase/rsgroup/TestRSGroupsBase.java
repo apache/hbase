@@ -78,7 +78,7 @@ public abstract class TestRSGroupsBase {
   protected static HBaseCluster cluster;
   protected static RSGroupAdmin rsGroupAdmin;
   protected static HMaster master;
-  protected static boolean INIT = false;
+  protected boolean INIT = false;
   protected static RSGroupAdminEndpoint rsGroupAdminEndpoint;
   protected static CPMasterObserver observer;
 
