@@ -164,6 +164,18 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test "balance should work" do
+      command(:balance_switch, true)
+      output = capture_stdout { command(:balancer_enabled) }
+      assert(output.include?('true'))
+
+      command(:balancer)
+      output = capture_stdout { command(:balancer, 'force') }
+      assert(output.include?('true'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "create should fail with non-string table names" do
       assert_raise(ArgumentError) do
         command(:create, 123, 'xxx')
