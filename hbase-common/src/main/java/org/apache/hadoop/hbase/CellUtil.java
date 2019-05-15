@@ -1116,25 +1116,27 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell.
+   *
+   * Note that this method is a LimitedPrivate API and may change between minor releases.
    * @param cell
    * @param ts
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
-  @Deprecated
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
   public static void setTimestamp(Cell cell, long ts) throws IOException {
     PrivateCellUtil.setTimestamp(cell, ts);
   }
 
   /**
    * Sets the given timestamp to the cell.
+   *
+   * Note that this method is a LimitedPrivate API and may change between minor releases.
    * @param cell
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
-  @Deprecated
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
   public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
     PrivateCellUtil.setTimestamp(cell, Bytes.toLong(ts, tsOffset));
   }
