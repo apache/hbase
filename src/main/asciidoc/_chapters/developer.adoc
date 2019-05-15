@@ -2329,7 +2329,7 @@ Co-authored-by: name <name@example.com>
 Co-authored-by: another-name <another-name@example.com>"
 ----
 
-Note: `Amending-Author: Author <committer&apache>` was used prior to this
+Note: `Amending-Author: Author <committer@apache>` was used prior to this
 link:https://lists.apache.org/thread.html/f00b5f9b65570e777dbb31c37d7b0ffc55c5fc567aefdb456608a042@%3Cdev.hbase.apache.org%3E[DISCUSSION].
 
 ====== Close related GitHub PRs
