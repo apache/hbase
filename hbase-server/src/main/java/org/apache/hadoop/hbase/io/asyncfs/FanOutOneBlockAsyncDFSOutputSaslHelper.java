@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
 import com.google.protobuf.ByteString;
@@ -66,7 +66,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -128,16 +128,6 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static final SaslAdaptor SASL_ADAPTOR;
 
-  // helper class for convert protos.
-  private interface PBHelper {
-
-    List<CipherOptionProto> convertCipherOptions(List<CipherOption> options);
-
-    List<CipherOption> convertCipherOptionProtos(List<CipherOptionProto> options);
-  }
-
-  private static final PBHelper PB_HELPER;
-
   private interface TransparentCryptoHelper {
 
     Encryptor createEncryptor(Configuration conf, FileEncryptionInfo feInfo, DFSClient client)
@@ -188,42 +178,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static PBHelper createPBHelper() throws NoSuchMethodException {
-    Class<?> helperClass;
-    try {
-      helperClass = Class.forName("org.apache.hadoop.hdfs.protocolPB.PBHelperClient");
-    } catch (ClassNotFoundException e) {
-      LOG.debug("No PBHelperClient class found, should be hadoop 2.7-", e);
-      helperClass = org.apache.hadoop.hdfs.protocolPB.PBHelper.class;
-    }
-    Method convertCipherOptionsMethod = helperClass.getMethod("convertCipherOptions", List.class);
-    Method convertCipherOptionProtosMethod =
-        helperClass.getMethod("convertCipherOptionProtos", List.class);
-    return new PBHelper() {
-
-      @SuppressWarnings("unchecked")
-      @Override
-      public List<CipherOptionProto> convertCipherOptions(List<CipherOption> options) {
-        try {
-          return (List<CipherOptionProto>) convertCipherOptionsMethod.invoke(null, options);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @SuppressWarnings("unchecked")
-      @Override
-      public List<CipherOption> convertCipherOptionProtos(List<CipherOptionProto> options) {
-        try {
-          return (List<CipherOption>) convertCipherOptionProtosMethod.invoke(null, options);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
-  }
-
-  private static TransparentCryptoHelper createTransparentCryptoHelper27()
+  private static TransparentCryptoHelper createTransparentCryptoHelperWithoutHDFS12396()
       throws NoSuchMethodException {
     Method decryptEncryptedDataEncryptionKeyMethod = DFSClient.class
       .getDeclaredMethod("decryptEncryptedDataEncryptionKey", FileEncryptionInfo.class);
@@ -252,7 +207,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     };
   }
 
-  private static TransparentCryptoHelper createTransparentCryptoHelper28()
+  private static TransparentCryptoHelper createTransparentCryptoHelperWithHDFS12396()
       throws ClassNotFoundException, NoSuchMethodException {
     Class<?> hdfsKMSUtilCls = Class.forName("org.apache.hadoop.hdfs.HdfsKMSUtil");
     Method decryptEncryptedDataEncryptionKeyMethod = hdfsKMSUtilCls.getDeclaredMethod(
@@ -285,18 +240,17 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static TransparentCryptoHelper createTransparentCryptoHelper()
       throws NoSuchMethodException, ClassNotFoundException {
     try {
-      return createTransparentCryptoHelper27();
+      return createTransparentCryptoHelperWithoutHDFS12396();
     } catch (NoSuchMethodException e) {
-      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient, should be hadoop 2.8+",
-        e);
+      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient," +
+        " should be hadoop version with HDFS-12396", e);
     }
-    return createTransparentCryptoHelper28();
+    return createTransparentCryptoHelperWithHDFS12396();
   }
 
   static {
     try {
       SASL_ADAPTOR = createSaslAdaptor();
-      PB_HELPER = createPBHelper();
       TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please "
@@ -413,7 +367,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         builder.setPayload(ByteString.copyFrom(payload));
       }
       if (options != null) {
-        builder.addAllCipherOption(PB_HELPER.convertCipherOptions(options));
+        builder.addAllCipherOption(PBHelperClient.convertCipherOptions(options));
       }
       DataTransferEncryptorMessageProto proto = builder.build();
       int size = proto.getSerializedSize();
@@ -498,7 +452,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private CipherOption getCipherOption(DataTransferEncryptorMessageProto proto,
         boolean isNegotiatedQopPrivacy, SaslClient saslClient) throws IOException {
       List<CipherOption> cipherOptions =
-          PB_HELPER.convertCipherOptionProtos(proto.getCipherOptionList());
+          PBHelperClient.convertCipherOptionProtos(proto.getCipherOptionList());
       if (cipherOptions == null || cipherOptions.isEmpty()) {
         return null;
       }
