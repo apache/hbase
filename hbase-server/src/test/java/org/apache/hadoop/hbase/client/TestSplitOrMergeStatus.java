@@ -46,7 +46,7 @@ import static org.junit.Assert.assertTrue;
 public class TestSplitOrMergeStatus {
 
   private static final Log LOG = LogFactory.getLog(TestSplitOrMergeStatus.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
 
   /**

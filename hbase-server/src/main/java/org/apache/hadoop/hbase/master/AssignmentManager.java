@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Admin.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -1073,8 +1074,11 @@ public class AssignmentManager extends ZooKeeperListener {
       case RS_ZK_REQUEST_REGION_SPLIT:
       case RS_ZK_REGION_SPLITTING:
       case RS_ZK_REGION_SPLIT:
-        if (!handleRegionSplitting(
-            rt, encodedName, prettyPrintedRegionName, sn)) {
+        // If region split not enabled then skip only if event type is RS_ZK_REQUEST_REGION_SPLIT,
+        // allow on-going split operations
+        if ((!isRegionSplitOrMergeEnabled(rt, prettyPrintedRegionName, MasterSwitchType.SPLIT)
+            && rt.getEventType() == EventType.RS_ZK_REQUEST_REGION_SPLIT)
+            || !handleRegionSplitting(rt, encodedName, prettyPrintedRegionName, sn)) {
           deleteSplittingNode(encodedName, sn);
         }
         break;
@@ -1084,8 +1088,11 @@ public class AssignmentManager extends ZooKeeperListener {
       case RS_ZK_REGION_MERGED:
         // Merged region is a new region, we can't find it in the region states now.
         // However, the two merging regions are not new. They should be in state for merging.
-        if (!handleRegionMerging(
-            rt, encodedName, prettyPrintedRegionName, sn)) {
+        // If region merge not enabled then skip only if event type is RS_ZK_REQUEST_REGION_MERGE,
+        // allow on-going merge operations
+        if ((!isRegionSplitOrMergeEnabled(rt, prettyPrintedRegionName, MasterSwitchType.MERGE)
+            && rt.getEventType() == EventType.RS_ZK_REQUEST_REGION_MERGE)
+            || !handleRegionMerging(rt, encodedName, prettyPrintedRegionName, sn)) {
           deleteMergingNode(encodedName, sn);
         }
         break;
@@ -1213,7 +1220,25 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  //For unit tests only
+  /**
+   * Check whether region split or merge enabled.
+   * @param rt Region transition info
+   * @param prettyPrintedRegionName Region name
+   * @param switchType Region operation type
+   * @param eventType Event type
+   * @return true if region split/merge enabled
+   */
+  private boolean isRegionSplitOrMergeEnabled(RegionTransition rt, String prettyPrintedRegionName,
+      MasterSwitchType switchType) {
+    if (!((HMaster) server).getSplitOrMergeTracker().isSplitOrMergeEnabled(switchType)) {
+      LOG.warn("Region " + switchType + " not enabled, skipping " + rt.getEventType()
+          + " of reigon " + prettyPrintedRegionName);
+      return false;
+    }
+    return true;
+  }
+
+  // For unit tests only
   boolean wasClosedHandlerCalled(HRegionInfo hri) {
     AtomicBoolean b = closedRegionHandlerCalled.get(hri);
     //compareAndSet to be sure that unit tests don't see stale values. Means,
