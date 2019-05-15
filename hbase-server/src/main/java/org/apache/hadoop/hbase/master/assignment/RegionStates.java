@@ -47,7 +47,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.collection.UnmodifiableCollection;
 
 /**
  * RegionStates contains a set of Maps that describes the in-memory state of the AM, with
@@ -181,7 +180,7 @@ public class RegionStates {
 
   /** @return A view of region state nodes for all the regions. */
   public Collection<RegionStateNode> getRegionStateNodes() {
-    return UnmodifiableCollection.unmodifiableCollection(regionsMap.values());
+    return Collections.unmodifiableCollection(regionsMap.values());
   }
 
   /** @return A snapshot of region state nodes for all the regions. */

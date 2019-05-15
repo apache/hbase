@@ -620,8 +620,6 @@ public class ServerManager {
     }
   }
 
-  /** This is already called from a synchronized method, so synch is for visibility sake. */
-  @VisibleForTesting
   public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (onlineServers) {
       if (!this.onlineServers.containsKey(sn)) {

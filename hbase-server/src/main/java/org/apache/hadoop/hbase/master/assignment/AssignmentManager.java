@@ -129,9 +129,9 @@ public class AssignmentManager {
       "hbase.assignment.rit.chore.interval.msec";
   private static final int DEFAULT_RIT_CHORE_INTERVAL_MSEC = 60 * 1000;
 
-  public static final String NONLIVE_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY =
-      "hbase.assignment.nonlive.metric.chore.interval.msec";
-  private static final int DEFAULT_NONLIVE_METRIC_CHORE_INTERVAL_MSEC = 120 * 1000;
+  public static final String DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY =
+      "hbase.assignment.dead.region.metric.chore.interval.msec";
+  private static final int DEFAULT_DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC = 120 * 1000;
 
   public static final String ASSIGN_MAX_ATTEMPTS =
       "hbase.assignment.maximum.attempts";
@@ -151,7 +151,7 @@ public class AssignmentManager {
 
   private final MetricsAssignmentManager metrics;
   private final RegionInTransitionChore ritChore;
-  private final NonLiveServerMetricRegionChore nonLiveMetricChore;
+  private final DeadServerMetricRegionChore deadMetricChore;
   private final MasterServices master;
 
   private final AtomicBoolean running = new AtomicBoolean(false);
@@ -198,12 +198,12 @@ public class AssignmentManager {
         DEFAULT_RIT_CHORE_INTERVAL_MSEC);
     this.ritChore = new RegionInTransitionChore(ritChoreInterval);
 
-    int nonLiveChoreInterval = conf.getInt(NONLIVE_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY,
-        DEFAULT_NONLIVE_METRIC_CHORE_INTERVAL_MSEC);
-    if (nonLiveChoreInterval > 0) {
-      this.nonLiveMetricChore = new NonLiveServerMetricRegionChore(nonLiveChoreInterval);
+    int deadRegionChoreInterval = conf.getInt(DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC_CONF_KEY,
+        DEFAULT_DEAD_REGION_METRIC_CHORE_INTERVAL_MSEC);
+    if (deadRegionChoreInterval > 0) {
+      this.deadMetricChore = new DeadServerMetricRegionChore(deadRegionChoreInterval);
     } else {
-      this.nonLiveMetricChore = null;
+      this.deadMetricChore = null;
     }
   }
 
@@ -286,8 +286,8 @@ public class AssignmentManager {
     // Remove the RIT chore
     if (hasProcExecutor) {
       master.getMasterProcedureExecutor().removeChore(this.ritChore);
-      if (this.nonLiveMetricChore != null) {
-        master.getMasterProcedureExecutor().removeChore(this.nonLiveMetricChore);
+      if (this.deadMetricChore != null) {
+        master.getMasterProcedureExecutor().removeChore(this.deadMetricChore);
       }
     }
 
@@ -1148,8 +1148,8 @@ public class AssignmentManager {
     }
   }
 
-  private static class NonLiveServerMetricRegionChore extends ProcedureInMemoryChore<MasterProcedureEnv> {
-    public NonLiveServerMetricRegionChore(final int timeoutMsec) {
+  private static class DeadServerMetricRegionChore extends ProcedureInMemoryChore<MasterProcedureEnv> {
+    public DeadServerMetricRegionChore(final int timeoutMsec) {
       super(timeoutMsec);
     }
 
@@ -1170,9 +1170,12 @@ public class AssignmentManager {
         }
         ServerName sn;
         State state;
-        synchronized (rsn.getState()) {
+        rsn.lock();
+        try {
           sn = rsn.getRegionLocation();
           state = rsn.getState();
+        } finally {
+          rsn.unlock();
         }
         if (state != State.OPEN) {
           continue; // Mostly skipping RITs that are already being take care of.
@@ -1203,7 +1206,7 @@ public class AssignmentManager {
           deadRegions, unknownRegions);
       }
 
-      am.updateNonLiveServerRegionMetrics(deadRegions, unknownRegions);
+      am.updateDeadServerRegionMetrics(deadRegions, unknownRegions);
     }
   }
 
@@ -1313,8 +1316,8 @@ public class AssignmentManager {
     metrics.updateRITCountOverThreshold(ritStat.getTotalRITsOverThreshold());
   }
 
-  private void updateNonLiveServerRegionMetrics(int nonLiveRegions, int unknownRegions) {
-    metrics.updateDeadServerOpenRegions(nonLiveRegions);
+  private void updateDeadServerRegionMetrics(int deadRegions, int unknownRegions) {
+    metrics.updateDeadServerOpenRegions(deadRegions);
     metrics.updateUnknownServerOpenRegions(unknownRegions);
   }
 
@@ -1345,7 +1348,7 @@ public class AssignmentManager {
 
     // Start the chores
     master.getMasterProcedureExecutor().addChore(this.ritChore);
-    master.getMasterProcedureExecutor().addChore(this.nonLiveMetricChore);
+    master.getMasterProcedureExecutor().addChore(this.deadMetricChore);
 
     long costMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
     LOG.info("Joined the cluster in {}", StringUtils.humanTimeDiff(costMs));
