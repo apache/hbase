@@ -1181,7 +1181,7 @@ public final class CellUtil {
    * @param cell
    * @param ts
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
+   * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
    */
   @Deprecated
   public static void setTimestamp(Cell cell, long ts) throws IOException {
@@ -1194,7 +1194,7 @@ public final class CellUtil {
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
+   * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
    */
   @Deprecated
   public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
