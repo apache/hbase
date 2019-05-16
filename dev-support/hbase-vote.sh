@@ -74,6 +74,7 @@ operator may still consider to verify the following manually
 3. Other concerns if any
 __EOF
 
+[[ "${SOURCE_URL}" != */ ]] && SOURCE_URL="${SOURCE_URL}/"
 HBASE_RC_VERSION=$(tr "/" "\n" <<< "${SOURCE_URL}" | tail -n2)
 HBASE_VERSION=$(echo "${HBASE_RC_VERSION}" | sed -e 's/RC[0-9]//g' | sed -e 's/hbase-//g')
 JAVA_VERSION=$(java -version 2>&1 | cut -f3 -d' ' | head -n1 | sed -e 's/"//g')
@@ -106,7 +107,7 @@ function download_and_import_keys() {
 
 function download_release_candidate () {
     # get all files from release candidate repo
-    wget --recursive --no-parent "${SOURCE_URL}"
+    wget -r -np -nH --cut-dirs 4 "${SOURCE_URL}"
 }
 
 function verify_signatures() {
@@ -169,7 +170,7 @@ __EOF
 
 download_and_import_keys
 download_release_candidate
-pushd dist.apache.org/repos/dist/dev/hbase/"${HBASE_RC_VERSION}"
+pushd "${HBASE_RC_VERSION}"
 
 execute verify_signatures
 execute verify_checksums
