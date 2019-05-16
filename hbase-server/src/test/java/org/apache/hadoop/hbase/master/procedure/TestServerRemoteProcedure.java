@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -189,9 +190,10 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public RemoteProcedureDispatcher.RemoteOperation remoteCallBuild(MasterProcedureEnv env,
-        ServerName serverName) {
-      return new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]);
+    public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(
+        MasterProcedureEnv env, ServerName serverName) {
+      return Optional
+          .of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]));
     }
 
     @Override

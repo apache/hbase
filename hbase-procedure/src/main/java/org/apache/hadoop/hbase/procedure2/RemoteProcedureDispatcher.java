@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
@@ -232,8 +233,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   public interface RemoteProcedure<TEnv, TRemote> {
     /**
      * For building the remote operation.
+     * May be empty if no need to send remote call. Usually, this means the RemoteProcedure has been
+     * finished already. This is possible, as we may have already sent the procedure to RS but then
+     * the rpc connection is broken so the executeProcedures call fails, but the RS does receive the
+     * procedure and execute it and then report back, before we retry again.
      */
-    RemoteOperation remoteCallBuild(TEnv env, TRemote remote);
+    Optional<RemoteOperation> remoteCallBuild(TEnv env, TRemote remote);
 
     /**
      * Called when the executeProcedure call is failed.
@@ -277,8 +282,8 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       final TRemote remote, final Set<RemoteProcedure> remoteProcedures) {
     final ArrayListMultimap<Class<?>, RemoteOperation> requestByType = ArrayListMultimap.create();
     for (RemoteProcedure proc : remoteProcedures) {
-      RemoteOperation operation = proc.remoteCallBuild(env, remote);
-      requestByType.put(operation.getClass(), operation);
+      Optional<RemoteOperation> operation = proc.remoteCallBuild(env, remote);
+      operation.ifPresent(op -> requestByType.put(op.getClass(), op));
     }
     return requestByType;
   }

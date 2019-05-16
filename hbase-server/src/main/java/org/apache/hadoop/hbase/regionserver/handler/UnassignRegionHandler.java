@@ -25,8 +25,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -60,7 +60,7 @@ public class UnassignRegionHandler extends EventHandler {
 
   private final RetryCounter retryCounter;
 
-  public UnassignRegionHandler(RegionServerServices server, String encodedName, long closeProcId,
+  public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
       boolean abort, @Nullable ServerName destination, EventType eventType) {
     super(server, eventType);
     this.encodedName = encodedName;
@@ -70,13 +70,13 @@ public class UnassignRegionHandler extends EventHandler {
     this.retryCounter = HandlerUtil.getRetryCounter();
   }
 
-  private RegionServerServices getServer() {
-    return (RegionServerServices) server;
+  private HRegionServer getServer() {
+    return (HRegionServer) server;
   }
 
   @Override
   public void process() throws IOException {
-    RegionServerServices rs = getServer();
+    HRegionServer rs = getServer();
     byte[] encodedNameBytes = Bytes.toBytes(encodedName);
     Boolean previous = rs.getRegionsInTransitionInRS().putIfAbsent(encodedNameBytes, Boolean.FALSE);
     if (previous != null) {
@@ -94,7 +94,7 @@ public class UnassignRegionHandler extends EventHandler {
       }
       return;
     }
-    HRegion region = (HRegion) rs.getRegion(encodedName);
+    HRegion region = rs.getRegion(encodedName);
     if (region == null) {
       LOG.debug(
         "Received CLOSE for a region {} which is not online, and we're not opening/closing.",
@@ -124,6 +124,8 @@ public class UnassignRegionHandler extends EventHandler {
       HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo()))) {
       throw new IOException("Failed to report close to master: " + regionName);
     }
+    // Cache the close region procedure id after report region transition succeed.
+    rs.finishRegionProcedure(closeProcId);
     rs.getRegionsInTransitionInRS().remove(encodedNameBytes, Boolean.FALSE);
     LOG.info("Closed {}", regionName);
   }
@@ -134,7 +136,7 @@ public class UnassignRegionHandler extends EventHandler {
     getServer().abort("Failed to close region " + encodedName + " and can not recover", t);
   }
 
-  public static UnassignRegionHandler create(RegionServerServices server, String encodedName,
+  public static UnassignRegionHandler create(HRegionServer server, String encodedName,
       long closeProcId, boolean abort, @Nullable ServerName destination) {
     // Just try our best to determine whether it is for closing meta. It is not the end of the world
     // if we put the handler into a wrong executor.

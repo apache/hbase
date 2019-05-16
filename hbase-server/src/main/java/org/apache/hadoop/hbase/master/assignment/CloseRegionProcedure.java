@@ -61,7 +61,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
+  public RemoteOperation newRemoteOperation() {
     return new RegionCloseOperation(this, region, getProcId(), assignCandidate);
   }
 

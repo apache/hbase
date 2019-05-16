@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -84,11 +85,12 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  public RemoteProcedureDispatcher.RemoteOperation remoteCallBuild(MasterProcedureEnv env,
+  public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
       ServerName serverName) {
-    return new RSProcedureDispatcher.ServerOperation(this, getProcId(), SplitWALCallable.class,
-        MasterProcedureProtos.SplitWALParameter.newBuilder().setWalPath(walPath).build()
-            .toByteArray());
+    return Optional
+        .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), SplitWALCallable.class,
+            MasterProcedureProtos.SplitWALParameter.newBuilder().setWalPath(walPath).build()
+                .toByteArray()));
   }
 
   @Override
