@@ -127,12 +127,6 @@ RUN cabal update
 RUN cabal install shellcheck --global
 
 ####
-# Install bats
-####
-RUN add-apt-repository -y ppa:duggan/bats
-RUN apt-key update && apt-get -q update && apt-get -q install --no-install-recommends -y bats
-
-####
 # Install pylint
 ####
 RUN pip install pylint==1.9.2
