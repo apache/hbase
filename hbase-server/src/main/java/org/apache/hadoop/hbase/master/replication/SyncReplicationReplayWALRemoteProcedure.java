@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -62,13 +63,14 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
+  public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     ReplaySyncReplicationWALParameter.Builder builder =
-      ReplaySyncReplicationWALParameter.newBuilder();
+        ReplaySyncReplicationWALParameter.newBuilder();
     builder.setPeerId(peerId);
     wals.stream().forEach(builder::addWal);
-    return new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
-      builder.build().toByteArray());
+    return Optional
+        .of(new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
+            builder.build().toByteArray()));
   }
 
   protected void complete(MasterProcedureEnv env, Throwable error) {

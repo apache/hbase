@@ -51,6 +51,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
@@ -191,6 +192,8 @@ import sun.misc.SignalHandler;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -254,6 +257,18 @@ public class HRegionServer extends HasThread implements
   //false - if close region action in progress
   protected final ConcurrentMap<byte[], Boolean> regionsInTransitionInRS =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
+
+  /**
+   * Used to cache the open/close region procedures which already submitted.
+   * See {@link #submitRegionProcedure(long)}.
+   */
+  private final ConcurrentMap<Long, Long> submittedRegionProcedures = new ConcurrentHashMap<>();
+  /**
+   * Used to cache the open/close region procedures which already executed.
+   * See {@link #submitRegionProcedure(long)}.
+   */
+  private final Cache<Long, Long> executedRegionProcedures =
+      CacheBuilder.newBuilder().expireAfterAccess(600, TimeUnit.SECONDS).build();
 
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
@@ -3880,6 +3895,51 @@ public class HRegionServer extends HasThread implements
       }
       throw ProtobufUtil.getRemoteException(se);
     }
+  }
+
+  /**
+   * Will ignore the open/close region procedures which already submitted or executed.
+   *
+   * When master had unfinished open/close region procedure and restarted, new active master may
+   * send duplicate open/close region request to regionserver. The open/close request is submitted
+   * to a thread pool and execute. So first need a cache for submitted open/close region procedures.
+   *
+   * After the open/close region request executed and report region transition succeed, cache it in
+   * executed region procedures cache. See {@link #finishRegionProcedure(long)}. After report region
+   * transition succeed, master will not send the open/close region request to regionserver again.
+   * And we thought that the ongoing duplicate open/close region request should not be delayed more
+   * than 600 seconds. So the executed region procedures cache will expire after 600 seconds.
+   *
+   * See HBASE-22404 for more details.
+   *
+   * @param procId the id of the open/close region procedure
+   * @return true if the procedure can be submitted.
+   */
+  boolean submitRegionProcedure(long procId) {
+    if (procId == -1) {
+      return true;
+    }
+    // Ignore the region procedures which already submitted.
+    Long previous = submittedRegionProcedures.putIfAbsent(procId, procId);
+    if (previous != null) {
+      LOG.warn("Received procedure pid={}, which already submitted, just ignore it", procId);
+      return false;
+    }
+    // Ignore the region procedures which already executed.
+    if (executedRegionProcedures.getIfPresent(procId) != null) {
+      LOG.warn("Received procedure pid={}, which already executed, just ignore it", procId);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * See {@link #submitRegionProcedure(long)}.
+   * @param procId the id of the open/close region procedure
+   */
+  public void finishRegionProcedure(long procId) {
+    executedRegionProcedures.put(procId, procId);
+    submittedRegionProcedures.remove(procId);
   }
 
   public boolean isShutDown() {

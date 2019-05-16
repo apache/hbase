@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -117,9 +119,9 @@ public class AssignProcedure extends RegionTransitionProcedure {
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(final MasterProcedureEnv env,
+  public Optional<RemoteOperation> remoteCallBuild(final MasterProcedureEnv env,
       final ServerName serverName) {
-    return null;
+    return Optional.empty();
   }
 
   @Override
