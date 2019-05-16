@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
@@ -99,11 +101,11 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
+  public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     assert targetServer.equals(remote);
-    return new ServerOperation(this, getProcId(), RefreshPeerCallable.class,
+    return Optional.of(new ServerOperation(this, getProcId(), RefreshPeerCallable.class,
         RefreshPeerParameter.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-            .setTargetServer(ProtobufUtil.toServerName(remote)).build().toByteArray());
+            .setTargetServer(ProtobufUtil.toServerName(remote)).build().toByteArray()));
   }
 
   @Override

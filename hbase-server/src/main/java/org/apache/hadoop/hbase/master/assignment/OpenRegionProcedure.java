@@ -57,7 +57,7 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
+  public RemoteOperation newRemoteOperation() {
     return new RegionOpenOperation(this, region, getProcId());
   }
 
