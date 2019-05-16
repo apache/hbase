@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
+
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -669,18 +671,24 @@ public class HFileBlock implements Cacheable {
 
     HFileBlock unpacked = new HFileBlock(this);
     unpacked.allocateBuffer(); // allocates space for the decompressed block
-
-    HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
-        ? reader.getBlockDecodingContext() : reader.getDefaultBlockDecodingContext();
-
-    ByteBuff dup = this.buf.duplicate();
-    dup.position(this.headerSize());
-    dup = dup.slice();
-
-    ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-      unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
-
-    return unpacked;
+    boolean succ = false;
+    try {
+      HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
+          ? reader.getBlockDecodingContext() : reader.getDefaultBlockDecodingContext();
+      // Create a duplicated buffer without the header part.
+      ByteBuff dup = this.buf.duplicate();
+      dup.position(this.headerSize());
+      dup = dup.slice();
+      // Decode the dup into unpacked#buf
+      ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
+        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
+      succ = true;
+      return unpacked;
+    } finally {
+      if (!succ) {
+        unpacked.release();
+      }
+    }
   }
 
   /**
@@ -701,7 +709,7 @@ public class HFileBlock implements Cacheable {
 
     buf = newBuf;
     // set limit to exclude next block's header
-    buf.limit(headerSize + uncompressedSizeWithoutHeader + cksumBytes);
+    buf.limit(capacityNeeded);
   }
 
   /**
@@ -1689,7 +1697,7 @@ public class HFileBlock implements Cacheable {
     }
 
     private ByteBuff allocate(int size, boolean intoHeap) {
-      return intoHeap ? ByteBuffAllocator.HEAP.allocate(size) : allocator.allocate(size);
+      return intoHeap ? HEAP.allocate(size) : allocator.allocate(size);
     }
 
     /**
@@ -1739,7 +1747,7 @@ public class HFileBlock implements Cacheable {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Extra see to get block size!", new RuntimeException());
           }
-          headerBuf = new SingleByteBuff(ByteBuffer.allocate(hdrSize));
+          headerBuf = HEAP.allocate(hdrSize);
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
         }
@@ -1782,7 +1790,7 @@ public class HFileBlock implements Cacheable {
         // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
         // contains the header of next block, so no need to set next block's header in it.
         HFileBlock hFileBlock = new HFileBlock(curBlock, checksumSupport, MemoryType.EXCLUSIVE,
-            offset, nextBlockOnDiskSize, fileContext, allocator);
+            offset, nextBlockOnDiskSize, fileContext, intoHeap ? HEAP: allocator);
         // Run check on uncompressed sizings.
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();

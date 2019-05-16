@@ -1128,15 +1128,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       updateCurrentBlock(newBlock);
     }
 
-    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey,
-        boolean rewind, Cell key, boolean seekBefore) throws IOException {
-      if (this.curBlock == null
-          || this.curBlock.getOffset() != seekToBlock.getOffset()) {
+    protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey, boolean rewind,
+        Cell key, boolean seekBefore) throws IOException {
+      if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
         blockBuffer.rewind();
       }
-
       // Update the nextIndexedKey
       this.nextIndexedKey = nextIndexedKey;
       return blockSeek(key, seekBefore);
@@ -1473,9 +1471,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               // Validate encoding type for data blocks. We include encoding
               // type in the cache key, and we expect it to match on a cache hit.
               if (cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getDataBlockEncoding()) {
+                // Remember to release the block when in exceptional path.
+                cachedBlock.release();
                 throw new IOException("Cached block under key " + cacheKey + " "
-                  + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
-                  + dataBlockEncoder.getDataBlockEncoding() + ")");
+                    + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
+                    + dataBlockEncoder.getDataBlockEncoding() + ")");
               }
             }
             // Cache-hit. Return!
@@ -1499,15 +1499,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
 
         // Cache the block if necessary
-        AtomicBoolean cachedRaw = new AtomicBoolean(false);
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
-            cachedRaw.set(cacheConf.shouldCacheCompressed(category));
-            cache.cacheBlock(cacheKey, cachedRaw.get() ? hfileBlock : unpacked,
+            cache.cacheBlock(cacheKey,
+              cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
               cacheConf.isInMemory());
           }
         });
-        if (unpacked != hfileBlock && !cachedRaw.get()) {
+        if (unpacked != hfileBlock) {
           // End of life here if hfileBlock is an independent block.
           hfileBlock.release();
         }
