@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.fs;
 
 import java.lang.reflect.InvocationTargetException;
@@ -24,7 +23,6 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,14 +32,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,11 +55,6 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestBlockReorder {
   private static final Log LOG = LogFactory.getLog(TestBlockReorder.class);
-
-  static {
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) HFileSystem.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   private Configuration conf;
   private MiniDFSCluster cluster;
