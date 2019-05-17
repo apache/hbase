@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.atomic.AtomicReference;import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
@@ -349,7 +349,10 @@ public class HRegionServer extends HasThread implements
   protected final int numRegionsToReport;
 
   // Stub to do region server status calls against the master.
-  private volatile RegionServerStatusService.BlockingInterface rssStub;
+  private final Object rssStubLock = new Object();
+  private RegionServerStatusService.BlockingInterface rssStub;
+  private boolean resetRssStub;
+
   private volatile LockService.BlockingInterface lockStub;
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
@@ -1140,9 +1143,10 @@ public class HRegionServer extends HasThread implements
       shutdownWAL(!abortRequested);
     }
 
-    // Make sure the proxy is down.
-    if (this.rssStub != null) {
+    // Make sure the proxy is down
+    synchronized (rssStubLock) {
       this.rssStub = null;
+      this.resetRssStub = false;
     }
     if (this.lockStub != null) {
       this.lockStub = null;
@@ -1212,7 +1216,7 @@ public class HRegionServer extends HasThread implements
   @VisibleForTesting
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
       throws IOException {
-    RegionServerStatusService.BlockingInterface rss = ensureRssStub(false, 0);
+    RegionServerStatusService.BlockingInterface rss = ensureRssStub();
     if (rss == null) {
       // the current server could be stopping.
       return;
@@ -1232,7 +1236,7 @@ public class HRegionServer extends HasThread implements
       resetRssStubOnServiceException(rss);
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
-      createRegionServerStatusStub(true);
+      ensureRssStub();
     }
   }
 
@@ -1243,7 +1247,7 @@ public class HRegionServer extends HasThread implements
    * @return false if FileSystemUtilizationChore should pause reporting to master. true otherwise
    */
   public boolean reportRegionSizesForQuotas(RegionSizeStore regionSizeStore) {
-    RegionServerStatusService.BlockingInterface rss = ensureRssStub(false, 0);
+    RegionServerStatusService.BlockingInterface rss = ensureRssStub();
     if (rss == null) {
       // the current server could be stopping.
       LOG.trace("Skipping Region size report to HMaster as stub is null");
@@ -1260,7 +1264,7 @@ public class HRegionServer extends HasThread implements
         return true;
       }
       resetRssStubOnServiceException(rss);
-      createRegionServerStatusStub(true);
+      ensureRssStub();
       if (ioe instanceof DoNotRetryIOException) {
         DoNotRetryIOException doNotRetryEx = (DoNotRetryIOException) ioe;
         if (doNotRetryEx.getCause() != null) {
@@ -2304,7 +2308,7 @@ public class HRegionServer extends HasThread implements
     // Only go down if clusterConnection is null. It is set to null almost as last thing as the
     // HRegionServer does down.
     while (this.clusterConnection != null && !this.clusterConnection.isClosed()) {
-      RegionServerStatusService.BlockingInterface rss = ensureRssStub(true, Integer.MAX_VALUE);
+      RegionServerStatusService.BlockingInterface rss = ensureRssStub(Integer.MAX_VALUE);
       if (rss == null) {
         break; // That means cluster connection is closed.
       }
@@ -2418,7 +2422,7 @@ public class HRegionServer extends HasThread implements
         msg += "\nCause:\n" + Throwables.getStackTraceAsString(cause);
       }
       // Report to the master but only if we have already registered with the master.
-      RegionServerStatusService.BlockingInterface rss = rssStub;
+      RegionServerStatusService.BlockingInterface rss = ensureRssStub();
       if (rss != null && this.serverName != null) {
         ReportRSFatalErrorRequest.Builder builder =
           ReportRSFatalErrorRequest.newBuilder();
@@ -2556,9 +2560,9 @@ public class HRegionServer extends HasThread implements
    * @return master + port, or null if server has been stopped
    */
   @VisibleForTesting
-  protected synchronized ServerName createRegionServerStatusStub() {
+  protected ServerName createRegionServerStatusStub() {
     // Create RS stub without refreshing the master node from ZK, use cached data
-    return createRegionServerStatusStub(false);
+    return createRegionServerStatusStub(true);
   }
 
   /**
@@ -2656,9 +2660,9 @@ public class HRegionServer extends HasThread implements
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) return RegionServerStartupResponse.getDefaultInstance();
-    ServerName masterServerName = createRegionServerStatusStub(true);
-    RegionServerStatusService.BlockingInterface rss = ensureRssStub(false, 0);
-    if (masterServerName == null || rss == null) {
+    RegionServerStatusService.BlockingInterface rss = ensureRssStub();
+    ServerName masterServerName = rss == null ? null : masterAddressTracker.getMasterAddress();
+    if (masterServerName == null) {
       return null;
     }
     RegionServerStartupResponse result = null;
@@ -2702,9 +2706,8 @@ public class HRegionServer extends HasThread implements
     try {
       GetLastFlushedSequenceIdRequest req =
           RequestConverter.buildGetLastFlushedSequenceIdRequest(encodedRegionName);
-      RegionServerStatusService.BlockingInterface rss = ensureRssStub(false, 1);
+      RegionServerStatusService.BlockingInterface rss = ensureRssStub(1);
       if (rss == null) {
-        // Still no luck, we tried
         LOG.warn("Unable to connect to the master to check " + "the last flushed sequence id");
         return RegionStoreSequenceIds.newBuilder().setLastFlushedSequenceId(HConstants.NO_SEQNUM)
             .build();
@@ -3804,7 +3807,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean reportFileArchivalForQuotas(TableName tableName,
       Collection<Entry<String, Long>> archivedFiles) {
-    RegionServerStatusService.BlockingInterface rss = ensureRssStub(false, 0);
+    RegionServerStatusService.BlockingInterface rss = ensureRssStub();
     try {
       RegionServerStatusProtos.FileArchiveNotificationRequest request =
           rsSpaceQuotaManager.buildFileArchiveRequest(tableName, archivedFiles);
@@ -3821,7 +3824,7 @@ public class HRegionServer extends HasThread implements
       }
       resetRssStubOnServiceException(rss);
       // re-create the stub if we failed to report the archival
-      createRegionServerStatusStub(true);
+      ensureRssStub();
       LOG.debug("Failed to report file archival(s) to Master. This will be retried.", ioe);
       return false;
     }
@@ -3848,7 +3851,10 @@ public class HRegionServer extends HasThread implements
   }
 
   void reportProcedureDone(ReportProcedureDoneRequest request) throws IOException {
-    RegionServerStatusService.BlockingInterface rss = ensureRssStub();
+    RegionServerStatusService.BlockingInterface rss = ensureRssStub(Integer.MAX_VALUE);
+    if (rss == null) {
+      throw new IOException("Cannot connect to master to report; cluster shutting down?");
+    }
     try {
       rss.reportProcedureDone(null, request);
     } catch (ServiceException se) {
@@ -3858,26 +3864,30 @@ public class HRegionServer extends HasThread implements
   }
 
   private RegionServerStatusService.BlockingInterface ensureRssStub() {
-    return ensureRssStub(false, Integer.MAX_VALUE);
+    return ensureRssStub(0);
   }
 
-  private RegionServerStatusService.BlockingInterface ensureRssStub(
-      boolean checkClusterConn, int maxRetries) {
+  private RegionServerStatusService.BlockingInterface ensureRssStub(int maxRetries) {
     RegionServerStatusService.BlockingInterface rss = null;
-    while (maxRetries-- >= 0 && (!checkClusterConn
-      || (checkClusterConn && clusterConnection != null && !clusterConnection.isClosed()))) {
-      rss = rssStub;
-      if (rss != null) {
-        break;
+    while (rss == null && maxRetries-- >= 0
+        && (clusterConnection != null && !clusterConnection.isClosed())) {
+      synchronized (rssStubLock) {
+        if (resetRssStub) {
+          createRegionServerStatusStub();
+          resetRssStub = (rssStub != null); // Ensure we try again in some other call.
+        }
+        rss = rssStub;
       }
-      createRegionServerStatusStub();
     }
     return rss;
   }
 
   private void resetRssStubOnServiceException(RegionServerStatusService.BlockingInterface rss) {
-    if (rssStub == rss) {
-      rssStub = null;
+    synchronized (rssStubLock) {
+      if (rssStub == rss) {
+        rssStub = null;
+        resetRssStub = true;
+      }
     }
   }
 
