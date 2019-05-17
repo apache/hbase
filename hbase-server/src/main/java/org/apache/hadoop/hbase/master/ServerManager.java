@@ -620,6 +620,8 @@ public class ServerManager {
     }
   }
 
+  // Note: this is currently invoked from RPC, not just tests. Locking in this class needs cleanup.
+  @VisibleForTesting
   public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (onlineServers) {
       if (!this.onlineServers.containsKey(sn)) {

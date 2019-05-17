@@ -1148,7 +1148,8 @@ public class AssignmentManager {
     }
   }
 
-  private static class DeadServerMetricRegionChore extends ProcedureInMemoryChore<MasterProcedureEnv> {
+  private static class DeadServerMetricRegionChore
+      extends ProcedureInMemoryChore<MasterProcedureEnv> {
     public DeadServerMetricRegionChore(final int timeoutMsec) {
       super(timeoutMsec);
     }
