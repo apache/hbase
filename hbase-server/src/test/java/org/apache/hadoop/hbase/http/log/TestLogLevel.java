@@ -17,17 +17,19 @@
 */
 package org.apache.hadoop.hbase.http.log;
 
-import static org.apache.hadoop.hbase.http.log.LogLevel.PROTOCOL_HTTP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.BindException;
+import java.net.SocketException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
+import javax.net.ssl.SSLException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -36,14 +38,18 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.http.HttpConfig;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.log.LogLevel.CLI;
+import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -60,8 +66,11 @@ import org.junit.experimental.categories.Category;
 @Category({MiscTests.class, SmallTests.class})
 public class TestLogLevel {
   private static File BASEDIR;
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static Configuration serverConf;
   private static Configuration clientConf;
+  private static Configuration sslConf;
   private static final String logName = TestLogLevel.class.getName();
   private static final Logger log = LogManager.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
@@ -87,6 +96,8 @@ public class TestLogLevel {
     }
     serverConf = new Configuration();
     clientConf = new Configuration();
+
+    setupSSL(BASEDIR);
 
     kdc = setupMiniKdc();
     // Create two principles: a client and a HTTP principal
@@ -124,6 +135,35 @@ public class TestLogLevel {
       }
     } while (bindException);
     return kdc;
+  }
+
+  static private void setupSSL(File base) throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
+
+    keystoresDir = base.getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestLogLevel.class);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
+
+    sslConf = getSslConfig();
+  }
+
+  /**
+   * Get the SSL configuration.
+   * This method is copied from KeyStoreTestUtil#getSslConfig() in Hadoop.
+   * @return {@link Configuration} instance with ssl configs loaded.
+   */
+  private static Configuration getSslConfig() {
+    Configuration sslConf = new Configuration(false);
+    String sslServerConfFile = "ssl-server.xml";
+    String sslClientConfFile = "ssl-client.xml";
+    sslConf.addResource(sslServerConfFile);
+    sslConf.addResource(sslClientConfFile);
+    sslConf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile);
+    sslConf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile);
+    return sslConf;
   }
 
   @AfterClass
@@ -193,15 +233,16 @@ public class TestLogLevel {
   /**
    * Creates and starts a Jetty server binding at an ephemeral port to run
    * LogLevel servlet.
+   * @param protocol "http" or "https"
    * @param isSpnego true if SPNEGO is enabled
    * @return a created HttpServer object
    * @throws Exception if unable to create or start a Jetty server
    */
-  private HttpServer createServer(boolean isSpnego)
+  private HttpServer createServer(String protocol, boolean isSpnego)
       throws Exception {
     HttpServer.Builder builder = new HttpServer.Builder()
         .setName("..")
-        .addEndpoint(new URI(PROTOCOL_HTTP + "://localhost:0"))
+        .addEndpoint(new URI(protocol + "://localhost:0"))
         .setFindPort(true)
         .setConf(serverConf);
     if (isSpnego) {
@@ -214,24 +255,43 @@ public class TestLogLevel {
           .setACL(new AccessControlList("client"));
     }
 
+    // if using HTTPS, configure keystore/truststore properties.
+    if (protocol.equals(LogLevel.PROTOCOL_HTTPS)) {
+      builder = builder.keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+                       .keyStore(sslConf.get("ssl.server.keystore.location"),
+                         sslConf.get("ssl.server.keystore.password"),
+                         sslConf.get("ssl.server.keystore.type", "jks"))
+                       .trustStore(sslConf.get("ssl.server.truststore.location"),
+                         sslConf.get("ssl.server.truststore.password"),
+                         sslConf.get("ssl.server.truststore.type", "jks"));
+    }
+
     HttpServer server = builder.build();
     server.start();
     return server;
   }
 
-  private void testDynamicLogLevel(final boolean isSpnego)
-      throws Exception {
-    testDynamicLogLevel(isSpnego, Level.DEBUG.toString());
+  private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
+      final boolean isSpnego) throws Exception {
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, Level.DEBUG.toString());
   }
 
   /**
    * Run both client and server using the given protocol.
    *
+   * @param bindProtocol specify either http or https for server
+   * @param connectProtocol specify either http or https for client
    * @param isSpnego true if SPNEGO is enabled
    * @throws Exception if client can't accesss server.
    */
-  private void testDynamicLogLevel(final boolean isSpnego, final String newLevel)
-      throws Exception {
+  private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
+      final boolean isSpnego, final String newLevel) throws Exception {
+    if (!LogLevel.isValidProtocol(bindProtocol)) {
+      throw new Exception("Invalid server protocol " + bindProtocol);
+    }
+    if (!LogLevel.isValidProtocol(connectProtocol)) {
+      throw new Exception("Invalid client protocol " + connectProtocol);
+    }
     Level oldLevel = log.getEffectiveLevel();
     assertNotEquals("Get default Log Level which shouldn't be ERROR.",
         Level.ERROR, oldLevel);
@@ -249,7 +309,7 @@ public class TestLogLevel {
       UserGroupInformation.setConfiguration(serverConf);
     }
 
-    final HttpServer server = createServer(isSpnego);
+    final HttpServer server = createServer(bindProtocol, isSpnego);
     // get server port
     final String authority = NetUtils.getHostPortString(server.getConnectorAddress(0));
 
@@ -261,8 +321,8 @@ public class TestLogLevel {
       clientUGI.doAs(new PrivilegedExceptionAction<Void>() {
         @Override public Void run() throws Exception {
           // client command line
-          TestLogLevel.this.getLevel(authority);
-          TestLogLevel.this.setLevel(authority, newLevel);
+          getLevel(connectProtocol, authority);
+          setLevel(connectProtocol, authority, newLevel);
           return null;
         }
       });
@@ -278,11 +338,12 @@ public class TestLogLevel {
    * Run LogLevel command line to start a client to get log level of this test
    * class.
    *
+   * @param protocol specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to connect
    */
-  private void getLevel(String authority) throws Exception {
-    String[] getLevelArgs = {"-getlevel", authority, logName};
+  private void getLevel(String protocol, String authority) throws Exception {
+    String[] getLevelArgs = {"-getlevel", authority, logName, "-protocol", protocol};
     CLI cli = new CLI(clientConf);
     cli.run(getLevelArgs);
   }
@@ -291,12 +352,13 @@ public class TestLogLevel {
    * Run LogLevel command line to start a client to set log level of this test
    * class to debug.
    *
+   * @param protocol specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
-  private void setLevel(String authority, String newLevel)
+  private void setLevel(String protocol, String authority, String newLevel)
       throws Exception {
-    String[] setLevelArgs = {"-setlevel", authority, logName, newLevel};
+    String[] setLevelArgs = {"-setlevel", authority, logName, newLevel, "-protocol", protocol};
     CLI cli = new CLI(clientConf);
     cli.run(setLevelArgs);
 
@@ -311,7 +373,7 @@ public class TestLogLevel {
    */
   @Test(timeout=60000)
   public void testInfoLogLevel() throws Exception {
-    testDynamicLogLevel(true, "INFO");
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, "INFO");
   }
 
   /**
@@ -321,26 +383,74 @@ public class TestLogLevel {
    */
   @Test(timeout=60000)
   public void testErrorLogLevel() throws Exception {
-    testDynamicLogLevel(true, "ERROR");
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, "ERROR");
   }
 
   /**
    * Server runs HTTP, no SPNEGO.
    *
    * @throws Exception if http client can't access http server.
+   *   or http client can access https server.
    */
   @Test(timeout=60000)
   public void testLogLevelByHttp() throws Exception {
-    testDynamicLogLevel(false);
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false);
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, false);
+      fail("A HTTPS Client should not have succeeded in connecting to a HTTP server");
+    } catch (SSLException e) {
+      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+    }
   }
 
   /**
    * Server runs HTTP + SPNEGO.
    *
-   * @throws Exception if http client can't access http server.
+   * @throws Exception if http client can't access http server,
+   *   or http client can access https server.
    */
   @Test(timeout=60000)
   public void testLogLevelByHttpWithSpnego() throws Exception {
-    testDynamicLogLevel(true);
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true);
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, true);
+      fail("A HTTPS Client should not have succeeded in connecting to a HTTP server");
+    } catch (SSLException e) {
+      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+    }
+  }
+
+  /**
+   * Server runs HTTPS, no SPNEGO.
+   *
+   * @throws Exception if https client can't access https server,
+   *   or https client can access http server.
+   */
+  @Test(timeout=60000)
+  public void testLogLevelByHttps() throws Exception {
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS, false);
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, false);
+      fail("A HTTP Client should not have succeeded in connecting to a HTTPS server");
+    } catch (SocketException e) {
+      GenericTestUtils.assertExceptionContains("Unexpected end of file from server", e);
+    }
+  }
+
+  /**
+   * Server runs HTTPS + SPNEGO.
+   *
+   * @throws Exception if https client can't access https server,
+   *   or https client can access http server.
+   */
+  @Test(timeout=60000)
+  public void testLogLevelByHttpsWithSpnego() throws Exception {
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS, true);
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, true);
+      fail("A HTTP Client should not have succeeded in connecting to a HTTPS server");
+    } catch (SocketException e) {
+      GenericTestUtils.assertExceptionContains("Unexpected end of file from server", e);
+    }
   }
 }
