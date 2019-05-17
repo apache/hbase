@@ -125,7 +125,7 @@ HBase 2.0 introduces following changes to the RegionObserver interface.
 ==== WALObserver
 HBase 2.0 introduces following changes to the WALObserver interface.
 
-====== [−] interface WALObserver
+===== [−] interface WALObserver
 [cols="1,1", frame="all"]
 |===
 | Change | Result
@@ -197,7 +197,7 @@ org/apache/hadoop/hbase/ipc/RpcScheduler.dispatch:(Lorg/apache/hadoop/hbase/ipc/
 | Return value type has been changed from void to boolean.| This method has been removed because the return type is part of the method signature. A client program may be interrupted by NoSuchMethodError exception.
 |===
 
-2. Following abstract methods have been removed:
+1. Following abstract methods have been removed:
 
 ===== [−]interface PriorityFunction  (2)
 [cols="1,1", frame="all"]
