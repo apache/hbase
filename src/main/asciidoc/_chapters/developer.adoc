@@ -876,6 +876,30 @@ Regards the latter, run `mvn apache-rat:check` to verify all files are suitably 
 See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On recent discussion clarifying ASF release policy]
 for how we arrived at this process.
 
+To help with the release verfication `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
+
+[source,bourne]
+----
+./dev-support/hbase-vote.sh -h
+hbase-vote. A script for standard vote which verifies the following items
+1. Checksum of sources and binaries
+2. Signature of sources and binaries
+3. Rat check
+4. Built from source
+5. Unit tests
+
+Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>]
+       hbase-vote.sh -h | --help
+
+  -h | --help                   Show this screen.
+  -s | --source '<url>'         A URL pointing to the release candidate sources and binaries
+                                e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
+  -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
+  -f | --keys-file-url '<url>'   the URL of the key file, default is
+                                http://www.apache.org/dist/hbase/KEYS
+  -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+----
+
 [[hbase.release.announcement]]
 == Announcing Releases
 
