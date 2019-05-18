@@ -526,9 +526,15 @@ function hadoopcheck_rebuild
       hbase_hadoop2_versions="${hbase_common_hadoop2_versions}"
     fi
   fi
-  hbase_hadoop3_versions="3.0.0"
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    yetus_info "Setting Hadoop 3 versions to test based on branch-1.x rules."
     hbase_hadoop3_versions=""
+  else
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.x/master/feature branch rules"
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop3_versions="3.0.3 3.1.2"
+    else
+      hbase_hadoop2_versions="3.0.3 3.1.1 3.1.2"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
