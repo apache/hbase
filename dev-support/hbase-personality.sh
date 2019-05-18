@@ -534,7 +534,8 @@ function hadoopcheck_rebuild
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop3_versions="3.0.3 3.1.2"
     else
-      hbase_hadoop2_versions="3.0.3 3.1.1 3.1.2"
+      hbase_hadoop3_versions="3.0.3 3.1.1 3.1.2"
+    fi
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
