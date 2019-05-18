@@ -96,6 +96,8 @@ public class SplitLogWorker implements Runnable {
         // TODO have to correctly figure out when log splitting has been
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
+        // Note: this can actually get the master stuck (HBASE-22289) so treat preempted as error.
+        //       splitLogFile does return false for legitimate retriable errors.
         try {
           if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
             fs, conf, p, sequenceIdChecker,

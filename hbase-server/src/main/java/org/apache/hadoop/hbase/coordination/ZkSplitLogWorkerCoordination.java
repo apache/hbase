@@ -572,7 +572,9 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
     try {
       if (ZKUtil.setData(watcher, task, slt.toByteArray(), taskZKVersion)) {
         LOG.info("successfully transitioned task " + task + " to final state " + slt);
-        ctr.increment();
+        if (ctr != null) {
+          ctr.increment();
+        }
         return;
       }
       LOG.warn("failed to transistion task " + task + " to end state " + slt

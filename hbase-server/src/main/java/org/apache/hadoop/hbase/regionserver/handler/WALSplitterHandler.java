@@ -62,38 +62,47 @@ public class WALSplitterHandler extends EventHandler {
     this.splitTaskExecutor = splitTaskExecutor;
   }
 
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
+      justification="Intentional")
   @Override
   public void process() throws IOException {
     long startTime = System.currentTimeMillis();
     Status status = null;
     try {
       status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), reporter);
+      boolean wasCounterIncremented = false;
       switch (status) {
       case DONE:
         coordination.endTask(new SplitLogTask.Done(this.serverName),
           SplitLogCounters.tot_wkr_task_done, splitTaskDetails);
         break;
       case PREEMPTED:
-        SplitLogCounters.tot_wkr_preempt_task.increment();
-        LOG.warn("task execution preempted " + splitTaskDetails.getWALFile());
-        break;
+          SplitLogCounters.tot_wkr_preempt_task.increment();
+          wasCounterIncremented = true;
+          // Preempted state can currently be returned either when task is preempted, or when
+          // there's a particular kind of error (e.g. some ZK/HDFS errors, in my observation).
+          // In the latter case, master-side split task will get stuck if we don't update the
+          // status. Treat preemption as error to be on the safe side.
+          LOG.warn("task execution preempted; treating as error " + splitTaskDetails.getWALFile());
+          //$FALL-THROUGH$
       case ERR:
-        if (server != null && !server.isStopped()) {
-          coordination.endTask(new SplitLogTask.Err(this.serverName),
-            SplitLogCounters.tot_wkr_task_err, splitTaskDetails);
-          break;
-        }
-        // if the RS is exiting then there is probably a tons of stuff
-        // that can go wrong. Resign instead of signaling error.
-        //$FALL-THROUGH$
+          if (server != null && !server.isStopped()) {
+            coordination.endTask(new SplitLogTask.Err(this.serverName), wasCounterIncremented
+              ? null : SplitLogCounters.tot_wkr_task_err, splitTaskDetails);
+            break;
+          }
+          // if the RS is exiting then there is probably a tons of stuff
+          // that can go wrong. Resign instead of signaling error.
+          //$FALL-THROUGH$
       case RESIGNED:
-        if (server != null && server.isStopped()) {
-          LOG.info("task execution interrupted because worker is exiting "
-              + splitTaskDetails.toString());
-        }
-        coordination.endTask(new SplitLogTask.Resigned(this.serverName),
-          SplitLogCounters.tot_wkr_task_resigned, splitTaskDetails);
-        break;
+          if (server != null && server.isStopped()) {
+            LOG.info("task execution interrupted because worker is exiting "
+                + splitTaskDetails.toString());
+          }
+          coordination.endTask(new SplitLogTask.Resigned(this.serverName), wasCounterIncremented
+            ? null : SplitLogCounters.tot_wkr_task_resigned, splitTaskDetails);
+          break;
       }
     } finally {
       LOG.info("Worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
