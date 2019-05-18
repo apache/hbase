@@ -189,6 +189,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationPeerConfigUpgrader;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -3950,5 +3951,13 @@ public class HMaster extends HRegionServer implements MasterServices {
         conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, plugins + "," + cleanerClass);
       }
     }
+  }
+
+  @Override
+  public Map<String, ReplicationStatus> getWalGroupsReplicationStatus() {
+    if (!this.isOnline() || !LoadBalancer.isMasterCanHostUserRegions(conf)) {
+      return new HashMap<>();
+    }
+    return super.getWalGroupsReplicationStatus();
   }
 }
