@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -47,7 +47,7 @@
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
   </description>
-  <url>http://hbase.apache.org</url>
+  <url>https://hbase.apache.org</url>
   <inceptionYear>2007</inceptionYear>
   <!-- Set here so we can consistently use the correct name, even on branches with
        an ASF parent pom older than v15. Also uses the url from v18.
@@ -98,7 +98,7 @@
   </scm>
   <issueManagement>
     <system>JIRA</system>
-    <url>http://issues.apache.org/jira/browse/HBASE</url>
+    <url>https://issues.apache.org/jira/browse/HBASE</url>
   </issueManagement>
   <mailingLists>
     <mailingList>
@@ -108,8 +108,8 @@
       <post>user@hbase.apache.org</post>
       <archive>https://lists.apache.org/list.html?user@hbase.apache.org</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
-        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
+        <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
+        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -119,8 +119,8 @@
       <post>dev@hbase.apache.org</post>
       <archive>https://lists.apache.org/list.html?dev@hbase.apache.org</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
-        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
+        <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
+        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -784,7 +784,7 @@
               <phase>prepare-package</phase>
               <goals>
                   <!--This goal will install a -test.jar when we do install
-                      See http://maven.apache.org/guides/mini/guide-attached-tests.html
+                      See https://maven.apache.org/guides/mini/guide-attached-tests.html
                    -->
                 <goal>test-jar</goal>
               </goals>
@@ -829,7 +829,7 @@
               <exclude>**/src/main/resources/META-INF/LEGAL</exclude>
               <!-- MIT: https://github.com/asciidoctor/asciidoctor/blob/master/LICENSE.adoc -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
-              <!-- MIT http://jquery.org/license -->
+              <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
               <!-- vector graphics -->
@@ -998,7 +998,7 @@
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+  See the reference guide on building for more information: https://hbase.apache.org/book.html#build
                   </message>
                 </requireMavenVersion>
                 <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
@@ -1008,7 +1008,7 @@
   HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+  See the reference guide on building for more information: https://hbase.apache.org/book.html#build
                   </message>
                 </requireJavaVersion>
                 <bannedDependencies>
@@ -3693,7 +3693,7 @@
       </build>
     </profile>
   </profiles>
-  <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
+  <!-- See https://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
       <plugin>
