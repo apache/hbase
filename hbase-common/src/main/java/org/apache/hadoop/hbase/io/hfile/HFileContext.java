@@ -34,6 +34,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HFileContext implements HeapSize, Cloneable {
+  public static final int FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT +
+      // Algorithm, checksumType, encoding, Encryption.Context, hfileName reference
+      5 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      // usesHBaseChecksum, includesMvcc, includesTags and compressTags
+      4 * Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG);
 
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
 
@@ -188,19 +193,13 @@ public class HFileContext implements HeapSize, Cloneable {
   }
 
   /**
-   * HeapSize implementation
-   * NOTE : The heapsize should be altered as and when new state variable are added
+   * HeapSize implementation. NOTE : The heapsize should be altered as and when new state variable
+   * are added
    * @return heap size of the HFileContext
    */
   @Override
   public long heapSize() {
-    long size = ClassSize.align(ClassSize.OBJECT +
-        // Algorithm reference, encodingon, checksumtype, Encryption.Context reference
-        5 * ClassSize.REFERENCE +
-        2 * Bytes.SIZEOF_INT +
-        // usesHBaseChecksum, includesMvcc, includesTags and compressTags
-        4 * Bytes.SIZEOF_BOOLEAN +
-        Bytes.SIZEOF_LONG);
+    long size = FIXED_OVERHEAD;
     if (this.hfileName != null) {
       size += ClassSize.STRING + this.hfileName.length();
     }

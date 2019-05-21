@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruCachedBlock;
 import org.apache.hadoop.hbase.regionserver.CSLMImmutableSegment;
@@ -513,6 +515,20 @@ public class TestHeapSize  {
     // accounted for.  But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
+  }
+
+  @Test
+  public void testHFileBlockSize() throws IOException {
+    long expected;
+    long actual;
+
+    actual = HFileContext.FIXED_OVERHEAD;
+    expected = ClassSize.estimateBase(HFileContext.class, false);
+    assertEquals(expected, actual);
+
+    actual = HFileBlock.FIXED_OVERHEAD;
+    expected = ClassSize.estimateBase(HFileBlock.class, false);
+    assertEquals(expected, actual);
   }
 
   @Test
