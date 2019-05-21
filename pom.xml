@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <!--
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -47,7 +47,7 @@
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
   </description>
-  <url>http://hbase.apache.org</url>
+  <url>https://hbase.apache.org</url>
   <inceptionYear>2007</inceptionYear>
   <!-- Set here so we can consistently use the correct name, even on branches with
        an ASF parent pom older than v15. Also uses the url from v18.
@@ -89,7 +89,7 @@
   <pluginRepositories>
     <pluginRepository>
       <id>apache.snapshots</id>
-      <url>http://repository.apache.org/snapshots/</url>
+      <url>https://repository.apache.org/snapshots/</url>
     </pluginRepository>
   </pluginRepositories>
   <scm>
@@ -99,11 +99,11 @@
   </scm>
   <issueManagement>
     <system>JIRA</system>
-    <url>http://issues.apache.org/jira/browse/HBASE</url>
+    <url>https://issues.apache.org/jira/browse/HBASE</url>
   </issueManagement>
   <ciManagement>
     <system>hudson</system>
-    <url>http://hudson.zones.apache.org/hudson/view/HBase/job/HBase-TRUNK/</url>
+    <url>https://hudson.zones.apache.org/hudson/view/HBase/job/HBase-TRUNK/</url>
   </ciManagement>
   <mailingLists>
     <mailingList>
@@ -111,10 +111,10 @@
       <subscribe>user-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>user-unsubscribe@hbase.apache.org</unsubscribe>
       <post>user@hbase.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
-        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
+        <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
+        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -122,29 +122,29 @@
       <subscribe>dev-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>dev-unsubscribe@hbase.apache.org</unsubscribe>
       <post>dev@hbase.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
       <otherArchives>
-        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
-        <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
+        <otherArchive>https://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
+        <otherArchive>https://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
       <name>Commits List</name>
       <subscribe>commits-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>commits-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-commits/</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/hbase-commits/</archive>
     </mailingList>
     <mailingList>
       <name>Issues List</name>
       <subscribe>issues-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>issues-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-issues/</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/hbase-issues/</archive>
     </mailingList>
     <mailingList>
       <name>Builds List</name>
       <subscribe>builds-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
-      <archive>http://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
     </mailingList>
   </mailingLists>
   <developers>
@@ -154,7 +154,7 @@
       <email>acube123@apache.org</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>apurtell</id>
@@ -162,7 +162,7 @@
       <email>apurtell@apache.org</email>
       <timezone>-8</timezone>
       <organization>Intel</organization>
-      <organizationUrl>http://www.intel.com</organizationUrl>
+      <organizationUrl>https://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>anoopsamjohn</id>
@@ -170,7 +170,7 @@
       <email>anoopsamjohn@apache.org</email>
       <timezone>+5</timezone>
       <organization>Intel</organization>
-      <organizationUrl>http://www.intel.com</organizationUrl>
+      <organizationUrl>https://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>ddas</id>
@@ -178,7 +178,7 @@
       <email>ddas@apache.org</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>dmeil</id>
@@ -186,7 +186,7 @@
       <email>dmeil@apache.org</email>
       <timezone>-5</timezone>
       <organization>Explorys</organization>
-      <organizationUrl>http://www.explorys.com</organizationUrl>
+      <organizationUrl>https://www.explorys.com</organizationUrl>
     </developer>
     <developer>
       <id>enis</id>
@@ -194,7 +194,7 @@
       <email>enis@apache.org</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>fenghh</id>
@@ -202,7 +202,7 @@
       <email>fenghh@apache.org</email>
       <timezone>+8</timezone>
       <organization>Xiaomi</organization>
-      <organizationUrl>http://www.xiaomi.com</organizationUrl>
+      <organizationUrl>https://www.xiaomi.com</organizationUrl>
     </developer>
     <developer>
       <id>garyh</id>
@@ -210,7 +210,7 @@
       <email>garyh@apache.org</email>
       <timezone>-8</timezone>
       <organization>Continuuity</organization>
-      <organizationUrl>http://www.continuuity.com</organizationUrl>
+      <organizationUrl>https://www.continuuity.com</organizationUrl>
     </developer>
     <developer>
       <id>gchanan</id>
@@ -218,7 +218,7 @@
       <email>gchanan@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jdcryans</id>
@@ -226,7 +226,7 @@
       <email>jdcryans@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jeffreyz</id>
@@ -234,7 +234,7 @@
       <email>jeffreyz@apache.org</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>jyates</id>
@@ -242,7 +242,7 @@
       <email>jyates@apache.org</email>
       <timezone>-8</timezone>
       <organization>Salesforce.com</organization>
-      <organizationUrl>http://www.salesforce.com/</organizationUrl>
+      <organizationUrl>https://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
       <id>jgray</id>
@@ -250,7 +250,7 @@
       <email>jgray@fb.com</email>
       <timezone>-8</timezone>
       <organization>Continuuity</organization>
-      <organizationUrl>http://www.continuuity.com</organizationUrl>
+      <organizationUrl>https://www.continuuity.com</organizationUrl>
     </developer>
     <developer>
       <id>jmhsieh</id>
@@ -258,7 +258,7 @@
       <email>jmhsieh@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>jxiang</id>
@@ -266,7 +266,7 @@
       <email>jxiang@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>kannan</id>
@@ -274,7 +274,7 @@
       <email>kannan@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>karthik</id>
@@ -282,7 +282,7 @@
       <email>kranganathan@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>larsgeorge</id>
@@ -290,7 +290,7 @@
       <email>larsgeorge@apache.org</email>
       <timezone>+1</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com/</organizationUrl>
+      <organizationUrl>https://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
       <id>larsh</id>
@@ -298,7 +298,7 @@
       <email>larsh@apache.org</email>
       <timezone>-8</timezone>
       <organization>Salesforce.com</organization>
-      <organizationUrl>http://www.salesforce.com/</organizationUrl>
+      <organizationUrl>https://www.salesforce.com/</organizationUrl>
     </developer>
     <developer>
       <id>liangxie</id>
@@ -306,7 +306,7 @@
       <email>liangxie@apache.org</email>
       <timezone>+8</timezone>
       <organization>Xiaomi</organization>
-      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
+      <organizationUrl>https://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
       <id>mbautin</id>
@@ -314,7 +314,7 @@
       <email>mbautin@apache.org</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>ndimiduk</id>
@@ -322,7 +322,7 @@
       <email>ndimiduk@apache.org</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>nspiegelberg</id>
@@ -330,7 +330,7 @@
       <email>nspiegelberg@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>rawson</id>
@@ -338,7 +338,7 @@
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
       <organization>DrawnToScale</organization>
-      <organizationUrl>http://drawntoscale.com/</organizationUrl>
+      <organizationUrl>https://drawntoscale.com/</organizationUrl>
     </developer>
     <developer>
       <id>sershe</id>
@@ -346,7 +346,7 @@
       <email>sershe@apache.org</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>stack</id>
@@ -354,7 +354,7 @@
       <email>stack@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com/</organizationUrl>
+      <organizationUrl>https://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
       <id>tedyu</id>
@@ -362,7 +362,7 @@
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+      <organizationUrl>https://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>todd</id>
@@ -370,7 +370,7 @@
       <email>todd@apache.org</email>
       <timezone>-8</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>rajeshbabu</id>
@@ -378,7 +378,7 @@
       <email>rajeshbabu@apache.org</email>
       <timezone>+5</timezone>
       <organization>Huawei</organization>
-      <organizationUrl>http://www.huawei.com</organizationUrl>
+      <organizationUrl>https://www.huawei.com</organizationUrl>
     </developer>
     <developer>
       <id>ramkrishna</id>
@@ -386,7 +386,7 @@
       <email>ramkrishna@apache.org</email>
       <timezone>+5</timezone>
       <organization>Intel</organization>
-      <organizationUrl>http://www.intel.in</organizationUrl>
+      <organizationUrl>https://www.intel.in</organizationUrl>
     </developer>
     <developer>
       <id>liyin</id>
@@ -394,7 +394,7 @@
       <email>liyin.tang@fb.com</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>nkeywal</id>
@@ -402,7 +402,7 @@
       <email>nkeywal@apache.org</email>
       <timezone>+1</timezone>
       <organization>Scaled Risk</organization>
-      <organizationUrl>http://www.scaledrisk.com</organizationUrl>
+      <organizationUrl>https://www.scaledrisk.com</organizationUrl>
     </developer>
     <developer>
       <id>eclark</id>
@@ -410,7 +410,7 @@
       <email>eclark@apache.org</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organizationUrl>https://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>mbertozzi</id>
@@ -418,7 +418,7 @@
       <email>mbertozzi@apache.org</email>
       <timezone>0</timezone>
       <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
+      <organizationUrl>https://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>zjushch</id>
@@ -426,7 +426,7 @@
       <email>zjushch@apache.org</email>
       <timezone>+8</timezone>
       <organization>Taobao</organization>
-      <organizationUrl>http://www.taobao.com</organizationUrl>
+      <organizationUrl>https://www.taobao.com</organizationUrl>
     </developer>
   </developers>
   <repositories>
@@ -436,7 +436,7 @@
     </repository>
     <repository>
       <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      <url>https://repository.jboss.org/nexus/content/groups/public-jboss/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -620,7 +620,7 @@
               <phase>prepare-package</phase>
               <goals>
                   <!--This goal will install a -test.jar when we do install
-                      See http://maven.apache.org/guides/mini/guide-attached-tests.html
+                      See https://maven.apache.org/guides/mini/guide-attached-tests.html
                    -->
                 <goal>test-jar</goal>
               </goals>
@@ -745,7 +745,7 @@
               <exclude>**/src/main/resources/META-INF/LEGAL</exclude>
               <!-- MIT: https://github.com/asciidoctor/asciidoctor/blob/master/LICENSE.adoc -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
-              <!-- MIT http://jquery.org/license -->
+              <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
               <!-- vector graphics -->
@@ -879,7 +879,7 @@
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+  See the reference guide on building for more information: https://hbase.apache.org/book.html#build
                   </message>
                 </requireMavenVersion>
                 <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
@@ -889,7 +889,7 @@
   HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+  See the reference guide on building for more information: https://hbase.apache.org/book.html#build
                   </message>
                 </requireJavaVersion>
                 <bannedDependencies>
@@ -1107,7 +1107,7 @@
             <version>2.2</version>
           </dependency>
           <dependency>
-            <!-- required for reflow skin (http://andriusvelykis.github.io/reflow-maven-skin/) -->
+            <!-- required for reflow skin (https://andriusvelykis.github.io/reflow-maven-skin/) -->
             <groupId>lt.velykis.maven.skins</groupId>
             <artifactId>reflow-velocity-tools</artifactId>
             <version>1.1.1</version>
@@ -2811,7 +2811,7 @@
     </profile>
 
   </profiles>
-  <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
+  <!-- See https://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
       <plugin>
