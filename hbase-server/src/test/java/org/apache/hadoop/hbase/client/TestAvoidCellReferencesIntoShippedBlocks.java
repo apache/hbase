@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -292,18 +291,11 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     }
   }
 
-  /**
-   * TODO: not sure what do we test here but seems the test can not work together with async
-   * prefetch scanner. Ignore it for now, as after HBASE-21879 is landed we will have a more natural
-   * way to deal with reference counting...
-   */
-  @Ignore
   @Test
   public void testHBASE16372InReadPath() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with block size as 1024
-    final Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024, null);
-    try {
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024, null)) {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
@@ -370,7 +362,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       // set partial as true so that the scan can send partial columns also
       s.setAllowPartialResults(true);
       s.setMaxResultSize(1000);
-      try (ResultScanner scanner = table.getScanner(s)) {
+      try (ScanPerNextResultScanner scanner =
+        new ScanPerNextResultScanner(TEST_UTIL.getAsyncConnection().getTable(tableName), s)) {
         Thread evictorThread = new Thread() {
           @Override
           public void run() {
@@ -402,9 +395,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
             s1.withStartRow(ROW3);
             s1.withStopRow(ROW5);
             s1.setCaching(1);
-            ResultScanner scanner;
-            try {
-              scanner = table.getScanner(s1);
+
+            try (ResultScanner scanner = table.getScanner(s1)) {
               int count = Iterables.size(scanner);
               assertEquals("Count the rows", 2, count);
               int newBlockRefCount = 0;
@@ -442,8 +434,6 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
         }
       }
       assertEquals("Count should give all rows ", 10, count);
-    } finally {
-      table.close();
     }
   }
 }
