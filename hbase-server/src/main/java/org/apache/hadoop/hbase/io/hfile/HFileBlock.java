@@ -113,6 +113,14 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFileBlock implements Cacheable {
   private static final Logger LOG = LoggerFactory.getLogger(HFileBlock.class);
+  public static final int FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT +
+     // BlockType, ByteBuff, MemoryType, HFileContext, ByteBuffAllocator
+      5 * ClassSize.REFERENCE +
+      // On-disk size, uncompressed size, and next block's on-disk size
+      // bytePerChecksum and onDiskDataSize
+      4 * Bytes.SIZEOF_INT +
+      // This and previous block offset
+      2 * Bytes.SIZEOF_LONG);
 
   // Block Header fields.
 
@@ -740,24 +748,12 @@ public class HFileBlock implements Cacheable {
 
   @Override
   public long heapSize() {
-    long size = ClassSize.align(
-        ClassSize.OBJECT +
-        // Block type, multi byte buffer, MemoryType and meta references
-        4 * ClassSize.REFERENCE +
-        // On-disk size, uncompressed size, and next block's on-disk size
-        // bytePerChecksum and onDiskDataSize
-        4 * Bytes.SIZEOF_INT +
-        // This and previous block offset
-        2 * Bytes.SIZEOF_LONG +
-        // Heap size of the meta object. meta will be always not null.
-        fileContext.heapSize()
-    );
-
+    long size = FIXED_OVERHEAD;
+    size += fileContext.heapSize();
     if (buf != null) {
       // Deep overhead of the byte buffer. Needs to be aligned separately.
       size += ClassSize.align(buf.capacity() + MULTI_BYTE_BUFFER_HEAP_SIZE);
     }
-
     return ClassSize.align(size);
   }
 
