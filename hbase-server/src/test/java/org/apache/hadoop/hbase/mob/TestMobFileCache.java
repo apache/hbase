@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,7 +62,7 @@ public class TestMobFileCache {
   private HRegion region;
   private Configuration conf;
   private MobFileCache mobFileCache;
-  private long currentTimeMillis = System.currentTimeMillis();
+  private long currentTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
   private static final String TEST_CACHE_SIZE = "2";
   private static final int EXPECTED_CACHE_SIZE_ZERO = 0;
   private static final int EXPECTED_CACHE_SIZE_ONE = 1;

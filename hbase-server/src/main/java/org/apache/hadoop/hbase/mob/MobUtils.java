@@ -118,7 +118,7 @@ public final class MobUtils {
    * @return The string format of the date, it's yyyymmdd.
    */
   public static String formatDate(LocalDate date) {
-    return DATE_TIME_FORMATTER.format(date);
+    return DATE_TIME_FORMATTER.format(date).replace("+", "");
   }
 
   public static String formatDate(long millisecond) {

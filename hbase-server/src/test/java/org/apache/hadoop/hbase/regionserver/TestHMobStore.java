@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -111,7 +112,7 @@ public class TestHMobStore {
   private byte[] value = Bytes.toBytes("value");
   private byte[] value2 = Bytes.toBytes("value2");
   private Path mobFilePath;
-  private long currentTimeMillis = System.currentTimeMillis();
+  private long currentTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
   private Cell seekKey1;
   private Cell seekKey2;
   private Cell seekKey3;
