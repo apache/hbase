@@ -84,28 +84,29 @@ if [ $# = 0 ]; then
   echo ""
   echo "Commands:"
   echo "Some commands take arguments. Pass no args or -h for usage."
-  echo "  shell           Run the HBase shell"
-  echo "  hbck            Run the hbase 'fsck' tool"
-  echo "  snapshot        Tool for managing snapshots"
-  echo "  snapshotinfo    Tool for dumping snapshot information"
-  echo "  wal             Write-ahead-log analyzer"
-  echo "  hfile           Store file analyzer"
-  echo "  zkcli           Run the ZooKeeper shell"
-  echo "  upgrade         Upgrade hbase"
-  echo "  master          Run an HBase HMaster node" 
-  echo "  regionserver    Run an HBase HRegionServer node" 
-  echo "  zookeeper       Run a Zookeeper server"
-  echo "  rest            Run an HBase REST server" 
-  echo "  thrift          Run the HBase Thrift server" 
-  echo "  thrift2         Run the HBase Thrift2 server"
-  echo "  clean           Run the HBase clean up script"
-  echo "  classpath       Dump hbase CLASSPATH"
-  echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
-  echo "  pe              Run PerformanceEvaluation"
-  echo "  ltt             Run LoadTestTool"
-  echo "  canary          Run the Canary tool"
-  echo "  version         Print the version"
-  echo "  CLASSNAME       Run the class named CLASSNAME"
+  echo "  shell            Run the HBase shell"
+  echo "  hbck             Run the hbase 'fsck' tool"
+  echo "  snapshot         Tool for managing snapshots"
+  echo "  snapshotinfo     Tool for dumping snapshot information"
+  echo "  wal              Write-ahead-log analyzer"
+  echo "  hfile            Store file analyzer"
+  echo "  zkcli            Run the ZooKeeper shell"
+  echo "  upgrade          Upgrade hbase"
+  echo "  master           Run an HBase HMaster node"
+  echo "  regionserver     Run an HBase HRegionServer node"
+  echo "  zookeeper        Run a Zookeeper server"
+  echo "  rest             Run an HBase REST server"
+  echo "  thrift           Run the HBase Thrift server"
+  echo "  thrift2          Run the HBase Thrift2 server"
+  echo "  clean            Run the HBase clean up script"
+  echo "  classpath        Dump hbase CLASSPATH"
+  echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
+  echo "  completebulkload Run LoadIncrementalHFiles tool"
+  echo "  pe               Run PerformanceEvaluation"
+  echo "  ltt              Run LoadTestTool"
+  echo "  canary           Run the Canary tool"
+  echo "  version          Print the version"
+  echo "  CLASSNAME        Run the class named CLASSNAME"
   exit 1
 fi
 
@@ -403,6 +404,8 @@ elif [ "$COMMAND" = "canary" ] ; then
   HBASE_OPTS="$HBASE_OPTS $HBASE_CANARY_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
+elif [ "$COMMAND" = "completebulkload" ] ; then
+  CLASS='org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles'
 else
   CLASS=$COMMAND
 fi
