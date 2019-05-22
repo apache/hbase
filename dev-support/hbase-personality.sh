@@ -185,6 +185,18 @@ function personality_modules
     if [ -n "${BUILD_ID}" ]; then
       extra="${extra} -Dbuild.id=${BUILD_ID}"
     fi
+
+    # If the set of changed files includes CommonFSUtils then add the hbase-server
+    # module to the set of modules (if not already included) to be tested
+    for f in "${CHANGED_FILES[@]}"
+    do
+      if [[ "${f}" =~ CommonFSUtils ]]; then
+        if [[ ! "${MODULES[*]}" =~ hbase-server ]] && [[ ! "${MODULES[*]}" =~ \. ]]; then
+          MODULES+=("hbase-server")
+        fi
+        break
+      fi
+    done
   fi
 
   for module in "${MODULES[@]}"; do
@@ -491,23 +503,45 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  hbase_common_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
+  if [[ "${PATCH_BRANCH}" = branch-1.* ]] && [[ "${PATCH_BRANCH#branch-1.}" -lt "5" ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on before-branch-1.5 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.7"
+    else
+      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7"
+    fi
+  elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.6.5 2.7.7 2.8.5"
+    else
+      hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7 2.8.2 2.8.3 2.8.4 2.8.5"
+    fi
+  elif [[ "${PATCH_BRANCH}" = branch-2.1 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.1 rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.7.7 2.8.5"
+    else
+      hbase_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7 2.8.2 2.8.3 2.8.4 2.8.5"
+    fi
+  else
+    yetus_info "Setting Hadoop 2 versions to test based on branch-1.5+/branch-2.1+/master/feature branch rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.8.5 2.9.2"
+    else
+      hbase_hadoop2_versions="2.8.2 2.8.3 2.8.4 2.8.5 2.9.1 2.9.2"
+    fi
+  fi
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    yetus_info "Setting Hadoop versions to test based on branch-1-ish rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.4"
-    else
-      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 ${hbase_common_hadoop2_versions}"
-    fi
+    yetus_info "Setting Hadoop 3 versions to test based on branch-1.x rules."
     hbase_hadoop3_versions=""
-  else # master or a feature branch
-    yetus_info "Setting Hadoop versions to test based on branch-2/master/feature branch rules."
+  else
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.x/master/feature branch rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.6.5 2.7.4"
+      hbase_hadoop3_versions="3.0.3 3.1.2"
     else
-      hbase_hadoop2_versions="${hbase_common_hadoop2_versions}"
+      hbase_hadoop3_versions="3.0.3 3.1.1 3.1.2"
     fi
-    hbase_hadoop3_versions="3.0.0"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
@@ -610,7 +644,7 @@ function hbaseprotoc_rebuild
   # Need to run 'install' instead of 'compile' because shading plugin
   # is hooked-up to 'install'; else hbase-protocol-shaded is left with
   # half of its process done.
-  modules_workers patch hbaseprotoc install -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  modules_workers patch hbaseprotoc install -DskipTests -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
   until [[ $i -eq "${#MODULE[@]}" ]]; do
@@ -682,24 +716,6 @@ function hbaseanti_patchfile
   warnings=$(${GREP} -c 'new TreeMap<byte.*()' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
     add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted."
-    ((result=result+1))
-  fi
-
-  warnings=$(${GREP} -c 'import org.apache.hadoop.classification' "${patchfile}")
-  if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase."
-    ((result=result+1))
-  fi
-
-  warnings=$(${GREP} -c 'import org.codehaus.jackson' "${patchfile}")
-  if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears use Jackson 1 classes/annotations."
-    ((result=result+1))
-  fi
-
-  warnings=$(${GREP} -cE 'org.apache.commons.logging.Log(Factory|;)' "${patchfile}")
-  if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears to use commons-logging instead of slf4j."
     ((result=result+1))
   fi
 
