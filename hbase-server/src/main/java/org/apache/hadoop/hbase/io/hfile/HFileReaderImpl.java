@@ -330,14 +330,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // We can read v3 or v2 versions of hfile.
     throw new IllegalArgumentException("Invalid HFile version: major=" +
       trailer.getMajorVersion() + ", minor=" + trailer.getMinorVersion() + ": expected at least " +
-      "major=2 and minor=" + MAX_MINOR_VERSION);
+      "major=2 and minor=" + MAX_MINOR_VERSION + ", path=" + path);
   }
 
   @SuppressWarnings("serial")
   public static class BlockIndexNotLoadedException extends IllegalStateException {
-    public BlockIndexNotLoadedException() {
+    public BlockIndexNotLoadedException(Path path) {
       // Add a message in case anyone relies on it as opposed to class name.
-      super("Block index not loaded");
+      super(path + " block index not loaded");
     }
   }
 
@@ -385,7 +385,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public Optional<Cell> getFirstKey() {
     if (dataBlockIndexReader == null) {
-      throw new BlockIndexNotLoadedException();
+      throw new BlockIndexNotLoadedException(path);
     }
     return dataBlockIndexReader.isEmpty() ? Optional.empty()
         : Optional.of(dataBlockIndexReader.getRootBlockKey(0));
@@ -475,8 +475,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    */
   @SuppressWarnings("serial")
   public static class NotSeekedException extends IllegalStateException {
-    public NotSeekedException() {
-      super("Not seeked to a key/value");
+    public NotSeekedException(Path path) {
+      super(path + " not seeked to a key/value");
     }
   }
 
@@ -568,7 +568,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     protected void assertSeeked() {
       if (!isSeeked())
-        throw new NotSeekedException();
+        throw new NotSeekedException(reader.getPath());
     }
 
     @Override
@@ -638,7 +638,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         throw new IllegalStateException("Invalid currTagsLen " + this.currTagsLen +
           ". Block offset: " + curBlock.getOffset() + ", block length: " +
             this.blockBuffer.limit() +
-          ", position: " + this.blockBuffer.position() + " (without header).");
+          ", position: " + this.blockBuffer.position() + " (without header)." +
+          " path=" + reader.getPath());
       }
     }
 
@@ -725,7 +726,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           throw new IllegalStateException("Invalid klen " + klen + " or vlen "
               + vlen + ". Block offset: "
               + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
-              + blockBuffer.position() + " (without header).");
+              + blockBuffer.position() + " (without header)."
+              + " path=" + reader.getPath());
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
@@ -740,7 +742,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           if (checkLen(tlen)) {
             throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
                 + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
-                + blockBuffer.position() + " (without header).");
+                + blockBuffer.position() + " (without header)."
+                + " path=" + reader.getPath());
           }
           // add the two bytes read for the tags.
           offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
@@ -755,7 +758,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               throw new IllegalStateException("blockSeek with seekBefore "
                   + "at the first key of the block: key=" + CellUtil.getCellKeyAsString(key)
                   + ", blockOffset=" + curBlock.getOffset() + ", onDiskSize="
-                  + curBlock.getOnDiskSizeWithHeader());
+                  + curBlock.getOnDiskSizeWithHeader()
+                  + ", path=" + reader.getPath());
             }
             blockBuffer.moveBack(lastKeyValueSize);
             readKeyValueLen();
@@ -918,7 +922,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
 
         if (block.getOffset() < 0) {
-          throw new IOException("Invalid block file offset: " + block);
+          throw new IOException(
+              "Invalid block file offset: " + block + ", path=" + reader.getPath());
         }
 
         // We are reading the next block without block type validation, because
@@ -1032,8 +1037,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         LOG.error("Current pos = " + blockBuffer.position()
             + "; currKeyLen = " + currKeyLen + "; currValLen = "
             + currValueLen + "; block limit = " + blockBuffer.limit()
-            + "; HFile name = " + reader.getName()
-            + "; currBlock currBlockOffset = " + this.curBlock.getOffset());
+            + "; currBlock currBlockOffset = " + this.curBlock.getOffset()
+            + "; path=" + reader.getPath());
         throw e;
       }
     }
@@ -1131,7 +1136,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       HFileBlock newBlock = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
           isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (newBlock.getOffset() < 0) {
-        throw new IOException("Invalid block offset: " + newBlock.getOffset());
+        throw new IOException(
+            "Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
       }
       updateCurrentBlock(newBlock);
     }
@@ -1175,7 +1181,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             + " or currValueLen " + this.currValueLen + ". Block offset: "
             + this.curBlock.getOffset() + ", block length: "
             + this.blockBuffer.limit() + ", position: " + this.blockBuffer.position()
-            + " (without header).");
+            + " (without header)." + ", path=" + reader.getPath());
       }
     }
 
@@ -1190,7 +1196,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // sanity check
       if (newBlock.getBlockType() != BlockType.DATA) {
         throw new IllegalStateException("ScannerV2 works only on data " + "blocks, got "
-            + newBlock.getBlockType() + "; " + "fileName=" + reader.getName()
+            + newBlock.getBlockType() + "; " + "HFileName=" + reader.getPath()
             + ", " + "dataBlockEncoder=" + reader.getDataBlockEncoding() + ", " + "isCompaction="
             + isCompaction);
       }
@@ -1340,10 +1346,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
              // so blocks with the old encoding still linger in cache for some
              // period of time. This event should be rare as it only happens on
              // schema definition change.
-             LOG.info("Evicting cached block with key " + cacheKey +
-                     " because of a data block encoding mismatch" +
-                     "; expected: " + expectedDataBlockEncoding +
-                     ", actual: " + actualDataBlockEncoding);
+             LOG.info("Evicting cached block with key " + cacheKey
+                 + " because of a data block encoding mismatch" + "; expected: "
+                 + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding + ", path="
+                 + path);
              // This is an error scenario. so here we need to decrement the
              // count.
              cache.returnBlock(cacheKey, cachedBlock);
@@ -1370,7 +1376,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return null; // there are no meta blocks
     }
     if (metaBlockIndexReader == null) {
-      throw new IOException("Meta index not loaded");
+      throw new IOException(path + " meta index not loaded");
     }
 
     byte[] mbname = Bytes.toBytes(metaBlockName);
@@ -1422,13 +1428,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       DataBlockEncoding expectedDataBlockEncoding)
       throws IOException {
     if (dataBlockIndexReader == null) {
-      throw new IOException("Block index not loaded");
+      throw new IOException(path + " block index not loaded");
     }
     long trailerOffset = trailer.getLoadOnOpenDataOffset();
     if (dataBlockOffset < 0 || dataBlockOffset >= trailerOffset) {
       throw new IOException("Requested block is out of range: " + dataBlockOffset +
         ", lastDataBlockOffset: " + trailer.getLastDataBlockOffset() +
-        ", trailer.getLoadOnOpenDataOffset: " + trailerOffset);
+        ", trailer.getLoadOnOpenDataOffset: " + trailerOffset +
+        ", path=" + path);
     }
     // For any given block from any given file, synchronize reads for said
     // block.
@@ -1467,7 +1474,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               if (cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getDataBlockEncoding()) {
                 throw new IOException("Cached block under key " + cacheKey + " "
                   + "has wrong encoding: " + cachedBlock.getDataBlockEncoding() + " (expected: "
-                  + dataBlockEncoder.getDataBlockEncoding() + ")");
+                  + dataBlockEncoder.getDataBlockEncoding() + ")"
+                  + ", path=" + path);
               }
             }
             // Cache-hit. Return!
@@ -1537,7 +1545,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
     if (actualBlockType != expectedBlockType) {
       throw new IOException("Expected block type " + expectedBlockType + ", " +
-          "but got " + actualBlockType + ": " + block);
+          "but got " + actualBlockType + ": " + block + ", path=" + path);
     }
   }
 
@@ -1637,7 +1645,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         String encoderCls = dataBlockEncoder.getClass().getName();
         throw new CorruptHFileException("Encoder " + encoderCls
           + " doesn't support data block encoding "
-          + DataBlockEncoding.getNameFromId(dataBlockEncoderId));
+          + DataBlockEncoding.getNameFromId(dataBlockEncoderId)
+          + ", path=" + reader.getPath());
       }
       updateCurrBlockRef(newBlock);
       ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
@@ -1711,7 +1720,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     private void assertValidSeek() {
       if (this.curBlock == null) {
-        throw new NotSeekedException();
+        throw new NotSeekedException(reader.getPath());
       }
     }
 
@@ -1758,7 +1767,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     if (blockType != BlockType.GENERAL_BLOOM_META &&
         blockType != BlockType.DELETE_FAMILY_BLOOM_META) {
       throw new RuntimeException("Block Type: " + blockType.toString() +
-          " is not supported") ;
+          " is not supported, path=" + path) ;
     }
 
     for (HFileBlock b : loadOnOpenBlocks)
@@ -1803,7 +1812,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // Use the algorithm the key wants
       Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
       if (cipher == null) {
-        throw new IOException("Cipher '" + key.getAlgorithm() + "' is not available");
+        throw new IOException("Cipher '" + key.getAlgorithm() + "' is not available"
+            + ", path=" + path);
       }
       cryptoContext.setCipher(cipher);
       cryptoContext.setKey(key);
