@@ -555,37 +555,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return evictBlock(cacheKey, true);
   }
 
-  // does not check for the ref count. Just tries to evict it if found in the
-  // bucket map
-  private boolean forceEvict(BlockCacheKey cacheKey) {
-    if (!cacheEnabled) {
-      return false;
-    }
-    RAMQueueEntry removedBlock = checkRamCache(cacheKey);
-    BucketEntry bucketEntry = backingMap.get(cacheKey);
-    if (bucketEntry == null) {
-      if (removedBlock != null) {
-        cacheStats.evicted(0, cacheKey.isPrimary());
-        return true;
-      } else {
-        return false;
-      }
-    }
-    ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
-    try {
-      lock.writeLock().lock();
-      if (backingMap.remove(cacheKey, bucketEntry)) {
-        blockEvicted(cacheKey, bucketEntry, removedBlock == null);
-      } else {
-        return false;
-      }
-    } finally {
-      lock.writeLock().unlock();
-    }
-    cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
-    return true;
-  }
-
   private RAMQueueEntry checkRamCache(BlockCacheKey cacheKey) {
     RAMQueueEntry removedBlock = ramCache.remove(cacheKey);
     if (removedBlock != null) {
@@ -1047,8 +1016,15 @@ public class BucketCache implements BlockCache, HeapSize {
           ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntries[i].offset());
           try {
             lock.writeLock().lock();
-            if (backingMap.remove(key, bucketEntries[i])) {
-              blockEvicted(key, bucketEntries[i], false);
+            int refCount = bucketEntries[i].getRefCount();
+            if (refCount == 0) {
+              if (backingMap.remove(key, bucketEntries[i])) {
+                blockEvicted(key, bucketEntries[i], false);
+              } else {
+                bucketEntries[i].markForEvict();
+              }
+            } else {
+              bucketEntries[i].markForEvict();
             }
           } finally {
             lock.writeLock().unlock();
@@ -1667,7 +1643,7 @@ public class BucketCache implements BlockCache, HeapSize {
       if (bucketEntry != null) {
         int refCount = bucketEntry.decrementRefCountAndGet();
         if (refCount == 0 && bucketEntry.isMarkedForEvict()) {
-          forceEvict(cacheKey);
+          evictBlock(cacheKey);
         }
       }
     }
