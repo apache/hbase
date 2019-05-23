@@ -522,16 +522,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       if (victimHandler != null && !repeat) {
         // The handler will increase result's refCnt for RPC, so need no extra retain.
         Cacheable result = victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
-
         // Promote this to L1.
         if (result != null) {
           if (caching) {
-            if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
-              Cacheable original = result;
-              result = ((HFileBlock) original).deepCloneOnHeap();
-              // deepClone an new one, so need to release the original one to deallocate it.
-              original.release();
-            }
             cacheBlock(cacheKey, result, /* inMemory = */ false);
           }
         }

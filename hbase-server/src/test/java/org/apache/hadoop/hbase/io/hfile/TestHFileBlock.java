@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -526,7 +525,7 @@ public class TestHFileBlock {
               ByteBuffer serialized = ByteBuffer.allocate(blockFromHFile.getSerializedLength());
               blockFromHFile.serialize(serialized, true);
               HFileBlock deserialized = (HFileBlock) blockFromHFile.getDeserializer()
-                  .deserialize(new SingleByteBuff(serialized), HEAP, MemoryType.EXCLUSIVE);
+                  .deserialize(new SingleByteBuff(serialized), HEAP);
               assertEquals("Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
                 blockFromHFile, deserialized);
               // intentional reference comparison
