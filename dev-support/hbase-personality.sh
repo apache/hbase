@@ -588,6 +588,11 @@ function hadoopcheck_rebuild
   else
     add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${hbase_hadoop2_versions}."
   fi
+
+  logfile="${PATCH_DIR}/patch-install-after-hadoopcheck.txt"
+  echo_and_redirect "${logfile}" \
+    "$(maven_executor)" clean install \
+      -DskipTests -DHBasePatchProcess
   return 0
 }
 
