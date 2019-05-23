@@ -616,6 +616,12 @@
       <email>zyork@apache.org</email>
       <timezone>-8</timezone>
     </developer>
+    <developer>
+      <id>meiyi</id>
+      <name>Yi Mei</name>
+      <email>meiyi@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
