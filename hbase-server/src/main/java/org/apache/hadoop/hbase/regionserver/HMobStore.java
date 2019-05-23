@@ -316,7 +316,8 @@ public class HMobStore extends HStore {
   /**
    * Reads the cell from the mob file.
    *
-   * @param reference                   The cell found in the HBase, its value is a path to a mob file.
+   * @param reference                   The cell found in the HBase, its value is a path to a mob
+   *                                   file.
    * @param cacheBlocks                 Whether the scanner should cache blocks.
    * @param readPt                      the read point.
    * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is

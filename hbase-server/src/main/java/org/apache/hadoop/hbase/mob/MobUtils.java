@@ -249,7 +249,8 @@ public final class MobUtils {
    * Sets the attribute of caching blocks in the scan.
    *
    * @param scan        The current scan.
-   * @param cacheBlocks True, set the attribute of caching blocks into the scan, the scanner with this scan
+   * @param cacheBlocks True, set the attribute of caching blocks into the scan, the scanner with
+   *                   this scan
    *                    caches blocks.
    *                    False, the scanner doesn't cache blocks for this scan.
    */

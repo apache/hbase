@@ -675,7 +675,8 @@ public class TestPartitionedMobCompactor {
             }
             PartitionedMobCompactionRequest request = select(files, isForceAllFiles);
 
-            // Make sure that when there is no del files, there will be no startKey/endKey for partition.
+            // Make sure that when there is no del files, there will be no startKey/endKey for
+            // partition.
             if (request.getDelPartitions().size() == 0) {
               for (CompactionPartition p : request.getCompactionPartitions()) {
                 assertTrue(p.getStartKey() == null);
@@ -695,7 +696,8 @@ public class TestPartitionedMobCompactor {
               }
             }
 
-            // Make sure that only del files within key range for a partition is included in compaction.
+            // Make sure that only del files within key range for a partition is included in
+            // compaction.
             // compact the mob files by partitions in parallel.
             for (CompactionPartition partition : request.getCompactionPartitions()) {
               List<HStoreFile> delFiles =
