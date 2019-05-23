@@ -2890,6 +2890,8 @@
             <reports>
               <report>aggregate</report>
             </reports>
+
+            <!-- Breaks build on branch-1. See HBASE-19663
             <configuration>
               <doclet>
                 org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
@@ -2899,6 +2901,7 @@
                 <artifactId>hbase-annotations</artifactId>
                 <version>${project.version}</version>
               </docletArtifact>
+            -->
               <destDir>apidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
