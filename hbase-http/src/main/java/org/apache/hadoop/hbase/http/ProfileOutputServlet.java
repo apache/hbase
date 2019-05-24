@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -37,6 +38,8 @@ public class ProfileOutputServlet extends DefaultServlet {
   private static final long serialVersionUID = 1L;
   private static final Logger LOG = LoggerFactory.getLogger(ProfileOutputServlet.class);
   private static final int REFRESH_PERIOD = 2;
+  // Alphanumeric characters, plus percent (url-encoding), equals, and ampersand
+  private static final Pattern ALPHA_NUMERIC = Pattern.compile("[a-zA-Z0-9\\%\\=\\&]*");
 
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
@@ -48,11 +51,25 @@ public class ProfileOutputServlet extends DefaultServlet {
     // will be <100 bytes (in all modes).
     if (requestedFile.length() < 100) {
       LOG.info(requestedFile  + " is incomplete. Sending auto-refresh header.");
-      resp.setHeader("Refresh", REFRESH_PERIOD + "," + req.getRequestURI());
+      String refreshUrl = req.getRequestURI();
+      // Rebuild the query string (if we have one)
+      if (req.getQueryString() != null) {
+        refreshUrl += "?" + sanitize(req.getQueryString());
+      }
+      ProfileServlet.setResponseHeader(resp);
+      resp.setHeader("Refresh", REFRESH_PERIOD + ";" + refreshUrl);
       resp.getWriter().write("This page will be auto-refreshed every " + REFRESH_PERIOD +
-        " seconds until the output file is ready.");
+        " seconds until the output file is ready. Redirecting to " + refreshUrl);
     } else {
       super.doGet(req, resp);
     }
+  }
+
+  static String sanitize(String input) {
+    // Basic test to try to avoid any XSS attacks or HTML content showing up.
+    if (ALPHA_NUMERIC.matcher(input).matches()) {
+      return input;
+    }
+    throw new RuntimeException("Non-alphanumeric data found in input, aborting.");
   }
 }

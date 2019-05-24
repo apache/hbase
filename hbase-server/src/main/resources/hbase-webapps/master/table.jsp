@@ -230,7 +230,7 @@ if ( fqtn != null ) {
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="http://<%= hostAndPort %>/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+    <td><a href="http://<%= hostAndPort %>/rs-status/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
