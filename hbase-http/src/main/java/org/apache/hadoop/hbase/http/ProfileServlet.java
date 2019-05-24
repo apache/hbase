@@ -359,7 +359,7 @@ public class ProfileServlet extends HttpServlet {
     return Output.SVG;
   }
 
-  private static void setResponseHeader(final HttpServletResponse response) {
+  static void setResponseHeader(final HttpServletResponse response) {
     response.setHeader(ACCESS_CONTROL_ALLOW_METHODS, ALLOWED_METHODS);
     response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     response.setContentType(CONTENT_TYPE_TEXT);
