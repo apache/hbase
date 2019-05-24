@@ -590,8 +590,9 @@ function hadoopcheck_rebuild
 
   logfile="${PATCH_DIR}/patch-install-after-hadoopcheck.txt"
   echo_and_redirect "${logfile}" \
-    "$(maven_executor)" clean install \
+    $(maven_executor) clean install \
       -DskipTests -DHBasePatchProcess
+
   return 0
 }
 
