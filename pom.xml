@@ -2891,8 +2891,8 @@
               <report>aggregate</report>
             </reports>
 
-            <!-- Breaks build on branch-1. See HBASE-19663
             <configuration>
+            <!-- Breaks build on branch-1. See HBASE-19663
               <doclet>
                 org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
