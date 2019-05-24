@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.servlet.Filter;
@@ -86,28 +82,6 @@ public class TestPathFilter extends HttpServerFunctionalTest {
       public void initFilter(FilterContainer container, Configuration conf) {
         container.addFilter("recording", RecordingFilter.class.getName(), null);
       }
-    }
-  }
-
-  /**
-   * access a url, ignoring some IOException such as the page does not exist
-   */
-  private static void access(String urlstring) throws IOException {
-    LOG.warn("access " + urlstring);
-    URL url = new URL(urlstring);
-
-    URLConnection connection = url.openConnection();
-    connection.connect();
-
-    try {
-      try (BufferedReader in = new BufferedReader(
-              new InputStreamReader(connection.getInputStream(), "UTF-8"))) {
-        for (; in.readLine() != null; ) {
-          // Ignoring the content of the URLs. Only checking if something is there.
-        }
-      }
-    } catch(IOException ioe) {
-      LOG.warn("urlstring=" + urlstring, ioe);
     }
   }
 
