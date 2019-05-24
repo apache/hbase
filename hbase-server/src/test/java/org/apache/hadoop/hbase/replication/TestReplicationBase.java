@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -83,6 +84,8 @@ public class TestReplicationBase {
 
   protected static HBaseTestingUtility utility1;
   protected static HBaseTestingUtility utility2;
+  protected static final int NUM_SLAVES1 = 2;
+  protected static final int NUM_SLAVES2 = 4;
   protected static final int NB_ROWS_IN_BATCH = 100;
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
@@ -201,6 +204,13 @@ public class TestReplicationBase {
     utility2 = new HBaseTestingUtility(conf2);
   }
 
+  protected static void restartHBaseCluster(HBaseTestingUtility util, int numSlaves)
+      throws Exception {
+    util.shutdownMiniHBaseCluster();
+    util
+      .startMiniHBaseCluster(StartMiniClusterOption.builder().numRegionServers(numSlaves).build());
+  }
+
   protected static void startClusters() throws Exception{
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
@@ -216,10 +226,10 @@ public class TestReplicationBase {
     LOG.info("Setup second Zk");
 
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
-    utility1.startMiniCluster(2);
+    utility1.startMiniCluster(NUM_SLAVES1);
     // Have a bunch of slave servers, because inter-cluster shipping logic uses number of sinks
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
-    utility2.startMiniCluster(4);
+    utility2.startMiniCluster(NUM_SLAVES2);
 
     hbaseAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
 
