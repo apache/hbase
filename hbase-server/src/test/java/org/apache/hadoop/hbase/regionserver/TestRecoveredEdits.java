@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -149,7 +149,7 @@ public class TestRecoveredEdits {
     assertTrue(storeFiles.isEmpty());
     region.close();
     Path regionDir = region.getRegionDir(hbaseRootDir, hri);
-    Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
+    Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir);
     // This is a little fragile getting this path to a file of 10M of edits.
     Path recoveredEditsFile = new Path(
       System.getProperty("test.build.classes", "target/test-classes"),

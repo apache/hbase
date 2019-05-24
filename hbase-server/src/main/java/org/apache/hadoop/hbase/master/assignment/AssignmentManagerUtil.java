@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -229,7 +229,7 @@ final class AssignmentManagerUtil {
   }
 
   static void checkClosedRegion(MasterProcedureEnv env, RegionInfo regionInfo) throws IOException {
-    if (WALSplitter.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
+    if (WALSplitUtil.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
       throw new IOException("Recovered.edits are found in Region: " + regionInfo +
         ", abort split/merge to prevent data loss");
     }
