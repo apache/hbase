@@ -44,7 +44,8 @@ import java.util.Map;
  * configured for each.
  * Internally, the input format delegates to
  * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
- * and thus has the same performance advantages; see {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
+ * and thus has the same performance advantages; see
+ * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
  * for more details.
  * Usage is similar to TableSnapshotInputFormat, with the following exception:
  * initMultiTableSnapshotMapperJob takes in a map
@@ -70,7 +71,8 @@ import java.util.Map;
  * </pre>
  * Internally, this input format restores each snapshot into a subdirectory of the given tmp
  * directory. Input splits and
- * record readers are created as described in {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
+ * record readers are created as described in
+ * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
  * (one per region).
  * See {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for more notes on
  * permissioning; the
@@ -108,7 +110,8 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat
   /**
    * Configure conf to read from snapshotScans, with snapshots restored to a subdirectory of
    * restoreDir.
-   * Sets: {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#RESTORE_DIRS_KEY},
+   * Sets:
+   * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#RESTORE_DIRS_KEY},
    * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#SNAPSHOT_TO_SCANS_KEY}
    *
    * @param conf
