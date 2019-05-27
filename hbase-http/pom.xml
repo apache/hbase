@@ -55,7 +55,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
         <executions>
           <execution>
             <id>default</id>
@@ -345,6 +344,11 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
         </dependency>
+        <dependency>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-core-asl</artifactId>
+          <version>1.9.13</version>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -397,6 +401,10 @@
             </exclusion>
           </exclusions>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
         </dependency>
       </dependencies>
       <build>
