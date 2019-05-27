@@ -815,6 +815,7 @@ public class TestPartitionedMobCompactor {
    * @param qualifier the column qualifier
    * @param count the store file number
    * @param type the key type
+   * @param date the date value
    */
   private void createStoreFiles(Path basePath, String family, String qualifier, int count,
       Type type, final Date date) throws IOException {
