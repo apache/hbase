@@ -90,6 +90,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   // DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS (10 min) so that there is no need to heartbeat.
   private final CountDownLatch lockAcquireLatch;
 
+  private volatile boolean suspended = false;
+
   @Override
   public TableName getTableName() {
     return tableName;
@@ -219,9 +221,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     locked.set(false);
     // Maybe timeout already awakened the event and the procedure has finished.
     synchronized (event) {
-      if (!event.isReady()) {
+      if (!event.isReady() && suspended) {
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
         event.wake(env.getProcedureScheduler());
+        suspended = false;
       }
     }
   }
@@ -244,6 +247,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
       event.suspend();
       event.suspendIfNotReady(this);
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      suspended = true;
     }
     throw new ProcedureSuspendedException();
   }
