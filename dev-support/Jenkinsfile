@@ -133,6 +133,10 @@ pipeline {
                   --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
                   "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
+              for stale in $(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | grep -v ${HADOOP2_VERSION}); do
+                echo "Delete stale hadoop 2 cache ${stale}"
+                rm -rf $stale
+              done
             '''
             stash name: 'hadoop-2', includes: "hadoop-${HADOOP2_VERSION}-bin.tar.gz"
           }
@@ -156,6 +160,10 @@ pipeline {
                   --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
                   "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
+              for stale in $(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | grep -v ${HADOOP3_VERSION}); do
+                echo "Delete stale hadoop 3 cache ${stale}"
+                rm -rf $stale
+              done
             '''
             stash name: 'hadoop-3', includes: "hadoop-${HADOOP3_VERSION}-bin.tar.gz"
           }
