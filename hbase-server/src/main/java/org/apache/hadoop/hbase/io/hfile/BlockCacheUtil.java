@@ -230,6 +230,9 @@ public class BlockCacheUtil {
       BlockCacheKey cacheKey, Cacheable newBlock) {
     // NOTICE: The getBlock has retained the existingBlock inside.
     Cacheable existingBlock = blockCache.getBlock(cacheKey, false, false, false);
+    if (existingBlock == null) {
+      return true;
+    }
     try {
       int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
       if (comparison < 0) {
