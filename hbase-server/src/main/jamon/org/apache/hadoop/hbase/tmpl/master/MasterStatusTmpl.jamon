@@ -302,7 +302,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <tr>
                     <td>HBase Source Checksum</td>
                     <td><% org.apache.hadoop.hbase.util.VersionInfo.getSrcChecksum() %></td>
-                    <td>HBase source MD5 checksum</td>
+                    <td>HBase source SHA512 checksum</td>
                 </tr>
                 <tr>
                     <td>Hadoop Version</td>
