@@ -512,7 +512,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
       boolean updateCacheMetrics) {
-    LruCachedBlock cb = map.get(cacheKey);
+    LruCachedBlock cb = map.computeIfPresent(cacheKey, (key, val) -> {
+      // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
+      // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
+      // the block and release, then we're retaining a block with refCnt=0 which is disallowed.
+      // see HBASE-22422.
+      val.getBuffer().retain();
+      return val;
+    });
     if (cb == null) {
       if (!repeat && updateCacheMetrics) {
         stats.miss(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
@@ -540,10 +547,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
       }
       return null;
     }
-    if (updateCacheMetrics) stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    if (updateCacheMetrics) {
+      stats.hit(caching, cacheKey.isPrimary(), cacheKey.getBlockType());
+    }
     cb.access(count.incrementAndGet());
-    // It will be referenced by RPC path, so increase here.
-    cb.getBuffer().retain();
     return cb.getBuffer();
   }
 
@@ -601,8 +608,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (previous == null) {
       return 0;
     }
-    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate.
-    previous.getBuffer().release();
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
@@ -610,7 +615,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       assertCounterSanity(size, val);
     }
     if (block.getBuffer().getBlockType().isData()) {
-       dataBlockElements.decrement();
+      dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
@@ -620,6 +625,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
         victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
       }
     }
+    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
+    // NOT move this up because if do that then the victimHandler may access the buffer with
+    // refCnt = 0 which is disallowed.
+    previous.getBuffer().release();
     return block.heapSize();
   }
 
