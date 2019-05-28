@@ -252,11 +252,12 @@ public class TestVerifyReplication extends TestReplicationBase {
     // normal Batch tests
     byte[] qualifierName = Bytes.toBytes("f1");
     Put put = new Put(Bytes.toBytes("r1"));
-    put.addColumn(famName, qualifierName, Bytes.toBytes("v1002"));
+    long ts = System.currentTimeMillis();
+    put.addColumn(famName, qualifierName, ts + 1, Bytes.toBytes("v1002"));
     htable1.put(put);
-    put.addColumn(famName, qualifierName, Bytes.toBytes("v1001"));
+    put.addColumn(famName, qualifierName, ts + 2, Bytes.toBytes("v1001"));
     htable1.put(put);
-    put.addColumn(famName, qualifierName, Bytes.toBytes("v1112"));
+    put.addColumn(famName, qualifierName, ts + 3, Bytes.toBytes("v1112"));
     htable1.put(put);
 
     Scan scan = new Scan();
@@ -291,9 +292,9 @@ public class TestVerifyReplication extends TestReplicationBase {
       }
     }
 
-    put.addColumn(famName, qualifierName, Bytes.toBytes("v1111"));
+    put.addColumn(famName, qualifierName, ts + 4, Bytes.toBytes("v1111"));
     htable2.put(put);
-    put.addColumn(famName, qualifierName, Bytes.toBytes("v1112"));
+    put.addColumn(famName, qualifierName, ts + 5, Bytes.toBytes("v1112"));
     htable2.put(put);
 
     scan = new Scan();
