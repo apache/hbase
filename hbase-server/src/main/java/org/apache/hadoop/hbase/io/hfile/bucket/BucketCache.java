@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
@@ -1532,21 +1533,28 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public RAMQueueEntry get(BlockCacheKey key) {
-      RAMQueueEntry re = delegate.get(key);
-      if (re != null) {
-        // It'll be referenced by RPC, so retain here.
+      return delegate.computeIfPresent(key, (k, re) -> {
+        // It'll be referenced by RPC, so retain atomically here. if the get and retain is not
+        // atomic, another thread may remove and release the block, when retaining in this thread we
+        // may retain a block with refCnt=0 which is disallowed. (see HBASE-22422)
         re.getData().retain();
-      }
-      return re;
+        return re;
+      });
     }
 
+    /**
+     * Return the previous associated value, or null if absent. It has the same meaning as
+     * {@link ConcurrentMap#putIfAbsent(Object, Object)}
+     */
     public RAMQueueEntry putIfAbsent(BlockCacheKey key, RAMQueueEntry entry) {
-      RAMQueueEntry previous = delegate.putIfAbsent(key, entry);
-      if (previous == null) {
+      AtomicBoolean absent = new AtomicBoolean(false);
+      RAMQueueEntry re = delegate.computeIfAbsent(key, k -> {
         // The RAMCache reference to this entry, so reference count should be increment.
         entry.getData().retain();
-      }
-      return previous;
+        absent.set(true);
+        return entry;
+      });
+      return absent.get() ? null : re;
     }
 
     public boolean remove(BlockCacheKey key) {
@@ -1575,8 +1583,9 @@ public class BucketCache implements BlockCache, HeapSize {
     public void clear() {
       Iterator<Map.Entry<BlockCacheKey, RAMQueueEntry>> it = delegate.entrySet().iterator();
       while (it.hasNext()) {
-        it.next().getValue().getData().release();
+        RAMQueueEntry re = it.next().getValue();
         it.remove();
+        re.getData().release();
       }
     }
   }
