@@ -2657,27 +2657,6 @@ public class HRegionServer extends HasThread implements
     return this.cacheFlusher;
   }
 
-  /**
-   * Get the top N most loaded regions this server is serving so we can tell the
-   * master which regions it can reallocate if we're overloaded. TODO: actually
-   * calculate which regions are most loaded. (Right now, we're just grabbing
-   * the first N regions being served regardless of load.)
-   */
-  protected HRegionInfo[] getMostLoadedRegions() {
-    ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    for (Region r : onlineRegions.values()) {
-      if (!r.isAvailable()) {
-        continue;
-      }
-      if (regions.size() < numRegionsToReport) {
-        regions.add(r.getRegionInfo());
-      } else {
-        break;
-      }
-    }
-    return regions.toArray(new HRegionInfo[regions.size()]);
-  }
-
   @Override
   public Leases getLeases() {
     return leases;
