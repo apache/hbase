@@ -43,10 +43,12 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.ExclusiveMemHFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruCachedBlock;
+import org.apache.hadoop.hbase.io.hfile.SharedMemHFileBlock;
 import org.apache.hadoop.hbase.regionserver.CSLMImmutableSegment;
 import org.apache.hadoop.hbase.regionserver.CellArrayImmutableSegment;
 import org.apache.hadoop.hbase.regionserver.CellArrayMap;
@@ -528,6 +530,14 @@ public class TestHeapSize  {
 
     actual = HFileBlock.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(HFileBlock.class, false);
+    assertEquals(expected, actual);
+
+    actual = ExclusiveMemHFileBlock.FIXED_OVERHEAD;
+    expected = ClassSize.estimateBase(ExclusiveMemHFileBlock.class, false);
+    assertEquals(expected, actual);
+
+    actual = SharedMemHFileBlock.FIXED_OVERHEAD;
+    expected = ClassSize.estimateBase(SharedMemHFileBlock.class, false);
     assertEquals(expected, actual);
   }
 
