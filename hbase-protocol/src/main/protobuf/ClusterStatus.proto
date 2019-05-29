@@ -142,6 +142,9 @@ message RegionLoad {
 
   /** the current total coprocessor requests made to region */
   optional uint64 cp_requests_count = 20;
+
+  /** the number of references active on the store */
+  optional int32 store_ref_count = 21 [default = 0];
 }
 
 /* Server-level protobufs */
