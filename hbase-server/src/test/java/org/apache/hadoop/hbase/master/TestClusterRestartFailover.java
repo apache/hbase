@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.master.assignment.ServerState;
 import org.apache.hadoop.hbase.master.assignment.ServerStateNode;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Category({ MasterTests.class, LargeTests.class })
 public class TestClusterRestartFailover extends AbstractTestRestartCluster {
 
   @ClassRule
@@ -64,7 +64,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
       .noneMatch(p -> p instanceof ServerCrashProcedure));
     TableName tableName = TABLES[0];
     ServerName testServer = UTIL.getHBaseCluster().getRegionServer(0).getServerName();
-    UTIL.waitFor(10000, () -> getServerStateNode(testServer) != null);
+    UTIL.waitFor(30000, () -> getServerStateNode(testServer) != null);
     ServerStateNode serverNode = getServerStateNode(testServer);
     Assert.assertNotNull(serverNode);
     Assert.assertTrue("serverNode should be ONLINE when cluster runs normally",
@@ -83,7 +83,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     UTIL.getHBaseCluster().waitUntilShutDown();
     LOG.info("Starting cluster the second time");
     UTIL.restartHBaseCluster(3, ports);
-    UTIL.waitFor(10000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
+    UTIL.waitFor(30000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
     serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
       .getServerNode(testServer);
     Assert.assertNotNull("serverNode should not be null when restart whole cluster", serverNode);
