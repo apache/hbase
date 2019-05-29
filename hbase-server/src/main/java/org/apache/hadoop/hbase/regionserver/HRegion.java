@@ -174,8 +174,8 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
@@ -1009,15 +1009,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqId = maxSeqId + 1;
     if (!isRestoredRegion) {
-      long maxSeqIdFromFile =
-          WALSplitter.getMaxRegionSequenceId(getWalFileSystem(), getWALRegionDirOfDefaultReplica());
+      long maxSeqIdFromFile = WALSplitUtil.getMaxRegionSequenceId(getWalFileSystem(),
+        getWALRegionDirOfDefaultReplica());
       nextSeqId = Math.max(maxSeqId, maxSeqIdFromFile) + 1;
       // The openSeqNum will always be increase even for read only region, as we rely on it to
       // determine whether a region has been successfully reopend, so here we always need to update
       // the max sequence id file.
       if (RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         LOG.debug("writing seq id for {}", this.getRegionInfo().getEncodedName());
-        WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(), nextSeqId - 1);
+        WALSplitUtil.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
+          nextSeqId - 1);
       }
     }
 
@@ -1174,7 +1175,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // checking region folder exists is due to many tests which delete the table folder while a
     // table is still online
     if (getWalFileSystem().exists(getWALRegionDir())) {
-      WALSplitter.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
+      WALSplitUtil.writeRegionSequenceIdFile(getWalFileSystem(), getWALRegionDir(),
         mvcc.getReadPoint());
     }
   }
@@ -4586,13 +4587,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     NavigableSet<Path> filesUnderRootDir = null;
     if (!regionDir.equals(defaultRegionDir)) {
       filesUnderRootDir =
-          WALSplitter.getSplitEditFilesSorted(rootFS, defaultRegionDir);
+          WALSplitUtil.getSplitEditFilesSorted(rootFS, defaultRegionDir);
       seqid = Math.max(seqid,
           replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS, filesUnderRootDir, reporter,
               defaultRegionDir));
     }
 
-    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(walFS, regionDir);
+    NavigableSet<Path> files = WALSplitUtil.getSplitEditFilesSorted(walFS, regionDir);
     seqid = Math.max(seqid, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
         files, reporter, regionDir));
 
@@ -4605,7 +4606,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // For debugging data loss issues!
       // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
       // column family. Have to fake out file type too by casting our recovered.edits as storefiles
-      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regionDir).getName();
+      String fakeFamilyName = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir).getName();
       Set<HStoreFile> fakeStoreFiles = new HashSet<>(files.size());
       for (Path file: files) {
         fakeStoreFiles.add(
@@ -4682,7 +4683,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
         }
         if (skipErrors) {
-          Path p = WALSplitter.moveAsideBadEditsFile(fs, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
           LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
               + "=true so continuing. Renamed " + edits +
               " as " + p, e);
@@ -4862,7 +4863,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           coprocessorHost.postReplayWALs(this.getRegionInfo(), edits);
         }
       } catch (EOFException eof) {
-        Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
+        Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
         msg = "EnLongAddered EOF. Most likely due to Master failure during " +
             "wal splitting, so we have this data in another edit.  " +
             "Continuing, but renaming " + edits + " as " + p;
@@ -4872,7 +4873,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = WALSplitter.moveAsideBadEditsFile(walFS, edits);
+          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
           msg = "File corruption enLongAddered!  " +
               "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
