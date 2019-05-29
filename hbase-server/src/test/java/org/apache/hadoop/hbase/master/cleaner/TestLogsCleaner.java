@@ -261,7 +261,7 @@ public class TestLogsCleaner {
    * When zk is working both files should be returned
    * @throws Exception from ZK watcher
    */
-  @Test(timeout=10000)
+  @Test
   public void testZooKeeperNormal() throws Exception {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
