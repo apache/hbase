@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.junit.After;
@@ -902,15 +903,12 @@ public abstract class AbstractTestWALReplay {
     assertTrue(listStatus.length > 0);
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
         this.fs, this.conf, null, null, null, wals);
-    FileStatus[] listStatus1 = this.fs.listStatus(
-      new Path(FSUtils.getWALTableDir(conf, tableName), new Path(hri.getEncodedName(),
-          "recovered.edits")), new PathFilter() {
+    FileStatus[] listStatus1 = this.fs.listStatus(new Path(FSUtils.getWALTableDir(conf, tableName),
+        new Path(hri.getEncodedName(), "recovered.edits")),
+      new PathFilter() {
         @Override
         public boolean accept(Path p) {
-          if (WALSplitter.isSequenceIdFile(p)) {
-            return false;
-          }
-          return true;
+          return !WALSplitUtil.isSequenceIdFile(p);
         }
       });
     int editCount = 0;
@@ -956,7 +954,7 @@ public abstract class AbstractTestWALReplay {
     runWALSplit(this.conf);
 
     // here we let the DFSInputStream throw an IOException just after the WALHeader.
-    Path editFile = WALSplitter.getSplitEditFilesSorted(this.fs, regionDir).first();
+    Path editFile = WALSplitUtil.getSplitEditFilesSorted(this.fs, regionDir).first();
     FSDataInputStream stream = fs.open(editFile);
     stream.seek(ProtobufLogReader.PB_WAL_MAGIC.length);
     Class<? extends AbstractFSWALProvider.Reader> logReaderClass =

@@ -81,7 +81,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
@@ -226,14 +226,14 @@ public abstract class AbstractTestDLS {
       for (RegionInfo hri : regions) {
         Path tdir = FSUtils.getWALTableDir(conf, table);
         @SuppressWarnings("deprecation")
-        Path editsdir = WALSplitter
+        Path editsdir = WALSplitUtil
             .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
                 tableName, hri.getEncodedName()));
         LOG.debug("checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
           @Override
           public boolean accept(Path p) {
-            if (WALSplitter.isSequenceIdFile(p)) {
+            if (WALSplitUtil.isSequenceIdFile(p)) {
               return false;
             }
             return true;

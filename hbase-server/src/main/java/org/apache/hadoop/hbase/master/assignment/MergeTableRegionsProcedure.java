@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -777,11 +777,11 @@ public class MergeTableRegionsProcedure
     long maxSequenceId = -1L;
     for (RegionInfo region : regionsToMerge) {
       maxSequenceId =
-        Math.max(maxSequenceId, WALSplitter.getMaxRegionSequenceId(
+        Math.max(maxSequenceId, WALSplitUtil.getMaxRegionSequenceId(
             walFS, getWALRegionDir(env, region)));
     }
     if (maxSequenceId > 0) {
-      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, mergedRegion),
+      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, mergedRegion),
           maxSequenceId);
     }
   }
