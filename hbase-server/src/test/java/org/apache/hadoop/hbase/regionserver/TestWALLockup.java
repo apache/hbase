@@ -314,7 +314,7 @@ public class TestWALLockup {
    * If below is broken, we will see this test timeout because RingBufferEventHandler was stuck in
    * attainSafePoint. Everyone will wait for sync to finish forever. See HBASE-14317.
    */
-  @Test (timeout=30000)
+  @Test
   public void testRingBufferEventHandlerStuckWhenSyncFailed()
     throws IOException, InterruptedException {
 

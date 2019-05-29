@@ -63,7 +63,7 @@ public class TestMasterHandlerFullWhenTransitRegion {
     UTIL.createTable(TableName.valueOf(TABLENAME), "fa");
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void test() throws Exception {
     RegionInfo regionInfo = UTIL.getAdmin().getRegions(TableName.valueOf(TABLENAME)).get(0);
     //See HBASE-21754
