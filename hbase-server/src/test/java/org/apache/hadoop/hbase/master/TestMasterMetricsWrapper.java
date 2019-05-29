@@ -116,7 +116,7 @@ public class TestMasterMetricsWrapper {
   /**
    * tests online and offline region number
    */
-  @Test (timeout=30000)
+  @Test
   public void testOfflineRegion() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);

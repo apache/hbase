@@ -203,7 +203,7 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testTableThrottleWithBatch() {
     final TableName TABLE_A = TableName.valueOf("TableA");
     final int TABLE_A_THROTTLE_1 = 3;
