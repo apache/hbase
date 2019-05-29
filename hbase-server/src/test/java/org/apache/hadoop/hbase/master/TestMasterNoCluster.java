@@ -309,7 +309,7 @@ public class TestMasterNoCluster {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMasterInitWithSameClientServerZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
     conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
@@ -320,7 +320,7 @@ public class TestMasterNoCluster {
     master.join();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMasterInitWithObserverModeClientZKQuorum() throws Exception {
     Configuration conf = new Configuration(TESTUTIL.getConfiguration());
     Assert.assertFalse(Boolean.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE));

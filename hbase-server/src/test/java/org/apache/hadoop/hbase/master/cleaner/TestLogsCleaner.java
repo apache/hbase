@@ -238,7 +238,7 @@ public class TestLogsCleaner {
    * When zk is working both files should be returned
    * @throws Exception
    */
-  @Test(timeout=10000)
+  @Test
   public void testZooKeeperNormal() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
