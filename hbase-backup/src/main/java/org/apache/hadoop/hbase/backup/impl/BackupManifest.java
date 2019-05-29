@@ -438,6 +438,7 @@ public class BackupManifest {
           long len = subFile.getLen();
           byte[] pbBytes = new byte[(int) len];
           in.readFully(pbBytes);
+          in.close();
           BackupProtos.BackupImage proto = null;
           try {
             proto = BackupProtos.BackupImage.parseFrom(pbBytes);
