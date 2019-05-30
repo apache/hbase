@@ -240,7 +240,42 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
     </div>
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 <script src="/static/js/tab.js" type="text/javascript"></script>
+<script>
+$(document).ready(function()
+    {
+        $.tablesorter.addParser({
+            id: 'filesize',
+            is: function(s) {
+                return s.match(new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ));
+            },
+            format: function(s) {
+                var suf = s.match(new RegExp( /(KB|B|GB|MB|TB)$/ ))[1];
+                var num = parseFloat(s.match( new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ))[0]);
+                switch(suf) {
+                    case 'B':
+                        return num;
+                    case 'KB':
+                        return num * 1024;
+                    case 'MB':
+                        return num * 1024 * 1024;
+                    case 'GB':
+                        return num * 1024 * 1024 * 1024;
+                    case 'TB':
+                        return num * 1024 * 1024 * 1024 * 1024;
+                }
+            },
+            type: 'numeric'
+        });
+        $("#baseStatsTable").tablesorter();
+        $("#requestStatsTable").tablesorter();
+        $("#storeStatsTable").tablesorter();
+        $("#compactionStatsTable").tablesorter();
+        $("#memstoreStatsTable").tablesorter();
+    }
+);
+</script>
 </body>
 </html>
