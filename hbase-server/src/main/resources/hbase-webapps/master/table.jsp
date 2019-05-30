@@ -483,7 +483,7 @@ if ( fqtn != null ) {
       ServerMetrics sl = master.getServerManager().getLoad(addr);
       // This port might be wrong if RS actually ended up using something else.
       urlRegionServer =
-          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
+          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
       if(sl != null) {
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
@@ -556,7 +556,7 @@ if (withReplica) {
 <%
   for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
      ServerName addr = rdEntry.getKey();
-     String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
+     String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
 %>
 <tr>
   <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
