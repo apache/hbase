@@ -185,7 +185,7 @@ public class TestLogLevel {
    * Test client command line options. Does not validate server behavior.
    * @throws Exception if commands return unexpected results.
    */
-  @Test(timeout=120000)
+  @Test
   public void testCommandOptions() throws Exception {
     final String className = this.getClass().getName();
 
@@ -379,7 +379,7 @@ public class TestLogLevel {
    *
    * @throws Exception if client can't set log level to INFO.
    */
-  @Test(timeout=60000)
+  @Test
   public void testInfoLogLevel() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, "INFO");
   }
@@ -389,7 +389,7 @@ public class TestLogLevel {
    *
    * @throws Exception if client can't set log level to ERROR.
    */
-  @Test(timeout=60000)
+  @Test
   public void testErrorLogLevel() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, "ERROR");
   }
@@ -400,7 +400,7 @@ public class TestLogLevel {
    * @throws Exception if http client can't access http server,
    *   or http client can access https server.
    */
-  @Test(timeout=60000)
+  @Test
   public void testLogLevelByHttp() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false);
     try {
@@ -419,7 +419,7 @@ public class TestLogLevel {
    * @throws Exception if http client can't access http server,
    *   or http client can access https server.
    */
-  @Test(timeout=60000)
+  @Test
   public void testLogLevelByHttpWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true);
     try {
@@ -438,7 +438,7 @@ public class TestLogLevel {
    * @throws Exception if https client can't access https server,
    *   or https client can access http server.
    */
-  @Test(timeout=60000)
+  @Test
   public void testLogLevelByHttps() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
         false);
@@ -459,7 +459,7 @@ public class TestLogLevel {
    * @throws Exception if https client can't access https server,
    *   or https client can access http server.
    */
-  @Test(timeout=60000)
+  @Test
   public void testLogLevelByHttpsWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
         true);
