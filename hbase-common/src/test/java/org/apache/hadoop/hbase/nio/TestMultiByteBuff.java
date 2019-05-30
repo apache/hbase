@@ -457,4 +457,29 @@ public class TestMultiByteBuff {
     assertEquals(i, mbb.getInt());
     assertEquals(l, mbb.getLong());
   }
+
+  @Test
+  public void testGetByteBufferWithOffsetAndPos() {
+    byte[] a = Bytes.toBytes("abcd");
+    byte[] b = Bytes.toBytes("efghijkl");
+    ByteBuffer aa = ByteBuffer.wrap(a);
+    ByteBuffer bb = ByteBuffer.wrap(b);
+    MultiByteBuff mbb = new MultiByteBuff(aa, bb);
+    ByteBuffer out = ByteBuffer.allocate(12);
+    mbb.get(out, 0, 1);
+    assertEquals(out.position(), 1);
+    assertTrue(Bytes.equals(Bytes.toBytes("a"), 0, 1, out.array(), 0, 1));
+
+    mbb.get(out, 1, 4);
+    assertEquals(out.position(), 5);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcde"), 0, 5, out.array(), 0, 5));
+
+    mbb.get(out, 10, 1);
+    assertEquals(out.position(), 6);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcdek"), 0, 6, out.array(), 0, 6));
+
+    mbb.get(out, 0, 6);
+    assertEquals(out.position(), 12);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcdekabcdef"), 0, 12, out.array(), 0, 12));
+  }
 }
