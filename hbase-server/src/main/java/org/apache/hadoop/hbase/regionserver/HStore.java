@@ -2776,4 +2776,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public int getCurrentParallelPutCount() {
     return currentParallelPutCount.get();
   }
+
+  public int getStoreRefCount() {
+    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
+      .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
+      .mapToInt(HStoreFile::getRefCount).sum();
+  }
 }
