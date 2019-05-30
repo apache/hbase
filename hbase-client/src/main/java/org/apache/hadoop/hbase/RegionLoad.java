@@ -359,6 +359,13 @@ public class RegionLoad implements RegionMetrics {
   }
 
   /**
+   * @return the reference count for the stores of this region
+   */
+  public int getStoreRefCount() {
+    return metrics.getStoreRefCount();
+  }
+
+  /**
    * @see java.lang.Object#toString()
    */
   @Override
@@ -366,6 +373,7 @@ public class RegionLoad implements RegionMetrics {
     StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "numberOfStores",
         this.getStores());
     Strings.appendKeyValue(sb, "numberOfStorefiles", this.getStorefiles());
+    Strings.appendKeyValue(sb, "storeRefCount", this.getStoreRefCount());
     Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
         this.getStoreUncompressedSizeMB());
     Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",

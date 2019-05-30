@@ -214,6 +214,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               MetricsRegionServerSource.STOREFILE_COUNT_DESC),
           this.regionWrapper.getNumStoreFiles());
       mrb.addGauge(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.STORE_REF_COUNT,
+              MetricsRegionServerSource.STORE_REF_COUNT),
+          this.regionWrapper.getStoreRefCount());
+      mrb.addGauge(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
               MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
           this.regionWrapper.getMemStoreSize());

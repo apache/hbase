@@ -48,6 +48,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private ScheduledExecutorService executor;
   private Runnable runnable;
   private long numStoreFiles;
+  private long storeRefCount;
   private long memstoreSize;
   private long storeFileSize;
   private long maxStoreFileAge;
@@ -117,6 +118,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getStoreFileSize() {
     return storeFileSize;
+  }
+
+  @Override
+  public long getStoreRefCount() {
+    return storeRefCount;
   }
 
   @Override
@@ -221,6 +227,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     @Override
     public void run() {
       long tempNumStoreFiles = 0;
+      int tempStoreRefCount = 0;
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
@@ -232,8 +239,9 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       long avgAgeNumerator = 0;
       long numHFiles = 0;
       if (region.stores != null) {
-        for (Store store : region.stores.values()) {
+        for (HStore store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
+          tempStoreRefCount += store.getStoreRefCount();
           tempMemstoreSize += store.getMemStoreSize().getDataSize();
           tempStoreFileSize += store.getStorefilesSize();
           OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
@@ -260,6 +268,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       }
 
       numStoreFiles = tempNumStoreFiles;
+      storeRefCount = tempStoreRefCount;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;

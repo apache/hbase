@@ -144,4 +144,8 @@ public interface RegionMetrics {
    */
   long getLastMajorCompactionTimestamp();
 
+  /**
+   * @return the reference count for the stores of this region
+   */
+  int getStoreRefCount();
 }
