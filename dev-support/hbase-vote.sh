@@ -29,7 +29,7 @@ hbase-vote. A script for standard vote which verifies the following items
 4. Built from source
 5. Unit tests
 
-Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>]
+Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests]
        ${SCRIPT} -h | --help
 
   -h | --help                   Show this screen.
@@ -39,6 +39,7 @@ Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-
   -f | --keys-file-url '<url>'   the URL of the key file, default is
                                 http://www.apache.org/dist/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+  -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
 __EOF
 }
 
@@ -54,6 +55,8 @@ while ((${#})); do
       KEY_FILE_URL="${2}"; shift 2  ;;
     -o | --output-dir )
       OUTPUT_DIR="${2}"; shift 2    ;;
+    -P )
+      MVN_ARGS="-P ${2}"; shift 2   ;;
     *           )
       usage >&2; exit 1             ;;
   esac
@@ -85,6 +88,11 @@ if [ ! -d "${OUTPUT_DIR}" ]; then
     exit 1
 fi
 
+# Maven profile must be provided
+if [ -z "${MVN_ARGS}" ]; then
+    MVN_ARGS="-P runAllTests"
+fi
+
 OUTPUT_PATH_PREFIX="${OUTPUT_DIR}"/"${HBASE_RC_VERSION}"
 
 # default value for verification targets, 0 = failed
@@ -107,7 +115,7 @@ function download_and_import_keys() {
 
 function download_release_candidate () {
     # get all files from release candidate repo
-    wget -r -np -nH --cut-dirs 4 "${SOURCE_URL}"
+    wget -r -np -N -nH --cut-dirs 4 "${SOURCE_URL}"
 }
 
 function verify_signatures() {
@@ -142,9 +150,9 @@ function build_from_source() {
     mvn clean install -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
 }
 
-function run_all_tests() {
-    rm -f "${OUTPUT_PATH_PREFIX}"_run_all_tests
-    mvn test -fae -P runAllTests -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_all_tests && UNIT_TEST_PASSED=1
+function run_tests() {
+    rm -f "${OUTPUT_PATH_PREFIX}"_run_tests
+    mvn package "${MVN_ARGS}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
 }
 
 function execute() {
@@ -160,7 +168,7 @@ function print_when_exit() {
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
          - mvn clean install -DskipTests
         * Unit tests pass (${JAVA_VERSION}): $( ((UNIT_TEST_PASSED)) && echo "ok" || echo "failed" )
-         - mvn test -P runAllTests
+         - mvn package ${MVN_ARGS}
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((UNIT_TEST_PASSED)) ; then
     exit 0
@@ -177,7 +185,7 @@ execute verify_checksums
 execute unzip_from_source
 execute rat_test
 execute build_from_source
-execute run_all_tests
+execute run_tests
 
 popd
 
