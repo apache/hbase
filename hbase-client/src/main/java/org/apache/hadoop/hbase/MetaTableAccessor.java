@@ -1050,6 +1050,9 @@ public class MetaTableAccessor {
    */
   @Nullable
   private static RegionInfo getRegionInfo(final Result r, byte [] qualifier) {
+    if (r == null){
+      throw new NullPointerException("Result cannot be null");
+    }
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), qualifier);
     if (cell == null) return null;
     return RegionInfo.parseFromOrNull(cell.getValueArray(),
