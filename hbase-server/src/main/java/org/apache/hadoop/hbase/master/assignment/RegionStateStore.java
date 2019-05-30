@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -219,7 +219,7 @@ public class RegionStateStore {
   private long getOpenSeqNumForParentRegion(RegionInfo region) throws IOException {
     FileSystem walFS = master.getMasterWalManager().getFileSystem();
     long maxSeqId =
-        WALSplitter.getMaxRegionSequenceId(walFS, FSUtils.getWALRegionDir(
+        WALSplitUtil.getMaxRegionSequenceId(walFS, FSUtils.getWALRegionDir(
             master.getConfiguration(), region.getTable(), region.getEncodedName()));
     return maxSeqId > 0 ? maxSeqId + 1 : HConstants.NO_SEQNUM;
   }

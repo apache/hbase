@@ -232,7 +232,7 @@ public class TestMetaTableMetrics {
     assertEquals(5L, putWithClientMetricsCount);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testConcurrentAccess() {
     try {
       tablename = Bytes.toBytes("hbase:meta");

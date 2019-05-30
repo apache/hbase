@@ -133,7 +133,7 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -4462,7 +4462,7 @@ public class HBaseFsck extends Configured implements Closeable {
                   // This is special case if a region is left after split
                   he.hdfsOnlyEdits = true;
                   FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
-                  Path ePath = WALSplitter.getRegionDirRecoveredEditsDir(regionDir.getPath());
+                  Path ePath = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir.getPath());
                   for (FileStatus subDir : subDirs) {
                     errors.progress();
                     String sdName = subDir.getPath().getName();

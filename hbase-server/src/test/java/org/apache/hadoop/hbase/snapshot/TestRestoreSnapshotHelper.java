@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -167,13 +167,13 @@ public class TestRestoreSnapshotHelper {
       region.initialize();
       Path recoveredEdit =
           FSUtils.getWALRegionDir(conf, tableName, region.getRegionInfo().getEncodedName());
-      long maxSeqId = WALSplitter.getMaxRegionSequenceId(fs, recoveredEdit);
+      long maxSeqId = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
 
       // open restored region without set restored flag
       HRegion region2 = HRegion.newHRegion(FSUtils.getTableDir(restoreDir, tableName), null, fs,
         conf, restoredRegion, htd, null);
       region2.initialize();
-      long maxSeqId2 = WALSplitter.getMaxRegionSequenceId(fs, recoveredEdit);
+      long maxSeqId2 = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
       Assert.assertTrue(maxSeqId2 > maxSeqId);
     }
   }

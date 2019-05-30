@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +117,7 @@ public class DisableTableProcedure
               for (RegionInfo region : env.getAssignmentManager().getRegionStates()
                 .getRegionsOfTable(tableName)) {
                 long maxSequenceId =
-                  WALSplitter.getMaxRegionSequenceId(walFS, getWALRegionDir(env, region));
+                    WALSplitUtil.getMaxRegionSequenceId(walFS, getWALRegionDir(env, region));
                 long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
                 mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, openSeqNum,
                   EnvironmentEdgeManager.currentTime()));

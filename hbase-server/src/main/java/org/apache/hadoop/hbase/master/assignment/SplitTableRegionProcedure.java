@@ -68,7 +68,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -876,11 +876,11 @@ public class SplitTableRegionProcedure
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
     FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
     long maxSequenceId =
-      WALSplitter.getMaxRegionSequenceId(walFS, getWALRegionDir(env, getParentRegion()));
+      WALSplitUtil.getMaxRegionSequenceId(walFS, getWALRegionDir(env, getParentRegion()));
     if (maxSequenceId > 0) {
-      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughterOneRI),
+      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughterOneRI),
           maxSequenceId);
-      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughterTwoRI),
+      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughterTwoRI),
           maxSequenceId);
     }
   }
