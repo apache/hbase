@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for a deserializer. Throws an IOException if the serialized data is incomplete or
@@ -33,11 +32,10 @@ public interface CacheableDeserializer<T extends Cacheable> {
   /**
    * @param b ByteBuff to deserialize the Cacheable.
    * @param allocator to manage NIO ByteBuffers for future allocation or de-allocation.
-   * @param memType the {@link MemoryType} of the buffer
    * @return T the deserialized object.
    * @throws IOException
    */
-  T deserialize(ByteBuff b, ByteBuffAllocator allocator, MemoryType memType) throws IOException;
+  T deserialize(ByteBuff b, ByteBuffAllocator allocator) throws IOException;
 
   /**
    * Get the identifier of this deserializer. Identifier is unique for each deserializer and

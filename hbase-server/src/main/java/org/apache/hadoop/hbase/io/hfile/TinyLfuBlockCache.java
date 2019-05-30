@@ -171,7 +171,7 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
       if (victimCache != null) {
         value = victimCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
         if ((value != null) && caching) {
-          if ((value instanceof HFileBlock) && ((HFileBlock) value).usesSharedMemory()) {
+          if ((value instanceof HFileBlock) && !((HFileBlock) value).isOnHeap()) {
             value = ((HFileBlock) value).deepCloneOnHeap();
           }
           cacheBlock(cacheKey, value);
@@ -246,17 +246,6 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     return cache.asMap().entrySet().stream()
         .map(entry -> (CachedBlock) new CachedBlockView(entry.getKey(), entry.getValue(), now))
         .iterator();
-  }
-
-  @Override
-  public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // There is no SHARED type here in L1. But the block might have been served from the L2 victim
-    // cache (when the Combined mode = false). So just try return this block to the victim cache.
-    // Note : In case of CombinedBlockCache we will have this victim cache configured for L1
-    // cache. But CombinedBlockCache will only call returnBlock on L2 cache.
-    if (victimCache != null) {
-      victimCache.returnBlock(cacheKey, block);
-    }
   }
 
   private void logStats() {
