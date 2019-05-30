@@ -232,8 +232,7 @@ public class CacheTestUtils {
           }
 
           @Override
-          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
-              throws IOException {
+          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
             int len = b.getInt();
             Thread.yield();
             byte buf[] = new byte[len];
@@ -280,11 +279,6 @@ public class CacheTestUtils {
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;
-    }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
     }
   }
 

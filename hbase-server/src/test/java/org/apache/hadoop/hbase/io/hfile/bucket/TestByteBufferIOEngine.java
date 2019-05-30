@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -127,7 +126,7 @@ public class TestByteBufferIOEngine {
     private int identifier;
 
     @Override
-    public Cacheable deserialize(final ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
+    public Cacheable deserialize(final ByteBuff b, ByteBuffAllocator alloc)
         throws IOException {
       this.buf = b;
       return null;
