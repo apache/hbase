@@ -344,7 +344,7 @@ public class ProtobufLogReader extends ReaderBase {
         try {
           int firstByte = this.inputStream.read();
           if (firstByte == -1) {
-            throw new EOFException("First byte is negative at offset " + originalPosition);
+            throw new EOFException();
           }
           size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
           // available may be < 0 on local fs for instance.  If so, can't depend on it.
@@ -412,15 +412,19 @@ public class ProtobufLogReader extends ReaderBase {
           throw eof;
         }
         // If stuck at the same place and we got and exception, lets go back at the beginning.
-        if (inputStream.getPos() == originalPosition && resetPosition) {
-          LOG.warn("Encountered a malformed edit, seeking to the beginning of the WAL since "
-              + "current position and original position match at {}", originalPosition);
-          seekOnFs(0);
+        if (inputStream.getPos() == originalPosition) {
+          if (resetPosition) {
+            LOG.warn("Encountered a malformed edit, seeking to the beginning of the WAL since " +
+              "current position and original position match at {}", originalPosition);
+            seekOnFs(0);
+          } else {
+            LOG.info("Reached the end of file at position {}", originalPosition);
+          }
         } else {
           // Else restore our position to original location in hope that next time through we will
           // read successfully.
-          LOG.warn("Encountered a malformed edit, seeking back to last good position in file, "
-              + "from {} to {}", inputStream.getPos(), originalPosition, eof);
+          LOG.warn("Encountered a malformed edit, seeking back to last good position in file, " +
+            "from {} to {}", inputStream.getPos(), originalPosition, eof);
           seekOnFs(originalPosition);
         }
         return false;
