@@ -20,6 +20,17 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 1.5.HBASE-22466.0 - Unreleased (as of 2019-05-30)
+
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-22466](https://issues.apache.org/jira/browse/HBASE-22466) | Try running create-release against branch-1 |  Major | . |
+
+
 ## Release HBASE-22466-1.5.0 - Unreleased (as of 2019-05-29)
 
 
