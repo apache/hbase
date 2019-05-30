@@ -96,7 +96,7 @@ public final class UnsafeAccess {
   private static void unsafeCopy(Object src, long srcAddr, Object dst, long destAddr, long len) {
     while (len > 0) {
       long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
-      theUnsafe.copyMemory(src, srcAddr, dst, destAddr, len);
+      theUnsafe.copyMemory(src, srcAddr, dst, destAddr, size);
       len -= size;
       srcAddr += size;
       destAddr += size;
