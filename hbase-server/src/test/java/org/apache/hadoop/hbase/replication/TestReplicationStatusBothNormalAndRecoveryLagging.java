@@ -52,7 +52,7 @@ public class TestReplicationStatusBothNormalAndRecoveryLagging extends TestRepli
       htable1.put(p);
     }
     Thread.sleep(10000);
-    restartHBaseCluster(utility1, NUM_SLAVES1);
+    restartHBaseCluster(utility1, 1);
     Admin hbaseAdmin = utility1.getAdmin();
     ServerName serverName = utility1.getHBaseCluster().getRegionServer(0).getServerName();
     Thread.sleep(10000);
