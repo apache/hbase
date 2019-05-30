@@ -30,7 +30,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -143,7 +142,7 @@ public class FileIOEngine implements IOEngine {
       }
     }
     dstBuffer.rewind();
-    return be.wrapAsCacheable(new ByteBuffer[] { dstBuffer }, MemoryType.EXCLUSIVE);
+    return be.wrapAsCacheable(new ByteBuffer[] { dstBuffer });
   }
 
   @VisibleForTesting

@@ -29,7 +29,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -194,9 +193,9 @@ class BucketEntry implements HBaseReferenceCounted {
     return this.refCnt() > 1 || (evicted && refCnt() == 1);
   }
 
-  Cacheable wrapAsCacheable(ByteBuffer[] buffers, MemoryType memoryType) throws IOException {
+  Cacheable wrapAsCacheable(ByteBuffer[] buffers) throws IOException {
     ByteBuff buf = ByteBuff.wrap(buffers, this.refCnt);
-    return this.deserializerReference().deserialize(buf, allocator, memoryType);
+    return this.deserializerReference().deserialize(buf, allocator);
   }
 
   interface BucketEntryHandler<T> {

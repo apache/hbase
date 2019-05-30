@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -82,7 +81,7 @@ public class TestCacheConfig {
     }
 
     @Override
-    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc, MemoryType memType)
+    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc)
         throws IOException {
       LOG.info("Deserialized " + b);
       return cacheable;
@@ -143,11 +142,6 @@ public class TestCacheConfig {
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;
-    }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
     }
   }
 
