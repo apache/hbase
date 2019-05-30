@@ -719,8 +719,8 @@ public final class ByteBufferUtils {
    * @param sourceOffset offset in the source buffer
    * @param length how many bytes to copy
    */
-  public static void copyFromBufferToBuffer(ByteBuffer in,
-      ByteBuffer out, int sourceOffset, int length) {
+  public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
+      int length) {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.position()
           + out.arrayOffset(), length);
@@ -733,27 +733,6 @@ public final class ByteBufferUtils {
       inDup.position(sourceOffset).limit(sourceOffset + length);
       out.put(inDup);
     }
-  }
-
-  /**
-   * Find length of common prefix of two parts in the buffer
-   * @param buffer Where parts are located.
-   * @param offsetLeft Offset of the first part.
-   * @param offsetRight Offset of the second part.
-   * @param limit Maximal length of common prefix.
-   * @return Length of prefix.
-   */
-  public static int findCommonPrefix(ByteBuffer buffer, int offsetLeft,
-      int offsetRight, int limit) {
-    int prefix = 0;
-
-    for (; prefix < limit; ++prefix) {
-      if (buffer.get(offsetLeft + prefix) != buffer.get(offsetRight + prefix)) {
-        break;
-      }
-    }
-
-    return prefix;
   }
 
   /**

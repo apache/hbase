@@ -580,7 +580,7 @@ public class MultiByteBuff extends ByteBuff {
     while (length > 0) {
       int toRead = Math.min(length, this.curItem.remaining());
       ByteBufferUtils.copyFromBufferToArray(dst, this.curItem, this.curItem.position(), offset,
-          toRead);
+        toRead);
       this.curItem.position(this.curItem.position() + toRead);
       length -= toRead;
       if (length == 0) break;
@@ -598,8 +598,7 @@ public class MultiByteBuff extends ByteBuff {
     sourceOffset = sourceOffset - this.itemBeginPos[itemIndex];
     while (length > 0) {
       int toRead = Math.min((item.limit() - sourceOffset), length);
-      ByteBufferUtils.copyFromBufferToArray(dst, item, sourceOffset, offset,
-          toRead);
+      ByteBufferUtils.copyFromBufferToArray(dst, item, sourceOffset, offset, toRead);
       length -= toRead;
       if (length == 0) break;
       itemIndex++;
@@ -1020,24 +1019,30 @@ public class MultiByteBuff extends ByteBuff {
     }
     pair.setFirst(ByteBuffer.wrap(dst));
     pair.setSecond(0);
-    return;
   }
 
   /**
    * Copies the content from an this MBB to a ByteBuffer
-   * @param out the ByteBuffer to which the copy has to happen
-   * @param sourceOffset the offset in the MBB from which the elements has
-   * to be copied
+   * @param out the ByteBuffer to which the copy has to happen, its position will be advanced.
+   * @param sourceOffset the offset in the MBB from which the elements has to be copied
    * @param length the length in the MBB upto which the elements has to be copied
    */
   @Override
-  public void get(ByteBuffer out, int sourceOffset,
-      int length) {
+  public void get(ByteBuffer out, int sourceOffset, int length) {
     checkRefCount();
-      // Not used from real read path actually. So not going with
-      // optimization
-    for (int i = 0; i < length; ++i) {
-      out.put(this.get(sourceOffset + i));
+    int itemIndex = getItemIndex(sourceOffset);
+    ByteBuffer in = this.items[itemIndex];
+    sourceOffset = sourceOffset - this.itemBeginPos[itemIndex];
+    while (length > 0) {
+      int toRead = Math.min(in.limit() - sourceOffset, length);
+      ByteBufferUtils.copyFromBufferToBuffer(in, out, sourceOffset, toRead);
+      length -= toRead;
+      if (length == 0) {
+        break;
+      }
+      itemIndex++;
+      in = this.items[itemIndex];
+      sourceOffset = 0;
     }
   }
 
