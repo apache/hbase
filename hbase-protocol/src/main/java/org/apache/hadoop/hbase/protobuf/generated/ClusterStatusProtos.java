@@ -3613,6 +3613,24 @@ public final class ClusterStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder getStoreCompleteSequenceIdOrBuilder(
         int index);
+
+    // optional int32 store_ref_count = 21 [default = 0];
+    /**
+     * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+     *
+     * <pre>
+     ** the number of references active on the store 
+     * </pre>
+     */
+    boolean hasStoreRefCount();
+    /**
+     * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+     *
+     * <pre>
+     ** the number of references active on the store 
+     * </pre>
+     */
+    int getStoreRefCount();
   }
   /**
    * Protobuf type {@code hbase.pb.RegionLoad}
@@ -3764,6 +3782,11 @@ public final class ClusterStatusProtos {
                 mutable_bitField0_ |= 0x00020000;
               }
               storeCompleteSequenceId_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.PARSER, extensionRegistry));
+              break;
+            }
+            case 168: {
+              bitField0_ |= 0x00020000;
+              storeRefCount_ = input.readInt32();
               break;
             }
           }
@@ -4283,6 +4306,30 @@ public final class ClusterStatusProtos {
       return storeCompleteSequenceId_.get(index);
     }
 
+    // optional int32 store_ref_count = 21 [default = 0];
+    public static final int STORE_REF_COUNT_FIELD_NUMBER = 21;
+    private int storeRefCount_;
+    /**
+     * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+     *
+     * <pre>
+     ** the number of references active on the store 
+     * </pre>
+     */
+    public boolean hasStoreRefCount() {
+      return ((bitField0_ & 0x00020000) == 0x00020000);
+    }
+    /**
+     * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+     *
+     * <pre>
+     ** the number of references active on the store 
+     * </pre>
+     */
+    public int getStoreRefCount() {
+      return storeRefCount_;
+    }
+
     private void initFields() {
       regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       stores_ = 0;
@@ -4302,6 +4349,7 @@ public final class ClusterStatusProtos {
       dataLocality_ = 0F;
       lastMajorCompactionTs_ = 0L;
       storeCompleteSequenceId_ = java.util.Collections.emptyList();
+      storeRefCount_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4383,6 +4431,9 @@ public final class ClusterStatusProtos {
       for (int i = 0; i < storeCompleteSequenceId_.size(); i++) {
         output.writeMessage(18, storeCompleteSequenceId_.get(i));
       }
+      if (((bitField0_ & 0x00020000) == 0x00020000)) {
+        output.writeInt32(21, storeRefCount_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4463,6 +4514,10 @@ public final class ClusterStatusProtos {
       for (int i = 0; i < storeCompleteSequenceId_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(18, storeCompleteSequenceId_.get(i));
+      }
+      if (((bitField0_ & 0x00020000) == 0x00020000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(21, storeRefCount_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4573,6 +4628,11 @@ public final class ClusterStatusProtos {
       }
       result = result && getStoreCompleteSequenceIdList()
           .equals(other.getStoreCompleteSequenceIdList());
+      result = result && (hasStoreRefCount() == other.hasStoreRefCount());
+      if (hasStoreRefCount()) {
+        result = result && (getStoreRefCount()
+            == other.getStoreRefCount());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4658,6 +4718,10 @@ public final class ClusterStatusProtos {
       if (getStoreCompleteSequenceIdCount() > 0) {
         hash = (37 * hash) + STORE_COMPLETE_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + getStoreCompleteSequenceIdList().hashCode();
+      }
+      if (hasStoreRefCount()) {
+        hash = (37 * hash) + STORE_REF_COUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreRefCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4814,6 +4878,8 @@ public final class ClusterStatusProtos {
         } else {
           storeCompleteSequenceIdBuilder_.clear();
         }
+        storeRefCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00040000);
         return this;
       }
 
@@ -4923,6 +4989,10 @@ public final class ClusterStatusProtos {
         } else {
           result.storeCompleteSequenceId_ = storeCompleteSequenceIdBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00040000) == 0x00040000)) {
+          to_bitField0_ |= 0x00020000;
+        }
+        result.storeRefCount_ = storeRefCount_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5015,6 +5085,9 @@ public final class ClusterStatusProtos {
               storeCompleteSequenceIdBuilder_.addAllMessages(other.storeCompleteSequenceId_);
             }
           }
+        }
+        if (other.hasStoreRefCount()) {
+          setStoreRefCount(other.getStoreRefCount());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6304,6 +6377,55 @@ public final class ClusterStatusProtos {
           storeCompleteSequenceId_ = null;
         }
         return storeCompleteSequenceIdBuilder_;
+      }
+
+      // optional int32 store_ref_count = 21 [default = 0];
+      private int storeRefCount_ ;
+      /**
+       * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+       *
+       * <pre>
+       ** the number of references active on the store 
+       * </pre>
+       */
+      public boolean hasStoreRefCount() {
+        return ((bitField0_ & 0x00040000) == 0x00040000);
+      }
+      /**
+       * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+       *
+       * <pre>
+       ** the number of references active on the store 
+       * </pre>
+       */
+      public int getStoreRefCount() {
+        return storeRefCount_;
+      }
+      /**
+       * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+       *
+       * <pre>
+       ** the number of references active on the store 
+       * </pre>
+       */
+      public Builder setStoreRefCount(int value) {
+        bitField0_ |= 0x00040000;
+        storeRefCount_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 store_ref_count = 21 [default = 0];</code>
+       *
+       * <pre>
+       ** the number of references active on the store 
+       * </pre>
+       */
+      public Builder clearStoreRefCount() {
+        bitField0_ = (bitField0_ & ~0x00040000);
+        storeRefCount_ = 0;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.RegionLoad)
@@ -14723,7 +14845,7 @@ public final class ClusterStatusProtos {
       "e\030\001 \002(\014\022\023\n\013sequence_id\030\002 \002(\004\"p\n\026RegionSt" +
       "oreSequenceIds\022 \n\030last_flushed_sequence_" +
       "id\030\001 \002(\004\0224\n\021store_sequence_id\030\002 \003(\0132\031.hb" +
-      "ase.pb.StoreSequenceId\"\324\004\n\nRegionLoad\0223\n" +
+      "ase.pb.StoreSequenceId\"\360\004\n\nRegionLoad\0223\n" +
       "\020region_specifier\030\001 \002(\0132\031.hbase.pb.Regio" +
       "nSpecifier\022\016\n\006stores\030\002 \001(\r\022\022\n\nstorefiles",
       "\030\003 \001(\r\022\"\n\032store_uncompressed_size_MB\030\004 \001" +
@@ -14738,38 +14860,39 @@ public final class ClusterStatusProtos {
       "_sequence_id\030\017 \001(\004\022\025\n\rdata_locality\030\020 \001(",
       "\002\022#\n\030last_major_compaction_ts\030\021 \001(\004:\0010\022=" +
       "\n\032store_complete_sequence_id\030\022 \003(\0132\031.hba" +
-      "se.pb.StoreSequenceId\"T\n\023ReplicationLoad" +
-      "Sink\022\032\n\022ageOfLastAppliedOp\030\001 \002(\004\022!\n\031time" +
-      "StampsOfLastAppliedOp\030\002 \002(\004\"\225\001\n\025Replicat" +
-      "ionLoadSource\022\016\n\006peerID\030\001 \002(\t\022\032\n\022ageOfLa" +
-      "stShippedOp\030\002 \002(\004\022\026\n\016sizeOfLogQueue\030\003 \002(" +
-      "\r\022 \n\030timeStampOfLastShippedOp\030\004 \002(\004\022\026\n\016r" +
-      "eplicationLag\030\005 \002(\004\"\212\003\n\nServerLoad\022\032\n\022nu" +
-      "mber_of_requests\030\001 \001(\004\022 \n\030total_number_o",
-      "f_requests\030\002 \001(\004\022\024\n\014used_heap_MB\030\003 \001(\r\022\023" +
-      "\n\013max_heap_MB\030\004 \001(\r\022*\n\014region_loads\030\005 \003(" +
-      "\0132\024.hbase.pb.RegionLoad\022+\n\014coprocessors\030" +
-      "\006 \003(\0132\025.hbase.pb.Coprocessor\022\031\n\021report_s" +
-      "tart_time\030\007 \001(\004\022\027\n\017report_end_time\030\010 \001(\004" +
-      "\022\030\n\020info_server_port\030\t \001(\r\0227\n\016replLoadSo" +
-      "urce\030\n \003(\0132\037.hbase.pb.ReplicationLoadSou" +
-      "rce\0223\n\014replLoadSink\030\013 \001(\0132\035.hbase.pb.Rep" +
-      "licationLoadSink\"a\n\016LiveServerInfo\022$\n\006se" +
-      "rver\030\001 \002(\0132\024.hbase.pb.ServerName\022)\n\013serv",
-      "er_load\030\002 \002(\0132\024.hbase.pb.ServerLoad\"\250\003\n\r" +
-      "ClusterStatus\0228\n\rhbase_version\030\001 \001(\0132!.h" +
-      "base.pb.HBaseVersionFileContent\022.\n\014live_" +
-      "servers\030\002 \003(\0132\030.hbase.pb.LiveServerInfo\022" +
-      "*\n\014dead_servers\030\003 \003(\0132\024.hbase.pb.ServerN" +
-      "ame\022;\n\025regions_in_transition\030\004 \003(\0132\034.hba" +
-      "se.pb.RegionInTransition\022\'\n\ncluster_id\030\005" +
-      " \001(\0132\023.hbase.pb.ClusterId\0222\n\023master_copr" +
-      "ocessors\030\006 \003(\0132\025.hbase.pb.Coprocessor\022$\n" +
-      "\006master\030\007 \001(\0132\024.hbase.pb.ServerName\022,\n\016b",
-      "ackup_masters\030\010 \003(\0132\024.hbase.pb.ServerNam" +
-      "e\022\023\n\013balancer_on\030\t \001(\010BF\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\023ClusterSta" +
-      "tusProtosH\001\240\001\001"
+      "se.pb.StoreSequenceId\022\032\n\017store_ref_count" +
+      "\030\025 \001(\005:\0010\"T\n\023ReplicationLoadSink\022\032\n\022ageO" +
+      "fLastAppliedOp\030\001 \002(\004\022!\n\031timeStampsOfLast" +
+      "AppliedOp\030\002 \002(\004\"\225\001\n\025ReplicationLoadSourc" +
+      "e\022\016\n\006peerID\030\001 \002(\t\022\032\n\022ageOfLastShippedOp\030" +
+      "\002 \002(\004\022\026\n\016sizeOfLogQueue\030\003 \002(\r\022 \n\030timeSta" +
+      "mpOfLastShippedOp\030\004 \002(\004\022\026\n\016replicationLa" +
+      "g\030\005 \002(\004\"\212\003\n\nServerLoad\022\032\n\022number_of_requ",
+      "ests\030\001 \001(\004\022 \n\030total_number_of_requests\030\002" +
+      " \001(\004\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_heap_M" +
+      "B\030\004 \001(\r\022*\n\014region_loads\030\005 \003(\0132\024.hbase.pb" +
+      ".RegionLoad\022+\n\014coprocessors\030\006 \003(\0132\025.hbas" +
+      "e.pb.Coprocessor\022\031\n\021report_start_time\030\007 " +
+      "\001(\004\022\027\n\017report_end_time\030\010 \001(\004\022\030\n\020info_ser" +
+      "ver_port\030\t \001(\r\0227\n\016replLoadSource\030\n \003(\0132\037" +
+      ".hbase.pb.ReplicationLoadSource\0223\n\014replL" +
+      "oadSink\030\013 \001(\0132\035.hbase.pb.ReplicationLoad" +
+      "Sink\"a\n\016LiveServerInfo\022$\n\006server\030\001 \002(\0132\024",
+      ".hbase.pb.ServerName\022)\n\013server_load\030\002 \002(" +
+      "\0132\024.hbase.pb.ServerLoad\"\250\003\n\rClusterStatu" +
+      "s\0228\n\rhbase_version\030\001 \001(\0132!.hbase.pb.HBas" +
+      "eVersionFileContent\022.\n\014live_servers\030\002 \003(" +
+      "\0132\030.hbase.pb.LiveServerInfo\022*\n\014dead_serv" +
+      "ers\030\003 \003(\0132\024.hbase.pb.ServerName\022;\n\025regio" +
+      "ns_in_transition\030\004 \003(\0132\034.hbase.pb.Region" +
+      "InTransition\022\'\n\ncluster_id\030\005 \001(\0132\023.hbase" +
+      ".pb.ClusterId\0222\n\023master_coprocessors\030\006 \003" +
+      "(\0132\025.hbase.pb.Coprocessor\022$\n\006master\030\007 \001(",
+      "\0132\024.hbase.pb.ServerName\022,\n\016backup_master" +
+      "s\030\010 \003(\0132\024.hbase.pb.ServerName\022\023\n\013balance" +
+      "r_on\030\t \001(\010BF\n*org.apache.hadoop.hbase.pr" +
+      "otobuf.generatedB\023ClusterStatusProtosH\001\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -14805,7 +14928,7 @@ public final class ClusterStatusProtos {
           internal_static_hbase_pb_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", "LastMajorCompactionTs", "StoreCompleteSequenceId", });
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", "LastMajorCompactionTs", "StoreCompleteSequenceId", "StoreRefCount", });
           internal_static_hbase_pb_ReplicationLoadSink_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_hbase_pb_ReplicationLoadSink_fieldAccessorTable = new

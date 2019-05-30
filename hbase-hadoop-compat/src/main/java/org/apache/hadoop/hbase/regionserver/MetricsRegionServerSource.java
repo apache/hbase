@@ -229,6 +229,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String WALFILE_SIZE_DESC = "Size of all WAL Files";
   String STOREFILE_COUNT = "storeFileCount";
   String STOREFILE_COUNT_DESC = "Number of Store Files";
+  String STORE_REF_COUNT = "storeRefCount";
+  String STORE_REF_COUNT_DESC = "Store reference count";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";

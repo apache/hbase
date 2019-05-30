@@ -188,6 +188,13 @@ public class RegionLoad {
   }
 
   /**
+   * @return the reference count for the stores of this region
+   */
+  public int getStoreRefCount() {
+    return regionLoadPB.getStoreRefCount();
+  }
+
+  /**
    * @see java.lang.Object#toString()
    */
   @Override
@@ -196,6 +203,7 @@ public class RegionLoad {
         this.getStores());
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
         this.getStorefiles());
+    sb = Strings.appendKeyValue(sb, "storeRefCount", this.getStoreRefCount());
     sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
       this.getStoreUncompressedSizeMB());
     sb = Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",

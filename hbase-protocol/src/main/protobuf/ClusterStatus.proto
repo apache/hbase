@@ -136,6 +136,15 @@ message RegionLoad {
 
   /** the most recent sequence Id of store from cache flush */
   repeated StoreSequenceId store_complete_sequence_id = 18;
+
+  /** branch-2 defines filtered_read_requests_count = 19, the current total
+      filtered read requests made to region */
+
+  /** master defines cp_requests_count = 20, the current total coprocessor
+      requests made to region */
+
+  /** the number of references active on the store */
+  optional int32 store_ref_count = 21 [ default = 0 ];
 }
 
 /* Server-level protobufs */

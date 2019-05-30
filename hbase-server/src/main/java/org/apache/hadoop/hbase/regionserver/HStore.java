@@ -2853,4 +2853,15 @@ public class HStore implements Store {
       lock.writeLock().unlock();
     }
   }
+
+  public int getStoreRefCount() {
+    int refCount = 0;
+    for (StoreFile store: storeEngine.getStoreFileManager().getStorefiles()) {
+      StoreFile.Reader r = store.getReader();
+      if (r != null) {
+        refCount += r.getRefCount();
+      }
+    }
+    return refCount;
+  }
 }
