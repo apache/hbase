@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -148,7 +147,6 @@ public class TestBucketCacheRefCnt {
       assertEquals(1, blk.refCnt());
 
       Cacheable block = cache.getBlock(key, false, false, false);
-      assertTrue(block.getMemoryType() == MemoryType.SHARED);
       assertTrue(block instanceof HFileBlock);
       assertTrue(((HFileBlock) block).getByteBuffAllocator() == alloc);
       assertEquals(2, block.refCnt());
@@ -157,7 +155,6 @@ public class TestBucketCacheRefCnt {
       assertEquals(3, block.refCnt());
 
       Cacheable newBlock = cache.getBlock(key, false, false, false);
-      assertTrue(newBlock.getMemoryType() == MemoryType.SHARED);
       assertTrue(newBlock instanceof HFileBlock);
       assertTrue(((HFileBlock) newBlock).getByteBuffAllocator() == alloc);
       assertEquals(4, newBlock.refCnt());
