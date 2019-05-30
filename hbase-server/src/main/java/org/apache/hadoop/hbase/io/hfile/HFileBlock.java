@@ -201,8 +201,6 @@ public class HFileBlock implements Cacheable {
    */
   private long offset = UNSET;
 
-  private MemoryType memType = MemoryType.EXCLUSIVE;
-
   /**
    * The on-disk size of the next block, including the header and checksums if present.
    * UNSET if unknown.
@@ -274,7 +272,7 @@ public class HFileBlock implements Cacheable {
     }
 
     @Override
-    public HFileBlock deserialize(ByteBuff buf, ByteBuffAllocator alloc, MemoryType memType)
+    public HFileBlock deserialize(ByteBuff buf, ByteBuffAllocator alloc)
         throws IOException {
       // The buf has the file block followed by block metadata.
       // Set limit to just before the BLOCK_METADATA_SPACE then rewind.
@@ -287,8 +285,7 @@ public class HFileBlock implements Cacheable {
       boolean usesChecksum = buf.get() == (byte) 1;
       long offset = buf.getLong();
       int nextBlockOnDiskSize = buf.getInt();
-      return new HFileBlock(newByteBuff, usesChecksum, memType, offset, nextBlockOnDiskSize, null,
-          alloc);
+      return new HFileBlock(newByteBuff, usesChecksum, offset, nextBlockOnDiskSize, null, alloc);
     }
 
     @Override
@@ -366,7 +363,7 @@ public class HFileBlock implements Cacheable {
    * to that point.
    * @param buf Has header, content, and trailing checksums if present.
    */
-  HFileBlock(ByteBuff buf, boolean usesHBaseChecksum, MemoryType memType, final long offset,
+  HFileBlock(ByteBuff buf, boolean usesHBaseChecksum, final long offset,
       final int nextBlockOnDiskSize, HFileContext fileContext, ByteBuffAllocator allocator)
       throws IOException {
     buf.rewind();
@@ -398,7 +395,6 @@ public class HFileBlock implements Cacheable {
     assert usesHBaseChecksum == fileContext.isUseHBaseChecksum();
     init(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, offset,
       onDiskDataSizeWithHeader, nextBlockOnDiskSize, fileContext, allocator);
-    this.memType = memType;
     this.offset = offset;
     this.buf = buf;
     this.buf.rewind();
@@ -1785,8 +1781,8 @@ public class HFileBlock implements Cacheable {
         // The onDiskBlock will become the headerAndDataBuffer for this block.
         // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
         // contains the header of next block, so no need to set next block's header in it.
-        HFileBlock hFileBlock = new HFileBlock(curBlock, checksumSupport, MemoryType.EXCLUSIVE,
-            offset, nextBlockOnDiskSize, fileContext, intoHeap ? HEAP: allocator);
+        HFileBlock hFileBlock = new HFileBlock(curBlock, checksumSupport, offset,
+            nextBlockOnDiskSize, fileContext, intoHeap ? HEAP : allocator);
         // Run check on uncompressed sizings.
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
@@ -2058,18 +2054,6 @@ public class HFileBlock implements Cacheable {
    */
   HFileContext getHFileContext() {
     return this.fileContext;
-  }
-
-  @Override
-  public MemoryType getMemoryType() {
-    return this.memType;
-  }
-
-  /**
-   * @return true if this block is backed by a shared memory area(such as that of a BucketCache).
-   */
-  boolean usesSharedMemory() {
-    return this.memType == MemoryType.SHARED;
   }
 
   /**

@@ -955,12 +955,6 @@ public class TestLruBlockCache {
     public BlockType getBlockType() {
       return BlockType.DATA;
     }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
-    }
-
   }
 
   static void testMultiThreadGetAndEvictBlockInternal(BlockCache cache) throws Exception {

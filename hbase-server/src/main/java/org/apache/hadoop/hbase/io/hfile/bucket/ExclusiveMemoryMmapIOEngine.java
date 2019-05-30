@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,6 +38,6 @@ public class ExclusiveMemoryMmapIOEngine extends FileMmapIOEngine {
     ByteBuff dst = ByteBuff.wrap(ByteBuffer.allocate(be.getLength()));
     bufferArray.read(be.offset(), dst);
     dst.position(0).limit(be.getLength());
-    return be.wrapAsCacheable(dst.nioByteBuffers(), MemoryType.EXCLUSIVE);
+    return be.wrapAsCacheable(dst.nioByteBuffers());
   }
 }

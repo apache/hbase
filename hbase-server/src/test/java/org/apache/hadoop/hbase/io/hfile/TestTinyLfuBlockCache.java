@@ -296,11 +296,6 @@ public class TestTinyLfuBlockCache {
     }
 
     @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
-    }
-
-    @Override
     public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
     }
   }

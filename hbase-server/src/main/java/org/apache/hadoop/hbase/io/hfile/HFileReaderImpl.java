@@ -24,8 +24,6 @@ import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -489,8 +487,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     private int currValueLen;
     private int currMemstoreTSLen;
     private long currMemstoreTS;
-    // Updated but never read?
-    protected AtomicInteger blockFetches = new AtomicInteger(0);
     protected final HFile.Reader reader;
     private int currTagsLen;
     // buffer backed keyonlyKV
@@ -506,7 +502,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      * If the nextIndexedKey is null, it means the nextIndexedKey has not been loaded yet.
      */
     protected Cell nextIndexedKey;
-    // Current block being used
+    // Current block being used. NOTICE: DON't release curBlock separately except in shipped() or
+    // close() methods. Because the shipped() or close() will do the release finally, even if any
+    // exception occur the curBlock will be released by the close() method (see
+    // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
+    // unreferenced block please.
     protected HFileBlock curBlock;
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
@@ -520,12 +520,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     void updateCurrBlockRef(HFileBlock block) {
-      if (block != null && this.curBlock != null &&
-          block.getOffset() == this.curBlock.getOffset()) {
+      if (block != null && curBlock != null && block.getOffset() == curBlock.getOffset()) {
         return;
       }
-      // We don't have to keep ref to EXCLUSIVE type of block
-      if (this.curBlock != null && this.curBlock.usesSharedMemory()) {
+      if (this.curBlock != null) {
         prevBlocks.add(this.curBlock);
       }
       this.curBlock = block;
@@ -533,7 +531,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     void reset() {
       // We don't have to keep ref to EXCLUSIVE type of block
-      if (this.curBlock != null && this.curBlock.usesSharedMemory()) {
+      if (this.curBlock != null) {
         this.prevBlocks.add(this.curBlock);
       }
       this.curBlock = null;
@@ -821,7 +819,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             return loadBlockAndSeekToKey(this.curBlock, nextIndexedKey, false, key,
                 false);
           }
-
         }
       }
       // Don't rewind on a reseek operation, because reseek implies that we are
@@ -846,20 +843,19 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public int seekTo(Cell key, boolean rewind) throws IOException {
       HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(key, curBlock,
-          cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
+        cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
       if (blockWithScanInfo == null || blockWithScanInfo.getHFileBlock() == null) {
-        // This happens if the key e.g. falls before the beginning of the
-        // file.
+        // This happens if the key e.g. falls before the beginning of the file.
         return -1;
       }
       return loadBlockAndSeekToKey(blockWithScanInfo.getHFileBlock(),
-          blockWithScanInfo.getNextIndexedKey(), rewind, key, false);
+        blockWithScanInfo.getNextIndexedKey(), rewind, key, false);
     }
 
     @Override
     public boolean seekBefore(Cell key) throws IOException {
       HFileBlock seekToBlock = reader.getDataBlockIndexReader().seekToDataBlock(key, curBlock,
-          cacheBlocks, pread, isCompaction, reader.getEffectiveEncodingInCache(isCompaction));
+        cacheBlocks, pread, isCompaction, reader.getEffectiveEncodingInCache(isCompaction));
       if (seekToBlock == null) {
         return false;
       }
@@ -869,27 +865,37 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // The key we are interested in
         if (previousBlockOffset == -1) {
           // we have a 'problem', the key we want is the first of the file.
+          releaseIfNotCurBlock(seekToBlock);
           return false;
         }
 
         // The first key in the current block 'seekToBlock' is greater than the given
         // seekBefore key. We will go ahead by reading the next block that satisfies the
         // given key. Return the current block before reading the next one.
-        seekToBlock.release();
+        releaseIfNotCurBlock(seekToBlock);
         // It is important that we compute and pass onDiskSize to the block
         // reader so that it does not have to read the header separately to
-        // figure out the size.  Currently, we do not have a way to do this
+        // figure out the size. Currently, we do not have a way to do this
         // correctly in the general case however.
         // TODO: See https://issues.apache.org/jira/browse/HBASE-14576
         int prevBlockSize = -1;
-        seekToBlock = reader.readBlock(previousBlockOffset,
-            prevBlockSize, cacheBlocks,
-            pread, isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
+        seekToBlock = reader.readBlock(previousBlockOffset, prevBlockSize, cacheBlocks, pread,
+          isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
       loadBlockAndSeekToKey(seekToBlock, firstKey, true, key, true);
       return true;
+    }
+
+    /**
+     * The curBlock will be released by shipping or close method, so only need to consider releasing
+     * the block, which was read from HFile before and not referenced by curBlock.
+     */
+    protected void releaseIfNotCurBlock(HFileBlock block) {
+      if (curBlock != block) {
+        block.release();
+      }
     }
 
     /**
@@ -903,33 +909,30 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         justification="Yeah, unnecessary null check; could do w/ clean up")
     protected HFileBlock readNextDataBlock() throws IOException {
       long lastDataBlockOffset = reader.getTrailer().getLastDataBlockOffset();
-      if (curBlock == null)
+      if (curBlock == null) {
         return null;
-
+      }
       HFileBlock block = this.curBlock;
-
       do {
         if (block.getOffset() >= lastDataBlockOffset) {
+          releaseIfNotCurBlock(block);
           return null;
         }
-
         if (block.getOffset() < 0) {
-          throw new IOException(
-              "Invalid block file offset: " + block + ", path=" + reader.getPath());
+          releaseIfNotCurBlock(block);
+          throw new IOException("Invalid block file offset: " + block + ", path=" + reader.getPath());
         }
-
         // We are reading the next block without block type validation, because
         // it might turn out to be a non-data block.
         block = reader.readBlock(block.getOffset() + block.getOnDiskSizeWithHeader(),
-            block.getNextBlockOnDiskSize(), cacheBlocks, pread,
-            isCompaction, true, null, getEffectiveDataBlockEncoding());
-        if (block != null && !block.getBlockType().isData()) { // Findbugs: NP_NULL_ON_SOME_PATH
+          block.getNextBlockOnDiskSize(), cacheBlocks, pread, isCompaction, true, null,
+          getEffectiveDataBlockEncoding());
+        if (block != null && !block.getBlockType().isData()) {
           // Whatever block we read we will be returning it unless
           // it is a datablock. Just in case the blocks are non data blocks
           block.release();
         }
       } while (!block.getBlockType().isData());
-
       return block;
     }
 
@@ -1109,8 +1112,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
 
       long firstDataBlockOffset = reader.getTrailer().getFirstDataBlockOffset();
-      if (curBlock != null
-          && curBlock.getOffset() == firstDataBlockOffset) {
+      if (curBlock != null && curBlock.getOffset() == firstDataBlockOffset) {
         return processFirstDataBlock();
       }
 
@@ -1128,8 +1130,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       HFileBlock newBlock = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
         isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (newBlock.getOffset() < 0) {
-        throw new IOException(
-            "Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
+        releaseIfNotCurBlock(newBlock);
+        throw new IOException("Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
       }
       updateCurrentBlock(newBlock);
     }
@@ -1176,26 +1178,26 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     /**
-     * Updates the current block to be the given {@link HFileBlock}. Seeks to
-     * the the first key/value pair.
-     *
-     * @param newBlock the block to make current
+     * Updates the current block to be the given {@link HFileBlock}. Seeks to the the first
+     * key/value pair.
+     * @param newBlock the block read by {@link HFileReaderImpl#readBlock}, it's a totally new block
+     *          with new allocated {@link ByteBuff}, so if no further reference to this block, we
+     *          should release it carefully.
      */
     protected void updateCurrentBlock(HFileBlock newBlock) throws IOException {
-      // Set the active block on the reader
-      // sanity check
-      if (newBlock.getBlockType() != BlockType.DATA) {
-        throw new IllegalStateException("ScannerV2 works only on data " + "blocks, got "
-            + newBlock.getBlockType() + "; " + "HFileName=" + reader.getPath()
-            + ", " + "dataBlockEncoder=" + reader.getDataBlockEncoding() + ", " + "isCompaction="
-            + isCompaction);
+      try {
+        if (newBlock.getBlockType() != BlockType.DATA) {
+          throw new IllegalStateException(
+              "ScannerV2 works only on data blocks, got " + newBlock.getBlockType() + "; "
+                  + "HFileName=" + reader.getPath() + ", " + "dataBlockEncoder="
+                  + reader.getDataBlockEncoding() + ", " + "isCompaction=" + isCompaction);
+        }
+        updateCurrBlockRef(newBlock);
+        blockBuffer = newBlock.getBufferWithoutHeader();
+        readKeyValueLen();
+      } finally {
+        releaseIfNotCurBlock(newBlock);
       }
-
-      updateCurrBlockRef(newBlock);
-      blockBuffer = newBlock.getBufferWithoutHeader();
-      readKeyValueLen();
-      blockFetches.incrementAndGet();
-
       // Reset the next indexed key
       this.nextIndexedKey = null;
     }
@@ -1643,32 +1645,33 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     /**
-     * Updates the current block to be the given {@link HFileBlock}. Seeks to
-     * the the first key/value pair.
-     *
-     * @param newBlock the block to make current
+     * Updates the current block to be the given {@link HFileBlock}. Seeks to the the first
+     * key/value pair.
+     * @param newBlock the block to make current, and read by {@link HFileReaderImpl#readBlock},
+     *          it's a totally new block with new allocated {@link ByteBuff}, so if no further
+     *          reference to this block, we should release it carefully.
      * @throws CorruptHFileException
      */
     @Override
     protected void updateCurrentBlock(HFileBlock newBlock) throws CorruptHFileException {
-
-      // sanity checks
-      if (newBlock.getBlockType() != BlockType.ENCODED_DATA) {
-        throw new IllegalStateException("EncodedScanner works only on encoded data blocks");
+      try {
+        // sanity checks
+        if (newBlock.getBlockType() != BlockType.ENCODED_DATA) {
+          throw new IllegalStateException("EncodedScanner works only on encoded data blocks");
+        }
+        short dataBlockEncoderId = newBlock.getDataBlockEncodingId();
+        if (!DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
+          String encoderCls = dataBlockEncoder.getClass().getName();
+          throw new CorruptHFileException(
+              "Encoder " + encoderCls + " doesn't support data block encoding "
+                  + DataBlockEncoding.getNameFromId(dataBlockEncoderId) + ",path=" + reader.getPath());
+        }
+        updateCurrBlockRef(newBlock);
+        ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
+        seeker.setCurrentBuffer(encodedBuffer);
+      } finally {
+        releaseIfNotCurBlock(newBlock);
       }
-      short dataBlockEncoderId = newBlock.getDataBlockEncodingId();
-      if (!DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
-        String encoderCls = dataBlockEncoder.getClass().getName();
-        throw new CorruptHFileException("Encoder " + encoderCls
-          + " doesn't support data block encoding "
-          + DataBlockEncoding.getNameFromId(dataBlockEncoderId)
-          + ", path=" + reader.getPath());
-      }
-      updateCurrBlockRef(newBlock);
-      ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
-      seeker.setCurrentBuffer(encodedBuffer);
-      blockFetches.incrementAndGet();
-
       // Reset the next indexed key
       this.nextIndexedKey = null;
     }
@@ -1748,8 +1751,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey,
         boolean rewind, Cell key, boolean seekBefore) throws IOException {
-      if (this.curBlock == null
-          || this.curBlock.getOffset() != seekToBlock.getOffset()) {
+      if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
         seeker.rewind();
