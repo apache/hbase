@@ -18,7 +18,7 @@
 
 set -e
 function usage {
-  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar"
+  echo "Usage: ${0} [options] /path/to/component/bin-install /path/to/hadoop/executable /path/to/hadoop/hadoop-yarn-server-tests-tests.jar /path/to/hadoop/hadoop-mapreduce-client-jobclient-tests.jar /path/to/mapred/executable"
   echo ""
   echo "    --zookeeper-data /path/to/use                                     Where the embedded zookeeper instance should write its data."
   echo "                                                                      defaults to 'zk-data' in the working-dir."
@@ -33,7 +33,7 @@ function usage {
   exit 1
 }
 # if no args specified, show usage
-if [ $# -lt 4 ]; then
+if [ $# -lt 5 ]; then
   usage
 fi
 
@@ -62,16 +62,22 @@ do
 done
 
 # should still have where component checkout is.
-if [ $# -lt 4 ]; then
+if [ $# -lt 5 ]; then
   usage
 fi
 component_install="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 hadoop_exec="$(cd "$(dirname "$2")"; pwd)/$(basename "$2")"
 yarn_server_tests_test_jar="$(cd "$(dirname "$3")"; pwd)/$(basename "$3")"
 mapred_jobclient_test_jar="$(cd "$(dirname "$4")"; pwd)/$(basename "$4")"
+mapred_exec="$(cd "$(dirname "$5")"; pwd)/$(basename "$5")"
 
 if [ ! -x "${hadoop_exec}" ]; then
   echo "hadoop cli does not appear to be executable." >&2
+  exit 1
+fi
+
+if [ ! -x "${mapred_exec}" ]; then
+  echo "mapred cli does not appear to be executable." >&2
   exit 1
 fi
 
@@ -276,7 +282,12 @@ trap cleanup EXIT SIGQUIT
 
 echo "Starting up Hadoop"
 
-HADOOP_CLASSPATH="${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+if [ "${hadoop_version%.*.*}" -gt 2 ]; then
+  "${mapred_exec}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+else
+  HADOOP_CLASSPATH="${yarn_server_tests_test_jar}" "${hadoop_exec}" jar "${mapred_jobclient_test_jar}" minicluster -format -writeConfig "${working_dir}/hbase-conf/core-site.xml" -writeDetails "${working_dir}/hadoop_cluster_info.json" >"${working_dir}/hadoop_cluster_command.out" 2>"${working_dir}/hadoop_cluster_command.err" &
+fi
+
 echo "$!" > "${working_dir}/hadoop.pid"
 
 sleep_time=2
