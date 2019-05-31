@@ -636,6 +636,7 @@ public class TestQuotaAdmin {
     assertTrue(admin.exceedThrottleQuotaSwitch(true));
     assertTrue(admin.exceedThrottleQuotaSwitch(false));
     assertFalse(admin.exceedThrottleQuotaSwitch(false));
+    assertEquals(2, admin.getQuota(new QuotaFilter()).size());
     admin.setQuota(QuotaSettingsFactory.unthrottleRegionServer(regionServer));
   }
 
