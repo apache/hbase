@@ -572,6 +572,7 @@ pipeline {
                   "hadoop-2/bin/hadoop" \
                   hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                   hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  hadoop-2/bin/mapred \
                   >output-integration/hadoop-2.log 2>&1 ; then
                 echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
                 exit 2
@@ -590,6 +591,7 @@ pipeline {
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                   hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  hadoop-3/bin/mapred \
                   >output-integration/hadoop-3.log 2>&1 ; then
                 echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
                 exit 2
@@ -604,6 +606,7 @@ pipeline {
                   hadoop-3/bin/hadoop \
                   hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                   hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                  hadoop-3/bin/mapred \
                   >output-integration/hadoop-3-shaded.log 2>&1 ; then
                 echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
                 exit 2
