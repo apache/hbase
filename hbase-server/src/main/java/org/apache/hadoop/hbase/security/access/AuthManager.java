@@ -194,7 +194,13 @@ public final class AuthManager implements Closeable {
     globalCache.clear();
     for (String name : globalPerms.keySet()) {
       for (Permission permission : globalPerms.get(name)) {
-        globalCache.put(name, (GlobalPermission) permission);
+        // Before 2.2, the global permission which storage in zk is not right. It was saved as a
+        // table permission. So here need to handle this for compatibility. See HBASE-22503.
+        if (permission instanceof TablePermission) {
+          globalCache.put(name, new GlobalPermission(permission.getActions()));
+        } else {
+          globalCache.put(name, (GlobalPermission) permission);
+        }
       }
     }
     mtime.incrementAndGet();
