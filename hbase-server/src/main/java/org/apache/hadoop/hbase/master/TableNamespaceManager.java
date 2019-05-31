@@ -222,14 +222,16 @@ public class TableNamespaceManager {
       return true;
     }
 
+    if (zkNamespaceManager == null) {
+      zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
+      zkNamespaceManager.start();
+    }
+
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned()) {
       try {
         boolean initGoodSofar = true;
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
-        zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
-        zkNamespaceManager.start();
-
         if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
           if (createNamespaceAync) {
             masterServices.getMasterProcedureExecutor().submitProcedure(
