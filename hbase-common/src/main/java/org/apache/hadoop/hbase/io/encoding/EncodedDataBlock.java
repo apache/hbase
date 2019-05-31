@@ -255,7 +255,7 @@ public class EncodedDataBlock {
       }
       BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
       baos.writeTo(stream);
-      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.ourBytes);
+      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.toByteArray());
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
@@ -271,6 +271,11 @@ public class EncodedDataBlock {
     @Override
     public synchronized void write(byte[] b, int off, int len) {
       this.ourBytes = b;
+    }
+
+    @Override
+    public synchronized byte[] toByteArray() {
+      return ourBytes;
     }
   }
 
