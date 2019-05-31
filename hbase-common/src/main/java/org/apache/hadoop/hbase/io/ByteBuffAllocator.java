@@ -71,8 +71,24 @@ public class ByteBuffAllocator {
   public static final String MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.allocator.max.buffer.count";
 
   public static final String BUFFER_SIZE_KEY = "hbase.ipc.server.allocator.buffer.size";
-  // 64 KB. Making it same as the chunk size what we will write/read to/from the socket channel.
-  public static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
+
+  /**
+   * There're some reasons why better to choose 65KB(rather than 64KB) as the default buffer size:
+   * <p>
+   * 1. Almost all of the data blocks have the block size: 64KB + delta, whose delta is very small,
+   * depends on the size of lastKeyValue. If we set buffer.size=64KB, then each block will be
+   * allocated as a MultiByteBuff: one 64KB DirectByteBuffer and delta bytes HeapByteBuffer, the
+   * HeapByteBuffer will increase the GC pressure. Ideally, we should let the data block to be
+   * allocated as a SingleByteBuff, it has simpler data structure, faster access speed, less heap
+   * usage.
+   * <p>
+   * 2. Since the blocks are MultiByteBuff when using buffer.size=64KB, so we have to calculate the
+   * checksum by an temp heap copying (see HBASE-21917), while if it's a SingleByteBuff, we can
+   * speed the checksum by calling the hadoop' checksum in native lib, which is more faster.
+   * <p>
+   * For performance comparison, please see HBASE-22483.
+   */
+  public static final int DEFAULT_BUFFER_SIZE = 65 * 1024;
 
   public static final String MIN_ALLOCATE_SIZE_KEY =
       "hbase.ipc.server.reservoir.minimal.allocating.size";
