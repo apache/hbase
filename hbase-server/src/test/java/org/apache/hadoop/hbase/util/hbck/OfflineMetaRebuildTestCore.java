@@ -94,6 +94,7 @@ public class OfflineMetaRebuildTestCore {
   public void setUpBefore() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.getConfiguration().setInt("dfs.datanode.max.xceivers", 9192);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.start.wait.for.namespacemanager", true);
     TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
     this.connection = ConnectionFactory.createConnection(conf);
