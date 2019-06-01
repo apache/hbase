@@ -32,7 +32,7 @@
 #      --annotation org.apache.yetus.audience.InterfaceAudience.LimitedPrivate \
 #      --include-file "hbase-*" \
 #      --known_problems_path ~/known_problems.json \
-#      rel/1.0.0 branch-1.2
+#      rel/1.3.0 branch-1.4
 
 import json
 import logging
@@ -325,14 +325,14 @@ def get_known_problems(json_path, src_rev, dst_rev):
     keys in the format source_branch/destination_branch and the values
     dictionaries with binary and source problems and warnings
     Example:
-    {'branch-1.0.0': {
-      'rel/1.0.0': {'binary': {'problems': 123, 'warnings': 16},
+    {'branch-1.3': {
+      'rel/1.3.0': {'binary': {'problems': 123, 'warnings': 16},
                       'source': {'problems': 167, 'warnings': 1}},
-      'branch-1.2.0': {'binary': {'problems': 0, 'warnings': 0},
+      'branch-1.4': {'binary': {'problems': 0, 'warnings': 0},
                       'source': {'problems': 0, 'warnings': 0}}
       },
-    'branch-1.2.0': {
-      'rel/1.2.1': {'binary': {'problems': 13, 'warnings': 1},
+    'branch-1.4': {
+      'rel/1.4.1': {'binary': {'problems': 13, 'warnings': 1},
                       'source': {'problems': 23, 'warnings': 0}}
       }
     } """

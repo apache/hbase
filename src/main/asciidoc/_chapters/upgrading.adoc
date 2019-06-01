@@ -162,7 +162,7 @@ HBase Private API::
 
 [[hbase.binary.compatibility]]
 .Binary Compatibility
-When we say two HBase versions are compatible, we mean that the versions are wire and binary compatible. Compatible HBase versions means that clients can talk to compatible but differently versioned servers. It means too that you can just swap out the jars of one version and replace them with the jars of another, compatible version and all will just work. Unless otherwise specified, HBase point versions are (mostly) binary compatible. You can safely do rolling upgrades between binary compatible versions; i.e. across maintenance releases: e.g. from 1.2.4 to 1.2.6. See link:[Does compatibility between versions also mean binary compatibility?] discussion on the HBase dev mailing list.
+When we say two HBase versions are compatible, we mean that the versions are wire and binary compatible. Compatible HBase versions means that clients can talk to compatible but differently versioned servers. It means too that you can just swap out the jars of one version and replace them with the jars of another, compatible version and all will just work. Unless otherwise specified, HBase point versions are (mostly) binary compatible. You can safely do rolling upgrades between binary compatible versions; i.e. across maintenance releases: e.g. from 1.4.4 to 1.4.6. See link:[Does compatibility between versions also mean binary compatibility?] discussion on the HBase dev mailing list.
 
 [[hbase.rolling.upgrade]]
 === Rolling Upgrades
@@ -180,7 +180,7 @@ The rolling-restart script will first gracefully stop and restart the master, an
 
 [[hbase.rolling.restart]]
 .Rolling Upgrade Between Versions that are Binary/Wire Compatible
-Unless otherwise specified, HBase minor versions are binary compatible. You can do a <<hbase.rolling.upgrade>> between HBase point versions. For example, you can go to 1.2.4 from 1.2.6 by doing a rolling upgrade across the cluster replacing the 1.2.4 binary with a 1.2.6 binary.
+Unless otherwise specified, HBase minor versions are binary compatible. You can do a <<hbase.rolling.upgrade>> between HBase point versions. For example, you can go to 1.4.4 from 1.4.6 by doing a rolling upgrade across the cluster replacing the 1.4.4 binary with a 1.4.6 binary.
 
 In the minor version-particular sections below, we call out where the versions are wire/protocol compatible and in this case, it is also possible to do a <<hbase.rolling.upgrade>>.
 
