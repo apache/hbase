@@ -1,5 +1,46 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.3.5 06/07/2019
+
+** Sub-task
+    * [HBASE-22330] - Backport HBASE-20724 (Sometimes some compacted storefiles are still opened after region failover) to branch-1
+    * [HBASE-22419] - Backport hbase-personality changes in HBASE-22399 and HBASE-20970 to all active branches
+    * [HBASE-22429] - hbase-vote download step requires URL to end with '/' 
+    * [HBASE-22430] - hbase-vote should tee build and test output to console
+
+** Bug
+    * [HBASE-17170] - HBase is also retrying DoNotRetryIOException because of class loader differences.
+    * [HBASE-20851] - Change rubocop config for max line length of 100
+    * [HBASE-22235] - OperationStatus.{SUCCESS|FAILURE|NOT_RUN} are not visible to 3rd party coprocessors
+    * [HBASE-22270] - master's jmx.clusterRequests could be negative in branch-1
+    * [HBASE-22391] - Fix flaky tests from TestFromClientSide
+    * [HBASE-22421] - branch-1 docker mode for yetus fails
+    * [HBASE-22451] - TestLoadIncrementalHFiles and TestSecureLoadIncrementalHFiles are flaky
+    * [HBASE-22487] - getMostLoadedRegions is unused
+    * [HBASE-22508] - Address findbugs/spotbugs complaints (branch-1.3) 
+
+** New Feature
+    * [HBASE-21815] - Make isTrackingMetrics and getMetrics of ScannerContext public
+
+** Improvement
+    * [HBASE-21784] - Dump replication queue should show list of wal files ordered chronologically
+    * [HBASE-22225] - Profiler tab on Master/RS UI not working w/o comprehensive message
+    * [HBASE-22291] - Fix recovery of recovered.edits files under root dir
+    * [HBASE-22341] - Add explicit guidelines for removing deprecations in book
+    * [HBASE-22358] - Change rubocop configuration for method length
+    * [HBASE-22379] - Fix Markdown for "Voting on Release Candidates" in book
+    * [HBASE-22384] - Formatting issues in administration section of book
+    * [HBASE-22392] - Remove extra/useless + 
+    * [HBASE-22474] - Add --mvn-custom-repo parameter to yetus calls
+    * [HBASE-22496] - UnsafeAccess.unsafeCopy should not copy more than UNSAFE_COPY_THRESHOLD on each iteration
+
+** Task
+    * [HBASE-22020] - upgrade to yetus 0.9.0
+    * [HBASE-22374] - Backport AccessChecker refactor to branch-1.3 
+    * [HBASE-22375] - Promote AccessChecker to LimitedPrivate(Coprocessor)
+    * [HBASE-22449] - https everywhere in Maven metadata
+
+
 Release Notes - HBase - Version 1.3.4 04/14/2019
 
 ** Sub-task
