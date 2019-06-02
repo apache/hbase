@@ -1711,21 +1711,22 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       boolean isByTable = getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false);
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-        this.assignmentManager.getRegionStates().getAssignmentsByTable(!isByTable);
-
-      List<RegionPlan> plans = new ArrayList<>();
+      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(isByTable);
+      for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+      }
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
-      this.balancer.setClusterLoad(assignmentsByTable);
+      this.balancer.setClusterLoad(assignments);
 
-      for (Map<ServerName, List<RegionInfo>> serverMap : assignmentsByTable.values()) {
-        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
-      }
-      for (Entry<TableName, Map<ServerName, List<RegionInfo>>> e : assignmentsByTable.entrySet()) {
+      List<RegionPlan> plans = new ArrayList<>();
+      for (Entry<TableName, Map<ServerName, List<RegionInfo>>> e : assignments.entrySet()) {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
-        if (partialPlans != null) plans.addAll(partialPlans);
+        if (partialPlans != null) {
+          plans.addAll(partialPlans);
+        }
       }
 
       long balanceStartTime = System.currentTimeMillis();
