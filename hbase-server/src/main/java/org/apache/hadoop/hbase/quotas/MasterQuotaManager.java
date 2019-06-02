@@ -440,9 +440,10 @@ public class MasterQuotaManager implements RegionStateListener {
         case READ_SIZE:
           if (req.hasTimedQuota()) {
             throttle.setReadSize(req.getTimedQuota());
-        } else {
-          throttle.clearReadSize();
-        }
+          } else {
+            throttle.clearReadSize();
+          }
+          break;
         case REQUEST_CAPACITY_UNIT:
           if (req.hasTimedQuota()) {
             throttle.setReqCapacityUnit(req.getTimedQuota());
