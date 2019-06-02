@@ -528,55 +528,40 @@ public class RegionStates {
    * Can't let out original since it can change and at least the load balancer
    * wants to iterate this exported list.  We need to synchronize on regions
    * since all access to this.servers is under a lock on this.regions.
-   * @param forceByCluster a flag to force to aggregate the server-load to the cluster level
-   * @return A clone of current assignments by table.
+   *
+   * @param isByTable If <code>true</code>, return the assignments by table. If <code>false</code>,
+   *                  return the assignments which aggregate the server-load to the cluster level.
+   * @return A clone of current assignments.
    */
-  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsByTable(
-      final boolean forceByCluster) {
-    if (!forceByCluster) return getAssignmentsByTable();
-
-    final HashMap<ServerName, List<RegionInfo>> ensemble =
-      new HashMap<ServerName, List<RegionInfo>>(serverMap.size());
-    for (ServerStateNode serverNode: serverMap.values()) {
-      ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList());
-    }
-
-    // TODO: can we use Collections.singletonMap(HConstants.ENSEMBLE_TABLE_NAME, ensemble)?
-    final Map<TableName, Map<ServerName, List<RegionInfo>>> result =
-      new HashMap<TableName, Map<ServerName, List<RegionInfo>>>(1);
-    result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
-    return result;
-  }
-
-  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsByTable() {
+  public Map<TableName, Map<ServerName, List<RegionInfo>>> getAssignmentsForBalancer(
+      boolean isByTable) {
     final Map<TableName, Map<ServerName, List<RegionInfo>>> result = new HashMap<>();
-    for (RegionStateNode node: regionsMap.values()) {
-      Map<ServerName, List<RegionInfo>> tableResult = result.get(node.getTable());
-      if (tableResult == null) {
-        tableResult = new HashMap<ServerName, List<RegionInfo>>();
-        result.put(node.getTable(), tableResult);
-      }
-
-      final ServerName serverName = node.getRegionLocation();
-      if (serverName == null) {
-        LOG.info("Skipping, no server for " + node);
-        continue;
-      }
-      List<RegionInfo> serverResult = tableResult.get(serverName);
-      if (serverResult == null) {
-        serverResult = new ArrayList<RegionInfo>();
-        tableResult.put(serverName, serverResult);
-      }
-
-      serverResult.add(node.getRegionInfo());
-    }
-    // Add online servers with no assignment for the table.
-    for (Map<ServerName, List<RegionInfo>> table: result.values()) {
-        for (ServerName svr : serverMap.keySet()) {
-          if (!table.containsKey(svr)) {
-            table.put(svr, new ArrayList<RegionInfo>());
-          }
+    if (isByTable) {
+      for (RegionStateNode node : regionsMap.values()) {
+        Map<ServerName, List<RegionInfo>> tableResult =
+            result.computeIfAbsent(node.getTable(), t -> new HashMap<>());
+        final ServerName serverName = node.getRegionLocation();
+        if (serverName == null) {
+          LOG.info("Skipping, no server for " + node);
+          continue;
         }
+        List<RegionInfo> serverResult =
+            tableResult.computeIfAbsent(serverName, s -> new ArrayList<>());
+        serverResult.add(node.getRegionInfo());
+      }
+      // Add online servers with no assignment for the table.
+      for (Map<ServerName, List<RegionInfo>> table : result.values()) {
+        for (ServerName serverName : serverMap.keySet()) {
+          table.putIfAbsent(serverName, new ArrayList<>());
+        }
+      }
+    } else {
+      final HashMap<ServerName, List<RegionInfo>> ensemble = new HashMap<>(serverMap.size());
+      for (ServerStateNode serverNode : serverMap.values()) {
+        ensemble.put(serverNode.getServerName(), serverNode.getRegionInfoList());
+      }
+      // Use a fake table name to represent the whole cluster's assignments
+      result.put(HConstants.ENSEMBLE_TABLE_NAME, ensemble);
     }
     return result;
   }
