@@ -38,11 +38,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -422,20 +425,29 @@ class TableOverAsyncTable implements Table {
     // get regions covered by the row range
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
     Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (byte[] r : keys) {
-      RegionCoprocessorRpcChannel channel = coprocessorService(r);
-      Future<R> future = pool.submit(new Callable<R>() {
-        @Override
-        public R call() throws Exception {
-          R result = call.call(channel);
-          byte[] region = channel.getLastRegion();
-          if (callback != null) {
-            callback.update(region, r, result);
+    try {
+      for (byte[] r : keys) {
+        RegionCoprocessorRpcChannel channel = coprocessorService(r);
+        Future<R> future = pool.submit(new Callable<R>() {
+          @Override
+          public R call() throws Exception {
+            R result = call.call(channel);
+            byte[] region = channel.getLastRegion();
+            if (callback != null) {
+              callback.update(region, r, result);
+            }
+            return result;
           }
-          return result;
-        }
-      });
-      futures.put(r, future);
+        });
+        futures.put(r, future);
+      }
+    } catch (RejectedExecutionException e) {
+      // maybe the connection has been closed, let's check
+      if (pool.isShutdown()) {
+        throw new DoNotRetryIOException("Connection is closed", e);
+      } else {
+        throw new HBaseIOException("Coprocessor operation is rejected", e);
+      }
     }
     for (Map.Entry<byte[], Future<R>> e : futures.entrySet()) {
       try {
