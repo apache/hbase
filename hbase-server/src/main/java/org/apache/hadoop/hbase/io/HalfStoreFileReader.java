@@ -269,7 +269,8 @@ public class HalfStoreFileReader extends StoreFileReader {
       public boolean seekBefore(Cell key) throws IOException {
         if (top) {
           Optional<Cell> fk = getFirstKey();
-          if (fk.isPresent() && PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0) {
+          if (fk.isPresent() &&
+                  PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0) {
             return false;
           }
         } else {
