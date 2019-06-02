@@ -518,7 +518,7 @@ EOF
 echo "Verifying row count from example."
 example_rowcount=$(echo 'count "test:example"' | "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive 2>/dev/null | tail -n 1)
 if [ "${example_rowcount}" -gt "1050" ]; then
-  echo "Found ${example_rowcount} rows, which is enough to cover 48 for import, 1000 example's use of user table regions, 2 for example's use of meta/root regions, and 1 for example's count record"
+  echo "Found ${example_rowcount} rows, which is enough to cover 48 for import, 1000 example's use of user table regions, 2 for example's use of meta/namespace regions, and 1 for example's count record"
 else
   echo "ERROR: Only found ${example_rowcount} rows."
 fi
