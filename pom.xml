@@ -2283,6 +2283,10 @@
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -2316,6 +2320,12 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-two.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>com.squareup.okhttp</groupId>
+                <artifactId>okhttp</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <!-- This was marked as test dep in earlier pom, but was scoped compile.
             Where do we actually need it? -->
