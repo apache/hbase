@@ -69,7 +69,7 @@ import org.slf4j.LoggerFactory;
 public class MajorCompactor extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(MajorCompactor.class);
-  protected static final Set<MajorCompactionRequest> ERRORS = Sets.newHashSet();
+  static final Set<MajorCompactionRequest> ERRORS = Sets.newHashSet();
 
   protected ClusterCompactionQueues clusterCompactionQueues;
   private long timestamp;

@@ -3078,7 +3078,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     if (cpHost != null) {
-      bypass = cpHost.postListNamespaces(namespaces);
+      cpHost.postListNamespaces(namespaces);
     }
     return namespaces;
   }

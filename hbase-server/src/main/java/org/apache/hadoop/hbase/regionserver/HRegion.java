@@ -7959,7 +7959,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
           entry.getKey().add(entry.getValue());
         }
-        if (we != null) mvcc.complete(we);
+        if (we != null) {
+          mvcc.complete(we);
+        }
       } else if (we != null) {
         mvcc.completeAndWait(we);
       }
@@ -8180,6 +8182,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock.release();
       }
       // if the wal sync was unsuccessful, remove keys from memstore
+      WriteEntry we = walKey != null ? walKey.getWriteEntry() : null;
       if (doRollBackMemstore) {
         for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
           rollbackMemstore(entry.getKey(), entry.getValue());
@@ -8187,9 +8190,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
           entry.getKey().add(entry.getValue());
         }
-        if (walKey != null) mvcc.complete(walKey.getWriteEntry());
+        if (we != null) {
+          mvcc.complete(we);
+        }
       } else {
-        if (walKey != null) mvcc.completeAndWait(walKey.getWriteEntry());
+        if (we != null) {
+          mvcc.completeAndWait(we);
+        }
       }
     }
 
