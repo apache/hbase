@@ -42,7 +42,7 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
 
   @Test
   public void testReplicationMetrics() throws Exception {
-    try (Admin hbaseAdmin = utility1.getConnection().getAdmin()) {
+    try (Admin hbaseAdmin = UTIL1.getConnection().getAdmin()) {
       Put p = new Put(Bytes.toBytes("starter"));
       p.addColumn(famName, qualName, Bytes.toBytes("value help to test replication delay"));
       htable1.put(p);
@@ -52,7 +52,7 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
       }
       // sleep 5 seconds to make sure timePassedAfterLastShippedOp > 2 * ageOfLastShippedOp
       Thread.sleep(5000);
-      HRegionServer rs = utility1.getRSForFirstRegionInTable(tableName);
+      HRegionServer rs = UTIL1.getRSForFirstRegionInTable(tableName);
       Map<String, ReplicationStatus> metrics = rs.getWalGroupsReplicationStatus();
       Assert.assertEquals("metric size ", 1, metrics.size());
       long lastPosition = 0;
@@ -72,7 +72,7 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
           .size() == 0) {
         Thread.sleep(500);
       }
-      rs = utility1.getRSForFirstRegionInTable(tableName);
+      rs = UTIL1.getRSForFirstRegionInTable(tableName);
       metrics = rs.getWalGroupsReplicationStatus();
       Path lastPath = null;
       for (Map.Entry<String, ReplicationStatus> metric : metrics.entrySet()) {
