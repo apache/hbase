@@ -37,6 +37,6 @@ public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
   @Test
   public void killOneSlaveRS() throws Exception {
-    loadTableAndKillRS(utility2);
+    loadTableAndKillRS(UTIL2);
   }
 }

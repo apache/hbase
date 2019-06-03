@@ -128,10 +128,10 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
 
-  private static HBaseTestingUtility utility3;
-  private static HBaseTestingUtility utility4;
-  private static Configuration conf3;
-  private static Configuration conf4;
+  private static HBaseTestingUtility UTIL3;
+  private static HBaseTestingUtility UTIL4;
+  private static Configuration CONF3;
+  private static Configuration CONF4;
   private static Table htable3;
   private static Table htable4;
 
@@ -143,27 +143,27 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    setupBulkLoadConfigsForCluster(conf1, PEER1_CLUSTER_ID);
-    conf3 = HBaseConfiguration.create(conf1);
-    conf3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
-    utility3 = new HBaseTestingUtility(conf3);
-    conf4 = HBaseConfiguration.create(conf1);
-    conf4.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/4");
-    utility3 = new HBaseTestingUtility(conf3);
-    utility4 = new HBaseTestingUtility(conf4);
+    setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
+    CONF3 = HBaseConfiguration.create(CONF1);
+    CONF3.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
+    UTIL3 = new HBaseTestingUtility(CONF3);
+    CONF4 = HBaseConfiguration.create(CONF1);
+    CONF4.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/4");
+    UTIL3 = new HBaseTestingUtility(CONF3);
+    UTIL4 = new HBaseTestingUtility(CONF4);
     TestReplicationBase.setUpBeforeClass();
-    setupBulkLoadConfigsForCluster(conf3, PEER3_CLUSTER_ID);
-    //utility4 is started within TestReplicationBase.setUpBeforeClass(), but we had not set
+    setupBulkLoadConfigsForCluster(CONF3, PEER3_CLUSTER_ID);
+    //UTIL4 is started within TestReplicationBase.setUpBeforeClass(), but we had not set
     //bulkload replication configs yet, so setting a 4th utility.
-    setupBulkLoadConfigsForCluster(conf4, PEER4_CLUSTER_ID);
-    startCluster(utility3, conf3);
-    startCluster(utility4, conf4);
+    setupBulkLoadConfigsForCluster(CONF4, PEER4_CLUSTER_ID);
+    startCluster(UTIL3, CONF3);
+    startCluster(UTIL4, CONF4);
   }
 
   private static void startCluster(HBaseTestingUtility util, Configuration configuration)
       throws Exception {
-    LOG.info("Setup Zk to same one from utility1 and utility4");
-    util.setZkCluster(utility1.getZkCluster());
+    LOG.info("Setup Zk to same one from utility1 and UTIL4");
+    util.setZkCluster(UTIL1.getZkCluster());
     util.startMiniCluster(2);
 
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
@@ -184,20 +184,20 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Override
   public void setUpBase() throws Exception {
     super.setUpBase();
-    ReplicationPeerConfig peer1Config = getPeerConfigForCluster(utility1);
-    ReplicationPeerConfig peer4Config = getPeerConfigForCluster(utility4);
-    ReplicationPeerConfig peer3Config = getPeerConfigForCluster(utility3);
+    ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
+    ReplicationPeerConfig peer4Config = getPeerConfigForCluster(UTIL4);
+    ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
     //adds cluster4 as a remote peer on cluster1
-    utility1.getAdmin().addReplicationPeer(PEER_ID4, peer4Config);
+    UTIL1.getAdmin().addReplicationPeer(PEER_ID4, peer4Config);
     //adds cluster1 as a remote peer on cluster4
-    utility4.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
+    UTIL4.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
     //adds cluster3 as a remote peer on cluster4
-    utility4.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
+    UTIL4.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
     //adds cluster4 as a remote peer on cluster3
-    utility3.getAdmin().addReplicationPeer(PEER_ID4, peer4Config);
-    setupCoprocessor(utility1);
-    setupCoprocessor(utility4);
-    setupCoprocessor(utility3);
+    UTIL3.getAdmin().addReplicationPeer(PEER_ID4, peer4Config);
+    setupCoprocessor(UTIL1);
+    setupCoprocessor(UTIL4);
+    setupCoprocessor(UTIL3);
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
@@ -229,10 +229,10 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Override
   public void tearDownBase() throws Exception {
     super.tearDownBase();
-    utility4.getAdmin().removeReplicationPeer(PEER_ID1);
-    utility4.getAdmin().removeReplicationPeer(PEER_ID3);
-    utility3.getAdmin().removeReplicationPeer(PEER_ID4);
-    utility1.getAdmin().removeReplicationPeer(PEER_ID4);
+    UTIL4.getAdmin().removeReplicationPeer(PEER_ID1);
+    UTIL4.getAdmin().removeReplicationPeer(PEER_ID3);
+    UTIL3.getAdmin().removeReplicationPeer(PEER_ID4);
+    UTIL1.getAdmin().removeReplicationPeer(PEER_ID4);
   }
 
   private static void setupBulkLoadConfigsForCluster(Configuration config,
@@ -248,18 +248,18 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   @Test
   public void testBulkLoadReplicationActiveActive() throws Exception {
-    Table peer1TestTable = utility1.getConnection().getTable(TestReplicationBase.tableName);
-    Table peer4TestTable = utility4.getConnection().getTable(TestReplicationBase.tableName);
-    Table peer3TestTable = utility3.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer1TestTable = UTIL1.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer4TestTable = UTIL4.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer3TestTable = UTIL3.getConnection().getTable(TestReplicationBase.tableName);
     byte[] row = Bytes.toBytes("001");
     byte[] value = Bytes.toBytes("v1");
-    assertBulkLoadConditions(row, value, utility1, peer1TestTable, peer4TestTable, peer3TestTable);
+    assertBulkLoadConditions(row, value, UTIL1, peer1TestTable, peer4TestTable, peer3TestTable);
     row = Bytes.toBytes("002");
     value = Bytes.toBytes("v2");
-    assertBulkLoadConditions(row, value, utility4, peer1TestTable, peer4TestTable, peer3TestTable);
+    assertBulkLoadConditions(row, value, UTIL4, peer1TestTable, peer4TestTable, peer3TestTable);
     row = Bytes.toBytes("003");
     value = Bytes.toBytes("v3");
-    assertBulkLoadConditions(row, value, utility3, peer1TestTable, peer4TestTable, peer3TestTable);
+    assertBulkLoadConditions(row, value, UTIL3, peer1TestTable, peer4TestTable, peer3TestTable);
     //Additional wait to make sure no extra bulk load happens
     Thread.sleep(400);
     //We have 3 bulk load events (1 initiated on each cluster).
@@ -270,18 +270,18 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   @Test
   public void testPartionedMOBCompactionBulkLoadDoesntReplicate() throws Exception {
-    Path path = createMobFiles(utility3);
+    Path path = createMobFiles(UTIL3);
     ColumnFamilyDescriptor descriptor =
       new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
     ExecutorService pool = null;
     try {
       pool = Executors.newFixedThreadPool(1);
       PartitionedMobCompactor compactor =
-        new PartitionedMobCompactor(utility3.getConfiguration(), utility3.getTestFileSystem(),
+        new PartitionedMobCompactor(UTIL3.getConfiguration(), UTIL3.getTestFileSystem(),
           tableName, descriptor, pool);
       BULK_LOAD_LATCH = new CountDownLatch(1);
       BULK_LOADS_COUNT.set(0);
-      compactor.compact(Arrays.asList(utility3.getTestFileSystem().listStatus(path)), true);
+      compactor.compact(Arrays.asList(UTIL3.getTestFileSystem().listStatus(path)), true);
       assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.SECONDS));
       Thread.sleep(400);
       assertEquals(1, BULK_LOADS_COUNT.get());
