@@ -2836,10 +2836,14 @@ public class HStore implements Store {
             // Just close and return
             filesToRemove.add(file);
           } else {
-            LOG.info("Can't archive compacted file " + file.getPath()
+            if (r != null) {
+              LOG.info("Can't archive compacted file " + file.getPath()
                 + " because of either isCompactedAway=" + r.isCompactedAway()
                 + " or file has reference, isReferencedInReads=" + r.isReferencedInReads()
                 + ", refCount=" + r.getRefCount() + ", skipping for now.");
+            } else {
+              LOG.info("Can't archive compacted file " + file.getPath() + ", skipping for now.");
+            }
           }
         } catch (Exception e) {
           LOG.error(
