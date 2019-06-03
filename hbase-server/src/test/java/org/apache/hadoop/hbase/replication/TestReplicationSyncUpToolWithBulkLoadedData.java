@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
+import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_RETRIES;
+import static org.apache.hadoop.hbase.replication.TestReplicationBase.SLEEP_TIME;
+import static org.apache.hadoop.hbase.replication.TestReplicationBase.row;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -26,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,35 +40,34 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplicationSyncUpTool {
+public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplicationSyncUpToolBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationSyncUpToolWithBulkLoadedData.class);
+    HBaseClassTestRule.forClass(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    conf1.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
-    conf1.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
-    conf1.set("hbase.replication.source.fs.conf.provider",
-      TestSourceFSConfigurationProvider.class.getCanonicalName());
-    TestReplicationBase.setUpBeforeClass();
-  }
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
   @Override
+  protected void customizeClusterConf(Configuration conf) {
+    conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    conf.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
+    conf.set("hbase.replication.source.fs.conf.provider",
+      TestSourceFSConfigurationProvider.class.getCanonicalName());
+  }
+
+  @Test
   public void testSyncUpTool() throws Exception {
     /**
      * Set up Replication: on Master and one Slave Table: t1_syncup and t2_syncup columnfamily:
@@ -77,7 +81,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     Iterator<String> randomHFileRangeListIterator = null;
     Set<String> randomHFileRanges = new HashSet<>(16);
     for (int i = 0; i < 16; i++) {
-      randomHFileRanges.add(utility1.getRandomUUID().toString());
+      randomHFileRanges.add(UTIL1.getRandomUUID().toString());
     }
     List<String> randomHFileRangeList = new ArrayList<>(randomHFileRanges);
     Collections.sort(randomHFileRangeList);
@@ -105,58 +109,58 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   private void mimicSyncUpAfterBulkLoad(Iterator<String> randomHFileRangeListIterator)
       throws Exception {
     LOG.debug("mimicSyncUpAfterBulkLoad");
-    utility2.shutdownMiniHBaseCluster();
+    UTIL2.shutdownMiniHBaseCluster();
 
     loadAndReplicateHFiles(false, randomHFileRangeListIterator);
 
-    int rowCount_ht1Source = utility1.countRows(ht1Source);
+    int rowCount_ht1Source = countRows(ht1Source);
     assertEquals("t1_syncup has 206 rows on source, after bulk load of another 103 hfiles", 206,
       rowCount_ht1Source);
 
-    int rowCount_ht2Source = utility1.countRows(ht2Source);
+    int rowCount_ht2Source = countRows(ht2Source);
     assertEquals("t2_syncup has 406 rows on source, after bulk load of another 203 hfiles", 406,
       rowCount_ht2Source);
 
-    utility1.shutdownMiniHBaseCluster();
-    utility2.restartHBaseCluster(1);
+    UTIL1.shutdownMiniHBaseCluster();
+    UTIL2.restartHBaseCluster(1);
 
     Thread.sleep(SLEEP_TIME);
 
     // Before sync up
-    int rowCount_ht1TargetAtPeer1 = utility2.countRows(ht1TargetAtPeer1);
-    int rowCount_ht2TargetAtPeer1 = utility2.countRows(ht2TargetAtPeer1);
-    assertEquals("@Peer1 t1_syncup should still have 100 rows", 100, rowCount_ht1TargetAtPeer1);
-    assertEquals("@Peer1 t2_syncup should still have 200 rows", 200, rowCount_ht2TargetAtPeer1);
+    int rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
+    int rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
+    assertEquals("@Peer1 t1_syncup should still have 100 rows", 100, rowCountHt1TargetAtPeer1);
+    assertEquals("@Peer1 t2_syncup should still have 200 rows", 200, rowCountHt2TargetAtPeer1);
 
     // Run sync up tool
-    syncUp(utility1);
+    syncUp(UTIL1);
 
     // After syun up
     for (int i = 0; i < NB_RETRIES; i++) {
-      syncUp(utility1);
-      rowCount_ht1TargetAtPeer1 = utility2.countRows(ht1TargetAtPeer1);
-      rowCount_ht2TargetAtPeer1 = utility2.countRows(ht2TargetAtPeer1);
+      syncUp(UTIL1);
+      rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
+      rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
       if (i == NB_RETRIES - 1) {
-        if (rowCount_ht1TargetAtPeer1 != 200 || rowCount_ht2TargetAtPeer1 != 400) {
+        if (rowCountHt1TargetAtPeer1 != 200 || rowCountHt2TargetAtPeer1 != 400) {
           // syncUP still failed. Let's look at the source in case anything wrong there
-          utility1.restartHBaseCluster(1);
-          rowCount_ht1Source = utility1.countRows(ht1Source);
+          UTIL1.restartHBaseCluster(1);
+          rowCount_ht1Source = countRows(ht1Source);
           LOG.debug("t1_syncup should have 206 rows at source, and it is " + rowCount_ht1Source);
-          rowCount_ht2Source = utility1.countRows(ht2Source);
+          rowCount_ht2Source = countRows(ht2Source);
           LOG.debug("t2_syncup should have 406 rows at source, and it is " + rowCount_ht2Source);
         }
         assertEquals("@Peer1 t1_syncup should be sync up and have 200 rows", 200,
-          rowCount_ht1TargetAtPeer1);
+          rowCountHt1TargetAtPeer1);
         assertEquals("@Peer1 t2_syncup should be sync up and have 400 rows", 400,
-          rowCount_ht2TargetAtPeer1);
+          rowCountHt2TargetAtPeer1);
       }
-      if (rowCount_ht1TargetAtPeer1 == 200 && rowCount_ht2TargetAtPeer1 == 400) {
+      if (rowCountHt1TargetAtPeer1 == 200 && rowCountHt2TargetAtPeer1 == 400) {
         LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
-            + rowCount_ht1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
-            + rowCount_ht2TargetAtPeer1);
+        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i +
+          ", with rowCount_ht1TargetPeer1 =" + rowCountHt1TargetAtPeer1 +
+          " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }
@@ -168,44 +172,42 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
 
     // Load 100 + 3 hfiles to t1_syncup.
     byte[][][] hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, famName, ht1Source, hfileRanges,
-      100);
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source, hfileRanges, 100);
 
     hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, noRepfamName, ht1Source,
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadAndValidateHFileReplication("HFileReplication_1", row, NO_REP_FAMILY, ht1Source,
       hfileRanges, 3);
 
     // Load 200 + 3 hfiles to t2_syncup.
     hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, famName, ht2Source, hfileRanges,
-      200);
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source, hfileRanges, 200);
 
     hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, noRepfamName, ht2Source,
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadAndValidateHFileReplication("HFileReplication_1", row, NO_REP_FAMILY, ht2Source,
       hfileRanges, 3);
 
     if (verifyReplicationOnSlave) {
       // ensure replication completed
-      wait(ht1TargetAtPeer1, utility1.countRows(ht1Source) - 3,
+      wait(ht1TargetAtPeer1, countRows(ht1Source) - 3,
         "t1_syncup has 103 rows on source, and 100 on slave1");
 
-      wait(ht2TargetAtPeer1, utility1.countRows(ht2Source) - 3,
+      wait(ht2TargetAtPeer1, countRows(ht2Source) - 3,
         "t2_syncup has 203 rows on source, and 200 on slave1");
     }
   }
 
   private void loadAndValidateHFileReplication(String testName, byte[] row, byte[] fam,
       Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
-    Path dir = utility1.getDataTestDirOnTestFS(testName);
-    FileSystem fs = utility1.getTestFileSystem();
+    Path dir = UTIL1.getDataTestDirOnTestFS(testName);
+    FileSystem fs = UTIL1.getTestFileSystem();
     dir = dir.makeQualified(fs);
     Path familyDir = new Path(dir, Bytes.toString(fam));
 
@@ -213,24 +215,23 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     for (byte[][] range : hfileRanges) {
       byte[] from = range[0];
       byte[] to = range[1];
-      HFileTestUtil.createHFile(utility1.getConfiguration(), fs, new Path(familyDir, "hfile_"
-          + hfileIdx++), fam, row, from, to, numOfRows);
+      HFileTestUtil.createHFile(UTIL1.getConfiguration(), fs,
+        new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
     }
 
     final TableName tableName = source.getName();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(utility1.getConfiguration());
-    String[] args = { dir.toString(), tableName.toString() };
-    loader.run(args);
+    BulkLoadHFiles loader = BulkLoadHFiles.create(UTIL1.getConfiguration());
+    loader.bulkLoad(tableName, dir);
   }
 
-  private void wait(Table target, int expectedCount, String msg) throws IOException,
-      InterruptedException {
+  private void wait(Table target, int expectedCount, String msg)
+      throws IOException, InterruptedException {
     for (int i = 0; i < NB_RETRIES; i++) {
-      int rowCount_ht2TargetAtPeer1 = utility2.countRows(target);
+      int rowCountHt2TargetAtPeer1 = countRows(target);
       if (i == NB_RETRIES - 1) {
-        assertEquals(msg, expectedCount, rowCount_ht2TargetAtPeer1);
+        assertEquals(msg, expectedCount, rowCountHt2TargetAtPeer1);
       }
-      if (expectedCount == rowCount_ht2TargetAtPeer1) {
+      if (expectedCount == rowCountHt2TargetAtPeer1) {
         break;
       }
       Thread.sleep(SLEEP_TIME);

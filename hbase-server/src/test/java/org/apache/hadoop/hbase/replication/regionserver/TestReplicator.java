@@ -59,19 +59,19 @@ public class TestReplicator extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Set RPC size limit to 10kb (will be applied to both source and sink clusters)
-    conf1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
+    CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
     TestReplicationBase.setUpBeforeClass();
   }
 
   @Test
   public void testReplicatorBatching() throws Exception {
     // Clear the tables
-    truncateTable(utility1, tableName);
-    truncateTable(utility2, tableName);
+    truncateTable(UTIL1, tableName);
+    truncateTable(UTIL2, tableName);
 
     // Replace the peer set up for us by the base class with a wrapper for this test
     admin.addPeer("testReplicatorBatching",
-      new ReplicationPeerConfig().setClusterKey(utility2.getClusterKey())
+      new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
           .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()),
       null);
 
@@ -92,7 +92,7 @@ public class TestReplicator extends TestReplicationBase {
       }
 
       // Wait for replication to complete.
-      Waiter.waitFor(conf1, 60000, new Waiter.ExplainingPredicate<Exception>() {
+      Waiter.waitFor(CONF1, 60000, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           LOG.info("Count=" + ReplicationEndpointForTest.getBatchCount());
@@ -107,7 +107,7 @@ public class TestReplicator extends TestReplicationBase {
 
       assertEquals("We sent an incorrect number of batches", NUM_ROWS,
         ReplicationEndpointForTest.getBatchCount());
-      assertEquals("We did not replicate enough rows", NUM_ROWS, utility2.countRows(htable2));
+      assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
       admin.removePeer("testReplicatorBatching");
     }
@@ -116,12 +116,12 @@ public class TestReplicator extends TestReplicationBase {
   @Test
   public void testReplicatorWithErrors() throws Exception {
     // Clear the tables
-    truncateTable(utility1, tableName);
-    truncateTable(utility2, tableName);
+    truncateTable(UTIL1, tableName);
+    truncateTable(UTIL2, tableName);
 
     // Replace the peer set up for us by the base class with a wrapper for this test
     admin.addPeer("testReplicatorWithErrors",
-      new ReplicationPeerConfig().setClusterKey(utility2.getClusterKey())
+      new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
           .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()),
       null);
 
@@ -143,7 +143,7 @@ public class TestReplicator extends TestReplicationBase {
 
       // Wait for replication to complete.
       // We can expect 10 batches
-      Waiter.waitFor(conf1, 60000, new Waiter.ExplainingPredicate<Exception>() {
+      Waiter.waitFor(CONF1, 60000, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           return FailureInjectingReplicationEndpointForTest.getEntriesCount() >= NUM_ROWS;
@@ -155,7 +155,7 @@ public class TestReplicator extends TestReplicationBase {
         }
       });
 
-      assertEquals("We did not replicate enough rows", NUM_ROWS, utility2.countRows(htable2));
+      assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
       admin.removePeer("testReplicatorWithErrors");
     }

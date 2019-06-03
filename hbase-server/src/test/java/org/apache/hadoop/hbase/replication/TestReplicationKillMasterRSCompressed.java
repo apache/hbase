@@ -41,7 +41,7 @@ public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMa
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     TestReplicationBase.setUpBeforeClass();
   }
 }

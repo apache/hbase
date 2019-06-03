@@ -57,10 +57,10 @@ public class TestReplicationKillRS extends TestReplicationBase {
     Thread killer = killARegionServer(util, 5000, rsToKill1);
     Result[] res;
     int initialCount;
-    try (Connection conn = ConnectionFactory.createConnection(conf1)) {
+    try (Connection conn = ConnectionFactory.createConnection(CONF1)) {
       try (Table table = conn.getTable(tableName)) {
         LOG.info("Start loading table");
-        initialCount = utility1.loadTable(table, famName);
+        initialCount = UTIL1.loadTable(table, famName);
         LOG.info("Done loading table");
         killer.join(5000);
         LOG.info("Done waiting for threads");
@@ -86,7 +86,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
     int lastCount = 0;
     final long start = System.currentTimeMillis();
     int i = 0;
-    try (Connection conn = ConnectionFactory.createConnection(conf2)) {
+    try (Connection conn = ConnectionFactory.createConnection(CONF2)) {
       try (Table table = conn.getTable(tableName)) {
         while (true) {
           if (i == NB_RETRIES - 1) {

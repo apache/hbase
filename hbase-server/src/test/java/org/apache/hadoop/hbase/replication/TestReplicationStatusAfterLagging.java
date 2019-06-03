@@ -44,18 +44,18 @@ public class TestReplicationStatusAfterLagging extends TestReplicationBase {
 
   @Test
   public void testReplicationStatusAfterLagging() throws Exception {
-    utility2.shutdownMiniHBaseCluster();
-    restartHBaseCluster(utility1, 1);
+    UTIL2.shutdownMiniHBaseCluster();
+    restartHBaseCluster(UTIL1, 1);
     // add some values to cluster 1
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.addColumn(famName, Bytes.toBytes("col1"), Bytes.toBytes("val" + i));
       htable1.put(p);
     }
-    utility2.startMiniHBaseCluster();
+    UTIL2.startMiniHBaseCluster();
     Thread.sleep(10000);
-    Admin hbaseAdmin = utility1.getAdmin();
-    ServerName serverName = utility1.getHBaseCluster().getRegionServer(0).getServerName();
+    Admin hbaseAdmin = UTIL1.getAdmin();
+    ServerName serverName = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     List<ReplicationLoadSource> loadSources =
       metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();

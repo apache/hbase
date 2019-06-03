@@ -88,11 +88,11 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   public void setUp() throws Exception {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : utility1.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
         .getRegionServerThreads()) {
-      utility1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
+      UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
-    utility1.deleteTableData(tableName);
+    UTIL1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
     // in an async fashion, which is why we cannot just call deleteTableData on
     // utility2 since late writes could make it to the slave in some way.
@@ -123,7 +123,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   @Test
   public void testChangingNumberOfPeerRegionServers() throws IOException, InterruptedException {
     LOG.info("testSimplePutDelete");
-    MiniHBaseCluster peerCluster = utility2.getMiniHBaseCluster();
+    MiniHBaseCluster peerCluster = UTIL2.getMiniHBaseCluster();
     int numRS = peerCluster.getRegionServerThreads().size();
 
     doPutTest(Bytes.toBytes(1));
@@ -150,7 +150,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     put.addColumn(famName, row, row);
 
     if (htable1 == null) {
-      htable1 = utility1.getConnection().getTable(tableName);
+      htable1 = UTIL1.getConnection().getTable(tableName);
     }
 
     htable1.put(put);
