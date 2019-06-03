@@ -74,11 +74,11 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    connection1 = ConnectionFactory.createConnection(conf1);
-    connection2 = ConnectionFactory.createConnection(conf2);
+    connection1 = ConnectionFactory.createConnection(CONF1);
+    connection2 = ConnectionFactory.createConnection(CONF2);
     admin1 = connection1.getAdmin();
     admin2 = connection2.getAdmin();
-    adminExt = new ReplicationAdmin(conf1);
+    adminExt = new ReplicationAdmin(CONF1);
   }
 
   @AfterClass
@@ -199,8 +199,8 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
         assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
       }
     } finally {
-      utility1.deleteTable(tn);
-      utility2.deleteTable(tn);
+      UTIL1.deleteTable(tn);
+      UTIL2.deleteTable(tn);
     }
   }
 
@@ -273,7 +273,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   public void testReplicationPeerConfigUpdateCallback() throws Exception {
     String peerId = "1";
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
+    rpc.setClusterKey(UTIL2.getClusterKey());
     rpc.setReplicationEndpointImpl(TestUpdatableReplicationEndpoint.class.getName());
     rpc.getConfiguration().put("key1", "value1");
 
@@ -325,7 +325,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
     @Override
     public UUID getPeerUUID() {
-      return utility1.getRandomUUID();
+      return UTIL1.getRandomUUID();
     }
 
     @Override
