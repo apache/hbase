@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Queue;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,11 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   public QuotaSettings next() throws IOException {
     if (cache.isEmpty()) {
       Result result = scanner.next();
+      // Skip exceedThrottleQuota row key because this is not a QuotaSettings
+      if (result != null
+          && Bytes.equals(result.getRow(), QuotaTableUtil.getExceedThrottleQuotaRowKey())) {
+        result = scanner.next();
+      }
       if (result == null) {
         return null;
       }
