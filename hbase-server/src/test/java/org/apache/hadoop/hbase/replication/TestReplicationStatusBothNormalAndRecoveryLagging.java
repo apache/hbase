@@ -44,7 +44,7 @@ public class TestReplicationStatusBothNormalAndRecoveryLagging extends TestRepli
 
   @Test
   public void testReplicationStatusBothNormalAndRecoveryLagging() throws Exception {
-    utility2.shutdownMiniHBaseCluster();
+    UTIL2.shutdownMiniHBaseCluster();
     // add some values to cluster 1
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -52,9 +52,9 @@ public class TestReplicationStatusBothNormalAndRecoveryLagging extends TestRepli
       htable1.put(p);
     }
     Thread.sleep(10000);
-    restartHBaseCluster(utility1, 1);
-    Admin hbaseAdmin = utility1.getAdmin();
-    ServerName serverName = utility1.getHBaseCluster().getRegionServer(0).getServerName();
+    restartHBaseCluster(UTIL1, 1);
+    Admin hbaseAdmin = UTIL1.getAdmin();
+    ServerName serverName = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     Thread.sleep(10000);
     // add more values to cluster 1, these should cause normal queue to lag
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {

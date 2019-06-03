@@ -54,7 +54,7 @@ public class TestReplicationStatus extends TestReplicationBase {
    */
   @Test
   public void testReplicationStatus() throws Exception {
-    Admin hbaseAdmin = utility1.getAdmin();
+    Admin hbaseAdmin = UTIL1.getAdmin();
     // disable peer
     hbaseAdmin.disableReplicationPeer(PEER_ID2);
 
@@ -69,7 +69,7 @@ public class TestReplicationStatus extends TestReplicationBase {
 
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
 
-    for (JVMClusterUtil.RegionServerThread thread : utility1.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread thread : UTIL1.getHBaseCluster()
       .getRegionServerThreads()) {
       ServerName server = thread.getRegionServer().getServerName();
       ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
@@ -88,10 +88,10 @@ public class TestReplicationStatus extends TestReplicationBase {
     }
 
     // Stop rs1, then the queue of rs1 will be transfered to rs0
-    utility1.getHBaseCluster().getRegionServer(1).stop("Stop RegionServer");
+    UTIL1.getHBaseCluster().getRegionServer(1).stop("Stop RegionServer");
     Thread.sleep(10000);
     metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
-    ServerName server = utility1.getHBaseCluster().getRegionServer(0).getServerName();
+    ServerName server = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
     List<ReplicationLoadSource> rLoadSourceList = sm.getReplicationLoadSourceList();
     // check SourceList still only has one entry

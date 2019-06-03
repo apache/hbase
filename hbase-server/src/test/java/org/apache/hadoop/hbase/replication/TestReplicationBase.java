@@ -25,16 +25,12 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -51,7 +47,6 @@ import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -68,22 +63,19 @@ import org.slf4j.LoggerFactory;
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
 
-  protected static Configuration conf1 = HBaseConfiguration.create();
-  protected static Configuration conf2;
   protected static Configuration CONF_WITH_LOCALFS;
-
-  protected static ZKWatcher zkw1;
-  protected static ZKWatcher zkw2;
 
   protected static ReplicationAdmin admin;
   protected static Admin hbaseAdmin;
 
   protected static Table htable1;
   protected static Table htable2;
-  protected static NavigableMap<byte[], Integer> scopes;
 
-  protected static HBaseTestingUtility utility1;
-  protected static HBaseTestingUtility utility2;
+  protected static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
+  protected static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
+  protected static final Configuration CONF1 = UTIL1.getConfiguration();
+  protected static final Configuration CONF2 = UTIL2.getConfiguration();
+
   protected static final int NUM_SLAVES1 = 2;
   protected static final int NUM_SLAVES2 = 4;
   protected static final int NB_ROWS_IN_BATCH = 100;
@@ -105,12 +97,12 @@ public class TestReplicationBase {
   protected final void cleanUp() throws IOException, InterruptedException {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : utility1.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
         .getRegionServerThreads()) {
-      utility1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
+      UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
-    int rowCount = utility1.countRows(tableName);
-    utility1.deleteTableData(tableName);
+    int rowCount = UTIL1.countRows(tableName);
+    UTIL1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
     // in an async fashion, which is why we cannot just call deleteTableData on
     // utility2 since late writes could make it to the slave in some way.
@@ -172,92 +164,85 @@ public class TestReplicationBase {
     htable1.put(puts);
   }
 
-  protected static void configureClusters(){
-    conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
+  private static void setupConfig(HBaseTestingUtility util, String znodeParent) {
+    Configuration conf = util.getConfiguration();
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, znodeParent);
     // We don't want too many edits per batch sent to the ReplicationEndpoint to trigger
     // sufficient number of events. But we don't want to go too low because
     // HBaseInterClusterReplicationEndpoint partitions entries into batches and we want
     // more than one batch sent to the peer cluster for better testing.
-    conf1.setInt("replication.source.size.capacity", 102400);
-    conf1.setLong("replication.source.sleepforretries", 100);
-    conf1.setInt("hbase.regionserver.maxlogs", 10);
-    conf1.setLong("hbase.master.logcleaner.ttl", 10);
-    conf1.setInt("zookeeper.recovery.retry", 1);
-    conf1.setInt("zookeeper.recovery.retry.intervalmill", 10);
-    conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
-    conf1.setInt("replication.stats.thread.period.seconds", 5);
-    conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    conf1.setLong("replication.sleep.before.failover", 2000);
-    conf1.setInt("replication.source.maxretriesmultiplier", 10);
-    conf1.setFloat("replication.source.ratio", 1.0f);
-    conf1.setBoolean("replication.source.eof.autorecovery", true);
-    conf1.setLong("hbase.serial.replication.waiting.ms", 100);
+    conf.setInt("replication.source.size.capacity", 102400);
+    conf.setLong("replication.source.sleepforretries", 100);
+    conf.setInt("hbase.regionserver.maxlogs", 10);
+    conf.setLong("hbase.master.logcleaner.ttl", 10);
+    conf.setInt("zookeeper.recovery.retry", 1);
+    conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
+    conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
+    conf.setInt("replication.stats.thread.period.seconds", 5);
+    conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
+    conf.setLong("replication.sleep.before.failover", 2000);
+    conf.setInt("replication.source.maxretriesmultiplier", 10);
+    conf.setFloat("replication.source.ratio", 1.0f);
+    conf.setBoolean("replication.source.eof.autorecovery", true);
+    conf.setLong("hbase.serial.replication.waiting.ms", 100);
+  }
 
-    utility1 = new HBaseTestingUtility(conf1);
+  static void configureClusters(HBaseTestingUtility util1,
+      HBaseTestingUtility util2) {
+    setupConfig(util1, "/1");
+    setupConfig(util2, "/2");
 
-    // Base conf2 on conf1 so it gets the right zk cluster.
-    conf2 = HBaseConfiguration.create(conf1);
+    Configuration conf2 = util2.getConfiguration();
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-
-    utility2 = new HBaseTestingUtility(conf2);
   }
 
   protected static void restartHBaseCluster(HBaseTestingUtility util, int numSlaves)
       throws Exception {
     util.shutdownMiniHBaseCluster();
-    util
-      .startMiniHBaseCluster(StartMiniClusterOption.builder().numRegionServers(numSlaves).build());
+    util.restartHBaseCluster(numSlaves);
   }
 
-  protected static void startClusters() throws Exception{
-    utility1.startMiniZKCluster();
-    MiniZooKeeperCluster miniZK = utility1.getZkCluster();
-    // Have to reget conf1 in case zk cluster location different
-    // than default
-    conf1 = utility1.getConfiguration();
-    zkw1 = new ZKWatcher(conf1, "cluster1", null, true);
-    admin = new ReplicationAdmin(conf1);
+  protected static void startClusters() throws Exception {
+    UTIL1.startMiniZKCluster();
+    MiniZooKeeperCluster miniZK = UTIL1.getZkCluster();
+    admin = new ReplicationAdmin(CONF1);
     LOG.info("Setup first Zk");
 
-    utility2.setZkCluster(miniZK);
-    zkw2 = new ZKWatcher(conf2, "cluster2", null, true);
+    UTIL2.setZkCluster(miniZK);
     LOG.info("Setup second Zk");
 
-    CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
-    utility1.startMiniCluster(NUM_SLAVES1);
+    CONF_WITH_LOCALFS = HBaseConfiguration.create(CONF1);
+    UTIL1.startMiniCluster(NUM_SLAVES1);
     // Have a bunch of slave servers, because inter-cluster shipping logic uses number of sinks
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
-    utility2.startMiniCluster(NUM_SLAVES2);
+    UTIL2.startMiniCluster(NUM_SLAVES2);
 
-    hbaseAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
+    hbaseAdmin = ConnectionFactory.createConnection(CONF1).getAdmin();
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
-    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (ColumnFamilyDescriptor f : table.getColumnFamilies()) {
-      scopes.put(f.getName(), f.getScope());
-    }
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
+
+    Connection connection1 = ConnectionFactory.createConnection(CONF1);
+    Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin1 = connection1.getAdmin()) {
       admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
-    utility1.waitUntilAllRegionsAssigned(tableName);
-    utility2.waitUntilAllRegionsAssigned(tableName);
+    UTIL1.waitUntilAllRegionsAssigned(tableName);
+    UTIL2.waitUntilAllRegionsAssigned(tableName);
     htable1 = connection1.getTable(tableName);
     htable2 = connection2.getTable(tableName);
   }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    configureClusters();
+    configureClusters(UTIL1, UTIL2);
     startClusters();
   }
 
@@ -269,7 +254,7 @@ public class TestReplicationBase {
   public void setUpBase() throws Exception {
     if (!peerExist(PEER_ID2)) {
       ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-          .setClusterKey(utility2.getClusterKey()).setSerial(isSerialPeer()).build();
+          .setClusterKey(UTIL2.getClusterKey()).setSerial(isSerialPeer()).build();
       hbaseAdmin.addReplicationPeer(PEER_ID2, rpc);
     }
   }
@@ -285,7 +270,7 @@ public class TestReplicationBase {
     Put put = new Put(row);
     put.addColumn(famName, row, row);
 
-    htable1 = utility1.getConnection().getTable(tableName);
+    htable1 = UTIL1.getConnection().getTable(tableName);
     htable1.put(put);
 
     Get get = new Get(row);
@@ -340,7 +325,7 @@ public class TestReplicationBase {
     htable2.close();
     htable1.close();
     admin.close();
-    utility2.shutdownMiniCluster();
-    utility1.shutdownMiniCluster();
+    UTIL2.shutdownMiniCluster();
+    UTIL1.shutdownMiniCluster();
   }
 }

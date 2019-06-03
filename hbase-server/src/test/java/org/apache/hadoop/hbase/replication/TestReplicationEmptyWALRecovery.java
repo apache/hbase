@@ -55,16 +55,16 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
    * @param numRs number of regionservers
    */
   private void waitForLogAdvance(int numRs) throws Exception {
-    Waiter.waitFor(conf1, 10000, new Waiter.Predicate<Exception>() {
+    Waiter.waitFor(CONF1, 10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         for (int i = 0; i < numRs; i++) {
-          HRegionServer hrs = utility1.getHBaseCluster().getRegionServer(i);
+          HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(i);
           RegionInfo regionInfo =
-              utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+              UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
           WAL wal = hrs.getWAL(regionInfo);
           Path currentFile = ((AbstractFSWAL<?>) wal).getCurrentFileName();
-          Replication replicationService = (Replication) utility1.getHBaseCluster()
+          Replication replicationService = (Replication) UTIL1.getHBaseCluster()
               .getRegionServer(i).getReplicationSourceService();
           for (ReplicationSourceInterface rsi : replicationService.getReplicationManager()
               .getSources()) {
@@ -81,19 +81,19 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
 
   @Test
   public void testEmptyWALRecovery() throws Exception {
-    final int numRs = utility1.getHBaseCluster().getRegionServerThreads().size();
+    final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
 
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
     long ts = System.currentTimeMillis();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
-          utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
-      WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
+          UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+      WAL wal = UTIL1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
       String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
-      Path emptyWalPath = new Path(utility1.getDataTestDir(), walGroupId + "." + ts);
-      utility1.getTestFileSystem().create(emptyWalPath).close();
+      Path emptyWalPath = new Path(UTIL1.getDataTestDir(), walGroupId + "." + ts);
+      UTIL1.getTestFileSystem().create(emptyWalPath).close();
       emptyWalPaths.add(emptyWalPath);
     }
 
@@ -102,12 +102,12 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     // determine if the file being replicated currently is still opened for write, so just inject a
     // new wal to the replication queue does not mean the previous file is closed.
     for (int i = 0; i < numRs; i++) {
-      HRegionServer hrs = utility1.getHBaseCluster().getRegionServer(i);
+      HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(i);
       Replication replicationService = (Replication) hrs.getReplicationSourceService();
       replicationService.getReplicationManager().preLogRoll(emptyWalPaths.get(i));
       replicationService.getReplicationManager().postLogRoll(emptyWalPaths.get(i));
       RegionInfo regionInfo =
-        utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
+        UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = hrs.getWAL(regionInfo);
       wal.rollWriter(true);
     }
