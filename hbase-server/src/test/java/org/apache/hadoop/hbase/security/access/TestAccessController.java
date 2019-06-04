@@ -270,6 +270,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
 
     Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -1282,6 +1283,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
     try {
       // create temp users
       User tblUser =
@@ -1535,7 +1537,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
     createTable(TEST_UTIL, htd);
-
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
     try {
       // create temp users
       User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
@@ -1640,6 +1642,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family2));
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
     try {
       List<UserPermission> perms;
       Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
@@ -2140,6 +2143,7 @@ public class TestAccessController extends SecureTestUtil {
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
 
     // Starting a new RegionServer.
     JVMClusterUtil.RegionServerThread newRsThread = hbaseCluster
@@ -2297,6 +2301,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd, new byte[][]{Bytes.toBytes("s")});
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
   @Test (timeout=180000)
@@ -2848,6 +2853,7 @@ public class TestAccessController extends SecureTestUtil {
     HTableDescriptor htd = new HTableDescriptor(table1);
     htd.addFamily(new HColumnDescriptor(family));
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
 
     // creating the ns and table in it
     String ns = "testNamespace";
@@ -2857,6 +2863,7 @@ public class TestAccessController extends SecureTestUtil {
     htd = new HTableDescriptor(table2);
     htd.addFamily(new HColumnDescriptor(family));
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
 
     // Verify that we can read sys-tables
     String aclTableName = AccessControlLists.ACL_TABLE_NAME.getNameAsString();
@@ -2936,6 +2943,8 @@ public class TestAccessController extends SecureTestUtil {
     TableName tname = TableName.valueOf("revoke");
     try {
       TEST_UTIL.createTable(tname, TEST_FAMILY);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tname);
+
       User testUserPerms = User.createUserForTesting(conf, "revokePerms", new String[0]);
       Permission.Action[] actions = { Action.READ, Action.WRITE };
       AccessControlClient.grant(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),

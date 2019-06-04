@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -768,17 +769,25 @@ public class SecureTestUtil {
       throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
-    observer.tableDeletionLatch = new CountDownLatch(1);
+    MasterSyncObserver observer = null;
+    HMaster master = testUtil.getHBaseCluster().getMaster();
+    if (master != null) {
+      observer = (MasterSyncObserver)master.getMasterCoprocessorHost()
+          .findCoprocessor(MasterSyncObserver.class.getName());
+      if (observer != null) {
+        observer.tableDeletionLatch = new CountDownLatch(1);
+      }
+    }
     try {
       admin.disableTable(tableName);
     } catch (TableNotEnabledException e) {
       LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
     }
     admin.deleteTable(tableName);
-    observer.tableDeletionLatch.await();
-    observer.tableDeletionLatch = null;
+    if (observer != null) {
+      observer.tableDeletionLatch.await();
+      observer.tableDeletionLatch = null;
+    }
   }
 
   public static String convertToNamespace(String namespace) {
