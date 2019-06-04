@@ -534,11 +534,16 @@ public class TestCellUtil {
     assertTrue(CellUtil.equals(kv, res));
   }
 
+  // Workaround for jdk 11 - reflective access to interface default methods for testGetType
+  private abstract class CellForMockito implements Cell {
+
+  }
+
   @Test
   public void testGetType() throws IOException {
-    Cell c = Mockito.mock(Cell.class);
+    CellForMockito c = Mockito.mock(CellForMockito.class);
     Mockito.when(c.getType()).thenCallRealMethod();
-    for (Cell.Type type : Cell.Type.values()) {
+    for (CellForMockito.Type type : CellForMockito.Type.values()) {
       Mockito.when(c.getTypeByte()).thenReturn(type.getCode());
       assertEquals(type, c.getType());
     }
