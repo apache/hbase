@@ -209,6 +209,7 @@ public class TestAccessController3 extends SecureTestUtil {
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
 
     Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();

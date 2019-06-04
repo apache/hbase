@@ -95,6 +95,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
   @Test (timeout=180000)
   public void testQualifierAccess() throws Exception {
     final Table table = createTable(TEST_UTIL, TABLE, new byte[][] { FAMILY });
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
     try {
       doQualifierAccess(table);
     } finally {
