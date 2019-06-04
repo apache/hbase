@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.10 5/6/2019
+Release Notes - HBase - Version 1.4.10 6/14/2019
 
 ** Sub-task
     * [HBASE-21374] - Backport HBASE-21342 to branch-1
@@ -11,8 +11,14 @@ Release Notes - HBase - Version 1.4.10 5/6/2019
     * [HBASE-21748] - Port HBASE-21738 (Remove all the CLSM#size operation in our memstore because it's an quite time consuming.) to branch-1
     * [HBASE-22152] - Create a jenkins file for yetus to processing GitHub PR
     * [HBASE-22215] - Backport MultiRowRangeFilter does not work with reverse scans
+    * [HBASE-22330] - Backport HBASE-20724 (Sometimes some compacted storefiles are still opened after region failover) to branch-1
+    * [HBASE-22419] - Backport hbase-personality changes in HBASE-22399 and HBASE-20970 to all active branches
+    * [HBASE-22429] - hbase-vote download step requires URL to end with '/' 
+    * [HBASE-22430] - hbase-vote should tee build and test output to console
+    * [HBASE-22507] - Backport the pre commit changes in HBASE-22500 to all active branches
 
 ** Bug
+    * [HBASE-20851] - Change rubocop config for max line length of 100
     * [HBASE-20911] - correct Swtich/case indentation in formatter template for eclipse
     * [HBASE-20912] - Add import order config in dev support for eclipse
     * [HBASE-21048] - Get LogLevel is not working from console in secure environment
@@ -41,14 +47,28 @@ Release Notes - HBase - Version 1.4.10 5/6/2019
     * [HBASE-22212] - [1.x] Backport missing filter improvements
     * [HBASE-22235] - OperationStatus.{SUCCESS|FAILURE|NOT_RUN} are not visible to 3rd party coprocessors
     * [HBASE-22270] - master's jmx.clusterRequests could be negative in branch-1
+    * [HBASE-22274] - Cell size limit check on append should consider cell's previous size.
     * [HBASE-22310] - checkAndMutate used an incorrect row to check the condition
+    * [HBASE-22389] - Revert HBASE-19275 TestSnapshotFileCache never worked properly on branch-1
+    * [HBASE-22390] - backport HBASE-22190 to branch-1
+    * [HBASE-22391] - Fix flaky tests from TestFromClientSide
+    * [HBASE-22421] - branch-1 docker mode for yetus fails
+    * [HBASE-22448] - Scan is slow for Multiple Column prefixes
+    * [HBASE-22451] - TestLoadIncrementalHFiles and TestSecureLoadIncrementalHFiles are flaky
+    * [HBASE-22462] - Should run a 'mvn install' at the end of hadoop check in pre commit job
+    * [HBASE-22487] - getMostLoadedRegions is unused
+    * [HBASE-22509] - Address findbugs/spotbugs complaints (branch-1.4) 
+    * [HBASE-22518] - yetus personality is treating branch-1.4 like earlier branches for hadoopcheck
+    * [HBASE-22533] - TestAccessController3 is flaky (branch-1)
 
 ** New Feature
     * [HBASE-21815] - Make isTrackingMetrics and getMetrics of ScannerContext public
     * [HBASE-21926] - Profiler servlet
+    * [HBASE-22184] - [security] Support get|set LogLevel in HTTPS mode
 
 ** Improvement
     * [HBASE-20047] - AuthenticationTokenIdentifier should provide a toString
+    * [HBASE-20305] - Add option to SyncTable that skip deletes on target cluster
     * [HBASE-20586] - SyncTable tool: Add support for cross-realm remote clusters
     * [HBASE-20672] - New metrics ReadRequestRate and WriteRequestRate
     * [HBASE-20858] - port HBASE-20695 to branch-1
@@ -56,10 +76,18 @@ Release Notes - HBase - Version 1.4.10 5/6/2019
     * [HBASE-21567] - Allow overriding configs starting up the shell
     * [HBASE-21590] - Optimize trySkipToNextColumn in StoreScanner a bit
     * [HBASE-21645] - Perform sanity check and disallow table creation/modification with region replication < 1
+    * [HBASE-21784] - Dump replication queue should show list of wal files ordered chronologically
     * [HBASE-21818] - Incorrect list item in javadoc
     * [HBASE-22219] - Backport HBASE-19049 to branch-1 to prevent DIRKRB-613 
     * [HBASE-22225] - Profiler tab on Master/RS UI not working w/o comprehensive message
     * [HBASE-22291] - Fix recovery of recovered.edits files under root dir
+    * [HBASE-22341] - Add explicit guidelines for removing deprecations in book
+    * [HBASE-22358] - Change rubocop configuration for method length
+    * [HBASE-22379] - Fix Markdown for "Voting on Release Candidates" in book
+    * [HBASE-22384] - Formatting issues in administration section of book
+    * [HBASE-22392] - Remove extra/useless + 
+    * [HBASE-22474] - Add --mvn-custom-repo parameter to yetus calls
+    * [HBASE-22496] - UnsafeAccess.unsafeCopy should not copy more than UNSAFE_COPY_THRESHOLD on each iteration
 
 ** Test
     * [HBASE-21963] - Add a script for building and verifying release candidate
@@ -70,6 +98,8 @@ Release Notes - HBase - Version 1.4.10 5/6/2019
     * [HBASE-21853] - update copyright notices to 2019
     * [HBASE-21884] - Fix box/unbox findbugs warning in secure bulk load
     * [HBASE-22020] - upgrade to yetus 0.9.0
+    * [HBASE-22375] - Promote AccessChecker to LimitedPrivate(Coprocessor)
+    * [HBASE-22449] - https everywhere in Maven metadata
 
 
 Release Notes - HBase - Version 1.4.9 12/7/2018
