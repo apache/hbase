@@ -170,7 +170,7 @@ public class RestoreTool {
         TableName tableName = tableNames[i];
         TableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, incrBackupId);
         if (tableDescriptor == null) {
-          throw new IOException("Can't find " + tableName + "'s descriptor ");
+          throw new IOException("Can't find " + tableName + "'s descriptor.");
         }
         LOG.debug("Found descriptor " + tableDescriptor + " through " + incrBackupId);
 
