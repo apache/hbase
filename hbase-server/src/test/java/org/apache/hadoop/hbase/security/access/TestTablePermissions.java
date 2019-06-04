@@ -106,7 +106,9 @@ public class TestTablePermissions {
       "TestTablePermissions", ABORTABLE);
 
     UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+    UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     UTIL.createTable(TEST_TABLE2, TEST_FAMILY);
+    UTIL.waitUntilAllRegionsAssigned(TEST_TABLE2);
   }
 
   @AfterClass

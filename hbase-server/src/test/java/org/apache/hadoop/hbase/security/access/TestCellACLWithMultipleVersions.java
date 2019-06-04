@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -145,12 +144,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     htd.setOwner(USER_OWNER);
     htd.addFamily(hcd);
     // Create the test table (owner added to the _acl_ table)
-    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      try (Admin admin = connection.getAdmin()) {
-        admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-      }
-    }
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    TEST_UTIL.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
     LOG.info("Sleeping a second because of HBASE-12581");
     Threads.sleep(1000);
   }

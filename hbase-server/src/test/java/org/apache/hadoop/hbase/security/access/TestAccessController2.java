@@ -131,7 +131,7 @@ public class TestAccessController2 extends SecureTestUtil {
     createNamespace(TEST_UTIL, NamespaceDescriptor.create(namespace).build());
     try (Table table = createTable(TEST_UTIL, tableName,
           new byte[][] { TEST_FAMILY, TEST_FAMILY_2 })) {
-      TEST_UTIL.waitTableEnabled(tableName);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
       // Ingesting test data.
       table.put(Arrays.asList(new Put(TEST_ROW).addColumn(TEST_FAMILY, Q1, value1),
@@ -504,6 +504,7 @@ public class TestAccessController2 extends SecureTestUtil {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(new HColumnDescriptor(family));
     createTable(TEST_UTIL, htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
 
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);

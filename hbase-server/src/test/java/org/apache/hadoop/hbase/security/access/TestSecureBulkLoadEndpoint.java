@@ -146,6 +146,7 @@ public class TestSecureBulkLoadEndpoint {
   public void testForRaceCondition() throws Exception {
     /// create table
     testUtil.createTable(TABLE,FAMILY,Bytes.toByteArrays(SPLIT_ROWKEY));
+    testUtil.waitUntilAllRegionsAssigned(TABLE);
 
     Consumer<Region> fsCreatedListener = new Consumer<Region>() {
       @Override
