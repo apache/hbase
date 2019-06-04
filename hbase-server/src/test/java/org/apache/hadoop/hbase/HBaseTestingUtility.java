@@ -106,7 +106,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -1484,7 +1483,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           .setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1544,7 +1542,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       hcd.setBlocksize(blockSize);
       htd.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(htd, splitKeys);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
     // assigned
@@ -1561,7 +1558,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createTable(HTableDescriptor htd, byte[][] splitRows)
       throws IOException {
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(htd, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
@@ -1616,7 +1612,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       hcd.setBloomFilterType(BloomType.NONE);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc);
     return new HTable(c, desc.getTableName());
   }
@@ -1639,7 +1634,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           .setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1664,7 +1658,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           .setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc);
     return new HTable(c, desc.getTableName());
   }
@@ -1739,7 +1732,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc, splitKeys);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1792,7 +1784,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           .setBlocksize(blockSize);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1832,7 +1823,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
       i++;
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1865,7 +1855,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     desc.addFamily(hcd);
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
@@ -1898,34 +1887,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       desc.addFamily(hcd);
     }
-    waitUntilTableNamespaceManagerStarted();
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(desc.getTableName());
     return new HTable(getConfiguration(), desc.getTableName());
   }
-
-  public void waitUntilTableNamespaceManagerStarted() throws IOException {
-    final int maxwait = 60000;
-    final long startTime = EnvironmentEdgeManager.currentTime();
-    final HMaster master = getMiniHBaseCluster().getMaster();
-    do {
-      if(master.getTableNamespaceManager().isTableNamespaceManagerStarted()) {
-        break;
-      }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new IOException("Interrupt while waiting for master namespace manager starting.");
-      }
-    } while (EnvironmentEdgeManager.currentTime() - startTime < maxwait);
-    if(!master.getTableNamespaceManager().isTableNamespaceManagerStarted()) {
-      throw new IOException(
-          "Cannot continue testing due to master namespace manager not started after waiting " +
-              (EnvironmentEdgeManager.currentTime() - startTime) + " milliseconds");
-    }
-  }
-
 
   /**
    * Create an unmanaged WAL. Be sure to close it when you're through.

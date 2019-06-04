@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -83,18 +82,6 @@ public class TestAssignmentListener {
     public void awaitModifications(int count) throws InterruptedException {
       while (!modified.compareAndSet(count, 0)) {
         Thread.sleep(100);
-      }
-    }
-
-    //wait on multiple possible values.
-    public int awaitModifications(List<Integer> values) throws InterruptedException {
-      while (true) {
-        for (int v : values) {
-          if (modified.compareAndSet(v, 0)) {
-            return v;
-          }
-          Thread.sleep(100);
-        }
       }
     }
   }
@@ -239,13 +226,10 @@ public class TestAssignmentListener {
       final byte[] FAMILY = Bytes.toBytes("cf");
 
       // Create a new table, with a single region
-      LOG.info("Create Table testtb");
+      LOG.info("Create Table");
       TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-      // Wait for 1 or 2 since if namespace table is created before testtb, modified value will be 2
-      // Waiting on 1 will fail this test indefinitely.
-      List<Integer> modificationValues = Arrays.asList(1,2);
-      int modification = listener.awaitModifications(modificationValues);
-      assertEquals(modification, listener.getLoadCount());
+      listener.awaitModifications(1);
+      assertEquals(1, listener.getLoadCount());
       assertEquals(0, listener.getCloseCount());
 
       // Add some data

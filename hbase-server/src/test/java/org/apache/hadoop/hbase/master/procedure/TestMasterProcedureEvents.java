@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,8 +42,6 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureEvents {
@@ -79,77 +76,13 @@ public class TestMasterProcedureEvents {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
 
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("f");
-    htd.addFamily(hcd);
-
-    while (!master.isInitialized()) {
-      Thread.sleep(250);
-    }
-    UTIL.createTable(htd, null);
-
-    // Modify the table descriptor
-    HTableDescriptor newHTD =
-        new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
-    long newMaxFileSize = newHTD.getMaxFileSize() * 2;
-    newHTD.setMaxFileSize(newMaxFileSize);
-    newHTD.setRegionReplication(3);
-
-    master.setInitialized(false); // fake it, set back later
-
-    ModifyTableProcedure proc = new ModifyTableProcedure(procExec.getEnvironment(), newHTD);
-
-    long pollCalls = procSched.getPollCalls();
-    long nullPollCalls = procSched.getNullPollCalls();
-
-    long procId = procExec.submitProcedure(proc);
-    for (int i = 0; i < 10; ++i) {
-      Thread.sleep(100);
-      assertEquals(pollCalls + 1, procSched.getPollCalls());
-      assertEquals(nullPollCalls, procSched.getNullPollCalls());
-    }
-
-    master.setInitialized(true);
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
-
-    assertEquals(pollCalls + 2, procSched.getPollCalls());
-    assertEquals(nullPollCalls, procSched.getNullPollCalls());
-  }
-
-  @Test
-  public void testNamespaceManagerInitializedEvent() throws Exception {
-    TableName tableName = TableName.valueOf("testNamespaceManagerInitializedEvent");
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
-
     HRegionInfo hri = new HRegionInfo(tableName);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("f");
     htd.addFamily(hcd);
 
     while (!master.isInitialized()) Thread.sleep(250);
-
-    final int maxwait = 60000;
-    final long startTime = EnvironmentEdgeManager.currentTime();
-    do {
-      if(master.getTableNamespaceManager().isTableNamespaceManagerStarted()) {
-        break;
-      }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new IOException("Interrupt while waiting for master namespace manager starting.");
-      }
-    } while (EnvironmentEdgeManager.currentTime() - startTime < maxwait);
-
-    if(!master.getTableNamespaceManager().isTableNamespaceManagerStarted()) {
-      throw new IOException(
-        "Cannot continue testing due to master namespace manager not started after waiting " +
-        (EnvironmentEdgeManager.currentTime() - startTime) + " milliseconds");
-    }
-
-    master.setNamespaceManagerInitializedEvent(false); // fake it, set back later
+    master.setInitialized(false); // fake it, set back later
 
     CreateTableProcedure proc = new CreateTableProcedure(
       procExec.getEnvironment(), htd, new HRegionInfo[] { hri });
@@ -164,7 +97,7 @@ public class TestMasterProcedureEvents {
       assertEquals(nullPollCalls, procSched.getNullPollCalls());
     }
 
-    master.setNamespaceManagerInitializedEvent(true);
+    master.setInitialized(true);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     assertEquals(pollCalls + 2, procSched.getPollCalls());

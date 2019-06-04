@@ -132,10 +132,6 @@ public class MasterProcedureEnv {
     return procSched.waitEvent(((HMaster)master).getInitializedEvent(), proc);
   }
 
-  public boolean waitNamespaceManagerInitialized(Procedure proc) {
-    return procSched.waitEvent(((HMaster)master).getNamespaceManagerInitializedEvent(), proc);
-  }
-
   public boolean waitServerCrashProcessingEnabled(Procedure proc) {
     return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
   }

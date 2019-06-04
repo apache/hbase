@@ -508,9 +508,6 @@ public class TestMasterFailover {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.assignment.usezk", true);
-    // The test depends on namespace region is online, therefore, we have to
-    // wait for namespace manager starting.
-    conf.setBoolean("hbase.master.start.wait.for.namespacemanager", true);
 
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
