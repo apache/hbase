@@ -95,11 +95,12 @@ public class TestRegionServerHostname {
       // iterate through host addresses and use each as hostname
       while (addrList.hasMoreElements()) {
         InetAddress addr = addrList.nextElement();
-        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress()) {
+        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress() ||
+            !addr.isSiteLocalAddress()) {
           continue;
         }
         String hostName = addr.getHostName();
-        LOG.info("Found " + hostName + " on " + ni);
+        LOG.info("Found " + hostName + " on " + ni + ", addr=" + addr);
 
         TEST_UTIL.getConfiguration().set(HRegionServer.MASTER_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, hostName);
