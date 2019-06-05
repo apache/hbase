@@ -656,6 +656,8 @@ elif [ "$COMMAND" = "pre-upgrade" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 elif [ "$COMMAND" = "completebulkload" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.BulkLoadHFilesTool'
+elif [ "$COMMAND" = "top" ] ; then
+  CLASS='org.apache.hadoop.hbase.hbtop.HBTop'
 else
   CLASS=$COMMAND
 fi
