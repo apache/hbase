@@ -64,8 +64,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.5/hbase-2.1.5-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.1.5/hbase-2.1.5-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.5/hbase-2.1.5-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.1.5/hbase-2.1.5-client-bin.tar.gz">client-bin</a> (<a href="https://apache.org/dist/hbase/2.1.5/hbase-2.1.5-client-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.1.5/hbase-2.1.5-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td>The shaded hbase-client might be broke in 2.1.5; you may need to specify an old Apache HTrace dependency. See HBASE-22052
-      </td>
+      <td />
     </tr>
     <tr>
       <td style="test-align: left">
