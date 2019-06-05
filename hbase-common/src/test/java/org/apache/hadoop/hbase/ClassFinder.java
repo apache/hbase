@@ -49,6 +49,7 @@ public class ClassFinder {
   private FileNameFilter fileNameFilter;
   private ClassFilter classFilter;
   private FileFilter fileFilter;
+  private ClassLoader classLoader;
 
   public interface ResourcePathFilter {
     boolean isCandidatePath(String resourcePath, boolean isJar);
@@ -114,16 +115,27 @@ public class ClassFinder {
     }
   }
 
-  public ClassFinder() {
-    this(null, null, null);
+  // To control which classloader to use while trying to find jars/classes
+  public ClassFinder(ClassLoader classLoader) {
+    this(null, null, null, classLoader);
   }
 
-  public ClassFinder(ResourcePathFilter resourcePathFilter,
-      FileNameFilter fileNameFilter, ClassFilter classFilter) {
+  public ClassFinder() {
+    this(ClassLoader.getSystemClassLoader());
+  }
+
+  public ClassFinder(ResourcePathFilter resourcePathFilter, FileNameFilter fileNameFilter,
+      ClassFilter classFilter) {
+    this(resourcePathFilter, fileNameFilter, classFilter, ClassLoader.getSystemClassLoader());
+  }
+
+  public ClassFinder(ResourcePathFilter resourcePathFilter, FileNameFilter fileNameFilter,
+      ClassFilter classFilter, ClassLoader classLoader) {
     this.resourcePathFilter = resourcePathFilter;
     this.classFilter = classFilter;
     this.fileNameFilter = fileNameFilter;
     this.fileFilter = new FileFilterWithName(fileNameFilter);
+    this.classLoader = classLoader;
   }
 
   /**
@@ -147,7 +159,7 @@ public class ClassFinder {
     final String path = packageName.replace('.', '/');
     final Pattern jarResourceRe = Pattern.compile("^file:(.+\\.jar)!/" + path + "$");
 
-    Enumeration<URL> resources = ClassLoader.getSystemClassLoader().getResources(path);
+    Enumeration<URL> resources = this.classLoader.getResources(path);
     List<File> dirs = new ArrayList<>();
     List<String> jars = new ArrayList<>();
 
@@ -270,7 +282,7 @@ public class ClassFinder {
   private Class<?> makeClass(String className, boolean proceedOnExceptions)
     throws ClassNotFoundException, LinkageError {
     try {
-      Class<?> c = Class.forName(className, false, this.getClass().getClassLoader());
+      Class<?> c = Class.forName(className, false, classLoader);
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
       return isCandidateClass ? c : null;
     } catch (NoClassDefFoundError|ClassNotFoundException classNotFoundEx) {
