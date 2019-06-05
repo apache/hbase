@@ -77,7 +77,7 @@ public class MemStoreChunkPool {
   private static final int statThreadPeriod = 60 * 5;
   private AtomicLong createdChunkCount = new AtomicLong();
   private AtomicLong reusedChunkCount = new AtomicLong();
-  private AtomicLong gotChunkCount = new AtomicLong();
+  private AtomicLong requestedChunkCount = new AtomicLong();
 
   MemStoreChunkPool(Configuration conf, int chunkSize, int maxCount,
       int initialCount) {
@@ -90,9 +90,8 @@ public class MemStoreChunkPool {
       reclaimedChunks.add(chunk);
     }
     createdChunkCount.set(initialCount);
-    final String n = Thread.currentThread().getName();
     scheduleThreadPool = Executors.newScheduledThreadPool(1,
-        new ThreadFactoryBuilder().setNameFormat(n+"-MemStoreChunkPool Statistics")
+        new ThreadFactoryBuilder().setNameFormat("MemStoreChunkPool Statistics")
             .setDaemon(true).build());
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
@@ -104,7 +103,7 @@ public class MemStoreChunkPool {
    * @return a chunk
    */
   Chunk getChunk() {
-    gotChunkCount.incrementAndGet();
+    requestedChunkCount.incrementAndGet();
     Chunk chunk = reclaimedChunks.poll();
     if (chunk == null) {
       chunk = new Chunk(chunkSize);
@@ -178,13 +177,13 @@ public class MemStoreChunkPool {
     long total = createdChunkCount.get();
     long reused = reusedChunkCount.get();
     long available = reclaimedChunks.size();
-    long got = gotChunkCount.get();
+    long requested = requestedChunkCount.get();
     LOG.info("Stats: chunk in pool=" + available
         + ", chunk in use=" + (total - available)
         + ", total chunk=" + total
-        + ", reused chunk count=" + reused
-        + ", reuse ratio=" + (got == 0 ? "0" : StringUtils.formatPercent(
-            (float) reused / (float) got, 2)));
+        + ", reused chunk=" + reused
+        + ", reuse ratio=" + (requested == 0 ? "0" : StringUtils.formatPercent(
+            (float) reused / (float) requested, 2)));
   }
 
   /**
