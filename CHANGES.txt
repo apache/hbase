@@ -35,6 +35,7 @@ Release Notes - HBase - Version 1.4.10 6/14/2019
     * [HBASE-21781] - list_deadservers elapsed time is incorrect
     * [HBASE-21800] - RegionServer aborted due to NPE from MetaTableMetrics coprocessor
     * [HBASE-21915] - FileLink$FileLinkInputStream doesn't implement CanUnbuffer
+    * [HBASE-21920] - Ignoring 'empty' end_key while calculating end_key for new region in HBCK -fixHdfsOverlaps command can cause data loss
     * [HBASE-21959] - CompactionTool should close the store it uses for compacting files, in order to properly archive compacted files.
     * [HBASE-21991] - Fix MetaMetrics issues - [Race condition, Faulty remove logic], few improvements
     * [HBASE-22045] - Mutable range histogram reports incorrect outliers
@@ -60,6 +61,7 @@ Release Notes - HBase - Version 1.4.10 6/14/2019
     * [HBASE-22509] - Address findbugs/spotbugs complaints (branch-1.4) 
     * [HBASE-22518] - yetus personality is treating branch-1.4 like earlier branches for hadoopcheck
     * [HBASE-22533] - TestAccessController3 is flaky (branch-1)
+    * [HBASE-22540] - [Memstore] Correct counters in MemStoreChunkPool
 
 ** New Feature
     * [HBASE-21815] - Make isTrackingMetrics and getMetrics of ScannerContext public
