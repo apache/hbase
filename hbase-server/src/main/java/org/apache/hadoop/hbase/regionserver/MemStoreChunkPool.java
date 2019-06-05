@@ -77,6 +77,7 @@ public class MemStoreChunkPool {
   private static final int statThreadPeriod = 60 * 5;
   private AtomicLong createdChunkCount = new AtomicLong();
   private AtomicLong reusedChunkCount = new AtomicLong();
+  private AtomicLong requestedChunkCount = new AtomicLong();
 
   MemStoreChunkPool(Configuration conf, int chunkSize, int maxCount,
       int initialCount) {
@@ -88,9 +89,9 @@ public class MemStoreChunkPool {
       chunk.init();
       reclaimedChunks.add(chunk);
     }
-    final String n = Thread.currentThread().getName();
+    createdChunkCount.set(initialCount);
     scheduleThreadPool = Executors.newScheduledThreadPool(1,
-        new ThreadFactoryBuilder().setNameFormat(n+"-MemStoreChunkPool Statistics")
+        new ThreadFactoryBuilder().setNameFormat("MemStoreChunkPool Statistics")
             .setDaemon(true).build());
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
@@ -102,6 +103,7 @@ public class MemStoreChunkPool {
    * @return a chunk
    */
   Chunk getChunk() {
+    requestedChunkCount.incrementAndGet();
     Chunk chunk = reclaimedChunks.poll();
     if (chunk == null) {
       chunk = new Chunk(chunkSize);
@@ -172,15 +174,16 @@ public class MemStoreChunkPool {
   }
 
   private void logStats() {
-    if (!LOG.isDebugEnabled()) return;
-    long created = createdChunkCount.get();
+    long total = createdChunkCount.get();
     long reused = reusedChunkCount.get();
-    long total = created + reused;
-    LOG.debug("Stats: current pool size=" + reclaimedChunks.size()
-        + ",created chunk count=" + created
-        + ",reused chunk count=" + reused
-        + ",reuseRatio=" + (total == 0 ? "0" : StringUtils.formatPercent(
-            (float) reused / (float) total, 2)));
+    long available = reclaimedChunks.size();
+    long requested = requestedChunkCount.get();
+    LOG.info("Stats: chunk in pool=" + available
+        + ", chunk in use=" + (total - available)
+        + ", total chunk=" + total
+        + ", reused chunk=" + reused
+        + ", reuse ratio=" + (requested == 0 ? "0" : StringUtils.formatPercent(
+            (float) reused / (float) requested, 2)));
   }
 
   /**
