@@ -2387,6 +2387,28 @@ Avoid merge commits, as they create problems in the git history.
 
 See <<appendix_contributing_to_documentation,appendix contributing to documentation>>.
 
+====== How to re-trigger github Pull Request checks/re-build
+
+A Pull Request (PR) submission triggers the hbase yetus checks. The checks make
+sure the patch doesn't break the build or introduce test failures. The checks take
+around four hours to run (They are the same set run when you submit a patch via
+HBASE JIRA). When finished, they add a report to the PR as a comment. If a problem
+w/ the patch -- failed compile, checkstyle violation, or an added findbugs --
+the original author makes fixes and pushes a new patch. This re-runs the checks
+to produce a new report.
+
+Sometimes though, the patch is good but a flakey, unrelated test has the report vote -1
+on the patch. In this case, **committers** can retrigger the check run by doing a force push of the
+exact same patch. Or, click on the `Console output` link which shows toward the end
+of the report (For example `https://builds.apache.org/job/HBase-PreCommit-GitHub-PR/job/PR-289/1/console`).
+This will take you to `builds.apache.org`, to the build run that failed. See the
+"breadcrumbs" along the top (where breadcrumbs is the listing of the directories that
+gets us to this particular build page). It'll look something like
+`Jenkins > HBase-PreCommit-GitHub-PR > PR-289 > #1`. Click on the
+PR number -- i.e. PR-289 in our example -- and then, when you've arrived at the PR page,
+find the 'Build with Parameters' menu-item (along top left-hand menu). Click here and
+then `Build` leaving the JIRA_ISSUE_KEY empty. This will re-run your checks.
+
 ==== Dialog
 
 Committers should hang out in the #hbase room on irc.freenode.net for real-time discussions.
