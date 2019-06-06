@@ -297,7 +297,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean seekBefore(Cell key) throws IOException {
         if (top) {
           Cell fk = new KeyValue.KeyOnlyKeyValue(getFirstKey(), 0, getFirstKey().length);
-          if (getComparator().compareOnlyKeyPortion(key, fk) <= 0) {
+          if (fk != null && getComparator().compareOnlyKeyPortion(key, fk) <= 0) {
             return false;
           }
         } else {
