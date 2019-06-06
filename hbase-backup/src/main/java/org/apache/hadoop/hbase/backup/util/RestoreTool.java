@@ -169,6 +169,9 @@ public class RestoreTool {
       for (int i = 0; i < tableNames.length; i++) {
         TableName tableName = tableNames[i];
         TableDescriptor tableDescriptor = getTableDescriptor(fileSys, tableName, incrBackupId);
+        if (tableDescriptor == null) {
+          throw new IOException("Can't find " + tableName + "'s descriptor.");
+        }
         LOG.debug("Found descriptor " + tableDescriptor + " through " + incrBackupId);
 
         TableName newTableName = newTableNames[i];
@@ -456,7 +459,7 @@ public class RestoreTool {
 
   /**
    * Prepare the table for bulkload, most codes copied from
-   * {@link LoadIncrementalHFiles#createTable(TableName, String, Admin)}
+   * {@link LoadIncrementalHFiles#createTable(TableName, Path, Admin)}
    * @param conn connection
    * @param tableBackupPath path
    * @param tableName table name
