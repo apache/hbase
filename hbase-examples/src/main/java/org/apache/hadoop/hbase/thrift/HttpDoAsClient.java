@@ -18,19 +18,24 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
@@ -68,11 +73,13 @@ public class HttpDoAsClient {
   private static boolean secure = false;
   static protected String doAsUser = null;
   static protected String principal = null;
+  static protected String keyTab = null;
 
   public static void main(String[] args) throws Exception {
-    if (args.length < 3 || args.length > 4) {
+    if (args.length < 3 || args.length > 6) {
       System.out.println("Invalid arguments!");
-      System.out.println("Usage: HttpDoAsClient host port doAsUserName [security=true]");
+      System.out.println(
+          "Usage: HttpDoAsClient host port doAsUserName [security=true] [principal] [keytab]");
       System.exit(-1);
     }
 
@@ -81,7 +88,16 @@ public class HttpDoAsClient {
     doAsUser = args[2];
     if (args.length > 3) {
       secure = Boolean.parseBoolean(args[3]);
-      principal = getSubject().getPrincipals().iterator().next().getName();
+      if (args.length > 4) {
+        principal = args[4];
+        keyTab = args[5];
+        if (!new File(keyTab).exists()) {
+          System.err.printf("ERROR: KeyTab File %s not found %n", keyTab);
+          System.exit(-1);
+        }
+      } else {
+        principal = getSubject().getPrincipals().iterator().next().getName();
+      }
     }
 
     final HttpDoAsClient client = new HttpDoAsClient();
@@ -252,31 +268,66 @@ public class HttpDoAsClient {
      * To authenticate the DemoClient, kinit should be invoked ahead.
      * Here we try to get the Kerberos credential from the ticket cache.
      */
-    LoginContext context = new LoginContext("", new Subject(), null,
-        new Configuration() {
-          @Override
-          public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<>();
-            options.put("useKeyTab", "false");
-            options.put("storeKey", "false");
-            options.put("doNotPrompt", "true");
-            options.put("useTicketCache", "true");
-            options.put("renewTGT", "true");
-            options.put("refreshKrb5Config", "true");
-            options.put("isInitiator", "true");
-            String ticketCache = System.getenv("KRB5CCNAME");
-            if (ticketCache != null) {
-              options.put("ticketCache", ticketCache);
-            }
-            options.put("debug", "true");
+    LoginContext context;
 
-            return new AppConfigurationEntry[]{
-              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                            options)};
-          }
-        });
+    if (keyTab != null) {
+      // To authenticate the HttpDoAsClient using principal and keyTab
+      Set<Principal> principals = new HashSet<>();
+      principals.add(new KerberosPrincipal(principal));
+      Subject subject =
+          new Subject(false, principals, new HashSet<>(), new HashSet<>());
+
+      context = new LoginContext("", subject, null, new KerberosConfiguration(principal, keyTab));
+    } else {
+      /*
+       * To authenticate the HttpDoAsClient, kinit should be invoked ahead. Here we try to
+       * get the Kerberos credential from the ticket cache.
+       */
+      context = new LoginContext("", new Subject(), null, new KerberosConfiguration());
+    }
     context.login();
     return context.getSubject();
+  }
+
+  private static class KerberosConfiguration extends Configuration {
+    private String principal;
+    private String keyTab;
+
+    public KerberosConfiguration() {
+      // Empty constructor will have no principal or keyTab values
+    }
+
+    public KerberosConfiguration(String principal, String keyTab) {
+      this.principal = principal;
+      this.keyTab = keyTab;
+    }
+
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      Map<String, String> options = new HashMap<>();
+      if (principal != null && keyTab != null) {
+        options.put("principal", principal);
+        options.put("keyTab", keyTab);
+        options.put("useKeyTab", "true");
+        options.put("storeKey", "true");
+      } else {
+        options.put("useKeyTab", "false");
+        options.put("storeKey", "false");
+      }
+      options.put("doNotPrompt", "true");
+      options.put("useTicketCache", "true");
+      options.put("renewTGT", "true");
+      options.put("refreshKrb5Config", "true");
+      options.put("isInitiator", "true");
+      String ticketCache = System.getenv("KRB5CCNAME");
+      if (ticketCache != null) {
+        options.put("ticketCache", ticketCache);
+      }
+      options.put("debug", "true");
+
+      return new AppConfigurationEntry[] {
+        new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+          AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options) };
+    }
   }
 }
