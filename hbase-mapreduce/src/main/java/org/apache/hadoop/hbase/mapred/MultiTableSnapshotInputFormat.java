@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.mapred;
 
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -107,6 +108,7 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat
     return new TableSnapshotRecordReader((TableSnapshotRegionSplit) split, job);
   }
 
+  @SuppressWarnings("checkstyle:linelength")
   /**
    * Configure conf to read from snapshotScans, with snapshots restored to a subdirectory of
    * restoreDir.
