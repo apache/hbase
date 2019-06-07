@@ -29,12 +29,9 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -54,7 +51,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -644,29 +640,6 @@ public final class ConnectionUtils {
       future.completeExceptionally(e);
     }
     return future;
-  }
-
-  static ThreadPoolExecutor getThreadPool(Configuration conf, int maxThreads, int coreThreads,
-      Supplier<String> threadName, BlockingQueue<Runnable> passedWorkQueue) {
-    // shared HTable thread executor not yet initialized
-    if (maxThreads == 0) {
-      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
-    BlockingQueue<Runnable> workQueue = passedWorkQueue;
-    if (workQueue == null) {
-      workQueue =
-        new LinkedBlockingQueue<>(maxThreads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-          HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
-      coreThreads = maxThreads;
-    }
-    ThreadPoolExecutor tpe = new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime,
-      TimeUnit.SECONDS, workQueue, Threads.newDaemonThreadFactory(threadName.get()));
-    tpe.allowCoreThreadTimeOut(true);
-    return tpe;
   }
 
   static void shutdownPool(ExecutorService pool) {
