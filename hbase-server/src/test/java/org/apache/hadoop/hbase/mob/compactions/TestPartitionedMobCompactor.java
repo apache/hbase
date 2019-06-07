@@ -811,11 +811,11 @@ public class TestPartitionedMobCompactor {
   /**
    * Creates store files.
    * @param basePath the path to create file
-   * @param family the family name
-   * @param qualifier the column qualifier
+   * @param family the column family name
+   * @param qualifier the column qualifier assigned to data values
    * @param count the store file number
-   * @param type the key type
-   * @param date the date value
+   * @param type the row key type
+   * @param date the latest timestamp when an instance of MobFileName is created
    */
   private void createStoreFiles(Path basePath, String family, String qualifier, int count,
       Type type, final Date date) throws IOException {
