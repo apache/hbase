@@ -18,20 +18,22 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import java.io.IOException;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HDFS_URI_SCHEME;
+import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_SCHEME;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_SCHEME;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
 
+import java.io.IOException;
 import java.util.Objects;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.security.token.Token;
 
 /**
  * Helper class to obtain a filesystem delegation token.
@@ -70,16 +72,16 @@ public class FsDelegationToken {
       throws IOException {
     String tokenKind;
     String scheme = fs.getUri().getScheme();
-    if (SWebHdfsFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
-      tokenKind = SWebHdfsFileSystem.TOKEN_KIND.toString();
-    } else if (WebHdfsFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
-      tokenKind = WebHdfsFileSystem.TOKEN_KIND.toString();
-    } else if (HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(scheme)) {
-      tokenKind = DelegationTokenIdentifier.HDFS_DELEGATION_KIND.toString();
+    if (SWEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = SWEBHDFS_TOKEN_KIND.toString();
+    } else if (WEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = WEBHDFS_TOKEN_KIND.toString();
+    } else if (HDFS_URI_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = HDFS_DELEGATION_KIND.toString();
     } else {
       LOG.warn("Unknown FS URI scheme: " + scheme);
       // Preserve default behavior
-      tokenKind = DelegationTokenIdentifier.HDFS_DELEGATION_KIND.toString();
+      tokenKind = HDFS_DELEGATION_KIND.toString();
     }
 
     acquireDelegationToken(tokenKind, fs);

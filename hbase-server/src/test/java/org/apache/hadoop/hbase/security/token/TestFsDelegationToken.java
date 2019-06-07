@@ -1,5 +1,8 @@
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -12,7 +15,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
@@ -23,7 +25,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Category({SecurityTests.class, SmallTests.class})
 public class TestFsDelegationToken {
   private UserProvider userProvider = Mockito.mock(UserProvider.class);
   private User user = Mockito.mock(User.class);
@@ -49,39 +51,40 @@ public class TestFsDelegationToken {
     when(webHdfsFileSystem.getUri()).thenReturn(new URI("webhdfs://someUri"));
     when(swebHdfsFileSystem.getCanonicalServiceName()).thenReturn("swebhdfs://");
     when(swebHdfsFileSystem.getUri()).thenReturn(new URI("swebhdfs://someUri"));
-    when(user.getToken(DelegationTokenIdentifier.HDFS_DELEGATION_KIND.toString(),
+    when(user.getToken(
+        HDFS_DELEGATION_KIND.toString(),
         fileSystem.getCanonicalServiceName()))
         .thenReturn(hdfsToken);
     when(user.getToken(
-        WebHdfsFileSystem.TOKEN_KIND.toString(),
+        WEBHDFS_TOKEN_KIND.toString(),
         webHdfsFileSystem.getCanonicalServiceName())).thenReturn(webhdfsToken);
     when(user.getToken(
-        SWebHdfsFileSystem.TOKEN_KIND.toString(),
+        SWEBHDFS_TOKEN_KIND.toString(),
         swebHdfsFileSystem.getCanonicalServiceName())).thenReturn(swebhdfsToken);
     when(hdfsToken.getKind()).thenReturn(new Text("HDFS_DELEGATION_TOKEN"));
-    when(webhdfsToken.getKind()).thenReturn(WebHdfsFileSystem.TOKEN_KIND);
-    when(swebhdfsToken.getKind()).thenReturn(SWebHdfsFileSystem.TOKEN_KIND);
+    when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
+    when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);
   }
 
   @Test
   public void acquireDelegationToken_defaults_to_hdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(fileSystem);
     assertEquals(
-        fsDelegationToken.getUserToken().getKind(), DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
+        fsDelegationToken.getUserToken().getKind(), HDFS_DELEGATION_KIND);
   }
 
   @Test
   public void acquireDelegationToken_webhdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(webHdfsFileSystem);
     assertEquals(
-        fsDelegationToken.getUserToken().getKind(), WebHdfsFileSystem.TOKEN_KIND);
+        fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
   }
 
   @Test
   public void acquireDelegationToken_swebhdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(swebHdfsFileSystem);
     assertEquals(
-        fsDelegationToken.getUserToken().getKind(), SWebHdfsFileSystem.TOKEN_KIND);
+        fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
   }
 
   @Test(expected = NullPointerException.class)
@@ -92,14 +95,15 @@ public class TestFsDelegationToken {
   @Test
   public void acquireDelegationTokenByTokenKind_webhdfsFileSystem() throws IOException {
     fsDelegationToken
-        .acquireDelegationToken(WebHdfsFileSystem.TOKEN_KIND.toString(), webHdfsFileSystem);
-    assertEquals(fsDelegationToken.getUserToken().getKind(), WebHdfsFileSystem.TOKEN_KIND);
+        .acquireDelegationToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
   }
 
   @Test
   public void acquireDelegationTokenByTokenKind_swebhdfsFileSystem() throws IOException {
     fsDelegationToken
-        .acquireDelegationToken(SWebHdfsFileSystem.TOKEN_KIND.toString(), swebHdfsFileSystem);
-    assertEquals(fsDelegationToken.getUserToken().getKind(), SWebHdfsFileSystem.TOKEN_KIND);
+        .acquireDelegationToken(
+            SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
   }
 }
