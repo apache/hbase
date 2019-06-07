@@ -7,17 +7,23 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
+@Category({ SecurityTests.class, SmallTests.class })
 public class TestFsDelegationToken {
   private UserProvider userProvider = Mockito.mock(UserProvider.class);
   private User user = Mockito.mock(User.class);
@@ -28,6 +34,10 @@ public class TestFsDelegationToken {
   private WebHdfsFileSystem webHdfsFileSystem = Mockito.mock(WebHdfsFileSystem.class);
   private WebHdfsFileSystem swebHdfsFileSystem = Mockito.mock(SWebHdfsFileSystem.class);
   private FileSystem fileSystem = Mockito.mock(FileSystem.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFsDelegationToken.class);
 
   @Before
   public void setup() throws IOException, URISyntaxException {
