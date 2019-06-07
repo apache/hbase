@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -30,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The connection implementation based on {@link AsyncConnection}.
@@ -134,13 +139,25 @@ class ConnectionOverAsyncConnection implements Connection {
     return conn.isClosed();
   }
 
+  private ThreadPoolExecutor createThreadPool() {
+    Configuration conf = conn.getConfiguration();
+    int threads = conf.getInt("hbase.hconnection.threads.max", 256);
+    long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
+    BlockingQueue<Runnable> workQueue =
+      new LinkedBlockingQueue<>(threads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+        HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+    ThreadPoolExecutor tpe = new ThreadPoolExecutor(threads, threads, keepAliveTime,
+      TimeUnit.SECONDS, workQueue,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(toString() + "-shared-%d").build());
+    tpe.allowCoreThreadTimeOut(true);
+    return tpe;
+  }
+
   private ExecutorService getBatchPool() {
     if (batchPool == null) {
       synchronized (this) {
         if (batchPool == null) {
-          int threads = conn.getConfiguration().getInt("hbase.hconnection.threads.max", 256);
-          this.batchPool = ConnectionUtils.getThreadPool(conn.getConfiguration(), threads, threads,
-            () -> toString() + "-shared", null);
+          this.batchPool = createThreadPool();
         }
       }
     }
