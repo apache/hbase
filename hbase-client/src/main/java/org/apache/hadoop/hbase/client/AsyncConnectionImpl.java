@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -113,7 +114,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private ChoreService authService;
 
-  private volatile boolean closed = false;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final Optional<MetricsConnection> metrics;
 
@@ -188,14 +189,12 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public boolean isClosed() {
-    return closed;
+    return closed.get();
   }
 
   @Override
   public void close() {
-    // As the code below is safe to be executed in parallel, here we do not use CAS or lock, just a
-    // simple volatile flag.
-    if (closed) {
+    if (!closed.compareAndSet(false, true)) {
       return;
     }
     IOUtils.closeQuietly(clusterStatusListener);
@@ -209,7 +208,6 @@ class AsyncConnectionImpl implements AsyncConnection {
     if (c != null) {
       c.closePool();
     }
-    closed = true;
   }
 
   @Override

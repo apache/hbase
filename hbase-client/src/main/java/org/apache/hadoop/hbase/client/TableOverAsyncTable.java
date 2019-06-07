@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -76,12 +77,13 @@ class TableOverAsyncTable implements Table {
 
   private final AsyncTable<?> table;
 
-  private final ExecutorService pool;
+  private final IOExceptionSupplier<ExecutorService> poolSupplier;
 
-  TableOverAsyncTable(AsyncConnectionImpl conn, AsyncTable<?> table, ExecutorService pool) {
+  TableOverAsyncTable(AsyncConnectionImpl conn, AsyncTable<?> table,
+      IOExceptionSupplier<ExecutorService> poolSupplier) {
     this.conn = conn;
     this.table = table;
-    this.pool = pool;
+    this.poolSupplier = poolSupplier;
   }
 
   @Override
@@ -423,6 +425,7 @@ class TableOverAsyncTable implements Table {
   private <R> void coprocssorService(String serviceName, byte[] startKey, byte[] endKey,
       Callback<R> callback, StubCall<R> call) throws Throwable {
     // get regions covered by the row range
+    ExecutorService pool = this.poolSupplier.get();
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
     Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     try {
@@ -443,7 +446,7 @@ class TableOverAsyncTable implements Table {
       }
     } catch (RejectedExecutionException e) {
       // maybe the connection has been closed, let's check
-      if (pool.isShutdown()) {
+      if (conn.isClosed()) {
         throw new DoNotRetryIOException("Connection is closed", e);
       } else {
         throw new HBaseIOException("Coprocessor operation is rejected", e);

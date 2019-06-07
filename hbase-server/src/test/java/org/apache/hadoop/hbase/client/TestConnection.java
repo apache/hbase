@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,7 +39,11 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -336,7 +342,7 @@ public class TestConnection {
     TEST_UTIL.getAdmin().createTable(builder.build());
 
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-        RegionLocator locator = conn.getRegionLocator(tableName)) {
+      RegionLocator locator = conn.getRegionLocator(tableName)) {
       // Get locations of the regions of the table
       List<HRegionLocation> locations = locator.getAllRegionLocations();
 
@@ -352,5 +358,28 @@ public class TestConnection {
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
+  }
+
+  @Test(expected = DoNotRetryIOException.class)
+  public void testClosedConnection() throws ServiceException, Throwable {
+    byte[] family = Bytes.toBytes("cf");
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(MultiRowMutationEndpoint.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
+    TEST_UTIL.getAdmin().createTable(builder.build());
+
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    // cache the location
+    try (Table table = conn.getTable(tableName)) {
+      table.get(new Get(Bytes.toBytes(0)));
+    } finally {
+      conn.close();
+    }
+    Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = service -> {
+      throw new RuntimeException("Should not arrive here");
+    };
+    conn.getTable(tableName).coprocessorService(MultiRowMutationService.class,
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, callable);
   }
 }

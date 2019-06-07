@@ -18,18 +18,25 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The connection implementation based on {@link AsyncConnection}.
@@ -41,6 +48,10 @@ class ConnectionOverAsyncConnection implements Connection {
 
   private volatile boolean aborted = false;
 
+  // only used for executing coprocessor calls, as users may reference the methods in the
+  // BlockingInterface of the protobuf stub so we have to execute the call in a separated thread...
+  // Will be removed in 4.0.0 along with the deprecated coprocessor methods in Table and Admin
+  // interface.
   private volatile ExecutorService batchPool = null;
 
   private final AsyncConnectionImpl conn;
@@ -121,7 +132,7 @@ class ConnectionOverAsyncConnection implements Connection {
 
   // will be called from AsyncConnection, to avoid infinite loop as in the above method we will call
   // AsyncConnection.close.
-  void closePool() {
+  synchronized void closePool() {
     ExecutorService batchPool = this.batchPool;
     if (batchPool != null) {
       ConnectionUtils.shutdownPool(batchPool);
@@ -134,13 +145,36 @@ class ConnectionOverAsyncConnection implements Connection {
     return conn.isClosed();
   }
 
-  private ExecutorService getBatchPool() {
+  // only used for executing coprocessor calls, as users may reference the methods in the
+  // BlockingInterface of the protobuf stub so we have to execute the call in a separated thread...
+  // Will be removed in 4.0.0 along with the deprecated coprocessor methods in Table and Admin
+  // interface.
+  private ThreadPoolExecutor createThreadPool() {
+    Configuration conf = conn.getConfiguration();
+    int threads = conf.getInt("hbase.hconnection.threads.max", 256);
+    long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
+    BlockingQueue<Runnable> workQueue =
+      new LinkedBlockingQueue<>(threads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+        HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+    ThreadPoolExecutor tpe = new ThreadPoolExecutor(threads, threads, keepAliveTime,
+      TimeUnit.SECONDS, workQueue,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(toString() + "-shared-%d").build());
+    tpe.allowCoreThreadTimeOut(true);
+    return tpe;
+  }
+
+  // only used for executing coprocessor calls, as users may reference the methods in the
+  // BlockingInterface of the protobuf stub so we have to execute the call in a separated thread...
+  // Will be removed in 4.0.0 along with the deprecated coprocessor methods in Table and Admin
+  // interface.
+  private ExecutorService getBatchPool() throws IOException {
     if (batchPool == null) {
       synchronized (this) {
+        if (isClosed()) {
+          throw new DoNotRetryIOException("Connection is closed");
+        }
         if (batchPool == null) {
-          int threads = conn.getConfiguration().getInt("hbase.hconnection.threads.max", 256);
-          this.batchPool = ConnectionUtils.getThreadPool(conn.getConfiguration(), threads, threads,
-            () -> toString() + "-shared", null);
+          this.batchPool = createThreadPool();
         }
       }
     }
@@ -153,13 +187,14 @@ class ConnectionOverAsyncConnection implements Connection {
 
       @Override
       public Table build() {
-        ExecutorService p = pool != null ? pool : getBatchPool();
+        IOExceptionSupplier<ExecutorService> poolSupplier =
+          pool != null ? () -> pool : ConnectionOverAsyncConnection.this::getBatchPool;
         return new TableOverAsyncTable(conn,
           conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
             .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
             .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
             .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS).build(),
-          p);
+          poolSupplier);
       }
     };
   }
