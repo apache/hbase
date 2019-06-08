@@ -31,6 +31,10 @@
 
 -->
 <module name="Checker">
+  <!-- Filter out Checkstyle warnings that have been suppressed with the @SuppressWarnings
+  annotation -->
+  <module name="SuppressWarningsFilter"/>
+
   <module name="FileTabCharacter"/>
   <module name="TreeWalker">
 
@@ -130,5 +134,8 @@
     http://checkstyle.sourceforge.net/config_whitespace.html -->
     <module name="MethodParamPad"/>
     <module name="ParenPad"/>
+
+    <!-- Make the @SuppressWarnings annotations available to Checkstyle -->
+    <module name="SuppressWarningsHolder"/>
   </module>
 </module>
