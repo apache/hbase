@@ -628,6 +628,16 @@ Setting doDeletes to false modifies default behaviour to not delete target cells
 Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
 and doPuts to false would give same effect as setting dryrun to true.
 
+.Additional info on doDeletes/doPuts
+[NOTE]
+====
+"doDeletes/doPuts" were only added by
+link:https://jira.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may not be available on
+all released versions.
+For major 1.x versions, minimum minor release including it is *1.4.10*.
+For major 2.x versions, minimum minor release including it is *2.1.5*.
+====
+
 .Set doDeletes to false on Two-Way Replication scenarios
 [NOTE]
 ====
