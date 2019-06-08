@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -60,15 +59,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,42 +74,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Add any testing of HBaseAdmin functionality here.
  */
 @Category({LargeTests.class, ClientTests.class})
-public class TestAdmin2 {
+public class TestAdmin2 extends TestAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAdmin2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin2.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Admin ADMIN;
-
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
-    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 30);
-    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 30);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
-    TEST_UTIL.startMiniCluster(3);
-    ADMIN = TEST_UTIL.getAdmin();
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    for (TableDescriptor htd : ADMIN.listTableDescriptors()) {
-      TEST_UTIL.deleteTable(htd.getTableName());
-    }
-  }
 
   @Test
   public void testCreateBadTables() throws IOException {
@@ -409,7 +374,6 @@ public class TestAdmin2 {
 
   /**
    * For HBASE-2556
-   * @throws IOException
    */
   @Test
   public void testGetTableRegions() throws IOException {
