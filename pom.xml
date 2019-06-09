@@ -816,6 +816,8 @@
               <!-- exclude the shaded protobuf files -->
               <exclude>**/shaded/com/google/protobuf/**</exclude>
               <exclude>**/src/main/patches/**</exclude>
+              <!-- email template for votes -->
+              <exclude>dev-support/create-release/vote.tmpl</exclude>
             </excludes>
           </configuration>
         </plugin>
