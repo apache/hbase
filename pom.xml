@@ -1506,6 +1506,7 @@
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <spotbugs.version>3.1.11</spotbugs.version>
+    <surefire.version>2.22.2</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>2.2.1</hbase-thirdparty.version>
