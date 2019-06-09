@@ -86,8 +86,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is not whitelisted
-   * @result An IOException should be thrown and caught
+   * which is not whitelisted.
+   * @exception Exception should be thrown and caught
    *         to show coprocessor is working as desired
    * @param whitelistedPaths A String array of paths to add in
    *         for the whitelisting configuration
@@ -127,9 +127,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result The coprocessor should be added to the table
-   *         descriptor successfully
+   * which is whitelisted. The coprocessor should be added to
+   * the table descriptor successfully.
    * @param whitelistedPaths A String array of paths to add in
    *         for the whitelisting configuration
    * @param coprocessorPath A String to use as the
@@ -168,8 +167,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is not whitelisted
-   * @result An IOException should be thrown and caught
+   * which is not whitelisted.
+   * @exception Exception should be thrown and caught
    *         to show coprocessor is working as desired
    */
   @Test
@@ -180,10 +179,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table creation including a coprocessor path
-   * which is not whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is not whitelisted. Coprocessor should be added to
+   * table descriptor. Table is disabled to avoid an IOException due
+   * to the added coprocessor not actually existing on disk.
    */
   @Test
   public void testDifferentFileSystemNonWhitelisted() throws Exception {
@@ -193,10 +191,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is whitelisted. Coprocessor should be added to table
+   * descriptor. Table is disabled to avoid an IOException due to
+   * the added coprocessor not actually existing on disk.
    */
   @Test
   public void testSchemeAndDirectorywhitelisted() throws Exception {
@@ -206,10 +203,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is whitelisted. Coprocessor should be added to table
+   * descriptor. Table is disabled to avoid an IOException due to
+   * the added coprocessor not actually existing on disk.
    */
   @Test
   public void testSchemeWhitelisted() throws Exception {
@@ -219,10 +215,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is whitelisted. Coprocessor should be added to table
+   * descriptor. Table is disabled to avoid an IOException due to
+   * the added coprocessor not actually existing on disk.
    */
   @Test
   public void testDFSNameWhitelistedWorks() throws Exception {
@@ -232,10 +227,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is whitelisted. Coprocessor should be added to table
+   * descriptor. Table is disabled to avoid an IOException due to
+   * the added coprocessor not actually existing on disk.
    */
   @Test
   public void testDFSNameNotWhitelistedFails() throws Exception {
@@ -245,10 +239,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table modification adding a coprocessor path
-   * which is whitelisted
-   * @result Coprocessor should be added to table descriptor
-   *         Table is disabled to avoid an IOException due to
-   *         the added coprocessor not actually existing on disk
+   * which is whitelisted. Coprocessor should be added to table
+   * descriptor. Table is disabled to avoid an IOException due to
+   * the added coprocessor not actually existing on disk.
    */
   @Test
   public void testBlanketWhitelist() throws Exception {
@@ -258,8 +251,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table creation including a coprocessor path
-   * which is not whitelisted
-   * @result Table will not be created due to the offending coprocessor
+   * which is not whitelisted. Table will not be created due to the
+   * offending coprocessor.
    */
   @Test
   public void testCreationNonWhitelistedCoprocessorPath() throws Exception {
@@ -303,8 +296,8 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   /**
    * Test a table creation including a coprocessor path
-   * which is on the classpath
-   * @result Table will be created with the coprocessor
+   * which is on the classpath. Table will be created with the
+   * coprocessor.
    */
   @Test
   public void testCreationClasspathCoprocessor() throws Exception {
