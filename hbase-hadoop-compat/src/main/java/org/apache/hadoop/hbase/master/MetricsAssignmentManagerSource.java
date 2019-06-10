@@ -50,6 +50,8 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
   String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   String RIT_DURATION_NAME = "ritDuration";
+  String DEAD_SERVER_OPEN_REGIONS = "deadServerOpenRegions";
+  String UNKNOWN_SERVER_OPEN_REGIONS = "unknownServerOpenRegions";
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
@@ -91,6 +93,10 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void setRITOldestAge(long age);
 
   void updateRitDuration(long duration);
+
+  void updateDeadServerOpenRegions(int deadRegions);
+
+  void updateUnknownServerOpenRegions(int unknownRegions);
 
   /**
    * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately
