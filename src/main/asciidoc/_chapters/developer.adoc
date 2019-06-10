@@ -1004,7 +1004,18 @@ Regards the latter, run `mvn apache-rat:check` to verify all files are suitably 
 See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On recent discussion clarifying ASF release policy]
 for how we arrived at this process.
 
-To help with the release verfication `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
+To help with the release verification, please follow the guideline below and vote based on the your verification.
+
+=== Baseline Verifications for Voting Release Candidates
+
+Although contributors have their own checklist for verifications, the following items are usually used for voting on release candidates.
+
+* CHANGES.md if any
+* RELEASENOTES.md (release notes) if any
+* Generated API compatibility report
+** For what should be compatible please refer the link:https://hbase.apache.org/book.html#hbase.versioning[versioning guideline], especially for items with marked as high severity
+* Use `hbase-vote.sh`  to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
+** `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
 
 [source,bourne]
 ----
@@ -1027,6 +1038,15 @@ Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-f
                                 http://www.apache.org/dist/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
 ----
+* If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. link:https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html[dashboard of master branch] (please change the test branch accordingly).
+
+=== Additional Verifications for Voting Release Candidates
+
+Other than the common verifications, contributors may call out additional concerns, e.g. for a specific feature by running end to end tests on a distributed environment. This is optional and always encouraged.
+
+* Start a distributed HBase cluster and call out the test result of specific workload on cluster. e.g.
+** Run basic table operations, e.g. `create/put/get/scan/flush/list/disable/drop`
+** Run built-in tests, e.g. `LoadTestTool` (LTT) and `IntegrationTestBigLinkedList` (ITBLL)
 
 [[hbase.release.announcement]]
 == Announcing Releases
