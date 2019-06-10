@@ -178,12 +178,14 @@ public class RegionStates {
     return regions;
   }
 
-  Collection<RegionStateNode> getRegionStateNodes() {
-    return regionsMap.values();
+  /** @return A view of region state nodes for all the regions. */
+  public Collection<RegionStateNode> getRegionStateNodes() {
+    return Collections.unmodifiableCollection(regionsMap.values());
   }
 
+  /** @return A snapshot of region state nodes for all the regions. */
   public ArrayList<RegionState> getRegionStates() {
-    final ArrayList<RegionState> regions = new ArrayList<RegionState>(regionsMap.size());
+    final ArrayList<RegionState> regions = new ArrayList<>(regionsMap.size());
     for (RegionStateNode node: regionsMap.values()) {
       regions.add(node.toRegionState());
     }

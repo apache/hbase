@@ -96,6 +96,14 @@ public class MetricsAssignmentManager {
     assignmentManagerSource.incrementOperationCounter();
   }
 
+  public void updateDeadServerOpenRegions(int deadRegions) {
+    assignmentManagerSource.updateDeadServerOpenRegions(deadRegions);
+  }
+
+  public void updateUnknownServerOpenRegions(int unknownRegions) {
+    assignmentManagerSource.updateUnknownServerOpenRegions(unknownRegions);
+  }
+
   /**
    * @return Set of common metrics for assign procedure
    */
