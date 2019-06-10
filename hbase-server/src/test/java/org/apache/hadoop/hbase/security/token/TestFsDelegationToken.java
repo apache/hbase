@@ -46,7 +46,7 @@ import org.mockito.Mockito;
 public class TestFsDelegationToken {
   private UserProvider userProvider = Mockito.mock(UserProvider.class);
   private User user = Mockito.mock(User.class);
-  private FsDelegationToken fsDelegationToken = new FsDelegationToken(userProvider, "testRenewer");
+  private FsDelegationToken fsDelegationToken = new FsDelegationToken(userProvider, "Renewer");
   private Token hdfsToken = Mockito.mock(Token.class);
   private Token webhdfsToken = Mockito.mock(Token.class);
   private Token swebhdfsToken = Mockito.mock(Token.class);
