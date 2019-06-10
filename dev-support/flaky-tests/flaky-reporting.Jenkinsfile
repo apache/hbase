@@ -24,7 +24,7 @@ pipeline {
     cron('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '100'))
+    buildDiscarder(logRotator(numToKeepStr: '50'))
     timeout (time: 15, unit: 'MINUTES')
     timestamps()
   }
@@ -41,7 +41,7 @@ pipeline {
           fi
           declare -a flaky_args
           flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 5)
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 40)
+          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
           docker build -t hbase-dev-support dev-support
           docker run -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
 '''

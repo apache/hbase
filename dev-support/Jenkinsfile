@@ -24,7 +24,7 @@ pipeline {
     cron('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '30'))
+    buildDiscarder(logRotator(numToKeepStr: '15'))
     timeout (time: 9, unit: 'HOURS')
     timestamps()
     skipDefaultCheckout()
