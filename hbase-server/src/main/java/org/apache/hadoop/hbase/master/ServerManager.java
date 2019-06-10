@@ -574,8 +574,9 @@ public class ServerManager {
     }
   }
 
+  // Note: this is currently invoked from RPC, not just tests. Locking in this class needs cleanup.
   @VisibleForTesting
-  public void moveFromOnlineToDeadServers(final ServerName sn) {
+  public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (onlineServers) {
       if (!this.onlineServers.containsKey(sn)) {
         LOG.trace("Expiration of {} but server not online", sn);
@@ -859,6 +860,20 @@ public class ServerManager {
 
   public boolean isServerOnline(ServerName serverName) {
     return serverName != null && onlineServers.containsKey(serverName);
+  }
+
+  public enum ServerLiveState {
+    LIVE,
+    DEAD,
+    UNKNOWN
+  }
+
+  /**
+   * @return whether the server is online, dead, or unknown.
+   */
+  public synchronized ServerLiveState isServerKnownAndOnline(ServerName serverName) {
+    return onlineServers.containsKey(serverName) ? ServerLiveState.LIVE
+      : (deadservers.isDeadServer(serverName) ? ServerLiveState.DEAD : ServerLiveState.UNKNOWN);
   }
 
   /**

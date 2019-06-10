@@ -34,6 +34,8 @@ public class MetricsAssignmentManagerSourceImpl
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;
   private MetricHistogram ritDurationHisto;
+  private MutableGaugeLong deadServerOpenRegions;
+  private MutableGaugeLong unknownServerOpenRegions;
 
   private MutableFastCounter operationCounter;
 
@@ -63,6 +65,8 @@ public class MetricsAssignmentManagerSourceImpl
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0L);
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME, RIT_DURATION_DESC);
     operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0L);
+    deadServerOpenRegions = metricsRegistry.newGauge(DEAD_SERVER_OPEN_REGIONS, "", 0);
+    unknownServerOpenRegions = metricsRegistry.newGauge(UNKNOWN_SERVER_OPEN_REGIONS, "", 0);
 
     /**
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
@@ -102,6 +106,16 @@ public class MetricsAssignmentManagerSourceImpl
   @Override
   public void updateRitDuration(long duration) {
     ritDurationHisto.add(duration);
+  }
+
+  @Override
+  public void updateDeadServerOpenRegions(int deadRegions) {
+    deadServerOpenRegions.set(deadRegions);
+  }
+
+  @Override
+  public void updateUnknownServerOpenRegions(int unknownRegions) {
+    unknownServerOpenRegions.set(unknownRegions);
   }
 
   @Override
