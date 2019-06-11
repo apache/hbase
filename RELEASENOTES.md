@@ -27,6 +27,31 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-21970](https://issues.apache.org/jira/browse/HBASE-21970) | *Major* | **Document that how to upgrade from 2.0 or 2.1 to 2.2+**
+
+See the document http://hbase.apache.org/book.html#upgrade2.2 about how to upgrade from 2.0 or 2.1 to 2.2+.
+
+HBase 2.2+ uses a new Procedure form assiging/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one. 
+
+And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
+
+1. Shutdown both active and standby Masters (Your cluster will continue to server reads and writes without interruption).
+2. Set the property hbase.procedure.upgrade-to-2-2 to true in hbase-site.xml for the Master, and start only one Master, still using the 2.1.1+ (or 2.0.3+) version.
+3. Wait until the Master quits. Confirm that there is a 'READY TO ROLLING UPGRADE' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
+4. Start new Masters with the new 2.2+ version.
+
+Then you can rolling upgrade RegionServers one by one. See HBASE-21075 for more details.
+
+
+---
+
+* [HBASE-21536](https://issues.apache.org/jira/browse/HBASE-21536) | *Trivial* | **Fix completebulkload usage instructions**
+
+Added completebulkload short name for BulkLoadHFilesTool to bin/hbase.
+
+
+---
+
 * [HBASE-22500](https://issues.apache.org/jira/browse/HBASE-22500) | *Blocker* | **Modify pom and jenkins jobs for hadoop versions**
 
 Change the default hadoop-3 version to 3.1.2. Drop the support for the releases which are effected by CVE-2018-8029, see this email https://lists.apache.org/thread.html/3d6831c3893cd27b6850aea2feff7d536888286d588e703c6ffd2e82@%3Cuser.hadoop.apache.org%3E
@@ -90,13 +115,6 @@ Now the default hadoop-two.version has been changed to 2.8.5, and all hadoop ver
 * [HBASE-22392](https://issues.apache.org/jira/browse/HBASE-22392) | *Trivial* | **Remove extra/useless +**
 
 Removed extra + in HRegion, HStore and LoadIncrementalHFiles for branch-2 and HRegion and HStore for branch-1.
-
-
----
-
-* [HBASE-21536](https://issues.apache.org/jira/browse/HBASE-21536) | *Trivial* | **Fix completebulkload usage instructions**
-
-Added completebulkload short name for BulkLoadHFilesTool to bin/hbase.
 
 
 ---
