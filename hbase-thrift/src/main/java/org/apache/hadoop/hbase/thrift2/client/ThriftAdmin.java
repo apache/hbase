@@ -1117,12 +1117,12 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void grant(UserPermission userPermission, boolean mergeExistingPermissions) {
+  public Future<Void> grantAsync(UserPermission userPermission, boolean mergeExistingPermissions) {
     throw new NotImplementedException("grant not supported in ThriftAdmin");
   }
 
   @Override
-  public void revoke(UserPermission userPermission) {
+  public Future<Void> revokeAsync(UserPermission userPermission) {
     throw new NotImplementedException("revoke not supported in ThriftAdmin");
   }
 

@@ -24,6 +24,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "AccessControl.proto";
 import "HBase.proto";
 import "RPC.proto";
 import "Snapshot.proto";
@@ -607,4 +608,20 @@ enum SplitWALState{
   ACQUIRE_SPLIT_WAL_WORKER = 1;
   DISPATCH_WAL_TO_WORKER = 2;
   RELEASE_SPLIT_WORKER = 3;
+}
+
+enum UpdatePermissionState {
+  UPDATE_PERMISSION_STORAGE = 1;
+  UPDATE_PERMISSION_CACHE_ON_RS = 2;
+  POST_UPDATE_PERMISSION = 3;
+}
+
+message UpdatePermissionStateData {
+  required ServerName target_server = 1;
+  required string entry = 2;
+}
+
+message UpdatePermissionRemoteStateData {
+  required ServerName target_server = 1;
+  required string entry = 2;
 }

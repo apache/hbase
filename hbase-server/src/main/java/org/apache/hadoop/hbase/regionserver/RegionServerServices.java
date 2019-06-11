@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.ZKPermissionStorage;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -313,7 +313,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   AccessChecker getAccessChecker();
 
   /**
-   * @return {@link ZKPermissionWatcher}
+   * @return the {@link ZKPermissionStorage}
    */
-  ZKPermissionWatcher getZKPermissionWatcher();
+  ZKPermissionStorage getZKPermissionStorage();
 }

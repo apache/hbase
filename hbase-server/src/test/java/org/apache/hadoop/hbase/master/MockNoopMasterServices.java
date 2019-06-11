@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.ZKPermissionStorage;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 public class MockNoopMasterServices implements MasterServices {
@@ -482,7 +482,7 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public ZKPermissionWatcher getZKPermissionWatcher() {
+  public ZKPermissionStorage getZKPermissionStorage() {
     return null;
   }
 }

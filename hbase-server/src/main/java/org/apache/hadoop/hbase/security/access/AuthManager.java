@@ -91,8 +91,9 @@ public final class AuthManager {
       }
     }
   }
-  PermissionCache<NamespacePermission> NS_NO_PERMISSION = new PermissionCache<>();
-  PermissionCache<TablePermission> TBL_NO_PERMISSION = new PermissionCache<>();
+
+  private PermissionCache<NamespacePermission> NS_NO_PERMISSION = new PermissionCache<>();
+  private PermissionCache<TablePermission> TBL_NO_PERMISSION = new PermissionCache<>();
 
   /**
    * Cache for global permission excluding superuser and supergroup.
@@ -481,6 +482,7 @@ public final class AuthManager {
    */
   public void removeNamespace(byte[] ns) {
     namespaceCache.remove(Bytes.toString(ns));
+    mtime.incrementAndGet();
   }
 
   /**
@@ -489,6 +491,7 @@ public final class AuthManager {
    */
   public void removeTable(TableName table) {
     tableCache.remove(table);
+    mtime.incrementAndGet();
   }
 
   /**
@@ -497,5 +500,38 @@ public final class AuthManager {
    */
   public long getMTime() {
     return mtime.get();
+  }
+
+  /**
+   * Refresh permission cache for entry
+   * @param entry the given entry, it's '@namespace', 'hbase:acl' or 'tablename'.
+   * @param data the updated user permissions data
+   * @throws IOException exception when deserialize data
+   */
+  public void refresh(String entry, byte[] data) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updating permissions cache for {} with data {}", entry,
+        Bytes.toStringBinary(data));
+    }
+    if (PermissionStorage.isNamespaceEntry(entry)) {
+      refreshNamespaceCacheFromWritable(PermissionStorage.fromNamespaceEntry(entry), data);
+    } else {
+      refreshTableCacheFromWritable(TableName.valueOf(entry), data);
+    }
+  }
+
+  /**
+   * Remove permission cache for entry
+   * @param entry the given entry, it's '@namespace', 'hbase:acl' or 'tablename'.
+   */
+  public void remove(String entry) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing permissions cache for {}", entry);
+    }
+    if (PermissionStorage.isNamespaceEntry(entry)) {
+      removeNamespace(PermissionStorage.fromNamespaceEntry(Bytes.toBytes(entry)));
+    } else {
+      removeTable(TableName.valueOf(entry));
+    }
   }
 }

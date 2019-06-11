@@ -3832,20 +3832,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> grant(UserPermission userPermission,
       boolean mergeExistingPermissions) {
-    return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.<GrantRequest, GrantResponse, Void> call(controller,
-          stub, ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions),
-          (s, c, req, done) -> s.grant(c, req, done), resp -> null))
-        .call();
+    return this.<GrantRequest, GrantResponse> procedureCall(
+      ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions),
+      (s, c, req, done) -> s.grant(c, req, done), (resp) -> resp.getProcId(),
+      new GrantProcedureBiConsumer(userPermission, mergeExistingPermissions));
   }
 
   @Override
   public CompletableFuture<Void> revoke(UserPermission userPermission) {
-    return this.<Void> newMasterCaller()
-        .action((controller, stub) -> this.<RevokeRequest, RevokeResponse, Void> call(controller,
-          stub, ShadedAccessControlUtil.buildRevokeRequest(userPermission),
-          (s, c, req, done) -> s.revoke(c, req, done), resp -> null))
-        .call();
+    return this.<RevokeRequest, RevokeResponse> procedureCall(
+      ShadedAccessControlUtil.buildRevokeRequest(userPermission),
+      (s, c, req, done) -> s.revoke(c, req, done), (resp) -> resp.getProcId(),
+      new RevokeProcedureBiConsumer(userPermission));
   }
 
   @Override
@@ -3872,5 +3870,59 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               (s, c, req, done) -> s.hasUserPermissions(c, req, done),
               resp -> resp.getHasUserPermissionList()))
         .call();
+  }
+
+  private static abstract class UpdatePermissionProcedureBiConsumer extends ProcedureBiConsumer {
+    protected final UserPermission userPermission;
+
+    UpdatePermissionProcedureBiConsumer(UserPermission userPermission) {
+      this.userPermission = userPermission;
+    }
+
+    abstract String getOperationType();
+
+    String getDescription() {
+      return "Operation: " + getOperationType() + ", UserPermission: " + userPermission;
+    }
+
+    @Override
+    void onFinished() {
+      LOG.info(getDescription() + " completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.info(getDescription() + " failed with " + error.getMessage());
+    }
+  }
+
+  private static class RevokeProcedureBiConsumer extends UpdatePermissionProcedureBiConsumer {
+    RevokeProcedureBiConsumer(UserPermission userPermission) {
+      super(userPermission);
+    }
+
+    @Override
+    String getOperationType() {
+      return "REVOKE";
+    }
+  }
+
+  private static class GrantProcedureBiConsumer extends UpdatePermissionProcedureBiConsumer {
+    protected final boolean mergeExistingPermissions;
+
+    GrantProcedureBiConsumer(UserPermission userPermission, boolean mergeExistingPermissions) {
+      super(userPermission);
+      this.mergeExistingPermissions = mergeExistingPermissions;
+    }
+
+    @Override
+    String getDescription() {
+      return super.getDescription() + ", mergeExistingPermissions: " + mergeExistingPermissions;
+    }
+
+    @Override
+    String getOperationType() {
+      return "GRANT";
+    }
   }
 }

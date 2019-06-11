@@ -54,13 +54,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -394,67 +392,35 @@ public final class PermissionStorage {
   /**
    * Returns {@code true} if the given table is {@code _acl_} metadata table.
    */
-  static boolean isAclTable(TableDescriptor desc) {
-    return ACL_TABLE_NAME.equals(desc.getTableName());
+  static boolean isAclTable(TableName tableName) {
+    return ACL_TABLE_NAME.equals(tableName);
   }
 
   /**
-   * Loads all of the permission grants stored in a region of the {@code _acl_}
-   * table.
+   * Loads all of the permission grants stored in the table of {@code _acl_}
    *
-   * @param aclRegion the acl region
+   * @param aclTable the acl table
    * @return a map of the permissions for this table.
    * @throws IOException if an error occurs
    */
-  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Region aclRegion)
+  public static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Table aclTable)
       throws IOException {
-    if (!isAclRegion(aclRegion)) {
-      throw new IOException("Can only load permissions from "+ACL_TABLE_NAME);
+    if (!isAclTable(aclTable.getName())) {
+      throw new IOException("Can only load permissions from " + ACL_TABLE_NAME);
     }
-
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-      new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+        new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_ table
-
     Scan scan = new Scan();
     scan.addFamily(ACL_LIST_FAMILY);
-
-    InternalScanner iScanner = null;
-    try {
-      iScanner = aclRegion.getScanner(scan);
-
-      while (true) {
-        List<Cell> row = new ArrayList<>();
-
-        boolean hasNext = iScanner.next(row);
-        ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
-        byte[] entry = null;
-        for (Cell kv : row) {
-          if (entry == null) {
-            entry = CellUtil.cloneRow(kv);
-          }
-          Pair<String, Permission> permissionsOfUserOnTable =
-              parsePermissionRecord(entry, kv, null, null, false, null);
-          if (permissionsOfUserOnTable != null) {
-            String username = permissionsOfUserOnTable.getFirst();
-            Permission permission = permissionsOfUserOnTable.getSecond();
-            perms.put(username, new UserPermission(username, permission));
-          }
-        }
-        if (entry != null) {
-          allPerms.put(entry, perms);
-        }
-        if (!hasNext) {
-          break;
-        }
-      }
-    } finally {
-      if (iScanner != null) {
-        iScanner.close();
+    try (ResultScanner scanner = aclTable.getScanner(scan)) {
+      for (Result row : scanner) {
+        ListMultimap<String, UserPermission> resultPerms =
+            parsePermissions(row.getRow(), row, null, null, null, false);
+        allPerms.put(row.getRow(), resultPerms);
       }
     }
-
     return allPerms;
   }
 
@@ -462,36 +428,14 @@ public final class PermissionStorage {
    * Load all permissions from the region server holding {@code _acl_},
    * primarily intended for testing purposes.
    */
-  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(
-      Configuration conf) throws IOException {
-    Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-      new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
-
-    // do a full scan of _acl_, filtering on only first table region rows
-
-    Scan scan = new Scan();
-    scan.addFamily(ACL_LIST_FAMILY);
-
-    ResultScanner scanner = null;
+  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Configuration conf)
+      throws IOException {
     // TODO: Pass in a Connection rather than create one each time.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        scanner = table.getScanner(scan);
-        try {
-          for (Result row : scanner) {
-            ListMultimap<String, UserPermission> resultPerms =
-                parsePermissions(row.getRow(), row, null, null, null, false);
-            allPerms.put(row.getRow(), resultPerms);
-          }
-        } finally {
-          if (scanner != null) {
-            scanner.close();
-          }
-        }
+        return loadAll(table);
       }
     }
-
-    return allPerms;
   }
 
   public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
@@ -744,8 +688,7 @@ public final class PermissionStorage {
    * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances and returns the
    * resulting byte array. Writes a set of permission [user: table permission]
    */
-  public static byte[] writePermissionsAsBytes(ListMultimap<String, UserPermission> perms,
-      Configuration conf) {
+  public static byte[] writePermissionsAsBytes(ListMultimap<String, UserPermission> perms) {
     return ProtobufUtil
         .prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
   }

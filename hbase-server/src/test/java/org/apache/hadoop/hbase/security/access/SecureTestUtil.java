@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
@@ -845,5 +847,13 @@ public class SecureTestUtil {
         }
       }
     }
+  }
+
+  public static Set<AuthManager> getAuthManagers(MiniHBaseCluster cluster) {
+    Set<AuthManager> result = new HashSet<>();
+    for (AccessController ac : getAccessControllers(cluster)) {
+      result.add(ac.getAuthManager());
+    }
+    return result;
   }
 }

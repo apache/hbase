@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
@@ -2266,6 +2267,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE);
     verifyAllowed(deleteTableAction, TABLE_ADMIN);
+
+    // check table permissions is deleted when table is deleted
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    for (AuthManager authManager : authManagers) {
+      boolean result = authManager.authorizeUserTable(TABLE_ADMIN, tableName, Action.ADMIN);
+      assertFalse(result);
+    }
   }
 
   private void createTestTable(TableName tname) throws Exception {
@@ -2740,6 +2748,9 @@ public class TestAccessController extends SecureTestUtil {
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     createNamespace(TEST_UTIL, desc);
     grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
+    AuthManager masterAuthManager =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAccessChecker().getAuthManager();
+    assertTrue(masterAuthManager.authorizeUserNamespace(USER_NONE, namespace, Action.READ));
 
     // Test 1: A specific namespace
     getNamespacePermissionsAndVerify(namespace, 1, namespace);
@@ -2751,6 +2762,16 @@ public class TestAccessController extends SecureTestUtil {
     getNamespacePermissionsAndVerify("^test[a-zA-Z]*", 1, namespace);
 
     deleteNamespace(TEST_UTIL, namespace);
+
+    // check namespace permission is deleted from master auth manager
+    masterAuthManager =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAccessChecker().getAuthManager();
+    assertFalse(masterAuthManager.authorizeUserNamespace(USER_NONE, namespace, Action.READ));
+    // check namespace permission is deleted from RS auth managers
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    for (AuthManager authManager : authManagers) {
+      assertFalse(authManager.authorizeUserNamespace(USER_NONE, namespace, Action.READ));
+    }
   }
 
   /**

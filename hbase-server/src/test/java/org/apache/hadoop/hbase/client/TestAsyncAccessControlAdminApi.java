@@ -17,9 +17,13 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AuthManager;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -53,7 +57,7 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void test() throws Exception {
+  public void testAclApi() throws Exception {
     TableName tableName = TableName.valueOf("test-table");
     String userName1 = "user1";
     String userName2 = "user2";
@@ -123,5 +127,26 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
       }
     };
     assertFalse((Boolean) user2.runAs(checkPermissionsAction));
+  }
+
+  @Test
+  public void testRegionServerPermissionCache() throws Exception {
+    TableName tableName = TableName.valueOf("test-table");
+    String userName1 = "user1";
+    User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), userName1, new String[0]);
+    Permission permission =
+        Permission.newBuilder(tableName).withActions(Permission.Action.READ).build();
+    UserPermission userPermission = new UserPermission(userName1, permission);
+    // grant user1 table permission
+    CompletableFuture<Void> future = admin.grant(userPermission, false);
+    future.get();
+
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    for (AuthManager authManager : authManagers) {
+      boolean result = authManager.authorizeUserTable(user, tableName, Permission.Action.WRITE);
+      assertFalse(result);
+      result = authManager.authorizeUserTable(user, tableName, Permission.Action.READ);
+      assertTrue(result);
+    }
   }
 }

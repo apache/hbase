@@ -133,7 +133,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.ZKPermissionStorage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -147,7 +147,6 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -349,7 +348,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
   private AccessChecker accessChecker;
-  private ZKPermissionWatcher zkPermissionWatcher;
+  private ZKPermissionStorage zkPermissionStorage;
 
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below
@@ -1487,22 +1486,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
     if (!getConfiguration().getBoolean("hbase.testing.nocluster", false) && zkWatcher != null) {
-      zkPermissionWatcher =
-          new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
-      try {
-        zkPermissionWatcher.start();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper permission watcher initialization failed", e);
-      }
+      zkPermissionStorage = new ZKPermissionStorage(zkWatcher, getConfiguration());
+      zkPermissionStorage.reloadPermissionsToAuthManager(accessChecker.getAuthManager());
     }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
   void stop() {
-    if (zkPermissionWatcher != null) {
-      zkPermissionWatcher.close();
-    }
     closeAllScanners();
     rpcServer.stop();
   }
@@ -3800,7 +3791,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return accessChecker;
   }
 
-  protected ZKPermissionWatcher getZkPermissionWatcher() {
-    return zkPermissionWatcher;
+  protected ZKPermissionStorage getZKPermissionStorage() {
+    return zkPermissionStorage;
   }
 }

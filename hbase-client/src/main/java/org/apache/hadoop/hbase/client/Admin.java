@@ -2140,14 +2140,47 @@ public interface Admin extends Abortable, Closeable {
    *          permissions.
    * @throws IOException if a remote or network exception occurs
    */
-  void grant(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException;
+  default void grant(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    get(grantAsync(userPermission, mergeExistingPermissions));
+  }
+
+  /**
+   * Grants user specific permissions but does not block. You can use Future.get(long, TimeUnit) to
+   * wait on the operation to complete. It may throw ExecutionException if there was an error while
+   * executing the operation or TimeoutException in case the wait timeout was not long enough to
+   * allow the operation to complete.
+   * @param userPermission user name and the specific permission
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *          previous granted permissions. otherwise, it'll merge with previous granted
+   *          permissions.
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  Future<Void> grantAsync(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException;
 
   /**
    * Revokes user specific permissions
    * @param userPermission user name and the specific permission
    * @throws IOException if a remote or network exception occurs
    */
-  void revoke(UserPermission userPermission) throws IOException;
+  default void revoke(UserPermission userPermission) throws IOException {
+    get(revokeAsync(userPermission));
+  }
+
+  /**
+   * Revokes user specific permissions but does not block. You can use Future.get(long, TimeUnit) to
+   * wait on the operation to complete. It may throw ExecutionException if there was an error while
+   * executing the operation or TimeoutException in case the wait timeout was not long enough to
+   * allow the operation to complete.
+   * @param userPermission user name and the specific permission
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  Future<Void> revokeAsync(UserPermission userPermission) throws IOException;
 
   /**
    * Get the global/namespace/table permissions for user

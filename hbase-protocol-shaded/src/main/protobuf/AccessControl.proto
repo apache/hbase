@@ -90,6 +90,7 @@ message GrantRequest {
 }
 
 message GrantResponse {
+  optional uint64 proc_id = 1;
 }
 
 message RevokeRequest {
@@ -97,6 +98,7 @@ message RevokeRequest {
 }
 
 message RevokeResponse {
+  optional uint64 proc_id = 1;
 }
 
 message GetUserPermissionsRequest {

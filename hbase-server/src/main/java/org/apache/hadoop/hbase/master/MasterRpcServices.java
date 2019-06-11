@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
@@ -107,6 +108,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UpdatePermissionProcedure;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -2727,14 +2729,13 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preGrant(perm, mergeExistingPermissions);
       }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.addUserPermission(getConfiguration(), perm, table,
-          mergeExistingPermissions);
-      }
-      if (master.cpHost != null) {
-        master.cpHost.postGrant(perm, mergeExistingPermissions);
-      }
-      return GrantResponse.getDefaultInstance();
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 2);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionProcedure.UpdatePermissionType.GRANT, master.getServerName(),
+          Optional.of(perm), Optional.of(mergeExistingPermissions), Optional.empty(), latch);
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
+      latch.await();
+      return GrantResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2749,13 +2750,13 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preRevoke(userPermission);
       }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
-      }
-      if (master.cpHost != null) {
-        master.cpHost.postRevoke(userPermission);
-      }
-      return RevokeResponse.getDefaultInstance();
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 2);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionProcedure.UpdatePermissionType.REVOKE, master.getServerName(),
+          Optional.of(userPermission), Optional.empty(), Optional.empty(), latch);
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
+      latch.await();
+      return RevokeResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

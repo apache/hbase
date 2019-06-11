@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.ZKPermissionStorage;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -526,7 +526,7 @@ public interface MasterServices extends Server {
   AccessChecker getAccessChecker();
 
   /**
-   * @return the {@link ZKPermissionWatcher}
+   * @return the {@link ZKPermissionStorage}
    */
-  ZKPermissionWatcher getZKPermissionWatcher();
+  ZKPermissionStorage getZKPermissionStorage();
 }

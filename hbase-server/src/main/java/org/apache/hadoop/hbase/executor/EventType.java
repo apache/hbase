@@ -294,7 +294,14 @@ public enum EventType {
    *
    * RS_REPLAY_SYNC_REPLICATION_WAL
    */
-  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL);
+  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL),
+
+  /**
+   * RS refresh permission cache.<br>
+   *
+   * RS_REFRESH_PERMISSION_CACHE
+   */
+  RS_REFRESH_PERMISSION_CACHE(86, ExecutorType.RS_REFRESH_PERMISSION_CACHE);
 
   private final int code;
   private final ExecutorType executor;

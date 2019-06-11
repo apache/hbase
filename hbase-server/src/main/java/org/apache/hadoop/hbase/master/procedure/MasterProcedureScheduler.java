@@ -105,16 +105,20 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     (n, k) -> n.compareKey((String) k);
   private final static AvlKeyComparator<MetaQueue> META_QUEUE_KEY_COMPARATOR =
     (n, k) -> n.compareKey((TableName) k);
+  private final static AvlKeyComparator<AclQueue> ACL_QUEUE_KEY_COMPARATOR =
+    (n, k) -> n.compareKey((String) k);
 
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<>();
   private final FairQueue<String> peerRunQueue = new FairQueue<>();
   private final FairQueue<TableName> metaRunQueue = new FairQueue<>();
+  private final FairQueue<String> aclRunQueue = new FairQueue<>();
 
   private final ServerQueue[] serverBuckets = new ServerQueue[128];
   private TableQueue tableMap = null;
   private PeerQueue peerMap = null;
   private MetaQueue metaMap = null;
+  private AclQueue aclMap = null;
 
   private final SchemaLocking locking;
 
@@ -138,6 +142,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       doAdd(serverRunQueue, getServerQueue(spi.getServerName(), spi), proc, addFront);
     } else if (isPeerProcedure(proc)) {
       doAdd(peerRunQueue, getPeerQueue(getPeerId(proc)), proc, addFront);
+    } else if (isAclProcedure(proc)) {
+      doAdd(aclRunQueue, getAclQueue(getAcl(proc)), proc, addFront);
     } else {
       // TODO: at the moment we only have Table and Server procedures
       // if you are implementing a non-table/non-server procedure, you have two options: create
@@ -173,8 +179,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected boolean queueHasRunnables() {
-    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables() ||
-      serverRunQueue.hasRunnables() || peerRunQueue.hasRunnables();
+    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables()
+        || serverRunQueue.hasRunnables() || peerRunQueue.hasRunnables()
+        || aclRunQueue.hasRunnables();
   }
 
   @Override
@@ -192,6 +199,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
     if (pollResult == null) {
       pollResult = doPoll(tableRunQueue);
+    }
+    if (pollResult == null) {
+      pollResult = doPoll(aclRunQueue);
     }
     return pollResult;
   }
@@ -278,6 +288,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     clear(peerMap, peerRunQueue, PEER_QUEUE_KEY_COMPARATOR);
     peerMap = null;
 
+    clear(aclMap, aclRunQueue, ACL_QUEUE_KEY_COMPARATOR);
+    aclMap = null;
+
     assert size() == 0 : "expected queue size to be 0, got " + size();
   }
 
@@ -310,6 +323,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     count += queueSize(tableMap);
     count += queueSize(peerMap);
     count += queueSize(metaMap);
+    count += queueSize(aclMap);
     return count;
   }
 
@@ -339,6 +353,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       tryCleanupPeerQueue(getPeerId(proc), proc);
     } else if (proc instanceof ServerProcedureInterface) {
       tryCleanupServerQueue(getServerName(proc), proc);
+    } else if (proc instanceof AclProcedureInterface) {
+      tryCleanupAclQueue(getAcl(proc), proc);
     } else {
       // No cleanup for other procedure types, yet.
       return;
@@ -493,6 +509,51 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static String getPeerId(Procedure<?> proc) {
     return ((PeerProcedureInterface) proc).getPeerId();
+  }
+
+  // ============================================================================
+  //  Acl Queue Lookup Helpers
+  // ============================================================================
+  private AclQueue getAclQueue(String entry) {
+    AclQueue node = AvlTree.get(aclMap, entry, ACL_QUEUE_KEY_COMPARATOR);
+    if (node != null) {
+      return node;
+    }
+    node = new AclQueue(entry, locking.getAclLock(entry));
+    aclMap = AvlTree.insert(aclMap, node);
+    return node;
+  }
+
+  private void removeAclQueue(String acl) {
+    aclMap = AvlTree.remove(aclMap, acl, ACL_QUEUE_KEY_COMPARATOR);
+    locking.removeAclLock(acl);
+  }
+
+  private void tryCleanupAclQueue(String acl, Procedure<?> procedure) {
+    schedLock();
+    try {
+      AclQueue queue = AvlTree.get(aclMap, acl, ACL_QUEUE_KEY_COMPARATOR);
+      if (queue == null) {
+        return;
+      }
+
+      final LockAndQueue lock = locking.getAclLock(acl);
+      if (queue.isEmpty() && lock.tryExclusiveLock(procedure)) {
+        removeFromRunQueue(aclRunQueue, queue,
+          () -> "clean up acl queue after " + procedure + " completed");
+        removeAclQueue(acl);
+      }
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  private static boolean isAclProcedure(Procedure<?> proc) {
+    return proc instanceof AclProcedureInterface;
+  }
+
+  private static String getAcl(Procedure<?> proc) {
+    return ((AclProcedureInterface) proc).getAclEntry();
   }
 
   // ============================================================================

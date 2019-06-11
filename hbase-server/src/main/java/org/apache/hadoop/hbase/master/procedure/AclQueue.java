@@ -15,12 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.master.procedure;
 
-package org.apache.hadoop.hbase.procedure2;
-
+import org.apache.hadoop.hbase.procedure2.LockStatus;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public enum LockedResourceType {
-  SERVER, NAMESPACE, TABLE, REGION, PEER, META, ACL
+class AclQueue extends Queue<String> {
+
+  public AclQueue(String entry, LockStatus lockStatus) {
+    super(entry, lockStatus);
+  }
+
+  @Override
+  public boolean requireExclusiveLock(Procedure<?> proc) {
+    return false;
+  }
 }

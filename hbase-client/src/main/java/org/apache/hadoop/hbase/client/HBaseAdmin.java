@@ -3837,30 +3837,71 @@ public class HBaseAdmin implements Admin {
       });
   }
 
-  @Override
-  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
-      throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        GrantRequest req =
-            ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
-        this.master.grant(getRpcController(), req);
-        return null;
-      }
-    });
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  private class UpdatePermissionFuture extends ProcedureFuture<Void> {
+    private final UserPermission userPermission;
+    private final Supplier<String> getOperation;
+
+    public UpdatePermissionFuture(HBaseAdmin admin, UserPermission userPermission, Long procId,
+        Supplier<String> getOperation) {
+      super(admin, procId);
+      this.userPermission = userPermission;
+      this.getOperation = getOperation;
+    }
+
+    @Override
+    public String toString() {
+      return "Operation: " + getOperation.get() + ", userPermission: " + userPermission;
+    }
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  private class GrantFuture extends UpdatePermissionFuture {
+    private final boolean mergeExistingPermissions;
+
+    public GrantFuture(HBaseAdmin admin, UserPermission userPermission,
+        boolean mergeExistingPermissions, Long procId, Supplier<String> getOperation) {
+      super(admin, userPermission, procId, getOperation);
+      this.mergeExistingPermissions = mergeExistingPermissions;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + ", mergeExistingPermissions: " + mergeExistingPermissions;
+    }
   }
 
   @Override
-  public void revoke(UserPermission userPermission) throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
-        this.master.revoke(getRpcController(), req);
-        return null;
-      }
-    });
+  public Future<Void> grantAsync(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    AccessControlProtos.GrantResponse response =
+        executeCallable(new MasterCallable<AccessControlProtos.GrantResponse>(getConnection(),
+            getRpcControllerFactory()) {
+          @Override
+          protected AccessControlProtos.GrantResponse rpcCall() throws Exception {
+            GrantRequest req =
+                ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
+            return this.master.grant(getRpcController(), req);
+          }
+        });
+    return new GrantFuture(this, userPermission, mergeExistingPermissions, response.getProcId(),
+      () -> "GRANT");
+  }
+
+  @Override
+  public Future<Void> revokeAsync(UserPermission userPermission) throws IOException {
+    AccessControlProtos.RevokeResponse response =
+        executeCallable(new MasterCallable<AccessControlProtos.RevokeResponse>(getConnection(),
+            getRpcControllerFactory()) {
+          @Override
+          protected AccessControlProtos.RevokeResponse rpcCall() throws Exception {
+            RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
+            return this.master.revoke(getRpcController(), req);
+          }
+        });
+    return new UpdatePermissionFuture(this, userPermission, response.getProcId(), () -> "REVOKE");
   }
 
   @Override

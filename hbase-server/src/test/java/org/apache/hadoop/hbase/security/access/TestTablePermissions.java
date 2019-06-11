@@ -303,7 +303,7 @@ public class TestTablePermissions {
   public void testSerialization() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     ListMultimap<String, UserPermission> permissions = createPermissions();
-    byte[] permsData = PermissionStorage.writePermissionsAsBytes(permissions, conf);
+    byte[] permsData = PermissionStorage.writePermissionsAsBytes(permissions);
 
     ListMultimap<String, UserPermission> copy =
         PermissionStorage.readUserPermission(permsData, conf);
