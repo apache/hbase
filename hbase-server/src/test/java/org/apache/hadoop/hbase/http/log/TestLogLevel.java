@@ -51,6 +51,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -399,7 +400,7 @@ public class TestLogLevel {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, false);
       fail("A HTTPS Client should not have succeeded in connecting to a HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      exceptionShouldContains("Unrecognized SSL message", e);
     }
   }
 
@@ -416,7 +417,7 @@ public class TestLogLevel {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, true);
       fail("A HTTPS Client should not have succeeded in connecting to a HTTP server");
     } catch (SSLException e) {
-      GenericTestUtils.assertExceptionContains("Unrecognized SSL message", e);
+      exceptionShouldContains("Unrecognized SSL message", e);
     }
   }
 
@@ -433,7 +434,7 @@ public class TestLogLevel {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, false);
       fail("A HTTP Client should not have succeeded in connecting to a HTTPS server");
     } catch (SocketException e) {
-      GenericTestUtils.assertExceptionContains("Unexpected end of file from server", e);
+      exceptionShouldContains("Unexpected end of file from server", e);
     }
   }
 
@@ -447,10 +448,34 @@ public class TestLogLevel {
   public void testLogLevelByHttpsWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS, true);
     try {
-      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, true);
-      fail("A HTTP Client should not have succeeded in connecting to a HTTPS server");
-    } catch (SocketException e) {
-      GenericTestUtils.assertExceptionContains("Unexpected end of file from server", e);
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
+          true);
+      fail("A HTTP Client should not have succeeded in connecting to a " +
+          "HTTPS server");
+    }  catch (SocketException e) {
+      exceptionShouldContains("Unexpected end of file from server", e);
     }
+  }
+
+  /**
+   * Assert that a throwable or one of its causes should contain the substr in its message.
+   *
+   * Ideally we should use {@link GenericTestUtils#assertExceptionContains(String, Throwable)} util
+   * method which asserts t.toString() contains the substr. As the original throwable may have been
+   * wrapped in Hadoop3 because of HADOOP-12897, it's required to check all the wrapped causes.
+   * After stop supporting Hadoop2, this method can be removed and assertion in tests can use
+   * t.getCause() directly, similar to HADOOP-15280.
+   */
+  private static void exceptionShouldContains(String substr, Throwable throwable) {
+    Throwable t = throwable;
+    while (t != null) {
+      String msg = t.toString();
+      if (msg != null && msg.contains(substr)) {
+        return;
+      }
+      t = t.getCause();
+    }
+    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:" +
+        StringUtils.stringifyException(throwable), throwable);
   }
 }
