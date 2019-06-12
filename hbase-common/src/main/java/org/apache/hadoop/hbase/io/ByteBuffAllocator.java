@@ -68,9 +68,20 @@ public class ByteBuffAllocator {
   // default heap allocator, it will just allocate ByteBuffers from heap but wrapped by an ByteBuff.
   public static final ByteBuffAllocator HEAP = ByteBuffAllocator.createOnHeap();
 
+  public static final String ALLOCATOR_POOL_ENABLED_KEY = "hbase.server.allocator.pool.enabled";
+
   public static final String MAX_BUFFER_COUNT_KEY = "hbase.server.allocator.max.buffer.count";
 
   public static final String BUFFER_SIZE_KEY = "hbase.server.allocator.buffer.size";
+
+  public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
+
+  /**
+   * @deprecated use {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
+   */
+  @Deprecated
+  public static final String DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY =
+      "hbase.ipc.server.reservoir.enabled";
 
   /**
    * @deprecated use {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
@@ -88,9 +99,12 @@ public class ByteBuffAllocator {
    * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
    * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
    * {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} and {@link ByteBuffAllocator#BUFFER_SIZE_KEY}.
-   * Keep the two old config keys here for HBase2.x compatibility.
+   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
+   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
+   * compatibility.
    */
   static {
+    Configuration.addDeprecation(DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, ALLOCATOR_POOL_ENABLED_KEY);
     Configuration.addDeprecation(DEPRECATED_MAX_BUFFER_COUNT_KEY, MAX_BUFFER_COUNT_KEY);
     Configuration.addDeprecation(DEPRECATED_BUFFER_SIZE_KEY, BUFFER_SIZE_KEY);
   }
@@ -112,9 +126,6 @@ public class ByteBuffAllocator {
    * For performance comparison, please see HBASE-22483.
    */
   public static final int DEFAULT_BUFFER_SIZE = 65 * 1024;
-
-  public static final String MIN_ALLOCATE_SIZE_KEY =
-      "hbase.ipc.server.reservoir.minimal.allocating.size";
 
   public static final Recycler NONE = () -> {
   };
