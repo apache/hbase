@@ -67,7 +67,34 @@
           <dependencySet>
             <excludes>
             <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
-              <exclude>com.sun.xml.ws:jaxws-ri</exclude>
+              <exclude>com.sun.activation:javax.activation</exclude>
+              <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
+                   They are needed to be included in lib/jdk11 to be added to classpath during
+                   Java 11 runtime hence excluding from main lib.
+              -->
+              <exclude>com.sun.xml.ws:*</exclude>
+              <exclude>org.glassfish.jaxb:*</exclude>
+              <exclude>com.sun.istack:istack-commons-runtime</exclude>
+              <exclude>org.glassfish.gmbal:gmbal-api-only</exclude>
+              <exclude>org.glassfish.external:management-api</exclude>
+              <exclude>org.jvnet.staxex:stax-ex</exclude>
+              <exclude>com.sun.xml.stream.buffer:streambuffer</exclude>
+              <exclude>org.jvnet.mimepull:mimepull</exclude>
+              <exclude>com.sun.xml.fastinfoset:FastInfoset</exclude>
+              <exclude>org.glassfish.ha:ha-api</exclude>
+              <exclude>com.sun.xml.messaging.saaj:saaj-impl</exclude>
+              <exclude>com.fasterxml.woodstox:woodstox-core</exclude>
+              <exclude>org.codehaus.woodstox:stax2-api</exclude>
+              <exclude>com.sun.xml.bind:jaxb-xjc</exclude>
+              <exclude>com.sun.xml.bind:jaxb-jxc</exclude>
+              <exclude>javax.mail:mail</exclude>
+              <exclude>javax.persistence:javax.persistence-api</exclude>
+              <exclude>org.eclipse.persistence:*</exclude>
+              <exclude>org.glassfish:javax.json</exclude>
+              <exclude>commonj.sdo:commonj.sdo</exclude>
+              <exclude>javax.xml.ws:jaxws-api</exclude>
+              <exclude>javax.xml.soap:javax.xml.soap-api</exclude>
+              <exclude>javax.jws:javax.jws-api</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
@@ -190,6 +217,40 @@
         <include>jline:jline</include>
       </includes>
     </dependencySet>
-  </dependencySets>
+   <dependencySet>
+     <outputDirectory>lib/jdk11</outputDirectory>
+     <useTransitiveDependencies>true</useTransitiveDependencies>
+     <includes>
+         <include>com.sun.activation:javax.activation</include>
+       <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
+            They are needed to be included in lib/jdk11 to be added to classpath during
+            Java 11 runtime
+       -->
+       <include>com.sun.xml.ws:*</include>
+       <include>org.glassfish.jaxb:*</include>
+       <include>com.sun.istack:istack-commons-runtime</include>
+       <include>org.glassfish.gmbal:gmbal-api-only</include>
+       <include>org.glassfish.external:management-api</include>
+       <include>org.jvnet.staxex:stax-ex</include>
+       <include>com.sun.xml.stream.buffer:streambuffer</include>
+       <include>org.jvnet.mimepull:mimepull</include>
+       <include>com.sun.xml.fastinfoset:FastInfoset</include>
+       <include>org.glassfish.ha:ha-api</include>
+       <include>com.sun.xml.messaging.saaj:saaj-impl</include>
+       <include>com.fasterxml.woodstox:woodstox-core</include>
+       <include>org.codehaus.woodstox:stax2-api</include>
+       <include>com.sun.xml.bind:jaxb-xjc</include>
+       <include>com.sun.xml.bind:jaxb-jxc</include>
+       <include>javax.mail:mail</include>
+       <include>javax.persistence:javax.persistence-api</include>
+       <include>org.eclipse.persistence:*</include>
+       <include>org.glassfish:javax.json</include>
+       <include>commonj.sdo:commonj.sdo</include>
+       <include>javax.xml.ws:jaxws-api</include>
+       <include>javax.xml.soap:javax.xml.soap-api</include>
+       <include>javax.jws:javax.jws-api</include>
+    </includes>
+  </dependencySet>
+</dependencySets>
 
 </assembly>

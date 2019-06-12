@@ -313,6 +313,11 @@
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.sun.xml.ws</groupId>
+      <artifactId>jaxws-ri</artifactId>
+      <type>pom</type>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
