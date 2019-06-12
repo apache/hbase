@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
- * {@see org.apache.hadoop.hbase.HBaseTestingUtility}
+ * @see org.apache.hadoop.hbase.HBaseCommonTestingUtility
+ *
  */
 @InterfaceAudience.Public
 public class HBaseCommonTestingUtility {
