@@ -243,8 +243,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   /**
    * Currently, we need to expose the writer's OutputStream to tests so that they can manipulate the
-   * default behavior (such as setting the maxRecoveryErrorCount value for example (see
-   * {@see org.apache.hadoop.hbase.regionserver.wal.AbstractTestWALReplay#testReplayEditsWrittenIntoWAL()}). This is
+   * default behavior (such as setting the maxRecoveryErrorCount value). This is
    * done using reflection on the underlying HDFS OutputStream. NOTE: This could be removed once Hadoop1 support is
    * removed.
    * @return null if underlying stream is not ready.
