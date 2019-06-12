@@ -143,13 +143,4 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
         + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size()
         + "]";
   }
-
-  @Override
-  protected boolean skipControl(long deltaSize, long controlSize) {
-    if (deltaSize < controlSize) {
-      return true;
-    } else {
-      return false;
-    }
-  }
 }

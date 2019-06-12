@@ -137,14 +137,6 @@ public abstract class PressureAwareThroughputController extends Configured imple
     return sleepTime;
   }
 
-  /**
-   * Check whether to skip control given delta size and control size
-   * @param deltaSize Delta size since last control
-   * @param controlSize Size limit to perform control
-   * @return a boolean indicates whether to skip this control
-   */
-  protected abstract boolean skipControl(long deltaSize, long controlSize);
-
   @Override
   public void finish(String opName) {
     ActiveOperation operation = activeOperations.remove(opName);

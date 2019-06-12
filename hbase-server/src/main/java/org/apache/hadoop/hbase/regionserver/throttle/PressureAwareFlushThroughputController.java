@@ -128,10 +128,4 @@ public class PressureAwareFlushThroughputController extends PressureAwareThrough
     return "DefaultFlushController [maxThroughput=" + throughputDesc(getMaxThroughput())
         + ", activeFlushNumber=" + activeOperations.size() + "]";
   }
-
-  @Override
-  protected boolean skipControl(long deltaSize, long controlSize) {
-    // for flush, we control the flow no matter whether the flush size is small
-    return false;
-  }
 }
