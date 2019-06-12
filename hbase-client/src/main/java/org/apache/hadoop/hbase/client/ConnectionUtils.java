@@ -545,7 +545,7 @@ public final class ConnectionUtils {
       TableName tableName, Query query, byte[] row, RegionLocateType locateType,
       Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
       long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
-    if (query.getConsistency() == Consistency.STRONG) {
+    if (query.getConsistency() != Consistency.TIMELINE) {
       return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
     // user specifies a replica id explicitly, just send request to the specific replica
