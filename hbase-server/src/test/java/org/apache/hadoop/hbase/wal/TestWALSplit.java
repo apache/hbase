@@ -379,7 +379,7 @@ public class TestWALSplit {
   }
 
   /**
-   * {@see https://issues.apache.org/jira/browse/HBASE-3020}
+   * @see "https://issues.apache.org/jira/browse/HBASE-3020"
    */
   @Test
   public void testRecoveredEditsPathForMeta() throws IOException {
@@ -1136,7 +1136,7 @@ public class TestWALSplit {
   }
 
   /**
-   * {@see https://issues.apache.org/jira/browse/HBASE-4862}
+   * @see "https://issues.apache.org/jira/browse/HBASE-4862"
    */
   @Test
   public void testConcurrentSplitLogAndReplayRecoverEdit() throws IOException {
