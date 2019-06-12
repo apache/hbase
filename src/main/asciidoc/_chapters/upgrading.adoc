@@ -641,6 +641,35 @@ login from the configured keytab file and automatically refresh the credentials
 in the background for the process lifetime (See
 link:https://issues.apache.org/jira/browse/HBASE-16231[HBASE-16231]).
 
+[[upgrade2.0.compaction.throughput.limit]]
+.Default Compaction Throughput
+HBase 2.x comes with default limits to the speed at which compactions can execute. This
+limit is defined per RegionServer. In previous versions of HBase, there was no limit to
+the speed at which a compaction could run by default. Applying a limit to the throughput of
+a compaction should ensure more stable operations from RegionServers.
+
+Take care to notice that this limit is _per RegionServer_, not _per compaction_.
+
+The throughput limit is defined as a range of bytes written per second, and is
+allowed to vary within the given lower and upper bound. RegionServers observe the
+current throughput of a compaction and apply a linear formula to adjust the allowed
+throughput, within the lower and upper bound, with respect to external pressure.
+For compactions, external pressure is defined as the number of store files with
+respect to the maximum number of allowed store files. The more store files, the
+higher the compaction pressure.
+
+Configuration of this throughput is governed by the following properties.
+
+- The lower bound is defined by `hbase.hstore.compaction.throughput.lower.bound`
+  and defaults to 10 MB/s (`10485760`).
+- The upper bound is defined by `hbase.hstore.compaction.throughput.higher.bound`
+  and defaults to 20 MB/s (`20971520`).
+
+To revert this behavior to the unlimited compaction throughput of earlier versions
+of HBase, please set the following property to the implementation that applies no
+limits to compactions.
+
+`hbase.regionserver.throughput.controller=org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController`
 
 ////
 This would be a good place to link to an appendix on migrating applications
