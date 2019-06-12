@@ -328,7 +328,7 @@ public class BalancerTestBase {
    *
    * @param list
    * @param plans
-   * @return
+   * @return the result which has all added map ServerAndLoad values
    */
   protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list,
                                           List<RegionPlan> plans,

@@ -4089,8 +4089,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Called to do a piece of the batch that came in to {@link #batchMutate(Mutation[], long, long)}
-   * In here we also handle replay of edits on region recover.
-   * @return Change in size brought about by applying <code>batchOp</code>
+   * In here we also handle replay of edits on region recover. Also gets change in size brought
+   * about by applying <code>batchOp</code>
    */
   private void doMiniBatchMutate(BatchOperation<?> batchOp) throws IOException {
     boolean success = false;

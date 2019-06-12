@@ -300,7 +300,6 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * <code>c</code>. Postcondition is that curChunk.get()
    * != c
    * @param c the chunk to retire
-   * @return true if we won the race to retire the chunk
    */
   private void tryRetireChunk(Chunk c) {
     currChunk.compareAndSet(c, null);

@@ -844,7 +844,7 @@ public class TestHStoreFile extends HBaseTestCase {
    * @param numRows
    * @param qualifier
    * @param family
-   * @return
+   * @return KeyValues list
    */
   List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {

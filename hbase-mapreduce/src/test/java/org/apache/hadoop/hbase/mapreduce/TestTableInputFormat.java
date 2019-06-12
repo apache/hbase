@@ -145,7 +145,7 @@ public class TestTableInputFormat {
    * @param key
    * @param expectedKey
    * @param expectedValue
-   * @return
+   * @return true if succeed
    */
   static boolean checkResult(Result r, ImmutableBytesWritable key,
       byte[] expectedKey, byte[] expectedValue) {
