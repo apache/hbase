@@ -372,8 +372,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private Cacheable asReferencedHeapBlock(Cacheable buf) {
     if (buf instanceof HFileBlock) {
       HFileBlock blk = ((HFileBlock) buf);
-      if (!blk.isOnHeap()) {
-        return blk.deepCloneOnHeap();
+      if (blk.isSharedMem()) {
+        return HFileBlock.deepCloneOnHeap(blk);
       }
     }
     // The block will be referenced by this LRUBlockCache, so should increase its refCnt here.

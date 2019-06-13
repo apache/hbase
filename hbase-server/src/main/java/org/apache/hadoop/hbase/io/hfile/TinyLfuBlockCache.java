@@ -171,8 +171,8 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
       if (victimCache != null) {
         value = victimCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
         if ((value != null) && caching) {
-          if ((value instanceof HFileBlock) && !((HFileBlock) value).isOnHeap()) {
-            value = ((HFileBlock) value).deepCloneOnHeap();
+          if ((value instanceof HFileBlock) && ((HFileBlock) value).isSharedMem()) {
+            value = HFileBlock.deepCloneOnHeap((HFileBlock) value);
           }
           cacheBlock(cacheKey, value);
         }
