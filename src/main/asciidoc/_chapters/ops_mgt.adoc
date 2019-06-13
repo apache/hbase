@@ -53,9 +53,11 @@ Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
   hbck            Run the hbase 'fsck' tool
   snapshot        Tool for managing snapshots
+  snapshotinfo    Tool for dumping snapshot information
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
   zkcli           Run the ZooKeeper shell
+  upgrade         Upgrade hbase
   master          Run an HBase HMaster node
   regionserver    Run an HBase HRegionServer node
   zookeeper       Run a Zookeeper server
@@ -65,6 +67,7 @@ Some commands take arguments. Pass no args or -h for usage.
   clean           Run the HBase clean up script
   classpath       Dump hbase CLASSPATH
   mapredcp        Dump CLASSPATH entries required by mapreduce
+  completebulkload Run LoadIncrementalHFiles tool
   pe              Run PerformanceEvaluation
   ltt             Run LoadTestTool
   canary          Run the Canary tool
