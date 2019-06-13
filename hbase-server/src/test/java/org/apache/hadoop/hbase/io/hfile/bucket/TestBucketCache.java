@@ -203,9 +203,16 @@ public class TestBucketCache {
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
 
-  private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
+  public static void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
       throws InterruptedException {
     while (!cache.backingMap.containsKey(cacheKey) || cache.ramCache.containsKey(cacheKey)) {
+      Thread.sleep(100);
+    }
+    Thread.sleep(1000);
+  }
+
+  public static void waitUntilAllFlushedToBucket(BucketCache cache) throws InterruptedException {
+    while (!cache.ramCache.isEmpty()) {
       Thread.sleep(100);
     }
     Thread.sleep(1000);
@@ -430,10 +437,10 @@ public class TestBucketCache {
     ByteBuffer buf1 = ByteBuffer.allocate(size), buf2 = ByteBuffer.allocate(size);
     HFileContext meta = new HFileContextBuilder().build();
     ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
-    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf1,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta, allocator);
-    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf2,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf1), HFileBlock.FILL_HEADER, -1, 52, -1, meta, allocator);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf2), HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
 
     BlockCacheKey key = new BlockCacheKey("testCacheBlockNextBlockMetadataMissing", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -492,10 +499,10 @@ public class TestBucketCache {
     RAMCache cache = new RAMCache();
     BlockCacheKey key1 = new BlockCacheKey("file-1", 1);
     BlockCacheKey key2 = new BlockCacheKey("file-2", 2);
-    HFileBlock blk1 = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-        -1, 52, -1, meta, ByteBuffAllocator.HEAP);
-    HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-        -1, -1, -1, meta, ByteBuffAllocator.HEAP);
+    HFileBlock blk1 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+        HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
+    HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+        HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
     RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, ByteBuffAllocator.NONE);
     RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, ByteBuffAllocator.NONE);
 
@@ -527,8 +534,8 @@ public class TestBucketCache {
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
     ByteBuffer buf = ByteBuffer.allocate(length);
     HFileContext meta = new HFileContextBuilder().build();
-    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-        offset, 52, -1, meta, ByteBuffAllocator.HEAP);
+    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+        HFileBlock.FILL_HEADER, offset, 52, -1, meta, ByteBuffAllocator.HEAP);
 
     // initialize an mocked ioengine.
     IOEngine ioEngine = Mockito.mock(IOEngine.class);

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
@@ -57,9 +58,9 @@ public class TestRAMCache {
         int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
         long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
         HFileContext fileContext, ByteBuffAllocator allocator) {
-      super(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, b,
-          fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext,
-          allocator);
+      super(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset,
+          ByteBuff.wrap(b), fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader,
+          fileContext, allocator);
     }
 
     public void setLatch(CountDownLatch latch) {
