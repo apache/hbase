@@ -93,6 +93,8 @@ Usage: hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [
    -zookeeper    Tries to grab zookeeper.znode.parent
       on each zookeeper instance
    -daemon        Continuous check at defined intervals.
+   -permittedZookeeperFailures <N>    Ignore first N failures when attempting to
+      connect to individual zookeeper nodes in the ensemble
    -interval <N>  Interval between checks (sec)
    -e             Use table/regionserver as regular expression
       which means the table/regionserver is regular expression pattern
