@@ -340,6 +340,14 @@ public class TestHFileBlock {
     testReaderV2Internals();
   }
 
+  private void assertRelease(HFileBlock blk) {
+    if (blk instanceof ExclusiveMemHFileBlock) {
+      assertFalse(blk.release());
+    } else {
+      assertTrue(blk.release());
+    }
+  }
+
   protected void testReaderV2Internals() throws IOException {
     if(includesTag) {
       TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
@@ -403,10 +411,10 @@ public class TestHFileBlock {
                 + "'.\nMessage is expected to start with: '" + expectedPrefix
                 + "'", ex.getMessage().startsWith(expectedPrefix));
           }
-          assertTrue(b.release());
+          assertRelease(b);
           is.close();
         }
-        assertTrue(expected.release());
+        assertRelease(expected);
       }
     }
   }
@@ -534,7 +542,7 @@ public class TestHFileBlock {
                   deserialized.unpack(meta, hbr));
               }
             }
-            assertTrue(blockUnpacked.release());
+            assertRelease(blockUnpacked);
             if (blockFromHFile != blockUnpacked) {
               blockFromHFile.release();
             }
@@ -651,7 +659,7 @@ public class TestHFileBlock {
             assertEquals(b.getOnDiskDataSizeWithHeader(),
                          b2.getOnDiskDataSizeWithHeader());
             assertEquals(0, HFile.getAndResetChecksumFailuresCount());
-            assertTrue(b2.release());
+            assertRelease(b2);
 
             curOffset += b.getOnDiskSizeWithHeader();
 
@@ -694,12 +702,12 @@ public class TestHFileBlock {
                 }
               }
               assertTrue(wrongBytesMsg, bytesAreCorrect);
-              assertTrue(newBlock.release());
+              assertRelease(newBlock);
               if (newBlock != b) {
-                assertTrue(b.release());
+                assertRelease(b);
               }
             } else {
-              assertTrue(b.release());
+              assertRelease(b);
             }
           }
           assertEquals(curOffset, fs.getFileStatus(path).getLen());
@@ -750,9 +758,9 @@ public class TestHFileBlock {
           long onDiskSizeArg = withOnDiskSize ? expectedSize : -1;
           b = hbr.readBlockData(offset, onDiskSizeArg, pread, false, false);
           if (useHeapAllocator) {
-            assertTrue(b.isOnHeap());
+            assertTrue(!b.isSharedMem());
           } else {
-            assertTrue(!b.getBlockType().isData() || !b.isOnHeap());
+            assertTrue(!b.getBlockType().isData() || b.isSharedMem());
           }
           assertEquals(types.get(blockId), b.getBlockType());
           assertEquals(expectedSize, b.getOnDiskSizeWithHeader());
@@ -913,14 +921,13 @@ public class TestHFileBlock {
                           .withCompression(Algorithm.NONE)
                           .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                           .withChecksumType(ChecksumType.NULL).build();
-      HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf, HFileBlock.FILL_HEADER,
-          -1, 0, -1, meta, HEAP);
-      long byteBufferExpectedSize = ClassSize.align(ClassSize.estimateBase(
-          new MultiByteBuff(buf).getClass(), true)
-          + HConstants.HFILEBLOCK_HEADER_SIZE + size);
-      long hfileMetaSize =  ClassSize.align(ClassSize.estimateBase(HFileContext.class, true));
-      long hfileBlockExpectedSize =
-          ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
+      HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
+          HFileBlock.FILL_HEADER, -1, 0, -1, meta, HEAP);
+      long byteBufferExpectedSize =
+          ClassSize.align(ClassSize.estimateBase(new MultiByteBuff(buf).getClass(), true)
+              + HConstants.HFILEBLOCK_HEADER_SIZE + size);
+      long hfileMetaSize = ClassSize.align(ClassSize.estimateBase(HFileContext.class, true));
+      long hfileBlockExpectedSize = ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize + hfileMetaSize;
       assertEquals("Block data size: " + size + ", byte buffer expected " +
           "size: " + byteBufferExpectedSize + ", HFileBlock class expected " +
@@ -936,10 +943,10 @@ public class TestHFileBlock {
     byte[] byteArr = new byte[length];
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
-    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta, alloc);
-    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta, alloc);
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, 52, -1, meta, alloc);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, -1, -1, meta, alloc);
     ByteBuffer buff1 = ByteBuffer.allocate(length);
     ByteBuffer buff2 = ByteBuffer.allocate(length);
     blockWithNextBlockMetadata.serialize(buff1, true);

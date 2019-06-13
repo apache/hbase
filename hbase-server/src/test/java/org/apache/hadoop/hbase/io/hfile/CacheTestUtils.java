@@ -148,7 +148,6 @@ public class CacheTestUtils {
       if (buf != null) {
         assertEquals(block.block, buf);
       }
-
     }
 
     // Re-add some duplicate blocks. Hope nothing breaks.
@@ -307,10 +306,11 @@ public class CacheTestUtils {
                           .withBytesPerCheckSum(0)
                           .withChecksumType(ChecksumType.NULL)
                           .build();
-      HFileBlock generated = new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader,
-          uncompressedSizeWithoutHeader, prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize, onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
-          ByteBuffAllocator.HEAP);
+      HFileBlock generated =
+          new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
+              prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
+              onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
+              ByteBuffAllocator.HEAP);
 
       String strKey;
       /* No conflicting keys */

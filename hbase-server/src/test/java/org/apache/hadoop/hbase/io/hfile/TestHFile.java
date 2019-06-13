@@ -169,7 +169,7 @@ public class TestHFile  {
       Cacheable cachedBlock = lru.getBlock(key, false, false, true);
       Assert.assertNotNull(cachedBlock);
       Assert.assertTrue(cachedBlock instanceof HFileBlock);
-      Assert.assertTrue(((HFileBlock) cachedBlock).isOnHeap());
+      Assert.assertFalse(((HFileBlock) cachedBlock).isSharedMem());
       // Should never allocate off-heap block from allocator because ensure that it's LRU.
       Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
       block.release(); // return back the ByteBuffer back to allocator.
@@ -217,10 +217,10 @@ public class TestHFile  {
         HFileBlock hfb = (HFileBlock) cachedBlock;
         // Data block will be cached in BucketCache, so it should be an off-heap block.
         if (hfb.getBlockType().isData()) {
-          Assert.assertFalse(hfb.isOnHeap());
+          Assert.assertTrue(hfb.isSharedMem());
         } else {
           // Non-data block will be cached in LRUBlockCache, so it must be an on-heap block.
-          Assert.assertTrue(hfb.isOnHeap());
+          Assert.assertFalse(hfb.isSharedMem());
         }
       } finally {
         cachedBlock.release();

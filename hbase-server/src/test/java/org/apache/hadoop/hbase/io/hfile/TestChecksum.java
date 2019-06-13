@@ -101,7 +101,7 @@ public class TestChecksum {
     HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
         meta, ByteBuffAllocator.HEAP);
     HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
-    assertTrue(b.isOnHeap());
+    assertTrue(!b.isSharedMem());
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
   }
 
@@ -148,7 +148,7 @@ public class TestChecksum {
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, (HFileSystem) fs, path,
           meta, ByteBuffAllocator.HEAP);
       HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
-      assertTrue(b.isOnHeap());
+      assertTrue(!b.isSharedMem());
 
       // verify SingleByteBuff checksum.
       verifySBBCheckSum(b.getBufferReadOnly());

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.WriterThread;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -69,7 +70,7 @@ public class TestBucketCacheRefCnt {
   }
 
   private static HFileBlock createBlock(int offset, int size, ByteBuffAllocator alloc) {
-    return new HFileBlock(BlockType.DATA, size, size, -1, ByteBuffer.allocate(size),
+    return new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(ByteBuffer.allocate(size)),
         HFileBlock.FILL_HEADER, offset, 52, size, CONTEXT, alloc);
   }
 
