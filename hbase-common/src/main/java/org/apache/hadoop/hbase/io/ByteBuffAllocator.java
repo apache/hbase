@@ -297,6 +297,12 @@ public class ByteBuffAllocator {
         }
       }
     }
+    this.usedBufCount.set(0);
+    this.maxPoolSizeInfoLevelLogged = false;
+    this.poolAllocationBytes.reset();
+    this.heapAllocationBytes.reset();
+    this.lastPoolAllocationBytes = 0;
+    this.lastHeapAllocationBytes = 0;
   }
 
   /**
