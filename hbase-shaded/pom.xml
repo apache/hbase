@@ -135,6 +135,7 @@
                                         <!-- exclude J2EE modules that come in for JDK11+ (since
                                              hadoop-3.2.0) or modules that come in for JDK8+ but
                                              need not be included -->
+                                        <exclude>javax.annotation:javax.annotation-api</exclude>
                                         <exclude>javax.activation:javax.activation-api</exclude>
                                         <!-- default to excluding Hadoop, have module that want
                                              to include it redefine the exclude list -->
