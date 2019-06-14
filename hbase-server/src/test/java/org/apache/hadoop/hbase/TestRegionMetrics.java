@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -130,6 +132,27 @@ public class TestRegionMetrics {
         regionMetrics.stream().map(r -> Bytes.toString(r.getRegionName())).
           collect(Collectors.toList()));
       assertEquals(serverMetrics.getRegionMetrics().size(), regionMetrics.size());
+      checkMetricsValue(regionMetrics, serverMetrics);
+    }
+  }
+
+  private void checkMetricsValue(List<RegionMetrics> regionMetrics, ServerMetrics serverMetrics)
+    throws InvocationTargetException, IllegalAccessException {
+    for (RegionMetrics fromRM : regionMetrics) {
+      RegionMetrics fromSM = serverMetrics.getRegionMetrics().get(fromRM.getRegionName());
+      Class clazz = RegionMetrics.class;
+      for (Method method : clazz.getMethods()) {
+        // check numeric values only
+        if (method.getReturnType().equals(Size.class)
+          || method.getReturnType().equals(int.class)
+          || method.getReturnType().equals(long.class)
+          || method.getReturnType().equals(float.class)) {
+          Object valueRm = method.invoke(fromRM);
+          Object valueSM = method.invoke(fromSM);
+          assertEquals("Return values of method " + method.getName() + " are different",
+              valueRm.toString(), valueSM.toString());
+        }
+      }
     }
   }
 
