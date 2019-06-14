@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
+import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MAX_BUFFER_COUNT_KEY;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;
@@ -421,5 +422,29 @@ public class TestHFileScannerImplReferenceCount {
     scanner.close();
     Assert.assertNull(scanner.curBlock);
     Assert.assertTrue(scanner.prevBlocks.isEmpty());
+  }
+
+  @Test
+  public void testDisabledBlockCache() throws Exception {
+    writeHFile(conf, fs, hfilePath, Algorithm.NONE, DataBlockEncoding.NONE, CELL_COUNT);
+    // Set LruBlockCache
+    conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
+    Assert.assertNull(defaultBC);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
+    Assert.assertFalse(cacheConfig.isCombinedBlockCache()); // Must be LruBlockCache.
+    HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
+    Assert.assertTrue(reader instanceof HFileReaderImpl);
+    // We've build a HFile tree with index = 16.
+    Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
+
+    HFileBlock block1 = reader.getDataBlockIndexReader()
+        .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE)
+        .getHFileBlock();
+
+    Assert.assertTrue(block1.isSharedMem());
+    Assert.assertTrue(block1 instanceof SharedMemHFileBlock);
+    Assert.assertEquals(1, block1.refCnt());
+    Assert.assertTrue(block1.release());
   }
 }
