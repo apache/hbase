@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,16 +46,26 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
+import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncNonMetaRegionLocator {
@@ -74,6 +85,9 @@ public class TestAsyncNonMetaRegionLocator {
   private static AsyncNonMetaRegionLocator LOCATOR;
 
   private static byte[][] SPLIT_KEYS;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -388,6 +402,98 @@ public class TestAsyncNonMetaRegionLocator {
           RegionLocateType.CURRENT, reload).get();
       }
     });
+  }
+
+  @Test
+  public void testRegionReplicaRitRecovery() throws Exception {
+    int startRowNum = 11;
+    int rowCount = 60;
+
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    TEST_UTIL.getAdmin().createTable(
+      TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2)
+          .build());
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    RegionLocations locs = new Locator() {
+
+      @Override
+      public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
+          throws Exception {
+        LOCATOR.updateCachedLocationOnError(loc, error);
+      }
+
+      @Override
+      public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
+          throws Exception {
+        return LOCATOR.getRegionLocations(tableName, EMPTY_START_ROW, replicaId,
+          RegionLocateType.CURRENT, reload).get();
+      }
+    }.getRegionLocations(tableName, 0, false);
+    ServerName serverName =
+        RegionReplicaTestHelper.getRSCarryingReplica(TEST_UTIL, tableName, 1).get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tableName);
+    insertData(tableName);
+    int splitRowNum = startRowNum + rowCount / 2;
+    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
+
+    // Split region of the table
+    long procId =
+        procExec.submitProcedure(new SplitTableRegionProcedure(procExec.getEnvironment(), regions
+            .get(0), splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+
+    // Disable the table
+    long procId1 =
+        procExec.submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName,
+            false));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId1);
+
+    long procId2 =
+        procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId2);
+
+    AssignmentTestingUtil.killRs(TEST_UTIL, serverName);
+    long procId3 = getSCPProcId(procExec);
+    Threads.sleepWithoutInterrupt(5000);
+
+    boolean hasRegionsInTransition =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+            .hasRegionsInTransition();
+
+    assertEquals(false, hasRegionsInTransition);
+
+  }
+
+  private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
+    return TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  }
+
+  private long getSCPProcId(ProcedureExecutor<?> procExec) {
+    TEST_UTIL.waitFor(35000, () -> !procExec.getProcedures().isEmpty());
+    return procExec.getActiveProcIds().stream().mapToLong(Long::longValue).min().getAsLong();
+  }
+
+  private void insertData(final TableName tableName) throws IOException, InterruptedException {
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
+    Put p;
+    int startRowNum = 11;
+    int rowCount = 60;
+    for (int i= 0; i < rowCount / 2; i++) {
+      p = new Put(Bytes.toBytes("" + (startRowNum + i)));
+      p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes(i));
+      t.put(p);
+      p = new Put(Bytes.toBytes("" + (startRowNum + rowCount - i - 1)));
+      p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes(i));
+      t.put(p);
+      if (i % 5 == 0) {
+        TEST_UTIL.getAdmin().flush(tableName);
+      }
+    }
   }
 
   // Testcase for HBASE-21961
