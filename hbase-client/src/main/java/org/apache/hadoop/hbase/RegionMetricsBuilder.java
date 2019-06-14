@@ -109,7 +109,7 @@ public final class RegionMetricsBuilder {
         .setRootIndexSizeKB((int) regionMetrics.getStoreFileRootLevelIndexSize()
           .get(Size.Unit.KILOBYTE))
         .setStores(regionMetrics.getStoreCount())
-        .setStorefiles(regionMetrics.getStoreCount())
+        .setStorefiles(regionMetrics.getStoreFileCount())
         .setStoreRefCount(regionMetrics.getStoreRefCount())
         .setStorefileSizeMB((int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE))
         .addAllStoreCompleteSequenceId(toStoreSequenceId(regionMetrics.getStoreSequenceId()))
