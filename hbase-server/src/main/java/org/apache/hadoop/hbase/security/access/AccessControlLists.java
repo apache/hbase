@@ -259,7 +259,14 @@ public class AccessControlLists {
     Delete d = new Delete(userPermissionRowKey(userPerm));
     d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
     try {
-      t.delete(d);
+      /**
+       * We need to run the ACL delete in superuser context, to have
+       * similar authorization logic to addUserPermission().
+       * This ensures behaviour is consistent with pre 2.1.1 and 2.2+.
+       * The permission authorization has already happened here.
+       * See the TODO comment in addUserPermission for details
+       */
+      t.delete(new ArrayList<>(Arrays.asList(d)));
     } finally {
       t.close();
     }

@@ -3133,4 +3133,46 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(action, SUPERUSER);
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_ADMIN);
   }
+
+  @Test
+  public void testTableAdmin() throws Exception {
+
+    // Create a user with table admin permissions only
+    User userTableAdmin = User.createUserForTesting(conf, "table_admin", new String[0]);
+    grantOnTable(TEST_UTIL, userTableAdmin.getShortName(), TEST_TABLE, null, null,
+      Permission.Action.ADMIN);
+
+    AccessTestAction grantAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.grant(null, protocol, USER_NONE.getShortName(), TEST_TABLE, null, null,
+            false, Action.READ);
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction revokeAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
+          AccessControlService.BlockingInterface protocol =
+              AccessControlService.newBlockingStub(service);
+          AccessControlUtil.revoke(null, protocol, USER_NONE.getShortName(), TEST_TABLE, null, null,
+            Action.READ);
+        }
+        return null;
+      }
+    };
+
+    verifyAllowed(userTableAdmin, grantAction);
+    verifyAllowed(userTableAdmin, revokeAction);
+  }
 }
