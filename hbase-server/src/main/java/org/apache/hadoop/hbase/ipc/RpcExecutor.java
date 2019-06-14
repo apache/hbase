@@ -116,6 +116,20 @@ public abstract class RpcExecutor {
     this.abortable = abortable;
 
     float callQueuesHandlersFactor = this.conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.1f);
+    if (Float.compare(callQueuesHandlersFactor, 1.0f) > 0 ||
+        Float.compare(0.0f, callQueuesHandlersFactor) > 0) {
+      LOG.warn(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY +
+        " is *ILLEGAL*, it should be in range [0.0, 1.0]");
+      // For callQueuesHandlersFactor > 1.0, we just set it 1.0f.
+      if (Float.compare(callQueuesHandlersFactor, 1.0f) > 0) {
+        LOG.warn("Set " + CALL_QUEUE_HANDLER_FACTOR_CONF_KEY + " 1.0f");
+        callQueuesHandlersFactor = 1.0f;
+      } else {
+        // But for callQueuesHandlersFactor < 0.0, following method #computeNumCallQueues
+        // will compute max(1, -x) => 1 which has same effect of default value.
+        LOG.warn("Set " + CALL_QUEUE_HANDLER_FACTOR_CONF_KEY + " default value 0.0f");
+      }
+    }
     this.numCallQueues = computeNumCallQueues(handlerCount, callQueuesHandlersFactor);
     this.queues = new ArrayList<>(this.numCallQueues);
 
