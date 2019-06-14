@@ -231,6 +231,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     } else {
       // Remove from in-memory states
       am.getRegionStates().deleteRegion(regionInfo);
+      am.getRegionStates().removeRegionFromServer(regionNode.getRegionLocation(), regionNode);
       env.getMasterServices().getServerManager().removeRegion(regionInfo);
       FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
       if (fnm != null) {
