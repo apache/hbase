@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.mockito.Mockito;
 
 /**
- * {@link ConnectionImplementation} testing utility.
+ * {@link Connection} testing utility.
  */
 public class HConnectionTestingUtility {
 
@@ -32,9 +32,9 @@ public class HConnectionTestingUtility {
    * to HBaseTestingUtility to give it access.
    */
   /**
-   * Get a Mocked {@link ConnectionImplementation} that goes with the passed <code>conf</code>
+   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code>
    * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
-   * {@link ConnectionImplementation#getConfiguration()} is invoked. Be sure to shutdown the
+   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the
    * connection when done by calling {@link Connection#close()} else it will stick around; this is
    * probably not what you want.
    * @param conf configuration

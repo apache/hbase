@@ -66,12 +66,11 @@ import java.util.Map;
  * </pre>
  * Internally, this input format restores each snapshot into a subdirectory of the given tmp
  * directory. Input splits and
- * record readers are created as described in {@link org.apache.hadoop.hbase.mapreduce
- * .TableSnapshotInputFormat}
+ * record readers are created as described in
+ * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
  * (one per region).
  * See {@link TableSnapshotInputFormat} for more notes on
- * permissioning; the
- * same caveats apply here.
+ * permissioning; the same caveats apply here.
  *
  * @see TableSnapshotInputFormat
  * @see org.apache.hadoop.hbase.client.TableSnapshotScanner
