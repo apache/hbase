@@ -1419,7 +1419,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *      boolean, boolean)
    */
   private boolean shouldUseHeap(BlockType expectedBlockType) {
-    if (cacheConf.getBlockCache() == null) {
+    if (!cacheConf.getBlockCache().isPresent()) {
       return false;
     } else if (!cacheConf.isCombinedBlockCache()) {
       // Block to cache in LruBlockCache must be an heap one. So just allocate block memory from
