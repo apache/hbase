@@ -66,7 +66,8 @@ public class TestBufferedMutator {
 
   @Test
   public void test() throws Exception {
-    try (BufferedMutator mutator = TEST_UTIL.getConnection().getBufferedMutator(TABLE_NAME)) {
+    try (BufferedMutator mutator = TEST_UTIL.getConnection()
+      .getBufferedMutator(new BufferedMutatorParams(TABLE_NAME).writeBufferSize(64 * 1024))) {
       mutator.mutate(IntStream.range(0, COUNT / 2)
         .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(CF, CQ, VALUE))
         .collect(Collectors.toList()));
