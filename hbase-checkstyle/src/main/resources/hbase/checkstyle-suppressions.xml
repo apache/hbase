@@ -36,13 +36,13 @@
   <suppress checks="MagicNumberCheck" files=".*/src/test/.*\.java"/>
   <suppress checks="VisibilityModifier" files=".*/src/test/.*\.java"/>
   <suppress checks="InterfaceIsTypeCheck" files=".*/src/main/.*\.java"/>
-  <suppress checks="EmptyBlockCheck" files="TBoundedThreadPoolServer.java"/>
-  <suppress checks="EmptyBlockCheck" files="TestServletFilter.java"/>
-  <suppress checks="EmptyBlockCheck" files="TestGlobalFilter.java"/>
-  <suppress checks="EmptyBlockCheck" files="TestPathFilter.java"/>
-  <suppress checks="EqualsHashCode" files="StartcodeAgnosticServerName.java"/>
-  <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
+  <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.thrift.TBoundedThreadPoolServer.java"/>
+  <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestServletFilter.java"/>
+  <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestGlobalFilter.java"/>
+  <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestPathFilter.java"/>
+  <suppress checks="EqualsHashCode" files="org.apache.hadoop.hbase.favored.StartcodeAgnosticServerName.java"/>
+  <suppress checks="MethodLength" files="org.apache.hadoop.hbase.tool.coprocessor.Branch1CoprocessorMethods.java"/>
   <suppress checks="IllegalImport" message="org\.apache\.htrace\.core"/>
   <suppress checks="ImportOrder" message="Extra separation in import group before"/>
-  <suppress checks="MethodLength" files="DemoClient.java"/>
+  <suppress checks="MethodLength" files="org.apache.hadoop.hbase.thrift.DemoClient.java"/>
 </suppressions>
