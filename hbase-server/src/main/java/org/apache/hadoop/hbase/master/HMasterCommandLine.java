@@ -242,6 +242,7 @@ public class HMasterCommandLine extends ServerCommandLine {
           throw new RuntimeException("HMaster Aborted");
       }
     } catch (Throwable t) {
+      t.printStackTrace();
       LOG.error("Master exiting", t);
       return 1;
     }
