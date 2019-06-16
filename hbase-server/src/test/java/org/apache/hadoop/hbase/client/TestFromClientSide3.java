@@ -311,7 +311,7 @@ public class TestFromClientSide3 {
 
           // change the compaction.min config option for this table to 5
           LOG.info("hbase.hstore.compaction.min should now be 5");
-          HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
+          HTableDescriptor htd = new HTableDescriptor(table.getDescriptor());
           htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
           admin.modifyTable(htd);
           LOG.info("alter status finished");
@@ -368,8 +368,8 @@ public class TestFromClientSide3 {
           htd.modifyFamily(hcd);
           admin.modifyTable(htd);
           LOG.info("alter status finished");
-          assertNull(table.getTableDescriptor().getFamily(FAMILY).getValue(
-                  "hbase.hstore.compaction.min"));
+          assertNull(table.getDescriptor().getColumnFamily(FAMILY)
+            .getValue(Bytes.toBytes("hbase.hstore.compaction.min")));
         }
       }
     }
@@ -541,7 +541,7 @@ public class TestFromClientSide3 {
       getList.add(get);
       getList.add(get2);
 
-      boolean[] exists = table.existsAll(getList);
+      boolean[] exists = table.exists(getList);
       assertEquals(true, exists[0]);
       assertEquals(true, exists[1]);
 
@@ -593,7 +593,7 @@ public class TestFromClientSide3 {
       gets.add(new Get(Bytes.add(ANOTHERROW, new byte[]{0x00})));
 
       LOG.info("Calling exists");
-      boolean[] results = table.existsAll(gets);
+      boolean[] results = table.exists(gets);
       assertFalse(results[0]);
       assertFalse(results[1]);
       assertTrue(results[2]);
@@ -607,7 +607,7 @@ public class TestFromClientSide3 {
       gets = new ArrayList<>();
       gets.add(new Get(new byte[]{0x00}));
       gets.add(new Get(new byte[]{0x00, 0x00}));
-      results = table.existsAll(gets);
+      results = table.exists(gets);
       assertTrue(results[0]);
       assertFalse(results[1]);
 
@@ -620,7 +620,7 @@ public class TestFromClientSide3 {
       gets.add(new Get(new byte[]{(byte) 0xff}));
       gets.add(new Get(new byte[]{(byte) 0xff, (byte) 0xff}));
       gets.add(new Get(new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff}));
-      results = table.existsAll(gets);
+      results = table.exists(gets);
       assertFalse(results[0]);
       assertTrue(results[1]);
       assertFalse(results[2]);

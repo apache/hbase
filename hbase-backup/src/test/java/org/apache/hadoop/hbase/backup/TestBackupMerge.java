@@ -116,7 +116,7 @@ public class TestBackupMerge extends TestBackupBase {
       tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     Table hTable = conn.getTable(table1_restore);
-    LOG.debug("After incremental restore: " + hTable.getTableDescriptor());
+    LOG.debug("After incremental restore: " + hTable.getDescriptor());
     int countRows = TEST_UTIL.countRows(hTable, famName);
     LOG.debug("f1 has " + countRows + " rows");
     Assert.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, countRows);

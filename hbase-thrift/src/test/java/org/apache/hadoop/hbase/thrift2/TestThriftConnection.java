@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -614,7 +613,7 @@ public class TestThriftConnection {
       assertTrue(Bytes.equals(VALUE_1, value1));
       assertNull(value2);
       assertTrue(table.exists(get));
-      assertEquals(1, table.existsAll(Collections.singletonList(get)).length);
+      assertEquals(1, table.exists(Collections.singletonList(get)).length);
       Delete delete = new Delete(ROW_1);
 
       table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1)

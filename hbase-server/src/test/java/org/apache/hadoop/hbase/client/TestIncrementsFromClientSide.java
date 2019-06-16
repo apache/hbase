@@ -112,30 +112,22 @@ public class TestIncrementsFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(3 * 1000);
+    try (Connection connection = ConnectionFactory.createConnection(c);
+        Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+          .setOperationTimeout(3 * 1000).build()) {
+      Increment inc = new Increment(ROW);
+      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      Result result = table.increment(inc);
 
-      try {
-        Increment inc = new Increment(ROW);
-        inc.addColumn(TEST_UTIL.fam1, QUALIFIER, 1);
-        Result result = table.increment(inc);
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
 
-        Cell [] cells = result.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
-
-        // Verify expected result
-        Result readResult = table.get(new Get(ROW));
-        cells = readResult.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
-      } finally {
-        table.close();
-        connection.close();
-      }
+      // Verify expected result
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
     }
   }
 
