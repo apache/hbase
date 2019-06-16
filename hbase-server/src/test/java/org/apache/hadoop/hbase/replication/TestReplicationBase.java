@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -69,7 +68,6 @@ public class TestReplicationBase {
 
   protected static Configuration CONF_WITH_LOCALFS;
 
-  protected static ReplicationAdmin admin;
   protected static Admin hbaseAdmin;
 
   protected static Table htable1;
@@ -215,7 +213,6 @@ public class TestReplicationBase {
   protected static void startClusters() throws Exception {
     UTIL1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = UTIL1.getZkCluster();
-    admin = new ReplicationAdmin(CONF1);
     LOG.info("Setup first Zk");
 
     UTIL2.setZkCluster(miniZK);
@@ -342,7 +339,6 @@ public class TestReplicationBase {
   public static void tearDownAfterClass() throws Exception {
     htable2.close();
     htable1.close();
-    admin.close();
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
   }

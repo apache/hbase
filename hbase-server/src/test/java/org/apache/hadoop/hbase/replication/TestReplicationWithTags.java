@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -81,7 +80,7 @@ public class TestReplicationWithTags {
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2;
 
-  private static ReplicationAdmin replicationAdmin;
+  private static Admin replicationAdmin;
 
   private static Connection connection1;
   private static Connection connection2;
@@ -121,7 +120,7 @@ public class TestReplicationWithTags {
     // Have to reget conf1 in case zk cluster location different
     // than default
     conf1 = utility1.getConfiguration();
-    replicationAdmin = new ReplicationAdmin(conf1);
+    replicationAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
     LOG.info("Setup first Zk");
 
     // Base conf2 on conf1 so it gets the right zk cluster.
@@ -143,7 +142,7 @@ public class TestReplicationWithTags {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
-    replicationAdmin.addPeer("2", rpc, null);
+    replicationAdmin.addReplicationPeer("2", rpc);
 
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
