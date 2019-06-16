@@ -23,12 +23,12 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -86,14 +86,14 @@ public class TestRemoveRegionMetrics {
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("D"));
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());
     Admin admin = TEST_UTIL.getAdmin();
-    HRegionInfo regionInfo;
+    RegionInfo regionInfo;
     byte[] row =  Bytes.toBytes("r1");
 
 
     for (int i = 0; i < 30; i++) {
       boolean moved = false;
       try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-        regionInfo = locator.getRegionLocation(row, true).getRegionInfo();
+        regionInfo = locator.getRegionLocation(row, true).getRegion();
       }
 
       int currentServerIdx = cluster.getServerWith(regionInfo.getRegionName());

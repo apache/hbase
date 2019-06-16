@@ -304,7 +304,7 @@ public abstract class TableInputFormatBase
         throw new IOException("Expecting at least one region.");
       }
       List<InputSplit> splits = new ArrayList<>(1);
-      long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
+      long regionSize = sizeCalculator.getRegionSize(regLoc.getRegion().getRegionName());
       TableSplit split = new TableSplit(tableName, scan,
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
           .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
@@ -342,8 +342,8 @@ public abstract class TableInputFormatBase
         String regionLocation;
         regionLocation = reverseDNS(regionAddress);
 
-        byte[] regionName = location.getRegionInfo().getRegionName();
-        String encodedRegionName = location.getRegionInfo().getEncodedName();
+        byte[] regionName = location.getRegion().getRegionName();
+        String encodedRegionName = location.getRegion().getEncodedName();
         long regionSize = sizeCalculator.getRegionSize(regionName);
         TableSplit split = new TableSplit(tableName, scan,
             splitStart, splitStop, regionLocation, encodedRegionName, regionSize);

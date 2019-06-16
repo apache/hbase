@@ -89,7 +89,7 @@ public class TestReplicasClient {
   private static Table table = null;
   private static final byte[] row = Bytes.toBytes(TestReplicasClient.class.getName());
 
-  private static HRegionInfo hriPrimary;
+  private static RegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
@@ -205,7 +205,7 @@ public class TestReplicasClient {
     table = HTU.createTable(hdt, new byte[][]{f}, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
-      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+      hriPrimary = locator.getRegionLocation(row, false).getRegion();
     }
 
     // mock a secondary region info to open
@@ -258,7 +258,7 @@ public class TestReplicasClient {
     return HTU.getMiniHBaseCluster().getRegionServer(0);
   }
 
-  private void openRegion(HRegionInfo hri) throws Exception {
+  private void openRegion(RegionInfo hri) throws Exception {
     try {
       if (isRegionOpened(hri)) return;
     } catch (Exception e){}
@@ -272,7 +272,7 @@ public class TestReplicasClient {
     checkRegionIsOpened(hri);
   }
 
-  private void closeRegion(HRegionInfo hri) throws Exception {
+  private void closeRegion(RegionInfo hri) throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
       getRS().getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose = getRS()
@@ -282,13 +282,13 @@ public class TestReplicasClient {
     checkRegionIsClosed(hri.getEncodedName());
   }
 
-  private void checkRegionIsOpened(HRegionInfo hri) throws Exception {
+  private void checkRegionIsOpened(RegionInfo hri) throws Exception {
     while (!getRS().getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
   }
 
-  private boolean isRegionOpened(HRegionInfo hri) throws Exception {
+  private boolean isRegionOpened(RegionInfo hri) throws Exception {
     return getRS().getRegionByEncodedName(hri.getEncodedName()).isAvailable();
   }
 
@@ -307,7 +307,7 @@ public class TestReplicasClient {
     // We don't delete the znode here, because there is not always a znode.
   }
 
-  private void flushRegion(HRegionInfo regionInfo) throws IOException {
+  private void flushRegion(RegionInfo regionInfo) throws IOException {
     TestRegionServerNoMaster.flushRegion(HTU, regionInfo);
   }
 

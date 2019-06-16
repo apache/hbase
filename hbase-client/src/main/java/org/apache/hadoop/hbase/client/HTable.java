@@ -272,7 +272,7 @@ public class HTable implements Table {
       HRegionLocation regionLocation = getRegionLocator().getRegionLocation(currentKey, reload);
       keysInRange.add(currentKey);
       regionsInRange.add(regionLocation);
-      currentKey = regionLocation.getRegionInfo().getEndKey();
+      currentKey = regionLocation.getRegion().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
         && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
             || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
@@ -362,7 +362,7 @@ public class HTable implements Table {
         @Override
         protected Result rpcCall() throws Exception {
           ClientProtos.GetRequest request = RequestConverter.buildGetRequest(
-              getLocation().getRegionInfo().getRegionName(), configuredGet);
+              getLocation().getRegion().getRegionName(), configuredGet);
           ClientProtos.GetResponse response = doGet(request);
           return response == null? null:
             ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -479,7 +479,7 @@ public class HTable implements Table {
       @Override
       protected Void rpcCall() throws Exception {
         MutateRequest request = RequestConverter
-            .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
+            .buildMutateRequest(getLocation().getRegion().getRegionName(), delete);
         doMutate(request);
         return null;
       }
@@ -519,7 +519,7 @@ public class HTable implements Table {
       @Override
       protected Void rpcCall() throws Exception {
         MutateRequest request =
-            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
+            RequestConverter.buildMutateRequest(getLocation().getRegion().getRegionName(), put);
         doMutate(request);
         return null;
       }
@@ -550,7 +550,7 @@ public class HTable implements Table {
       @Override
       protected MultiResponse rpcCall() throws Exception {
         RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
-            getLocation().getRegionInfo().getRegionName(), rm);
+            getLocation().getRegion().getRegionName(), rm);
         regionMutationBuilder.setAtomic(true);
         MultiRequest request =
             MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
@@ -591,7 +591,7 @@ public class HTable implements Table {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
+          getLocation().getRegion().getRegionName(), append, getNonceGroup(), getNonce());
         MutateResponse response = doMutate(request);
         if (!response.hasResult()) return null;
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -610,7 +610,7 @@ public class HTable implements Table {
       @Override
       protected Result rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
+          getLocation().getRegion().getRegionName(), increment, getNonceGroup(), getNonce());
         MutateResponse response = doMutate(request);
         // Should this check for null like append does?
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -648,7 +648,7 @@ public class HTable implements Table {
       @Override
       protected Long rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family,
+          getLocation().getRegion().getRegionName(), row, family,
           qualifier, amount, durability, getNonceGroup(), getNonce());
         MutateResponse response = doMutate(request);
         Result result = ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
@@ -685,7 +685,7 @@ public class HTable implements Table {
       protected Boolean rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(opName);
         MutateRequest request = RequestConverter.buildMutateRequest(
-            getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+            getLocation().getRegion().getRegionName(), row, family, qualifier,
             new BinaryComparator(value), compareType, timeRange, put);
         MutateResponse response = doMutate(request);
         return Boolean.valueOf(response.getProcessed());
@@ -721,7 +721,7 @@ public class HTable implements Table {
         protected SingleResponse rpcCall() throws Exception {
           CompareType compareType = CompareType.valueOf(opName);
           MutateRequest request = RequestConverter
-            .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family,
+            .buildMutateRequest(getLocation().getRegion().getRegionName(), row, family,
               qualifier, new BinaryComparator(value), compareType, timeRange, delete);
           MutateResponse response = doMutate(request);
           return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
@@ -760,7 +760,7 @@ public class HTable implements Table {
       protected MultiResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(opName);
         MultiRequest request = RequestConverter
-          .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+          .buildMutateRequest(getLocation().getRegion().getRegionName(), row, family, qualifier,
             new BinaryComparator(value), compareType, timeRange, rm);
         ClientProtos.MultiResponse response = doMulti(request);
         ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
@@ -1097,7 +1097,7 @@ public class HTable implements Table {
     final Map<byte[], RegionCoprocessorServiceExec> execsByRow = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < keys.size(); i++) {
       final byte[] rowKey = keys.get(i);
-      final byte[] region = regions.get(i).getRegionInfo().getRegionName();
+      final byte[] region = regions.get(i).getRegion().getRegionName();
       RegionCoprocessorServiceExec exec =
           new RegionCoprocessorServiceExec(region, rowKey, methodDescriptor, request);
       execs.add(exec);

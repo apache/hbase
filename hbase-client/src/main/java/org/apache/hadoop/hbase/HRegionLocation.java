@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -84,16 +83,6 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   @Override
   public int hashCode() {
     return this.serverName.hashCode();
-  }
-
-  /**
-   *
-   * @return Immutable HRegionInfo
-   * @deprecated Since 2.0.0. Will remove in 3.0.0. Use {@link #getRegion()}} instead.
-   */
-  @Deprecated
-  public HRegionInfo getRegionInfo(){
-    return regionInfo == null ? null : new ImmutableHRegionInfo(regionInfo);
   }
 
   /**

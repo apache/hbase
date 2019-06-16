@@ -110,24 +110,24 @@ public class TestCatalogJanitorInMemoryStates {
 
     // We need to create a valid split with daughter regions
     HRegionLocation parent = allRegionLocations.get(0);
-    List<HRegionLocation> daughters = splitRegion(parent.getRegionInfo());
+    List<HRegionLocation> daughters = splitRegion(parent.getRegion());
     LOG.info("Parent region: " + parent);
     LOG.info("Daughter regions: " + daughters);
     assertNotNull("Should have found daughter regions for " + parent, daughters);
 
     assertTrue("Parent region should exist in RegionStates",
-        am.getRegionStates().isRegionInRegionStates(parent.getRegionInfo()));
+        am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
     assertTrue("Parent region should exist in ServerManager",
-        sm.isRegionInServerManagerStates(parent.getRegionInfo()));
+        sm.isRegionInServerManagerStates(parent.getRegion()));
 
     // clean the parent
-    Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegionInfo(), null,
-        daughters.get(0).getRegionInfo(), daughters.get(1).getRegionInfo());
-    janitor.cleanParent(parent.getRegionInfo(), r);
+    Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null,
+        daughters.get(0).getRegion(), daughters.get(1).getRegion());
+    janitor.cleanParent(parent.getRegion(), r);
     assertFalse("Parent region should have been removed from RegionStates",
-        am.getRegionStates().isRegionInRegionStates(parent.getRegionInfo()));
+        am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
     assertFalse("Parent region should have been removed from ServerManager",
-        sm.isRegionInServerManagerStates(parent.getRegionInfo()));
+        sm.isRegionInServerManagerStates(parent.getRegion()));
 
   }
 

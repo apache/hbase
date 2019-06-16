@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -166,7 +166,7 @@ public class TestRegionServerMetrics {
   public void assertRegionMetrics(String metric, long expectedValue) throws Exception {
     try (RegionLocator locator = connection.getRegionLocator(tableName)) {
       for ( HRegionLocation location: locator.getAllRegionLocations()) {
-        HRegionInfo hri = location.getRegionInfo();
+        RegionInfo hri = location.getRegion();
         MetricsRegionAggregateSource agg =
             rs.getRegion(hri.getRegionName()).getMetrics().getSource().getAggregateSource();
         String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR +

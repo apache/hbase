@@ -422,8 +422,8 @@ public class TestCoprocessorMetrics {
         table.get(new Get(bar));
         table.get(new Get(foo)); // 2 gets to 2 separate regions
         assertEquals(2, locator.getAllRegionLocations().size());
-        assertNotEquals(locator.getRegionLocation(bar).getRegionInfo(),
-            locator.getRegionLocation(foo).getRegionInfo());
+        assertNotEquals(locator.getRegionLocation(bar).getRegion(),
+            locator.getRegionLocation(foo).getRegion());
       }
     }
 
@@ -498,12 +498,12 @@ public class TestCoprocessorMetrics {
       // close one of the regions
       try (RegionLocator locator = connection.getRegionLocator(tableName)) {
         HRegionLocation loc = locator.getRegionLocation(foo);
-        admin.unassign(loc.getRegionInfo().getEncodedNameAsBytes(), true);
+        admin.unassign(loc.getRegion().getEncodedNameAsBytes(), true);
 
         HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(loc.getServerName());
         UTIL.waitFor(30000,
-            () -> server.getOnlineRegion(loc.getRegionInfo().getRegionName()) == null);
-        assertNull(server.getOnlineRegion(loc.getRegionInfo().getRegionName()));
+          () -> server.getOnlineRegion(loc.getRegion().getRegionName()) == null);
+        assertNull(server.getOnlineRegion(loc.getRegion().getRegionName()));
       }
 
       // with only 1 region remaining, we should still be able to find the Counter

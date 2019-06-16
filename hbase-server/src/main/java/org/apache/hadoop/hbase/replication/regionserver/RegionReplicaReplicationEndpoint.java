@@ -463,7 +463,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // check whether we should still replay this entry. If the regions are changed, or the
         // entry is not coming from the primary region, filter it out.
         HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
-        if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
+        if (!Bytes.equals(primaryLocation.getRegion().getEncodedNameAsBytes(),
           encodedRegionName)) {
           if (useCache) {
             useCache = false;
@@ -471,7 +471,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           }
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-              + " because located region " + primaryLocation.getRegionInfo().getEncodedName()
+              + " because located region " + primaryLocation.getRegion().getEncodedName()
               + " is different than the original region " + Bytes.toStringBinary(encodedRegionName)
               + " from WALEdit");
             for (Entry entry : entries) {
@@ -497,8 +497,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         if (!RegionReplicaUtil.isDefaultReplica(replicaId)) {
           RegionInfo regionInfo = location == null
               ? RegionReplicaUtil.getRegionInfoForReplica(
-                locations.getDefaultRegionLocation().getRegionInfo(), replicaId)
-              : location.getRegionInfo();
+                locations.getDefaultRegionLocation().getRegion(), replicaId)
+              : location.getRegion();
           RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
             rpcControllerFactory, tableName, location, regionInfo, row, entries,
             sink.getSkippedEditsCounter());
@@ -604,7 +604,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       // entry is not coming form the primary region, filter it out because we do not need it.
       // Regions can change because of (1) region split (2) region merge (3) table recreated
       boolean skip = false;
-      if (!Bytes.equals(location.getRegionInfo().getEncodedNameAsBytes(),
+      if (!Bytes.equals(location.getRegion().getEncodedNameAsBytes(),
           initialEncodedRegionName)) {
         skip = true;
       }
@@ -615,7 +615,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // set the region name for the target region replica
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
             ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray, location
-                .getRegionInfo().getEncodedNameAsBytes(), null, null, null);
+                .getRegion().getEncodedNameAsBytes(), null, null, null);
         controller.setCellScanner(p.getSecond());
         return stub.replay(controller, p.getFirst());
       }
@@ -623,7 +623,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       if (skip) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-            + " because located region " + location.getRegionInfo().getEncodedName()
+            + " because located region " + location.getRegion().getEncodedName()
             + " is different than the original region "
             + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
           for (Entry entry : entries) {

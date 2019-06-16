@@ -250,7 +250,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       List<HRegionLocation> regionLocations = locator.getAllRegionLocations();
       List<TRegionInfo> results = new ArrayList<>(regionLocations.size());
       for (HRegionLocation regionLocation : regionLocations) {
-        RegionInfo info = regionLocation.getRegionInfo();
+        RegionInfo info = regionLocation.getRegion();
         ServerName serverName = regionLocation.getServerName();
         TRegionInfo region = new TRegionInfo();
         region.serverName = ByteBuffer.wrap(

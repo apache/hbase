@@ -171,7 +171,7 @@ public class OfflineMetaRebuildTestCore {
     }
 
     for (HRegionLocation e : regions) {
-      RegionInfo hri = e.getRegionInfo();
+      RegionInfo hri = e.getRegion();
       ServerName hsa = e.getServerName();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
           && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {

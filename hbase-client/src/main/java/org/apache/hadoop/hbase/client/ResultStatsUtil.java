@@ -71,7 +71,7 @@ public final class ResultStatsUtil {
     ServerName server = null;
     if (regionLocation != null) {
       server = regionLocation.getServerName();
-      regionName = regionLocation.getRegionInfo().getRegionName();
+      regionName = regionLocation.getRegion().getRegionName();
     }
 
     return updateStats(r, stats, server, regionName);

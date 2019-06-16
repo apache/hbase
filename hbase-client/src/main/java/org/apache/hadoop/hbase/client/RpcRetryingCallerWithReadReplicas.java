@@ -138,7 +138,7 @@ public class RpcRetryingCallerWithReadReplicas {
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
-      byte[] reg = location.getRegionInfo().getRegionName();
+      byte[] reg = location.getRegion().getRegionName();
       ClientProtos.GetRequest request = RequestConverter.buildGetRequest(reg, get);
       HBaseRpcController hrc = (HBaseRpcController)getRpcController();
       hrc.reset();

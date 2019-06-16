@@ -20,16 +20,16 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -42,10 +42,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Iterator;
 /**
  * A base for {@link MultiTableInputFormat}s. Receives a list of
  * {@link Scan} instances that define the input tables and
@@ -219,7 +219,7 @@ public abstract class MultiTableInputFormatBase extends
                 HRegionLocation hregionLocation = regionLocator.getRegionLocation(
                     keys.getFirst()[i], false);
                 String regionHostname = hregionLocation.getHostname();
-                HRegionInfo regionInfo = hregionLocation.getRegionInfo();
+                RegionInfo regionInfo = hregionLocation.getRegion();
                 String encodedRegionName = regionInfo.getEncodedName();
                 long regionSize = sizeCalculator.getRegionSize(
                     regionInfo.getRegionName());

@@ -509,13 +509,13 @@ module Hbase
 
     define_test "unassign should allow encoded region names" do
       region = command(:locate_region, @test_name, '')
-      regionName = region.getRegionInfo().getRegionNameAsString()
+      regionName = region.getRegion.getRegionNameAsString
       command(:unassign, regionName, true)
     end
 
     define_test "unassign should allow non-encoded region names" do
       region = command(:locate_region, @test_name, '')
-      encodedRegionName = region.getRegionInfo().getEncodedName()
+      encodedRegionName = region.getRegion.getEncodedName
       command(:unassign, encodedRegionName, true)
     end
   end

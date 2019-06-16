@@ -231,13 +231,13 @@ public class TestConnectionImplementation {
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
-        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().getEncodedNameAsBytes(),
+        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegion().getEncodedNameAsBytes(),
           sn);
         TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tableName);
       }
       Assert.assertNotNull(hci.clusterStatusListener);
-      TEST_UTIL.assertRegionOnServer(l.getRegionLocation(rk).getRegionInfo(), sn, 20000);
+      TEST_UTIL.assertRegionOnServer(l.getRegionLocation(rk).getRegion(), sn, 20000);
     }
 
     Put p1 = new Put(rk);
@@ -539,7 +539,7 @@ public class TestConnectionImplementation {
     // a location where the port is current port number +1 -- i.e. a non-existent location.
     HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
     final int nextPort = loc.getPort() + 1;
-    conn.updateCachedLocation(loc.getRegionInfo(), loc.getServerName(),
+    conn.updateCachedLocation(loc.getRegion(), loc.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort,
         HConstants.LATEST_TIMESTAMP), HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW)
@@ -567,8 +567,8 @@ public class TestConnectionImplementation {
 
     // Now moving the region to the second server
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
-    byte[] regionName = toMove.getRegionInfo().getRegionName();
-    byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
+    byte[] regionName = toMove.getRegion().getRegionName();
+    byte[] encodedRegionNameBytes = toMove.getRegion().getEncodedNameAsBytes();
 
     // Choose the other server.
     int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
@@ -590,8 +590,8 @@ public class TestConnectionImplementation {
 
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depend only on the region we're looking at.
-    LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
+    LOG.info("Move starting region="+toMove.getRegion().getRegionNameAsString());
+    TEST_UTIL.getAdmin().move(toMove.getRegion().getEncodedNameAsBytes(), destServerName);
 
     while (destServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -601,7 +601,7 @@ public class TestConnectionImplementation {
       Thread.sleep(1);
     }
 
-    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+    LOG.info("Move finished for region="+toMove.getRegion().getRegionNameAsString());
 
     // Check our new state.
     Assert.assertNull(curServer.getOnlineRegion(regionName));
@@ -653,8 +653,8 @@ public class TestConnectionImplementation {
       .containsKey(encodedRegionNameBytes));
 
     // We move it back to do another test with a scan
-    LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(),
+    LOG.info("Move starting region=" + toMove.getRegion().getRegionNameAsString());
+    TEST_UTIL.getAdmin().move(toMove.getRegion().getEncodedNameAsBytes(),
       curServer.getServerName());
 
     while (curServer.getOnlineRegion(regionName) == null ||
@@ -668,7 +668,7 @@ public class TestConnectionImplementation {
     // Check our new state.
     Assert.assertNotNull(curServer.getOnlineRegion(regionName));
     Assert.assertNull(destServer.getOnlineRegion(regionName));
-    LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
+    LOG.info("Move finished for region=" + toMove.getRegion().getRegionNameAsString());
 
     // Cache was NOT updated and points to the wrong server
     Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort() ==
@@ -747,28 +747,28 @@ public class TestConnectionImplementation {
 
     // Same server as already in cache reporting - overwrites any value despite seqNum.
     int nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
+    conn.updateCachedLocation(location.getRegion(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // No source specified - same.
     nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
+    conn.updateCachedLocation(location.getRegion(), location.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // Higher seqNum - overwrites lower seqNum.
     nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+    conn.updateCachedLocation(location.getRegion(), anySource,
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() + 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort, location.getPort());
 
     // Lower seqNum - does not overwrite higher seqNum.
     nextPort = location.getPort() + 1;
-    conn.updateCachedLocation(location.getRegionInfo(), anySource,
+    conn.updateCachedLocation(location.getRegion(), anySource,
         ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     Assert.assertEquals(nextPort - 1, location.getPort());
@@ -868,8 +868,8 @@ public class TestConnectionImplementation {
 
       // Now moving the region to the second server
       HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation();
-      byte[] regionName = toMove.getRegionInfo().getRegionName();
-      byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
+      byte[] regionName = toMove.getRegion().getRegionName();
+      byte[] encodedRegionNameBytes = toMove.getRegion().getEncodedNameAsBytes();
 
       // Choose the other server.
       int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
@@ -884,13 +884,14 @@ public class TestConnectionImplementation {
        //find another row in the cur server that is less than ROW_X
       List<HRegion> regions = curServer.getRegions(TABLE_NAME3);
       byte[] otherRow = null;
-       for (Region region : regions) {
-         if (!region.getRegionInfo().getEncodedName().equals(toMove.getRegionInfo().getEncodedName())
-             && Bytes.BYTES_COMPARATOR.compare(region.getRegionInfo().getStartKey(), ROW_X) < 0) {
-           otherRow = region.getRegionInfo().getStartKey();
-           break;
-         }
-       }
+      for (Region region : regions) {
+        if (!region.getRegionInfo().getEncodedName().equals(toMove.getRegion().getEncodedName())
+                && Bytes.BYTES_COMPARATOR.compare(
+                        region.getRegionInfo().getStartKey(), ROW_X) < 0) {
+          otherRow = region.getRegionInfo().getStartKey();
+          break;
+        }
+      }
       assertNotNull(otherRow);
       // If empty row, set it to first row.-f
       if (otherRow.length <= 0) otherRow = Bytes.toBytes("aaa");
@@ -909,8 +910,8 @@ public class TestConnectionImplementation {
 
        // Moving. It's possible that we don't have all the regions online at this point, so
       //  the test depends only on the region we're looking at.
-      LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-      TEST_UTIL.getAdmin().move(toMove.getRegionInfo().getEncodedNameAsBytes(), destServerName);
+      LOG.info("Move starting region=" + toMove.getRegion().getRegionNameAsString());
+      TEST_UTIL.getAdmin().move(toMove.getRegion().getEncodedNameAsBytes(), destServerName);
 
       while (destServer.getOnlineRegion(regionName) == null ||
           destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
@@ -920,7 +921,7 @@ public class TestConnectionImplementation {
         Thread.sleep(1);
       }
 
-      LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+      LOG.info("Move finished for region="+toMove.getRegion().getRegionNameAsString());
 
       // Check our new state.
       Assert.assertNull(curServer.getOnlineRegion(regionName));

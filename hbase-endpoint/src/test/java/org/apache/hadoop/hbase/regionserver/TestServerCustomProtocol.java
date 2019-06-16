@@ -342,7 +342,7 @@ public class TestServerCustomProtocol {
     try (Table table = util.getConnection().getTable(TEST_TABLE);
         RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
       for (HRegionLocation e: locator.getAllRegionLocations()) {
-        LOG.info("Region " + e.getRegionInfo().getRegionNameAsString()
+        LOG.info("Region " + e.getRegion().getRegionNameAsString()
             + ", servername=" + e.getServerName());
       }
       // Here are what regions looked like on a run:
@@ -362,7 +362,7 @@ public class TestServerCustomProtocol {
       // should contain last 2 regions
       HRegionLocation loc = locator.getRegionLocation(ROW_A, true);
       assertNull("Should be missing region for row aaa (prior to start row)",
-        results.get(loc.getRegionInfo().getRegionName()));
+        results.get(loc.getRegion().getRegionName()));
       verifyRegionResults(locator, results, ROW_B);
       verifyRegionResults(locator, results, ROW_C);
 
@@ -374,7 +374,7 @@ public class TestServerCustomProtocol {
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
+          results.get(loc.getRegion().getRegionName()));
 
       // test explicit start + end
       results = ping(table, ROW_AB, ROW_BC);
@@ -384,7 +384,7 @@ public class TestServerCustomProtocol {
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
+          results.get(loc.getRegion().getRegionName()));
 
       // test single region
       results = ping(table, ROW_B, ROW_BC);
@@ -393,10 +393,10 @@ public class TestServerCustomProtocol {
       verifyRegionResults(locator, results, ROW_B);
       loc = locator.getRegionLocation(ROW_A, true);
       assertNull("Should be missing region for row aaa (prior to start)",
-          results.get(loc.getRegionInfo().getRegionName()));
+          results.get(loc.getRegion().getRegionName()));
       loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
+          results.get(loc.getRegion().getRegionName()));
     }
   }
 
@@ -476,7 +476,7 @@ public class TestServerCustomProtocol {
         ", value=" + e.getValue());
     }
     HRegionLocation loc = regionLocator.getRegionLocation(row, true);
-    byte[] region = loc.getRegionInfo().getRegionName();
+    byte[] region = loc.getRegion().getRegionName();
     assertTrue("Results should contain region " +
       Bytes.toStringBinary(region) + " for row '" + Bytes.toStringBinary(row)+ "'",
       results.containsKey(region));

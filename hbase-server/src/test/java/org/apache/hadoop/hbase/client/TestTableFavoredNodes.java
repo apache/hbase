@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -176,7 +175,7 @@ public class TestTableFavoredNodes {
 
     byte[] splitPoint = Bytes.toBytes(0);
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-    HRegionInfo parent = locator.getRegionLocation(splitPoint).getRegionInfo();
+    RegionInfo parent = locator.getRegionLocation(splitPoint).getRegion();
     List<ServerName> parentFN = fnm.getFavoredNodes(parent);
     assertNotNull("FN should not be null for region: " + parent, parentFN);
 
@@ -190,10 +189,10 @@ public class TestTableFavoredNodes {
     // All regions should have favored nodes    checkIfFavoredNodeInformationIsCorrect(tableName);
 
     // Get the daughters of parent.
-    HRegionInfo daughter1 = locator.getRegionLocation(parent.getStartKey(), true).getRegionInfo();
+    RegionInfo daughter1 = locator.getRegionLocation(parent.getStartKey(), true).getRegion();
     List<ServerName> daughter1FN = fnm.getFavoredNodes(daughter1);
 
-    HRegionInfo daughter2 = locator.getRegionLocation(splitPoint, true).getRegionInfo();
+    RegionInfo daughter2 = locator.getRegionLocation(splitPoint, true).getRegion();
     List<ServerName> daughter2FN = fnm.getFavoredNodes(daughter2);
 
     checkIfDaughterInherits2FN(parentFN, daughter1FN);
@@ -240,8 +239,8 @@ public class TestTableFavoredNodes {
     checkIfFavoredNodeInformationIsCorrect(tableName);
 
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-    HRegionInfo regionA = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-    HRegionInfo regionB = locator.getRegionLocation(splitKeys[0]).getRegionInfo();
+    RegionInfo regionA = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegion();
+    RegionInfo regionB = locator.getRegionLocation(splitKeys[0]).getRegion();
 
     List<ServerName> regionAFN = fnm.getFavoredNodes(regionA);
     LOG.info("regionA: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionA));
@@ -257,8 +256,8 @@ public class TestTableFavoredNodes {
     // All regions should have favored nodes
     checkIfFavoredNodeInformationIsCorrect(tableName);
 
-    HRegionInfo mergedRegion =
-      locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+    RegionInfo mergedRegion =
+      locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegion();
     List<ServerName> mergedFN = fnm.getFavoredNodes(mergedRegion);
 
     assertArrayEquals("Merged region doesn't match regionA's FN",
@@ -315,7 +314,7 @@ public class TestTableFavoredNodes {
     RegionLocator regionLocator = admin.getConnection().getRegionLocator(tableName);
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
 
-      HRegionInfo regionInfo = regionLocation.getRegionInfo();
+      RegionInfo regionInfo = regionLocation.getRegion();
       List<ServerName> fnList = fnm.getFavoredNodes(regionInfo);
 
       // 1. Does each region have favored node?

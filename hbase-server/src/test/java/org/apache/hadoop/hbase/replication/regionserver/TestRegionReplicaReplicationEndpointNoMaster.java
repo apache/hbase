@@ -95,7 +95,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   private static HRegionServer rs0;
   private static HRegionServer rs1;
 
-  private static HRegionInfo hriPrimary;
+  private static RegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
@@ -123,7 +123,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     table = HTU.createTable(htd, new byte[][]{f}, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
-      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+      hriPrimary = locator.getRegionLocation(row, false).getRegion();
     }
 
     // mock a secondary region info to open
@@ -205,7 +205,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
       RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
         RpcControllerFactory.instantiate(connection.getConfiguration()),
         table.getName(), locations.getRegionLocation(1),
-        locations.getRegionLocation(1).getRegionInfo(), row, Lists.newArrayList(entry),
+        locations.getRegionLocation(1).getRegion(), row, Lists.newArrayList(entry),
         new AtomicLong());
 
       RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(

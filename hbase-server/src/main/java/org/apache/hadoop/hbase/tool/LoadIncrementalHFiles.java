@@ -525,7 +525,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
                 Bytes.toStringBinary(getRow()) + " with hfile group " +
                 LoadIncrementalHFiles.this.toString(famPaths));
           }
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          byte[] regionName = getLocation().getRegion().getRegionName();
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
             success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,

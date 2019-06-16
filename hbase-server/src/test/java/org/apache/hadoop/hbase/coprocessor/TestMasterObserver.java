@@ -1341,8 +1341,8 @@ public class TestMasterObserver {
       RegionLocator regionLocator = connection.getRegionLocator(htd.getTableName());
       List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
 
-      admin.mergeRegionsAsync(regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
-        regions.get(1).getRegionInfo().getEncodedNameAsBytes(), true);
+      admin.mergeRegionsAsync(regions.get(0).getRegion().getEncodedNameAsBytes(),
+        regions.get(1).getRegion().getEncodedNameAsBytes(), true);
       assertTrue("Coprocessor should have been called on region merge",
         cp.wasMergeRegionsCalled());
 
@@ -1585,7 +1585,7 @@ public class TestMasterObserver {
       assertTrue("Found server", found);
       LOG.info("Found " + destName);
       master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
-          firstGoodPair.getRegionInfo().getEncodedNameAsBytes(), ServerName.valueOf(destName)));
+          firstGoodPair.getRegion().getEncodedNameAsBytes(), ServerName.valueOf(destName)));
       assertTrue("Coprocessor should have been called on region move",
         cp.wasMoveCalled());
 
