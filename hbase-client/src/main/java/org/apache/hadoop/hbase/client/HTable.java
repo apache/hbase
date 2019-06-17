@@ -659,22 +659,6 @@ public class HTable implements Table {
         callWithRetries(callable, this.operationTimeoutMs);
   }
 
-  @Override
-  @Deprecated
-  public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Put put) throws IOException {
-    return doCheckAndPut(row, family, qualifier, CompareOperator.EQUAL.name(), value, null, put);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op, final byte [] value, final Put put) throws IOException {
-    // The name of the operators in CompareOperator are intentionally those of the
-    // operators in the filter's CompareOp enum.
-    return doCheckAndPut(row, family, qualifier, op.name(), value, null, put);
-  }
-
   private boolean doCheckAndPut(final byte[] row, final byte[] family, final byte[] qualifier,
     final String opName, final byte[] value, final TimeRange timeRange, final Put put)
     throws IOException {
@@ -693,21 +677,6 @@ public class HTable implements Table {
     };
     return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeoutMs)
         .callWithRetries(callable, this.operationTimeoutMs);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, CompareOperator.EQUAL.name(), value, null,
-      delete);
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
-    final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndDelete(row, family, qualifier, op.name(), value, null, delete);
   }
 
   private boolean doCheckAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
@@ -799,13 +768,6 @@ public class HTable implements Table {
     }
 
     return ((Result)results[0]).getExists();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, op.name(), value, null, rm);
   }
 
   @Override
@@ -982,33 +944,8 @@ public class HTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public int getRpcTimeout() {
-    return rpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setRpcTimeout(int rpcTimeout) {
-    setReadRpcTimeout(rpcTimeout);
-    setWriteRpcTimeout(rpcTimeout);
-  }
-
-  @Override
   public long getReadRpcTimeout(TimeUnit unit) {
     return unit.convert(readRpcTimeoutMs, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  @Deprecated
-  public int getReadRpcTimeout() {
-    return readRpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setReadRpcTimeout(int readRpcTimeout) {
-    this.readRpcTimeoutMs = readRpcTimeout;
   }
 
   @Override
@@ -1017,32 +954,8 @@ public class HTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public int getWriteRpcTimeout() {
-    return writeRpcTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setWriteRpcTimeout(int writeRpcTimeout) {
-    this.writeRpcTimeoutMs = writeRpcTimeout;
-  }
-
-  @Override
   public long getOperationTimeout(TimeUnit unit) {
     return unit.convert(operationTimeoutMs, TimeUnit.MILLISECONDS);
-  }
-
-  @Override
-  @Deprecated
-  public int getOperationTimeout() {
-    return operationTimeoutMs;
-  }
-
-  @Override
-  @Deprecated
-  public void setOperationTimeout(int operationTimeout) {
-    this.operationTimeoutMs = operationTimeout;
   }
 
   @Override

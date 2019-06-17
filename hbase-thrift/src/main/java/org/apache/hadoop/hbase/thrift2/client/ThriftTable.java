@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -409,15 +408,13 @@ public class ThriftTable implements Table {
     }
   }
 
-
-  @Override
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+  private boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
       byte[] value, RowMutations mutation) throws IOException {
     try {
-      ByteBuffer valueBuffer = value == null? null : ByteBuffer.wrap(value);
+      ByteBuffer valueBuffer = value == null ? null : ByteBuffer.wrap(value);
       return client.checkAndMutate(tableNameInBytes, ByteBuffer.wrap(row), ByteBuffer.wrap(family),
-          ByteBuffer.wrap(qualifier), ThriftUtilities.compareOpFromHBase(op), valueBuffer,
-          ThriftUtilities.rowMutationsFromHBase(mutation));
+        ByteBuffer.wrap(qualifier), ThriftUtilities.compareOpFromHBase(op), valueBuffer,
+        ThriftUtilities.rowMutationsFromHBase(mutation));
     } catch (TException e) {
       throw new IOException(e);
     }

@@ -137,7 +137,7 @@ public class OfflineMetaRebuildTestCore {
     return this.connection.getTable(tablename);
   }
 
-  private void dumpMeta(HTableDescriptor htd) throws IOException {
+  private void dumpMeta(TableDescriptor htd) throws IOException {
     List<byte[]> metaRows = TEST_UTIL.getMetaTableRows(htd.getTableName());
     for (byte[] row : metaRows) {
       LOG.info(Bytes.toString(row));
@@ -162,7 +162,7 @@ public class OfflineMetaRebuildTestCore {
       byte[] startKey, byte[] endKey) throws IOException {
 
     LOG.info("Before delete:");
-    HTableDescriptor htd = tbl.getTableDescriptor();
+    TableDescriptor htd = tbl.getDescriptor();
     dumpMeta(htd);
 
     List<HRegionLocation> regions;
@@ -203,7 +203,7 @@ public class OfflineMetaRebuildTestCore {
   protected RegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
     Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
-    HTableDescriptor htd = htbl.getTableDescriptor();
+    TableDescriptor htd = htbl.getDescriptor();
     RegionInfo hri = RegionInfoBuilder.newBuilder(htbl.getName())
         .setStartKey(startKey)
         .setEndKey(endKey)
