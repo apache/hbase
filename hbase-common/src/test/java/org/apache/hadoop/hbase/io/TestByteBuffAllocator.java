@@ -25,12 +25,14 @@ import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -337,5 +339,22 @@ public class TestByteBuffAllocator {
     } catch (Exception e) {
       // expected exception.
     }
+  }
+
+  @Test
+  public void testDeprecatedConfigs() {
+    Configuration conf = new Configuration();
+    conf.setInt(ByteBuffAllocator.DEPRECATED_MAX_BUFFER_COUNT_KEY, 10);
+    conf.setInt(ByteBuffAllocator.DEPRECATED_BUFFER_SIZE_KEY, 1024);
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
+    Assert.assertEquals(1024, allocator.getBufferSize());
+    Assert.assertEquals(10, allocator.getTotalBufferCount());
+
+    conf = new Configuration();
+    conf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, 11);
+    conf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 2048);
+    allocator = ByteBuffAllocator.create(conf, true);
+    Assert.assertEquals(2048, allocator.getBufferSize());
+    Assert.assertEquals(11, allocator.getTotalBufferCount());
   }
 }
