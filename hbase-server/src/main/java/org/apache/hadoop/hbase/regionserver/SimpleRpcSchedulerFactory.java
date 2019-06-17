@@ -31,7 +31,10 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
-
+  /**
+   * @deprecated since 1.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-12028">HBASE-12028</a>
+   */
   @Override
   @Deprecated
   public RpcScheduler create(Configuration conf, PriorityFunction priority) {
