@@ -226,7 +226,9 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * @return the number of valid bytes in the buffer
-   * @deprecated use {@link #getLength()} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getLength()} instead.
+   * @see #getLength()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11862">HBASE-11862</a>
    */
   @Deprecated
   public int getSize() {
@@ -1370,7 +1372,9 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
    * @return deserialized long from buffer.
-   * @deprecated Use {@link #readAsVLong(byte[],int)} instead.
+   * @deprecated since 0.98.12. Use {@link #readAsVLong(byte[],int)} instead.
+   * @see #readAsVLong(byte[], int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6919">HBASE-6919</a>
    */
   @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
@@ -2003,7 +2007,10 @@ public class Bytes implements Comparable<Bytes> {
    *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
-   * @deprecated {@link Bytes#binarySearch(byte[][], byte[], int, int)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #binarySearch(byte[][], byte[], int, int)} instead.
+   * @see #binarySearch(byte[][], byte[], int, int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
    */
   @Deprecated
   public static int binarySearch(byte [][]arr, byte []key, int offset,
@@ -2061,7 +2068,10 @@ public class Bytes implements Comparable<Bytes> {
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
    * @return the index of the block
-   * @deprecated Use {@link Bytes#binarySearch(Cell[], Cell, CellComparator)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #binarySearch(Cell[], Cell, CellComparator)} instead.
+   * @see #binarySearch(Cell[], Cell, CellComparator)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
    */
   @Deprecated
   public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
