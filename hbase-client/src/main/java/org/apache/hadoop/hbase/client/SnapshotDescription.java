@@ -37,7 +37,10 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table) {
@@ -49,7 +52,10 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName, SnapshotType)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type) {
@@ -61,7 +67,10 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName, SnapshotType, String)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner) {
@@ -73,7 +82,10 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use the version with the TableName instance instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
+   *   instance instead.
+   * @see #SnapshotDescription(String, TableName, SnapshotType, String, long, int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner,
@@ -96,7 +108,11 @@ public class SnapshotDescription {
   }
 
   /**
-   * @deprecated Use getTableName() or getTableNameAsString() instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getTableName()} or
+   *   {@link #getTableNameAsString()} instead.
+   * @see #getTableName()
+   * @see #getTableNameAsString()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
    */
   @Deprecated
   public String getTable() {
