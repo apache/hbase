@@ -1110,8 +1110,10 @@ public interface Admin extends Abortable, Closeable {
    *          array we'll assign to a random server. A server name is made of host, port and
    *          startcode. Here is an example: <code> host187.example.com,60020,1289493121758</code>
    * @throws IOException if we can't find a region named <code>encodedRegionName</code>
-   * @deprecated Use {@link #move(byte[], ServerName)} instead. And if you want to move the region
-   *             to a random server, please use {@link #move(byte[])}.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use {@link #move(byte[], ServerName)}
+   *   instead. And if you want to move the region to a random server, please use
+   *   {@link #move(byte[])}.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-22108">HBASE-22108</a>
    */
   @Deprecated
   default void move(byte[] encodedRegionName, byte[] destServerName) throws IOException {
@@ -1873,7 +1875,8 @@ public interface Admin extends Abortable, Closeable {
    * @return <code>true</code> if aborted, <code>false</code> if procedure already completed or does
    *         not exist
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.1.1 -- to be removed.
+   * @deprecated since 2.1.1 and will be removed in 4.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21223">HBASE-21223</a>
    */
   @Deprecated
   default boolean abortProcedure(long procId, boolean mayInterruptIfRunning) throws IOException {
@@ -1893,7 +1896,8 @@ public interface Admin extends Abortable, Closeable {
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return <code>true</code> if aborted, <code>false</code> if procedure already completed or does not exist
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Since 2.1.1 -- to be removed.
+   * @deprecated since 2.1.1 and will be removed in 4.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21223">HBASE-21223</a>
    */
   @Deprecated
   Future<Boolean> abortProcedureAsync(

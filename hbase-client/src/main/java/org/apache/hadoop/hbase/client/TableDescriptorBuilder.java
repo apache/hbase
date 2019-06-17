@@ -272,6 +272,7 @@ public class TableDescriptorBuilder {
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
   private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
     Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+
   /**
    * Table descriptor for namespace table
    */
@@ -288,6 +289,7 @@ public class TableDescriptorBuilder {
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
         .build())
       .build();
+
   private final ModifyableTableDescriptor desc;
 
   /**
@@ -488,12 +490,20 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  /**
+   * @deprecated since 2.0.0 and will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+   */
   @Deprecated
   public TableDescriptorBuilder setOwner(User owner) {
     desc.setOwner(owner);
     return this;
   }
 
+  /**
+   * @deprecated since 2.0.0 and will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+   */
   @Deprecated
   public TableDescriptorBuilder setOwnerString(String ownerString) {
     desc.setOwnerString(ownerString);
@@ -1532,17 +1542,29 @@ public class TableDescriptorBuilder {
       }
     }
 
+    /**
+     * @deprecated since 2.0.0 and will be removed in 3.0.0.
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+     */
     @Deprecated
     public ModifyableTableDescriptor setOwner(User owner) {
       return setOwnerString(owner != null ? owner.getShortName() : null);
     }
 
+    /**
+     * @deprecated since 2.0.0 and will be removed in 3.0.0.
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+     */
     // used by admin.rb:alter(table_name,*args) to update owner.
     @Deprecated
     public ModifyableTableDescriptor setOwnerString(String ownerString) {
       return setValue(OWNER_KEY, ownerString);
     }
 
+    /**
+     * @deprecated since 2.0.0 and will be removed in 3.0.0.
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
+     */
     @Override
     @Deprecated
     public String getOwnerString() {

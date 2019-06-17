@@ -181,7 +181,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * System property key to get test directory value. Name is as it is because mini dfs has
    * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
    * used in mini dfs.
-   * @deprecated can be used only with mini dfs
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Can be used only with mini dfs.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19410">HBASE-19410</a>
    */
   @Deprecated
   private static final String TEST_DIRECTORY_KEY = "test.build.data";
@@ -357,8 +358,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility()} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
+   *   instead.
    * @return a normal HBaseTestingUtility
+   * @see #HBaseTestingUtility()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
    */
   @Deprecated
   public static HBaseTestingUtility createLocalHTU() {
@@ -366,8 +370,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility(Configuration)} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #HBaseTestingUtility(Configuration)} instead.
    * @return a normal HBaseTestingUtility
+   * @see #HBaseTestingUtility(Configuration)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
    */
   @Deprecated
   public static HBaseTestingUtility createLocalHTU(Configuration c) {
@@ -787,7 +794,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(boolean createWALDir) throws Exception {
@@ -803,7 +813,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numSlaves, boolean createRootDir)
@@ -821,7 +834,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numSlaves, boolean createRootDir,
@@ -840,7 +856,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *  {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, boolean createRootDir)
@@ -858,7 +877,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param numSlaves Slave node number, for both HBase region server and HDFS data node.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves) throws Exception {
@@ -877,7 +899,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createRootDir Whether to create a new root or data directory path.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts,
@@ -897,7 +922,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    *                      HDFS data node number.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts)
@@ -916,7 +944,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param numDataNodes Number of datanodes.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes)
@@ -938,7 +969,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param rsClass The class to use as HRegionServer, or null for default.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numSlaves, String[] dataNodeHosts,
@@ -965,7 +999,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param rsClass The class to use as HRegionServer, or null for default.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes,
@@ -994,7 +1031,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniCluster()
-   * @deprecated Use {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniCluster(int numMasters, int numRegionServers, int numDataNodes,
@@ -1135,7 +1175,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param numRegionServers Number of region servers.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
-   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniHBaseCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers)
@@ -1154,7 +1197,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param rsPorts Ports that RegionServer should use.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
-   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniHBaseCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
@@ -1177,7 +1223,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param createWALDir Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
-   * @deprecated Use {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link #startMiniHBaseCluster(StartMiniClusterOption)} instead.
+   * @see #startMiniHBaseCluster(StartMiniClusterOption)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21071">HBASE-21071</a>
    */
   @Deprecated
   public MiniHBaseCluster startMiniHBaseCluster(int numMasters, int numRegionServers,
@@ -1900,6 +1949,12 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
+  /**
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
+   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
+   */
   @Deprecated
   public HTableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
@@ -1911,6 +1966,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Create a table of name <code>name</code>.
    * @param name Name to give table.
    * @return Column descriptor.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
+   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
    */
   @Deprecated
   public HTableDescriptor createTableDescriptor(final String name) {
@@ -2012,8 +2071,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    * @return A region on which you must call
              {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
-   * @deprecated use
-   * {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
+   *   instead.
+   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
    */
   @Deprecated
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
@@ -2381,6 +2443,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Return the number of rows in the given table.
+   * @param table to count rows
+   * @return count of rows
    */
   public int countRows(final Table table) throws IOException {
     return countRows(table, new Scan());

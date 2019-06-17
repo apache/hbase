@@ -1030,7 +1030,12 @@ public interface RegionObserver {
    * @param oldCell old cell containing previous value
    * @param newCell the new cell containing the computed value
    * @return the new cell, possibly changed
-   * @deprecated Use {@link #postIncrementBeforeWAL} or {@link #postAppendBeforeWAL} instead.
+   * @deprecated since 2.2.0 and will be removedin 4.0.0. Use
+   *   {@link #postIncrementBeforeWAL(ObserverContext, Mutation, List)} or
+   *   {@link #postAppendBeforeWAL(ObserverContext, Mutation, List)} instead.
+   * @see #postIncrementBeforeWAL(ObserverContext, Mutation, List)
+   * @see #postAppendBeforeWAL(ObserverContext, Mutation, List)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21643">HBASE-21643</a>
    */
   @Deprecated
   default Cell postMutationBeforeWAL(ObserverContext<RegionCoprocessorEnvironment> ctx,
