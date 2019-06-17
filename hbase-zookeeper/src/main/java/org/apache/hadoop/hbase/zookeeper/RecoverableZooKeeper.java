@@ -203,10 +203,10 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, Watcher watcher) throws KeeperException, InterruptedException {
-    return getStatInstance(path, watcher, null);
+    return exists(path, watcher, null);
   }
 
-  private Stat getStatInstance(String path, Watcher watcher, Boolean watch)
+  private Stat exists(String path, Watcher watcher, Boolean watch)
           throws InterruptedException, KeeperException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.exists")) {
       RetryCounter retryCounter = retryCounterFactory.create();
@@ -242,7 +242,7 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, boolean watch) throws KeeperException, InterruptedException {
-    return getStatInstance(path, null, watch);
+    return exists(path, null, watch);
   }
 
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
@@ -262,10 +262,10 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, Watcher watcher)
     throws KeeperException, InterruptedException {
-    return getChildrenUtils(path, watcher, null);
+    return getChildren(path, watcher, null);
   }
 
-  private List<String> getChildrenUtils(String path, Watcher watcher, Boolean watch)
+  private List<String> getChildren(String path, Watcher watcher, Boolean watch)
           throws InterruptedException, KeeperException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getChildren")) {
       RetryCounter retryCounter = retryCounterFactory.create();
@@ -302,7 +302,7 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, boolean watch)
     throws KeeperException, InterruptedException {
-    return getChildrenUtils(path, null, watch);
+    return getChildren(path, null, watch);
   }
 
   /**
@@ -311,10 +311,10 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
     throws KeeperException, InterruptedException {
-    return getDataUtils(path, watcher, null, stat);
+    return getData(path, watcher, null, stat);
   }
 
-  private byte[] getDataUtils(String path, Watcher watcher, Boolean watch, Stat stat)
+  private byte[] getData(String path, Watcher watcher, Boolean watch, Stat stat)
           throws InterruptedException, KeeperException {
     try (TraceScope scope = TraceUtil.createTrace("RecoverableZookeeper.getData")) {
       RetryCounter retryCounter = retryCounterFactory.create();
@@ -351,7 +351,7 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, boolean watch, Stat stat)
     throws KeeperException, InterruptedException {
-    return getDataUtils(path, null, watch, stat);
+    return getData(path, null, watch, stat);
   }
 
   /**
@@ -666,10 +666,6 @@ public class RecoverableZooKeeper {
 
   public synchronized ZooKeeper getZooKeeper() {
     return zk;
-  }
-
-  public synchronized byte[] getSessionPasswd() {
-    return zk == null ? null : zk.getSessionPasswd();
   }
 
   public void sync(String path, AsyncCallback.VoidCallback cb, Object ctx) throws KeeperException {
