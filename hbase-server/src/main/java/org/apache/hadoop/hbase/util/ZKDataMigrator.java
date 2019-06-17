@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -90,14 +89,13 @@ public class ZKDataMigrator {
     return rv;
   }
 
-  @SuppressWarnings("checkstyle:linelength")
   /**
    * Gets table state from ZK.
    * @param zkw ZKWatcher instance to use
    * @param tableName table we're checking
    * @return Null or
    * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State}
-   * found in znode.
+   *        found in znode.
    * @throws KeeperException
    * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
    */
