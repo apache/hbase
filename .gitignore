@@ -20,3 +20,4 @@ linklint-*.zip
 linklint/
 .checkstyle
 **/.checkstyle
+.java-version
