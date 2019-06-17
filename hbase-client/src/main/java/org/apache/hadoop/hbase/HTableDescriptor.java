@@ -1602,11 +1602,19 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setCacheDataInL1(true)
       });
 
+  /**
+   * @deprecated since 0.94.1
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
+   */
   @Deprecated
   public HTableDescriptor setOwner(User owner) {
     return setOwnerString(owner != null ? owner.getShortName() : null);
   }
 
+  /**
+   * @deprecated since 0.94.1
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
+   */
   // used by admin.rb:alter(table_name,*args) to update owner.
   @Deprecated
   public HTableDescriptor setOwnerString(String ownerString) {
@@ -1618,6 +1626,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return this;
   }
 
+  /**
+   * @deprecated since 0.94.1
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
+   */
   @Deprecated
   public String getOwnerString() {
     if (getValue(OWNER_KEY) != null) {

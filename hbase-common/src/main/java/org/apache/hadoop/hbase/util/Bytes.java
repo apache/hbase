@@ -1334,7 +1334,9 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
    * @return deserialized long from buffer.
-   * @deprecated Use {@link #readAsVLong(byte[],int)} instead.
+   * @deprecated since 0.98.12. Use {@link #readAsVLong(byte[],int)} instead.
+   * @see #readAsVLong(byte[], int)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6919">HBASE-6919</a>
    */
   @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
