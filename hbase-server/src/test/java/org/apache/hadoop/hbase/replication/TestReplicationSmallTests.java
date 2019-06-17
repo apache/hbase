@@ -239,7 +239,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   }
 
   /**
-   * Integration test for TestReplicationAdmin, removes and re-add a peer cluster
+   * Removes and re-add a peer cluster
    */
   @Test
   public void testAddAndRemoveClusters() throws Exception {
@@ -352,8 +352,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    * Test for HBASE-8663
    * <p>
    * Create two new Tables with colfamilies enabled for replication then run
-   * ReplicationAdmin.listReplicated(). Finally verify the table:colfamilies. Note:
-   * TestReplicationAdmin is a better place for this testing but it would need mocks.
+   * {@link Admin#listReplicatedTableCFs()}. Finally verify the table:colfamilies.
    */
   @Test
   public void testVerifyListReplicatedTable() throws Exception {

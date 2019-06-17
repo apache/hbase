@@ -76,7 +76,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
     try {
       // Not sure if this is cached after a split so we could have problems
       // here if a region splits while mapping
-      region = locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
+      region = locator.getRegionLocation(key.get()).getRegion().getStartKey();
     } catch (IOException e) {
       LOG.error(e.toString(), e);
     }

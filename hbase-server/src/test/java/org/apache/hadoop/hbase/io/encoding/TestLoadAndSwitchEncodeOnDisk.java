@@ -116,7 +116,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
       regions = rl.getAllRegionLocations();
     }
     for (HRegionLocation e: regions) {
-      byte [] startkey = e.getRegionInfo().getStartKey();
+      byte [] startkey = e.getRegion().getStartKey();
       Scan s = new Scan(startkey);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();

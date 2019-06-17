@@ -3093,7 +3093,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public void unassignRegionByRow(byte[] row, RegionLocator table) throws IOException {
     HRegionLocation hrl = table.getRegionLocation(row);
-    unassignRegion(hrl.getRegionInfo().getRegionName());
+    unassignRegion(hrl.getRegion().getRegionName());
   }
 
   /*
@@ -4188,8 +4188,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
             TableDescriptor htd = table.getDescriptor();
             for (HRegionLocation loc : getConnection().getRegionLocator(tableName)
                 .getAllRegionLocations()) {
-              Scan scan = new Scan().withStartRow(loc.getRegionInfo().getStartKey())
-                  .withStopRow(loc.getRegionInfo().getEndKey()).setOneRowLimit()
+              Scan scan = new Scan().withStartRow(loc.getRegion().getStartKey())
+                  .withStopRow(loc.getRegion().getEndKey()).setOneRowLimit()
                   .setMaxResultsPerColumnFamily(1).setCacheBlocks(false);
               for (byte[] family : htd.getColumnFamilyNames()) {
                 scan.addFamily(family);

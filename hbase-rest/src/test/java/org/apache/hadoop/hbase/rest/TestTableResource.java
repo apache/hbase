@@ -31,13 +31,13 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -153,7 +153,7 @@ public class TestTableResource {
       boolean found = false;
       LOG.debug("looking for region " + region.getName());
       for (HRegionLocation e: regionMap) {
-        HRegionInfo hri = e.getRegionInfo();
+        RegionInfo hri = e.getRegion();
         // getRegionNameAsString uses Bytes.toStringBinary which escapes some non-printable
         // characters
         String hriRegionName = Bytes.toString(hri.getRegionName());

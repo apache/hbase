@@ -81,7 +81,7 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
               this.table, this.row, this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected CoprocessorServiceResponse rpcCall() throws Exception {
-        byte [] regionName = getLocation().getRegionInfo().getRegionName();
+        byte [] regionName = getLocation().getRegion().getRegionName();
         CoprocessorServiceRequest csr =
             CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request, row, regionName);
         return getStub().execService(getRpcController(), csr);

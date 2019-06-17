@@ -170,7 +170,7 @@ public class BaseTestHBaseFsck {
     }
 
     for (HRegionLocation location : locations) {
-      RegionInfo hri = location.getRegionInfo();
+      RegionInfo hri = location.getRegion();
       ServerName hsa = location.getServerName();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
           && Bytes.compareTo(hri.getEndKey(), endKey) == 0
@@ -546,7 +546,7 @@ public class BaseTestHBaseFsck {
     HRegionLocation metaLocation = connection.getRegionLocator(TableName.META_TABLE_NAME)
         .getRegionLocation(HConstants.EMPTY_START_ROW);
     ServerName hsa = metaLocation.getServerName();
-    RegionInfo hri = metaLocation.getRegionInfo();
+    RegionInfo hri = metaLocation.getRegion();
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
       try (Connection unmanagedConnection = ConnectionFactory.createConnection(conf)) {

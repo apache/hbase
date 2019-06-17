@@ -187,7 +187,7 @@ public class TestHRegionFileSystem {
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDirs.get(0));
     assertEquals(2, familyDirs.size());
-    RegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo();
+    RegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegion();
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, new HFileSystem(fs), tableDir, hri);
     return regionFs;
   }

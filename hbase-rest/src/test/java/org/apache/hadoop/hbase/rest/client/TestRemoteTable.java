@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -152,13 +153,9 @@ public class TestRemoteTable {
 
   @Test
   public void testGetTableDescriptor() throws IOException {
-    Table table = null;
-    try {
-      table = TEST_UTIL.getConnection().getTable(TABLE);
-      HTableDescriptor local = table.getTableDescriptor();
-      assertEquals(remoteTable.getTableDescriptor(), local);
-    } finally {
-      if (null != table) table.close();
+    try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
+      TableDescriptor local = table.getDescriptor();
+      assertEquals(remoteTable.getDescriptor(), new HTableDescriptor(local));
     }
   }
 
@@ -505,7 +502,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_1, value1));
     assertNull(value2);
     assertTrue(remoteTable.exists(get));
-    assertEquals(1, remoteTable.existsAll(Collections.singletonList(get)).length);
+    assertEquals(1, remoteTable.exists(Collections.singletonList(get)).length);
     Delete delete = new Delete(ROW_1);
 
     remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)

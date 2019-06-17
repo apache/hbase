@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
@@ -672,7 +671,7 @@ public class TestScannersFromClientSide {
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       loc = locator.getRegionLocation(ROW);
     }
-    HRegionInfo hri = loc.getRegionInfo();
+    RegionInfo hri = loc.getRegion();
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     byte[] regionName = hri.getRegionName();
     int i = cluster.getServerWith(regionName);

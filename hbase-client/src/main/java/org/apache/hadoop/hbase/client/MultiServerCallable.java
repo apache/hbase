@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -76,7 +75,7 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
   }
 
   @Override
-  public HRegionInfo getHRegionInfo() {
+  public RegionInfo getRegionInfo() {
     throw new RuntimeException("Cannot get region info for multi-region request");
   }
 

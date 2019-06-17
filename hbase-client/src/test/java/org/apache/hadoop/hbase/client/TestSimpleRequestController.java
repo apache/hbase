@@ -148,7 +148,7 @@ public class TestSimpleRequestController {
     assertNotEquals(ReturnCode.INCLUDE, loc2Code);
 
     // fill the task slots for LOC3.
-    taskCounterPerRegion.put(LOC3.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerRegion.put(LOC3.getRegion().getRegionName(), new AtomicInteger(100));
     taskCounterPerServer.put(LOC3.getServerName(), new AtomicInteger(100));
 
     ReturnCode loc3Code = checker.canTakeRow(LOC3, createPut(1L));
@@ -156,7 +156,7 @@ public class TestSimpleRequestController {
     assertNotEquals(ReturnCode.INCLUDE, loc3Code);
 
     // release the task slots for LOC3.
-    taskCounterPerRegion.put(LOC3.getRegionInfo().getRegionName(), new AtomicInteger(0));
+    taskCounterPerRegion.put(LOC3.getRegion().getRegionName(), new AtomicInteger(0));
     taskCounterPerServer.put(LOC3.getServerName(), new AtomicInteger(0));
 
     ReturnCode loc3Code_2 = checker.canTakeRow(LOC3, createPut(1L));
@@ -306,7 +306,7 @@ public class TestSimpleRequestController {
     checker.notifyFinal(code, LOC1, heapSizeOfRow);
 
     // fill the task slots for LOC1.
-    taskCounterPerRegion.put(LOC1.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerRegion.put(LOC1.getRegion().getRegionName(), new AtomicInteger(100));
     taskCounterPerServer.put(LOC1.getServerName(), new AtomicInteger(100));
 
     // the region was previously accepted, so it must be accpted now.
@@ -317,7 +317,7 @@ public class TestSimpleRequestController {
     }
 
     // fill the task slots for LOC3.
-    taskCounterPerRegion.put(LOC3.getRegionInfo().getRegionName(), new AtomicInteger(100));
+    taskCounterPerRegion.put(LOC3.getRegion().getRegionName(), new AtomicInteger(100));
     taskCounterPerServer.put(LOC3.getServerName(), new AtomicInteger(100));
 
     // no task slots.
@@ -328,7 +328,7 @@ public class TestSimpleRequestController {
     }
 
     // release the tasks for LOC3.
-    taskCounterPerRegion.put(LOC3.getRegionInfo().getRegionName(), new AtomicInteger(0));
+    taskCounterPerRegion.put(LOC3.getRegion().getRegionName(), new AtomicInteger(0));
     taskCounterPerServer.put(LOC3.getServerName(), new AtomicInteger(0));
 
     // add LOC3 region.

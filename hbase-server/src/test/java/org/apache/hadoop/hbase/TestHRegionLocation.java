@@ -56,7 +56,7 @@ public class TestHRegionLocation {
     HRegionLocation hrl4 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
-    HRegionLocation hrl5 = new HRegionLocation(hrl4.getRegionInfo(),
+    HRegionLocation hrl5 = new HRegionLocation(hrl4.getRegion(),
         hrl4.getServerName(), hrl4.getSeqNum() + 1);
     assertTrue(hrl4.equals(hrl5));
   }

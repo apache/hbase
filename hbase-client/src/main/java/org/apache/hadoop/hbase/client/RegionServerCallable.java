@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -187,7 +186,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   @Override
   public void throwable(Throwable t, boolean retrying) {
     if (location != null) {
-      getConnection().updateCachedLocations(tableName, location.getRegionInfo().getRegionName(),
+      getConnection().updateCachedLocations(tableName, location.getRegion().getRegionName(),
           row, t, location.getServerName());
     }
   }
@@ -203,13 +202,13 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
   }
 
   /**
-   * @return the HRegionInfo for the current region
+   * @return the RegionInfo for the current region
    */
-  public HRegionInfo getHRegionInfo() {
+  public RegionInfo getRegionInfo() {
     if (this.location == null) {
       return null;
     }
-    return this.location.getRegionInfo();
+    return this.location.getRegion();
   }
 
   @Override

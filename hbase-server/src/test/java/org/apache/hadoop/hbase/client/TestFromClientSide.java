@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -53,14 +54,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -101,7 +100,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -181,31 +179,24 @@ public class TestFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    try (Table t = connection.getTable(TableName.valueOf(name.getMethodName()))) {
-      if (t instanceof HTable) {
-        HTable table = (HTable) t;
-        table.setOperationTimeout(3 * 1000);
 
-        try {
-          Append append = new Append(ROW);
-          append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-          Result result = table.append(append);
+    try (Connection connection = ConnectionFactory.createConnection(c);
+        Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
+          .setOperationTimeout(3 * 1000).build()) {
+      Append append = new Append(ROW);
+      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      Result result = table.append(append);
 
-          // Verify expected result
-          Cell[] cells = result.rawCells();
-          assertEquals(1, cells.length);
-          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+      // Verify expected result
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
 
-          // Verify expected result again
-          Result readResult = table.get(new Get(ROW));
-          cells = readResult.rawCells();
-          assertEquals(1, cells.length);
-          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-        } finally {
-          connection.close();
-        }
-      }
+      // Verify expected result again
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
     }
   }
 
@@ -482,10 +473,10 @@ public class TestFromClientSide {
       List<HRegionLocation> regions = splitTable(t);
       assertRowCount(t, rowCount);
       // Get end key of first region.
-      byte[] endKey = regions.get(0).getRegionInfo().getEndKey();
+      byte[] endKey = regions.get(0).getRegion().getEndKey();
       // Count rows with a filter that stops us before passed 'endKey'.
       // Should be count of rows in first region.
-      int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
+      int endKeyCount = countRows(t, createScanWithRowFilter(endKey));
       assertTrue(endKeyCount < rowCount);
 
       // How do I know I did not got to second region?  Thats tough.  Can't really
@@ -497,30 +488,29 @@ public class TestFromClientSide {
       // New test.  Make it so scan goes into next region by one and then two.
       // Make sure count comes out right.
       byte[] key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] + 1)};
-      int plusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      int plusOneCount = countRows(t, createScanWithRowFilter(key));
       assertEquals(endKeyCount + 1, plusOneCount);
       key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] + 2)};
-      int plusTwoCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      int plusTwoCount = countRows(t, createScanWithRowFilter(key));
       assertEquals(endKeyCount + 2, plusTwoCount);
 
       // New test.  Make it so I scan one less than endkey.
       key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] - 1)};
-      int minusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      int minusOneCount = countRows(t, createScanWithRowFilter(key));
       assertEquals(endKeyCount - 1, minusOneCount);
       // For above test... study logs.  Make sure we do "Finished with scanning.."
       // in first region and that we do not fall into the next region.
 
-      key = new byte[]{'a', 'a', 'a'};
-      int countBBB = TEST_UTIL.countRows(t,
-              createScanWithRowFilter(key, null, CompareOperator.EQUAL));
+      key = new byte[] { 'a', 'a', 'a' };
+      int countBBB = countRows(t, createScanWithRowFilter(key, null, CompareOperator.EQUAL));
       assertEquals(1, countBBB);
 
-      int countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, null,
-              CompareOperator.GREATER_OR_EQUAL));
+      int countGreater =
+        countRows(t, createScanWithRowFilter(endKey, null, CompareOperator.GREATER_OR_EQUAL));
       // Because started at start of table.
       assertEquals(0, countGreater);
-      countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
-              CompareOperator.GREATER_OR_EQUAL));
+      countGreater =
+        countRows(t, createScanWithRowFilter(endKey, endKey, CompareOperator.GREATER_OR_EQUAL));
       assertEquals(rowCount - endKeyCount, countGreater);
     }
   }
@@ -552,16 +542,14 @@ public class TestFromClientSide {
     return s;
   }
 
-  private void assertRowCount(final Table t, final int expected)
-  throws IOException {
-    assertEquals(expected, TEST_UTIL.countRows(t, new Scan()));
+  private void assertRowCount(final Table t, final int expected) throws IOException {
+    assertEquals(expected, countRows(t, new Scan()));
   }
 
-  /*
+  /**
    * Split table into multiple regions.
    * @param t Table to split.
    * @return Map of regions to servers.
-   * @throws IOException
    */
   private List<HRegionLocation> splitTable(final Table t)
   throws IOException, InterruptedException {
@@ -4375,7 +4363,7 @@ public class TestFromClientSide {
       // Test user metadata
       try (Admin admin = TEST_UTIL.getAdmin()) {
         // make a modifiable descriptor
-        HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
+        HTableDescriptor desc = new HTableDescriptor(a.getDescriptor());
         // offline the table
         admin.disableTable(tableAname);
         // add a user attribute to HTD
@@ -4391,7 +4379,7 @@ public class TestFromClientSide {
       }
 
       // Test that attribute changes were applied
-      HTableDescriptor desc = a.getTableDescriptor();
+      HTableDescriptor desc = new HTableDescriptor(a.getDescriptor());
       assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
       // check HTD attribute
       value = desc.getValue(attrName);
@@ -4427,7 +4415,7 @@ public class TestFromClientSide {
 
       // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
       // in Store.rowAtOrBeforeFromStoreFile
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Put put1 = new Put(firstRow);
       Put put2 = new Put(secondRow);
@@ -5296,7 +5284,7 @@ public class TestFromClientSide {
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
         // get the block cache and region
-        String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+        String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
 
         HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
                 .getRegion(regionName);
@@ -5417,7 +5405,7 @@ public class TestFromClientSide {
         RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
       assertEquals(1, allRegionLocations.size());
-      HRegionInfo regionInfo = allRegionLocations.get(0).getRegionInfo();
+      RegionInfo regionInfo = allRegionLocations.get(0).getRegion();
       ServerName addrBefore = allRegionLocations.get(0).getServerName();
       // Verify region location before move.
       HRegionLocation addrCache = locator.getRegionLocation(regionInfo.getStartKey(), false);
@@ -5519,7 +5507,7 @@ public class TestFromClientSide {
       do {
         HRegionLocation regionLocation = r.getRegionLocation(currentKey);
         regionsInRange.add(regionLocation);
-        currentKey = regionLocation.getRegionInfo().getEndKey();
+        currentKey = regionLocation.getRegion().getEndKey();
       } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
           && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
       return regionsInRange;
@@ -6444,19 +6432,6 @@ public class TestFromClientSide {
       }
       assertEquals(4, count); // 003 004 005 006
     }
-  }
-
-  private static Pair<byte[][], byte[][]> getStartEndKeys(List<RegionLocations> regions) {
-    final byte[][] startKeyList = new byte[regions.size()][];
-    final byte[][] endKeyList = new byte[regions.size()][];
-
-    for (int i = 0; i < regions.size(); i++) {
-      RegionInfo region = regions.get(i).getRegionLocation().getRegion();
-      startKeyList[i] = region.getStartKey();
-      endKeyList[i] = region.getEndKey();
-    }
-
-    return new Pair<>(startKeyList, endKeyList);
   }
 
   @Test

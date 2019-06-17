@@ -155,7 +155,7 @@ public class TestFromClientSide3 {
       HRegionLocation loc = locator.getRegionLocation(row, true);
       AdminProtos.AdminService.BlockingInterface server =
         ((ClusterConnection) admin.getConnection()).getAdmin(loc.getServerName());
-      byte[] regName = loc.getRegionInfo().getRegionName();
+      byte[] regName = loc.getRegion().getRegionName();
 
       for (int i = 0; i < nFlushes; i++) {
         randomCFPuts(table, row, family, nPuts);
@@ -285,7 +285,7 @@ public class TestFromClientSide3 {
         try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
           // Verify we have multiple store files.
           HRegionLocation loc = locator.getRegionLocation(row, true);
-          byte[] regionName = loc.getRegionInfo().getRegionName();
+          byte[] regionName = loc.getRegion().getRegionName();
           AdminProtos.AdminService.BlockingInterface server =
                   connection.getAdmin(loc.getServerName());
           assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
@@ -297,8 +297,8 @@ public class TestFromClientSide3 {
           for (int i = 0; i < 10 * 1000 / 40; ++i) {
             // The number of store files after compaction should be lesser.
             loc = locator.getRegionLocation(row, true);
-            if (!loc.getRegionInfo().isOffline()) {
-              regionName = loc.getRegionInfo().getRegionName();
+            if (!loc.getRegion().isOffline()) {
+              regionName = loc.getRegion().getRegionName();
               server = connection.getAdmin(loc.getServerName());
               if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
                 break;
@@ -311,7 +311,7 @@ public class TestFromClientSide3 {
 
           // change the compaction.min config option for this table to 5
           LOG.info("hbase.hstore.compaction.min should now be 5");
-          HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
+          HTableDescriptor htd = new HTableDescriptor(table.getDescriptor());
           htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
           admin.modifyTable(htd);
           LOG.info("alter status finished");
@@ -325,7 +325,7 @@ public class TestFromClientSide3 {
           // This time, the compaction request should not happen
           Thread.sleep(10 * 1000);
           loc = locator.getRegionLocation(row, true);
-          regionName = loc.getRegionInfo().getRegionName();
+          regionName = loc.getRegion().getRegionName();
           server = connection.getAdmin(loc.getServerName());
           int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
           assertTrue(sfCount > 1);
@@ -344,7 +344,7 @@ public class TestFromClientSide3 {
           // poll wait for the compactions to happen
           for (int i = 0; i < 10 * 1000 / 40; ++i) {
             loc = locator.getRegionLocation(row, true);
-            regionName = loc.getRegionInfo().getRegionName();
+            regionName = loc.getRegion().getRegionName();
             try {
               server = connection.getAdmin(loc.getServerName());
               if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
@@ -368,8 +368,8 @@ public class TestFromClientSide3 {
           htd.modifyFamily(hcd);
           admin.modifyTable(htd);
           LOG.info("alter status finished");
-          assertNull(table.getTableDescriptor().getFamily(FAMILY).getValue(
-                  "hbase.hstore.compaction.min"));
+          assertNull(table.getDescriptor().getColumnFamily(FAMILY)
+            .getValue(Bytes.toBytes("hbase.hstore.compaction.min")));
         }
       }
     }
@@ -541,7 +541,7 @@ public class TestFromClientSide3 {
       getList.add(get);
       getList.add(get2);
 
-      boolean[] exists = table.existsAll(getList);
+      boolean[] exists = table.exists(getList);
       assertEquals(true, exists[0]);
       assertEquals(true, exists[1]);
 
@@ -593,7 +593,7 @@ public class TestFromClientSide3 {
       gets.add(new Get(Bytes.add(ANOTHERROW, new byte[]{0x00})));
 
       LOG.info("Calling exists");
-      boolean[] results = table.existsAll(gets);
+      boolean[] results = table.exists(gets);
       assertFalse(results[0]);
       assertFalse(results[1]);
       assertTrue(results[2]);
@@ -607,7 +607,7 @@ public class TestFromClientSide3 {
       gets = new ArrayList<>();
       gets.add(new Get(new byte[]{0x00}));
       gets.add(new Get(new byte[]{0x00, 0x00}));
-      results = table.existsAll(gets);
+      results = table.exists(gets);
       assertTrue(results[0]);
       assertFalse(results[1]);
 
@@ -620,7 +620,7 @@ public class TestFromClientSide3 {
       gets.add(new Get(new byte[]{(byte) 0xff}));
       gets.add(new Get(new byte[]{(byte) 0xff, (byte) 0xff}));
       gets.add(new Get(new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff}));
-      results = table.existsAll(gets);
+      results = table.exists(gets);
       assertFalse(results[0]);
       assertTrue(results[1]);
       assertFalse(results[2]);

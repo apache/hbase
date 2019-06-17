@@ -31,7 +31,7 @@ EOF
 
       def command(table, row_key)
         region_location = admin.locate_region(table, row_key)
-        hri = region_location.getRegionInfo
+        hri = region_location.getRegion
 
         formatter.header(%w[HOST REGION])
         formatter.row([region_location.getHostnamePort, hri.toString])

@@ -298,7 +298,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         RegionLocator regionLocator = conn.getRegionLocator(getTablename())) {
 
       // Configure the partitioner and other things needed for HFileOutputFormat.
-      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+      HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
 
       // Run the job making sure it works.
       assertEquals(true, job.waitForCompletion(true));

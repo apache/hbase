@@ -67,12 +67,12 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
   protected FlushRegionResponse call(HBaseRpcController controller) throws Exception {
     // Check whether we should still do the flush to this region. If the regions are changed due
     // to splits or merges, etc return success
-    if (!Bytes.equals(location.getRegionInfo().getRegionName(), regionName)) {
+    if (!Bytes.equals(location.getRegion().getRegionName(), regionName)) {
       if (!reload) {
         throw new IOException("Cached location seems to be different than requested region.");
       }
       LOG.info("Skipping flush region, because the located region "
-          + Bytes.toStringBinary(location.getRegionInfo().getRegionName()) + " is different than "
+          + Bytes.toStringBinary(location.getRegion().getRegionName()) + " is different than "
           + " requested region " + Bytes.toStringBinary(regionName));
       return FlushRegionResponse.newBuilder()
           .setLastFlushTime(EnvironmentEdgeManager.currentTime())

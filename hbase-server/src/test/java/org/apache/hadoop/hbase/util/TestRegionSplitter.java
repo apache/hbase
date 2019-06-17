@@ -29,9 +29,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -408,7 +408,7 @@ public class TestRegionSplitter {
       final List<HRegionLocation> regionInfoMap = locator.getAllRegionLocations();
       assertEquals(numRegions, regionInfoMap.size());
       for (HRegionLocation entry : regionInfoMap) {
-        final HRegionInfo regionInfo = entry.getRegionInfo();
+        final RegionInfo regionInfo = entry.getRegion();
         byte[] regionStart = regionInfo.getStartKey();
         byte[] regionEnd = regionInfo.getEndKey();
 

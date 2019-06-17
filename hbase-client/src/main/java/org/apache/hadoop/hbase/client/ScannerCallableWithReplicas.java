@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -109,8 +108,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable.getCaching();
   }
 
-  public HRegionInfo getHRegionInfo() {
-    return currentScannerCallable.getHRegionInfo();
+  public RegionInfo getRegionInfo() {
+    return currentScannerCallable.getRegionInfo();
   }
 
   public MoreResults moreResultsInRegion() {
@@ -262,16 +261,16 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       if (result != null && result.length != 0) this.lastResult = result[result.length - 1];
       if (LOG.isTraceEnabled()) {
         LOG.trace("Setting current scanner as id=" + currentScannerCallable.scannerId +
-            " associated with replica=" + currentScannerCallable.getHRegionInfo().getReplicaId());
+            " associated with replica=" + currentScannerCallable.getRegionInfo().getReplicaId());
       }
       // close all outstanding replica scanners but the one we heard back from
       outstandingCallables.remove(scanner);
       for (ScannerCallable s : outstandingCallables) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Closing scanner id=" + s.scannerId +
-            ", replica=" + s.getHRegionInfo().getRegionId() +
+            ", replica=" + s.getRegionInfo().getRegionId() +
             " because slow and replica=" +
-            this.currentScannerCallable.getHRegionInfo().getReplicaId() + " succeeded");
+            this.currentScannerCallable.getRegionInfo().getReplicaId() + " succeeded");
         }
         // Submit the "close" to the pool since this might take time, and we don't
         // want to wait for the "close" to happen yet. The "wait" will happen when

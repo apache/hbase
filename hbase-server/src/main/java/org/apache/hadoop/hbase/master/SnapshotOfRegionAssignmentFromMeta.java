@@ -113,7 +113,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
           if (result ==  null || result.isEmpty()) return true;
           RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
           if (rl == null) return true;
-          RegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
+          RegionInfo hri = rl.getRegionLocation(0).getRegion();
           if (hri == null) return true;
           if (hri.getTable() == null) return true;
           if (disabledTables.contains(hri.getTable())) {
@@ -126,13 +126,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
           // Add the current assignment to the snapshot for all replicas
           for (int i = 0; i < hrls.length; i++) {
             if (hrls[i] == null) continue;
-            hri = hrls[i].getRegionInfo();
+            hri = hrls[i].getRegion();
             if (hri == null) continue;
             addAssignment(hri, hrls[i].getServerName());
             addRegion(hri);
           }
 
-          hri = rl.getRegionLocation(0).getRegionInfo();
+          hri = rl.getRegionLocation(0).getRegion();
           // the code below is to handle favored nodes
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
               FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);

@@ -575,7 +575,7 @@ public class TestAdmin2 extends TestAdminBase {
 
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
-      RegionInfo region = regionLocation.getRegionInfo();
+      RegionInfo region = regionLocation.getRegion();
       byte[] regionName = region.getRegionName();
       Pair<RegionInfo, ServerName> pair = rawAdmin.getRegion(regionName);
       assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));

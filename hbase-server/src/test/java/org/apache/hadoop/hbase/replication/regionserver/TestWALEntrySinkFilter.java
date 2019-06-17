@@ -28,17 +28,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -303,11 +300,6 @@ public class TestWALEntrySinkFilter {
             }
 
             @Override
-            public HTableDescriptor getTableDescriptor() throws IOException {
-              return null;
-            }
-
-            @Override
             public TableDescriptor getDescriptor() throws IOException {
               return null;
             }
@@ -373,16 +365,6 @@ public class TestWALEntrySinkFilter {
             }
 
             @Override
-            public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOperator op, byte[] value, Put put) throws IOException {
-              return false;
-            }
-
-            @Override
             public void delete(Delete delete) throws IOException {
 
             }
@@ -390,16 +372,6 @@ public class TestWALEntrySinkFilter {
             @Override
             public void delete(List<Delete> deletes) throws IOException {
 
-            }
-
-            @Override
-            public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value, Delete delete) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, CompareOperator op, byte[] value, Delete delete) throws IOException {
-              return false;
             }
 
             @Override
@@ -463,23 +435,8 @@ public class TestWALEntrySinkFilter {
             }
 
             @Override
-            public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op, byte[] value, RowMutations mutation) throws IOException {
-              return false;
-            }
-
-            @Override
             public long getRpcTimeout(TimeUnit unit) {
               return 0;
-            }
-
-            @Override
-            public int getRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setRpcTimeout(int rpcTimeout) {
-
             }
 
             @Override
@@ -488,42 +445,13 @@ public class TestWALEntrySinkFilter {
             }
 
             @Override
-            public int getReadRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setReadRpcTimeout(int readRpcTimeout) {
-
-            }
-
-            @Override
             public long getWriteRpcTimeout(TimeUnit unit) {
               return 0;
             }
 
             @Override
-            public int getWriteRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setWriteRpcTimeout(int writeRpcTimeout) {
-
-            }
-
-            @Override
             public long getOperationTimeout(TimeUnit unit) {
               return 0;
-            }
-
-            @Override
-            public int getOperationTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setOperationTimeout(int operationTimeout) {
             }
 
             @Override

@@ -1962,7 +1962,7 @@ public class HBaseFsck extends Configured implements Closeable {
             "META region location is null");
         return false;
       }
-      if (metaLocation.getRegionInfo() == null) {
+      if (metaLocation.getRegion() == null) {
         errors.reportError(ERROR_CODE.NULL_META_REGION,
             "META location regionInfo is null");
         return false;
@@ -1973,10 +1973,11 @@ public class HBaseFsck extends Configured implements Closeable {
         return false;
       }
       ServerName sn = metaLocation.getServerName();
-      MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, EnvironmentEdgeManager.currentTime());
-      HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegionInfo().getEncodedName());
+      MetaEntry m = new MetaEntry(metaLocation.getRegion(), sn,
+              EnvironmentEdgeManager.currentTime());
+      HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegion().getEncodedName());
       if (hbckInfo == null) {
-        regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), new HbckInfo(m));
+        regionInfoMap.put(metaLocation.getRegion().getEncodedName(), new HbckInfo(m));
       } else {
         hbckInfo.metaEntry = m;
       }
@@ -2365,7 +2366,7 @@ public class HBaseFsck extends Configured implements Closeable {
             + "have handle to reach it.");
         continue;
       }
-      RegionInfo hri = h.getRegionInfo();
+      RegionInfo hri = h.getRegion();
       if (hri == null) {
         LOG.warn("Unable to close region " + hi.getRegionNameAsString()
             + " because hbase:meta had invalid or missing "
@@ -3759,24 +3760,24 @@ public class HBaseFsck extends Configured implements Closeable {
           }
           ServerName sn = null;
           if (rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID) == null ||
-              rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID).getRegionInfo() == null) {
+              rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID).getRegion() == null) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
               "Empty REGIONINFO_QUALIFIER found in hbase:meta");
             return true;
           }
-          RegionInfo hri = rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID).getRegionInfo();
+          RegionInfo hri = rl.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID).getRegion();
           if (!(isTableIncluded(hri.getTable())
               || hri.isMetaRegion())) {
             return true;
           }
           PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(result);
           for (HRegionLocation h : rl.getRegionLocations()) {
-            if (h == null || h.getRegionInfo() == null) {
+            if (h == null || h.getRegion() == null) {
               continue;
             }
             sn = h.getServerName();
-            hri = h.getRegionInfo();
+            hri = h.getRegion();
 
             MetaEntry m = null;
             if (hri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {

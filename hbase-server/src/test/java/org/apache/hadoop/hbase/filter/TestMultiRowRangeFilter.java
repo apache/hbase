@@ -258,7 +258,7 @@ public class TestMultiRowRangeFilter {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
@@ -286,7 +286,7 @@ public class TestMultiRowRangeFilter {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(40), false));
@@ -312,7 +312,7 @@ public class TestMultiRowRangeFilter {
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(""), true, Bytes.toBytes(10), false));
@@ -334,7 +334,7 @@ public class TestMultiRowRangeFilter {
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(""), false));
@@ -356,7 +356,7 @@ public class TestMultiRowRangeFilter {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
@@ -381,29 +381,28 @@ public class TestMultiRowRangeFilter {
   public void testMultiRowRangeFilterWithExclusive() throws IOException {
     tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 6000000);
-    Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
-    ht.setReadRpcTimeout(600000);
-    ht.setOperationTimeout(6000000);
-    generateRows(numRows, ht, family, qf, value);
+    TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
+    try (Table ht = TEST_UTIL.getConnection().getTableBuilder(tableName, null)
+      .setReadRpcTimeout(600000).setOperationTimeout(6000000).build()) {
+      generateRows(numRows, ht, family, qf, value);
 
-    Scan scan = new Scan();
-    scan.setMaxVersions();
+      Scan scan = new Scan();
+      scan.readAllVersions();
 
-    List<RowRange> ranges = new ArrayList<>();
-    ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
-    ranges.add(new RowRange(Bytes.toBytes(20), false, Bytes.toBytes(40), false));
-    ranges.add(new RowRange(Bytes.toBytes(65), true, Bytes.toBytes(75), false));
+      List<RowRange> ranges = new ArrayList<>();
+      ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
+      ranges.add(new RowRange(Bytes.toBytes(20), false, Bytes.toBytes(40), false));
+      ranges.add(new RowRange(Bytes.toBytes(65), true, Bytes.toBytes(75), false));
 
-    MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
-    scan.setFilter(filter);
-    int resultsSize = getResultsSize(ht, scan);
-    LOG.info("found " + resultsSize + " results");
-    List<Cell> results1 = getScanResult(Bytes.toBytes(10), Bytes.toBytes(40), ht);
-    List<Cell> results2 = getScanResult(Bytes.toBytes(65), Bytes.toBytes(75), ht);
+      MultiRowRangeFilter filter = new MultiRowRangeFilter(ranges);
+      scan.setFilter(filter);
+      int resultsSize = getResultsSize(ht, scan);
+      LOG.info("found " + resultsSize + " results");
+      List<Cell> results1 = getScanResult(Bytes.toBytes(10), Bytes.toBytes(40), ht);
+      List<Cell> results2 = getScanResult(Bytes.toBytes(65), Bytes.toBytes(75), ht);
 
-    assertEquals((results1.size() - 1) + results2.size(), resultsSize);
-
-    ht.close();
+      assertEquals((results1.size() - 1) + results2.size(), resultsSize);
+    }
   }
 
   @Test
@@ -413,7 +412,7 @@ public class TestMultiRowRangeFilter {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges1 = new ArrayList<>();
     ranges1.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
@@ -448,7 +447,7 @@ public class TestMultiRowRangeFilter {
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
 
     List<RowRange> ranges1 = new ArrayList<>();
     ranges1.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(40), false));
@@ -648,12 +647,12 @@ public class TestMultiRowRangeFilter {
 
   private List<Cell> getScanResult(byte[] startRow, byte[] stopRow, Table ht) throws IOException {
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     if(!Bytes.toString(startRow).isEmpty()) {
-      scan.setStartRow(startRow);
+      scan.withStartRow(startRow);
     }
     if(!Bytes.toString(stopRow).isEmpty()) {
-      scan.setStopRow(stopRow);
+      scan.withStopRow(stopRow);
     }
     ResultScanner scanner = ht.getScanner(scan);
     List<Cell> kvList = new ArrayList<>();

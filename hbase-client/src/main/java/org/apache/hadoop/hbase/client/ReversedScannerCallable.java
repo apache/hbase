@@ -143,14 +143,14 @@ public class ReversedScannerCallable extends ScannerCallable {
       RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
           getConnection(), getTableName(), currentKey);
       HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
-      if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
+      if (regionLocation != null && regionLocation.getRegion().containsRow(currentKey)) {
         regionList.add(regionLocation);
       } else {
         throw new DoNotRetryIOException("Does hbase:meta exist hole? Locating row "
             + Bytes.toStringBinary(currentKey) + " returns incorrect region "
-            + (regionLocation == null ? null : regionLocation.getRegionInfo()));
+            + (regionLocation == null ? null : regionLocation.getRegion()));
       }
-      currentKey = regionLocation.getRegionInfo().getEndKey();
+      currentKey = regionLocation.getRegion().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
         && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
     return regionList;

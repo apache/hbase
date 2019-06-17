@@ -83,7 +83,7 @@ implements Configurable {
     try {
       // Not sure if this is cached after a split so we could have problems
       // here if a region splits while mapping
-      region = this.locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
+      region = this.locator.getRegionLocation(key.get()).getRegion().getStartKey();
     } catch (IOException e) {
       LOG.error(e.toString(), e);
     }

@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -623,7 +624,7 @@ public class TestAccessController extends SecureTestUtil {
       regions = locator.getAllRegionLocations();
     }
     HRegionLocation location = regions.get(0);
-    final HRegionInfo hri = location.getRegionInfo();
+    final RegionInfo hri = location.getRegion();
     final ServerName server = location.getServerName();
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -646,7 +647,7 @@ public class TestAccessController extends SecureTestUtil {
       regions = locator.getAllRegionLocations();
     }
     HRegionLocation location = regions.get(0);
-    final HRegionInfo hri = location.getRegionInfo();
+    final RegionInfo hri = location.getRegion();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -667,7 +668,7 @@ public class TestAccessController extends SecureTestUtil {
       regions = locator.getAllRegionLocations();
     }
     HRegionLocation location = regions.get(0);
-    final HRegionInfo hri = location.getRegionInfo();
+    final RegionInfo hri = location.getRegion();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -688,7 +689,7 @@ public class TestAccessController extends SecureTestUtil {
       regions = locator.getAllRegionLocations();
     }
     HRegionLocation location = regions.get(0);
-    final HRegionInfo hri = location.getRegionInfo();
+    final RegionInfo hri = location.getRegion();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -2131,7 +2132,7 @@ public class TestAccessController extends SecureTestUtil {
       regions = locator.getAllRegionLocations();
     }
     HRegionLocation location = regions.get(0);
-    final HRegionInfo hri = location.getRegionInfo();
+    final RegionInfo hri = location.getRegion();
     final ServerName server = location.getServerName();
     try (Table table = systemUserConnection.getTable(TEST_TABLE2)) {
       AccessTestAction moveAction = new AccessTestAction() {
