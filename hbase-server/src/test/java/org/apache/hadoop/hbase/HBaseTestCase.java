@@ -47,7 +47,10 @@ import junit.framework.TestCase;
 /**
  * Abstract HBase test class.  Initializes a few things that can come in handly
  * like an HBaseConfiguration and filesystem.
- * @deprecated Write junit4 unit tests using {@link HBaseTestingUtility}
+ * @deprecated since 2.0.0 and will be removed in 3.0.0. Write junit4 unit tests using
+ *   {@link HBaseTestingUtility}.
+ * @see HBaseTestingUtility
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-11912">HBASE-11912</a>
  */
 @Deprecated
 public abstract class HBaseTestCase extends TestCase {
