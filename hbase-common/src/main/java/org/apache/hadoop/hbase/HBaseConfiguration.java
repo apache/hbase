@@ -42,6 +42,9 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
+   * @deprecated since 0.90.0. Please use {@link #create()} instead.
+   * @see #create()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
    */
   @Deprecated
   public HBaseConfiguration() {
@@ -55,6 +58,9 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create(conf) to construct a plain Configuration
+   * @deprecated since 0.90.0. Please use {@link #create(Configuration)} instead.
+   * @see #create(Configuration)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
    */
   @Deprecated
   public HBaseConfiguration(final Configuration c) {

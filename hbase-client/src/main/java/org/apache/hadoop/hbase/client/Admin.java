@@ -733,7 +733,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   boolean balancer(boolean force) throws IOException;
-  
+
   /**
    * Query the current state of the balancer
    *
@@ -1482,7 +1482,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void deleteSnapshots(final Pattern pattern) throws IOException;
-  
+
   /**
    * Delete all existing snapshots matching the given table name regular expression and snapshot
    * name regular expression.
