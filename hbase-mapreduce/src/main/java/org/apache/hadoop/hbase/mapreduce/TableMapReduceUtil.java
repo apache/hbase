@@ -552,7 +552,10 @@ public class TableMapReduceUtil {
    * @param job The job that requires the permission.
    * @param quorumAddress string that contains the 3 required configuratins
    * @throws IOException When the authentication token cannot be obtained.
-   * @deprecated Since 1.2.0, use {@link #initCredentialsForCluster(Job, Configuration)} instead.
+   * @deprecated Since 1.2.0 and will be removed in 3.0.0. Use
+   *   {@link #initCredentialsForCluster(Job, Configuration)} instead.
+   * @see #initCredentialsForCluster(Job, Configuration)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-14886">HBASE-14886</a>
    */
   @Deprecated
   public static void initCredentialsForCluster(Job job, String quorumAddress)
@@ -876,7 +879,10 @@ public class TableMapReduceUtil {
    * Add the jars containing the given classes to the job's configuration
    * such that JobClient will ship them to the cluster and add them to
    * the DistributedCache.
-   * @deprecated rely on {@link #addDependencyJars(Job)} instead.
+   * @deprecated since 1.3.0 and will be removed in 3.0.0. Use {@link #addDependencyJars(Job)}
+   *   instead.
+   * @see #addDependencyJars(Job)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-8386">HBASE-8386</a>
    */
   @Deprecated
   public static void addDependencyJars(Configuration conf,

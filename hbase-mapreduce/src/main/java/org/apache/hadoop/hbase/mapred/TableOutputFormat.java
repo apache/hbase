@@ -57,8 +57,10 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
      *
-     * @deprecated Please use {@code #TableRecordWriter(JobConf)}  This version does not clean up
-     * connections and will leak connections (removed in 2.0)
+     * @deprecated since 2.0.0 and will be removed in 3.0.0. Please use
+     *   {@code #TableRecordWriter(JobConf)} instead. This version does not clean up connections and
+     *   will leak connections (removed in 2.0).
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-16774">HBASE-16774</a>
      */
     @Deprecated
     public TableRecordWriter(final BufferedMutator mutator) throws IOException {

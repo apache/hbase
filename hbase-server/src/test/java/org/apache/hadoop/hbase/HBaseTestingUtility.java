@@ -181,7 +181,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * System property key to get test directory value. Name is as it is because mini dfs has
    * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
    * used in mini dfs.
-   * @deprecated can be used only with mini dfs
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Can be used only with mini dfs.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19410">HBASE-19410</a>
    */
   @Deprecated
   private static final String TEST_DIRECTORY_KEY = "test.build.data";
@@ -357,8 +358,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility()} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
+   *   instead.
    * @return a normal HBaseTestingUtility
+   * @see #HBaseTestingUtility()
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
    */
   @Deprecated
   public static HBaseTestingUtility createLocalHTU() {
@@ -366,8 +370,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility(Configuration)} instead
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #HBaseTestingUtility(Configuration)} instead.
    * @return a normal HBaseTestingUtility
+   * @see #HBaseTestingUtility(Configuration)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
    */
   @Deprecated
   public static HBaseTestingUtility createLocalHTU(Configuration c) {
@@ -1770,6 +1777,12 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
+  /**
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
+   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
+   */
   @Deprecated
   public HTableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
@@ -1781,6 +1794,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Create a table of name <code>name</code>.
    * @param name Name to give table.
    * @return Column descriptor.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
+   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
    */
   @Deprecated
   public HTableDescriptor createTableDescriptor(final String name) {
@@ -1882,8 +1899,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    * @return A region on which you must call
              {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
-   * @deprecated use
-   * {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
+   *   instead.
+   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
    */
   @Deprecated
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,

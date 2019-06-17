@@ -162,7 +162,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
    * <code>b</code> can be null when deserializing).  Cannot start with a '.'
    * either. Also Family can not be an empty value or equal "recovered.edits".
-   * @deprecated Use {@link ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])}.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])} instead.
+   * @see ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>
    */
   @Deprecated
   public static byte [] isLegalFamilyName(final byte [] b) {

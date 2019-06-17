@@ -87,6 +87,8 @@ public class CellCreator {
    * @param visExpression visibility expression to be associated with cell
    * @return created Cell
    * @throws IOException
+   * @deprecated since 0.98.9
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-10560">HBASE-10560</a>
    */
   @Deprecated
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
