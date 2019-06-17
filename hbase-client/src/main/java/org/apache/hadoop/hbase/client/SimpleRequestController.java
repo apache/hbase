@@ -433,7 +433,7 @@ class SimpleRequestController implements RequestController {
      *
      * @param loc
      * @param heapSizeOfRow
-     * @return either Include ReturnCode or Skip ReturnCode
+     * @return either Include {@link ReturnCode} or Skip {@link ReturnCode}
      */
     @Override
     public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
