@@ -1981,7 +1981,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   /* ---- Protobuf AccessControlService implementation ---- */
 
   /**
-   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link Admin#grant(UserPermission, boolean)} instead.
+   * @see Admin#grant(UserPermission, boolean)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21739">HBASE-21739</a>
    */
   @Deprecated
   @Override
@@ -2024,7 +2027,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * @deprecated Use {@link Admin#revoke(UserPermission)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use {@link Admin#revoke(UserPermission)}
+   *   instead.
+   * @see Admin#revoke(UserPermission)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21739">HBASE-21739</a>
    */
   @Deprecated
   @Override
@@ -2064,7 +2070,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   * @see Admin#getUserPermissions(GetUserPermissionsRequest)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21911">HBASE-21911</a>
    */
   @Deprecated
   @Override
@@ -2115,7 +2124,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * @deprecated Use {@link Admin#hasUserPermissions(List)} instead.
+   * @deprecated since 2.2.0 and will be removed 4.0.0. Use {@link Admin#hasUserPermissions(List)}
+   *   instead.
+   * @see Admin#hasUserPermissions(List)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-22117">HBASE-22117</a>
    */
   @Deprecated
   @Override
@@ -2448,7 +2460,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * @deprecated Use {@link Admin#hasUserPermissions(String, List)} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
+   *   {@link Admin#hasUserPermissions(String, List)} instead.
+   * @see Admin#hasUserPermissions(String, List)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-22117">HBASE-22117</a>
    */
   @Deprecated
   @Override

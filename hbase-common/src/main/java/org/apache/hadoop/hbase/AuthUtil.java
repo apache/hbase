@@ -72,12 +72,13 @@ import org.slf4j.LoggerFactory;
  * for kerberized applications. For more, please refer
  * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration for Secure Operation</a>
  *
- * @deprecated since 2.2.0, to be removed in hbase-3.0.0.
+ * @deprecated since 2.2.0, to be marked as
+ *  {@link org.apache.yetus.audience.InterfaceAudience.Private} in 4.0.0.
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-20886">HBASE-20886</a>
  */
 @Deprecated
 @InterfaceAudience.Public
 public final class AuthUtil {
-  // TODO: Mark this class InterfaceAudience.Private from 3.0.0
   private static final Logger LOG = LoggerFactory.getLogger(AuthUtil.class);
 
   /** Prefix character to denote group names */
@@ -214,11 +215,12 @@ public final class AuthUtil {
    * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
    * @param conf the hbase service configuration
    * @return a ScheduledChore for renewals, if needed, and null otherwise.
-   * @deprecated Deprecated since 2.2.0, this method will be internal use only after 3.0.0.
+   * @deprecated Deprecated since 2.2.0, this method will be
+   *   {@link org.apache.yetus.audience.InterfaceAudience.Private} use only after 4.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-20886">HBASE-20886</a>
    */
   @Deprecated
   public static ScheduledChore getAuthChore(Configuration conf) throws IOException {
-    // TODO: Mark this method InterfaceAudience.Private from 3.0.0
     User user = loginClientAsService(conf);
     return getAuthRenewalChore(user.getUGI());
   }

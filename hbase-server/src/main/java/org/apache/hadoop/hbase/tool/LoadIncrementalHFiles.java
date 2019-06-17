@@ -154,7 +154,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * the case where a region has split during the process of the load. When this happens, the HFile
    * is split into two physical parts across the new region boundary, and each part is added back
    * into the queue. The import process finishes when the queue is empty.
-   * @deprecated Use {@link BulkLoadHFiles} instead.
+   * @deprecated since 2.2.0 and will be removed in 4.0.0. Use {@link BulkLoadHFiles} instead.
+   * @see BulkLoadHFiles
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-21782">HBASE-21782</a>
    */
   @InterfaceAudience.Public
   @Deprecated

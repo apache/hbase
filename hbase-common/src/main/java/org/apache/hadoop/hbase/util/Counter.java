@@ -25,7 +25,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * High scalable counter. Thread safe.
- * @deprecated use {@link java.util.concurrent.atomic.LongAdder} instead.
+ * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+ *   {@link java.util.concurrent.atomic.LongAdder} instead.
+ * @see java.util.concurrent.atomic.LongAdder
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-7612">HBASE-7612</a>
  */
 @InterfaceAudience.Public
 @Deprecated
