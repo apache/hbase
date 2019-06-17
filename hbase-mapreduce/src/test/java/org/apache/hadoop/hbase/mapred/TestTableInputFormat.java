@@ -143,12 +143,11 @@ public class TestTableInputFormat {
   /**
    * Verify that the result and key have expected values.
    *
-   * @param r
-   * @param key
-   * @param expectedKey
-   * @param expectedValue
-   * @return true if result and key have expected values, false otherwise. Where result is a single
-   *         row result.
+   * @param r single row result
+   * @param key the row key
+   * @param expectedKey the expected key
+   * @param expectedValue the expected value
+   * @return true if the result contains the expected key and value, false otherwise.
    */
   static boolean checkResult(Result r, ImmutableBytesWritable key,
       byte[] expectedKey, byte[] expectedValue) {
