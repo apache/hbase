@@ -51,7 +51,7 @@
      printer.setConf(conf);
      String[] options = {"-s"};
      printer.parseOptions(options);
-     printer.processFile(new Path(storeFile));
+     printer.processFile(new Path(storeFile), true);
      String text = byteStream.toString();%>
      <%=
        text
