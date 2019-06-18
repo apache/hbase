@@ -52,7 +52,7 @@ public class ClassLoaderTestHelper {
    * Jar a list of files into a jar archive.
    *
    * @param archiveFile the target jar archive
-   * @param tobejared a list of files to be jared
+   * @param tobeJared a list of files to be jared
    */
   private static boolean createJarArchive(File archiveFile, File[] tobeJared) {
     try {

@@ -2605,8 +2605,12 @@ public final class PrivateCellUtil {
    * method is used both in the normal comparator and the "same-prefix" comparator. Note that we are
    * assuming that row portions of both KVs have already been parsed and found identical, and we
    * don't validate that assumption here.
-   * @param commonPrefix the length of the common prefix of the two key-values being compared,
-   *          including row length and row
+   * @param comparator the cell comparator
+   * @param left the cell to be compared
+   * @param right the serialized key part of a key-value
+   * @param roffset the offset in the key byte[]
+   * @param rlength the length of the key byte[]
+   * @param rowlength the row length
    */
   static final int compareWithoutRow(CellComparator comparator, Cell left, byte[] right,
       int roffset, int rlength, short rowlength) {

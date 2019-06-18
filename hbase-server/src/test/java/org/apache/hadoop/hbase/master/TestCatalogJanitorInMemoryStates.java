@@ -133,7 +133,7 @@ public class TestCatalogJanitorInMemoryStates {
 
   /**
    * Splits a region
-   * @param t Region to split.
+   * @param r Region to split.
    * @return List of region locations
    */
   private List<HRegionLocation> splitRegion(final RegionInfo r)

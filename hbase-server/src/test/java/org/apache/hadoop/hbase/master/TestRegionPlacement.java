@@ -358,7 +358,7 @@ public class TestRegionPlacement {
 
   /**
    * Verify the meta has updated to the latest assignment plan
-   * @param plan
+   * @param expectedPlan the region assignment plan
    * @throws IOException
    */
   private void verifyMETAUpdated(FavoredNodesPlan expectedPlan)

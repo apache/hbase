@@ -196,8 +196,8 @@ public class TestActiveMasterManager {
 
   /**
    * Assert there is an active master and that it has the specified address.
-   * @param zk
-   * @param thisMasterAddress
+   * @param zk single zookeeper watcher
+   * @param expectedAddress expected master address
    * @throws KeeperException
    * @throws IOException
    */

@@ -143,7 +143,7 @@ public class EncodedSeekPerformanceTest {
 
   /**
    * @param path Path to the HFile which will be used.
-   * @param encoders List of encoders which will be used for tests.
+   * @param encodings the data block encoding algorithms used
    * @throws IOException if there is a bug while reading from disk
    */
   public void runTests(Path path, DataBlockEncoding[] encodings)

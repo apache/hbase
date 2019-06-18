@@ -184,7 +184,7 @@ class NamespaceStateManager {
   /**
    * Delete the namespace state.
    *
-   * @param An instance of NamespaceTableAndRegionInfo
+   * @param namespace the name of the namespace
    */
   void deleteNamespace(String namespace) {
     this.nsStateCache.remove(namespace);

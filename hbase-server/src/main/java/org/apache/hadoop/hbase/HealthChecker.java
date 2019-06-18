@@ -54,7 +54,8 @@ class HealthChecker {
   /**
    * Initialize.
    *
-   * @param configuration
+   * @param location the location of health script
+   * @param timeout the timeout of health script
    */
   public void init(String location, long timeout) {
     this.healthCheckScript = location;
