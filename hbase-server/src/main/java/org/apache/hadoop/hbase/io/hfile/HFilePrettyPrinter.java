@@ -174,7 +174,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       IOException {
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("HFile", options, true);
+      formatter.printHelp("hfile", options, true);
       return false;
     }
     CommandLineParser parser = new PosixParser();
@@ -267,7 +267,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     // iterate over all files found
     for (Path fileName : files) {
       try {
-        int exitCode = processFile(fileName);
+        int exitCode = processFile(fileName, false);
         if (exitCode != 0) {
           return exitCode;
         }
@@ -284,22 +284,26 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     return 0;
   }
 
-  public int processFile(Path file) throws IOException {
-    if (verbose)
+  // HBASE-22561 introduces boolean checkRootDir for WebUI specificly
+  public int processFile(Path file, boolean checkRootDir) throws IOException {
+    if (verbose) {
       out.println("Scanning -> " + file);
+    }
 
-    Path rootPath = FSUtils.getRootDir(getConf());
-    String rootString = rootPath + rootPath.SEPARATOR;
-    if (!file.toString().startsWith(rootString)) {
-      // First we see if fully-qualified URI matches the root dir. It might
-      // also be an absolute path in the same filesystem, so we prepend the FS
-      // of the root dir and see if that fully-qualified URI matches.
-      FileSystem rootFS = rootPath.getFileSystem(getConf());
-      String qualifiedFile = rootFS.getUri().toString() + file.toString();
-      if (!qualifiedFile.startsWith(rootString)) {
-        err.println("ERROR, file (" + file +
-            ") is not in HBase's root directory (" + rootString + ")");
-        return -2;
+    if (checkRootDir) {
+      Path rootPath = FSUtils.getRootDir(getConf());
+      String rootString = rootPath + rootPath.SEPARATOR;
+      if (!file.toString().startsWith(rootString)) {
+        // First we see if fully-qualified URI matches the root dir. It might
+        // also be an absolute path in the same filesystem, so we prepend the FS
+        // of the root dir and see if that fully-qualified URI matches.
+        FileSystem rootFS = rootPath.getFileSystem(getConf());
+        String qualifiedFile = rootFS.getUri().toString() + file.toString();
+        if (!qualifiedFile.startsWith(rootString)) {
+          err.println(
+            "ERROR, file (" + file + ") is not in HBase's root directory (" + rootString + ")");
+          return -2;
+        }
       }
     }
 
