@@ -73,10 +73,12 @@
                    Java 11 runtime hence excluding from main lib.
               -->
               <exclude>com.sun.xml.ws:*</exclude>
+              <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
               <exclude>org.glassfish.jaxb:*</exclude>
               <exclude>com.sun.istack:istack-commons-runtime</exclude>
-              <exclude>org.glassfish.gmbal:gmbal-api-only</exclude>
+              <exclude>org.glassfish.gmbal:gmbal</exclude>
               <exclude>org.glassfish.external:management-api</exclude>
+              <exclude>org.glassfish.pfl:*</exclude>
               <exclude>org.jvnet.staxex:stax-ex</exclude>
               <exclude>com.sun.xml.stream.buffer:streambuffer</exclude>
               <exclude>org.jvnet.mimepull:mimepull</exclude>
@@ -85,16 +87,16 @@
               <exclude>com.sun.xml.messaging.saaj:saaj-impl</exclude>
               <exclude>com.fasterxml.woodstox:woodstox-core</exclude>
               <exclude>org.codehaus.woodstox:stax2-api</exclude>
+              <exclude>jakarta.activation:jakarta.activation-api</exclude>
               <exclude>com.sun.xml.bind:jaxb-xjc</exclude>
               <exclude>com.sun.xml.bind:jaxb-jxc</exclude>
-              <exclude>javax.mail:mail</exclude>
-              <exclude>javax.persistence:javax.persistence-api</exclude>
+              <exclude>jakarta.mail:jakarta.mail-api</exclude>
+              <exclude>jakarta.persistence:jakarta.persistence-api</exclude>
               <exclude>org.eclipse.persistence:*</exclude>
-              <exclude>org.glassfish:javax.json</exclude>
-              <exclude>commonj.sdo:commonj.sdo</exclude>
-              <exclude>javax.xml.ws:jaxws-api</exclude>
-              <exclude>javax.xml.soap:javax.xml.soap-api</exclude>
-              <exclude>javax.jws:javax.jws-api</exclude>
+              <exclude>jakarta.xml.ws:jakarta.xml.ws-api</exclude>
+              <exclude>jakarta.xml.bind:jakarta.xml.bind-api</exclude>
+              <exclude>jakarta.xml.soap:jakarta.xml.soap-api</exclude>
+              <exclude>jakarta.jws:jakarta.jws-api</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
@@ -227,10 +229,12 @@
             Java 11 runtime
        -->
        <include>com.sun.xml.ws:*</include>
+       <include>jakarta.annotation:jakarta.annotation-api</include>
        <include>org.glassfish.jaxb:*</include>
        <include>com.sun.istack:istack-commons-runtime</include>
-       <include>org.glassfish.gmbal:gmbal-api-only</include>
+       <include>org.glassfish.gmbal:gmbal</include>
        <include>org.glassfish.external:management-api</include>
+       <include>org.glassfish.pfl:*</include>
        <include>org.jvnet.staxex:stax-ex</include>
        <include>com.sun.xml.stream.buffer:streambuffer</include>
        <include>org.jvnet.mimepull:mimepull</include>
@@ -239,16 +243,16 @@
        <include>com.sun.xml.messaging.saaj:saaj-impl</include>
        <include>com.fasterxml.woodstox:woodstox-core</include>
        <include>org.codehaus.woodstox:stax2-api</include>
+       <include>jakarta.activation:jakarta.activation-api</include>
        <include>com.sun.xml.bind:jaxb-xjc</include>
        <include>com.sun.xml.bind:jaxb-jxc</include>
-       <include>javax.mail:mail</include>
-       <include>javax.persistence:javax.persistence-api</include>
+       <include>jakarta.mail:jakarta.mail-api</include>
+       <include>jakarta.persistence:jakarta.persistence-api</include>
        <include>org.eclipse.persistence:*</include>
-       <include>org.glassfish:javax.json</include>
-       <include>commonj.sdo:commonj.sdo</include>
-       <include>javax.xml.ws:jaxws-api</include>
-       <include>javax.xml.soap:javax.xml.soap-api</include>
-       <include>javax.jws:javax.jws-api</include>
+       <include>jakarta.xml.ws:jakarta.xml.ws-api</include>
+       <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
+       <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
+       <include>jakarta.jws:jakarta.jws-api</include>
     </includes>
   </dependencySet>
 </dependencySets>
