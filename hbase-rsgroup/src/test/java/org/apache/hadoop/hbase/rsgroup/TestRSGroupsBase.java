@@ -100,11 +100,13 @@ public abstract class TestRSGroupsBase {
         RSGroupBasedLoadBalancer.class.getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName() + "," + CPMasterObserver.class.getName());
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setInt(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 100000);
+
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
     initialize();
   }
 
