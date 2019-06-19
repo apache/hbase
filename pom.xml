@@ -1445,7 +1445,7 @@
     <commons-validator.version>1.6</commons-validator.version>
     <!-- pretty outdated -->
     <commons-io.version>2.5</commons-io.version>
-    <commons-lang3.version>3.6</commons-lang3.version>
+    <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <disruptor.version>3.3.6</disruptor.version>
     <httpclient.version>4.5.3</httpclient.version>
