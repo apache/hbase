@@ -17,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.junit.Assert.assertTrue;
+
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -65,8 +70,10 @@ public class TestExportSnapshotNoCluster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    testDir = TEST_UTIL.getDataTestDir();
+    // Make sure testDir is on LocalFileSystem
+    testDir = TEST_UTIL.getDataTestDir().makeQualified(URI.create("file:///"), new Path("/"));
     fs = testDir.getFileSystem(TEST_UTIL.getConfiguration());
+    assertTrue("FileSystem '" + fs + "' is not local", fs instanceof LocalFileSystem);
 
     setUpBaseConf(TEST_UTIL.getConfiguration());
   }
