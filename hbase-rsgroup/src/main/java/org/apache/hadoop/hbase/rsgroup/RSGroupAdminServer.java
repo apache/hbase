@@ -204,6 +204,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   private void moveServerRegionsFromGroup(Set<Address> servers, String targetGroupName)
       throws IOException {
     boolean hasRegionsToMove;
+    int retry = 0;
     RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
     Set<Address> allSevers = new HashSet<>(servers);
     do {
@@ -215,7 +216,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           if (!targetGrp.containsTable(region.getTable())) {
             LOG.info("Moving server region {}, which do not belong to RSGroup {}",
                 region.getShortNameToLog(), targetGroupName);
-            this.master.getAssignmentManager().move(region);
+            try {
+              this.master.getAssignmentManager().move(region);
+            }catch (IOException ioe){
+              LOG.error("Move region {} from group failed, will retry, current retry time is {}",
+                  region.getShortNameToLog(), retry, ioe);
+            }
             if (master.getAssignmentManager().getRegionStates().
                 getRegionState(region).isFailedOpen()) {
               continue;
@@ -229,13 +235,15 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           iter.remove();
         }
       }
+
+      retry++;
       try {
         rsGroupInfoManager.wait(1000);
       } catch (InterruptedException e) {
         LOG.warn("Sleep interrupted", e);
         Thread.currentThread().interrupt();
       }
-    } while (hasRegionsToMove);
+    } while (hasRegionsToMove && retry <= 50);
   }
 
   /**
@@ -247,23 +255,49 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    */
   private void moveTableRegionsToGroup(Set<TableName> tables, String targetGroupName)
       throws IOException {
+    boolean hasRegionsToMove;
+    int retry = 0;
     RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
-    for (TableName table : tables) {
-      if (master.getAssignmentManager().isTableDisabled(table)) {
-        LOG.debug("Skipping move regions because the table {} is disabled", table);
-        continue;
-      }
-      LOG.info("Moving region(s) for table {} to RSGroup {}", table, targetGroupName);
-      for (RegionInfo region : master.getAssignmentManager().getRegionStates()
-          .getRegionsOfTable(table)) {
-        ServerName sn =
-            master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
-        if (!targetGrp.containsServer(sn.getAddress())) {
-          LOG.info("Moving region {} to RSGroup {}", region.getShortNameToLog(), targetGroupName);
-          master.getAssignmentManager().move(region);
+    Set<TableName> allTables = new HashSet<>(tables);
+    do {
+      hasRegionsToMove = false;
+      for (Iterator<TableName> iter = allTables.iterator(); iter.hasNext(); ) {
+        TableName table = iter.next();
+        if (master.getAssignmentManager().isTableDisabled(table)) {
+          LOG.debug("Skipping move regions because the table {} is disabled", table);
+          continue;
+        }
+        LOG.info("Moving region(s) for table {} to RSGroup {}", table, targetGroupName);
+        for (RegionInfo region : master.getAssignmentManager().getRegionStates()
+            .getRegionsOfTable(table)) {
+          ServerName sn =
+              master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
+          if (!targetGrp.containsServer(sn.getAddress())) {
+            LOG.info("Moving region {} to RSGroup {}", region.getShortNameToLog(), targetGroupName);
+            try {
+              master.getAssignmentManager().move(region);
+            }catch (IOException ioe){
+              LOG.error("Move region {} to group failed, will retry, current retry time is {}",
+                  region.getShortNameToLog(), retry, ioe);
+            }
+            hasRegionsToMove = true;
+          }
+        }
+
+        if (!hasRegionsToMove) {
+          LOG.info("Table {} has no more regions to move for RSGroup", table.getNameAsString());
+          iter.remove();
         }
       }
-    }
+
+      retry++;
+      try {
+        rsGroupInfoManager.wait(1000);
+      } catch (InterruptedException e) {
+        LOG.warn("Sleep interrupted", e);
+        Thread.currentThread().interrupt();
+      }
+    } while (hasRegionsToMove && retry <= 50);
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
