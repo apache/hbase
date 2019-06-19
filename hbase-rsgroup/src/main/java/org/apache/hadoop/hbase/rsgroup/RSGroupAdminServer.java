@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -60,9 +61,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   private MasterServices master;
   private final RSGroupInfoManager rsGroupInfoManager;
 
+  private String FAILED_MOVE_MAX_RETRY_KEY = "hbase.rsgroup.move.max.retry";
+  private int moveMaxRetry;
+
   public RSGroupAdminServer(MasterServices master, RSGroupInfoManager rsGroupInfoManager) {
     this.master = master;
     this.rsGroupInfoManager = rsGroupInfoManager;
+    this.moveMaxRetry = master.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY_KEY, 50);
   }
 
   @Override
@@ -193,103 +198,87 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
-  /**
-   * Move every region from servers which are currently located on these servers,
-   * but should not be located there.
-   *
-   * @param servers the servers that will move to new group
-   * @param targetGroupName the target group name
-   * @throws IOException if moving the server and tables fail
-   */
-  private void moveServerRegionsFromGroup(Set<Address> servers, String targetGroupName)
-      throws IOException {
-    boolean hasRegionsToMove;
-    int retry = 0;
-    RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
-    Set<Address> allSevers = new HashSet<>(servers);
-    do {
-      hasRegionsToMove = false;
-      for (Iterator<Address> iter = allSevers.iterator(); iter.hasNext();) {
-        Address rs = iter.next();
-        // Get regions that are associated with this server and filter regions by group tables.
-        for (RegionInfo region : getRegions(rs)) {
-          if (!targetGrp.containsTable(region.getTable())) {
-            LOG.info("Moving server region {}, which do not belong to RSGroup {}",
-                region.getShortNameToLog(), targetGroupName);
-            try {
-              this.master.getAssignmentManager().move(region);
-            }catch (IOException ioe){
-              LOG.error("Move region {} from group failed, will retry, current retry time is {}",
-                  region.getShortNameToLog(), retry, ioe);
-            }
-            if (master.getAssignmentManager().getRegionStates().
-                getRegionState(region).isFailedOpen()) {
-              continue;
-            }
-            hasRegionsToMove = true;
-          }
-        }
-
-        if (!hasRegionsToMove) {
-          LOG.info("Server {} has no more regions to move for RSGroup", rs.getHostname());
-          iter.remove();
-        }
-      }
-
-      retry++;
-      try {
-        rsGroupInfoManager.wait(1000);
-      } catch (InterruptedException e) {
-        LOG.warn("Sleep interrupted", e);
-        Thread.currentThread().interrupt();
-      }
-    } while (hasRegionsToMove && retry <= 50);
+  private enum MoveType {
+    TO, FROM
   }
 
   /**
-   * Moves regions of tables which are not on target group servers.
+   * When move a table to a group, all regions of it must be moved to group servers (to the group).
+   * When move a server to a group, some regions on it which are of tables that do not belong to
+   * the target group must be moved (from the group).
+   * So MoveType.TO means TableName set, and MoveType.FROM means server Address set.
    *
-   * @param tables the tables that will move to new group
-   * @param targetGroupName the target group name
-   * @throws IOException if moving the region fails
+   * @param set it's a table set or a server set
+   * @param targetGroupName
+   * @param type
+   * @param <T>
+   * @throws IOException
    */
-  private void moveTableRegionsToGroup(Set<TableName> tables, String targetGroupName)
+  private <T> void moveRegionsToOrFromGroup(Set<T> set, String targetGroupName, MoveType type)
       throws IOException {
+    Set<T> newSet = new HashSet<>(set);
     boolean hasRegionsToMove;
     int retry = 0;
+    IOException toThrow = null;
+    Set<String> failedRegions = new HashSet<>();
     RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
-    Set<TableName> allTables = new HashSet<>(tables);
     do {
       hasRegionsToMove = false;
-      for (Iterator<TableName> iter = allTables.iterator(); iter.hasNext(); ) {
-        TableName table = iter.next();
-        if (master.getAssignmentManager().isTableDisabled(table)) {
-          LOG.debug("Skipping move regions because the table {} is disabled", table);
-          continue;
-        }
-        LOG.info("Moving region(s) for table {} to RSGroup {}", table, targetGroupName);
-        for (RegionInfo region : master.getAssignmentManager().getRegionStates()
-            .getRegionsOfTable(table)) {
-          ServerName sn =
-              master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
-          if (!targetGrp.containsServer(sn.getAddress())) {
-            LOG.info("Moving region {} to RSGroup {}", region.getShortNameToLog(), targetGroupName);
-            try {
-              master.getAssignmentManager().move(region);
-            }catch (IOException ioe){
-              LOG.error("Move region {} to group failed, will retry, current retry time is {}",
-                  region.getShortNameToLog(), retry, ioe);
+      for (Iterator<T> iter = newSet.iterator(); iter.hasNext(); ) {
+        T el = iter.next();
+        List<RegionInfo> toMoveRegions = new ArrayList<>();
+        if (type == MoveType.TO) {
+          // means element type of set is TableName
+          assert el instanceof TableName;
+          if (master.getAssignmentManager().isTableDisabled((TableName) el)) {
+            LOG.debug("Skipping move regions because the table {} is disabled", el);
+          }else {
+            // Get regions of these tables and filter regions by group servers.
+            for (RegionInfo region :
+                master.getAssignmentManager().getRegionStates().getRegionsOfTable((TableName) el)) {
+              ServerName sn =
+                  master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
+              if (!targetGrp.containsServer(sn.getAddress())) {
+                toMoveRegions.add(region);
+              }
             }
-            hasRegionsToMove = true;
+          }
+        }
+        if (type == MoveType.FROM) {
+          // means element type of set is Address
+          assert el instanceof Address;
+          // Get regions that are associated with these servers and filter regions by group tables.
+          for (RegionInfo region : getRegions((Address) el)) {
+            if (!targetGrp.containsTable(region.getTable())) {
+              toMoveRegions.add(region);
+            }
           }
         }
 
+        //move regions
+        for (RegionInfo region : toMoveRegions) {
+          LOG.info("Moving server region {}, which do not belong to RSGroup {}",
+              region.getShortNameToLog(), targetGroupName);
+          try {
+            this.master.getAssignmentManager().move(region);
+            failedRegions.remove(region.getRegionNameAsString());
+          } catch (IOException ioe) {
+            LOG.debug("Move region {} from group failed, will retry, current retry time is {}",
+                region.getShortNameToLog(), retry, ioe);
+            toThrow = ioe;
+            failedRegions.add(region.getRegionNameAsString());
+          }
+          if (master.getAssignmentManager().getRegionStates().
+              getRegionState(region).isFailedOpen()) {
+            continue;
+          }
+          hasRegionsToMove = true;
+        }
         if (!hasRegionsToMove) {
-          LOG.info("Table {} has no more regions to move for RSGroup", table.getNameAsString());
+          LOG.info("There are no more regions of {} to move for RSGroup {}", el, targetGroupName);
           iter.remove();
         }
       }
-
       retry++;
       try {
         rsGroupInfoManager.wait(1000);
@@ -297,7 +286,17 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.warn("Sleep interrupted", e);
         Thread.currentThread().interrupt();
       }
-    } while (hasRegionsToMove && retry <= 50);
+    } while (hasRegionsToMove && retry <= moveMaxRetry);
+
+    //has up to max retry time or there are no more regions to move
+    if (hasRegionsToMove) {
+      // print failed moved regions, for later process conveniently
+      String msg = String.format("move regions for group %s failed, failed regions: %s",
+          targetGroupName, failedRegions);
+      LOG.error(msg);
+      throw new DoNotRetryIOException(msg +
+          ", just record the last failed region's cause, more details in server log", toThrow);
+    }
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -356,7 +355,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // MovedServers may be < passed in 'servers'.
       Set<Address> movedServers = rsGroupInfoManager.moveServers(servers, srcGrp.getName(),
           targetGroupName);
-      moveServerRegionsFromGroup(movedServers, targetGroupName);
+      moveRegionsToOrFromGroup(movedServers, targetGroupName, MoveType.FROM);
       LOG.info("Move servers done: {} => {}", srcGrp.getName(), targetGroupName);
     }
   }
@@ -398,7 +397,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // targetGroup is null when a table is being deleted. In this case no further
       // action is required.
       if (targetGroup != null) {
-        moveTableRegionsToGroup(tables, targetGroup);
+        moveRegionsToOrFromGroup(tables, targetGroup, MoveType.TO);
       }
     }
   }
@@ -530,9 +529,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       rsGroupInfoManager.moveServersAndTables(servers, tables, srcGroup, targetGroup);
 
       //move regions on these servers which do not belong to group tables
-      moveServerRegionsFromGroup(servers, targetGroup);
+      moveRegionsToOrFromGroup(servers, targetGroup, MoveType.FROM);
       //move regions of these tables which are not on group servers
-      moveTableRegionsToGroup(tables, targetGroup);
+      moveRegionsToOrFromGroup(tables, targetGroup, MoveType.TO);
     }
     LOG.info("Move servers and tables done. Severs: {}, Tables: {} => {}", servers, tables,
         targetGroup);
