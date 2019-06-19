@@ -1995,18 +1995,6 @@ Likewise, don't add unrelated cleanup or refactorings outside the scope of your 
 
 Make sure that you're clear about what you are testing in your unit tests and why.
 
-[[common.patch.feedback.writable]]
-===== Implementing Writable
-
-.Applies pre-0.96 only
-[NOTE]
-====
-In 0.96, HBase moved to protocol buffers (protobufs). The below section on Writables applies to 0.94.x and previous, not to 0.96 and beyond.
-====
-
-Every class returned by RegionServers must implement the `Writable` interface.
-If you are creating a new class that needs to implement this interface, do not forget the default constructor.
-
 ==== Garbage-Collection Conserving Guidelines
 
 The following guidelines were borrowed from http://engineering.linkedin.com/performance/linkedin-feed-faster-less-jvm-garbage.
