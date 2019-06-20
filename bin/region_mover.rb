@@ -88,7 +88,7 @@ def getServerNameForRegion(admin, r)
     server = result.getValue(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
     startcode = result.getValue(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
     return nil unless server
-    return java.lang.String.new(Bytes.toString(server)).replaceFirst(":", ",")  + "," + Bytes.toLong(startcode).to_s
+    return ServerName.getServerName(Bytes.toString(server), Bytes.toLong(startcode))
   ensure
     table.close()
   end
