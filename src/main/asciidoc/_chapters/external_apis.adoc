@@ -353,6 +353,128 @@ curl -vi -X PUT \
   "example.com:8000/users/fakerow"
 
 |===
+
+.Endpoints for `Check-And-Put` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=put
+|PUT
+|Conditional Put - Change the current version value of a cell: Compare the current or latest version value (`current-version-value`) of a cell with the `check-value`, and if `current-version-value` == `check-value`, write new data (the `new-value`) into the cell as the current or latest version. The row, column qualifier, and value must each be Base-64 encoded. To encode a string, use the `base64` command-line utility. To decode the string, use `base64 -d`. The payload is in the `--data` or `-d` argument, with `the check cell name (column family:column name) and value` always at the end and right after `the new Put cell name (column family:column name) and value` of the same row key. You can also save the data to be inserted to a file and pass it to the `-d` parameter with syntax like `-d @filename.txt`.
+|curl -vi -X PUT \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93MQ=="><Cell column="Y2ZhOmFsaWFz">T2xkR3V5</Cell><Cell column="Y2ZhOmFsaWFz">TmV3R3V5</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/row1/?check=put"
+
+curl -vi -X PUT \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"Row":[{"key":"cm93MQ==","Cell":[{"column":"Y2ZhOmFsaWFz","$":"T2xkR3V5"},{"column":"Y2ZhOmFsaWFz", "$":"TmV3R3V5"}] }]}' \
+  "http://example.com:8000/users/row1/?check=put"
+|===
+Detailed Explanation:
+
+*** In the above json-format example:
+1. `{"column":"Y2ZhOmFsaWFz", "$":"TmV3R3V5"}` at the end of `-d` option are `the check cell name and check cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"TmV3R3V5" for "NewGuy"`
+2. `{"column":"Y2ZhOmFsaWFz","$":"T2xkR3V5"}` are `the new Put cell name and cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"T2xkR3V5" for "OldGuy"`
+3. `"cm93MQ=="` is `the Base-64 for "row1"` for the checkAndPut `row key`
+4. `"/?check=put"` after the `"row key" in the request URL` is required for checkAndPut WebHBase operation to work
+5. The `"row key" in the request URL` should be URL-encoded, e.g., `"david%20chen"` and `"row1"` are the URL-encoded formats of row keys `"david chen"` and `"row1"`, respectively
+
+  Note: "cfa" is the column family name and "alias" are the column (qualifier) name for the non-Base64 encoded cell name.
+
+*** Basically, the xml-format example is the same as the json-format example, and will not be explained here in detail.
+
+.Endpoints for `Check-And-Delete` Operations
+[options="header", cols="2m,m,3d,6l"]
+|===
+|Endpoint
+|HTTP Verb
+|Description
+|Example
+
+|/_table_/_row_key_/?check=delete
+|DELETE
+|Conditional Deleting a Row: Compare the value of any version of a cell (`any-version-value`) with the `check-value`, and if `any-version-value` == `check-value`, delete the row specified by the `row_key` inside the requesting URL.The row, column qualifier, and value for checking in the payload must each be Base-64 encoded. To encode a string, use the base64 command-line utility. To decode the string, use base64 -d. The payload is in the --data argument. You can also save the data to be checked to a file and pass it to the `-d` parameter with syntax like `-d @filename.txt`.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93MQ=="><Cell column="Y2ZhOmFsaWFz">TmV3R3V5</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/row1/?check=delete"
+
+curl -vi -X DELETE \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"Row":[{"key":"cm93MQ==","Cell":[{"column":"Y2ZhOmFsaWFz","$":"TmV3R3V5"}]}]}' \
+  "http://example.com:8000/users/row1/?check=delete"
+
+|/_table_/_row_key_
+/_column_family_
+/?check=delete
+|DELETE
+|Conditional Deleting a Column Family of a Row: Compare the value of any version of a cell (`any-version-value`) with the `check-value`, and if `any-version-value` == `check-value`, delete the column family of a row specified by the `row_key/column_family` inside the requesting URL. Anything else is the same as those in `Conditional Deleting a Row`.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93MQ=="><Cell column="Y2ZhOmFsaWFz">TmV3R3V5</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/row1/cfa/?check=delete"
+
+curl -vi -X DELETE \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"Row":[{"key":"cm93MQ==","Cell":[{"column":"Y2ZhOmFsaWFz","$":"TmV3R3V5"}]}]}' \
+  "http://example.com:8000/users/row1/cfa/?check=delete"
+
+|/_table_/_row_key_
+/_column:qualifier_
+/?check=delete
+|DELETE
+|Conditional Deleting All Versions of a Column of a Row: Compare the value of any version of a cell (`any-version-value`) with the `check-value`, and if `any-version-value` == `check-value`, delete the column of a row specified by the `row_key/column:qualifier` inside the requesting URL. The `column:qualifier` in the requesting URL is the `column_family:column_name`. Anything else is the same as those in `Conditional Deleting a Row`.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93MQ=="><Cell column="Y2ZhOmFsaWFz">TmV3R3V5</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/row1/cfa:alias/?check=delete"
+
+curl -vi -X DELETE \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"Row":[{"key":"cm93MQ==","Cell":[{"column":"Y2ZhOmFsaWFz","$":"TmV3R3V5"}]}]}' \
+  "http://example.com:8000/users/row1/cfa:alias/?check=delete"
+
+|/_table_/_row_key_
+/_column:qualifier_
+/_version_id_/?check=delete
+|DELETE
+|Conditional Deleting a Single Version of a Column of a Row: Compare the value of any version of a cell (`any-version-value`) with the `check-value`, and if `any-version-value` == `check-value`, delete the version of a column of a row specified by the `row_key/column:qualifier/version_id` inside the requesting URL. The `column:qualifier` in the requesting URL is the `column_family:column_name`. The `version_id` in the requesting URL is a number, which equals to `the timestamp of the targeted version + 1`. Anything else is the same as those in `Conditional Deleting a Row`.
+|curl -vi -X DELETE \
+  -H "Accept: text/xml" \
+  -H "Content-Type: text/xml" \
+  -d '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><CellSet><Row key="cm93MQ=="><Cell column="Y2ZhOmFsaWFz">TmV3R3V5</Cell></Row></CellSet>' \
+  "http://example.com:8000/users/row1/cfa:alias/1519423552160/?check=delete"
+
+curl -vi -X DELETE \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"Row":[{"key":"cm93MQ==","Cell":[{"column":"Y2ZhOmFsaWFz","$":"TmV3R3V5"}]}]}' \
+  "http://example.com:8000/users/row1/cfa:alias/1519423552160/?check=delete"
+|===
+Detailed Explanation:
+
+*** In the above 4 json-format examples:
+1. `{"column":"Y2ZhOmFsaWFz", "$":"TmV3R3V5"}` at the end of `-d` option are `the check cell name and check cell value in Base-64` respectively: `"Y2ZhOmFsaWFz" for "cfa:alias"`, and `"TmV3R3V5" for "NewGuy"`
+2. `"cm93MQ=="` is `the Base-64 for "row1"` for the checkAndDelete `row key`
+3. `"/?check=delete"` at the end of `the request URL` is required for checkAndDelete WebHBase operation to work
+4. `"version_id"` in the `request URL` of the last json-format example should be equivalent to the value of `"the timestamp number + 1"`
+5. The `"row key"`, `"column family"`, `"cell name" or "column family:column name"`, and `"version_id"` in `the request URL` of a checkAndDelete WebHBase operation should be URL-encoded, e.g., `"row1"`, `"cfa"`, `"cfa:alias"` and `"1519423552160"` in the examples are the URL-encoded `"row key"`, `"column family"`, `"column family:column name"`, and `"version_id"`, respectively
+
+*** Basically, the 4 xml-format examples are the same as the 4 corresponding json-format examples, and will not be explained here in detail.
+
 [[xml_schema]]
 === REST XML Schema
 
