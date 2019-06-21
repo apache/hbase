@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -64,7 +64,7 @@ public class TestMobWithByteBuffAllocator {
   @BeforeClass
   public static void setUp() throws Exception {
     // Must use the ByteBuffAllocator here
-    CONF.setBoolean(RSRpcServices.RESERVOIR_ENABLED_KEY, true);
+    CONF.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
     // Must use OFF-HEAP BucketCache here.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.1f);
     CONF.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");

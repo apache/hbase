@@ -1005,54 +1005,6 @@ For a RegionServer hosting data that can comfortably fit into cache, or if your 
 
 The compressed BlockCache is disabled by default. To enable it, set `hbase.block.data.cachecompressed` to `true` in _hbase-site.xml_ on all RegionServers.
 
-[[regionserver.offheap]]
-=== RegionServer Offheap Read/Write Path
-
-[[regionserver.offheap.readpath]]
-==== Offheap read-path
-In hbase-2.0.0, link:https://issues.apache.org/jira/browse/HBASE-11425[HBASE-11425] changed the HBase read path so it
-could hold the read-data off-heap avoiding copying of cached data on to the java heap.
-This reduces GC pauses given there is less garbage made and so less to clear. The off-heap read path has a performance
-that is similar/better to that of the on-heap LRU cache.  This feature is available since HBase 2.0.0.
-If the BucketCache is in `file` mode, fetching will always be slower compared to the native on-heap LruBlockCache.
-Refer to below blogs for more details and test results on off heaped read path
-link:https://blogs.apache.org/hbase/entry/offheaping_the_read_path_in[Offheaping the Read Path in Apache HBase: Part 1 of 2]
-and link:https://blogs.apache.org/hbase/entry/offheap-read-path-in-production[Offheap Read-Path in Production - The Alibaba story]
-
-For an end-to-end off-heaped read-path, first of all there should be an off-heap backed <<offheap.blockcache>>(BC). Configure 'hbase.bucketcache.ioengine' to off-heap in
-_hbase-site.xml_. Also specify the total capacity of the BC using `hbase.bucketcache.size` config. Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in
-_hbase-env.sh_. This is how we specify the max possible off-heap memory allocation for the
-RegionServer java process. This should be bigger than the off-heap BC size. Please keep in mind that there is no default for `hbase.bucketcache.ioengine`
-which means the BC is turned OFF by default (See <<direct.memory>>). 
-
-Next thing to tune is the ByteBuffer pool on the RPC server side.
-The buffers from this pool will be used to accumulate the cell bytes and create a result cell block to send back to the client side.
-`hbase.ipc.server.reservoir.enabled` can be used to turn this pool ON or OFF. By default this pool is ON and available. HBase will create off heap ByteBuffers
-and pool them. Please make sure not to turn this OFF if you want end-to-end off-heaping in read path.
-If this pool is turned off, the server will create temp buffers on heap to accumulate the cell bytes and make a result cell block. This can impact the GC on a highly read loaded server.
-The user can tune this pool with respect to how many buffers are in the pool and what should be the size of each ByteBuffer. 
-Use the config `hbase.ipc.server.reservoir.initial.buffer.size` to tune each of the buffer sizes. Default is 64 KB. 
-
-When the read pattern is a random row read load and each of the rows are smaller in size compared to this 64 KB, try reducing this.
-When the result size is larger than one ByteBuffer size, the server will try to grab more than one buffer and make a result cell block out of these. When the pool is running out of buffers, the server will end up creating temporary on-heap buffers. 
-
-The maximum number of ByteBuffers in the pool can be tuned using the config 'hbase.ipc.server.reservoir.initial.max'. Its value defaults to 64 * region server handlers configured (See the config 'hbase.regionserver.handler.count'). The math is such that by default we consider 2 MB as the result cell block size per read result and each handler will be handling a read. For 2 MB size, we need 32 buffers each of size 64 KB (See default buffer size in pool). So per handler 32 ByteBuffers(BB). We allocate twice this size as the max BBs count such that one handler can be creating the response and handing it to the RPC Responder thread and then handling a new request creating a new response cell block (using pooled buffers). Even if the responder could not send back the first TCP reply immediately, our count should allow that we should still have enough buffers in our pool without having to make temporary buffers on the heap. Again for smaller sized random row reads, tune this max count. There are lazily created buffers and the count is the max count to be pooled. 
-
-If you still see GC issues even after making end-to-end read path off-heap, look for issues in the appropriate buffer pool. Check the below RegionServer log with INFO level:
-[source]
-----
-Pool already reached its max capacity : XXX and no free buffers now. Consider increasing the value for 'hbase.ipc.server.reservoir.initial.max' ?
-----
-
-The setting for _HBASE_OFFHEAPSIZE_ in _hbase-env.sh_ should consider this off heap buffer pool at the RPC side also. We need to config this max off heap size for the RegionServer as a bit higher than the sum of this max pool size and the off heap cache size. The TCP layer will also need to create direct bytebuffers for TCP communication. Also the DFS client will need some off-heap to do its workings especially if short-circuit reads are configured. Allocating an extra of 1 - 2 GB for the max direct memory size has worked in tests. 
-
-If you are using co processors and refer the Cells in the read results, DO NOT store reference to these Cells out of the scope of the CP hook methods. Some times the CPs need store info about the cell (Like its row key) for considering in the next CP hook call etc. For such cases, pls clone the required fields of the entire Cell as per the use cases. [ See CellUtil#cloneXXX(Cell) APIs ]
-
-[[regionserver.offheap.writepath]]
-==== Offheap write-path
-
-TODO
-
 [[regionserver_splitting_implementation]]
 === RegionServer Splitting Implementation
 
