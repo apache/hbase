@@ -356,5 +356,15 @@ public class TestByteBuffAllocator {
     allocator = ByteBuffAllocator.create(conf, true);
     Assert.assertEquals(2048, allocator.getBufferSize());
     Assert.assertEquals(11, allocator.getTotalBufferCount());
+
+    conf = new Configuration();
+    conf.setBoolean(ByteBuffAllocator.DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, false);
+    Assert.assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
+    conf.setBoolean(ByteBuffAllocator.DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, true);
+    Assert.assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
+    conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
+    Assert.assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
+    conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false);
+    Assert.assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
   }
 }
