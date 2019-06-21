@@ -2498,6 +2498,28 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       }
     }
+    if (param instanceof ClientProtos.MultiRequest) {
+      int numGets = 0;
+      int numMutations = 0;
+      int numServiceCalls = 0;
+      ClientProtos.MultiRequest multi = (ClientProtos.MultiRequest)param;
+      for (ClientProtos.RegionAction regionAction : multi.getRegionActionList()) {
+        for (ClientProtos.Action action: regionAction.getActionList()) {
+          if (action.hasMutation()) {
+            numMutations++;
+          }
+          if (action.hasGet()) {
+            numGets++;
+          }
+          if (action.hasServiceCall()) {
+            numServiceCalls++;
+          }
+        }
+      }
+      responseInfo.put("multi.gets", numGets);
+      responseInfo.put("multi.mutations", numMutations);
+      responseInfo.put("multi.servicecalls", numServiceCalls);
+    }
     LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
   }
 
