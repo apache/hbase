@@ -390,9 +390,8 @@ public class TestBucketCache {
       new BucketCache(ioEngineName, Long.MAX_VALUE, 1, constructedBlockSizes, writeThreads,
               writerQLen, null, 100, conf);
     } catch (IllegalArgumentException e) {
-      if ("Cache capacity is too large, only support 32TB now".equals(e.getMessage())) {
-        isTestCompleted = true;
-      }
+      Assert.assertEquals("Cache capacity is too large, only support 32TB now", e.getMessage());
+      isTestCompleted = true;
     }
     Assert.assertTrue(isTestCompleted);
   }
