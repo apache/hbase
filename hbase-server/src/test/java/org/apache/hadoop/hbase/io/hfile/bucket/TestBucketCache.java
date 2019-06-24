@@ -396,7 +396,7 @@ public class TestBucketCache {
     try {
       new BucketCache(ioEngineName, Long.MAX_VALUE, 1, constructedBlockSizes, writeThreads,
               writerQLen, null, 100, conf);
-      Assert.fail("Should have thrown IllegalArgumentException because of large cache capacity");
+      Assert.fail("Should have thrown IllegalArgumentException because of large cache capacity!");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals("Cache capacity is too large, only support 32TB now", e.getMessage());
     }
