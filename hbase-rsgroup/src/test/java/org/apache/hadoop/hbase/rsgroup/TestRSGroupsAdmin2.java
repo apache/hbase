@@ -683,7 +683,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
    * Randomly choose a region to set state.
    * @param newGroup target group
    * @return source server of region, and region state
-   * @throws IOException
+   * @throws IOException if methods called throw
    */
   private Pair<ServerName, RegionStateNode> setARegionState(RSGroupInfo newGroup)
       throws IOException{
