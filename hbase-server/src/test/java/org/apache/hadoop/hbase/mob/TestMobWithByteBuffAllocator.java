@@ -101,11 +101,13 @@ public class TestMobWithByteBuffAllocator {
     int rows = 0;
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       try (ResultScanner scanner = table.getScanner(new Scan().setReversed(true))) {
-        for (Result res; (res = scanner.next()) != null;) {
+        Result res = scanner.next();
+        while (res != null) {
           rows++;
           for (Cell cell : res.listCells()) {
             Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
           }
+          res = scanner.next();
         }
       }
     }

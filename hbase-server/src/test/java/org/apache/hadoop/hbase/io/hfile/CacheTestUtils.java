@@ -223,22 +223,22 @@ public class CacheTestUtils {
 
   public static class ByteArrayCacheable implements Cacheable {
 
-    static final CacheableDeserializer<Cacheable> blockDeserializer =
-        new CacheableDeserializer<Cacheable>() {
-          @Override
-          public int getDeserializerIdentifier() {
-            return deserializerIdentifier;
-          }
+    private static final CacheableDeserializer<Cacheable> blockDeserializer =
+      new CacheableDeserializer<Cacheable>() {
+        @Override
+        public int getDeserializerIdentifier() {
+          return deserializerIdentifier;
+        }
 
-          @Override
-          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
-            int len = b.getInt();
-            Thread.yield();
-            byte buf[] = new byte[len];
-            b.get(buf);
-            return new ByteArrayCacheable(buf);
-          }
-        };
+        @Override
+        public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
+          int len = b.getInt();
+          Thread.yield();
+          byte[] buf = new byte[len];
+          b.get(buf);
+          return new ByteArrayCacheable(buf);
+        }
+      };
 
     final byte[] buf;
 

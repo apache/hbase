@@ -140,7 +140,7 @@ public class BucketCache implements BlockCache, HeapSize {
   transient final RAMCache ramCache;
   // In this map, store the block's meta data like offset, length
   @VisibleForTesting
-  transient ConcurrentMap<BlockCacheKey, BucketEntry> backingMap;
+  transient ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMap;
 
   /**
    * Flag if the cache is enabled or not... We shut it off if there are IO
@@ -1524,7 +1524,16 @@ public class BucketCache implements BlockCache, HeapSize {
    * Wrapped the delegate ConcurrentMap with maintaining its block's reference count.
    */
   static class RAMCache {
-    final ConcurrentMap<BlockCacheKey, RAMQueueEntry> delegate = new ConcurrentHashMap<>();
+    /**
+     * Defined the map as {@link ConcurrentHashMap} explicitly here, because in
+     * {@link RAMCache#get(BlockCacheKey)} and
+     * {@link RAMCache#putIfAbsent(BlockCacheKey, RAMQueueEntry)} , we need to guarantee the
+     * atomicity of map#computeIfPresent(key, func) and map#putIfAbsent(key, func). Besides, the
+     * func method can execute exactly once only when the key is present(or absent) and under the
+     * lock context. Otherwise, the reference count of block will be messed up. Notice that the
+     * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+     */
+    final ConcurrentHashMap<BlockCacheKey, RAMQueueEntry> delegate = new ConcurrentHashMap<>();
 
     public boolean containsKey(BlockCacheKey key) {
       return delegate.containsKey(key);

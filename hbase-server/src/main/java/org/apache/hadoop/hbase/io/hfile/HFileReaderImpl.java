@@ -920,7 +920,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         if (block.getOffset() < 0) {
           releaseIfNotCurBlock(block);
-          throw new IOException("Invalid block file offset: " + block + ", path=" + reader.getPath());
+          throw new IOException(
+              "Invalid block file offset: " + block + ", path=" + reader.getPath());
         }
         // We are reading the next block without block type validation, because
         // it might turn out to be a non-data block.
@@ -1131,7 +1132,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (newBlock.getOffset() < 0) {
         releaseIfNotCurBlock(newBlock);
-        throw new IOException("Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
+        throw new IOException(
+            "Invalid block offset: " + newBlock.getOffset() + ", path=" + reader.getPath());
       }
       updateCurrentBlock(newBlock);
     }
@@ -1339,7 +1341,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             // schema definition change.
             LOG.info("Evicting cached block with key " + cacheKey
                 + " because of a data block encoding mismatch" + "; expected: "
-                + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding + ", path=" + path);
+                + expectedDataBlockEncoding + ", actual: " + actualDataBlockEncoding + ", path="
+                + path);
             // This is an error scenario. so here we need to release the block.
             cachedBlock.release();
             cache.evictBlock(cacheKey);
@@ -1662,9 +1665,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         short dataBlockEncoderId = newBlock.getDataBlockEncodingId();
         if (!DataBlockEncoding.isCorrectEncoder(dataBlockEncoder, dataBlockEncoderId)) {
           String encoderCls = dataBlockEncoder.getClass().getName();
-          throw new CorruptHFileException(
-              "Encoder " + encoderCls + " doesn't support data block encoding "
-                  + DataBlockEncoding.getNameFromId(dataBlockEncoderId) + ",path=" + reader.getPath());
+          throw new CorruptHFileException("Encoder " + encoderCls
+              + " doesn't support data block encoding "
+              + DataBlockEncoding.getNameFromId(dataBlockEncoderId) + ",path=" + reader.getPath());
         }
         updateCurrBlockRef(newBlock);
         ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
