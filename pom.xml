@@ -1439,7 +1439,6 @@
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
-    <avro.version>1.9.0</avro.version>
     <caffeine.version>2.6.2</caffeine.version>
     <commons-codec.version>1.10</commons-codec.version>
     <commons-validator.version>1.6</commons-validator.version>
@@ -1839,12 +1838,6 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
-      </dependency>
-      <!-- Avro dependencies we mostly get transitively, manual version coallescing -->
-      <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro</artifactId>
-        <version>${avro.version}</version>
       </dependency>
       <!--This is not used by hbase directly.  Used by thrift,
           dropwizard and zk.-->

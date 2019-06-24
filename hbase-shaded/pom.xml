@@ -318,10 +318,6 @@
 
                                     <!-- org.apache relocations not in org.apache.hadoop or org.apache.commons -->
                                     <relocation>
-                                        <pattern>org.apache.avro</pattern>
-                                        <shadedPattern>${shaded.prefix}.org.apache.avro</shadedPattern>
-                                    </relocation>
-                                    <relocation>
                                         <pattern>org.apache.curator</pattern>
                                         <shadedPattern>${shaded.prefix}.org.apache.curator</shadedPattern>
                                     </relocation>
