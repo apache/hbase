@@ -396,6 +396,7 @@ public class TestBucketCache {
     Assert.assertTrue(isTestCompleted);
   }
 
+
   @Test
   public void testValidBucketCacheConfigs() throws IOException {
     Configuration conf = HBaseConfiguration.create();
