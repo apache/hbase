@@ -153,8 +153,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
-  /** Concurrent map (the cache) */
-  private transient final Map<BlockCacheKey, LruCachedBlock> map;
+  /**
+   * Defined the cache map as {@link ConcurrentHashMap} here, because in
+   * {@link LruBlockCache#getBlock}, we need to guarantee the atomicity of map#computeIfPresent
+   * (key, func). Besides, the func method must execute exactly once only when the key is present
+   * and under the lock context, otherwise the reference count will be messed up. Notice that the
+   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+   */
+  private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private transient final ReentrantLock evictionLock = new ReentrantLock(true);
