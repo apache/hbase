@@ -735,10 +735,6 @@ public class TestHeapMemoryManager {
       return null;
     }
 
-    @Override
-    public void returnBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    }
-
     public void setTestBlockSize(long testBlockSize) {
       this.testBlockSize = testBlockSize;
     }

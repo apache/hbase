@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -128,6 +129,8 @@ public class CacheConfig {
   // Local reference to the block cache
   private final BlockCache blockCache;
 
+  private final ByteBuffAllocator byteBuffAllocator;
+
   /**
    * Create a cache configuration using the specified configuration object and
    * defaults for family level settings. Only use if no column family context.
@@ -138,7 +141,7 @@ public class CacheConfig {
   }
 
   public CacheConfig(Configuration conf, BlockCache blockCache) {
-    this(conf, null, blockCache);
+    this(conf, null, blockCache, ByteBuffAllocator.HEAP);
   }
 
   /**
@@ -147,7 +150,8 @@ public class CacheConfig {
    * @param conf hbase configuration
    * @param family column family configuration
    */
-  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache) {
+  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
+      ByteBuffAllocator byteBuffAllocator) {
     this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ) &&
         (family == null ? true : family.isBlockCacheEnabled());
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
@@ -171,6 +175,7 @@ public class CacheConfig {
     this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN) ||
         (family == null ? false : family.isPrefetchBlocksOnOpen());
     this.blockCache = blockCache;
+    this.byteBuffAllocator = byteBuffAllocator;
     LOG.info("Created cacheConfig: " + this + (family == null ? "" : " for family " + family) +
         " with blockCache=" + blockCache);
   }
@@ -190,6 +195,7 @@ public class CacheConfig {
     this.prefetchOnOpen = cacheConf.prefetchOnOpen;
     this.dropBehindCompaction = cacheConf.dropBehindCompaction;
     this.blockCache = cacheConf.blockCache;
+    this.byteBuffAllocator = cacheConf.byteBuffAllocator;
   }
 
   private CacheConfig() {
@@ -203,6 +209,7 @@ public class CacheConfig {
     this.prefetchOnOpen = false;
     this.dropBehindCompaction = false;
     this.blockCache = null;
+    this.byteBuffAllocator = ByteBuffAllocator.HEAP;
   }
 
   /**
@@ -358,6 +365,14 @@ public class CacheConfig {
    */
   public Optional<BlockCache> getBlockCache() {
     return Optional.ofNullable(this.blockCache);
+  }
+
+  public boolean isCombinedBlockCache() {
+    return blockCache instanceof CombinedBlockCache;
+  }
+
+  public ByteBuffAllocator getByteBuffAllocator() {
+    return this.byteBuffAllocator;
   }
 
   @Override

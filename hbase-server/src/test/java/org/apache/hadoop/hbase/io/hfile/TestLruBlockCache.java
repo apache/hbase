@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -27,6 +28,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,12 +38,16 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests the concurrent LruBlockCache.<p>
@@ -56,6 +62,8 @@ public class TestLruBlockCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLruBlockCache.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestLruBlockCache.class);
 
   @Test
   public void testCacheEvictionThreadSafe() throws Exception {
@@ -813,10 +821,10 @@ public class TestLruBlockCache {
     byte[] byteArr = new byte[length];
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
-    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, 52, -1, meta);
-    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, -1, -1, -1, meta);
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, 52, -1, meta, HEAP);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, -1, -1, meta, HEAP);
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
         (int)Math.ceil(1.2*maxSize/blockSize),
@@ -948,13 +956,78 @@ public class TestLruBlockCache {
     public BlockType getBlockType() {
       return BlockType.DATA;
     }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
-    }
-
   }
 
+  static void testMultiThreadGetAndEvictBlockInternal(BlockCache cache) throws Exception {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    byte[] byteArr = new byte[length];
+    HFileContext meta = new HFileContextBuilder().build();
+    BlockCacheKey key = new BlockCacheKey("key1", 0);
+    HFileBlock blk = new HFileBlock(BlockType.DATA, size, size, -1,
+        ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1, 52, -1, meta,
+        HEAP);
+    AtomicBoolean err1 = new AtomicBoolean(false);
+    Thread t1 = new Thread(() -> {
+      for (int i = 0; i < 10000 && !err1.get(); i++) {
+        try {
+          cache.getBlock(key, false, false, true);
+        } catch (Exception e) {
+          err1.set(true);
+          LOG.info("Cache block or get block failure: ", e);
+        }
+      }
+    });
+
+    AtomicBoolean err2 = new AtomicBoolean(false);
+    Thread t2 = new Thread(() -> {
+      for (int i = 0; i < 10000 && !err2.get(); i++) {
+        try {
+          cache.evictBlock(key);
+        } catch (Exception e) {
+          err2.set(true);
+          LOG.info("Evict block failure: ", e);
+        }
+      }
+    });
+
+    AtomicBoolean err3 = new AtomicBoolean(false);
+    Thread t3 = new Thread(() -> {
+      for (int i = 0; i < 10000 && !err3.get(); i++) {
+        try {
+          cache.cacheBlock(key, blk);
+        } catch (Exception e) {
+          err3.set(true);
+          LOG.info("Cache block failure: ", e);
+        }
+      }
+    });
+    t1.start();
+    t2.start();
+    t3.start();
+    t1.join();
+    t2.join();
+    t3.join();
+    Assert.assertFalse(err1.get());
+    Assert.assertFalse(err2.get());
+    Assert.assertFalse(err3.get());
+  }
+
+  @Test
+  public void testMultiThreadGetAndEvictBlock() throws Exception {
+    long maxSize = 100000;
+    long blockSize = calculateBlockSize(maxSize, 10);
+    LruBlockCache cache =
+        new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+            LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
+            0.66f, // min
+            0.99f, // acceptable
+            0.33f, // single
+            0.33f, // multi
+            0.34f, // memory
+            1.2f, // limit
+            false, 1024);
+    testMultiThreadGetAndEvictBlockInternal(cache);
+  }
 }
 

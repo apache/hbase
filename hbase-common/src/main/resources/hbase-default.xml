@@ -938,6 +938,24 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.hstore.compaction.throughput.lower.bound</name>
+    <value>52428800</value>
+    <description>The target lower bound on aggregate compaction throughput, in bytes/sec. Allows
+    you to tune the minimum available compaction throughput when the
+    PressureAwareCompactionThroughputController throughput controller is active. (It is active by
+    default.)</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.throughput.higher.bound</name>
+    <value>104857600</value>
+    <description>The target upper bound on aggregate compaction throughput, in bytes/sec. Allows
+    you to control aggregate compaction throughput demand when the
+    PressureAwareCompactionThroughputController throughput controller is active. (It is active by
+    default.) The maximum throughput will be tuned between the lower and upper bounds when
+    compaction pressure is within the range [0.0, 1.0]. If compaction pressure is 1.0 or greater
+    the higher bound will be ignored until pressure returns to the normal range.</description>
+  </property>
+  <property>
     <name>hbase.bucketcache.size</name>
     <value></value>
     <description>A float that EITHER represents a percentage of total heap memory

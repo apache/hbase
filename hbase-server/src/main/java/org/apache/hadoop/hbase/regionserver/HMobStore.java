@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
+import org.apache.hadoop.hbase.mob.MobCell;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -297,14 +298,14 @@ public class HMobStore extends HStore {
   }
 
   /**
-   * Reads the cell from the mob file, and the read point does not count.
-   * This is used for DefaultMobStoreCompactor where we can read empty value for the missing cell.
+   * Reads the cell from the mob file, and the read point does not count. This is used for
+   * DefaultMobStoreCompactor where we can read empty value for the missing cell.
    * @param reference The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
    * @return The cell found in the mob file.
    * @throws IOException
    */
-  public Cell resolve(Cell reference, boolean cacheBlocks) throws IOException {
+  public MobCell resolve(Cell reference, boolean cacheBlocks) throws IOException {
     return resolve(reference, cacheBlocks, -1, true);
   }
 
@@ -313,14 +314,14 @@ public class HMobStore extends HStore {
    * @param reference The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
    * @param readPt the read point.
-   * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is
-   *        missing or corrupt.
+   * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is missing or
+   *          corrupt.
    * @return The cell found in the mob file.
    * @throws IOException
    */
-  public Cell resolve(Cell reference, boolean cacheBlocks, long readPt,
-    boolean readEmptyValueOnMobCellMiss) throws IOException {
-    Cell result = null;
+  public MobCell resolve(Cell reference, boolean cacheBlocks, long readPt,
+      boolean readEmptyValueOnMobCellMiss) throws IOException {
+    MobCell mobCell = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
       Tag tableNameTag = MobUtils.getTableNameTag(reference);
@@ -335,35 +336,34 @@ public class HMobStore extends HStore {
               locations = new ArrayList<>(2);
               TableName tn = TableName.valueOf(tableNameString);
               locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
-              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
-                  .getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
+              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn,
+                MobUtils.getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
               map.put(tableNameString, locations);
             }
           } finally {
             keyLock.releaseLockEntry(lockEntry);
           }
         }
-        result = readCell(locations, fileName, reference, cacheBlocks, readPt,
+        mobCell = readCell(locations, fileName, reference, cacheBlocks, readPt,
           readEmptyValueOnMobCellMiss);
       }
     }
-    if (result == null) {
+    if (mobCell == null) {
       LOG.warn("The Cell result is null, assemble a new Cell with the same row,family,"
           + "qualifier,timestamp,type and tags but with an empty value to return.");
-      result = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
-              .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(),
-                reference.getFamilyLength())
-              .setQualifier(reference.getQualifierArray(),
-                reference.getQualifierOffset(), reference.getQualifierLength())
-              .setTimestamp(reference.getTimestamp())
-              .setType(reference.getTypeByte())
-              .setValue(HConstants.EMPTY_BYTE_ARRAY)
-              .setTags(reference.getTagsArray(), reference.getTagsOffset(),
-                reference.getTagsLength())
-              .build();
+      Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+          .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
+          .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(),
+            reference.getFamilyLength())
+          .setQualifier(reference.getQualifierArray(), reference.getQualifierOffset(),
+            reference.getQualifierLength())
+          .setTimestamp(reference.getTimestamp()).setType(reference.getTypeByte())
+          .setValue(HConstants.EMPTY_BYTE_ARRAY)
+          .setTags(reference.getTagsArray(), reference.getTagsOffset(), reference.getTagsLength())
+          .build();
+      mobCell = new MobCell(cell);
     }
-    return result;
+    return mobCell;
   }
 
   /**
@@ -382,8 +382,8 @@ public class HMobStore extends HStore {
    * @return The found cell. Null if there's no such a cell.
    * @throws IOException
    */
-  private Cell readCell(List<Path> locations, String fileName, Cell search, boolean cacheMobBlocks,
-    long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {
+  private MobCell readCell(List<Path> locations, String fileName, Cell search,
+      boolean cacheMobBlocks, long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {
     FileSystem fs = getFileSystem();
     Throwable throwable = null;
     for (Path location : locations) {
@@ -391,8 +391,8 @@ public class HMobStore extends HStore {
       Path path = new Path(location, fileName);
       try {
         file = mobFileCache.openFile(fs, path, cacheConf);
-        return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt) : file.readCell(search,
-          cacheMobBlocks);
+        return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt)
+            : file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {
         mobFileCache.evictFile(fileName);
         throwable = e;
@@ -420,7 +420,7 @@ public class HMobStore extends HStore {
       }
     }
     LOG.error("The mob file " + fileName + " could not be found in the locations " + locations
-      + " or it is corrupt");
+        + " or it is corrupt");
     if (readEmptyValueOnMobCellMiss) {
       return null;
     } else if ((throwable instanceof FileNotFoundException)

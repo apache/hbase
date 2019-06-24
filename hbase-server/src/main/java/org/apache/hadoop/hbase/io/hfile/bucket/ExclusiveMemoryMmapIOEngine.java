@@ -20,31 +20,24 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * IO engine that stores data to a file on the local block device using memory mapping
- * mechanism
+ * IO engine that stores data to a file on the local block device using memory mapping mechanism
  */
 @InterfaceAudience.Private
 public class ExclusiveMemoryMmapIOEngine extends FileMmapIOEngine {
-  static final Logger LOG = LoggerFactory.getLogger(ExclusiveMemoryMmapIOEngine.class);
 
   public ExclusiveMemoryMmapIOEngine(String filePath, long capacity) throws IOException {
     super(filePath, capacity);
   }
 
   @Override
-  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
-      throws IOException {
-    byte[] dst = new byte[length];
-    bufferArray.getMultiple(offset, length, dst);
-    return deserializer.deserialize(new SingleByteBuff(ByteBuffer.wrap(dst)), true,
-      MemoryType.EXCLUSIVE);
+  public Cacheable read(BucketEntry be) throws IOException {
+    ByteBuff dst = ByteBuff.wrap(ByteBuffer.allocate(be.getLength()));
+    bufferArray.read(be.offset(), dst);
+    dst.position(0).limit(be.getLength());
+    return be.wrapAsCacheable(dst.nioByteBuffers());
   }
 }

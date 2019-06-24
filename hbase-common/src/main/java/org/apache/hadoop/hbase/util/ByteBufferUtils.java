@@ -30,6 +30,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -348,25 +349,39 @@ public final class ByteBufferUtils {
     }
   }
 
-  /**
-   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a
-   * {@link ByteBuffer}.
-   */
-  public static long readVLong(ByteBuffer in) {
-    byte firstByte = in.get();
+  private interface ByteVisitor {
+    byte get();
+  }
+
+  private static long readVLong(ByteVisitor visitor) {
+    byte firstByte = visitor.get();
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
       return firstByte;
     }
     long i = 0;
-    for (int idx = 0; idx < len-1; idx++) {
-      byte b = in.get();
+    for (int idx = 0; idx < len - 1; idx++) {
+      byte b = visitor.get();
       i = i << 8;
       i = i | (b & 0xFF);
     }
     return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
   }
 
+  /**
+   * Similar to {@link WritableUtils#readVLong(DataInput)} but reads from a {@link ByteBuffer}.
+   */
+  public static long readVLong(ByteBuffer in) {
+    return readVLong(in::get);
+  }
+
+  /**
+   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
+   * {@link ByteBuff}.
+   */
+  public static long readVLong(ByteBuff in) {
+    return readVLong(in::get);
+  }
 
   /**
    * Put in buffer integer using 7 bit encoding. For each written byte:
@@ -704,8 +719,8 @@ public final class ByteBufferUtils {
    * @param sourceOffset offset in the source buffer
    * @param length how many bytes to copy
    */
-  public static void copyFromBufferToBuffer(ByteBuffer in,
-      ByteBuffer out, int sourceOffset, int length) {
+  public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
+      int length) {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.position()
           + out.arrayOffset(), length);
@@ -718,27 +733,6 @@ public final class ByteBufferUtils {
       inDup.position(sourceOffset).limit(sourceOffset + length);
       out.put(inDup);
     }
-  }
-
-  /**
-   * Find length of common prefix of two parts in the buffer
-   * @param buffer Where parts are located.
-   * @param offsetLeft Offset of the first part.
-   * @param offsetRight Offset of the second part.
-   * @param limit Maximal length of common prefix.
-   * @return Length of prefix.
-   */
-  public static int findCommonPrefix(ByteBuffer buffer, int offsetLeft,
-      int offsetRight, int limit) {
-    int prefix = 0;
-
-    for (; prefix < limit; ++prefix) {
-      if (buffer.get(offsetLeft + prefix) != buffer.get(offsetRight + prefix)) {
-        break;
-      }
-    }
-
-    return prefix;
   }
 
   /**

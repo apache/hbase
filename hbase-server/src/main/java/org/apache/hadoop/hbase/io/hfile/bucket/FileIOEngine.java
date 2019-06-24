@@ -27,11 +27,10 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -121,29 +120,29 @@ public class FileIOEngine implements IOEngine {
 
   /**
    * Transfers data from file to the given byte buffer
-   * @param offset The offset in the file where the first byte to be read
-   * @param length The length of buffer that should be allocated for reading
-   *               from the file channel
-   * @return number of bytes read
-   * @throws IOException
+   * @param be an {@link BucketEntry} which maintains an (offset, len, refCnt)
+   * @return the {@link Cacheable} with block data inside.
+   * @throws IOException if any IO error happen.
    */
   @Override
-  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
-      throws IOException {
+  public Cacheable read(BucketEntry be) throws IOException {
+    long offset = be.offset();
+    int length = be.getLength();
     Preconditions.checkArgument(length >= 0, "Length of read can not be less than 0.");
     ByteBuffer dstBuffer = ByteBuffer.allocate(length);
     if (length != 0) {
       accessFile(readAccessor, dstBuffer, offset);
       // The buffer created out of the fileChannel is formed by copying the data from the file
-      // Hence in this case there is no shared memory that we point to. Even if the BucketCache evicts
-      // this buffer from the file the data is already copied and there is no need to ensure that
-      // the results are not corrupted before consuming them.
+      // Hence in this case there is no shared memory that we point to. Even if the BucketCache
+      // evicts this buffer from the file the data is already copied and there is no need to
+      // ensure that the results are not corrupted before consuming them.
       if (dstBuffer.limit() != length) {
-        throw new RuntimeException("Only " + dstBuffer.limit() + " bytes read, " + length
-            + " expected");
+        throw new IllegalArgumentIOException(
+            "Only " + dstBuffer.limit() + " bytes read, " + length + " expected");
       }
     }
-    return deserializer.deserialize(new SingleByteBuff(dstBuffer), true, MemoryType.EXCLUSIVE);
+    dstBuffer.rewind();
+    return be.wrapAsCacheable(new ByteBuffer[] { dstBuffer });
   }
 
   @VisibleForTesting
@@ -210,10 +209,8 @@ public class FileIOEngine implements IOEngine {
 
   @Override
   public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    // When caching block into BucketCache there will be single buffer backing for this HFileBlock.
-    assert srcBuffer.hasArray();
-    write(ByteBuffer.wrap(srcBuffer.array(), srcBuffer.arrayOffset(),
-            srcBuffer.remaining()), offset);
+    ByteBuffer dup = srcBuffer.asSubByteBuffer(srcBuffer.remaining()).duplicate();
+    write(dup, offset);
   }
 
   private void accessFile(FileAccessor accessor, ByteBuffer buffer,
@@ -229,8 +226,7 @@ public class FileIOEngine implements IOEngine {
       int accessLen = 0;
       if (endFileNum > accessFileNum) {
         // short the limit;
-        buffer.limit((int) (buffer.limit() - remainingAccessDataLen
-            + sizePerFile - accessOffset));
+        buffer.limit((int) (buffer.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
       }
       try {
         accessLen = accessor.access(fileChannel, buffer, accessOffset);
@@ -307,7 +303,7 @@ public class FileIOEngine implements IOEngine {
     }
   }
 
-  private static interface FileAccessor {
+  private interface FileAccessor {
     int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
         throws IOException;
   }

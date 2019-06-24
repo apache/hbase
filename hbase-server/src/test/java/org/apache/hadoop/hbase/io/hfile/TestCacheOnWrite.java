@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -112,7 +113,7 @@ public class TestCacheOnWrite {
   private static final int NUM_VALID_KEY_TYPES =
       KeyValue.Type.values().length - 2;
 
-  private static enum CacheOnWriteType {
+  private enum CacheOnWriteType {
     DATA_BLOCKS(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
         BlockType.DATA, BlockType.ENCODED_DATA),
     BLOOM_BLOCKS(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
@@ -124,12 +125,11 @@ public class TestCacheOnWrite {
     private final BlockType blockType1;
     private final BlockType blockType2;
 
-    private CacheOnWriteType(String confKey, BlockType blockType) {
+    CacheOnWriteType(String confKey, BlockType blockType) {
       this(confKey, blockType, blockType);
     }
 
-    private CacheOnWriteType(String confKey, BlockType blockType1,
-        BlockType blockType2) {
+    CacheOnWriteType(String confKey, BlockType blockType1, BlockType blockType2) {
       this.blockType1 = blockType1;
       this.blockType2 = blockType2;
       this.confKey = confKey;
@@ -269,18 +269,17 @@ public class TestCacheOnWrite {
 
     DataBlockEncoding encodingInCache = NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding();
     List<Long> cachedBlocksOffset = new ArrayList<>();
-    Map<Long, HFileBlock> cachedBlocks = new HashMap<>();
+    Map<Long, Pair<HFileBlock, HFileBlock>> cachedBlocks = new HashMap<>();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null,
           encodingInCache);
-      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
-          offset);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
       boolean isCached = fromCache != null;
       cachedBlocksOffset.add(offset);
-      cachedBlocks.put(offset, fromCache);
+      cachedBlocks.put(offset, fromCache == null ? null : Pair.newPair(block, fromCache));
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       assertTrue("shouldBeCached: " + shouldBeCached+ "\n" +
           "isCached: " + isCached + "\n" +
@@ -332,19 +331,20 @@ public class TestCacheOnWrite {
       Long entry = iterator.next();
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           entry);
-      HFileBlock hFileBlock = cachedBlocks.get(entry);
-      if (hFileBlock != null) {
-        // call return twice because for the isCache cased the counter would have got incremented
-        // twice
-        blockCache.returnBlock(blockCacheKey, hFileBlock);
-        if(cacheCompressedData) {
+      Pair<HFileBlock, HFileBlock> blockPair = cachedBlocks.get(entry);
+      if (blockPair != null) {
+        // Call return twice because for the isCache cased the counter would have got incremented
+        // twice. Notice that here we need to returnBlock with different blocks. see comments in
+        // BucketCache#returnBlock.
+        blockPair.getSecond().release();
+        if (cacheCompressedData) {
           if (this.compress == Compression.Algorithm.NONE
               || cowType == CacheOnWriteType.INDEX_BLOCKS
               || cowType == CacheOnWriteType.BLOOM_BLOCKS) {
-            blockCache.returnBlock(blockCacheKey, hFileBlock);
+            blockPair.getFirst().release();
           }
         } else {
-          blockCache.returnBlock(blockCacheKey, hFileBlock);
+          blockPair.getFirst().release();
         }
       }
     }
@@ -457,7 +457,7 @@ public class TestCacheOnWrite {
       assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
       assertNotEquals(BlockType.DATA, block.getBlockType());
     }
-    ((HRegion)region).close();
+    region.close();
   }
 
   @Test

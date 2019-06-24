@@ -19,10 +19,12 @@ limitations under the License.
 <%args>
 MetricsRegionServerWrapper mWrap;
 MetricsHBaseServerWrapper mServerWrap;
+ByteBuffAllocator bbAllocator;
 </%args>
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
+org.apache.hadoop.hbase.io.ByteBuffAllocator;
 org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapper;
 org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +47,7 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
         <li class=""><a href="#tab_walStats" data-toggle="tab">WALs</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
+        <li class=""><a href="#tab_byteBuffAllocatorStats" data-toggle="tab">ByteBuffAllocator Stats</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_baseStats">
@@ -64,6 +67,9 @@ org.apache.hadoop.hbase.io.util.MemorySizeUtil;
         </div>
         <div class="tab-pane" id="tab_queueStats">
             <& queueStats; mWrap = mWrap; mServerWrap = mServerWrap; &>
+        </div>
+        <div class="tab-pane" id="tab_byteBuffAllocatorStats">
+            <& byteBuffAllocatorStats; bbAllocator = bbAllocator; &>
         </div>
     </div>
 </div>
@@ -222,6 +228,30 @@ MetricsHBaseServerWrapper mServerWrap;
     <td><% mServerWrap.getGeneralQueueLength() %></td>
     <td><% mServerWrap.getReplicationQueueLength() %></td>
     <td><% TraditionalBinaryPrefix.long2String(mServerWrap.getTotalQueueSize(), "B", 1) %></td>
+</tr>
+</table>
+</%def>
+
+<%def byteBuffAllocatorStats>
+<%args>
+ByteBuffAllocator bbAllocator;
+</%args>
+<table class="table table-striped">
+<tr>
+    <th>Total Heap Allocation(Bytes)</th>
+    <th>Total Pool Allocation(Bytes)</th>
+    <th>Heap Allocation Ratio</th>
+    <th>Total Buffer Count</th>
+    <th>Used Buffer Count</th>
+    <th>Buffer Size(Bytes)</th>
+</tr>
+<tr>
+    <td><% bbAllocator.getHeapAllocationBytes() %></td>
+    <td><% bbAllocator.getPoolAllocationBytes() %></td>
+    <td><% String.format("%.3f", bbAllocator.getHeapAllocationRatio() * 100) %><% "%" %></td>
+    <td><% bbAllocator.getTotalBufferCount() %></td>
+    <td><% bbAllocator.getUsedBufferCount() %></td>
+    <td><% bbAllocator.getBufferSize() %></td>
 </tr>
 </table>
 </%def>

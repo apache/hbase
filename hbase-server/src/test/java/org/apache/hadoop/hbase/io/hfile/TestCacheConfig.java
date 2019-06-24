@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -76,18 +76,13 @@ public class TestCacheConfig {
     }
 
     @Override
-    public int getDeserialiserIdentifier() {
+    public int getDeserializerIdentifier() {
       return deserializedIdentifier;
     }
 
     @Override
-    public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType) throws IOException {
-      LOG.info("Deserialized " + b + ", reuse=" + reuse);
-      return cacheable;
-    }
-
-    @Override
-    public Cacheable deserialize(ByteBuff b) throws IOException {
+    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc)
+        throws IOException {
       LOG.info("Deserialized " + b);
       return cacheable;
     }
@@ -147,11 +142,6 @@ public class TestCacheConfig {
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;
-    }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
     }
   }
 
@@ -250,7 +240,7 @@ public class TestCacheConfig {
     HColumnDescriptor family = new HColumnDescriptor("testDisableCacheDataBlock");
     family.setBlockCacheEnabled(false);
 
-    cacheConfig = new CacheConfig(conf, family, null);
+    cacheConfig = new CacheConfig(conf, family, null, ByteBuffAllocator.HEAP);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());

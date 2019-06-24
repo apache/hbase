@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -59,10 +58,10 @@ public class TestBucketWriterThread {
   private static class MockBucketCache extends BucketCache {
 
     public MockBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
-      throws FileNotFoundException, IOException {
+        int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
+        throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-        persistencePath, ioErrorsTolerationDuration, HBaseConfiguration.create());
+          persistencePath, ioErrorsTolerationDuration, HBaseConfiguration.create());
     }
 
     @Override

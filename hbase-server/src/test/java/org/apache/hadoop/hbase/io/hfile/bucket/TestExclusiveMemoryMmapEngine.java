@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.createBucketEntry;
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.getByteBuff;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.BufferGrabbingDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -34,7 +34,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Basic test for {@link ExclusiveMemoryMmapIOEngine}
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestExclusiveMemoryMmapEngine {
 
   @ClassRule
@@ -50,17 +50,23 @@ public class TestExclusiveMemoryMmapEngine {
       for (int i = 0; i < 50; i++) {
         int len = (int) Math.floor(Math.random() * 100);
         long offset = (long) Math.floor(Math.random() * size % (size - len));
-        byte[] data1 = new byte[len];
-        for (int j = 0; j < data1.length; ++j) {
-          data1[j] = (byte) (Math.random() * 255);
-        }
-        fileMmapEngine.write(ByteBuffer.wrap(data1), offset);
-        BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-        fileMmapEngine.read(offset, len, deserializer);
-        ByteBuff data2 = deserializer.getDeserializedByteBuff();
-        for (int j = 0; j < data1.length; ++j) {
-          assertTrue(data1[j] == data2.get(j));
-        }
+        int val = (int) (Math.random() * 255);
+
+        // write
+        ByteBuff src = TestByteBufferIOEngine.createByteBuffer(len, val, i % 2 == 0);
+        int pos = src.position(), lim = src.limit();
+        fileMmapEngine.write(src, offset);
+        src.position(pos).limit(lim);
+
+        // read
+        BucketEntry be = createBucketEntry(offset, len);
+        fileMmapEngine.read(be);
+        ByteBuff dst = getByteBuff(be);
+
+        Assert.assertEquals(src.remaining(), len);
+        Assert.assertEquals(dst.remaining(), len);
+        Assert.assertEquals(0,
+          ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
       }
     } finally {
       File file = new File(filePath);
@@ -68,6 +74,5 @@ public class TestExclusiveMemoryMmapEngine {
         file.delete();
       }
     }
-
   }
 }
