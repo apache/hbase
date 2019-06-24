@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 public class ByteBufferListOutputStream extends ByteBufferOutputStream {
   private static final Logger LOG = LoggerFactory.getLogger(ByteBufferListOutputStream.class);
 
-  private ByteBuffAllocator allocator;
+  private final ByteBuffAllocator allocator;
   // Keep track of the BBs where bytes written to. We will first try to get a BB from the pool. If
   // it is not available will make a new one our own and keep writing to that. We keep track of all
   // the BBs that we got from pool, separately so that on closeAndPutbackBuffers, we can make sure

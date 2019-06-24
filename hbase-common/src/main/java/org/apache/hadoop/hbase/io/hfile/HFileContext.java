@@ -193,8 +193,8 @@ public class HFileContext implements HeapSize, Cloneable {
   }
 
   /**
-   * HeapSize implementation. NOTE : The heapsize should be altered as and when new state variable
-   * are added
+   * HeapSize implementation. NOTE : The heap size should be altered when new state variable are
+   * added.
    * @return heap size of the HFileContext
    */
   @Override
