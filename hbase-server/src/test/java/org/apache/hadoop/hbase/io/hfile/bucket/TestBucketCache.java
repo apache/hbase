@@ -393,15 +393,13 @@ public class TestBucketCache {
     conf.setFloat(BucketCache.SINGLE_FACTOR_CONFIG_NAME, 0.1f);
     conf.setFloat(BucketCache.MULTI_FACTOR_CONFIG_NAME, 0.7f);
     conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
-    boolean isTestCompleted = false;
     try {
       new BucketCache(ioEngineName, Long.MAX_VALUE, 1, constructedBlockSizes, writeThreads,
               writerQLen, null, 100, conf);
+      Assert.fail("Should have thrown IllegalArgumentException because of large cache capacity");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals("Cache capacity is too large, only support 32TB now", e.getMessage());
-      isTestCompleted = true;
     }
-    Assert.assertTrue(isTestCompleted);
   }
 
 
