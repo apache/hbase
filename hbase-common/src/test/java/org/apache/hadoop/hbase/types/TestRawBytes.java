@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -30,71 +30,71 @@ import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 @Category({MiscTests.class, SmallTests.class})
-public class TestRawString {
+public class TestRawBytes {
+  private static final byte[][] VALUES = new byte[][] {
+      Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
+      Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
+      Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"),
+  };
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawString.class);
+      HBaseClassTestRule.forClass(TestRawBytes.class);
 
-  private static final String[] VALUES = new String[] {
-    "", "1", "22", "333", "4444", "55555", "666666", "7777777", "88888888", "999999999",
-  };
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testIsOrderPreservingIsTrue() {
-    final DataType<String> type = new RawString(Order.ASCENDING);
+    final DataType<byte[]> type = new RawBytes(Order.ASCENDING);
 
     assertTrue(type.isOrderPreserving());
   }
 
   @Test
-  public void testGetOrderIsCorrectOrder() {
-    final DataType<String> type = new RawString(Order.ASCENDING);
+  public void testGetOrderCorrectOrder() {
+    final DataType<byte[]> type = new RawBytes(Order.ASCENDING);
 
     assertEquals(Order.ASCENDING, type.getOrder());
   }
 
   @Test
   public void testIsNullableIsFalse() {
-    final DataType<String> type = new RawString(Order.ASCENDING);
+    final DataType<byte[]> type = new RawBytes(Order.ASCENDING);
 
     assertFalse(type.isNullable());
   }
 
   @Test
   public void testIsSkippableIsFalse() {
-    final DataType<String> type = new RawString(Order.ASCENDING);
+    final DataType<byte[]> type = new RawBytes(Order.ASCENDING);
 
     assertFalse(type.isSkippable());
   }
 
   @Test
-  public void testEncodedClassIsString() {
-    final DataType<String> type = new RawString(Order.ASCENDING);
+  public void testEncodedClassIsByteArray() {
+    final DataType<byte[]> type = new RawBytes(Order.ASCENDING);
 
-    assertEquals(String.class, type.encodedClass());
+    assertEquals(byte[].class, type.encodedClass());
   }
 
   @Test
-  public void testReadWrite() {
-    for (final Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
-      final RawString type =
-          Order.ASCENDING == ord ? new RawString(Order.ASCENDING) : new RawString(Order.DESCENDING);
-      for (final String val : VALUES) {
-        final PositionedByteRange buff =
-            new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
-        assertEquals(buff.getLength(), type.encode(buff, val));
-        final byte[] expected = Bytes.toBytes(val);
-        ord.apply(expected);
-        assertArrayEquals(expected, buff.getBytes());
-        buff.setPosition(0);
-        assertEquals(val, type.decode(buff));
-        buff.setPosition(0);
-        assertEquals(buff.getLength(), type.skip(buff));
-        assertEquals(buff.getLength(), buff.getPosition());
+  public void testEncodedLength() {
+    final PositionedByteRange buffer = new SimplePositionedMutableByteRange(20);
+    for (final DataType<byte[]> type : new RawBytes[] { new RawBytes(Order.ASCENDING),
+      new RawBytes(Order.DESCENDING) }) {
+      for (final byte[] val : VALUES) {
+        buffer.setPosition(0);
+        type.encode(buffer, val);
+        assertEquals("encodedLength does not match actual, " + Arrays.toString(val),
+            buffer.getPosition(), type.encodedLength(val));
       }
     }
   }

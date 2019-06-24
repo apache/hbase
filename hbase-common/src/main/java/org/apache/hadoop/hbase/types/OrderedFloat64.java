@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedFloat64 extends OrderedBytesBase<Double> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedFloat64 ASCENDING = new OrderedFloat64(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedFloat64 DESCENDING = new OrderedFloat64(Order.DESCENDING);
 
-  protected OrderedFloat64(Order order) {
+  /**
+   * Creates a new 64-bite {@code double} with a fixed-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedFloat64(Order order) {
     super(order);
   }
 
@@ -66,6 +78,9 @@ public class OrderedFloat64 extends OrderedBytesBase<Double> {
 
   /**
    * Read a {@code double} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code double} from
+   * @return the {@code double} floating-point value with the same bit pattern
    */
   public double decodeDouble(PositionedByteRange src) {
     return OrderedBytes.decodeFloat64(src);
@@ -73,6 +88,10 @@ public class OrderedFloat64 extends OrderedBytesBase<Double> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeDouble(PositionedByteRange dst, double val) {
     return OrderedBytes.encodeFloat64(dst, val, order);

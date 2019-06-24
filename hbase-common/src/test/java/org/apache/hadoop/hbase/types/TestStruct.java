@@ -361,7 +361,7 @@ public class TestStruct {
         new RawBytesTerminated(Order.DESCENDING, "/");
     private static RawStringTerminated stringField =
         new RawStringTerminated(Order.DESCENDING, new byte[] { 0x00 });
-    private static RawBytes byteField3 = RawBytes.DESCENDING;
+    private static RawBytes byteField3 = new RawBytes(Order.DESCENDING);
 
     /**
      * The {@link Struct} equivalent of this type.

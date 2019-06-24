@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedInt32 extends OrderedBytesBase<Integer> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt32 ASCENDING = new OrderedInt32(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt32 DESCENDING = new OrderedInt32(Order.DESCENDING);
 
-  protected OrderedInt32(Order order) {
+  /**
+   * Creates a new 32-bit {@code int} with a fixed-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedInt32(Order order) {
     super(order);
   }
 
@@ -66,6 +78,9 @@ public class OrderedInt32 extends OrderedBytesBase<Integer> {
 
   /**
    * Read an {@code int} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code int} from
+   * @return the {@code int} read from the buffer
    */
   public int decodeInt(PositionedByteRange src) {
     return OrderedBytes.decodeInt32(src);
@@ -73,6 +88,10 @@ public class OrderedInt32 extends OrderedBytesBase<Integer> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeInt(PositionedByteRange dst, int val) {
     return OrderedBytes.encodeInt32(dst, val, order);

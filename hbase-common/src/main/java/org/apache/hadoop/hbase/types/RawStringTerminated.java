@@ -57,7 +57,7 @@ public class RawStringTerminated extends TerminatedWrapper<String> {
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawStringTerminated(byte[] term) {
-    super(new RawString(), term);
+    super(new RawString(Order.ASCENDING), term);
   }
 
   /**
@@ -65,6 +65,6 @@ public class RawStringTerminated extends TerminatedWrapper<String> {
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawStringTerminated(String term) {
-    super(new RawString(), term);
+    super(new RawString(Order.ASCENDING), term);
   }
 }

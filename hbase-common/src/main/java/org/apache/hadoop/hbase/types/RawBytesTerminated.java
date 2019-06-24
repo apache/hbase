@@ -56,7 +56,7 @@ public class RawBytesTerminated extends TerminatedWrapper<byte[]> {
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawBytesTerminated(byte[] term) {
-    super(new RawBytes(), term);
+    super(new RawBytes(Order.ASCENDING), term);
   }
 
   /**
@@ -64,7 +64,7 @@ public class RawBytesTerminated extends TerminatedWrapper<byte[]> {
    * @throws IllegalArgumentException if {@code term} is {@code null} or empty.
    */
   public RawBytesTerminated(String term) {
-    super(new RawBytes(), term);
+    super(new RawBytes(Order.ASCENDING), term);
   }
 
   /**
