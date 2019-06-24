@@ -681,7 +681,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
   /**
    * Randomly choose a region to set state.
-   * @param newGroup, target group
+   * @param newGroup target group
    * @return source server of region, and region state
    * @throws IOException
    */

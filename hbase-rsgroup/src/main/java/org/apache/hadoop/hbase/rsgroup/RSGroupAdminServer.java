@@ -209,10 +209,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * So MoveType.TO means TableName set, and MoveType.FROM means server Address set.
    *
    * @param set it's a table set or a server set
-   * @param targetGroupName
-   * @param type
-   * @param <T>
-   * @throws IOException
+   * @param targetGroupName target group name
+   * @param type type of move regions
+   * @param <T> the type of elements in Set
+   * @throws IOException if move haven't succeed even after max number of retries
    */
   private <T> void moveRegionsToOrFromGroup(Set<T> set, String targetGroupName, MoveType type)
       throws IOException {
