@@ -749,6 +749,16 @@ public interface MasterObserver {
       throws IOException {}
 
   /**
+   * Called after the snapshot operation has been completed.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor for the snapshot
+   * @param tableDescriptor the TableDescriptor of the table to snapshot
+   */
+  default void postCompletedSnapshotAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      SnapshotDescription snapshot, TableDescriptor tableDescriptor) throws IOException {
+  }
+
+  /**
    * Called before listSnapshots request has been processed.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor of the snapshot to list

@@ -1065,6 +1065,16 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void postCompletedSnapshotAction(SnapshotDescription snapshot,
+      TableDescriptor hTableDescriptor) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postCompletedSnapshotAction(this, snapshot, hTableDescriptor);
+      }
+    });
+  }
+
   public void preListSnapshot(final SnapshotDescription snapshot) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
