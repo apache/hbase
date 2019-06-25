@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,7 +96,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
       TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName));
 
     // disable sanity check
-    builder.setValue("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    builder.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
     TableDescriptor htd = builder.build();
     final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
 

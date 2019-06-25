@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -74,7 +75,7 @@ public class TestAssignmentManagerMetrics {
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Disable sanity check for coprocessor
-    conf.setBoolean("hbase.table.sanity.checks", false);
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
 
     // set RIT stuck warning threshold to a small value
     conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);

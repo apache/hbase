@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
@@ -825,6 +826,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         snapshotDir, snapshot);
     TableDescriptor snapshotTableDesc = manifest.getTableDescriptor();
     TableName tableName = TableName.valueOf(reqSnapshot.getTable());
+
+    // sanity check the new table descriptor
+    TableDescriptorChecker.sanityCheck(master.getConfiguration(), snapshotTableDesc);
 
     // stop tracking "abandoned" handlers
     cleanupSentinels();

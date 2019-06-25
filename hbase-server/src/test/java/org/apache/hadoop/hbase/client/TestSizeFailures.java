@@ -63,7 +63,6 @@ public class TestSizeFailures {
     //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean("hbase.table.sanity.checks", true); // ignore sanity checks in the server
     TEST_UTIL.startMiniCluster(SLAVES);
 
     // Write a bunch of data
