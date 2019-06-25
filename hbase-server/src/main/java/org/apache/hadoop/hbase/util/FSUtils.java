@@ -67,11 +67,11 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
@@ -708,17 +708,12 @@ public abstract class FSUtils extends CommonFSUtils {
 
   /**
    * Checks if meta region exists
-   *
    * @param fs file system
-   * @param rootdir root directory of HBase installation
+   * @param rootDir root directory of HBase installation
    * @return true if exists
-   * @throws IOException e
    */
-  @SuppressWarnings("deprecation")
-  public static boolean metaRegionExists(FileSystem fs, Path rootdir)
-  throws IOException {
-    Path metaRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.FIRST_META_REGIONINFO);
+  public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
+    Path metaRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.FIRST_META_REGIONINFO);
     return fs.exists(metaRegionDir);
   }
 
@@ -1044,7 +1039,11 @@ public abstract class FSUtils extends CommonFSUtils {
     return regionDirs;
   }
 
-  public static Path getRegionDir(Path tableDir, RegionInfo region) {
+  public static Path getRegionDirFromRootDir(Path rootDir, RegionInfo region) {
+    return getRegionDirFromTableDir(getTableDir(rootDir, region.getTable()), region);
+  }
+
+  public static Path getRegionDirFromTableDir(Path tableDir, RegionInfo region) {
     return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 

@@ -319,12 +319,11 @@ public class DeleteTableProcedure
 
     // Archive regions from FS (temp directory)
     if (archive) {
-      List<Path> regionDirList = regions.stream()
-        .filter(RegionReplicaUtil::isDefaultReplica)
-        .map(region -> FSUtils.getRegionDir(tempTableDir, region))
+      List<Path> regionDirList = regions.stream().filter(RegionReplicaUtil::isDefaultReplica)
+        .map(region -> FSUtils.getRegionDirFromTableDir(tempTableDir, region))
         .collect(Collectors.toList());
-      HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(),
-        tempTableDir, regionDirList);
+      HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tempTableDir,
+        regionDirList);
       LOG.debug("Table '{}' archived!", tableName);
     }
 
@@ -347,6 +346,13 @@ public class DeleteTableProcedure
       if (!fs.delete(mobTableDir, true)) {
         throw new IOException("Couldn't delete mob dir " + mobTableDir);
       }
+    }
+
+    // Delete the directory on wal filesystem
+    FileSystem walFs = mfs.getWALFileSystem();
+    Path tableWALDir = FSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
+    if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
+      throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
     }
   }
 

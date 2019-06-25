@@ -221,7 +221,7 @@ public class MasterFileSystem {
    * @return the directory for a give {@code region}.
    */
   public Path getRegionDir(RegionInfo region) {
-    return FSUtils.getRegionDir(FSUtils.getTableDir(getRootDir(), region.getTable()), region);
+    return FSUtils.getRegionDirFromRootDir(getRootDir(), region);
   }
 
   /**
