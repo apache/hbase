@@ -194,7 +194,9 @@ public class MasterFileSystem {
     return this.fs;
   }
 
-  protected FileSystem getWALFileSystem() { return this.walFs; }
+  public FileSystem getWALFileSystem() {
+    return this.walFs;
+  }
 
   public Configuration getConfiguration() {
     return this.conf;
@@ -220,7 +222,7 @@ public class MasterFileSystem {
    * @return the directory for a give {@code region}.
    */
   public Path getRegionDir(RegionInfo region) {
-    return FSUtils.getRegionDir(FSUtils.getTableDir(getRootDir(), region.getTable()), region);
+    return FSUtils.getRegionDirFromRootDir(getRootDir(), region);
   }
 
   /**

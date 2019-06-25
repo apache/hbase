@@ -18,22 +18,26 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCRegionState;
@@ -64,46 +68,65 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCRegionState state)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
     MasterServices masterServices = env.getMasterServices();
     try {
       switch (state) {
-      case GC_REGION_PREPARE:
-        // Nothing to do to prepare.
-        setNextState(GCRegionState.GC_REGION_ARCHIVE);
-        break;
-      case GC_REGION_ARCHIVE:
-        FileSystem fs = masterServices.getMasterFileSystem().getFileSystem();
-        if (HFileArchiver.exists(masterServices.getConfiguration(), fs, getRegion())) {
-          if (LOG.isDebugEnabled()) LOG.debug("Archiving region=" + getRegion().getShortNameToLog());
-          HFileArchiver.archiveRegion(masterServices.getConfiguration(), fs, getRegion());
-        }
-        setNextState(GCRegionState.GC_REGION_PURGE_METADATA);
-        break;
-      case GC_REGION_PURGE_METADATA:
-        // TODO: Purge metadata before removing from HDFS? This ordering is copied
-        // from CatalogJanitor.
-        AssignmentManager am = masterServices.getAssignmentManager();
-        if (am != null) {
-          if (am.getRegionStates() != null) {
-            am.getRegionStates().deleteRegion(getRegion());
+        case GC_REGION_PREPARE:
+          // Nothing to do to prepare.
+          setNextState(GCRegionState.GC_REGION_ARCHIVE);
+          break;
+        case GC_REGION_ARCHIVE:
+          MasterFileSystem mfs = masterServices.getMasterFileSystem();
+          FileSystem fs = mfs.getFileSystem();
+          if (HFileArchiver.exists(masterServices.getConfiguration(), fs, getRegion())) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Archiving region=" + getRegion().getShortNameToLog());
+            }
+            HFileArchiver.archiveRegion(masterServices.getConfiguration(), fs, getRegion());
           }
-        }
-        MetaTableAccessor.deleteRegion(masterServices.getConnection(), getRegion());
-        masterServices.getServerManager().removeRegion(getRegion());
-        FavoredNodesManager fnm = masterServices.getFavoredNodesManager();
-        if (fnm != null) {
-          fnm.deleteFavoredNodesForRegions(Lists.newArrayList(getRegion()));
-        }
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+          FileSystem walFs = mfs.getWALFileSystem();
+          // Cleanup the directories on WAL filesystem also
+          Path regionWALDir = FSUtils.getWALRegionDir(env.getMasterConfiguration(),
+            getRegion().getTable(), getRegion().getEncodedName());
+          if (walFs.exists(regionWALDir)) {
+            if (!walFs.delete(regionWALDir, true)) {
+              LOG.debug("Failed to delete {}", regionWALDir);
+            }
+          }
+          Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(env.getMasterConfiguration(),
+            getRegion().getTable(), getRegion().getEncodedName());
+          if (walFs.exists(wrongRegionWALDir)) {
+            if (!walFs.delete(wrongRegionWALDir, true)) {
+              LOG.debug("Failed to delete {}", regionWALDir);
+            }
+          }
+          setNextState(GCRegionState.GC_REGION_PURGE_METADATA);
+          break;
+        case GC_REGION_PURGE_METADATA:
+          // TODO: Purge metadata before removing from HDFS? This ordering is copied
+          // from CatalogJanitor.
+          AssignmentManager am = masterServices.getAssignmentManager();
+          if (am != null) {
+            if (am.getRegionStates() != null) {
+              am.getRegionStates().deleteRegion(getRegion());
+            }
+          }
+          MetaTableAccessor.deleteRegion(masterServices.getConnection(), getRegion());
+          masterServices.getServerManager().removeRegion(getRegion());
+          FavoredNodesManager fnm = masterServices.getFavoredNodesManager();
+          if (fnm != null) {
+            fnm.deleteFavoredNodesForRegions(Lists.newArrayList(getRegion()));
+          }
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException ioe) {
-      // TODO: This is going to spew log?
+      // TODO: This is going to spew log? Add retry backoff
       LOG.warn("Error trying to GC " + getRegion().getShortNameToLog() + "; retrying...", ioe);
     }
     return Flow.HAS_MORE_STATE;

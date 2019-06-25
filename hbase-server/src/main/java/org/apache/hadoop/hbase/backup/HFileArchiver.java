@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -87,23 +86,21 @@ public class HFileArchiver {
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    Path regionDir = HRegion.getRegionDir(rootDir, info);
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, info);
     return fs.exists(regionDir);
   }
 
   /**
-   * Cleans up all the files for a HRegion by archiving the HFiles to the
-   * archive directory
+   * Cleans up all the files for a HRegion by archiving the HFiles to the archive directory
    * @param conf the configuration to use
    * @param fs the file system object
    * @param info RegionInfo for region to be deleted
-   * @throws IOException
    */
   public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     archiveRegion(fs, rootDir, FSUtils.getTableDir(rootDir, info.getTable()),
-      HRegion.getRegionDir(rootDir, info));
+      FSUtils.getRegionDirFromRootDir(rootDir, info));
   }
 
   /**
