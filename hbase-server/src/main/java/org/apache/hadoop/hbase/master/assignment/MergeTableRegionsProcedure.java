@@ -824,16 +824,16 @@ public class MergeTableRegionsProcedure
   }
 
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
-    FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
+    MasterFileSystem fs = env.getMasterFileSystem();
     long maxSequenceId = -1L;
     for (RegionInfo region : regionsToMerge) {
       maxSequenceId =
-        Math.max(maxSequenceId, WALSplitter.getMaxRegionSequenceId(
-            walFS, getWALRegionDir(env, region)));
+          Math.max(maxSequenceId, WALSplitter.getMaxRegionSequenceId(env.getMasterConfiguration(),
+            region, fs::getFileSystem, fs::getWALFileSystem));
     }
     if (maxSequenceId > 0) {
-      WALSplitter.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, mergedRegion),
-          maxSequenceId);
+      WALSplitter.writeRegionSequenceIdFile(fs.getWALFileSystem(),
+        getWALRegionDir(env, mergedRegion), maxSequenceId);
     }
   }
 

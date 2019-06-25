@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -425,11 +424,9 @@ public abstract class CommonFSUtils {
    * @return the region directory used to store WALs under the WALRootDir
    * @throws IOException if there is an exception determining the WALRootDir
    */
-  public static Path getWALRegionDir(final Configuration conf,
-      final TableName tableName, final String encodedRegionName)
-      throws IOException {
-    return new Path(getWALTableDir(conf, tableName),
-        encodedRegionName);
+  public static Path getWALRegionDir(final Configuration conf, final TableName tableName,
+      final String encodedRegionName) throws IOException {
+    return new Path(getWALTableDir(conf, tableName), encodedRegionName);
   }
 
   /**
@@ -441,8 +438,22 @@ public abstract class CommonFSUtils {
    */
   public static Path getWALTableDir(final Configuration conf, final TableName tableName)
       throws IOException {
-    return new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
-        tableName.getQualifierAsString());
+    Path baseDir = new Path(getWALRootDir(conf), HConstants.BASE_NAMESPACE_DIR);
+    return new Path(new Path(baseDir, tableName.getNamespaceAsString()),
+      tableName.getQualifierAsString());
+  }
+
+  /**
+   * For backward compatibility with HBASE-20734, where we store recovered edits in a wrong
+   * directory without BASE_NAMESPACE_DIR. See HBASE-22617 for more details.
+   * @deprecated For compatibility, will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static Path getWrongWALRegionDir(final Configuration conf, final TableName tableName,
+      final String encodedRegionName) throws IOException {
+    Path wrongTableDir = new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
+      tableName.getQualifierAsString());
+    return new Path(wrongTableDir, encodedRegionName);
   }
 
   /**
@@ -1055,5 +1066,4 @@ public abstract class CommonFSUtils {
       super(message);
     }
   }
-
 }

@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -112,6 +113,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public RSProcedureDispatcher getRemoteDispatcher() {
     return remoteDispatcher;
+  }
+
+  public MasterFileSystem getMasterFileSystem() {
+    return master.getMasterFileSystem();
   }
 
   public boolean isRunning() {

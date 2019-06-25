@@ -274,7 +274,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
           MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
           Path tempdir = mfs.getTempDir();
           Path tableDir = FSUtils.getTableDir(tempdir, regionInfo.getTable());
-          Path regionDir = FSUtils.getRegionDir(tableDir, regionInfo);
+          Path regionDir = FSUtils.getRegionDirFromTableDir(tableDir, regionInfo);
           FileSystem fs = FileSystem.get(conf);
           fs.mkdirs(regionDir);
 
