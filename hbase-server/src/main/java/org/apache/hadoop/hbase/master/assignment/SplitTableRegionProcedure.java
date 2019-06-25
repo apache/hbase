@@ -590,7 +590,7 @@ public class SplitTableRegionProcedure
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
-    regionFs.createSplitsDir();
+    regionFs.createSplitsDir(daughter_1_RI, daughter_2_RI);
 
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
 
@@ -864,14 +864,14 @@ public class SplitTableRegionProcedure
   }
 
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
-    FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
-    long maxSequenceId =
-        WALSplitUtil.getMaxRegionSequenceId(walFS, getWALRegionDir(env, getParentRegion()));
+    MasterFileSystem fs = env.getMasterFileSystem();
+    long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(env.getMasterConfiguration(),
+      getParentRegion(), fs::getFileSystem, fs::getWALFileSystem);
     if (maxSequenceId > 0) {
-      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughter_1_RI),
-        maxSequenceId);
-      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, daughter_2_RI),
-        maxSequenceId);
+      WALSplitUtil.writeRegionSequenceIdFile(fs.getWALFileSystem(),
+        getWALRegionDir(env, daughter_1_RI), maxSequenceId);
+      WALSplitUtil.writeRegionSequenceIdFile(fs.getWALFileSystem(),
+        getWALRegionDir(env, daughter_2_RI), maxSequenceId);
     }
   }
 

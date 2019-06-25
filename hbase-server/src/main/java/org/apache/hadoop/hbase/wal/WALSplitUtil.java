@@ -28,7 +28,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -57,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -236,7 +237,6 @@ public final class WALSplitUtil {
    * Check whether there is recovered.edits in the region dir
    * @param conf conf
    * @param regionInfo the region to check
-   * @throws IOException IOException
    * @return true if recovered.edits exist in the region dir
    */
   public static boolean hasRecoveredEdits(final Configuration conf, final RegionInfo regionInfo)
@@ -247,10 +247,50 @@ public final class WALSplitUtil {
     }
     // Only default replica region can reach here, so we can use regioninfo
     // directly without converting it to default replica's regioninfo.
-    Path regionDir =
+    Path regionWALDir =
         FSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
-    NavigableSet<Path> files = getSplitEditFilesSorted(FSUtils.getWALFileSystem(conf), regionDir);
-    return files != null && !files.isEmpty();
+    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), regionInfo);
+    Path wrongRegionWALDir =
+        FSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+    FileSystem walFs = FSUtils.getWALFileSystem(conf);
+    FileSystem rootFs = FSUtils.getRootDirFileSystem(conf);
+    NavigableSet<Path> files = getSplitEditFilesSorted(walFs, regionWALDir);
+    if (!files.isEmpty()) {
+      return true;
+    }
+    files = getSplitEditFilesSorted(rootFs, regionDir);
+    if (!files.isEmpty()) {
+      return true;
+    }
+    files = getSplitEditFilesSorted(walFs, wrongRegionWALDir);
+    return !files.isEmpty();
+  }
+
+  /**
+   * This method will check 3 places for finding the max sequence id file. One is the expected
+   * place, another is the old place under the region directory, and the last one is the wrong one
+   * we introduced in HBASE-20734. See HBASE-22617 for more details.
+   * <p/>
+   * Notice that, you should always call this method instead of
+   * {@link #getMaxRegionSequenceId(FileSystem, Path)} until 4.0.0 release.
+   * @deprecated Only for compatibility, will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static long getMaxRegionSequenceId(Configuration conf, RegionInfo region,
+      IOExceptionSupplier<FileSystem> rootFsSupplier, IOExceptionSupplier<FileSystem> walFsSupplier)
+      throws IOException {
+    FileSystem rootFs = rootFsSupplier.get();
+    FileSystem walFs = walFsSupplier.get();
+    Path regionWALDir = FSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
+    // This is the old place where we store max sequence id file
+    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), region);
+    // This is for HBASE-20734, where we use a wrong directory, see HBASE-22617 for more details.
+    Path wrongRegionWALDir =
+      FSUtils.getWrongWALRegionDir(conf, region.getTable(), region.getEncodedName());
+    long maxSeqId = getMaxRegionSequenceId(walFs, regionWALDir);
+    maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(rootFs, regionDir));
+    maxSeqId = Math.max(maxSeqId, getMaxRegionSequenceId(walFs, wrongRegionWALDir));
+    return maxSeqId;
   }
 
   /**
