@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -113,13 +113,13 @@ public class DisableTableProcedure
         case DISABLE_TABLE_ADD_REPLICATION_BARRIER:
           if (env.getMasterServices().getTableDescriptors().get(tableName)
             .hasGlobalReplicationScope()) {
-            FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
+            MasterFileSystem fs = env.getMasterFileSystem();
             try (BufferedMutator mutator = env.getMasterServices().getConnection()
               .getBufferedMutator(TableName.META_TABLE_NAME)) {
               for (RegionInfo region : env.getAssignmentManager().getRegionStates()
                 .getRegionsOfTable(tableName)) {
-                long maxSequenceId =
-                  WALSplitter.getMaxRegionSequenceId(walFS, getWALRegionDir(env, region));
+                long maxSequenceId = WALSplitter.getMaxRegionSequenceId(
+                  env.getMasterConfiguration(), region, fs::getFileSystem, fs::getWALFileSystem);
                 long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
                 mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, openSeqNum,
                   EnvironmentEdgeManager.currentTime()));
