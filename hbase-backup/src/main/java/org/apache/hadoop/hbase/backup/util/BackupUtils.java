@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -149,8 +148,8 @@ public final class BackupUtils {
       // For each region, write the region info to disk
       LOG.debug("Starting to write region info for table " + table);
       for (RegionInfo regionInfo : regions) {
-        Path regionDir =
-            HRegion.getRegionDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
+        Path regionDir = FSUtils
+          .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
         regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
         writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
       }
