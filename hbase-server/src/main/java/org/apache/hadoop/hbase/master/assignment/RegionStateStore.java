@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -35,13 +34,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -217,10 +216,9 @@ public class RegionStateStore {
   }
 
   private long getOpenSeqNumForParentRegion(RegionInfo region) throws IOException {
-    FileSystem walFS = master.getMasterWalManager().getFileSystem();
-    long maxSeqId =
-        WALSplitUtil.getMaxRegionSequenceId(walFS, FSUtils.getWALRegionDir(
-            master.getConfiguration(), region.getTable(), region.getEncodedName()));
+    MasterFileSystem fs = master.getMasterFileSystem();
+    long maxSeqId = WALSplitUtil.getMaxRegionSequenceId(master.getConfiguration(), region,
+      fs::getFileSystem, fs::getWALFileSystem);
     return maxSeqId > 0 ? maxSeqId + 1 : HConstants.NO_SEQNUM;
   }
 

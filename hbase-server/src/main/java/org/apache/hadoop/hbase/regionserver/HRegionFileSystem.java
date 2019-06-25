@@ -108,7 +108,7 @@ public class HRegionFileSystem {
     this.tableDir = Objects.requireNonNull(tableDir, "tableDir is null");
     this.regionInfo = Objects.requireNonNull(regionInfo, "regionInfo is null");
     this.regionInfoForFs = ServerRegionReplicaUtil.getRegionInfoForFs(regionInfo);
-    this.regionDir = FSUtils.getRegionDir(tableDir, regionInfo);
+    this.regionDir = FSUtils.getRegionDirFromTableDir(tableDir, regionInfo);
     this.hdfsClientRetriesNumber = conf.getInt("hdfs.client.retries.number",
       DEFAULT_HDFS_CLIENT_RETRIES_NUMBER);
     this.baseSleepBeforeRetries = conf.getInt("hdfs.client.sleep.before.retries",
@@ -630,18 +630,25 @@ public class HRegionFileSystem {
   /**
    * Create the region splits directory.
    */
-  public void createSplitsDir() throws IOException {
+  public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
     Path splitdir = getSplitsDir();
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
       if (!deleteDir(splitdir)) {
-        throw new IOException("Failed deletion of " + splitdir
-            + " before creating them again.");
+        throw new IOException("Failed deletion of " + splitdir + " before creating them again.");
       }
     }
     // splitDir doesn't exists now. No need to do an exists() call for it.
     if (!createDir(splitdir)) {
       throw new IOException("Failed create of " + splitdir);
+    }
+    Path daughterATmpDir = getSplitsDir(daughterA);
+    if (!createDir(daughterATmpDir)) {
+      throw new IOException("Failed create of " + daughterATmpDir);
+    }
+    Path daughterBTmpDir = getSplitsDir(daughterB);
+    if (!createDir(daughterBTmpDir)) {
+      throw new IOException("Failed create of " + daughterBTmpDir);
     }
   }
 

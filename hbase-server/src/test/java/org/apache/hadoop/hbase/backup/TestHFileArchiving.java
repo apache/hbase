@@ -150,7 +150,7 @@ public class TestHFileArchiving {
 
     // now attempt to depose the region
     Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
@@ -200,7 +200,7 @@ public class TestHFileArchiving {
 
     // make sure there are some files in the regiondir
     Path rootDir = FSUtils.getRootDir(fs.getConf());
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
     FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {
@@ -267,7 +267,7 @@ public class TestHFileArchiving {
     Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
 
     HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
@@ -305,7 +305,7 @@ public class TestHFileArchiving {
     Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
 
     // To create a permission denied error, we do archive regions as a non-current user
