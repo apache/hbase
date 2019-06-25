@@ -146,6 +146,19 @@ public class TestBucketCache {
   }
 
   /**
+   * Test Utility to create test dir and return name
+   *
+   * @return return name of created dir
+   * @throws IOException
+   */
+  private Path createAndGetTestDir() throws IOException {
+    final Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
+    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
+    return testDir;
+  }
+
+
+  /**
    * Return a random element from {@code a}.
    */
   private static <T> T randFrom(List<T> a) {
@@ -256,8 +269,7 @@ public class TestBucketCache {
 
   @Test
   public void testRetrieveFromFile() throws Exception {
-    Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
-    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
+    Path testDir = createAndGetTestDir();
     String ioEngineName = "file:" + testDir + "/bucket.cache";
     testRetrievalUtils(testDir, ioEngineName);
     int[] smallBucketSizes = new int[]{3 * 1024, 5 * 1024};
@@ -272,16 +284,14 @@ public class TestBucketCache {
 
   @Test
   public void testRetrieveFromMMap() throws Exception {
-    Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
-    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
+    final Path testDir = createAndGetTestDir();
     final String ioEngineName = "mmap:" + testDir + "/bucket.cache";
     testRetrievalUtils(testDir, ioEngineName);
   }
 
   @Test
   public void testRetrieveFromPMem() throws Exception {
-    Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
-    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
+    final Path testDir = createAndGetTestDir();
     final String ioEngineName = "pmem:" + testDir + "/bucket.cache";
     testRetrievalUtils(testDir, ioEngineName);
     int[] smallBucketSizes = new int[]{3 * 1024, 5 * 1024};
@@ -323,12 +333,36 @@ public class TestBucketCache {
     assertTrue(new File(persistencePath).exists());
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testRetrieveFailure() throws Exception {
-    Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
-    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
-    final String ioEngineName = testDir + "/bucket.cache";
-    testRetrievalUtils(testDir, ioEngineName);
+  @Test
+  public void testRetrieveUnsupportedIOE() throws Exception {
+    try {
+      final Path testDir = createAndGetTestDir();
+      final String ioEngineName = testDir + "/bucket.cache";
+      testRetrievalUtils(testDir, ioEngineName);
+      Assert.fail("Should have thrown IllegalArgumentException because of unsupported IOEngine");
+    } catch (IllegalArgumentException e) {
+      Assert.assertEquals("Don't understand io engine name for cache- prefix with file:, " +
+              "files:, mmap: or offheap", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testRetrieveFromMultipleFiles() throws Exception {
+    final Path testDirInitial = createAndGetTestDir();
+    final Path newTestDir = new HBaseTestingUtility().getDataTestDir();
+    HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(newTestDir);
+    String ioEngineName = new StringBuilder("files:").append(testDirInitial)
+            .append("/bucket1.cache").append(FileIOEngine.FILE_DELIMITER).append(newTestDir)
+            .append("/bucket2.cache").toString();
+    testRetrievalUtils(testDirInitial, ioEngineName);
+    int[] smallBucketSizes = new int[]{3 * 1024, 5 * 1024};
+    String persistencePath = testDirInitial + "/bucket.persistence";
+    BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+            smallBucketSizes, writeThreads, writerQLen, persistencePath);
+    assertFalse(new File(persistencePath).exists());
+    assertEquals(0, bucketCache.getAllocator().getUsedSize());
+    assertEquals(0, bucketCache.backingMap.size());
+    HBASE_TESTING_UTILITY.cleanupTestDir();
   }
 
   @Test
@@ -336,8 +370,7 @@ public class TestBucketCache {
     BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
             constructedBlockSizes, writeThreads, writerQLen, null);
     try {
-      Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
-      HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(testDir);
+      final Path testDir = createAndGetTestDir();
       String ioEngineName = "file:" + testDir + "/bucket.cache";
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -389,6 +422,7 @@ public class TestBucketCache {
 
   @Test
   public void testCacheSizeCapacity() throws IOException {
+    // Test cache capacity (capacity / blockSize) < Integer.MAX_VALUE
     validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR,
             BucketCache.DEFAULT_MIN_FACTOR);
     Configuration conf = HBaseConfiguration.create();
@@ -404,7 +438,6 @@ public class TestBucketCache {
       Assert.assertEquals("Cache capacity is too large, only support 32TB now", e.getMessage());
     }
   }
-
 
   @Test
   public void testValidBucketCacheConfigs() throws IOException {
