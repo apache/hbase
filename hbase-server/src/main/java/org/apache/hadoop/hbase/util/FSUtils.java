@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
@@ -708,26 +707,36 @@ public abstract class FSUtils extends CommonFSUtils {
    * @return the region directory used to store WALs under the WALRootDir
    * @throws IOException if there is an exception determining the WALRootDir
    */
-  public static Path getWALRegionDir(final Configuration conf,
-      final HRegionInfo regionInfo)
-          throws IOException {
+  public static Path getWALRegionDir(final Configuration conf, final HRegionInfo regionInfo)
+      throws IOException {
     return new Path(getWALTableDir(conf, regionInfo.getTable()),
       regionInfo.getEncodedName());
+  }
+
+  /**
+   * Returns the WAL region directory based on the region info
+   * @param conf configuration to determine WALRootDir
+   * @param tableName the table name
+   * @param encodedRegionName the encoded region name
+   * @return the region directory used to store WALs under the WALRootDir
+   * @throws IOException if there is an exception determining the WALRootDir
+   */
+  public static Path getWALRegionDir(final Configuration conf, final TableName tableName,
+      final String encodedRegionName) throws IOException {
+    return new Path(getWALTableDir(conf, tableName), encodedRegionName);
   }
 
   /**
    * Checks if meta region exists
    *
    * @param fs file system
-   * @param rootdir root directory of HBase installation
+   * @param rootDir root directory of HBase installation
    * @return true if exists
    * @throws IOException e
    */
   @SuppressWarnings("deprecation")
-  public static boolean metaRegionExists(FileSystem fs, Path rootdir)
-  throws IOException {
-    Path metaRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.FIRST_META_REGIONINFO);
+  public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
+    Path metaRegionDir = getRegionDirFromRootDir(rootDir, HRegionInfo.FIRST_META_REGIONINFO);
     return fs.exists(metaRegionDir);
   }
 
@@ -861,8 +870,22 @@ public abstract class FSUtils extends CommonFSUtils {
    */
   public static Path getWALTableDir(final Configuration conf, final TableName tableName)
       throws IOException {
-    return new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
+    Path baseDir = new Path(getWALRootDir(conf), HConstants.BASE_NAMESPACE_DIR);
+    return new Path(new Path(baseDir, tableName.getNamespaceAsString()),
       tableName.getQualifierAsString());
+  }
+
+  /**
+   * For backward compatibility with HBASE-20734, where we store recovered edits in a wrong
+   * directory without BASE_NAMESPACE_DIR. See HBASE-22617 for more details.
+   * @deprecated For compatibility, will be removed in 4.0.0.
+   */
+  @Deprecated
+  public static Path getWrongWALRegionDir(final Configuration conf, final TableName tableName,
+      final String encodedRegionName) throws IOException {
+    Path wrongTableDir = new Path(new Path(getWALRootDir(conf), tableName.getNamespaceAsString()),
+      tableName.getQualifierAsString());
+    return new Path(wrongTableDir, encodedRegionName);
   }
 
   /**
@@ -1061,6 +1084,14 @@ public abstract class FSUtils extends CommonFSUtils {
         return false;
       }
     }
+  }
+
+  public static Path getRegionDirFromRootDir(Path rootDir, HRegionInfo region) {
+    return getRegionDirFromTableDir(getTableDir(rootDir, region.getTable()), region);
+  }
+
+  public static Path getRegionDirFromTableDir(Path tableDir, HRegionInfo region) {
+    return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 
   /**
