@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
@@ -4163,7 +4165,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (nonExistentList != null) {
       for (byte[] family : nonExistentList) {
         // Perhaps schema was changed between crash and replay
-        LOG.info("No family for " + Bytes.toString(family) + " omit from reply.");
+        LOG.info("No family for " + Bytes.toString(family) + " omit from replay.");
         familyMap.remove(family);
       }
     }
@@ -4276,54 +4278,58 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         minSeqIdForTheRegion = maxSeqIdInStore;
       }
     }
-    long seqid = minSeqIdForTheRegion;
+    long seqId = minSeqIdForTheRegion;
 
     FileSystem walFS = getWalFileSystem();
-    Path regionDir = getWALRegionDir();
     FileSystem rootFS = getFilesystem();
-    Path defaultRegionDir = getRegionDir(FSUtils.getRootDir(conf), getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(conf), getRegionInfo());
+    Path regionWALDir = getWALRegionDir();
+    Path wrongRegionWALDir = FSUtils.getWrongWALRegionDir(conf, getRegionInfo().getTable(),
+      getRegionInfo().getEncodedName());
 
+    // We made a mistake in HBASE-20734 so we need to do this dirty hack...
+    NavigableSet<Path> filesUnderWrongRegionWALDir =
+      WALSplitter.getSplitEditFilesSorted(walFS, wrongRegionWALDir);
+    seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
+      filesUnderWrongRegionWALDir, reporter, regionDir));
     // This is to ensure backwards compatability with HBASE-20723 where recovered edits can appear
     // under the root dir even if walDir is set.
-    NavigableSet<Path> filesUnderRootDir = null;
-    if (!regionDir.equals(defaultRegionDir)) {
-      filesUnderRootDir =
-          WALSplitter.getSplitEditFilesSorted(rootFS, defaultRegionDir);
-      seqid = Math.max(seqid,
-          replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS, filesUnderRootDir, reporter,
-              defaultRegionDir));
+    NavigableSet<Path> filesUnderRootDir = Sets.newTreeSet();
+    if (!regionWALDir.equals(regionDir)) {
+      filesUnderRootDir = WALSplitter.getSplitEditFilesSorted(rootFS, regionDir);
+      seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, rootFS,
+        filesUnderRootDir, reporter, regionDir));
     }
-    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(walFS, regionDir);
-    seqid = Math.max(seqid, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
-        files, reporter, regionDir));
-
-    if (seqid > minSeqIdForTheRegion) {
+    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(walFS, regionWALDir);
+    seqId = Math.max(seqId, replayRecoveredEditsForPaths(minSeqIdForTheRegion, walFS,
+        files, reporter, regionWALDir));
+    if (seqId > minSeqIdForTheRegion) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
-      internalFlushcache(null, seqid, stores.values(), status, false);
+      internalFlushcache(null, seqId, stores.values(), status, false);
     }
-    // Now delete the content of recovered edits.  We're done w/ them.
-    if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
+    // Now delete the content of recovered edits. We're done w/ them.
+    if (conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
       // For debugging data loss issues!
       // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
       // column family. Have to fake out file type too by casting our recovered.edits as storefiles
-      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regionDir).getName();
-      Set<StoreFile> fakeStoreFiles = new HashSet<>(files.size());
-      for (Path file: files) {
-        fakeStoreFiles.add(
-            new StoreFile(walFS, file, this.conf, null, null));
+      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regionWALDir).getName();
+      Set<StoreFile> fakeStoreFiles = new HashSet<>();
+      for (Path file: Iterables.concat(files, filesUnderWrongRegionWALDir)) {
+        fakeStoreFiles.add(new StoreFile(walFS, file, conf, null, null));
+      }
+      for (Path file: filesUnderRootDir) {
+        fakeStoreFiles.add(new StoreFile(rootFS, file, conf, null, null));
       }
       getRegionWALFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
     } else {
-      if (filesUnderRootDir != null) {
-        for (Path file : filesUnderRootDir) {
-          if (!rootFS.delete(file, false)) {
-            LOG.error("Failed delete of {} under root directory." + file);
-          } else {
-            LOG.debug("Deleted recovered.edits root directory file=" + file);
-          }
+      for (Path file : filesUnderRootDir) {
+        if (!rootFS.delete(file, false)) {
+          LOG.error("Failed delete of " + file + " from under the root directory");
+        } else {
+          LOG.debug("Deleted recovered.edits under root directory, file=" + file);
         }
       }
-      for (Path file: files) {
+      for (Path file : Iterables.concat(files, filesUnderWrongRegionWALDir)) {
         if (!walFS.delete(file, false)) {
           LOG.error("Failed delete of " + file);
         } else {
@@ -4331,7 +4337,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
     }
-    return seqid;
+
+    // We have replayed all the recovered edits. Let's delete the wrong directories introduced
+    // in HBASE-20734, see HBASE-22617 for more details.
+    FileSystem walFs = getWalFileSystem();
+    if (walFs.exists(wrongRegionWALDir)) {
+      if (!walFs.delete(wrongRegionWALDir, true)) {
+        LOG.warn("Unable to delete " + wrongRegionWALDir);
+      }
+    }
+
+    return seqId;
   }
 
   private long replayRecoveredEditsForPaths(long minSeqIdForTheRegion, FileSystem fs,
@@ -7194,34 +7210,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       HConstants.META_VERSION_QUALIFIER, now,
       Bytes.toBytes(HConstants.META_VERSION)));
     meta.put(row, HConstants.CATALOG_FAMILY, cells);
-  }
-
-  /**
-   * Computes the Path of the HRegion
-   *
-   * @param tabledir qualified path for table
-   * @param name ENCODED region name
-   * @return Path of HRegion directory
-   * @deprecated For tests only; to be removed.
-   */
-  @Deprecated
-  public static Path getRegionDir(final Path tabledir, final String name) {
-    return new Path(tabledir, name);
-  }
-
-  /**
-   * Computes the Path of the HRegion
-   *
-   * @param rootdir qualified path of HBase root directory
-   * @param info HRegionInfo for the region
-   * @return qualified path of region directory
-   * @deprecated For tests only; to be removed.
-   */
-  @Deprecated
-  @VisibleForTesting
-  public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
-    return new Path(
-      FSUtils.getTableDir(rootdir, info.getTable()), info.getEncodedName());
   }
 
   /**

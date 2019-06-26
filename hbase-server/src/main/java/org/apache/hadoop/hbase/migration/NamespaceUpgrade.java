@@ -319,8 +319,7 @@ public class NamespaceUpgrade implements Tool {
     }
 
     // Since meta table name has changed rename meta region dir from it's old encoding to new one
-    Path oldMetaRegionDir = HRegion.getRegionDir(rootDir,
-      new Path(newMetaDir, "1028785192").toString());
+    Path oldMetaRegionDir = new Path(rootDir, new Path(newMetaDir, "1028785192").toString());
     if (fs.exists(oldMetaRegionDir)) {
       LOG.info("Migrating meta region " + oldMetaRegionDir + " to " + newMetaRegionDir);
       if (!fs.rename(oldMetaRegionDir, newMetaRegionDir)) {

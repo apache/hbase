@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
@@ -78,15 +77,12 @@ public class HFileArchiveUtil {
    * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
    *         should not be archived
    */
-  public static Path getRegionArchiveDir(Path rootDir,
-                                         TableName tableName,
-                                         Path regiondir) {
+  public static Path getRegionArchiveDir(Path rootDir, TableName tableName, Path regiondir) {
     // get the archive directory for a table
     Path archiveDir = getTableArchivePath(rootDir, tableName);
-
     // then add on the region path under the archive
     String encodedRegionName = regiondir.getName();
-    return HRegion.getRegionDir(archiveDir, encodedRegionName);
+    return new Path(archiveDir, encodedRegionName);
   }
 
   /**
@@ -94,14 +90,15 @@ public class HFileArchiveUtil {
    * @param rootDir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
    * @param tableName name of the table to archive. Cannot be null.
+   * @param encodedRegionName encoded region name
    * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
    *         should not be archived
    */
-  public static Path getRegionArchiveDir(Path rootDir,
-                                         TableName tableName, String encodedRegionName) {
+  public static Path getRegionArchiveDir(Path rootDir, TableName tableName,
+      String encodedRegionName) {
     // get the archive directory for a table
     Path archiveDir = getTableArchivePath(rootDir, tableName);
-    return HRegion.getRegionDir(archiveDir, encodedRegionName);
+    return new Path(archiveDir, encodedRegionName);
   }
 
   /**

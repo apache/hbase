@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -486,7 +485,7 @@ public class HFileLink extends FileLink {
     String linkName = createHFileLinkName(FSUtils.getTableName(tablePath),
             regionPath.getName(), hfileName);
     Path linkTableDir = FSUtils.getTableDir(rootDir, linkTableName);
-    Path regionDir = HRegion.getRegionDir(linkTableDir, linkRegionName);
+    Path regionDir = new Path(linkTableDir, linkRegionName);
     return new Path(new Path(regionDir, familyPath.getName()), linkName);
   }
 

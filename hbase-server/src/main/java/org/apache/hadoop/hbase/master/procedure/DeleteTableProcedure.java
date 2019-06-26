@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -336,7 +335,7 @@ public class DeleteTableProcedure
       for (HRegionInfo hri : regions) {
         LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
         HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
-            tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
+            tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
       }
       LOG.debug("Table '" + tableName + "' archived!");
     }

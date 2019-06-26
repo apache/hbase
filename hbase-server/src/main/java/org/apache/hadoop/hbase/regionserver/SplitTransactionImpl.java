@@ -384,7 +384,7 @@ public class SplitTransactionImpl implements SplitTransaction {
             hri_b, std);
     }
 
-    this.parent.getRegionFileSystem().createSplitsDir();
+    this.parent.getRegionFileSystem().createSplitsDir(hri_a, hri_b);
 
     transition(SplitTransactionPhase.CREATE_SPLIT_DIR);
 

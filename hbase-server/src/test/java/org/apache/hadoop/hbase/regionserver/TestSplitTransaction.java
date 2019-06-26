@@ -346,8 +346,10 @@ public class TestSplitTransaction {
     assertEquals(parentRowCount, parentRowCount2);
 
     // Assert rollback cleaned up stuff in fs
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getFirstDaughter())));
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getSecondDaughter())));
+    assertTrue(!this.fs.exists(FSUtils.getRegionDirFromRootDir(this.testdir,
+      st.getFirstDaughter())));
+    assertTrue(!this.fs.exists(FSUtils.getRegionDirFromRootDir(this.testdir,
+      st.getSecondDaughter())));
     assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
 
     // Now retry the split but do not throw an exception this time.
