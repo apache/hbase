@@ -339,7 +339,7 @@ public class TestBucketCache {
       final Path testDir = createAndGetTestDir();
       final String ioEngineName = testDir + "/bucket.cache";
       testRetrievalUtils(testDir, ioEngineName);
-      Assert.fail("Should have thrown IllegalArgumentException because of unsupported IOEngine");
+      Assert.fail("Should have thrown IllegalArgumentException because of unsupported IOEngine!");
     } catch (IllegalArgumentException e) {
       Assert.assertEquals("Don't understand io engine name for cache- prefix with file:, " +
               "files:, mmap: or offheap", e.getMessage());
