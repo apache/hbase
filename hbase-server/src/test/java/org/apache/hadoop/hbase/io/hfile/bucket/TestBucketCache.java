@@ -149,7 +149,7 @@ public class TestBucketCache {
    * Test Utility to create test dir and return name
    *
    * @return return name of created dir
-   * @throws IOException
+   * @throws IOException throws IOException
    */
   private Path createAndGetTestDir() throws IOException {
     final Path testDir = HBASE_TESTING_UTILITY.getDataTestDir();
