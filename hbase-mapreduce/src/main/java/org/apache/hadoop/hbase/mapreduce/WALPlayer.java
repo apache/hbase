@@ -184,9 +184,13 @@ public class WALPlayer extends Configured implements Tool {
                 }
               }
               if (CellUtil.isDelete(cell)) {
-                del.add(cell);
+                if (del != null) {
+                  del.add(cell);
+                }
               } else {
-                put.add(cell);
+                if (put != null) {
+                  put.add(cell);
+                }
               }
             }
             lastCell = cell;
