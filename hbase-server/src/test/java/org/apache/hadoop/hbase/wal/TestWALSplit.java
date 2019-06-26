@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultySequenceFileLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -1235,7 +1234,7 @@ public class TestWALSplit {
       throws IOException {
     Path tdir = FSUtils.getWALTableDir(conf, table);
     @SuppressWarnings("deprecation")
-    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
+    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(new Path(tdir,
         Bytes.toString(region.getBytes())));
     FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
       @Override

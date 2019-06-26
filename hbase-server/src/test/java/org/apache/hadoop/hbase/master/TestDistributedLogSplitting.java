@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -263,7 +262,7 @@ public class TestDistributedLogSplitting {
         Path tdir = FSUtils.getTableDir(rootdir, table);
         Path editsdir =
             WALSplitter.getRegionDirRecoveredEditsDir(
-                HRegion.getRegionDir(tdir, hri.getEncodedName()));
+                FSUtils.getRegionDirFromTableDir(tdir, hri));
         LOG.debug("checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
           @Override
@@ -873,7 +872,7 @@ public class TestDistributedLogSplitting {
       for (HRegionInfo hri : regions) {
         Path editsdir =
             WALSplitter.getRegionDirRecoveredEditsDir(
-                HRegion.getRegionDir(tdir, hri.getEncodedName()));
+              FSUtils.getRegionDirFromTableDir(tdir, hri));
         LOG.debug("checking edits dir " + editsdir);
         if(!fs.exists(editsdir)) continue;
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
@@ -903,7 +902,7 @@ public class TestDistributedLogSplitting {
       for (HRegionInfo hri : regions) {
         Path editsdir =
             WALSplitter.getRegionDirRecoveredEditsDir(
-                HRegion.getRegionDir(tdir, hri.getEncodedName()));
+              FSUtils.getRegionDirFromTableDir(tdir, hri));
         fs.delete(editsdir, true);
       }
       disablingHT.close();

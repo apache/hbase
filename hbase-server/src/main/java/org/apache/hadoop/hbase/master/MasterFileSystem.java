@@ -214,7 +214,7 @@ public class MasterFileSystem {
     return this.walFsOk;
   }
 
-  protected FileSystem getWALFileSystem() {
+  public FileSystem getWALFileSystem() {
     return this.walFs;
   }
 
@@ -691,6 +691,4 @@ public class MasterFileSystem {
       LOG.warn("Failed archiving meta log for server " + serverName, ie);
     }
   }
-
-
 }

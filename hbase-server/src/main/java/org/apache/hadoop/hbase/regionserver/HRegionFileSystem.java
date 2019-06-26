@@ -640,18 +640,25 @@ public class HRegionFileSystem {
   /**
    * Create the region splits directory.
    */
-  void createSplitsDir() throws IOException {
+  void createSplitsDir(HRegionInfo daughterA, HRegionInfo daughterB) throws IOException {
     Path splitdir = getSplitsDir();
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
       if (!deleteDir(splitdir)) {
-        throw new IOException("Failed deletion of " + splitdir
-            + " before creating them again.");
+        throw new IOException("Failed deletion of " + splitdir + " before creating them again.");
       }
     }
     // splitDir doesn't exists now. No need to do an exists() call for it.
     if (!createDir(splitdir)) {
       throw new IOException("Failed create of " + splitdir);
+    }
+    Path daughterATmpDir = getSplitsDir(daughterA);
+    if (!createDir(daughterATmpDir)) {
+      throw new IOException("Failed create of " + daughterATmpDir);
+    }
+    Path daughterBTmpDir = getSplitsDir(daughterB);
+    if (!createDir(daughterBTmpDir)) {
+      throw new IOException("Failed create of " + daughterBTmpDir);
     }
   }
 
