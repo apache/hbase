@@ -696,7 +696,30 @@ possible configurations would overwhelm and obscure the important.
       Enables the MemStore-Local Allocation Buffer,
       a feature which works to prevent heap fragmentation under
       heavy write loads. This can reduce the frequency of stop-the-world
-      GC pauses on large heaps.</description>
+      GC pauses on large heaps.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.memstore.mslab.chunksize</name>
+    <value>2097152</value>
+    <description>The maximum byte size of a chunk in the MemStoreLAB. Unit: bytes</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.offheap.global.memstore.size</name>
+    <value>0</value>
+    <description>The amount of off-heap memory all MemStores in a RegionServer may use.
+      A value of 0 means that no off-heap memory will be used and all chunks in MSLAB
+      will be HeapByteBuffer, otherwise the non-zero value means how many megabyte of
+      off-heap memory will be used for chunks in MSLAB and all chunks in MSLAB will be
+      DirectByteBuffer. Unit: megabytes.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.memstore.mslab.max.allocation</name>
+    <value>262144</value>
+    <description>The maximal size of one allocation in the MemStoreLAB, if the desired byte
+      size exceed this threshold then it will be just allocated from JVM heap rather than MemStoreLAB.
+    </description>
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>

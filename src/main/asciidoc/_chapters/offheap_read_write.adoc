@@ -183,4 +183,23 @@ Please also see: link:https://issues.apache.org/jira/browse/HBASE-22483[HBASE-22
 [[regionserver.offheap.writepath]]
 == Offheap write-path
 
-TODO
+In HBase 2.0.0, link:https://issues.apache.org/jira/browse/HBASE-15179[HBASE-15179] made the HBase write path to work off-heap. By default, the MemStores use
+MSLAB to avoid memory fragmentation. It creates bigger fixed sized chunks and memstore cell's data will get copied into these chunks. These chunks can be pooled
+also and from 2.0.0 the MSLAB (MemStore-Local Allocation Buffer) pool is by default ON. Write off-heaping makes use of the MSLAB pool. It creates MSLAB chunks
+as Direct ByteBuffers and pools them. HBase defaults to using no off-heap memory for MSLAB which means that cells are copied to heap chunk in MSLAB by default
+rather than off-heap chunk.
+
+`hbase.regionserver.offheap.global.memstore.size` is the configuration key which controls the amount of off-heap data whose value is the number of megabytes
+of off-heap memory that should be by MSLAB (e.g. `25` would result in 25MB of off-heap). Be sure to increase `HBASE_OFFHEAPSIZE` which will set the JVM's
+MaxDirectMemorySize property. Its default value is 0, means MSLAB use heap chunks.
+
+`hbase.hregion.memstore.mslab.chunksize` controls the size of each off-heap chunk, defaulting to `2097152` (2MB).
+
+When a Cell is added to a MemStore, the bytes for that Cell are copied into these off-heap buffers (if set the `hbase.regionserver.offheap.global.memstore.size` to non-zero)
+and a Cell POJO will refer to this memory area. This can greatly reduce the on-heap occupancy of the MemStores and reduce the total heap utilization for RegionServers
+in a write-heavy workload. On-heap and off-heap memory utiliazation are tracked at multiple levels to implement low level and high level memory management.
+The decision to flush a MemStore considers both the on-heap and off-heap usage of that MemStore. At the Region level, the sum of the on-heap and off-heap usages and
+compares them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores are tracked as well as off-heap size. When any of
+these sizes breaches the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
+regions are selected for forced flushes.
+

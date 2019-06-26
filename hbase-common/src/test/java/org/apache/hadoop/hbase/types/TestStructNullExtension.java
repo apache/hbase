@@ -26,6 +26,7 @@ import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.ClassRule;
@@ -57,14 +58,14 @@ public class TestStructNullExtension {
   @Test
   public void testNullableNullExtension() {
     // the following field members are used because they're all nullable
-    StructBuilder builder = new StructBuilder()
-        .add(OrderedNumeric.ASCENDING)
-        .add(OrderedString.ASCENDING);
+    final StructBuilder builder = new StructBuilder()
+        .add(new OrderedNumeric(Order.ASCENDING))
+        .add(new OrderedString(Order.ASCENDING));
     Struct shorter = builder.toStruct();
-    Struct longer = builder
+    final Struct longer = builder
         // intentionally include a wrapped instance to test wrapper behavior.
-        .add(new TerminatedWrapper<>(OrderedString.ASCENDING, "/"))
-        .add(OrderedNumeric.ASCENDING)
+        .add(new TerminatedWrapper<>(new OrderedString(Order.ASCENDING), "/"))
+        .add(new OrderedNumeric(Order.ASCENDING))
         .toStruct();
 
     PositionedByteRange buf1 = new SimplePositionedMutableByteRange(7);

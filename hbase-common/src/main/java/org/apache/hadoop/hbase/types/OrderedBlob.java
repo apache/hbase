@@ -29,10 +29,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedBlob ASCENDING = new OrderedBlob(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will b removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedBlob DESCENDING = new OrderedBlob(Order.DESCENDING);
 
-  protected OrderedBlob(Order order) {
+  /**
+   * Creates a new {@code byte[]} with variable length.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedBlob(Order order) {
     super(order);
   }
 
@@ -65,6 +78,12 @@ public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
   /**
    * Write a subset of {@code val} to {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val  the value to write to {@code dst}
+   * @param voff the offset in {@code dst} where to write {@code val} to
+   * @param vlen the lenght of {@code val}
+   * @return the number of bytes written
    */
   public int encode(PositionedByteRange dst, byte[] val, int voff, int vlen) {
     return OrderedBytes.encodeBlobCopy(dst, val, voff, vlen, order);

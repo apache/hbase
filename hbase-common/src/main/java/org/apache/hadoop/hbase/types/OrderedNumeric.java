@@ -36,11 +36,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedNumeric extends OrderedBytesBase<Number> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedNumeric ASCENDING = new OrderedNumeric(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedNumeric DESCENDING = new OrderedNumeric(Order.DESCENDING);
 
-  protected OrderedNumeric(Order order) {
+  /**
+   * Creates a new {@link Number} of arbitrary precision and variable-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedNumeric(Order order) {
     super(order);
   }
 
@@ -82,6 +94,9 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Read a {@code long} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code long} from
+   * @return the {@code long} read from the buffer
    */
   public long decodeLong(PositionedByteRange src) {
     return OrderedBytes.decodeNumericAsLong(src);
@@ -89,6 +104,10 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeLong(PositionedByteRange dst, long val) {
     return OrderedBytes.encodeNumeric(dst, val, order);
@@ -96,6 +115,9 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Read a {@code double} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code double} from
+   * @return the {@code double} read from the buffer
    */
   public double decodeDouble(PositionedByteRange src) {
     return OrderedBytes.decodeNumericAsLong(src);
@@ -103,6 +125,10 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeDouble(PositionedByteRange dst, double val) {
     return OrderedBytes.encodeNumeric(dst, val, order);

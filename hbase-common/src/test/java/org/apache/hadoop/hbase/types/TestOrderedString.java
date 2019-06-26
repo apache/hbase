@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.ClassRule;
@@ -30,26 +31,32 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestOrderedString {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestOrderedString.class);
 
-  static final String[] VALUES =
+  private static final String[] VALUES =
       new String[] { null, "", "1", "22", "333", "4444", "55555", "666666",
-    "7777777", "88888888", "999999999" };
+        "7777777", "88888888", "999999999" };
 
   @Test
   public void testEncodedLength() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(20);
-    for (DataType<String> type : new OrderedString[] { OrderedString.ASCENDING, OrderedString.DESCENDING }) {
-      for (String val : VALUES) {
+    for (final DataType<String> type : new OrderedString[] { new OrderedString(Order.ASCENDING),
+      new OrderedString(Order.DESCENDING) }) {
+      for (final String val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);
-        assertEquals(
-          "encodedLength does not match actual, " + val,
+        assertEquals("encodedLength does not match actual, " + val,
           buff.getPosition(), type.encodedLength(val));
       }
     }
+  }
+
+  @Test
+  public void testEncodedClassIsFloat() {
+    final DataType<String> type = new OrderedString(Order.ASCENDING);
+
+    assertEquals(String.class, type.encodedClass());
   }
 }

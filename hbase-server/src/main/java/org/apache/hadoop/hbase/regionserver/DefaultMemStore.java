@@ -160,19 +160,23 @@ public class DefaultMemStore extends AbstractMemStore {
         getNextRow(cell, this.snapshot.getCellSet()));
   }
 
-  @Override public void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent) {
+  @Override
+  public void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent) {
   }
 
-  @Override protected boolean preUpdate(MutableSegment currentActive, Cell cell,
+  @Override
+  protected boolean preUpdate(MutableSegment currentActive, Cell cell,
       MemStoreSizing memstoreSizing) {
     return true;
   }
 
-  @Override protected void postUpdate(MutableSegment currentActive) {
+  @Override
+  protected void postUpdate(MutableSegment currentActive) {
     return;
   }
 
-  @Override protected boolean sizeAddedPreOperation() {
+  @Override
+  protected boolean sizeAddedPreOperation() {
     return false;
   }
 
@@ -186,7 +190,8 @@ public class DefaultMemStore extends AbstractMemStore {
     return HConstants.NO_SEQNUM;
   }
 
-  @Override public boolean isSloppy() {
+  @Override
+  public boolean isSloppy() {
     return false;
   }
 
