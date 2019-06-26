@@ -75,6 +75,11 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   }
 
   @Override
+  protected boolean hasIdleCleanupSupport() {
+    return new NettyRpcConnection().hasIdleCleanupSupport();
+  }
+
+  @Override
   protected void closeInternal() {
     if (shutdownGroupWhenClose) {
       group.shutdownGracefully();

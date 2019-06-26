@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.InterruptedIOException;
 import java.util.Collection;
 import java.util.function.Consumer;
+
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -118,4 +119,24 @@ public interface RequestController {
    */
   void waitForFreeSlot(long id, int periodToTrigger,
           Consumer<Long> trigger) throws InterruptedIOException;
+
+  /**
+   * Wait until there is at least size slot for size new tasks.
+   * @param size the number of requested slots
+   * @param id the caller's id
+   * @param periodToTrigger The period to invoke the trigger. This value is a hint. The real period
+   *          depends on the implementation.
+   * @param trigger The object to call periodically.
+   * @throws java.io.InterruptedIOException If the waiting is interrupted
+   */
+  void waitForFreeSlot(int size, long id, int periodToTrigger,
+          Consumer<Long> trigger) throws InterruptedIOException;
+
+  /**
+   * Wait until all slots are free.
+   * @param id the caller's id
+   * @throws java.io.InterruptedIOException If the waiting is interrupted
+   */
+  void waitForAllFreeSlot(long id) throws InterruptedIOException;
+
 }

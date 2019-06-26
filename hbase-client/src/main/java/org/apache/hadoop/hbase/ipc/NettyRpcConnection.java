@@ -85,6 +85,12 @@ class NettyRpcConnection extends RpcConnection {
       justification = "connect is also under lock as notifyOnCancel will call our action directly")
   private Channel channel;
 
+  // Dummy constructor used to call hasIdleCleanupSupport
+  NettyRpcConnection() {
+    super();
+    rpcClient=null;
+  }
+
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
         rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
@@ -132,6 +138,11 @@ class NettyRpcConnection extends RpcConnection {
     }
   }
 
+  @Override
+  public boolean hasIdleCleanupSupport() {
+    return true;
+  }
+
   private void established(Channel ch) throws IOException {
     ChannelPipeline p = ch.pipeline();
     String addBeforeHandler = p.context(BufferCallBeforeInitHandler.class).name();
@@ -149,6 +160,16 @@ class NettyRpcConnection extends RpcConnection {
     if (error instanceof FallbackDisallowedException) {
       return;
     }
+    // do not schedule anything if not needed...
+    boolean isOverKrb = false;
+    try {
+      isOverKrb = shouldAuthenticateOverKrb();
+    } catch (IOException e) {
+      return;
+    }
+    if (!isOverKrb) {
+      return;
+    }
     synchronized (this) {
       if (reloginInProgress) {
         return;
@@ -159,9 +180,7 @@ class NettyRpcConnection extends RpcConnection {
         @Override
         public void run() {
           try {
-            if (shouldAuthenticateOverKrb()) {
-              relogin();
-            }
+            relogin();
           } catch (IOException e) {
             LOG.warn("Relogin failed", e);
           }

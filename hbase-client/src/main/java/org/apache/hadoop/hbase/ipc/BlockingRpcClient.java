@@ -73,6 +73,11 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
   }
 
   @Override
+  protected boolean hasIdleCleanupSupport() {
+    return (new BlockingRpcConnection()).hasIdleCleanupSupport();
+  }
+
+  @Override
   protected void closeInternal() {
   }
 }

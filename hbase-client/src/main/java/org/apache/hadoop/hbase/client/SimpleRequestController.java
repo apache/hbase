@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +46,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -93,6 +93,8 @@ class SimpleRequestController implements RequestController {
           = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   @VisibleForTesting
   final ConcurrentMap<ServerName, AtomicInteger> taskCounterPerServer = new ConcurrentHashMap<>();
+
+  final ReentrantLock lock = new ReentrantLock();
   /**
    * The number of tasks simultaneously executed on the cluster.
    */
@@ -124,9 +126,9 @@ class SimpleRequestController implements RequestController {
   private final int thresholdToLogUndoneTaskDetails;
   public static final String THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS =
       "hbase.client.threshold.log.details";
-  private static final int DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS = 10;
   public static final String THRESHOLD_TO_LOG_REGION_DETAILS =
       "hbase.client.threshold.log.region.details";
+  private static final int DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS = 10;
   private static final int DEFAULT_THRESHOLD_TO_LOG_REGION_DETAILS = 2;
   private final int thresholdToLogRegionDetails;
   SimpleRequestController(final Configuration conf) {
@@ -244,11 +246,26 @@ class SimpleRequestController implements RequestController {
   public void incTaskCounters(Collection<byte[]> regions, ServerName sn) {
     tasksInProgress.incrementAndGet();
 
-    computeIfAbsent(taskCounterPerServer, sn, AtomicInteger::new).incrementAndGet();
+    incrementMapForKey(taskCounterPerServer,sn);
 
-    regions.forEach((regBytes)
-            -> computeIfAbsent(taskCounterPerRegion, regBytes, AtomicInteger::new).incrementAndGet()
-    );
+    regions.forEach((regBytes) -> incrementMapForKey(taskCounterPerRegion,regBytes));
+  }
+
+  private <K> void incrementMapForKey(Map<K,AtomicInteger> collection, K key) {
+    if (collection.containsKey(key)) {
+      collection.get(key).incrementAndGet();
+    } else {
+      lock.lock();
+      try {
+        if (collection.containsKey(key)) {
+          collection.get(key).incrementAndGet();
+        } else {
+          collection.put(key, new AtomicInteger(1));
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
   }
 
   @Override
@@ -324,8 +341,21 @@ class SimpleRequestController implements RequestController {
   }
 
   @Override
-  public void waitForFreeSlot(long id, int periodToTrigger, Consumer<Long> trigger) throws InterruptedIOException {
+  public void waitForFreeSlot(long id, int periodToTrigger, Consumer<Long> trigger)
+      throws InterruptedIOException {
     waitForMaximumCurrentTasks(maxTotalConcurrentTasks - 1, id, periodToTrigger, trigger);
+  }
+
+  @Override
+  public void waitForFreeSlot(int numberOfTask,long id, int periodToTrigger,
+          Consumer<Long> trigger) throws InterruptedIOException {
+    waitForMaximumCurrentTasks(maxTotalConcurrentTasks - numberOfTask,
+        id, periodToTrigger, trigger);
+  }
+
+  @Override
+  public void waitForAllFreeSlot(long id) throws InterruptedIOException {
+    waitForMaximumCurrentTasks(0, id, 0, null);
   }
 
   /**

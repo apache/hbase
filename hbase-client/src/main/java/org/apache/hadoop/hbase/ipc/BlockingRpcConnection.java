@@ -215,6 +215,14 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
   }
 
+  // Dummy constructor used to call hasIdleCleanupSupport
+  BlockingRpcConnection() {
+    super();
+    callSender = null;
+    threadName = null;
+    rpcClient=null;
+  }
+
   BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
         rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
@@ -763,6 +771,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   @Override
   public void cleanupConnection() {
     // do nothing
+  }
+
+  @Override
+  public boolean hasIdleCleanupSupport() {
+    return false;
   }
 
   @Override

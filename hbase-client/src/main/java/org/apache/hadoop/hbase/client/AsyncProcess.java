@@ -31,6 +31,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -255,12 +257,13 @@ class AsyncProcess {
     RequestController.Checker checker = requestController.newChecker();
     boolean firstIter = true;
     do {
-      // Wait until there is at least one slot for a new task.
-      requestController.waitForFreeSlot(id, periodToLog, getLogger(tableName, -1));
       int posInList = -1;
       if (!firstIter) {
         checker.reset();
       }
+
+      Set<ServerName> retainedServers = new TreeSet<>();
+
       Iterator<? extends Row> it = rows.iterator();
       while (it.hasNext()) {
         Row r = it.next();
@@ -309,16 +312,26 @@ class AsyncProcess {
           // TODO: replica-get is not supported on this path
           byte[] regionName = loc.getRegionInfo().getRegionName();
           addAction(loc.getServerName(), regionName, action, actionsByServer, nonceGroup);
+          retainedServers.add(loc.getServerName());
           it.remove();
         }
       }
       firstIter = false;
+
+      // Wait until there is at least one slot per server
+      requestController.waitForFreeSlot(retainedServers.size(),id, periodToLog,
+          getLogger(tableName, -1));
+
     } while (retainedActions.isEmpty() && atLeastOne && (locationErrors == null));
 
     if (retainedActions.isEmpty()) return NO_REQS_RESULT;
 
     return submitMultiActions(task, retainedActions, nonceGroup,
         locationErrors, locationErrorRows, actionsByServer);
+  }
+
+  public void waitAllSlot() throws InterruptedIOException {
+    requestController.waitForAllFreeSlot(id);
   }
 
   <CResult> AsyncRequestFuture submitMultiActions(AsyncProcessTask task,

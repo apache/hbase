@@ -81,6 +81,20 @@ abstract class RpcConnection {
   // the last time we were picked up from connection pool.
   protected long lastTouched;
 
+  // Dummy constructor used to call hasIdleCleanupSupport
+  RpcConnection() {
+    remoteId = null;
+    authMethod = null;
+    useSasl = false;
+    token = null;
+    serverPrincipal = null;
+    reloginMaxBackoff = 0;
+    codec = null;
+    compressor = null;
+    timeoutTimer = null;
+    conf = null;
+  }
+
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
       String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
       throws IOException {
@@ -274,4 +288,9 @@ abstract class RpcConnection {
    * Does the clean up work after the connection is removed from the connection pool
    */
   public abstract void cleanupConnection();
+
+  /**
+   * @return true when this client supports periodic cleanup of used connection
+   */
+  public abstract boolean hasIdleCleanupSupport();
 }

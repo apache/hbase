@@ -186,6 +186,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     private final int numAttempt;
     private final ServerName server;
     private final Set<CancellableRegionServerCallable> callsInProgress;
+    private long firstStartNanoTime;
+    private long startNanoTime;
+    private long elapseNanoTime;
+    private long numReject = -1;
     @VisibleForTesting
     SingleServerRequestRunnable(
         MultiAction multiAction, int numAttempt, ServerName server,
@@ -247,6 +251,30 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           callsInProgress.remove(callable);
         }
       }
+    }
+
+    public void onStart() {
+      ++numReject;
+      startNanoTime = System.nanoTime();
+      if (numReject == 0) {
+        firstStartNanoTime = startNanoTime;
+      }
+    }
+
+    public void onFinish() {
+      elapseNanoTime = System.nanoTime() - startNanoTime;
+    }
+
+    public long getElapseNanoTime() {
+      return elapseNanoTime;
+    }
+
+    public long getNumReject() {
+      return numReject;
+    }
+
+    public long getRejectedElapseNanoTime() {
+      return startNanoTime - firstStartNanoTime;
     }
   }
 
@@ -518,8 +546,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param numAttempt the attempt number.
    * @param actionsForReplicaThread original actions for replica thread; null on non-first call.
    */
-  void sendMultiAction(Map<ServerName, MultiAction> actionsByServer,
-                               int numAttempt, List<Action> actionsForReplicaThread, boolean reuseThread) {
+  // Must be synchronized because of the background thread writeBufferPeriodicFlushTimer
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SWL_SLEEP_WITH_LOCK_HELD",
+      justification="Slots are freed while in the executor thread, so the thread is not yet"
+          + " available for the pool." +
+          " In that case, we have a RejectedExecutionException. Sleep let some time to threads"
+          + " to be available again")
+  synchronized void sendMultiAction(Map<ServerName, MultiAction> actionsByServer, int numAttempt,
+      List<Action> actionsForReplicaThread, boolean reuseThread) {
     // Run the last item on the same thread if we are already on a send thread.
     // We hope most of the time it will be the only item, so we can cut down on threads.
     int actionsRemaining = actionsByServer.size();
@@ -527,8 +561,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     for (Map.Entry<ServerName, MultiAction> e : actionsByServer.entrySet()) {
       ServerName server = e.getKey();
       MultiAction multiAction = e.getValue();
-      Collection<? extends Runnable> runnables = getNewMultiActionRunnable(server, multiAction,
-          numAttempt);
+      Collection<? extends Runnable> runnables =
+          getNewMultiActionRunnable(server, multiAction, numAttempt);
       // make sure we correctly count the number of runnables before we try to reuse the send
       // thread, in case we had to split the request into different runnables because of backoff
       if (runnables.size() > actionsRemaining) {
@@ -543,22 +577,38 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
             && numAttempt % HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER != 0) {
           runnable.run();
         } else {
-          try {
-            pool.submit(runnable);
-          } catch (Throwable t) {
-            if (t instanceof RejectedExecutionException) {
-              // This should never happen. But as the pool is provided by the end user,
-              // let's secure this a little.
-              LOG.warn("id=" + asyncProcess.id + ", task rejected by pool. Unexpected." +
-                  " Server=" + server.getServerName(), t);
-            } else {
-              // see #HBASE-14359 for more details
-              LOG.warn("Caught unexpected exception/error: ", t);
+          boolean completed = false;
+          int nbTry = 0;
+          while (!completed) {
+            try {
+              ++nbTry;
+              pool.submit(runnable);
+              completed = true;
+            } catch (Throwable t) {
+              if (t instanceof RejectedExecutionException) {
+                if ((nbTry % 1000) == 0) {
+                  LOG.warn("#" + asyncProcess.id
+                      + ", the task was rejected by the pool. This is unexpected." + " Server is "
+                      + server.getServerName() + " (try " + nbTry + ")", t);
+                } else if (LOG.isDebugEnabled()) {
+                  LOG.debug("#" + asyncProcess.id
+                      + ", the task was rejected by the pool. This is unexpected." + " Server is "
+                      + server.getServerName() + " (try " + nbTry + ")", t);
+                }
+                try {
+                  Thread.sleep(10);
+                } catch (InterruptedException ex) {
+                  Thread.currentThread().interrupt();
+                }
+              } else {
+                // see #HBASE-14359 for more details
+                LOG.warn("Caught unexpected exception/error: ", t);
+              }
+              asyncProcess.decTaskCounters(multiAction.getRegions(), server);
+              // We're likely to fail again, but this will increment the attempt counter,
+              // so it will finish.
+              receiveGlobalFailure(multiAction, server, numAttempt, t);
             }
-            asyncProcess.decTaskCounters(multiAction.getRegions(), server);
-            // We're likely to fail again, but this will increment the attempt counter,
-            // so it will finish.
-            receiveGlobalFailure(multiAction, server, numAttempt, t);
           }
         }
       }
@@ -1165,6 +1215,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       }
     }
     return error.toString();
+  }
+
+  public boolean isFinished() {
+    return actionsInProgress.get() == 0;
   }
 
   @Override

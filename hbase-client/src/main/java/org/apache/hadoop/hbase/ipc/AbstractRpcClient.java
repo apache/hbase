@@ -140,7 +140,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   private final AtomicInteger callIdCnt = new AtomicInteger(0);
 
-  private final ScheduledFuture<?> cleanupIdleConnectionTask;
+  private ScheduledFuture<?> cleanupIdleConnectionTask = null;
 
   private int maxConcurrentCallsPerServer;
 
@@ -188,13 +188,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
     this.connections = new PoolMap<>(getPoolType(conf), getPoolSize(conf));
 
-    this.cleanupIdleConnectionTask = IDLE_CONN_SWEEPER.scheduleAtFixedRate(new Runnable() {
+    if (!hasIdleCleanupSupport()) {
+      this.cleanupIdleConnectionTask = IDLE_CONN_SWEEPER.scheduleAtFixedRate(new Runnable() {
 
-      @Override
-      public void run() {
-        cleanupIdleConnections();
-      }
-    }, minIdleTimeBeforeClose, minIdleTimeBeforeClose, TimeUnit.MILLISECONDS);
+        @Override
+        public void run() {
+          cleanupIdleConnections();
+        }
+      }, minIdleTimeBeforeClose, minIdleTimeBeforeClose, TimeUnit.MILLISECONDS);
+    }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Codec=" + this.codec + ", compressor=" + this.compressor + ", tcpKeepAlive="
@@ -372,6 +374,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   protected abstract T createConnection(ConnectionId remoteId) throws IOException;
 
+  protected abstract boolean hasIdleCleanupSupport();
+
   private void onCallFinished(Call call, HBaseRpcController hrc, InetSocketAddress addr,
       RpcCallback<Message> callback) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
@@ -450,6 +454,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
               + connection.remoteId);
           connections.removeValue(remoteId, connection);
           connection.shutdown();
+          connection.cleanupConnection();
         }
       }
     }
@@ -491,7 +496,9 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       connToClose = connections.values();
       connections.clear();
     }
-    cleanupIdleConnectionTask.cancel(true);
+    if (cleanupIdleConnectionTask != null) {
+      cleanupIdleConnectionTask.cancel(true);
+    }
     for (T conn : connToClose) {
       conn.shutdown();
     }
