@@ -548,9 +548,9 @@ public class WALSplitter {
   static Path getRegionSplitEditsPath(final Entry logEntry, String fileNameBeingSplit,
       String tmpDirName, Configuration conf) throws IOException {
     FileSystem walFS = FSUtils.getWALFileSystem(conf);
-    Path tableDir = FSUtils.getWALTableDir(conf, logEntry.getKey().getTablename());
+    TableName tableName = logEntry.getKey().getTablename();
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
-    Path regionDir = HRegion.getRegionDir(tableDir, encodedRegionName);
+    Path regionDir = FSUtils.getWALRegionDir(conf, tableName, encodedRegionName);
     Path dir = getRegionDirRecoveredEditsDir(regionDir);
 
     if (walFS.exists(dir) && walFS.isFile(dir)) {
@@ -558,8 +558,7 @@ public class WALSplitter {
       if (!walFS.exists(tmp)) {
         walFS.mkdirs(tmp);
       }
-      tmp = new Path(tmp,
-        HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
+      tmp = new Path(tmp, HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionName);
       LOG.warn("Found existing old file: " + dir + ". It could be some "
         + "leftover of an old installation. It should be a folder instead. "
         + "So moving it to " + tmp);

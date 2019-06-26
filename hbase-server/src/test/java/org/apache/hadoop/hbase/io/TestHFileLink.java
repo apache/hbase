@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
@@ -31,7 +30,6 @@ import org.junit.experimental.categories.Category;
 import java.util.regex.Matcher;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -95,7 +93,7 @@ public class TestHFileLink {
 
     for(TableName refTable : refTables) {
       Path refTableDir = FSUtils.getTableDir(archiveDir, refTable);
-      Path refRegionDir = HRegion.getRegionDir(refTableDir, encodedRegion);
+      Path refRegionDir = new Path(refTableDir, encodedRegion);
       Path refDir = new Path(refRegionDir, cf);
       Path refLinkDir = new Path(refDir, linkDir);
       String refStoreFileName = refTable.getNameAsString().replace(
@@ -107,7 +105,7 @@ public class TestHFileLink {
 
       for( TableName tableName : tableNames) {
         Path tableDir = FSUtils.getTableDir(rootDir, tableName);
-        Path regionDir = HRegion.getRegionDir(tableDir, encodedRegion);
+        Path regionDir = new Path(tableDir, encodedRegion);
         Path cfDir = new Path(regionDir, cf);
 
         //Verify back reference creation

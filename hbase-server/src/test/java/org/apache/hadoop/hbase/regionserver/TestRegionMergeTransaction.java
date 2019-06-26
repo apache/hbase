@@ -319,7 +319,7 @@ public class TestRegionMergeTransaction {
     assertEquals(rowCountOfRegionB, rowCountOfRegionB2);
 
     // Assert rollback cleaned up stuff in fs
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir,
+    assertTrue(!this.fs.exists(FSUtils.getRegionDirFromRootDir(this.testdir,
         mt.getMergedRegionInfo())));
 
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
