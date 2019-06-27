@@ -1649,7 +1649,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       return false;
     }
 
-    int maxRegionsInTransition = getMaxRegionsInTransition();
     synchronized (this.balancer) {
       // If balance not true, don't run balancer.
       if (!this.loadBalancerTracker.isBalancerOn()) return false;
@@ -1708,45 +1707,11 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
-      long balanceStartTime = System.currentTimeMillis();
-      long cutoffTime = balanceStartTime + this.maxBlancingTime;
-      int rpCount = 0;  // number of RegionPlans balanced so far
-      if (plans != null && !plans.isEmpty()) {
-        int balanceInterval = this.maxBlancingTime / plans.size();
-        LOG.info("Balancer plans size is " + plans.size() + ", the balance interval is "
-            + balanceInterval + " ms, and the max number regions in transition is "
-            + maxRegionsInTransition);
-
-        for (RegionPlan plan: plans) {
-          LOG.info("balance " + plan);
-          //TODO: bulk assign
-          try {
-            this.assignmentManager.moveAsync(plan);
-          } catch (HBaseIOException hioe) {
-            //should ignore failed plans here, avoiding the whole balance plans be aborted
-            //later calls of balance() can fetch up the failed and skipped plans
-            LOG.warn("Failed balance plan: {}, just skip it", plan, hioe);
-          }
-          //rpCount records balance plans processed, does not care if a plan succeeds
-          rpCount++;
-
-          balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
-            cutoffTime);
-
-          // if performing next balance exceeds cutoff time, exit the loop
-          if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
-            // TODO: After balance, there should not be a cutoff time (keeping it as
-            // a security net for now)
-            LOG.debug("No more balancing till next balance run; maxBalanceTime="
-                + this.maxBlancingTime);
-            break;
-          }
-        }
-      }
+      List<RegionPlan> sucRPs = executeRegionPlansWithThrottling(plans);
 
       if (this.cpHost != null) {
         try {
-          this.cpHost.postBalance(rpCount < plans.size() ? plans.subList(0, rpCount) : plans);
+          this.cpHost.postBalance(sucRPs);
         } catch (IOException ioe) {
           // balancing already succeeded so don't change the result
           LOG.error("Error invoking master coprocessor postBalance()", ioe);
@@ -1756,6 +1721,47 @@ public class HMaster extends HRegionServer implements MasterServices {
     // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
     // Return true indicating a success.
     return true;
+  }
+
+  public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
+    List<RegionPlan> sucRPs = new ArrayList<>();
+    int maxRegionsInTransition = getMaxRegionsInTransition();
+    long balanceStartTime = System.currentTimeMillis();
+    long cutoffTime = balanceStartTime + this.maxBlancingTime;
+    int rpCount = 0;  // number of RegionPlans balanced so far
+    if (plans != null && !plans.isEmpty()) {
+      int balanceInterval = this.maxBlancingTime / plans.size();
+      LOG.info("Balancer plans size is " + plans.size() + ", the balance interval is "
+          + balanceInterval + " ms, and the max number regions in transition is "
+          + maxRegionsInTransition);
+
+      for (RegionPlan plan: plans) {
+        LOG.info("balance " + plan);
+        //TODO: bulk assign
+        try {
+          this.assignmentManager.moveAsync(plan);
+        } catch (HBaseIOException hioe) {
+          //should ignore failed plans here, avoiding the whole balance plans be aborted
+          //later calls of balance() can fetch up the failed and skipped plans
+          LOG.warn("Failed balance plan: {}, just skip it", plan, hioe);
+        }
+        //rpCount records balance plans processed, does not care if a plan succeeds
+        rpCount++;
+
+        balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
+            cutoffTime);
+
+        // if performing next balance exceeds cutoff time, exit the loop
+        if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
+          // TODO: After balance, there should not be a cutoff time (keeping it as
+          // a security net for now)
+          LOG.debug("No more balancing till next balance run; maxBalanceTime="
+              + this.maxBlancingTime);
+          break;
+        }
+      }
+    }
+    return sucRPs;
   }
 
   @Override
