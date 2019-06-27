@@ -482,6 +482,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
+    return null;
+  }
+
+  @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
     return null;
   }
