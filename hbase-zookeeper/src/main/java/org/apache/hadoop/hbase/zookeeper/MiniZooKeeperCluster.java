@@ -56,21 +56,21 @@ public class MiniZooKeeperCluster {
   private static final int TICK_TIME = 2000;
   private static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
   private static final byte[] STATIC_BYTES = Bytes.toBytes("stat");
-  private int connectionTimeout;
+  private final int connectionTimeout;
 
   private boolean started;
 
   /** The default port. If zero, we use a random port. */
   private int defaultClientPort = 0;
 
-  private List<NIOServerCnxnFactory> standaloneServerFactoryList;
-  private List<ZooKeeperServer> zooKeeperServers;
-  private List<Integer> clientPortList;
+  private final List<NIOServerCnxnFactory> standaloneServerFactoryList;
+  private final List<ZooKeeperServer> zooKeeperServers;
+  private final List<Integer> clientPortList;
 
   private int activeZKServerIndex;
   private int tickTime = 0;
 
-  private Configuration configuration;
+  private final Configuration configuration;
 
   public MiniZooKeeperCluster() {
     this(new Configuration());
@@ -405,13 +405,10 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        Socket sock = new Socket("localhost", port);
-        try {
+        try (Socket sock = new Socket("localhost", port)) {
           OutputStream outstream = sock.getOutputStream();
           outstream.write(STATIC_BYTES);
           outstream.flush();
-        } finally {
-          sock.close();
         }
       } catch (IOException e) {
         return true;

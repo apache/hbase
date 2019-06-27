@@ -246,7 +246,7 @@ public final class ZKUtil {
     private static final Map<String, String> BASIC_JAAS_OPTIONS = new HashMap<>();
     static {
       String jaasEnvVar = System.getenv("HBASE_JAAS_DEBUG");
-      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
+      if ("true".equalsIgnoreCase(jaasEnvVar)) {
         BASIC_JAAS_OPTIONS.put("debug", "true");
       }
     }
@@ -353,7 +353,7 @@ public final class ZKUtil {
     throws KeeperException {
     try {
       Stat s = zkw.getRecoverableZooKeeper().exists(znode, zkw);
-      boolean exists = s != null ? true : false;
+      boolean exists = s != null;
       if (exists) {
         LOG.debug(zkw.prefix("Set watcher on existing znode=" + znode));
       } else {
@@ -443,8 +443,7 @@ public final class ZKUtil {
           ZKWatcher zkw, String znode)
     throws KeeperException {
     try {
-      List<String> children = zkw.getRecoverableZooKeeper().getChildren(znode, zkw);
-      return children;
+      return zkw.getRecoverableZooKeeper().getChildren(znode, zkw);
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
           "because node does not exist (not an error)"));
