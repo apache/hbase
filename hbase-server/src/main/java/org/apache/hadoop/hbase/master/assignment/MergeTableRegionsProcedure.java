@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +66,9 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -665,15 +666,14 @@ public class MergeTableRegionsProcedure
    * @param regionFs region file system
    * @param mergedDir the temp directory of merged region
    */
-  private void mergeStoreFiles(
-      final MasterProcedureEnv env, final HRegionFileSystem regionFs, final Path mergedDir)
-      throws IOException {
+  private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
+      final Path mergedDir) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
 
-    for (String family: regionFs.getFamilies()) {
-      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(Bytes.toBytes(family));
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+      String family = hcd.getNameAsString();
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
 
       if (storeFiles != null && storeFiles.size() > 0) {
