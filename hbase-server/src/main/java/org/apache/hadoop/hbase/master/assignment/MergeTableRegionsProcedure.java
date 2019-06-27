@@ -639,15 +639,14 @@ public class MergeTableRegionsProcedure
    * @param regionFs region file system
    * @param mergedDir the temp directory of merged region
    */
-  private void mergeStoreFiles(
-      final MasterProcedureEnv env, final HRegionFileSystem regionFs, final Path mergedDir)
-      throws IOException {
+  private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
+      final Path mergedDir) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
 
-    for (String family : regionFs.getFamilies()) {
-      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(Bytes.toBytes(family));
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+      String family = hcd.getNameAsString();
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
 
       if (storeFiles != null && storeFiles.size() > 0) {
@@ -655,9 +654,9 @@ public class MergeTableRegionsProcedure
           // Create reference file(s) of the region in mergedDir.
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          regionFs.mergeStoreFile(mergedRegion, family,
-              new HStoreFile(mfs.getFileSystem(), storeFileInfo, conf, CacheConfig.DISABLED,
-                  hcd.getBloomFilterType(), true), mergedDir);
+          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(mfs.getFileSystem(),
+              storeFileInfo, conf, CacheConfig.DISABLED, hcd.getBloomFilterType(), true),
+            mergedDir);
         }
       }
     }
