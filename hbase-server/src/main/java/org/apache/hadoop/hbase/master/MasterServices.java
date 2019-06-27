@@ -502,4 +502,11 @@ public interface MasterServices extends Server {
   default SplitWALManager getSplitWALManager(){
     return null;
   }
+
+  /**
+   * Execute region plans with throttling
+   * @param plans to execute
+   * @return succeeded plans
+   */
+  List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans);
 }

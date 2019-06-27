@@ -462,4 +462,9 @@ public class MockNoopMasterServices implements MasterServices {
   public boolean isClusterUp() {
     return true;
   }
+
+  @Override
+  public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
+    return null;
+  }
 }
