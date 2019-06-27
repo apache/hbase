@@ -626,6 +626,7 @@ public class SplitTableRegionProcedure
       final HRegionFileSystem regionFs) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // The following code sets up a thread pool executor with as many slots as
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
@@ -635,12 +636,15 @@ public class SplitTableRegionProcedure
     // clean this up.
     int nbFiles = 0;
     final Map<String, Collection<StoreFileInfo>> files =
-      new HashMap<String, Collection<StoreFileInfo>>(regionFs.getFamilies().size());
-    for (String family: regionFs.getFamilies()) {
+        new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
+    for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
+      String family = cfd.getNameAsString();
       Collection<StoreFileInfo> sfis = regionFs.getStoreFiles(family);
-      if (sfis == null) continue;
+      if (sfis == null) {
+        continue;
+      }
       Collection<StoreFileInfo> filteredSfis = null;
-      for (StoreFileInfo sfi: sfis) {
+      for (StoreFileInfo sfi : sfis) {
         // Filter. There is a lag cleaning up compacted reference files. They get cleared
         // after a delay in case outstanding Scanners still have references. Because of this,
         // the listing of the Store content may have straggler reference files. Skip these.
@@ -661,7 +665,7 @@ public class SplitTableRegionProcedure
     }
     if (nbFiles == 0) {
       // no file needs to be splitted.
-      return new Pair<Integer, Integer>(0,0);
+      return new Pair<Integer, Integer>(0, 0);
     }
     // Max #threads is the smaller of the number of storefiles or the default max determined above.
     int maxThreads = Math.min(
@@ -669,12 +673,11 @@ public class SplitTableRegionProcedure
         conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT)),
       nbFiles);
     LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
-      getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
-    final ExecutorService threadPool = Executors.newFixedThreadPool(
-      maxThreads, Threads.getNamedThreadFactory("StoreFileSplitter-%1$d"));
-    final List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>>(nbFiles);
+        getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
+    final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
+      Threads.getNamedThreadFactory("StoreFileSplitter-%1$d"));
+    final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 
-    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // Split each store file.
     for (Map.Entry<String, Collection<StoreFileInfo>> e : files.entrySet()) {
       byte[] familyName = Bytes.toBytes(e.getKey());
@@ -684,9 +687,9 @@ public class SplitTableRegionProcedure
         for (StoreFileInfo storeFileInfo : storeFiles) {
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, familyName,
-              new HStoreFile(mfs.getFileSystem(), storeFileInfo, conf, CacheConfig.DISABLED,
-                  hcd.getBloomFilterType(), true));
+          StoreFileSplitter sfs =
+              new StoreFileSplitter(regionFs, familyName, new HStoreFile(mfs.getFileSystem(),
+                  storeFileInfo, conf, CacheConfig.DISABLED, hcd.getBloomFilterType(), true));
           futures.add(threadPool.submit(sfs));
         }
       }
@@ -698,7 +701,7 @@ public class SplitTableRegionProcedure
     // When splits ran on the RegionServer, how-long-to-wait-configuration was named
     // hbase.regionserver.fileSplitTimeout. If set, use its value.
     long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout",
-        conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
+      conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
     try {
       boolean stillRunning = !threadPool.awaitTermination(fileSplitTimeout, TimeUnit.MILLISECONDS);
       if (stillRunning) {
@@ -707,11 +710,11 @@ public class SplitTableRegionProcedure
         while (!threadPool.isTerminated()) {
           Thread.sleep(50);
         }
-        throw new IOException("Took too long to split the" +
-            " files and create the references, aborting split");
+        throw new IOException(
+            "Took too long to split the" + " files and create the references, aborting split");
       }
     } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
 
     int daughterA = 0;
@@ -731,9 +734,8 @@ public class SplitTableRegionProcedure
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("pid=" + getProcId() + " split storefiles for region " +
-        getParentRegion().getShortNameToLog() +
-          " Daughter A: " + daughterA + " storefiles, Daughter B: " +
-          daughterB + " storefiles.");
+          getParentRegion().getShortNameToLog() + " Daughter A: " + daughterA +
+          " storefiles, Daughter B: " + daughterB + " storefiles.");
     }
     return new Pair<Integer, Integer>(daughterA, daughterB);
   }
