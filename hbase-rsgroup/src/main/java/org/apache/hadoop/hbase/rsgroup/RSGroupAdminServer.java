@@ -61,13 +61,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   private MasterServices master;
   private final RSGroupInfoManager rsGroupInfoManager;
 
-  private String FAILED_MOVE_MAX_RETRY_KEY = "hbase.rsgroup.move.max.retry";
+  private String FAILED_MOVE_MAX_RETRY = "hbase.rsgroup.move.max.retry";
   private int moveMaxRetry;
 
   public RSGroupAdminServer(MasterServices master, RSGroupInfoManager rsGroupInfoManager) {
     this.master = master;
     this.rsGroupInfoManager = rsGroupInfoManager;
-    this.moveMaxRetry = master.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY_KEY, 50);
+    this.moveMaxRetry = master.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY, 50);
   }
 
   @Override
@@ -203,10 +203,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   }
 
   /**
-   * When move a table to a group, all regions of it must be moved to group servers (to the group).
-   * When move a server to a group, some regions on it which are of tables that do not belong to
-   * the target group must be moved (from the group).
-   * So MoveType.TO means TableName set, and MoveType.FROM means server Address set.
+   * When move a table to a group, we can only move regions of it which are not on group servers
+   * TO the group. Because all regions of the table must be in target group. When move a server to
+   * a group, we can only move regions on it which do not belong to group tables FROM the group.
+   * And what's more, table regions or server regions that already in target group need not to be
+   * moved. So MoveType.TO means move regions of TABLES, and MoveType.FROM means move regions on
+   * SERVERS.
    *
    * @param set it's a table set or a server set
    * @param targetGroupName target group name
@@ -225,17 +227,17 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     do {
       hasRegionsToMove = false;
       for (Iterator<T> iter = newSet.iterator(); iter.hasNext(); ) {
-        T el = iter.next();
+        T element = iter.next();
         List<RegionInfo> toMoveRegions = new ArrayList<>();
         if (type == MoveType.TO) {
           // means element type of set is TableName
-          assert el instanceof TableName;
-          if (master.getAssignmentManager().isTableDisabled((TableName) el)) {
-            LOG.debug("Skipping move regions because the table {} is disabled", el);
+          assert element instanceof TableName;
+          if (master.getAssignmentManager().isTableDisabled((TableName) element)) {
+            LOG.debug("Skipping move regions because the table {} is disabled", element);
           }else {
             // Get regions of these tables and filter regions by group servers.
-            for (RegionInfo region :
-                master.getAssignmentManager().getRegionStates().getRegionsOfTable((TableName) el)) {
+            for (RegionInfo region : master.getAssignmentManager().getRegionStates()
+                .getRegionsOfTable((TableName) element)) {
               ServerName sn =
                   master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
               if (!targetGrp.containsServer(sn.getAddress())) {
@@ -246,9 +248,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         }
         if (type == MoveType.FROM) {
           // means element type of set is Address
-          assert el instanceof Address;
+          assert element instanceof Address;
           // Get regions that are associated with these servers and filter regions by group tables.
-          for (RegionInfo region : getRegions((Address) el)) {
+          for (RegionInfo region : getRegions((Address) element)) {
             if (!targetGrp.containsTable(region.getTable())) {
               toMoveRegions.add(region);
             }
@@ -275,7 +277,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           hasRegionsToMove = true;
         }
         if (!hasRegionsToMove) {
-          LOG.info("There are no more regions of {} to move for RSGroup {}", el, targetGroupName);
+          LOG.info("There are no more regions of {} to move for RSGroup {}", element,
+              targetGroupName);
           iter.remove();
         }
       }
