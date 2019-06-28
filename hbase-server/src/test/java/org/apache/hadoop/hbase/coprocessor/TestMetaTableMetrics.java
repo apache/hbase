@@ -11,17 +11,18 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -47,7 +48,9 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
+import org.hamcrest.CustomTypeSafeMatcher;
+import org.hamcrest.Matcher;
+import org.hamcrest.core.AllOf;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -55,7 +58,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestMetaTableMetrics {
@@ -73,18 +75,19 @@ public class TestMetaTableMetrics {
       ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final String value = "foo";
-  private static Configuration conf = null;
+  private static final String METRICS_ATTRIBUTE_NAME_PREFIX = "MetaTable_";
+  private static final List<String> METRICS_ATTRIBUTE_NAME_POSTFIXES =
+      Arrays.asList("_count", "_mean_rate", "_1min_rate", "_5min_rate", "_15min_rate");
   private static int connectorPort = 61120;
 
-  final byte[] cf = Bytes.toBytes("info");
-  final byte[] col = Bytes.toBytes("any");
-  byte[] tablename;
-  final int nthreads = 20;
+  private final byte[] cf = Bytes.toBytes("info");
+  private final byte[] col = Bytes.toBytes("any");
+  private byte[] tablename;
+  private final int nthreads = 20;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-
-    conf = UTIL.getConfiguration();
+    Configuration conf = UTIL.getConfiguration();
     // Set system coprocessor so it can be applied to meta regions
     UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
       MetaTableMetrics.class.getName());
@@ -109,10 +112,6 @@ public class TestMetaTableMetrics {
         }
       }
     }
-    UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME1)
-            .setColumnFamily(CFD)
-            .build());
   }
 
   @AfterClass
@@ -120,116 +119,45 @@ public class TestMetaTableMetrics {
     UTIL.shutdownMiniCluster();
   }
 
-  private void writeData(Table t) throws IOException {
-    List<Put> puts = new ArrayList<>(NUM_ROWS);
-    for (int i = 0; i < NUM_ROWS; i++) {
-      Put p = new Put(Bytes.toBytes(i + 1));
-      p.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(value));
-      puts.add(p);
-    }
-    t.put(puts);
-  }
-
-  private Set<String> readJmxMetricsWithRetry() throws IOException {
-    final int count = 0;
-    for (int i = 0; i < 10; i++) {
-      Set<String> metrics = readJmxMetrics();
-      if (metrics != null) {
-        return metrics;
-      }
-      LOG.warn("Failed to get jmxmetrics... sleeping, retrying; " + i + " of " + count + " times");
-      Threads.sleep(1000);
-    }
-    return null;
-  }
-
-  /**
-   * Read the attributes from Hadoop->HBase->RegionServer->MetaTableMetrics in JMX
-   * @throws IOException when fails to retrieve jmx metrics.
-   */
-  // this method comes from this class: TestStochasticBalancerJmxMetrics with minor modifications.
-  private Set<String> readJmxMetrics() throws IOException {
-    JMXConnector connector = null;
-    ObjectName target = null;
-    MBeanServerConnection mb = null;
-    try {
-      connector =
-          JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
-      mb = connector.getMBeanServerConnection();
-
-      @SuppressWarnings("JdkObsolete")
-      Hashtable<String, String> pairs = new Hashtable<>();
-      pairs.put("service", "HBase");
-      pairs.put("name", "RegionServer");
-      pairs.put("sub",
-        "Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor"
-            + ".MetaTableMetrics");
-      target = new ObjectName("Hadoop", pairs);
-      MBeanInfo beanInfo = mb.getMBeanInfo(target);
-
-      Set<String> existingAttrs = new HashSet<>();
-      for (MBeanAttributeInfo attrInfo : beanInfo.getAttributes()) {
-        existingAttrs.add(attrInfo.getName());
-      }
-      return existingAttrs;
-    } catch (Exception e) {
-      LOG.warn("Failed to get bean." + target, e);
-      if (mb != null) {
-        Set<ObjectInstance> instances = mb.queryMBeans(null, null);
-        Iterator<ObjectInstance> iterator = instances.iterator();
-        LOG.warn("MBean Found:");
-        while (iterator.hasNext()) {
-          ObjectInstance instance = iterator.next();
-          LOG.warn("Class Name: " + instance.getClassName());
-          LOG.warn("Object Name: " + instance.getObjectName());
-        }
-      }
-    } finally {
-      if (connector != null) {
-        try {
-          connector.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-    }
-    return null;
-  }
-
-  // verifies meta table metrics exist from jmx
-  // for one table, there should be 5 MetaTable_table_<TableName> metrics.
-  // such as:
-  // [Time-limited test] example.TestMetaTableMetrics(204): ==
-  //    MetaTable_table_TestExampleMetaTableMetricsOne_request_count
-  // [Time-limited test] example.TestMetaTableMetrics(204): ==
-  //    MetaTable_table_TestExampleMetaTableMetricsOne_request_mean_rate
-  // [Time-limited test] example.TestMetaTableMetrics(204): ==
-  //    MetaTable_table_TestExampleMetaTableMetricsOne_request_1min_rate
-  // [Time-limited test] example.TestMetaTableMetrics(204): ==
-  //    MetaTable_table_TestExampleMetaTableMetricsOne_request_5min_rate
-  // [Time-limited test] example.TestMetaTableMetrics(204): ==
-  // MetaTable_table_TestExampleMetaTableMetricsOne_request_15min_rate
+  // Verifies that meta table metrics exist in jmx. In case of one table (one region) with a single
+  // client: 9 metrics
+  // are generated and for each metrics, there should be 5 JMX attributes produced. e.g. for one
+  // table, there should
+  // be 5 MetaTable_table_<TableName>_request attributes, such as:
+  // - MetaTable_table_TestExampleMetaTableMetricsOne_request_count
+  // - MetaTable_table_TestExampleMetaTableMetricsOne_request_mean_rate
+  // - MetaTable_table_TestExampleMetaTableMetricsOne_request_1min_rate
+  // - MetaTable_table_TestExampleMetaTableMetricsOne_request_5min_rate
+  // - MetaTable_table_TestExampleMetaTableMetricsOne_request_15min_rate
   @Test
-  public void test() throws IOException, InterruptedException {
-    try (Table t = UTIL.getConnection().getTable(NAME1)) {
-      writeData(t);
-      // Flush the data
-      UTIL.flush(NAME1);
-      // Issue a compaction
-      UTIL.compact(NAME1, true);
-      Thread.sleep(2000);
-    }
-    Set<String> jmxMetrics = readJmxMetricsWithRetry();
-    assertNotNull(jmxMetrics);
-    long name1TableMetricsCount =
-        jmxMetrics.stream().filter(metric -> metric.contains("MetaTable_table_" + NAME1)).count();
-    assertEquals(5L, name1TableMetricsCount);
+  public void testMetaTableMetricsInJmx() throws Exception {
+    UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(NAME1).setColumnFamily(CFD).build());
+    writeData(NAME1);
+    UTIL.deleteTable(NAME1);
 
-    String putWithClientMetricNameRegex = "MetaTable_client_.+_put_request.*";
-    long putWithClientMetricsCount =
-            jmxMetrics.stream().filter(metric -> metric.matches(putWithClientMetricNameRegex))
-                    .count();
-    assertEquals(5L, putWithClientMetricsCount);
+    UTIL.waitFor(30000, 2000, true, () -> {
+      Map<String, Double> jmxMetrics = readMetaTableJmxMetrics();
+      boolean allMetricsFound = AllOf.allOf(
+        containsPositiveJmxAttributesFor("MetaTable_get_request"),
+        containsPositiveJmxAttributesFor("MetaTable_put_request"),
+        containsPositiveJmxAttributesFor("MetaTable_delete_request"),
+        containsPositiveJmxAttributesFor("MetaTable_region_.+_lossy_request"),
+        containsPositiveJmxAttributesFor("MetaTable_table_" + NAME1 + "_request"),
+        containsPositiveJmxAttributesFor("MetaTable_client_.+_put_request"),
+        containsPositiveJmxAttributesFor("MetaTable_client_.+_get_request"),
+        containsPositiveJmxAttributesFor("MetaTable_client_.+_delete_request"),
+        containsPositiveJmxAttributesFor("MetaTable_client_.+_lossy_request")
+      ).matches(jmxMetrics);
+
+      if (allMetricsFound) {
+        LOG.info("all the meta table metrics found with positive values: " + jmxMetrics.toString());
+      } else {
+        LOG.warn("couldn't find all the meta table metrics with positive values: "
+            + jmxMetrics.toString());
+      }
+      return allMetricsFound;
+    });
   }
 
   @Test
@@ -252,7 +180,93 @@ public class TestMetaTableMetrics {
     }
   }
 
-  public void putData(int nrows) throws InterruptedException {
+  private void writeData(TableName tableName) throws IOException {
+    try (Table t = UTIL.getConnection().getTable(tableName)) {
+      List<Put> puts = new ArrayList<>(NUM_ROWS);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        Put p = new Put(Bytes.toBytes(i + 1));
+        p.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(value));
+        puts.add(p);
+      }
+      t.put(puts);
+    }
+  }
+
+  private Matcher<Map<String, Double>> containsPositiveJmxAttributesFor(final String regexp) {
+    return new CustomTypeSafeMatcher<Map<String, Double>>(
+        "failed to find all the 5 positive JMX attributes for: " + regexp) {
+
+      @Override
+      protected boolean matchesSafely(final Map<String, Double> values) {
+        for (String key : values.keySet()) {
+          for (String metricsNamePostfix : METRICS_ATTRIBUTE_NAME_POSTFIXES) {
+            if (key.matches(regexp + metricsNamePostfix) && values.get(key) > 0) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+    };
+  }
+
+  /**
+   * Read the attributes from Hadoop->HBase->RegionServer->MetaTableMetrics in JMX
+   * @throws IOException when fails to retrieve jmx metrics.
+   */
+  private Map<String, Double> readMetaTableJmxMetrics() throws IOException {
+    JMXConnector connector = null;
+    ObjectName target = null;
+    MBeanServerConnection mb = null;
+    try {
+      connector =
+          JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
+      mb = connector.getMBeanServerConnection();
+
+      @SuppressWarnings("JdkObsolete")
+      Hashtable<String, String> pairs = new Hashtable<>();
+      pairs.put("service", "HBase");
+      pairs.put("name", "RegionServer");
+      pairs.put("sub",
+        "Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics");
+      target = new ObjectName("Hadoop", pairs);
+      MBeanInfo beanInfo = mb.getMBeanInfo(target);
+
+      Map<String, Double> existingAttrs = new HashMap<>();
+      for (MBeanAttributeInfo attrInfo : beanInfo.getAttributes()) {
+        Object value = mb.getAttribute(target, attrInfo.getName());
+        if (attrInfo.getName().startsWith(METRICS_ATTRIBUTE_NAME_PREFIX)
+            && value instanceof Number) {
+          existingAttrs.put(attrInfo.getName(), Double.parseDouble(value.toString()));
+        }
+      }
+      LOG.warn("MBean Found: " + target);
+      return existingAttrs;
+    } catch (Exception e) {
+      LOG.warn("Failed to get Meta Table Metrics bean (will retry later): " + target, e);
+      if (mb != null) {
+        Set<ObjectInstance> instances = mb.queryMBeans(null, null);
+        Iterator<ObjectInstance> iterator = instances.iterator();
+        LOG.warn("MBean Found:");
+        while (iterator.hasNext()) {
+          ObjectInstance instance = iterator.next();
+          LOG.warn("Class Name: " + instance.getClassName());
+          LOG.warn("Object Name: " + instance.getObjectName());
+        }
+      }
+    } finally {
+      if (connector != null) {
+        try {
+          connector.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    return Collections.emptyMap();
+  }
+
+  private void putData(int nrows) throws InterruptedException {
     LOG.info(String.format("Putting %d rows in hbase:meta", nrows));
     Thread[] threads = new Thread[nthreads];
     for (int i = 1; i <= nthreads; i++) {
@@ -261,7 +275,7 @@ public class TestMetaTableMetrics {
     startThreadsAndWaitToJoin(threads);
   }
 
-  public void getData(int nrows) throws InterruptedException {
+  private void getData(int nrows) throws InterruptedException {
     LOG.info(String.format("Getting %d rows from hbase:meta", nrows));
     Thread[] threads = new Thread[nthreads];
     for (int i = 1; i <= nthreads; i++) {
@@ -279,11 +293,11 @@ public class TestMetaTableMetrics {
     }
   }
 
-  class PutThread extends Thread {
+  private class PutThread extends Thread {
     int start;
     int end;
 
-    public PutThread(int start, int end) {
+    PutThread(int start, int end) {
       this.start = start;
       this.end = end;
     }
@@ -302,11 +316,11 @@ public class TestMetaTableMetrics {
     }
   }
 
-  class GetThread extends Thread {
+  private class GetThread extends Thread {
     int start;
     int end;
 
-    public GetThread(int start, int end) {
+    GetThread(int start, int end) {
       this.start = start;
       this.end = end;
     }
