@@ -165,9 +165,10 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
           "Invalid encoded region name: " + encodedRegionName + ", length should be 32.");
     }
     return new StringBuilder(regionsZNode).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-        .append(encodedRegionName.substring(0, 2)).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-        .append(encodedRegionName.substring(2, 4)).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-        .append(encodedRegionName.substring(4)).append("-").append(peerId).toString();
+            .append(encodedRegionName, 0, 2).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+            .append(encodedRegionName, 2, 4).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+            .append(encodedRegionName, 4, encodedRegionName.length()).append("-").append(peerId)
+            .toString();
   }
 
   @Override
