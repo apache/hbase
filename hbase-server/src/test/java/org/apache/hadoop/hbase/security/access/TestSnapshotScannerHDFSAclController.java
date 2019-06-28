@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
 import static org.apache.hadoop.hbase.security.access.Permission.Action.WRITE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -46,10 +48,12 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableSnapshotScanner;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -94,6 +98,9 @@ public class TestSnapshotScannerHDFSAclController {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
           + SnapshotScannerHDFSAclController.class.getName());
+    // set hfile cleaner plugin
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+      SnapshotScannerHDFSAclCleaner.class.getName());
 
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
@@ -544,6 +551,39 @@ public class TestSnapshotScannerHDFSAclController {
       admin.deleteNamespace(namespace);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
     }
+  }
+
+  @Test
+  public void testCleanArchiveTableDir() throws Exception {
+    final String grantUserName = name.getMethodName();
+    User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
+    String namespace = name.getMethodName();
+    TableName table = TableName.valueOf(namespace, "t1");
+    String snapshot = namespace + "t1";
+
+    TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
+    admin.snapshot(snapshot, table);
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, grantUserName, table, READ);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
+
+    // HFileCleaner will not delete archive table directory even if it's a empty directory
+    HFileCleaner cleaner = TEST_UTIL.getHBaseCluster().getMaster().getHFileCleaner();
+    cleaner.choreForTesting();
+    Path archiveTableDir = HFileArchiveUtil.getTableArchivePath(rootDir, table);
+    assertTrue(fs.exists(archiveTableDir));
+
+    // delete table and grant user can scan snapshot
+    admin.disableTable(table);
+    admin.deleteTable(table);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
+
+    // Check SnapshotScannerHDFSAclCleaner method
+    assertTrue(SnapshotScannerHDFSAclCleaner.isArchiveTableDir(archiveTableDir));
+    assertTrue(SnapshotScannerHDFSAclCleaner.isArchiveNamespaceDir(archiveTableDir.getParent()));
+    assertTrue(
+      SnapshotScannerHDFSAclCleaner.isArchiveDataDir(archiveTableDir.getParent().getParent()));
+    assertFalse(SnapshotScannerHDFSAclCleaner
+        .isArchiveDataDir(archiveTableDir.getParent().getParent().getParent()));
   }
 
   @Test
