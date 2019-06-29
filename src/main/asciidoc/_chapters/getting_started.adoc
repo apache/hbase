@@ -19,6 +19,7 @@
  */
 ////
 
+[[getting_started]]
 = Getting Started
 :doctype: book
 :numbered:
@@ -37,35 +38,6 @@ This guide describes the setup of a standalone HBase instance running against th
 This is not an appropriate configuration for a production instance of HBase, but will allow you to experiment with HBase.
 This section shows you how to create a table in HBase using the `hbase shell` CLI, insert rows into the table, perform put and scan operations against the table, enable or disable the table, and start and stop HBase.
 Apart from downloading HBase, this procedure should take less than 10 minutes.
-
-.Local Filesystem and Durability
-WARNING: _The following is fixed in HBase 0.98.3 and beyond. See link:https://issues.apache.org/jira/browse/HBASE-11272[HBASE-11272] and link:https://issues.apache.org/jira/browse/HBASE-11218[HBASE-11218]._
-
-Using HBase with a local filesystem does not guarantee durability.
-The HDFS local filesystem implementation will lose edits if files are not properly closed.
-This is very likely to happen when you are experimenting with new software, starting and stopping the daemons often and not always cleanly.
-You need to run HBase on HDFS to ensure all writes are preserved.
-Running against the local filesystem is intended as a shortcut to get you familiar with how the general system works, as the very first phase of evaluation.
-See link:https://issues.apache.org/jira/browse/HBASE-3696[HBASE-3696] and its associated issues for more details about the issues of running on the local filesystem.
-
-[[loopback.ip]]
-.Loopback IP - HBase 0.94.x and earlier
-NOTE: _The below advice is for hbase-0.94.x and older versions only. This is fixed in hbase-0.96.0 and beyond._
-
-Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. Ubuntu and some other distributions default to 127.0.1.1 and this will cause problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
-
-
-.Example /etc/hosts File for Ubuntu
-====
-The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble. 
-[listing]
-----
-127.0.0.1 localhost
-127.0.0.1 ubuntu.ubuntu-domain ubuntu
-----
-
-====
-
 
 === JDK Version Requirements
 
