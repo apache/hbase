@@ -1400,15 +1400,15 @@ public final class ZKUtil {
    * Take caution that this can ONLY be used for operations where atomicity is not important,
    * e.g. deletions. It must not be used when atomicity of the operations is critical.
    *
-   * @param zkw                         ZKWatcher
+   * @param zkw reference to the {@link ZKWatcher} which contains configuration and constants
    * @param runSequentialOnMultiFailure if true when we get a ZooKeeper exception that could
-   *                                    retry the operations one-by-one (sequentially)
-   * @param ops                         ZKUtilOp list
-   * @throws KeeperException unexpected ZooKeeper Exception
+   *        retry the operations one-by-one (sequentially)
+   * @param ops list of ZKUtilOp {@link ZKUtilOp} to partition while submitting batched multi
+   *        or sequential
+   * @throws KeeperException unexpected ZooKeeper Exception / Zookeeper unreachable
    */
   private static void submitBatchedMultiOrSequential(ZKWatcher zkw,
-                                                     boolean runSequentialOnMultiFailure,
-                                                     List<ZKUtilOp> ops) throws KeeperException {
+      boolean runSequentialOnMultiFailure, List<ZKUtilOp> ops) throws KeeperException {
     // at least one element should exist
     if (ops.isEmpty()) {
       return;
