@@ -121,7 +121,9 @@ public class HFileArchiver {
     if (tableDir == null || regionDir == null) {
       LOG.error("No archive directory could be found because tabledir (" + tableDir
           + ") or regiondir (" + regionDir + "was null. Deleting files instead.");
-      deleteRegionWithoutArchiving(fs, regionDir);
+      if (regionDir != null) {
+        deleteRegionWithoutArchiving(fs, regionDir);
+      }
       // we should have archived, but failed to. Doesn't matter if we deleted
       // the archived files correctly or not.
       return false;
