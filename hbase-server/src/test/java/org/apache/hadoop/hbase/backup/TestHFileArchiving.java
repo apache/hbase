@@ -526,6 +526,50 @@ public class TestHFileArchiving {
     }
   }
 
+  @Test
+  public void testArchiveRegionTableAndRegionDirsNull() throws IOException {
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
+  }
+
+  @Test
+  public void testArchiveRegionWithTableDirNull() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "xyzabc");
+    Path familyDir = new Path(regionDir, "rd");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "1");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    // Try to archive the file
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
+    assertFalse(fileSystem.exists(sourceRegionDir));
+  }
+
+  @Test
+  public void testArchiveRegionWithRegionDirNull() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "elgn4nf");
+    Path familyDir = new Path(regionDir, "rdar");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "2");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(),
+            null));
+    assertTrue(fileSystem.exists(sourceRegionDir));
+    fileSystem.delete(sourceRegionDir, true);
+  }
+
   // Avoid passing a null master to CleanerChore, see HBASE-21175
   private HFileCleaner getHFileCleaner(Stoppable stoppable, Configuration conf,
         FileSystem fs, Path archiveDir) throws IOException {
