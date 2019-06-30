@@ -526,6 +526,51 @@ public class TestHFileArchiving {
     }
   }
 
+  @Test
+  public void testUnDeletedRegionWithoutArchive() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "abcdef");
+    Path familyDir = new Path(regionDir, "cf");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "0");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    try {
+      // Try to archive the file but with null regionDir, can't delete sourceFile
+      HFileArchiver.archiveRegion(fileSystem, null, null, null);
+    } catch (IOException e) {
+      assertTrue(fileSystem.exists(sourceFile));
+    } finally {
+      fileSystem.delete(sourceFile, false);
+      fileSystem.delete(rootDir, true);
+    }
+    assertFalse(fileSystem.exists(sourceFile));
+  }
+
+  @Test
+  public void testDeleteRegionWithoutArchive() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "xyzabc");
+    Path familyDir = new Path(regionDir, "rd");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "1");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    try {
+      // Try to archive the file
+      HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir);
+    } catch (IOException e) {
+      fileSystem.delete(sourceFile, false);
+    } finally {
+      fileSystem.delete(rootDir, true);
+    }
+    assertFalse(fileSystem.exists(sourceFile));
+  }
+
   // Avoid passing a null master to CleanerChore, see HBASE-21175
   private HFileCleaner getHFileCleaner(Stoppable stoppable, Configuration conf,
         FileSystem fs, Path archiveDir) throws IOException {
