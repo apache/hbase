@@ -319,10 +319,11 @@ public class TestFromClientSide3 {
           HTableDescriptor htd = new HTableDescriptor(table.getTableDescriptor());
           htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
           admin.modifyTable(tableName, htd);
-          Pair<Integer, Integer> st;
-          while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
+          Pair<Integer, Integer> st = admin.getAlterStatus(tableName);
+          while (null != st && st.getFirst() > 0) {
             LOG.debug(st.getFirst() + " regions left to update");
             Thread.sleep(40);
+            st = admin.getAlterStatus(tableName);
           }
           LOG.info("alter status finished");
 
@@ -346,9 +347,11 @@ public class TestFromClientSide3 {
           hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
           htd.modifyFamily(hcd);
           admin.modifyTable(tableName, htd);
-          while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
+          st = admin.getAlterStatus(tableName);
+          while (null != st && st.getFirst() > 0) {
             LOG.debug(st.getFirst() + " regions left to update");
             Thread.sleep(40);
+            st = admin.getAlterStatus(tableName);
           }
           LOG.info("alter status finished");
 
@@ -381,9 +384,11 @@ public class TestFromClientSide3 {
           hcd.setValue("hbase.hstore.compaction.min", null);
           htd.modifyFamily(hcd);
           admin.modifyTable(tableName, htd);
-          while (null != (st = admin.getAlterStatus(tableName)) && st.getFirst() > 0) {
+          st = admin.getAlterStatus(tableName);
+          while (null != st && st.getFirst() > 0) {
             LOG.debug(st.getFirst() + " regions left to update");
             Thread.sleep(40);
+            st = admin.getAlterStatus(tableName);
           }
           LOG.info("alter status finished");
           assertNull(table.getTableDescriptor().getFamily(FAMILY).getValue(
@@ -394,7 +399,7 @@ public class TestFromClientSide3 {
   }
 
   @Test
-  public void testHTableBatchWithEmptyPut () throws IOException, InterruptedException {
+  public void testHTableBatchWithEmptyPut() throws IOException, InterruptedException {
     try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
       List actions = (List) new ArrayList();
@@ -1059,10 +1064,11 @@ public class TestFromClientSide3 {
   }
 
   @Test
-  public void testScanWithBatchSizeReturnIncompleteCells() throws IOException, InterruptedException {
+  public void testScanWithBatchSizeReturnIncompleteCells()
+          throws IOException, InterruptedException {
     TableDescriptor hd = TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
-            .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(3).build())
+      .build();
     try (Table table = TEST_UTIL.createTable(hd, null)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
@@ -1089,9 +1095,10 @@ public class TestFromClientSide3 {
       try (ResultScanner scanner = table.getScanner(scan)) {
         List<Result> list = new ArrayList<>();
         /*
-         * The first scan rpc should return a result with 2 cells, because 3MB + 4MB > 4MB; The second
-         * scan rpc should return a result with 3 cells, because reach the batch limit = 3; The
-         * mayHaveMoreCellsInRow in last result should be false in the scan rpc. BTW, the
+         * The first scan rpc should return a result with 2 cells, because 3MB + 4MB > 4MB;
+         * The second scan rpc should return a result with 3 cells, because reach the batch limit
+         * = 3;
+         * The mayHaveMoreCellsInRow in last result should be false in the scan rpc. BTW, the
          * moreResultsInRegion also would be false. Finally, the client should collect all the cells
          * into two result: 2+3 -> 3+2;
          */
