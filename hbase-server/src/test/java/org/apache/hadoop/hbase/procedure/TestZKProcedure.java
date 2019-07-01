@@ -334,7 +334,7 @@ public class TestZKProcedure {
 
   /**
    * Wait for the coordinator task to complete, and verify all the mocks
-   * @param proc the Procedure to execute
+   * @param proc the {@link Procedure} to execute
    * @param prepare the mock prepare
    * @param commit the mock commit
    * @param cleanup the mock cleanup
@@ -363,7 +363,7 @@ public class TestZKProcedure {
 
   /**
    * Wait for the coordinator task to complete, and verify all the mocks
-   * @param op the Subprocedure to use
+   * @param op the {@link Subprocedure} to use
    * @param prepare the mock prepare
    * @param commit the mock commit
    * @param cleanup the mock cleanup

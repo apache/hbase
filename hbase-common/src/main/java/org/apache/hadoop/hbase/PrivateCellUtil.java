@@ -2605,7 +2605,7 @@ public final class PrivateCellUtil {
    * method is used both in the normal comparator and the "same-prefix" comparator. Note that we are
    * assuming that row portions of both KVs have already been parsed and found identical, and we
    * don't validate that assumption here.
-   * @param comparator the cell comparator
+   * @param comparator the {@link CellComparator}} to use for comparison
    * @param left the cell to be compared
    * @param right the serialized key part of a key-value
    * @param roffset the offset in the key byte[]

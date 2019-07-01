@@ -197,9 +197,9 @@ public class TestActiveMasterManager {
   /**
    * Assert there is an active master and that it has the specified address.
    * @param zk single zookeeper watcher
-   * @param expectedAddress expected master address
-   * @throws KeeperException
-   * @throws IOException
+   * @param expectedAddress the expected address of the master
+   * @throws KeeperException unexpected zookeeper exception
+   * @throws IOException if an IO problem is encountered
    */
   private void assertMaster(ZKWatcher zk,
       ServerName expectedAddress)
