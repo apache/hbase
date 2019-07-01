@@ -139,7 +139,7 @@ public class TestServerSideScanMetricsFromClientSide {
    * @return The approximate heap size of a cell in the test table. All cells should have
    *         approximately the same heap size, so the value is cached to avoid repeating the
    *         calculation
-   * @throws Exception
+   * @throws Exception on unexpected failure
    */
   private long getCellHeapSize() throws Exception {
     if (CELL_HEAP_SIZE == -1) {
@@ -317,10 +317,10 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Run the scan to completetion and check the metric against the specified value
-   * @param scan
-   * @param metricKey
-   * @param expectedValue
-   * @throws Exception
+   * @param scan The scan instance to use to record metrics
+   * @param metricKey The metric key name
+   * @param expectedValue The expected value of metric
+   * @throws Exception on unexpected failure
    */
   private void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
