@@ -41,6 +41,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
@@ -52,11 +53,14 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -162,6 +166,8 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -6276,6 +6282,45 @@ public class TestHRegion {
     assertTrue(plugins.contains(replicationCoprocessorClass));
     assertTrue(region.getCoprocessorHost().
         getCoprocessors().contains(ReplicationObserver.class.getSimpleName()));
+  }
+
+  // make sure region is success close when coprocessor wrong region open failed
+  @Test
+  public void testOpenRegionFailedMemoryLeak() throws Exception {
+    final ServerName serverName = ServerName.valueOf("testOpenRegionFailed", 100, 42);
+    final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
+
+    HTableDescriptor htd
+      = new HTableDescriptor(TableName.valueOf("testOpenRegionFailed"));
+    htd.addFamily(new HColumnDescriptor(fam1));
+    htd.setValue("COPROCESSOR$1", "hdfs://test/test.jar|test||");
+
+    HRegionInfo hri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+    ScheduledExecutorService executor = CompatibilitySingletonFactory.
+      getInstance(MetricsExecutor.class).getExecutor();
+    for (int i = 0; i < 20 ; i++) {
+      try {
+        HRegion.openHRegion(hri, htd, rss.getWAL(hri),
+          TEST_UTIL.getConfiguration(), rss, null);
+      }catch(Throwable t){
+        LOG.info("Expected exception, continue");
+      }
+    }
+    TimeUnit.SECONDS.sleep(MetricsRegionWrapperImpl.PERIOD);
+    Field[] fields = ThreadPoolExecutor.class.getDeclaredFields();
+    boolean found = false;
+    for(Field field : fields){
+      if(field.getName().equals("workQueue")){
+        field.setAccessible(true);
+        BlockingQueue<Runnable> workQueue = (BlockingQueue<Runnable>)field.get(executor);
+        //there are still two task not cancel, can not cause to memory lack
+        Assert.assertTrue("ScheduledExecutor#workQueue should equals 2, now is " +
+          workQueue.size() + ", please check region is close", 2 == workQueue.size());
+        found = true;
+      }
+    }
+    Assert.assertTrue("can not find workQueue, test failed", found);
   }
 
   /**
