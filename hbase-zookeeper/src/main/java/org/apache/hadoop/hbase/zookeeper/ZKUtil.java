@@ -1893,14 +1893,15 @@ public final class ZKUtil {
     sb.append("\n").append(hfileRefsZnode).append(": ");
     final List<String> hFileRefChildrenNoWatchList =
             ZKUtil.listChildrenNoWatch(zkw, hfileRefsZnode);
-    if (hFileRefChildrenNoWatchList != null) {
-      for (String peerIdZNode : hFileRefChildrenNoWatchList) {
-        String zNodeToProcess = ZNodePaths.joinZNode(hfileRefsZnode, peerIdZNode);
-        sb.append("\n").append(zNodeToProcess).append(": ");
-        List<String> peerHFileRefsZNodes = ZKUtil.listChildrenNoWatch(zkw, zNodeToProcess);
-        if (peerHFileRefsZNodes != null) {
-          sb.append(String.join(", ", peerHFileRefsZNodes));
-        }
+    if (hFileRefChildrenNoWatchList == null) {
+      return;
+    }
+    for (String peerIdZNode : hFileRefChildrenNoWatchList) {
+      String zNodeToProcess = ZNodePaths.joinZNode(hfileRefsZnode, peerIdZNode);
+      sb.append("\n").append(zNodeToProcess).append(": ");
+      List<String> peerHFileRefsZNodes = ZKUtil.listChildrenNoWatch(zkw, zNodeToProcess);
+      if (peerHFileRefsZNodes != null) {
+        sb.append(String.join(", ", peerHFileRefsZNodes));
       }
     }
   }
