@@ -103,7 +103,7 @@ public class TestMetaTableMetrics {
         UTIL.startMiniCluster(1);
         break;
       } catch (Exception e) {
-        LOG.debug("Encountered exception when starting cluster. Trying port " + connectorPort, e);
+        LOG.debug("Encountered exception when starting cluster. Trying port {}", connectorPort, e);
         try {
           // this is to avoid "IllegalStateException: A mini-cluster is already running"
           UTIL.shutdownMiniCluster();
@@ -151,10 +151,9 @@ public class TestMetaTableMetrics {
       ).matches(jmxMetrics);
 
       if (allMetricsFound) {
-        LOG.info("all the meta table metrics found with positive values: " + jmxMetrics.toString());
+        LOG.info("all the meta table metrics found with positive values: {}", jmxMetrics);
       } else {
-        LOG.warn("couldn't find all the meta table metrics with positive values: "
-            + jmxMetrics.toString());
+        LOG.warn("couldn't find all the meta table metrics with positive values: {}", jmxMetrics);
       }
       return allMetricsFound;
     });
@@ -172,10 +171,10 @@ public class TestMetaTableMetrics {
       assertTrue(numRowsInTableAfter >= numRowsInTableBefore + numRows);
       getData(numRows);
     } catch (InterruptedException e) {
-      LOG.info("Caught InterruptedException while testConcurrentAccess: " + e.getMessage());
+      LOG.info("Caught InterruptedException while testConcurrentAccess: {}", e.getMessage());
       fail();
     } catch (IOException e) {
-      LOG.info("Caught IOException while testConcurrentAccess: " + e.getMessage());
+      LOG.info("Caught IOException while testConcurrentAccess: {}", e.getMessage());
       fail();
     }
   }
@@ -240,18 +239,18 @@ public class TestMetaTableMetrics {
           existingAttrs.put(attrInfo.getName(), Double.parseDouble(value.toString()));
         }
       }
-      LOG.warn("MBean Found: " + target);
+      LOG.info("MBean Found: {}", target);
       return existingAttrs;
     } catch (Exception e) {
-      LOG.warn("Failed to get Meta Table Metrics bean (will retry later): " + target, e);
+      LOG.warn("Failed to get Meta Table Metrics bean (will retry later): {}", target, e);
       if (mb != null) {
         Set<ObjectInstance> instances = mb.queryMBeans(null, null);
         Iterator<ObjectInstance> iterator = instances.iterator();
-        LOG.warn("MBean Found:");
+        LOG.debug("All the MBeans we found:");
         while (iterator.hasNext()) {
           ObjectInstance instance = iterator.next();
-          LOG.warn("Class Name: " + instance.getClassName());
-          LOG.warn("Object Name: " + instance.getObjectName());
+          LOG.debug("Class and object name: {} [{}]", instance.getClassName(),
+                    instance.getObjectName());
         }
       }
     } finally {
@@ -267,7 +266,7 @@ public class TestMetaTableMetrics {
   }
 
   private void putData(int nrows) throws InterruptedException {
-    LOG.info(String.format("Putting %d rows in hbase:meta", nrows));
+    LOG.info("Putting {} rows in hbase:meta", nrows);
     Thread[] threads = new Thread[nthreads];
     for (int i = 1; i <= nthreads; i++) {
       threads[i - 1] = new PutThread(1, nrows);
@@ -276,7 +275,7 @@ public class TestMetaTableMetrics {
   }
 
   private void getData(int nrows) throws InterruptedException {
-    LOG.info(String.format("Getting %d rows from hbase:meta", nrows));
+    LOG.info("Getting {} rows from hbase:meta", nrows);
     Thread[] threads = new Thread[nthreads];
     for (int i = 1; i <= nthreads; i++) {
       threads[i - 1] = new GetThread(1, nrows);
@@ -311,7 +310,7 @@ public class TestMetaTableMetrics {
           table.put(p);
         }
       } catch (IOException e) {
-        LOG.info("Caught IOException while PutThread operation: " + e.getMessage());
+        LOG.warn("Caught IOException while PutThread operation", e);
       }
     }
   }
@@ -333,7 +332,7 @@ public class TestMetaTableMetrics {
           table.get(get);
         }
       } catch (IOException e) {
-        LOG.info("Caught IOException while GetThread operation: " + e.getMessage());
+        LOG.warn("Caught IOException while GetThread operation", e);
       }
     }
   }
