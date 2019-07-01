@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,6 +75,11 @@ public class TestOpenSeqNumUnexpectedIncrease {
         rsServices.abort("for testing", new Exception("Inject error for testing"));
         throw new IOException("Inject error for testing");
       }
+    }
+
+    public Map<byte[], List<HStoreFile>> close() throws IOException {
+      //skip close
+      return null;
     }
   }
 
