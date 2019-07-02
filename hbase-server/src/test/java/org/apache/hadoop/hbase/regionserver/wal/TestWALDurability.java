@@ -104,6 +104,7 @@ public class TestWALDurability {
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = new Path(dir + getName());
     CustomFSLog customFSLog = new CustomFSLog(fs, rootDir, getName(), conf);
+    customFSLog.init();
     HRegion region = initHRegion(tableName, null, null, customFSLog);
     byte[] bytes = Bytes.toBytes(getName());
     Put put = new Put(bytes);
@@ -118,6 +119,7 @@ public class TestWALDurability {
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "true");
     fs = FileSystem.get(conf);
     customFSLog = new CustomFSLog(fs, rootDir, getName(), conf);
+    customFSLog.init();
     region = initHRegion(tableName, null, null, customFSLog);
 
     customFSLog.resetSyncFlag();
