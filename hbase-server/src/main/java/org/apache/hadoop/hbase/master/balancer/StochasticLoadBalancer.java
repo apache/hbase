@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -1028,8 +1029,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     abstract double cost();
 
+    @SuppressWarnings("checkstyle:linelength")
     /**
-     * Function to compute a scaled cost using {@link org.apache.commons.math3.stat.descriptive.DescriptiveStatistics}.
+     * Function to compute a scaled cost using
+     * {@link org.apache.commons.math3.stat.descriptive.DescriptiveStatistics#DescriptiveStatistics()}.
      * It assumes that this is a zero sum set of costs.  It assumes that the worst case
      * possible is all of the elements in one region server and the rest having 0.
      *
