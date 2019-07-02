@@ -98,6 +98,7 @@ public class MiniZooKeeperCluster {
 
   /**
    * Get the list of client ports.
+   *
    * @return clientPortList the client port list
    */
   @VisibleForTesting
@@ -163,7 +164,7 @@ public class MiniZooKeeperCluster {
   }
 
   public int getBackupZooKeeperServerNum() {
-    return zooKeeperServers.size()-1;
+    return zooKeeperServers.size() - 1;
   }
 
   public int getZooKeeperServerNum() {
@@ -179,7 +180,7 @@ public class MiniZooKeeperCluster {
     System.setProperty("zookeeper.preAllocSize", "100");
     FileTxnLog.setPreallocSize(100 * 1024);
     // allow all 4 letter words
-    System.setProperty("zookeeper.4lw.commands.whitelist","*");
+    System.setProperty("zookeeper.4lw.commands.whitelist", "*");
   }
 
   public int startup(File baseDir) throws IOException, InterruptedException {
@@ -212,7 +213,7 @@ public class MiniZooKeeperCluster {
 
     // running all the ZK servers
     for (int i = 0; i < numZooKeeperServers; i++) {
-      File dir = new File(baseDir, "zookeeper_"+i).getAbsoluteFile();
+      File dir = new File(baseDir, "zookeeper_" + i).getAbsoluteFile();
       createDir(dir);
       int tickTimeToUse;
       if (this.tickTime > 0) {
@@ -268,8 +269,7 @@ public class MiniZooKeeperCluster {
       // We have selected a port as a client port.  Update clientPortList if necessary.
       if (clientPortList.size() <= i) { // it is not in the list, add the port
         clientPortList.add(currentClientPort);
-      }
-      else if (clientPortList.get(i) <= 0) { // the list has invalid port, update with valid port
+      } else if (clientPortList.get(i) <= 0) { // the list has invalid port, update with valid port
         clientPortList.remove(i);
         clientPortList.add(i, currentClientPort);
       }
