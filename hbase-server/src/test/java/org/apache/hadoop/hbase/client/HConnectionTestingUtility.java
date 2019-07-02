@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
- * {@link ClusterConnection} testing utility.
+ * {@link Connection} testing utility.
  */
 public class HConnectionTestingUtility {
   /*
@@ -48,11 +48,19 @@ public class HConnectionTestingUtility {
    * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
    */
   /**
+<<<<<<< HEAD
    * Get a Mocked {@link ClusterConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
    * &lt;code>conf&lt;/conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
+=======
+   * Get a Mocked {@link Connection} that goes with the passed <code>conf</code>
+   * configuration instance. Minimally the mock will return &lt;code>conf&lt;/conf> when
+   * {@link Connection#getConfiguration()} is invoked. Be sure to shutdown the
+   * connection when done by calling {@link Connection#close()} else it will stick around; this is
+   * probably not what you want.
+>>>>>>> fabf2b8282... HBASE-22572 Javadoc Warnings: @link reference not found (#306)
    * @param conf configuration
    * @return ClusterConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException

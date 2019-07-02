@@ -44,9 +44,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Shared implementation of mapreduce code over multiple table snapshots.
- * Utilized by both mapreduce ({@link org.apache.hadoop.hbase.mapreduce
- * .MultiTableSnapshotInputFormat} and mapred
- * ({@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
+ * Utilized by both mapreduce
+ * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormat} and mapred
+ * {@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
  */
 @InterfaceAudience.LimitedPrivate({ "HBase" })
 @InterfaceStability.Evolving
