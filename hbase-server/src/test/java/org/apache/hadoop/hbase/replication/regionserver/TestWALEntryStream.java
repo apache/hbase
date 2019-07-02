@@ -27,9 +27,13 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.OptionalLong;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
@@ -52,6 +56,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -64,6 +69,7 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -72,6 +78,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestWALEntryStream {
@@ -331,6 +339,33 @@ public class TestWALEntryStream {
         new WALEntryStream(walQueue, CONF, 0, log, null, new MetricsSource("1"))) {
       assertFalse(entryStream.hasNext());
     }
+  }
+
+  @Test
+  public void testWALKeySerialization() throws Exception {
+    Map<String, byte[]> attributes = new HashMap<String, byte[]>();
+    attributes.put("foo", Bytes.toBytes("foo-value"));
+    attributes.put("bar", Bytes.toBytes("bar-value"));
+    WALKeyImpl key = new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis(), new ArrayList<UUID>(), 0L, 0L,
+        mvcc, scopes, attributes);
+    Assert.assertEquals(attributes, key.getExtendedAttributes());
+
+    WALProtos.WALKey.Builder builder = key.getBuilder(WALCellCodec.getNoneCompressor());
+    WALProtos.WALKey serializedKey = builder.build();
+
+    WALKeyImpl deserializedKey = new WALKeyImpl();
+    deserializedKey.readFieldsFromPb(serializedKey, WALCellCodec.getNoneUncompressor());
+
+    //equals() only checks region name, sequence id and write time
+    Assert.assertEquals(key, deserializedKey);
+    //can't use Map.equals() because byte arrays use reference equality
+    Assert.assertEquals(key.getExtendedAttributes().keySet(),
+        deserializedKey.getExtendedAttributes().keySet());
+    for (Map.Entry<String, byte[]> entry : deserializedKey.getExtendedAttributes().entrySet()){
+      Assert.assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
+    }
+    Assert.assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
   }
 
   private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf) {
