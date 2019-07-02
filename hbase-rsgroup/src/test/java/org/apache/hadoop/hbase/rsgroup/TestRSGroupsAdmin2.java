@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.rsgroup.RSGroupAdminServer.DEFAULT_MAX_RET
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -30,6 +31,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -57,6 +59,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ LargeTests.class })
@@ -341,17 +344,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
 
-    // test fail server move
-    try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+    // test move when src = dst
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
         Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
-      fail("servers shouldn't have been successfully moved.");
-    } catch (IOException ex) {
-      String exp = "Target RSGroup " + RSGroupInfo.DEFAULT_GROUP + " is same as source " +
-        RSGroupInfo.DEFAULT_GROUP + " RSGroup.";
-      String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
-    }
 
     // verify default group info
     Assert.assertEquals(oldDefaultGroupServerSize,
@@ -590,39 +585,6 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
   }
 
-  @Test
-  public void testFailedMoveWhenMoveServer() throws Exception{
-    String groupName = getGroupName(name.getMethodName());
-    rsGroupAdmin.addRSGroup(groupName);
-    final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
-    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
-        10);
-    try{
-      rsGroupAdmin.moveServers(Sets.newHashSet(gotPair.getFirst().getAddress()),
-          newGroup.getName());
-      fail("should get IOException when retry exhausted but there still exists failed moved "
-          + "regions");
-    }catch (IOException e){
-      assertTrue(e.getMessage().contains(
-          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
-    }
-  }
-
-  @Test
-  public void testFailedMoveWhenMoveTable() throws Exception{
-    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
-    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
-        5);
-    try{
-      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-      fail("should get IOException when retry exhausted but there still exists failed moved "
-          + "regions");
-    }catch (IOException e){
-      assertTrue(e.getMessage().contains(
-          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
-    }
-  }
-
   private Pair<ServerName, RegionStateNode> createTableWithRegionSplitting(RSGroupInfo rsGroupInfo,
       int tableRegionCount) throws Exception{
     final byte[] familyNameBytes = Bytes.toBytes("f");
@@ -652,24 +614,152 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       RSGroupInfo newGroup) throws IOException{
     // get target server to move, which should has more than one regions
     // randomly set a region state to SPLITTING to make move fail
-    Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableName);
-    String rregion = null;
-    ServerName toMoveServer = null;
+    return randomlySetRegionState(newGroup, RegionState.State.SPLITTING,tableName);
+  }
+
+  private Pair<ServerName, RegionStateNode> randomlySetRegionState(RSGroupInfo groupInfo,
+      RegionState.State state, TableName... tableNames) throws IOException {
+    Preconditions.checkArgument(tableNames.length == 1 || tableNames.length == 2,
+        "only support one or two tables");
+    Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableNames[0]);
+    if(tableNames.length == 2) {
+      Map<ServerName, List<String>> assignMap2 = getTableServerRegionMap().get(tableNames[1]);
+      assignMap2.forEach((k ,v) -> { if(!assignMap.containsKey(k)) assignMap.remove(k); });
+    }
+    String toCorrectRegionName = null;
+    ServerName srcServer = null;
     for (ServerName server : assignMap.keySet()) {
-      rregion = assignMap.get(server).size() > 1 &&
-          !newGroup.containsServer(server.getAddress()) ? assignMap.get(server).get(0) : null;
-      if (rregion != null) {
-        toMoveServer = server;
+      toCorrectRegionName = assignMap.get(server).size() >= 1 &&
+          !groupInfo.containsServer(server.getAddress()) ? assignMap.get(server).get(0) : null;
+      if (toCorrectRegionName != null) {
+        srcServer = server;
         break;
       }
     }
-    assert toMoveServer != null;
-    RegionInfo ri = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-        getRegionInfo(Bytes.toBytesBinary(rregion));
+    assert srcServer != null;
+    RegionInfo toCorrectRegionInfo = TEST_UTIL.getMiniHBaseCluster().getMaster()
+        .getAssignmentManager().getRegionInfo(Bytes.toBytesBinary(toCorrectRegionName));
     RegionStateNode rsn =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-            .getRegionStateNode(ri);
-    rsn.setState(RegionState.State.SPLITTING);
-    return new Pair<>(toMoveServer, rsn);
+            .getRegionStateNode(toCorrectRegionInfo);
+    rsn.setState(state);
+    return new Pair<>(srcServer, rsn);
+  }
+
+  @Test
+  public void testFailedMoveTablesAndRepair() throws Exception{
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+    Iterator iterator = newGroup.getServers().iterator();
+    Address newGroupServer1 = (Address) iterator.next();
+
+    // create table
+    // randomly set a region state to SPLITTING to make move abort
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
+        new Random().nextInt(8) + 4);
+    RegionStateNode rsn = gotPair.getSecond();
+
+    // move table to newGroup and check regions
+    try {
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
+      fail("should get IOException when retry exhausted but there still exists failed moved "
+          + "regions");
+    }catch (Exception e){
+      assertTrue(e.getMessage().contains(
+          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
+    }
+    for(RegionInfo regionInfo : master.getAssignmentManager().getAssignedRegions()){
+      if (regionInfo.getTable().equals(tableName) && regionInfo.equals(rsn.getRegionInfo())) {
+        assertNotEquals(master.getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(regionInfo).getAddress(), newGroupServer1);
+        }
+    }
+
+    // retry move table to newGroup adn check if all regions are corrected
+    rsn.setState(RegionState.State.OPEN);
+    rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
+    for(RegionInfo regionInfo : master.getAssignmentManager().getAssignedRegions()){
+      if (regionInfo.getTable().equals(tableName)) {
+        assertEquals(master.getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(regionInfo).getAddress(), newGroupServer1);
+      }
+    }
+  }
+
+  @Test
+  public void testFailedMoveServersAndRepair() throws Exception{
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+
+    // create table
+    // randomly set a region state to SPLITTING to make move abort
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
+        new Random().nextInt(8) + 4);
+    RegionStateNode rsn = gotPair.getSecond();
+    ServerName srcServer = rsn.getRegionLocation();
+
+    // move server to newGroup and check regions
+    try {
+      rsGroupAdmin.moveServers(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+      fail("should get IOException when retry exhausted but there still exists failed moved "
+          + "regions");
+    }catch (Exception e){
+      assertTrue(e.getMessage().contains(
+          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
+    }
+    for(RegionInfo regionInfo : master.getAssignmentManager().getAssignedRegions()){
+      if (regionInfo.getTable().equals(tableName) && regionInfo.equals(rsn.getRegionInfo())) {
+        assertEquals(master.getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(regionInfo), srcServer);
+      }
+    }
+
+    // retry move server to newGroup adn check if all regions on srcServer was moved
+    rsn.setState(RegionState.State.OPEN);
+    rsGroupAdmin.moveServers(Sets.newHashSet(srcServer.getAddress()), newGroup.getName());
+    assertEquals(master.getAssignmentManager().getRegionsOnServer(srcServer).size(), 0);
+  }
+
+  @Test
+  public void testFailedMoveServersTablesAndRepair() throws Exception{
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+    // create table
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    TableName table1 = TableName.valueOf(tableName.getNameAsString() + "_1");
+    TableName table2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    TEST_UTIL.createMultiRegionTable(table1, familyNameBytes,
+        new Random().nextInt(12) + 4);
+    TEST_UTIL.createMultiRegionTable(table2, familyNameBytes,
+        new Random().nextInt(12) + 4);
+
+    // randomly set a region state to SPLITTING to make move abort
+    Pair<ServerName, RegionStateNode> gotPair =
+        randomlySetRegionState(newGroup, RegionState.State.SPLITTING, table1, table2);
+    RegionStateNode rsn = gotPair.getSecond();
+    ServerName srcServer = rsn.getRegionLocation();
+
+    // move server and table to newGroup and check regions
+    try {
+      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(srcServer.getAddress()),
+          Sets.newHashSet(table2), newGroup.getName());
+      fail("should get IOException when retry exhausted but there still exists failed moved "
+          + "regions");
+    }catch (Exception e){
+      assertTrue(e.getMessage().contains(
+          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
+    }
+    for(RegionInfo regionInfo : master.getAssignmentManager().getAssignedRegions()){
+      if (regionInfo.getTable().equals(table1) && regionInfo.equals(rsn.getRegionInfo())) {
+        assertEquals(master.getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(regionInfo), srcServer);
+      }
+    }
+
+    // retry moveServersAndTables to newGroup and check if all regions on srcServer belongs to
+    // table2
+    rsn.setState(RegionState.State.OPEN);
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(srcServer.getAddress()),
+        Sets.newHashSet(table2), newGroup.getName());
+    for(RegionInfo regionsInfo : master.getAssignmentManager().getRegionsOnServer(srcServer)){
+      assertEquals(regionsInfo.getTable(), table2);
+    }
   }
 }
