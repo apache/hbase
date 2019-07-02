@@ -67,8 +67,10 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
-    return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP, CHANNEL_CLASS);
+    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf,
+      listeners, failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
+    asyncFSWAL.init();
+    return asyncFSWAL;
   }
 
   @Override
@@ -76,9 +78,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
-    return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP, CHANNEL_CLASS) {
-
+    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
+      failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
       @Override
       void atHeadOfRingBufferEventHandlerAppend() {
         action.run();
@@ -86,5 +87,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       }
 
     };
+    asyncFSWAL.init();
+    return asyncFSWAL;
   }
 }

@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.FailedCloseWALAfterInitializedErrorException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -150,6 +151,20 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
         return walCopy;
       }
       walCopy = createWAL();
+      boolean succ = false;
+      try {
+        walCopy.init();
+        succ = true;
+      } finally {
+        if (!succ) {
+          try {
+            walCopy.close();
+          } catch (Throwable t) {
+            throw new FailedCloseWALAfterInitializedErrorException(
+              "Failed close after init wal failed.", t);
+          }
+        }
+      }
       wal = walCopy;
       return walCopy;
     } finally {

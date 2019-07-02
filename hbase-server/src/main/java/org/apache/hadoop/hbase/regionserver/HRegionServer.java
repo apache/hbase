@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.FailedCloseWALAfterInitializedErrorException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -2145,11 +2146,17 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public WAL getWAL(RegionInfo regionInfo) throws IOException {
-    WAL wal = walFactory.getWAL(regionInfo);
-    if (this.walRoller != null) {
-      this.walRoller.addWAL(wal);
+    try {
+      WAL wal = walFactory.getWAL(regionInfo);
+      if (this.walRoller != null) {
+        this.walRoller.addWAL(wal);
+      }
+      return wal;
+    }catch (FailedCloseWALAfterInitializedErrorException ex) {
+      // see HBASE-21751 for details
+      abort("wal can not clean up after init failed", ex);
+      throw ex;
     }
-    return wal;
   }
 
   public LogRoller getWalRoller() {
