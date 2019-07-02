@@ -436,6 +436,7 @@ public abstract class AbstractTestFSWAL {
     String testName = currentTest.getMethodName();
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
         CONF, null, true, null, null);
+    wal.init();
     try {
       wal.sync();
     } finally {
