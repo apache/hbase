@@ -97,6 +97,7 @@ public class TestByteBufferArray {
     void run() throws IOException;
   }
 
+  @SuppressWarnings("TryFailThrowable")
   private void expectedAssert(Call r) throws IOException {
     try {
       r.run();
