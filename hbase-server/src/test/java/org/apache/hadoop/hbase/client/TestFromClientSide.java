@@ -29,7 +29,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -182,30 +181,27 @@ public class TestFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(3 * 1000);
+    try (Connection connection = ConnectionFactory.createConnection(c)) {
+      try (Table t = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+        if (t instanceof HTable) {
+          HTable table = (HTable) t;
+          table.setOperationTimeout(3 * 1000);
 
-      try {
-        Append append = new Append(ROW);
-        append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-        Result result = table.append(append);
+          Append append = new Append(ROW);
+          append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+          Result result = table.append(append);
 
-        // Verify expected result
-        Cell[] cells = result.rawCells();
-        assertEquals(1, cells.length);
-        assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+          // Verify expected result
+          Cell[] cells = result.rawCells();
+          assertEquals(1, cells.length);
+          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
 
-        // Verify expected result again
-        Result readResult = table.get(new Get(ROW));
-        cells = readResult.rawCells();
-        assertEquals(1, cells.length);
-        assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
-      } finally {
-        table.close();
-        connection.close();
+          // Verify expected result again
+          Result readResult = table.get(new Get(ROW));
+          cells = readResult.rawCells();
+          assertEquals(1, cells.length);
+          assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+        }
       }
     }
   }
@@ -228,53 +224,52 @@ public class TestFromClientSide {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(hcd);
     TEST_UTIL.getAdmin().createTable(desc);
-    Table h = TEST_UTIL.getConnection().getTable(tableName);
+    try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
+      long ts = System.currentTimeMillis();
+      Put p = new Put(T1, ts);
+      p.addColumn(FAMILY, C0, T1);
+      h.put(p);
+      p = new Put(T1, ts + 2);
+      p.addColumn(FAMILY, C0, T2);
+      h.put(p);
+      p = new Put(T1, ts + 4);
+      p.addColumn(FAMILY, C0, T3);
+      h.put(p);
 
-    long ts = System.currentTimeMillis();
-    Put p = new Put(T1, ts);
-    p.addColumn(FAMILY, C0, T1);
-    h.put(p);
-    p = new Put(T1, ts + 2);
-    p.addColumn(FAMILY, C0, T2);
-    h.put(p);
-    p = new Put(T1, ts + 4);
-    p.addColumn(FAMILY, C0, T3);
-    h.put(p);
+      Delete d = new Delete(T1, ts + 3);
+      h.delete(d);
 
-    Delete d = new Delete(T1, ts + 3);
-    h.delete(d);
+      d = new Delete(T1, ts + 3);
+      d.addColumns(FAMILY, C0, ts + 3);
+      h.delete(d);
 
-    d = new Delete(T1, ts + 3);
-    d.addColumns(FAMILY, C0, ts + 3);
-    h.delete(d);
+      Get g = new Get(T1);
+      // does *not* include the delete
+      g.setTimeRange(0, ts + 3);
+      Result r = h.get(g);
+      assertArrayEquals(T2, r.getValue(FAMILY, C0));
 
-    Get g = new Get(T1);
-    // does *not* include the delete
-    g.setTimeRange(0, ts + 3);
-    Result r = h.get(g);
-    assertArrayEquals(T2, r.getValue(FAMILY, C0));
+      Scan s = new Scan(T1);
+      s.setTimeRange(0, ts + 3);
+      s.setMaxVersions();
+      try (ResultScanner scanner = h.getScanner(s)) {
+        Cell[] kvs = scanner.next().rawCells();
+        assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
+        assertArrayEquals(T1, CellUtil.cloneValue(kvs[1]));
+      }
 
-    Scan s = new Scan(T1);
-    s.setTimeRange(0, ts + 3);
-    s.setMaxVersions();
-    ResultScanner scanner = h.getScanner(s);
-    Cell[] kvs = scanner.next().rawCells();
-    assertArrayEquals(T2, CellUtil.cloneValue(kvs[0]));
-    assertArrayEquals(T1, CellUtil.cloneValue(kvs[1]));
-    scanner.close();
-
-    s = new Scan(T1);
-    s.setRaw(true);
-    s.setMaxVersions();
-    scanner = h.getScanner(s);
-    kvs = scanner.next().rawCells();
-    assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
-    assertArrayEquals(T3, CellUtil.cloneValue(kvs[1]));
-    assertTrue(CellUtil.isDelete(kvs[2]));
-    assertArrayEquals(T2, CellUtil.cloneValue(kvs[3]));
-    assertArrayEquals(T1, CellUtil.cloneValue(kvs[4]));
-    scanner.close();
-    h.close();
+      s = new Scan(T1);
+      s.setRaw(true);
+      s.setMaxVersions();
+      try (ResultScanner scanner = h.getScanner(s)) {
+        Cell[] kvs = scanner.next().rawCells();
+        assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
+        assertArrayEquals(T3, CellUtil.cloneValue(kvs[1]));
+        assertTrue(CellUtil.isDelete(kvs[2]));
+        assertArrayEquals(T2, CellUtil.cloneValue(kvs[3]));
+        assertArrayEquals(T1, CellUtil.cloneValue(kvs[4]));
+      }
+    }
   }
 
   /**
@@ -288,47 +283,45 @@ public class TestFromClientSide {
     final byte[] COLUMN = Bytes.toBytes("column");
     final byte[] VALUE = Bytes.toBytes("value");
 
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // future timestamp
+      long ts = System.currentTimeMillis() * 2;
+      Put put = new Put(ROW, ts);
+      put.addColumn(FAMILY, COLUMN, VALUE);
+      table.put(put);
 
-    // future timestamp
-    long ts = System.currentTimeMillis() * 2;
-    Put put = new Put(ROW, ts);
-    put.addColumn(FAMILY, COLUMN, VALUE);
-    table.put(put);
+      Get get = new Get(ROW);
+      Result result = table.get(get);
+      assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
 
-    Get get = new Get(ROW);
-    Result result = table.get(get);
-    assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+      Delete del = new Delete(ROW);
+      del.addColumn(FAMILY, COLUMN, ts);
+      table.delete(del);
 
-    Delete del = new Delete(ROW);
-    del.addColumn(FAMILY, COLUMN, ts);
-    table.delete(del);
+      get = new Get(ROW);
+      result = table.get(get);
+      assertNull(result.getValue(FAMILY, COLUMN));
 
-    get = new Get(ROW);
-    result = table.get(get);
-    assertNull(result.getValue(FAMILY, COLUMN));
+      // major compaction, purged future deletes
+      TEST_UTIL.getAdmin().flush(tableName);
+      TEST_UTIL.getAdmin().majorCompact(tableName);
 
-    // major compaction, purged future deletes
-    TEST_UTIL.getAdmin().flush(tableName);
-    TEST_UTIL.getAdmin().majorCompact(tableName);
+      // waiting for the major compaction to complete
+      TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
+        @Override
+        public boolean evaluate() throws IOException {
+          return TEST_UTIL.getAdmin().getCompactionState(tableName) == CompactionState.NONE;
+        }
+      });
 
-    // waiting for the major compaction to complete
-    TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
-      @Override
-      public boolean evaluate() throws IOException {
-        return TEST_UTIL.getAdmin().getCompactionState(tableName) == CompactionState.NONE;
-      }
-    });
+      put = new Put(ROW, ts);
+      put.addColumn(FAMILY, COLUMN, VALUE);
+      table.put(put);
 
-    put = new Put(ROW, ts);
-    put.addColumn(FAMILY, COLUMN, VALUE);
-    table.put(put);
-
-    get = new Get(ROW);
-    result = table.get(get);
-    assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
-
-    table.close();
+      get = new Get(ROW);
+      result = table.get(get);
+      assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
+    }
   }
 
   /**
@@ -340,8 +333,9 @@ public class TestFromClientSide {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     Configuration conf = TEST_UTIL.getConfiguration();
-    Table table = TEST_UTIL.createTable(tableName, FAMILIES);
-    assertSame(conf, table.getConfiguration());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILIES)) {
+      assertSame(conf, table.getConfiguration());
+    }
   }
 
   /**
@@ -354,38 +348,40 @@ public class TestFromClientSide {
     byte [][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
         Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
         Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
-    String value = "this is the value";
-    String value2 = "this is some other value";
-    String keyPrefix1 = TEST_UTIL.getRandomUUID().toString();
-    String keyPrefix2 = TEST_UTIL.getRandomUUID().toString();
-    String keyPrefix3 = TEST_UTIL.getRandomUUID().toString();
-    putRows(ht, 3, value, keyPrefix1);
-    putRows(ht, 3, value, keyPrefix2);
-    putRows(ht, 3, value, keyPrefix3);
-    putRows(ht, 3, value2, keyPrefix1);
-    putRows(ht, 3, value2, keyPrefix2);
-    putRows(ht, 3, value2, keyPrefix3);
-    Table table = TEST_UTIL.getConnection().getTable(tableName);
-    System.out.println("Checking values for key: " + keyPrefix1);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-        getNumberOfRows(keyPrefix1, value2, table));
-    System.out.println("Checking values for key: " + keyPrefix2);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-        getNumberOfRows(keyPrefix2, value2, table));
-    System.out.println("Checking values for key: " + keyPrefix3);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-        getNumberOfRows(keyPrefix3, value2, table));
-    deleteColumns(ht, value2, keyPrefix1);
-    deleteColumns(ht, value2, keyPrefix2);
-    deleteColumns(ht, value2, keyPrefix3);
-    System.out.println("Starting important checks.....");
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1,
-      0, getNumberOfRows(keyPrefix1, value2, table));
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2,
-      0, getNumberOfRows(keyPrefix2, value2, table));
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
-      0, getNumberOfRows(keyPrefix3, value2, table));
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
+      String value = "this is the value";
+      String value2 = "this is some other value";
+      String keyPrefix1 = TEST_UTIL.getRandomUUID().toString();
+      String keyPrefix2 = TEST_UTIL.getRandomUUID().toString();
+      String keyPrefix3 = TEST_UTIL.getRandomUUID().toString();
+      putRows(ht, 3, value, keyPrefix1);
+      putRows(ht, 3, value, keyPrefix2);
+      putRows(ht, 3, value, keyPrefix3);
+      putRows(ht, 3, value2, keyPrefix1);
+      putRows(ht, 3, value2, keyPrefix2);
+      putRows(ht, 3, value2, keyPrefix3);
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        System.out.println("Checking values for key: " + keyPrefix1);
+        assertEquals("Got back incorrect number of rows from scan", 3,
+                getNumberOfRows(keyPrefix1, value2, table));
+        System.out.println("Checking values for key: " + keyPrefix2);
+        assertEquals("Got back incorrect number of rows from scan", 3,
+                getNumberOfRows(keyPrefix2, value2, table));
+        System.out.println("Checking values for key: " + keyPrefix3);
+        assertEquals("Got back incorrect number of rows from scan", 3,
+                getNumberOfRows(keyPrefix3, value2, table));
+        deleteColumns(ht, value2, keyPrefix1);
+        deleteColumns(ht, value2, keyPrefix2);
+        deleteColumns(ht, value2, keyPrefix3);
+        System.out.println("Starting important checks.....");
+        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1,
+                0, getNumberOfRows(keyPrefix1, value2, table));
+        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2,
+                0, getNumberOfRows(keyPrefix2, value2, table));
+        assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
+                0, getNumberOfRows(keyPrefix3, value2, table));
+      }
+    }
   }
 
   private void deleteColumns(Table ht, String value, String keyPrefix)
@@ -476,53 +472,54 @@ public class TestFromClientSide {
   public void testFilterAcrossMultipleRegions()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table t = TEST_UTIL.createTable(tableName, FAMILY);
-    int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
-    assertRowCount(t, rowCount);
-    // Split the table.  Should split on a reasonable key; 'lqj'
-    List<HRegionLocation> regions  = splitTable(t);
-    assertRowCount(t, rowCount);
-    // Get end key of first region.
-    byte [] endKey = regions.get(0).getRegionInfo().getEndKey();
-    // Count rows with a filter that stops us before passed 'endKey'.
-    // Should be count of rows in first region.
-    int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
-    assertTrue(endKeyCount < rowCount);
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
+      assertRowCount(t, rowCount);
+      // Split the table.  Should split on a reasonable key; 'lqj'
+      List<HRegionLocation> regions = splitTable(t);
+      assertRowCount(t, rowCount);
+      // Get end key of first region.
+      byte[] endKey = regions.get(0).getRegionInfo().getEndKey();
+      // Count rows with a filter that stops us before passed 'endKey'.
+      // Should be count of rows in first region.
+      int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
+      assertTrue(endKeyCount < rowCount);
 
-    // How do I know I did not got to second region?  Thats tough.  Can't really
-    // do that in client-side region test.  I verified by tracing in debugger.
-    // I changed the messages that come out when set to DEBUG so should see
-    // when scanner is done. Says "Finished with scanning..." with region name.
-    // Check that its finished in right region.
+      // How do I know I did not got to second region?  Thats tough.  Can't really
+      // do that in client-side region test.  I verified by tracing in debugger.
+      // I changed the messages that come out when set to DEBUG so should see
+      // when scanner is done. Says "Finished with scanning..." with region name.
+      // Check that its finished in right region.
 
-    // New test.  Make it so scan goes into next region by one and then two.
-    // Make sure count comes out right.
-    byte [] key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 1)};
-    int plusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-    assertEquals(endKeyCount + 1, plusOneCount);
-    key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 2)};
-    int plusTwoCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-    assertEquals(endKeyCount + 2, plusTwoCount);
+      // New test.  Make it so scan goes into next region by one and then two.
+      // Make sure count comes out right.
+      byte[] key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] + 1)};
+      int plusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      assertEquals(endKeyCount + 1, plusOneCount);
+      key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] + 2)};
+      int plusTwoCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      assertEquals(endKeyCount + 2, plusTwoCount);
 
-    // New test.  Make it so I scan one less than endkey.
-    key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] - 1)};
-    int minusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
-    assertEquals(endKeyCount - 1, minusOneCount);
-    // For above test... study logs.  Make sure we do "Finished with scanning.."
-    // in first region and that we do not fall into the next region.
+      // New test.  Make it so I scan one less than endkey.
+      key = new byte[]{endKey[0], endKey[1], (byte) (endKey[2] - 1)};
+      int minusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
+      assertEquals(endKeyCount - 1, minusOneCount);
+      // For above test... study logs.  Make sure we do "Finished with scanning.."
+      // in first region and that we do not fall into the next region.
 
-    key = new byte [] {'a', 'a', 'a'};
-    int countBBB = TEST_UTIL.countRows(t,
-      createScanWithRowFilter(key, null, CompareOperator.EQUAL));
-    assertEquals(1, countBBB);
+      key = new byte[]{'a', 'a', 'a'};
+      int countBBB = TEST_UTIL.countRows(t,
+              createScanWithRowFilter(key, null, CompareOperator.EQUAL));
+      assertEquals(1, countBBB);
 
-    int countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, null,
-      CompareOperator.GREATER_OR_EQUAL));
-    // Because started at start of table.
-    assertEquals(0, countGreater);
-    countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
-      CompareOperator.GREATER_OR_EQUAL));
-    assertEquals(rowCount - endKeyCount, countGreater);
+      int countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, null,
+              CompareOperator.GREATER_OR_EQUAL));
+      // Because started at start of table.
+      assertEquals(0, countGreater);
+      countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
+              CompareOperator.GREATER_OR_EQUAL));
+      assertEquals(rowCount - endKeyCount, countGreater);
+    }
   }
 
   /*
@@ -566,9 +563,9 @@ public class TestFromClientSide {
   private List<HRegionLocation> splitTable(final Table t)
   throws IOException, InterruptedException {
     // Split this table in two.
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.split(t.getName());
-    admin.close();
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.split(t.getName());
+    }
     List<HRegionLocation> regions = waitOnSplit(t);
     assertTrue(regions.size() > 1);
     return regions;
@@ -603,16 +600,17 @@ public class TestFromClientSide {
   @Test
   public void testSuperSimple() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    Scan scan = new Scan();
-    scan.addColumn(FAMILY, tableName.toBytes());
-    ResultScanner scanner = ht.getScanner(scan);
-    Result result = scanner.next();
-    assertTrue("Expected null result", result == null);
-    scanner.close();
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      Scan scan = new Scan();
+      scan.addColumn(FAMILY, tableName.toBytes());
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        Result result = scanner.next();
+        assertTrue("Expected null result", result == null);
+      }
+    }
   }
 
   @Test
@@ -620,127 +618,133 @@ public class TestFromClientSide {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Configuration conf = TEST_UTIL.getConfiguration();
     String oldMaxSize = conf.get(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY);
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[] value = new byte[4 * 1024 * 1024];
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, value);
-    ht.put(put);
-    try {
-      TEST_UTIL.getConfiguration().setInt(
-          ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
-      // Create new table so we pick up the change in Configuration.
-      try (Connection connection =
-          ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-        try (Table t = connection.getTable(TableName.valueOf(FAMILY))) {
-          put = new Put(ROW);
-          put.addColumn(FAMILY, QUALIFIER, value);
-          t.put(put);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[] value = new byte[4 * 1024 * 1024];
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, value);
+      ht.put(put);
+
+      try {
+        TEST_UTIL.getConfiguration().setInt(
+                ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
+        // Create new table so we pick up the change in Configuration.
+        try (Connection connection =
+                     ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+          try (Table t = connection.getTable(TableName.valueOf(FAMILY))) {
+            put = new Put(ROW);
+            put.addColumn(FAMILY, QUALIFIER, value);
+            t.put(put);
+          }
         }
+        fail("Inserting a too large KeyValue worked, should throw exception");
+      } catch (Exception e) {
       }
-      fail("Inserting a too large KeyValue worked, should throw exception");
-    } catch(Exception e) {}
+    }
     conf.set(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, oldMaxSize);
   }
 
   @Test
   public void testFilters() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte [][] ROWS = makeN(ROW, 10);
-    byte [][] QUALIFIERS = {
-        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
-    };
-    for(int i=0;i<10;i++) {
-      Put put = new Put(ROWS[i]);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
-      ht.put(put);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 10);
+      byte[][] QUALIFIERS = {
+              Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
+      };
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(ROWS[i]);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
+        ht.put(put);
+      }
+      Scan scan = new Scan();
+      scan.addFamily(FAMILY);
+      Filter filter = new QualifierFilter(CompareOperator.EQUAL,
+              new RegexStringComparator("col[1-5]"));
+      scan.setFilter(filter);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int expectedIndex = 1;
+        for (Result result : scanner) {
+          assertEquals(1, result.size());
+          assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[expectedIndex]));
+          assertTrue(Bytes.equals(CellUtil.cloneQualifier(result.rawCells()[0]),
+                  QUALIFIERS[expectedIndex]));
+          expectedIndex++;
+        }
+        assertEquals(6, expectedIndex);
+      }
     }
-    Scan scan = new Scan();
-    scan.addFamily(FAMILY);
-    Filter filter = new QualifierFilter(CompareOperator.EQUAL,
-      new RegexStringComparator("col[1-5]"));
-    scan.setFilter(filter);
-    ResultScanner scanner = ht.getScanner(scan);
-    int expectedIndex = 1;
-    for(Result result : ht.getScanner(scan)) {
-      assertEquals(1, result.size());
-      assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[expectedIndex]));
-      assertTrue(Bytes.equals(CellUtil.cloneQualifier(result.rawCells()[0]),
-          QUALIFIERS[expectedIndex]));
-      expectedIndex++;
-    }
-    assertEquals(6, expectedIndex);
-    scanner.close();
   }
 
   @Test
   public void testFilterWithLongCompartor() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte [][] ROWS = makeN(ROW, 10);
-    byte [][] values = new byte[10][];
-    for (int i = 0; i < 10; i ++) {
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 10);
+      byte[][] values = new byte[10][];
+      for (int i = 0; i < 10; i++) {
         values[i] = Bytes.toBytes(100L * i);
+      }
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(ROWS[i]);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(FAMILY, QUALIFIER, values[i]);
+        ht.put(put);
+      }
+      Scan scan = new Scan();
+      scan.addFamily(FAMILY);
+      Filter filter = new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOperator.GREATER,
+              new LongComparator(500));
+      scan.setFilter(filter);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int expectedIndex = 0;
+        for (Result result : scanner) {
+          assertEquals(1, result.size());
+          assertTrue(Bytes.toLong(result.getValue(FAMILY, QUALIFIER)) > 500);
+          expectedIndex++;
+        }
+        assertEquals(4, expectedIndex);
+      }
     }
-    for(int i = 0; i < 10; i ++) {
-      Put put = new Put(ROWS[i]);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(FAMILY, QUALIFIER, values[i]);
-      ht.put(put);
-    }
-    Scan scan = new Scan();
-    scan.addFamily(FAMILY);
-    Filter filter = new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOperator.GREATER,
-      new LongComparator(500));
-    scan.setFilter(filter);
-    ResultScanner scanner = ht.getScanner(scan);
-    int expectedIndex = 0;
-    for(Result result : ht.getScanner(scan)) {
-      assertEquals(1, result.size());
-      assertTrue(Bytes.toLong(result.getValue(FAMILY, QUALIFIER)) > 500);
-      expectedIndex++;
-    }
-    assertEquals(4, expectedIndex);
-    scanner.close();
-}
+  }
 
   @Test
   public void testKeyOnlyFilter() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte [][] ROWS = makeN(ROW, 10);
-    byte [][] QUALIFIERS = {
-        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
-    };
-    for(int i=0;i<10;i++) {
-      Put put = new Put(ROWS[i]);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
-      ht.put(put);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 10);
+      byte[][] QUALIFIERS = {
+              Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
+      };
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(ROWS[i]);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
+        ht.put(put);
+      }
+      Scan scan = new Scan();
+      scan.addFamily(FAMILY);
+      Filter filter = new KeyOnlyFilter(true);
+      scan.setFilter(filter);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int count = 0;
+        for (Result result : scanner) {
+          assertEquals(1, result.size());
+          assertEquals(Bytes.SIZEOF_INT, result.rawCells()[0].getValueLength());
+          assertEquals(VALUE.length, Bytes.toInt(CellUtil.cloneValue(result.rawCells()[0])));
+          count++;
+        }
+        assertEquals(10, count);
+      }
     }
-    Scan scan = new Scan();
-    scan.addFamily(FAMILY);
-    Filter filter = new KeyOnlyFilter(true);
-    scan.setFilter(filter);
-    ResultScanner scanner = ht.getScanner(scan);
-    int count = 0;
-    for(Result result : ht.getScanner(scan)) {
-      assertEquals(1, result.size());
-      assertEquals(Bytes.SIZEOF_INT, result.rawCells()[0].getValueLength());
-      assertEquals(VALUE.length, Bytes.toInt(CellUtil.cloneValue(result.rawCells()[0])));
-      count++;
-    }
-    assertEquals(10, count);
-    scanner.close();
   }
 
   /**
@@ -749,108 +753,108 @@ public class TestFromClientSide {
   @Test
   public void testSimpleMissing() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte [][] ROWS = makeN(ROW, 4);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 4);
 
-    // Try to get a row on an empty table
-    Get get = new Get(ROWS[0]);
-    Result result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get a row on an empty table
+      Get get = new Get(ROWS[0]);
+      Result result = ht.get(get);
+      assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILY);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILY);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILY, QUALIFIER);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    Scan scan = new Scan();
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      Scan scan = new Scan();
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
+      scan = new Scan(ROWS[0]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[0]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan(ROWS[0], ROWS[1]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[0],ROWS[1]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan();
+      scan.addFamily(FAMILY);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan();
-    scan.addFamily(FAMILY);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan();
+      scan.addColumn(FAMILY, QUALIFIER);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan();
-    scan.addColumn(FAMILY, QUALIFIER);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Insert a row
 
-    // Insert a row
+      Put put = new Put(ROWS[2]);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
 
-    Put put = new Put(ROWS[2]);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
+      // Try to get empty rows around it
 
-    // Try to get empty rows around it
+      get = new Get(ROWS[1]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    get = new Get(ROWS[1]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILY);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILY);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      get = new Get(ROWS[3]);
+      get.addColumn(FAMILY, QUALIFIER);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    get = new Get(ROWS[3]);
-    get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to scan empty rows around it
 
-    // Try to scan empty rows around it
+      scan = new Scan(ROWS[3]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[3]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan(ROWS[0], ROWS[2]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[0],ROWS[2]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Make sure we can actually get the row
 
-    // Make sure we can actually get the row
+      get = new Get(ROWS[2]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    get = new Get(ROWS[2]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      get = new Get(ROWS[2]);
+      get.addFamily(FAMILY);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILY);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      get = new Get(ROWS[2]);
+      get.addColumn(FAMILY, QUALIFIER);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    get = new Get(ROWS[2]);
-    get.addColumn(FAMILY, QUALIFIER);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      // Make sure we can scan the row
 
-    // Make sure we can scan the row
+      scan = new Scan();
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    scan = new Scan();
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      scan = new Scan(ROWS[0], ROWS[3]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    scan = new Scan(ROWS[0],ROWS[3]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-
-    scan = new Scan(ROWS[2],ROWS[3]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      scan = new Scan(ROWS[2], ROWS[3]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+    }
   }
 
   /**
@@ -865,297 +869,297 @@ public class TestFromClientSide {
     byte [][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte [][] VALUES = makeN(VALUE, 10);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
 
-    Get get;
-    Scan scan;
-    Delete delete;
-    Put put;
-    Result result;
+      Get get;
+      Scan scan;
+      Delete delete;
+      Put put;
+      Result result;
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Insert one column to one family
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Insert one column to one family
+      ////////////////////////////////////////////////////////////////////////////
 
-    put = new Put(ROWS[0]);
-    put.addColumn(FAMILIES[4], QUALIFIERS[0], VALUES[0]);
-    ht.put(put);
+      put = new Put(ROWS[0]);
+      put.addColumn(FAMILIES[4], QUALIFIERS[0], VALUES[0]);
+      ht.put(put);
 
-    // Get the single column
-    getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
+      // Get the single column
+      getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
 
-    // Scan the single column
-    scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
+      // Scan the single column
+      scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
 
-    // Get empty results around inserted column
-    getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
+      // Get empty results around inserted column
+      getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
 
-    // Scan empty results around inserted column
-    scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
+      // Scan empty results around inserted column
+      scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Flush memstore and run same tests from storefiles
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Flush memstore and run same tests from storefiles
+      ////////////////////////////////////////////////////////////////////////////
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Redo get and scan tests from storefile
-    getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
-    scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
-    getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
-    scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
+      // Redo get and scan tests from storefile
+      getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
+      scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
+      getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
+      scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Now, Test reading from memstore and storefiles at once
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Now, Test reading from memstore and storefiles at once
+      ////////////////////////////////////////////////////////////////////////////
 
-    // Insert multiple columns to two other families
-    put = new Put(ROWS[0]);
-    put.addColumn(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIERS[4], VALUES[4]);
-    put.addColumn(FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-    put.addColumn(FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    put.addColumn(FAMILIES[6], QUALIFIERS[7], VALUES[7]);
-    put.addColumn(FAMILIES[7], QUALIFIERS[7], VALUES[7]);
-    put.addColumn(FAMILIES[9], QUALIFIERS[0], VALUES[0]);
-    ht.put(put);
+      // Insert multiple columns to two other families
+      put = new Put(ROWS[0]);
+      put.addColumn(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIERS[4], VALUES[4]);
+      put.addColumn(FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+      put.addColumn(FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      put.addColumn(FAMILIES[6], QUALIFIERS[7], VALUES[7]);
+      put.addColumn(FAMILIES[7], QUALIFIERS[7], VALUES[7]);
+      put.addColumn(FAMILIES[9], QUALIFIERS[0], VALUES[0]);
+      ht.put(put);
 
-    // Get multiple columns across multiple families and get empties around it
-    singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
+      // Get multiple columns across multiple families and get empties around it
+      singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
 
-    // Scan multiple columns across multiple families and scan empties around it
-    singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
+      // Scan multiple columns across multiple families and scan empties around it
+      singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Flush the table again
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Flush the table again
+      ////////////////////////////////////////////////////////////////////////////
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Redo tests again
-    singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
-    singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
+      // Redo tests again
+      singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
+      singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
 
-    // Insert more data to memstore
-    put = new Put(ROWS[0]);
-    put.addColumn(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
-    put.addColumn(FAMILIES[6], QUALIFIERS[8], VALUES[8]);
-    put.addColumn(FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    put.addColumn(FAMILIES[4], QUALIFIERS[3], VALUES[3]);
-    ht.put(put);
+      // Insert more data to memstore
+      put = new Put(ROWS[0]);
+      put.addColumn(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
+      put.addColumn(FAMILIES[6], QUALIFIERS[8], VALUES[8]);
+      put.addColumn(FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      put.addColumn(FAMILIES[4], QUALIFIERS[3], VALUES[3]);
+      ht.put(put);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Delete a storefile column
-    ////////////////////////////////////////////////////////////////////////////
-    delete = new Delete(ROWS[0]);
-    delete.addColumns(FAMILIES[6], QUALIFIERS[7]);
-    ht.delete(delete);
+      ////////////////////////////////////////////////////////////////////////////
+      // Delete a storefile column
+      ////////////////////////////////////////////////////////////////////////////
+      delete = new Delete(ROWS[0]);
+      delete.addColumns(FAMILIES[6], QUALIFIERS[7]);
+      ht.delete(delete);
 
-    // Try to get deleted column
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[7]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get deleted column
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[7]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to scan deleted column
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[7]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan deleted column
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[7]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Make sure we can still get a column before it and after it
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still get a column before it and after it
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[8]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
 
-    // Make sure we can still scan a column before it and after it
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still scan a column before it and after it
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Delete a memstore column
-    ////////////////////////////////////////////////////////////////////////////
-    delete = new Delete(ROWS[0]);
-    delete.addColumns(FAMILIES[6], QUALIFIERS[8]);
-    ht.delete(delete);
+      ////////////////////////////////////////////////////////////////////////////
+      // Delete a memstore column
+      ////////////////////////////////////////////////////////////////////////////
+      delete = new Delete(ROWS[0]);
+      delete.addColumns(FAMILIES[6], QUALIFIERS[8]);
+      ht.delete(delete);
 
-    // Try to get deleted column
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get deleted column
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[8]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to scan deleted column
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan deleted column
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Make sure we can still get a column before it and after it
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still get a column before it and after it
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
-    // Make sure we can still scan a column before it and after it
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still scan a column before it and after it
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Delete joint storefile/memstore family
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Delete joint storefile/memstore family
+      ////////////////////////////////////////////////////////////////////////////
 
-    delete = new Delete(ROWS[0]);
-    delete.addFamily(FAMILIES[4]);
-    ht.delete(delete);
+      delete = new Delete(ROWS[0]);
+      delete.addFamily(FAMILIES[4]);
+      ht.delete(delete);
 
-    // Try to get storefile column in deleted family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get storefile column in deleted family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[4], QUALIFIERS[4]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to get memstore column in deleted family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get memstore column in deleted family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[4], QUALIFIERS[3]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to get deleted family
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILIES[4]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get deleted family
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILIES[4]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to scan storefile column in deleted family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan storefile column in deleted family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Try to scan memstore column in deleted family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan memstore column in deleted family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Try to scan deleted family
-    scan = new Scan();
-    scan.addFamily(FAMILIES[4]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan deleted family
+      scan = new Scan();
+      scan.addFamily(FAMILIES[4]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Make sure we can still get another family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[2], QUALIFIERS[2]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
+      // Make sure we can still get another family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[2], QUALIFIERS[2]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
 
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
-    // Make sure we can still scan another family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still scan another family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Flush everything and rerun delete tests
-    ////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////////////////////
+      // Flush everything and rerun delete tests
+      ////////////////////////////////////////////////////////////////////////////
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Try to get storefile column in deleted family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get storefile column in deleted family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[4], QUALIFIERS[4]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to get memstore column in deleted family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get memstore column in deleted family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[4], QUALIFIERS[3]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to get deleted family
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILIES[4]);
-    result = ht.get(get);
-    assertEmptyResult(result);
+      // Try to get deleted family
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILIES[4]);
+      result = ht.get(get);
+      assertEmptyResult(result);
 
-    // Try to scan storefile column in deleted family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan storefile column in deleted family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Try to scan memstore column in deleted family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan memstore column in deleted family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Try to scan deleted family
-    scan = new Scan();
-    scan.addFamily(FAMILIES[4]);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to scan deleted family
+      scan = new Scan();
+      scan.addFamily(FAMILIES[4]);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Make sure we can still get another family
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[2], QUALIFIERS[2]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
+      // Make sure we can still get another family
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[2], QUALIFIERS[2]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
 
-    get = new Get(ROWS[0]);
-    get.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = ht.get(get);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+      get = new Get(ROWS[0]);
+      get.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = ht.get(get);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
 
-    // Make sure we can still scan another family
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+      // Make sure we can still scan another family
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
 
-    scan = new Scan();
-    scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-
+      scan = new Scan();
+      scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+    }
   }
 
   @Test
@@ -1174,151 +1178,156 @@ public class TestFromClientSide {
       fail("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    // Null row (should NOT work)
-    try {
-      Put put = new Put((byte[])null);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      ht.put(put);
-      fail("Inserting a null row worked, should throw exception");
-    } catch(Exception e) {}
+      // Null row (should NOT work)
+      try {
+        Put put = new Put((byte[]) null);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        ht.put(put);
+        fail("Inserting a null row worked, should throw exception");
+      } catch (Exception e) {
+      }
 
-    // Null qualifier (should work)
-    {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, null, VALUE);
-      ht.put(put);
+      // Null qualifier (should work)
+      {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, null, VALUE);
+        ht.put(put);
 
-      getTestNull(ht, ROW, FAMILY, VALUE);
+        getTestNull(ht, ROW, FAMILY, VALUE);
 
-      scanTestNull(ht, ROW, FAMILY, VALUE);
+        scanTestNull(ht, ROW, FAMILY, VALUE);
 
-      Delete delete = new Delete(ROW);
-      delete.addColumns(FAMILY, null);
-      ht.delete(delete);
+        Delete delete = new Delete(ROW);
+        delete.addColumns(FAMILY, null);
+        ht.delete(delete);
 
-      Get get = new Get(ROW);
-      Result result = ht.get(get);
-      assertEmptyResult(result);
+        Get get = new Get(ROW);
+        Result result = ht.get(get);
+        assertEmptyResult(result);
+      }
     }
 
     // Use a new table
-    ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY);
+    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY)) {
 
-    // Empty qualifier, byte[0] instead of null (should work)
-    try {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
-      ht.put(put);
+      // Empty qualifier, byte[0] instead of null (should work)
+      try {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+        ht.put(put);
 
-      getTestNull(ht, ROW, FAMILY, VALUE);
+        getTestNull(ht, ROW, FAMILY, VALUE);
 
-      scanTestNull(ht, ROW, FAMILY, VALUE);
+        scanTestNull(ht, ROW, FAMILY, VALUE);
 
-      // Flush and try again
+        // Flush and try again
 
-      TEST_UTIL.flush();
+        TEST_UTIL.flush();
 
-      getTestNull(ht, ROW, FAMILY, VALUE);
+        getTestNull(ht, ROW, FAMILY, VALUE);
 
-      scanTestNull(ht, ROW, FAMILY, VALUE);
+        scanTestNull(ht, ROW, FAMILY, VALUE);
 
-      Delete delete = new Delete(ROW);
-      delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
-      ht.delete(delete);
+        Delete delete = new Delete(ROW);
+        delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+        ht.delete(delete);
 
-      Get get = new Get(ROW);
-      Result result = ht.get(get);
-      assertEmptyResult(result);
+        Get get = new Get(ROW);
+        Result result = ht.get(get);
+        assertEmptyResult(result);
 
-    } catch(Exception e) {
-      throw new IOException("Using a row with null qualifier threw exception, should ");
-    }
+      } catch (Exception e) {
+        throw new IOException("Using a row with null qualifier threw exception, should ");
+      }
 
-    // Null value
-    try {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, null);
-      ht.put(put);
+      // Null value
+      try {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, null);
+        ht.put(put);
 
-      Get get = new Get(ROW);
-      get.addColumn(FAMILY, QUALIFIER);
-      Result result = ht.get(get);
-      assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+        Get get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        Result result = ht.get(get);
+        assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
-      Scan scan = new Scan();
-      scan.addColumn(FAMILY, QUALIFIER);
-      result = getSingleScanResult(ht, scan);
-      assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+        Scan scan = new Scan();
+        scan.addColumn(FAMILY, QUALIFIER);
+        result = getSingleScanResult(ht, scan);
+        assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
-      Delete delete = new Delete(ROW);
-      delete.addColumns(FAMILY, QUALIFIER);
-      ht.delete(delete);
+        Delete delete = new Delete(ROW);
+        delete.addColumns(FAMILY, QUALIFIER);
+        ht.delete(delete);
 
-      get = new Get(ROW);
-      result = ht.get(get);
-      assertEmptyResult(result);
+        get = new Get(ROW);
+        result = ht.get(get);
+        assertEmptyResult(result);
 
-    } catch(Exception e) {
-      throw new IOException("Null values should be allowed, but threw exception");
+      } catch (Exception e) {
+        throw new IOException("Null values should be allowed, but threw exception");
+      }
     }
   }
 
   @Test
   public void testNullQualifier() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    // Work for Put
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, null, VALUE);
-    table.put(put);
+      // Work for Put
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, null, VALUE);
+      table.put(put);
 
-    // Work for Get, Scan
-    getTestNull(table, ROW, FAMILY, VALUE);
-    scanTestNull(table, ROW, FAMILY, VALUE);
+      // Work for Get, Scan
+      getTestNull(table, ROW, FAMILY, VALUE);
+      scanTestNull(table, ROW, FAMILY, VALUE);
 
-    // Work for Delete
-    Delete delete = new Delete(ROW);
-    delete.addColumns(FAMILY, null);
-    table.delete(delete);
+      // Work for Delete
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, null);
+      table.delete(delete);
 
-    Get get = new Get(ROW);
-    Result result = table.get(get);
-    assertEmptyResult(result);
+      Get get = new Get(ROW);
+      Result result = table.get(get);
+      assertEmptyResult(result);
 
-    // Work for Increment/Append
-    Increment increment = new Increment(ROW);
-    increment.addColumn(FAMILY, null, 1L);
-    table.increment(increment);
-    getTestNull(table, ROW, FAMILY, 1L);
+      // Work for Increment/Append
+      Increment increment = new Increment(ROW);
+      increment.addColumn(FAMILY, null, 1L);
+      table.increment(increment);
+      getTestNull(table, ROW, FAMILY, 1L);
 
-    table.incrementColumnValue(ROW, FAMILY, null, 1L);
-    getTestNull(table, ROW, FAMILY, 2L);
+      table.incrementColumnValue(ROW, FAMILY, null, 1L);
+      getTestNull(table, ROW, FAMILY, 2L);
 
-    delete = new Delete(ROW);
-    delete.addColumns(FAMILY, null);
-    table.delete(delete);
+      delete = new Delete(ROW);
+      delete.addColumns(FAMILY, null);
+      table.delete(delete);
 
-    Append append = new Append(ROW);
-    append.addColumn(FAMILY, null, VALUE);
-    table.append(append);
-    getTestNull(table, ROW, FAMILY, VALUE);
+      Append append = new Append(ROW);
+      append.addColumn(FAMILY, null, VALUE);
+      table.append(append);
+      getTestNull(table, ROW, FAMILY, VALUE);
 
-    // Work for checkAndMutate using thenPut, thenMutate and thenDelete
-    put = new Put(ROW);
-    put.addColumn(FAMILY, null, Bytes.toBytes("checkAndPut"));
-    table.put(put);
-    table.checkAndMutate(ROW, FAMILY).ifEquals(VALUE).thenPut(put);
+      // Work for checkAndMutate using thenPut, thenMutate and thenDelete
+      put = new Put(ROW);
+      put.addColumn(FAMILY, null, Bytes.toBytes("checkAndPut"));
+      table.put(put);
+      table.checkAndMutate(ROW, FAMILY).ifEquals(VALUE).thenPut(put);
 
-    RowMutations mutate = new RowMutations(ROW);
-    mutate.add(new Put(ROW).addColumn(FAMILY, null, Bytes.toBytes("checkAndMutate")));
-    table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndPut")).thenMutate(mutate);
+      RowMutations mutate = new RowMutations(ROW);
+      mutate.add(new Put(ROW).addColumn(FAMILY, null, Bytes.toBytes("checkAndMutate")));
+      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndPut")).thenMutate(mutate);
 
-    delete = new Delete(ROW);
-    delete.addColumns(FAMILY, null);
-    table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate")).thenDelete(delete);
+      delete = new Delete(ROW);
+      delete.addColumns(FAMILY, null);
+      table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate"))
+              .thenDelete(delete);
+    }
   }
 
   @Test
@@ -1328,211 +1337,223 @@ public class TestFromClientSide {
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert 4 versions of same column
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    ht.put(put);
+      // Insert 4 versions of same column
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      ht.put(put);
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(2);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(2);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
-    Scan scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(2);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      Scan scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(2);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+              new long[]{STAMPS[4], STAMPS[5]},
+              new byte[][]{VALUES[4], VALUES[5]},
+              0, 1);
 
-    // Flush and redo
+      // Flush and redo
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(2);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(2);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(2);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(2);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+              new long[]{STAMPS[4], STAMPS[5]},
+              new byte[][]{VALUES[4], VALUES[5]},
+              0, 1);
 
 
-    // Add some memstore and retest
+      // Add some memstore and retest
 
-    // Insert 4 more versions of same column and a dupe
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
-    ht.put(put);
+      // Insert 4 more versions of same column and a dupe
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
+      ht.put(put);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions();
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions();
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
+          0, 7);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions();
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions();
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},0, 7);
 
-    get = new Get(ROW);
-    get.setMaxVersions();
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      get = new Get(ROW);
+      get.setMaxVersions();
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
+          0, 7);
 
-    scan = new Scan(ROW);
-    scan.setMaxVersions();
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 7);
+      scan = new Scan(ROW);
+      scan.setMaxVersions();
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7],
+                  STAMPS[8]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},0, 7);
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
 
-    // Ensure maxVersions of table is respected
+      // Ensure maxVersions of table is respected
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Insert 4 more versions of same column and a dupe
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
-    ht.put(put);
+      // Insert 4 more versions of same column and a dupe
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
+      ht.put(put);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},
+          0, 9);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},0, 9);
 
-    // Delete a version in the memstore and a version in a storefile
-    Delete delete = new Delete(ROW);
-    delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
-    delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
-    ht.delete(delete);
+      // Delete a version in the memstore and a version in a storefile
+      Delete delete = new Delete(ROW);
+      delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
+      delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
+      ht.delete(delete);
 
-    // Test that it's gone
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
+      // Test that it's gone
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},
+          0, 9);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
-
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},0, 9);
+    }
   }
 
   @Test
@@ -1542,230 +1563,232 @@ public class TestFromClientSide {
     int [] LIMITS = {1,3,5};
     long [] STAMPS = makeStamps(10);
     byte [][] VALUES = makeNAscii(VALUE, 10);
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, LIMITS);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, LIMITS)) {
 
-    // Insert limit + 1 on each family
-    Put put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[5], VALUES[5]);
-    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[6], VALUES[6]);
-    ht.put(put);
+      // Insert limit + 1 on each family
+      Put put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[5], VALUES[5]);
+      put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[6], VALUES[6]);
+      ht.put(put);
 
-    // Verify we only get the right number out of each
+      // Verify we only get the right number out of each
 
-    // Family0
+      // Family0
 
-    Get get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      Get get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {STAMPS[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {STAMPS[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
 
-    Scan scan = new Scan(ROW);
-    scan.addColumn(FAMILIES[0], QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      Scan scan = new Scan(ROW);
+      scan.addColumn(FAMILIES[0], QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+              new long[]{STAMPS[1]},
+              new byte[][]{VALUES[1]},
+              0, 0);
 
-    scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[0]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {STAMPS[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
+      scan = new Scan(ROW);
+      scan.addFamily(FAMILIES[0]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+              new long[]{STAMPS[1]},
+              new byte[][]{VALUES[1]},
+              0, 0);
 
-    // Family1
+      // Family1
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[1], QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[1], QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[1]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[1]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILIES[1], QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILIES[1], QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+              new long[]{STAMPS[1], STAMPS[2], STAMPS[3]},
+              new byte[][]{VALUES[1], VALUES[2], VALUES[3]},
+              0, 2);
 
-    scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[1]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
+      scan = new Scan(ROW);
+      scan.addFamily(FAMILIES[1]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
+              new long[]{STAMPS[1], STAMPS[2], STAMPS[3]},
+              new byte[][]{VALUES[1], VALUES[2], VALUES[3]},
+              0, 2);
 
-    // Family2
+      // Family2
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[2], QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[2], QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+          0, 4);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+          0, 4);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILIES[2], QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILIES[2], QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+              new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+              new byte[][]{VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+              0, 4);
 
-    scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
-        0, 4);
+      scan = new Scan(ROW);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
+              new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
+              new byte[][]{VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
+              0, 4);
 
-    // Try all families
+      // Try all families
 
-    get = new Get(ROW);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.addColumn(FAMILIES[1], QUALIFIER);
-    get.addColumn(FAMILIES[2], QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.addColumn(FAMILIES[1], QUALIFIER);
+      get.addColumn(FAMILIES[2], QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 9 keys but received " + result.size(),
+          result.size() == 9);
 
-    scan = new Scan(ROW);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      scan = new Scan(ROW);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 9 keys but received " + result.size(),
+              result.size() == 9);
 
-    scan = new Scan(ROW);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    scan.addFamily(FAMILIES[0]);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
+      scan = new Scan(ROW);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.addFamily(FAMILIES[0]);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 9 keys but received " + result.size(),
+              result.size() == 9);
 
-    scan = new Scan(ROW);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    scan.addColumn(FAMILIES[0], QUALIFIER);
-    scan.addColumn(FAMILIES[1], QUALIFIER);
-    scan.addColumn(FAMILIES[2], QUALIFIER);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 9 keys but received " + result.size(),
-        result.size() == 9);
-
+      scan = new Scan(ROW);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      scan.addColumn(FAMILIES[0], QUALIFIER);
+      scan.addColumn(FAMILIES[1], QUALIFIER);
+      scan.addColumn(FAMILIES[2], QUALIFIER);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 9 keys but received " + result.size(),
+              result.size() == 9);
+    }
   }
 
   @Test
   public void testDeleteFamilyVersion() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
-    byte [][] VALUES = makeN(VALUE, 5);
-    long [] ts = {1000, 2000, 3000, 4000, 5000};
+      byte[][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
+      byte[][] VALUES = makeN(VALUE, 5);
+      long[] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
+      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
 
-    Put put = new Put(ROW);
-    for (int q = 0; q < 1; q++)
-      for (int t = 0; t < 5; t++)
-        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
-    ht.put(put);
-    admin.flush(tableName);
+        Put put = new Put(ROW);
+        for (int q = 0; q < 1; q++) {
+          for (int t = 0; t < 5; t++) {
+            put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+          }
+        }
+        ht.put(put);
+        admin.flush(tableName);
 
-    Delete delete = new Delete(ROW);
-    delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
-    delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
-    ht.delete(delete);
-    admin.flush(tableName);
+        Delete delete = new Delete(ROW);
+        delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
+        delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
+        ht.delete(delete);
+        admin.flush(tableName);
 
-    for (int i = 0; i < 1; i++) {
-      Get get = new Get(ROW);
-      get.addColumn(FAMILY, QUALIFIERS[i]);
-      get.setMaxVersions(Integer.MAX_VALUE);
-      Result result = ht.get(get);
-      // verify version '1000'/'3000'/'5000' remains for all columns
-      assertNResult(result, ROW, FAMILY, QUALIFIERS[i],
-          new long [] {ts[0], ts[2], ts[4]},
-          new byte[][] {VALUES[0], VALUES[2], VALUES[4]},
-          0, 2);
+        for (int i = 0; i < 1; i++) {
+          Get get = new Get(ROW);
+          get.addColumn(FAMILY, QUALIFIERS[i]);
+          get.setMaxVersions(Integer.MAX_VALUE);
+          Result result = ht.get(get);
+          // verify version '1000'/'3000'/'5000' remains for all columns
+          assertNResult(result, ROW, FAMILY, QUALIFIERS[i],
+                  new long[]{ts[0], ts[2], ts[4]},
+                  new byte[][]{VALUES[0], VALUES[2], VALUES[4]},
+                  0, 2);
+        }
+      }
     }
-    ht.close();
-    admin.close();
   }
 
   @Test
@@ -1776,111 +1799,114 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Admin admin = TEST_UTIL.getAdmin();
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
-    Put put = null;
-    Result result = null;
-    Get get = null;
-    Delete delete = null;
+    try (Admin admin = TEST_UTIL.getAdmin();
+        Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
+      Put put = null;
+      Result result = null;
+      Get get = null;
+      Delete delete = null;
 
-    // 1. put on ROW
-    put = new Put(ROW);
-    for (int q = 0; q < 5; q++)
-      for (int t = 0; t < 5; t++)
-        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
-    ht.put(put);
-    admin.flush(tableName);
+      // 1. put on ROW
+      put = new Put(ROW);
+      for (int q = 0; q < 5; q++) {
+        for (int t = 0; t < 5; t++) {
+          put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+        }
+      }
+      ht.put(put);
+      admin.flush(tableName);
 
-    // 2. put on ROWS[0]
-    byte [] ROW2 = Bytes.toBytes("myRowForTest");
-    put = new Put(ROW2);
-    for (int q = 0; q < 5; q++)
-      for (int t = 0; t < 5; t++)
-        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
-    ht.put(put);
-    admin.flush(tableName);
+      // 2. put on ROWS[0]
+      byte[] ROW2 = Bytes.toBytes("myRowForTest");
+      put = new Put(ROW2);
+      for (int q = 0; q < 5; q++) {
+        for (int t = 0; t < 5; t++) {
+          put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+        }
+      }
+      ht.put(put);
+      admin.flush(tableName);
 
-    // 3. delete on ROW
-    delete = new Delete(ROW);
-    // delete version <= 2000 of all columns
-    // note: addFamily must be the first since it will mask
-    // the subsequent other type deletes!
-    delete.addFamily(FAMILY, ts[1]);
-    // delete version '4000' of all columns
-    delete.addFamilyVersion(FAMILY, ts[3]);
-   // delete version <= 3000 of column 0
-    delete.addColumns(FAMILY, QUALIFIERS[0], ts[2]);
-    // delete version <= 5000 of column 2
-    delete.addColumns(FAMILY, QUALIFIERS[2], ts[4]);
-    // delete version 5000 of column 4
-    delete.addColumn(FAMILY, QUALIFIERS[4], ts[4]);
-    ht.delete(delete);
-    admin.flush(tableName);
+      // 3. delete on ROW
+      delete = new Delete(ROW);
+      // delete version <= 2000 of all columns
+      // note: addFamily must be the first since it will mask
+      // the subsequent other type deletes!
+      delete.addFamily(FAMILY, ts[1]);
+      // delete version '4000' of all columns
+      delete.addFamilyVersion(FAMILY, ts[3]);
+      // delete version <= 3000 of column 0
+      delete.addColumns(FAMILY, QUALIFIERS[0], ts[2]);
+      // delete version <= 5000 of column 2
+      delete.addColumns(FAMILY, QUALIFIERS[2], ts[4]);
+      // delete version 5000 of column 4
+      delete.addColumn(FAMILY, QUALIFIERS[4], ts[4]);
+      ht.delete(delete);
+      admin.flush(tableName);
 
-     // 4. delete on ROWS[0]
-    delete = new Delete(ROW2);
-    delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
-    delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
-    ht.delete(delete);
-    admin.flush(tableName);
+      // 4. delete on ROWS[0]
+      delete = new Delete(ROW2);
+      delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
+      delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
+      ht.delete(delete);
+      admin.flush(tableName);
 
-    // 5. check ROW
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIERS[0]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIERS[0],
-        new long [] {ts[4]},
-        new byte[][] {VALUES[4]},
-        0, 0);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIERS[1]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIERS[1],
-        new long [] {ts[2], ts[4]},
-        new byte[][] {VALUES[2], VALUES[4]},
-        0, 1);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIERS[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertEquals(0, result.size());
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIERS[3]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIERS[3],
-        new long [] {ts[2], ts[4]},
-        new byte[][] {VALUES[2], VALUES[4]},
-        0, 1);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIERS[4]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIERS[4],
-        new long [] {ts[2]},
-        new byte[][] {VALUES[2]},
-        0, 0);
-
-    // 6. check ROWS[0]
-    for (int i = 0; i < 5; i++) {
-      get = new Get(ROW2);
-      get.addColumn(FAMILY, QUALIFIERS[i]);
+      // 5. check ROW
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIERS[0]);
       get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      // verify version '1000'/'3000'/'5000' remains for all columns
-      assertNResult(result, ROW2, FAMILY, QUALIFIERS[i],
-          new long [] {ts[0], ts[2], ts[4]},
-          new byte[][] {VALUES[0], VALUES[2], VALUES[4]},
-          0, 2);
+      assertNResult(result, ROW, FAMILY, QUALIFIERS[0],
+              new long[]{ts[4]},
+              new byte[][]{VALUES[4]},
+              0, 0);
+
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIERS[1]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIERS[1],
+              new long[]{ts[2], ts[4]},
+              new byte[][]{VALUES[2], VALUES[4]},
+              0, 1);
+
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIERS[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertEquals(0, result.size());
+
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIERS[3]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIERS[3],
+              new long[]{ts[2], ts[4]},
+              new byte[][]{VALUES[2], VALUES[4]},
+              0, 1);
+
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIERS[4]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIERS[4],
+              new long[]{ts[2]},
+              new byte[][]{VALUES[2]},
+              0, 0);
+
+      // 6. check ROWS[0]
+      for (int i = 0; i < 5; i++) {
+        get = new Get(ROW2);
+        get.addColumn(FAMILY, QUALIFIERS[i]);
+        get.readVersions(Integer.MAX_VALUE);
+        result = ht.get(get);
+        // verify version '1000'/'3000'/'5000' remains for all columns
+        assertNResult(result, ROW2, FAMILY, QUALIFIERS[i],
+                new long[]{ts[0], ts[2], ts[4]},
+                new byte[][]{VALUES[0], VALUES[2], VALUES[4]},
+                0, 2);
+      }
     }
-    ht.close();
-    admin.close();
   }
 
   @Test
@@ -1891,22 +1917,22 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3)) {
+      Put put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+      ht.put(put);
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    ht.put(put);
+      // delete wrong family
+      Delete delete = new Delete(ROW);
+      delete.addFamily(FAMILIES[1], ts[0]);
+      ht.delete(delete);
 
-    // delete wrong family
-    Delete delete = new Delete(ROW);
-    delete.addFamily(FAMILIES[1], ts[0]);
-    ht.delete(delete);
-
-    Get get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.readAllVersions();
-    Result result = ht.get(get);
-    assertTrue(Bytes.equals(result.getValue(FAMILIES[0], QUALIFIER), VALUES[0]));
+      Get get = new Get(ROW);
+      get.addFamily(FAMILIES[0]);
+      get.readAllVersions();
+      Result result = ht.get(get);
+      assertTrue(Bytes.equals(result.getValue(FAMILIES[0], QUALIFIER), VALUES[0]));
+    }
   }
 
   @Test
@@ -1918,296 +1944,297 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3)) {
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
-    ht.put(put);
-
-    Delete delete = new Delete(ROW);
-    delete.addFamily(FAMILIES[0], ts[0]);
-    ht.delete(delete);
-
-    Get get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
-
-    Scan scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[0]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1]},
-        new byte[][] {VALUES[1]},
-        0, 0);
-
-    // Test delete latest version
-    put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
-    put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
-    put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
-    ht.put(put);
-
-    delete = new Delete(ROW);
-    delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
-    ht.delete(delete);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILIES[0], QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
-
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILIES[0], QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
-
-    // Test for HBASE-1847
-    delete = new Delete(ROW);
-    delete.addColumn(FAMILIES[0], null);
-    ht.delete(delete);
-
-    // Cleanup null qualifier
-    delete = new Delete(ROW);
-    delete.addColumns(FAMILIES[0], null);
-    ht.delete(delete);
-
-    // Expected client behavior might be that you can re-put deleted values
-    // But alas, this is not to be.  We can't put them back in either case.
-
-    put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
-    ht.put(put);
-
-
-    // It used to be due to the internal implementation of Get, that
-    // the Get() call would return ts[4] UNLIKE the Scan below. With
-    // the switch to using Scan for Get this is no longer the case.
-    get = new Get(ROW);
-    get.addFamily(FAMILIES[0]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
-
-    // The Scanner returns the previous values, the expected-naive-unexpected behavior
-
-    scan = new Scan(ROW);
-    scan.addFamily(FAMILIES[0]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[1], ts[2], ts[3]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
-        0, 2);
-
-    // Test deleting an entire family from one row but not the other various ways
-
-    put = new Put(ROWS[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
-
-    put = new Put(ROWS[1]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
-
-    put = new Put(ROWS[2]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
-
-    // Assert that above went in.
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 4 key but received " + result.size() + ": " + result,
-        result.size() == 4);
-
-    delete = new Delete(ROWS[0]);
-    delete.addFamily(FAMILIES[2]);
-    ht.delete(delete);
-
-    delete = new Delete(ROWS[1]);
-    delete.addColumns(FAMILIES[1], QUALIFIER);
-    ht.delete(delete);
-
-    delete = new Delete(ROWS[2]);
-    delete.addColumn(FAMILIES[1], QUALIFIER);
-    delete.addColumn(FAMILIES[1], QUALIFIER);
-    delete.addColumn(FAMILIES[2], QUALIFIER);
-    ht.delete(delete);
-
-    get = new Get(ROWS[0]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
-        new long [] {ts[0], ts[1]},
-        new byte[][] {VALUES[0], VALUES[1]},
-        0, 1);
-
-    scan = new Scan(ROWS[0]);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
-        new long [] {ts[0], ts[1]},
-        new byte[][] {VALUES[0], VALUES[1]},
-        0, 1);
-
-    get = new Get(ROWS[1]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-
-    scan = new Scan(ROWS[1]);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-
-    get = new Get(ROWS[2]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertEquals(1, result.size());
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
-        new long [] {ts[2]},
-        new byte[][] {VALUES[2]},
-        0, 0);
-
-    scan = new Scan(ROWS[2]);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertEquals(1, result.size());
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
-        new long [] {ts[2]},
-        new byte[][] {VALUES[2]},
-        0, 0);
-
-    // Test if we delete the family first in one row (HBASE-1541)
-
-    delete = new Delete(ROWS[3]);
-    delete.addFamily(FAMILIES[1]);
-    ht.delete(delete);
-
-    put = new Put(ROWS[3]);
-    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
-    ht.put(put);
-
-    put = new Put(ROWS[4]);
-    put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
-    ht.put(put);
-
-    get = new Get(ROWS[3]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
-
-    get = new Get(ROWS[4]);
-    get.addFamily(FAMILIES[1]);
-    get.addFamily(FAMILIES[2]);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-
-    scan = new Scan(ROWS[3]);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    ResultScanner scanner = ht.getScanner(scan);
-    result = scanner.next();
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[3]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[0]));
-    result = scanner.next();
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[1]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[1]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[1]), VALUES[2]));
-    scanner.close();
-
-    // Add test of bulk deleting.
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      put = new Put(bytes);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(FAMILIES[0], QUALIFIER, bytes);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
       ht.put(put);
-    }
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      get = new Get(bytes);
+
+      Delete delete = new Delete(ROW);
+      delete.addFamily(FAMILIES[0], ts[0]);
+      ht.delete(delete);
+
+      Get get = new Get(ROW);
       get.addFamily(FAMILIES[0]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1]},
+          new byte[][] {VALUES[1]},
+          0, 0);
+
+      Scan scan = new Scan(ROW);
+      scan.addFamily(FAMILIES[0]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+              new long[]{ts[1]},
+              new byte[][]{VALUES[1]},
+              0, 0);
+
+      // Test delete latest version
+      put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+      put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
+      put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
+      ht.put(put);
+
+      delete = new Delete(ROW);
+      delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
+      ht.delete(delete);
+
+      get = new Get(ROW);
+      get.addColumn(FAMILIES[0], QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertTrue(result.size() == 1);
-    }
-    ArrayList<Delete> deletes = new ArrayList<>();
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      delete = new Delete(bytes);
-      delete.addFamily(FAMILIES[0]);
-      deletes.add(delete);
-    }
-    ht.delete(deletes);
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      get = new Get(bytes);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1], ts[2], ts[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
+
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILIES[0], QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+              new long[]{ts[1], ts[2], ts[3]},
+              new byte[][]{VALUES[1], VALUES[2], VALUES[3]},
+              0, 2);
+
+      // Test for HBASE-1847
+      delete = new Delete(ROW);
+      delete.addColumn(FAMILIES[0], null);
+      ht.delete(delete);
+
+      // Cleanup null qualifier
+      delete = new Delete(ROW);
+      delete.addColumns(FAMILIES[0], null);
+      ht.delete(delete);
+
+      // Expected client behavior might be that you can re-put deleted values
+      // But alas, this is not to be.  We can't put them back in either case.
+
+      put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
+      ht.put(put);
+
+
+      // It used to be due to the internal implementation of Get, that
+      // the Get() call would return ts[4] UNLIKE the Scan below. With
+      // the switch to using Scan for Get this is no longer the case.
+      get = new Get(ROW);
       get.addFamily(FAMILIES[0]);
+      get.setMaxVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertTrue(result.isEmpty());
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+          new long [] {ts[1], ts[2], ts[3]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
+          0, 2);
+
+      // The Scanner returns the previous values, the expected-naive-unexpected behavior
+
+      scan = new Scan(ROW);
+      scan.addFamily(FAMILIES[0]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
+              new long[]{ts[1], ts[2], ts[3]},
+              new byte[][]{VALUES[1], VALUES[2], VALUES[3]},
+              0, 2);
+
+      // Test deleting an entire family from one row but not the other various ways
+
+      put = new Put(ROWS[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
+
+      put = new Put(ROWS[1]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
+
+      put = new Put(ROWS[2]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
+
+      // Assert that above went in.
+      get = new Get(ROWS[2]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 4 key but received " + result.size() + ": " + result,
+          result.size() == 4);
+
+      delete = new Delete(ROWS[0]);
+      delete.addFamily(FAMILIES[2]);
+      ht.delete(delete);
+
+      delete = new Delete(ROWS[1]);
+      delete.addColumns(FAMILIES[1], QUALIFIER);
+      ht.delete(delete);
+
+      delete = new Delete(ROWS[2]);
+      delete.addColumn(FAMILIES[1], QUALIFIER);
+      delete.addColumn(FAMILIES[1], QUALIFIER);
+      delete.addColumn(FAMILIES[2], QUALIFIER);
+      ht.delete(delete);
+
+      get = new Get(ROWS[0]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
+      assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
+          new long [] {ts[0], ts[1]},
+          new byte[][] {VALUES[0], VALUES[1]},
+          0, 1);
+
+      scan = new Scan(ROWS[0]);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 2 keys but received " + result.size(),
+              result.size() == 2);
+      assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
+              new long[]{ts[0], ts[1]},
+              new byte[][]{VALUES[0], VALUES[1]},
+              0, 1);
+
+      get = new Get(ROWS[1]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
+
+      scan = new Scan(ROWS[1]);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 2 keys but received " + result.size(),
+              result.size() == 2);
+
+      get = new Get(ROWS[2]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertEquals(1, result.size());
+      assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
+          new long [] {ts[2]},
+          new byte[][] {VALUES[2]},
+          0, 0);
+
+      scan = new Scan(ROWS[2]);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertEquals(1, result.size());
+      assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
+              new long[]{ts[2]},
+              new byte[][]{VALUES[2]},
+              0, 0);
+
+      // Test if we delete the family first in one row (HBASE-1541)
+
+      delete = new Delete(ROWS[3]);
+      delete.addFamily(FAMILIES[1]);
+      ht.delete(delete);
+
+      put = new Put(ROWS[3]);
+      put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
+      ht.put(put);
+
+      put = new Put(ROWS[4]);
+      put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
+      ht.put(put);
+
+      get = new Get(ROWS[3]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 1 key but received " + result.size(),
+          result.size() == 1);
+
+      get = new Get(ROWS[4]);
+      get.addFamily(FAMILIES[1]);
+      get.addFamily(FAMILIES[2]);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertTrue("Expected 2 keys but received " + result.size(),
+          result.size() == 2);
+
+      scan = new Scan(ROWS[3]);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        result = scanner.next();
+        assertTrue("Expected 1 key but received " + result.size(),
+                result.size() == 1);
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[3]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[0]));
+        result = scanner.next();
+        assertTrue("Expected 2 keys but received " + result.size(),
+                result.size() == 2);
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[4]));
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[1]), ROWS[4]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[1]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[1]), VALUES[2]));
+      }
+
+      // Add test of bulk deleting.
+      for (int i = 0; i < 10; i++) {
+        byte[] bytes = Bytes.toBytes(i);
+        put = new Put(bytes);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(FAMILIES[0], QUALIFIER, bytes);
+        ht.put(put);
+      }
+      for (int i = 0; i < 10; i++) {
+        byte[] bytes = Bytes.toBytes(i);
+        get = new Get(bytes);
+        get.addFamily(FAMILIES[0]);
+        result = ht.get(get);
+        assertTrue(result.size() == 1);
+      }
+      ArrayList<Delete> deletes = new ArrayList<>();
+      for (int i = 0; i < 10; i++) {
+        byte[] bytes = Bytes.toBytes(i);
+        delete = new Delete(bytes);
+        delete.addFamily(FAMILIES[0]);
+        deletes.add(delete);
+      }
+      ht.delete(deletes);
+      for (int i = 0; i < 10; i++) {
+        byte[] bytes = Bytes.toBytes(i);
+        get = new Get(bytes);
+        get.addFamily(FAMILIES[0]);
+        result = ht.get(get);
+        assertTrue(result.isEmpty());
+      }
     }
   }
 
@@ -2217,107 +2244,108 @@ public class TestFromClientSide {
   @Test
   public void testBatchOperationsWithErrors() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10);
+    try (Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10)) {
 
-    int NUM_OPS = 100;
-    int FAILED_OPS = 50;
+      int NUM_OPS = 100;
+      int FAILED_OPS = 50;
 
-    RetriesExhaustedWithDetailsException expectedException = null;
-    IllegalArgumentException iae = null;
+      RetriesExhaustedWithDetailsException expectedException = null;
+      IllegalArgumentException iae = null;
 
-    // 1.1 Put with no column families (local validation, runtime exception)
-    List<Put> puts = new ArrayList<Put>(NUM_OPS);
-    for (int i = 0; i != NUM_OPS; i++) {
-      Put put = new Put(Bytes.toBytes(i));
-      puts.add(put);
-    }
+      // 1.1 Put with no column families (local validation, runtime exception)
+      List<Put> puts = new ArrayList<Put>(NUM_OPS);
+      for (int i = 0; i != NUM_OPS; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        puts.add(put);
+      }
 
-    try {
-      foo.put(puts);
-    } catch (IllegalArgumentException e) {
-      iae = e;
-    }
-    assertNotNull(iae);
-    assertEquals(NUM_OPS, puts.size());
+      try {
+        foo.put(puts);
+      } catch (IllegalArgumentException e) {
+        iae = e;
+      }
+      assertNotNull(iae);
+      assertEquals(NUM_OPS, puts.size());
 
-    // 1.2 Put with invalid column family
-    iae = null;
-    puts.clear();
-    for (int i = 0; i != NUM_OPS; i++) {
-      Put put = new Put(Bytes.toBytes(i));
-      put.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY, Bytes.toBytes(i));
-      puts.add(put);
-    }
+      // 1.2 Put with invalid column family
+      iae = null;
+      puts.clear();
+      for (int i = 0; i != NUM_OPS; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY, Bytes.toBytes(i));
+        puts.add(put);
+      }
 
-    try {
-      foo.put(puts);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
-    }
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(puts.get(1)));
+      try {
+        foo.put(puts);
+      } catch (RetriesExhaustedWithDetailsException e) {
+        expectedException = e;
+      }
+      assertNotNull(expectedException);
+      assertEquals(FAILED_OPS, expectedException.exceptions.size());
+      assertTrue(expectedException.actions.contains(puts.get(1)));
 
-    // 2.1 Get non-existent rows
-    List<Get> gets = new ArrayList<>(NUM_OPS);
-    for (int i = 0; i < NUM_OPS; i++) {
-      Get get = new Get(Bytes.toBytes(i));
-      // get.addColumn(FAMILY, FAMILY);
-      gets.add(get);
-    }
-    Result[] getsResult = foo.get(gets);
+      // 2.1 Get non-existent rows
+      List<Get> gets = new ArrayList<>(NUM_OPS);
+      for (int i = 0; i < NUM_OPS; i++) {
+        Get get = new Get(Bytes.toBytes(i));
+        // get.addColumn(FAMILY, FAMILY);
+        gets.add(get);
+      }
+      Result[] getsResult = foo.get(gets);
 
-    assertNotNull(getsResult);
-    assertEquals(NUM_OPS, getsResult.length);
-    assertNull(getsResult[1].getRow());
+      assertNotNull(getsResult);
+      assertEquals(NUM_OPS, getsResult.length);
+      assertNull(getsResult[1].getRow());
 
-    // 2.2 Get with invalid column family
-    gets.clear();
-    getsResult = null;
-    expectedException = null;
-    for (int i = 0; i < NUM_OPS; i++) {
-      Get get = new Get(Bytes.toBytes(i));
-      get.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
-      gets.add(get);
-    }
-    try {
-      getsResult = foo.get(gets);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
-    }
-    assertNull(getsResult);
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(gets.get(1)));
+      // 2.2 Get with invalid column family
+      gets.clear();
+      getsResult = null;
+      expectedException = null;
+      for (int i = 0; i < NUM_OPS; i++) {
+        Get get = new Get(Bytes.toBytes(i));
+        get.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
+        gets.add(get);
+      }
+      try {
+        getsResult = foo.get(gets);
+      } catch (RetriesExhaustedWithDetailsException e) {
+        expectedException = e;
+      }
+      assertNull(getsResult);
+      assertNotNull(expectedException);
+      assertEquals(FAILED_OPS, expectedException.exceptions.size());
+      assertTrue(expectedException.actions.contains(gets.get(1)));
 
-    // 3.1 Delete with invalid column family
-    expectedException = null;
-    List<Delete> deletes = new ArrayList<>(NUM_OPS);
-    for (int i = 0; i < NUM_OPS; i++) {
-      Delete delete = new Delete(Bytes.toBytes(i));
-      delete.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
-      deletes.add(delete);
-    }
-    try {
+      // 3.1 Delete with invalid column family
+      expectedException = null;
+      List<Delete> deletes = new ArrayList<>(NUM_OPS);
+      for (int i = 0; i < NUM_OPS; i++) {
+        Delete delete = new Delete(Bytes.toBytes(i));
+        delete.addColumn((i % 2) == 0 ? FAMILY : INVALID_FAMILY, FAMILY);
+        deletes.add(delete);
+      }
+      try {
+        foo.delete(deletes);
+      } catch (RetriesExhaustedWithDetailsException e) {
+        expectedException = e;
+      }
+      assertEquals((NUM_OPS - FAILED_OPS), deletes.size());
+      assertNotNull(expectedException);
+      assertEquals(FAILED_OPS, expectedException.exceptions.size());
+      assertTrue(expectedException.actions.contains(deletes.get(1)));
+
+
+      // 3.2 Delete non-existent rows
+      deletes.clear();
+      for (int i = 0; i < NUM_OPS; i++) {
+        Delete delete = new Delete(Bytes.toBytes(i));
+        deletes.add(delete);
+      }
       foo.delete(deletes);
-    } catch (RetriesExhaustedWithDetailsException e) {
-      expectedException = e;
+
+      assertTrue(deletes.isEmpty());
     }
-    assertEquals((NUM_OPS - FAILED_OPS), deletes.size());
-    assertNotNull(expectedException);
-    assertEquals(FAILED_OPS, expectedException.exceptions.size());
-    assertTrue(expectedException.actions.contains(deletes.get(1)));
-
-
-    // 3.2 Delete non-existent rows
-    deletes.clear();
-    for (int i = 0; i < NUM_OPS; i++) {
-      Delete delete = new Delete(Bytes.toBytes(i));
-      deletes.add(delete);
-    }
-    foo.delete(deletes);
-
-    assertTrue(deletes.isEmpty());
   }
 
   /*
@@ -2394,75 +2422,75 @@ public class TestFromClientSide {
     byte [][] ROWS = makeN(ROW, numRows);
     byte [][] QUALIFIERS = makeN(QUALIFIER, numColsPerRow);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    // Insert rows
+      // Insert rows
 
-    for(int i=0;i<numRows;i++) {
-      Put put = new Put(ROWS[i]);
-      put.setDurability(Durability.SKIP_WAL);
-      for(int j=0;j<numColsPerRow;j++) {
-        put.addColumn(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
+      for (int i = 0; i < numRows; i++) {
+        Put put = new Put(ROWS[i]);
+        put.setDurability(Durability.SKIP_WAL);
+        for (int j = 0; j < numColsPerRow; j++) {
+          put.addColumn(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
+        }
+        assertTrue("Put expected to contain " + numColsPerRow + " columns but " +
+                "only contains " + put.size(), put.size() == numColsPerRow);
+        ht.put(put);
       }
-      assertTrue("Put expected to contain " + numColsPerRow + " columns but " +
-          "only contains " + put.size(), put.size() == numColsPerRow);
-      ht.put(put);
-    }
 
-    // Get a row
-    Get get = new Get(ROWS[numRows-1]);
-    Result result = ht.get(get);
-    assertNumKeys(result, numColsPerRow);
-    Cell [] keys = result.rawCells();
-    for(int i=0;i<result.size();i++) {
-      assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
-    }
-
-    // Scan the rows
-    Scan scan = new Scan();
-    ResultScanner scanner = ht.getScanner(scan);
-    int rowCount = 0;
-    while((result = scanner.next()) != null) {
+      // Get a row
+      Get get = new Get(ROWS[numRows - 1]);
+      Result result = ht.get(get);
       assertNumKeys(result, numColsPerRow);
-      Cell [] kvs = result.rawCells();
-      for(int i=0;i<numColsPerRow;i++) {
-        assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
+      Cell[] keys = result.rawCells();
+      for (int i = 0; i < result.size(); i++) {
+        assertKey(keys[i], ROWS[numRows - 1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
-      rowCount++;
-    }
-    scanner.close();
-    assertTrue("Expected to scan " + numRows + " rows but actually scanned "
-        + rowCount + " rows", rowCount == numRows);
 
-    // flush and try again
+      // Scan the rows
+      Scan scan = new Scan();
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int rowCount = 0;
+        while ((result = scanner.next()) != null) {
+          assertNumKeys(result, numColsPerRow);
+          Cell[] kvs = result.rawCells();
+          for (int i = 0; i < numColsPerRow; i++) {
+            assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
+          }
+          rowCount++;
+        }
+        assertTrue("Expected to scan " + numRows + " rows but actually scanned "
+                + rowCount + " rows", rowCount == numRows);
+      }
 
-    TEST_UTIL.flush();
+      // flush and try again
 
-    // Get a row
-    get = new Get(ROWS[numRows-1]);
-    result = ht.get(get);
-    assertNumKeys(result, numColsPerRow);
-    keys = result.rawCells();
-    for(int i=0;i<result.size();i++) {
-      assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
-    }
+      TEST_UTIL.flush();
 
-    // Scan the rows
-    scan = new Scan();
-    scanner = ht.getScanner(scan);
-    rowCount = 0;
-    while((result = scanner.next()) != null) {
+      // Get a row
+      get = new Get(ROWS[numRows - 1]);
+      result = ht.get(get);
       assertNumKeys(result, numColsPerRow);
-      Cell [] kvs = result.rawCells();
-      for(int i=0;i<numColsPerRow;i++) {
-        assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
+      keys = result.rawCells();
+      for (int i = 0; i < result.size(); i++) {
+        assertKey(keys[i], ROWS[numRows - 1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
-      rowCount++;
-    }
-    scanner.close();
-    assertTrue("Expected to scan " + numRows + " rows but actually scanned "
-        + rowCount + " rows", rowCount == numRows);
 
+      // Scan the rows
+      scan = new Scan();
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int rowCount = 0;
+        while ((result = scanner.next()) != null) {
+          assertNumKeys(result, numColsPerRow);
+          Cell[] kvs = result.rawCells();
+          for (int i = 0; i < numColsPerRow; i++) {
+            assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
+          }
+          rowCount++;
+        }
+        assertTrue("Expected to scan " + numRows + " rows but actually scanned "
+                + rowCount + " rows", rowCount == numRows);
+      }
+    }
   }
 
   /**
@@ -2476,56 +2504,56 @@ public class TestFromClientSide {
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert three versions
+      // Insert three versions
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      ht.put(put);
 
-    // Get the middle value
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      // Get the middle value
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
 
-    // Try to get one version before (expect fail)
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
+      // Try to get one version before (expect fail)
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
 
-    // Try to get one version after (expect fail)
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
+      // Try to get one version after (expect fail)
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
 
-    // Try same from storefile
-    TEST_UTIL.flush();
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
+      // Try same from storefile
+      TEST_UTIL.flush();
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
 
-    // Insert two more versions surrounding others, into memstore
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    ht.put(put);
+      // Insert two more versions surrounding others, into memstore
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+      ht.put(put);
 
-    // Check we can get everything we should and can't get what we shouldn't
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+      // Check we can get everything we should and can't get what we shouldn't
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
 
-    // Try same from two storefiles
-    TEST_UTIL.flush();
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-
+      // Try same from two storefiles
+      TEST_UTIL.flush();
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+    }
   }
 
   /**
@@ -2539,42 +2567,42 @@ public class TestFromClientSide {
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert lots versions
+      // Insert lots versions
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      ht.put(put);
 
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
 
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
 
-    // Try same from storefile
-    TEST_UTIL.flush();
+      // Try same from storefile
+      TEST_UTIL.flush();
 
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
 
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
-
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
+    }
   }
 
   /**
@@ -2585,20 +2613,20 @@ public class TestFromClientSide {
   public void testJiraTest1014() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    long manualStamp = 12345;
+      long manualStamp = 12345;
 
-    // Insert lots versions
+      // Insert lots versions
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, manualStamp, VALUE);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, manualStamp, VALUE);
+      ht.put(put);
 
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, manualStamp, VALUE);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp-1);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp+1);
-
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, manualStamp, VALUE);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp - 1);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp + 1);
+    }
   }
 
   /**
@@ -2611,37 +2639,38 @@ public class TestFromClientSide {
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert lots versions
+      // Insert lots versions
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      ht.put(put);
 
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
 
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
 
-    // Try same from storefile
-    TEST_UTIL.flush();
+      // Try same from storefile
+      TEST_UTIL.flush();
 
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
-    getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
+      getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
 
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
-    scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
+      scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
+    }
   }
 
   /**
@@ -2654,29 +2683,30 @@ public class TestFromClientSide {
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert lots versions
+      // Insert lots versions
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      ht.put(put);
 
-    getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
-    scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
-    // Try same from storefile
-    TEST_UTIL.flush();
+      // Try same from storefile
+      TEST_UTIL.flush();
 
-    getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
-    scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+      scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
+    }
   }
 
   //
@@ -3466,10 +3496,10 @@ public class TestFromClientSide {
   //
 
   private Result getSingleScanResult(Table ht, Scan scan) throws IOException {
-    ResultScanner scanner = ht.getScanner(scan);
-    Result result = scanner.next();
-    scanner.close();
-    return result;
+    try (ResultScanner scanner = ht.getScanner(scan)) {
+      Result result = scanner.next();
+      return result;
+    }
   }
 
   private byte [][] makeNAscii(byte [] base, int n) {
@@ -3527,440 +3557,455 @@ public class TestFromClientSide {
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Insert 4 versions of same column
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    ht.put(put);
+      // Insert 4 versions of same column
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      ht.put(put);
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(2);
-    Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(2);
+      Result result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
-    Scan scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(2);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      Scan scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(2);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+              new long[]{STAMPS[4], STAMPS[5]},
+              new byte[][]{VALUES[4], VALUES[5]},
+              0, 1);
 
-    // Flush and redo
+      // Flush and redo
 
-    TEST_UTIL.flush();
+      TEST_UTIL.flush();
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(2);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(2);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[4], STAMPS[5]},
+          new byte[][] {VALUES[4], VALUES[5]},
+          0, 1);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(2);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[4], STAMPS[5]},
-        new byte[][] {VALUES[4], VALUES[5]},
-        0, 1);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(2);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+              new long[]{STAMPS[4], STAMPS[5]},
+              new byte[][]{VALUES[4], VALUES[5]},
+              0, 1);
 
 
-    // Add some memstore and retest
+      // Add some memstore and retest
 
-    // Insert 4 more versions of same column and a dupe
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
-    ht.put(put);
+      // Insert 4 more versions of same column and a dupe
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
+      ht.put(put);
 
-    // Ensure maxVersions in query is respected
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(7);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+      // Ensure maxVersions in query is respected
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(7);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
+          0, 6);
+
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(7);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+        new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+        new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(7);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
+      get = new Get(ROW);
+      get.setMaxVersions(7);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+          new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7],
+                  VALUES[8]},
+          0, 6);
+
+      scan = new Scan(ROW);
+      scan.setMaxVersions(7);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+        new long[]{STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
+        new byte[][]{VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
 
-    get = new Get(ROW);
-    get.setMaxVersions(7);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 6);
+      // Verify we can get each one properly
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
+      getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
+      scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
 
-    scan = new Scan(ROW);
-    scan.setMaxVersions(7);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
-        0, 6);
+      // Verify we don't accidentally get others
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
+      scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
 
-    // Verify we can get each one properly
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
-    getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
-    scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+      // Ensure maxVersions of table is respected
 
-    // Verify we don't accidentally get others
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
-    scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
+      TEST_UTIL.flush();
 
-    // Ensure maxVersions of table is respected
+      // Insert 4 more versions of same column and a dupe
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
+      put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
+      ht.put(put);
 
-    TEST_UTIL.flush();
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8],
+                  VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
+          0, 9);
 
-    // Insert 4 more versions of same column and a dupe
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
-    put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
-    ht.put(put);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9],
+                  STAMPS[11], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9],
+                  VALUES[11], VALUES[13], VALUES[15]},0, 9);
 
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      // Delete a version in the memstore and a version in a storefile
+      Delete delete = new Delete(ROW);
+      delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
+      delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
+      ht.delete(delete);
 
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
-        0, 9);
+      // Test that it's gone
+      get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      result = ht.get(get);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6],
+                  VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+          0, 9);
 
-    // Delete a version in the memstore and a version in a storefile
-    Delete delete = new Delete(ROW);
-    delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
-    delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
-    ht.delete(delete);
-
-    // Test that it's gone
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
-
-    scan = new Scan(ROW);
-    scan.addColumn(FAMILY, QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 9);
+      scan = new Scan(ROW);
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILY, QUALIFIER,
+          new long[]{STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8],
+                  STAMPS[9], STAMPS[13], STAMPS[15]},
+          new byte[][]{VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8],
+                  VALUES[9], VALUES[13], VALUES[15]},0,9);
+    }
   }
 
   @Test
   public void testUpdates() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
+    try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10)) {
 
-    // Write a column with values at timestamp 1, 2 and 3
-    byte[] row = Bytes.toBytes("row1");
-    byte[] qualifier = Bytes.toBytes("myCol");
-    Put put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
-    hTable.put(put);
+      // Write a column with values at timestamp 1, 2 and 3
+      byte[] row = Bytes.toBytes("row1");
+      byte[] qualifier = Bytes.toBytes("myCol");
+      Put put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+      hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.setMaxVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.setMaxVersions();
 
-    // Check that the column indeed has the right values at timestamps 1 and
-    // 2
-    Result result = hTable.get(get);
-    NavigableMap<Long, byte[]> navigableMap =
-        result.getMap().get(FAMILY).get(qualifier);
-    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+      // Check that the column indeed has the right values at timestamps 1 and
+      // 2
+      Result result = hTable.get(get);
+      NavigableMap<Long, byte[]> navigableMap =
+              result.getMap().get(FAMILY).get(qualifier);
+      assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
 
-    // Update the value at timestamp 1
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
-    hTable.put(put);
+      // Update the value at timestamp 1
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+      hTable.put(put);
 
-    // Update the value at timestamp 2
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
-    hTable.put(put);
+      // Update the value at timestamp 2
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+      hTable.put(put);
 
-    // Check that the values at timestamp 2 and 1 got updated
-    result = hTable.get(get);
-    navigableMap = result.getMap().get(FAMILY).get(qualifier);
-    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+      // Check that the values at timestamp 2 and 1 got updated
+      result = hTable.get(get);
+      navigableMap = result.getMap().get(FAMILY).get(qualifier);
+      assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+    }
   }
 
   @Test
   public void testUpdatesWithMajorCompaction() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
-    Admin admin = TEST_UTIL.getAdmin();
+    try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
+        Admin admin = TEST_UTIL.getAdmin()) {
 
-    // Write a column with values at timestamp 1, 2 and 3
-    byte[] row = Bytes.toBytes("row2");
-    byte[] qualifier = Bytes.toBytes("myCol");
-    Put put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
-    hTable.put(put);
+      // Write a column with values at timestamp 1, 2 and 3
+      byte[] row = Bytes.toBytes("row2");
+      byte[] qualifier = Bytes.toBytes("myCol");
+      Put put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+      hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.setMaxVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.setMaxVersions();
 
-    // Check that the column indeed has the right values at timestamps 1 and
-    // 2
-    Result result = hTable.get(get);
-    NavigableMap<Long, byte[]> navigableMap =
-        result.getMap().get(FAMILY).get(qualifier);
-    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+      // Check that the column indeed has the right values at timestamps 1 and
+      // 2
+      Result result = hTable.get(get);
+      NavigableMap<Long, byte[]> navigableMap =
+              result.getMap().get(FAMILY).get(qualifier);
+      assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
 
-    // Trigger a major compaction
-    admin.flush(tableName);
-    admin.majorCompact(tableName);
-    Thread.sleep(6000);
+      // Trigger a major compaction
+      admin.flush(tableName);
+      admin.majorCompact(tableName);
+      Thread.sleep(6000);
 
-    // Update the value at timestamp 1
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
-    hTable.put(put);
+      // Update the value at timestamp 1
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+      hTable.put(put);
 
-    // Update the value at timestamp 2
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
-    hTable.put(put);
+      // Update the value at timestamp 2
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+      hTable.put(put);
 
-    // Trigger a major compaction
-    admin.flush(tableName);
-    admin.majorCompact(tableName);
-    Thread.sleep(6000);
+      // Trigger a major compaction
+      admin.flush(tableName);
+      admin.majorCompact(tableName);
+      Thread.sleep(6000);
 
-    // Check that the values at timestamp 2 and 1 got updated
-    result = hTable.get(get);
-    navigableMap = result.getMap().get(FAMILY).get(qualifier);
-    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+      // Check that the values at timestamp 2 and 1 got updated
+      result = hTable.get(get);
+      navigableMap = result.getMap().get(FAMILY).get(qualifier);
+      assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+    }
   }
 
   @Test
   public void testMajorCompactionBetweenTwoUpdates() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
-    Admin admin = TEST_UTIL.getAdmin();
+    try (Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
+        Admin admin = TEST_UTIL.getAdmin()) {
 
-    // Write a column with values at timestamp 1, 2 and 3
-    byte[] row = Bytes.toBytes("row3");
-    byte[] qualifier = Bytes.toBytes("myCol");
-    Put put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
-    hTable.put(put);
+      // Write a column with values at timestamp 1, 2 and 3
+      byte[] row = Bytes.toBytes("row3");
+      byte[] qualifier = Bytes.toBytes("myCol");
+      Put put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+      hTable.put(put);
 
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
-    hTable.put(put);
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+      hTable.put(put);
 
-    Get get = new Get(row);
-    get.addColumn(FAMILY, qualifier);
-    get.setMaxVersions();
+      Get get = new Get(row);
+      get.addColumn(FAMILY, qualifier);
+      get.setMaxVersions();
 
-    // Check that the column indeed has the right values at timestamps 1 and
-    // 2
-    Result result = hTable.get(get);
-    NavigableMap<Long, byte[]> navigableMap =
-        result.getMap().get(FAMILY).get(qualifier);
-    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+      // Check that the column indeed has the right values at timestamps 1 and
+      // 2
+      Result result = hTable.get(get);
+      NavigableMap<Long, byte[]> navigableMap =
+              result.getMap().get(FAMILY).get(qualifier);
+      assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
 
-    // Trigger a major compaction
-    admin.flush(tableName);
-    admin.majorCompact(tableName);
-    Thread.sleep(6000);
+      // Trigger a major compaction
+      admin.flush(tableName);
+      admin.majorCompact(tableName);
+      Thread.sleep(6000);
 
-    // Update the value at timestamp 1
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
-    hTable.put(put);
+      // Update the value at timestamp 1
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+      hTable.put(put);
 
-    // Trigger a major compaction
-    admin.flush(tableName);
-    admin.majorCompact(tableName);
-    Thread.sleep(6000);
+      // Trigger a major compaction
+      admin.flush(tableName);
+      admin.majorCompact(tableName);
+      Thread.sleep(6000);
 
-    // Update the value at timestamp 2
-    put = new Put(row);
-    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
-    hTable.put(put);
+      // Update the value at timestamp 2
+      put = new Put(row);
+      put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+      hTable.put(put);
 
-    // Trigger a major compaction
-    admin.flush(tableName);
-    admin.majorCompact(tableName);
-    Thread.sleep(6000);
+      // Trigger a major compaction
+      admin.flush(tableName);
+      admin.majorCompact(tableName);
+      Thread.sleep(6000);
 
-    // Check that the values at timestamp 2 and 1 got updated
-    result = hTable.get(get);
-    navigableMap = result.getMap().get(FAMILY).get(qualifier);
+      // Check that the values at timestamp 2 and 1 got updated
+      result = hTable.get(get);
+      navigableMap = result.getMap().get(FAMILY).get(qualifier);
 
-    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
-    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+      assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+      assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+    }
   }
 
   @Test
   public void testGet_EmptyTable() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    Get get = new Get(ROW);
-    get.addFamily(FAMILY);
-    Result r = table.get(get);
-    assertTrue(r.isEmpty());
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      Get get = new Get(ROW);
+      get.addFamily(FAMILY);
+      Result r = table.get(get);
+      assertTrue(r.isEmpty());
+    }
   }
 
   @Test
   public void testGet_NullQualifier() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    table.put(put);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
 
-    put = new Put(ROW);
-    put.addColumn(FAMILY, null, VALUE);
-    table.put(put);
-    LOG.info("Row put");
+      put = new Put(ROW);
+      put.addColumn(FAMILY, null, VALUE);
+      table.put(put);
+      LOG.info("Row put");
 
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, null);
-    Result r = table.get(get);
-    assertEquals(1, r.size());
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, null);
+      Result r = table.get(get);
+      assertEquals(1, r.size());
 
-    get = new Get(ROW);
-    get.addFamily(FAMILY);
-    r = table.get(get);
-    assertEquals(2, r.size());
+      get = new Get(ROW);
+      get.addFamily(FAMILY);
+      r = table.get(get);
+      assertEquals(2, r.size());
+    }
   }
 
   @Test
   public void testGet_NonExistentRow() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    table.put(put);
-    LOG.info("Row put");
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+      LOG.info("Row put");
 
-    Get get = new Get(ROW);
-    get.addFamily(FAMILY);
-    Result r = table.get(get);
-    assertFalse(r.isEmpty());
-    System.out.println("Row retrieved successfully");
+      Get get = new Get(ROW);
+      get.addFamily(FAMILY);
+      Result r = table.get(get);
+      assertFalse(r.isEmpty());
+      System.out.println("Row retrieved successfully");
 
-    byte [] missingrow = Bytes.toBytes("missingrow");
-    get = new Get(missingrow);
-    get.addFamily(FAMILY);
-    r = table.get(get);
-    assertTrue(r.isEmpty());
-    LOG.info("Row missing as it should be");
+      byte[] missingrow = Bytes.toBytes("missingrow");
+      get = new Get(missingrow);
+      get.addFamily(FAMILY);
+      r = table.get(get);
+      assertTrue(r.isEmpty());
+      LOG.info("Row missing as it should be");
+    }
   }
 
   @Test
@@ -3970,35 +4015,37 @@ public class TestFromClientSide {
     final byte [] row1 = Bytes.toBytes("row1");
     final byte [] row2 = Bytes.toBytes("row2");
     final byte [] value = Bytes.toBytes("abcd");
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
-    Put put = new Put(row1);
-    put.addColumn(CONTENTS_FAMILY, null, value);
-    table.put(put);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+        new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
+      Put put = new Put(row1);
+      put.addColumn(CONTENTS_FAMILY, null, value);
+      table.put(put);
 
-    put = new Put(row2);
-    put.addColumn(CONTENTS_FAMILY, null, value);
+      put = new Put(row2);
+      put.addColumn(CONTENTS_FAMILY, null, value);
 
-    assertEquals(1, put.size());
-    assertEquals(1, put.getFamilyCellMap().get(CONTENTS_FAMILY).size());
+      assertEquals(1, put.size());
+      assertEquals(1, put.getFamilyCellMap().get(CONTENTS_FAMILY).size());
 
-    // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
-    KeyValue kv = (KeyValue)put.getFamilyCellMap().get(CONTENTS_FAMILY).get(0);
+      // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
+      KeyValue kv = (KeyValue) put.getFamilyCellMap().get(CONTENTS_FAMILY).get(0);
 
-    assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), CONTENTS_FAMILY));
-    // will it return null or an empty byte array?
-    assertTrue(Bytes.equals(CellUtil.cloneQualifier(kv), new byte[0]));
+      assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), CONTENTS_FAMILY));
+      // will it return null or an empty byte array?
+      assertTrue(Bytes.equals(CellUtil.cloneQualifier(kv), new byte[0]));
 
-    assertTrue(Bytes.equals(CellUtil.cloneValue(kv), value));
+      assertTrue(Bytes.equals(CellUtil.cloneValue(kv), value));
 
-    table.put(put);
+      table.put(put);
 
-    Scan scan = new Scan();
-    scan.addColumn(CONTENTS_FAMILY, null);
-    ResultScanner scanner = table.getScanner(scan);
-    for (Result r : scanner) {
-      for(Cell key : r.rawCells()) {
-        System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
+      Scan scan = new Scan();
+      scan.addColumn(CONTENTS_FAMILY, null);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        for (Result r : scanner) {
+          for (Cell key : r.rawCells()) {
+            System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
+          }
+        }
       }
     }
   }
@@ -4007,19 +4054,18 @@ public class TestFromClientSide {
   public void testPutNoCF() throws IOException {
     final byte[] BAD_FAM = Bytes.toBytes("BAD_CF");
     final byte[] VAL = Bytes.toBytes(100);
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      boolean caughtNSCFE = false;
 
-    boolean caughtNSCFE = false;
-
-    try {
-      Put p = new Put(ROW);
-      p.addColumn(BAD_FAM, QUALIFIER, VAL);
-      table.put(p);
-    } catch (Exception e) {
-      caughtNSCFE = e instanceof NoSuchColumnFamilyException;
+      try {
+        Put p = new Put(ROW);
+        p.addColumn(BAD_FAM, QUALIFIER, VAL);
+        table.put(p);
+      } catch (Exception e) {
+        caughtNSCFE = e instanceof NoSuchColumnFamilyException;
+      }
+      assertTrue("Should throw NoSuchColumnFamilyException", caughtNSCFE);
     }
-    assertTrue("Should throw NoSuchColumnFamilyException", caughtNSCFE);
-
   }
 
   @Test
@@ -4028,25 +4074,28 @@ public class TestFromClientSide {
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final int NB_BATCH_ROWS = 10;
     final byte[] value = Bytes.toBytes("abcd");
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-      new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
-    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
-    for (int i = 0; i < NB_BATCH_ROWS; i++) {
-      byte[] row = Bytes.toBytes("row" + i);
-      Put put = new Put(row);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(CONTENTS_FAMILY, null, value);
-      rowsUpdate.add(put);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+      new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY })) {
+      ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+      for (int i = 0; i < NB_BATCH_ROWS; i++) {
+        byte[] row = Bytes.toBytes("row" + i);
+        Put put = new Put(row);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(CONTENTS_FAMILY, null, value);
+        rowsUpdate.add(put);
+      }
+      table.put(rowsUpdate);
+      Scan scan = new Scan();
+      scan.addFamily(CONTENTS_FAMILY);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int nbRows = 0;
+        for (@SuppressWarnings("unused")
+                Result row : scanner) {
+          nbRows++;
+        }
+        assertEquals(NB_BATCH_ROWS, nbRows);
+      }
     }
-    table.put(rowsUpdate);
-    Scan scan = new Scan();
-    scan.addFamily(CONTENTS_FAMILY);
-    ResultScanner scanner = table.getScanner(scan);
-    int nbRows = 0;
-    for (@SuppressWarnings("unused")
-    Result row : scanner)
-      nbRows++;
-    assertEquals(NB_BATCH_ROWS, nbRows);
   }
 
   @Test
@@ -4055,26 +4104,29 @@ public class TestFromClientSide {
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final byte[] value = Bytes.toBytes("abcd");
     final int NB_BATCH_ROWS = 10;
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
-    ArrayList<Put> rowsUpdate = new ArrayList<Put>();
-    for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
-      byte[] row = Bytes.toBytes("row" + i);
-      Put put = new Put(row);
-      put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(CONTENTS_FAMILY, null, value);
-      rowsUpdate.add(put);
-    }
-    table.put(rowsUpdate);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+        new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY })) {
+      ArrayList<Put> rowsUpdate = new ArrayList<Put>();
+      for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
+        byte[] row = Bytes.toBytes("row" + i);
+        Put put = new Put(row);
+        put.setDurability(Durability.SKIP_WAL);
+        put.addColumn(CONTENTS_FAMILY, null, value);
+        rowsUpdate.add(put);
+      }
+      table.put(rowsUpdate);
 
-    Scan scan = new Scan();
-    scan.addFamily(CONTENTS_FAMILY);
-    ResultScanner scanner = table.getScanner(scan);
-    int nbRows = 0;
-    for (@SuppressWarnings("unused")
-    Result row : scanner)
-      nbRows++;
-    assertEquals(NB_BATCH_ROWS * 10, nbRows);
+      Scan scan = new Scan();
+      scan.addFamily(CONTENTS_FAMILY);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int nbRows = 0;
+        for (@SuppressWarnings("unused")
+                Result row : scanner) {
+          nbRows++;
+        }
+        assertEquals(NB_BATCH_ROWS * 10, nbRows);
+      }
+    }
   }
 
   @Test
@@ -4115,88 +4167,83 @@ public class TestFromClientSide {
     final byte [] FAM1 = Bytes.toBytes("fam1");
     final byte [] FAM2 = Bytes.toBytes("fam2");
     // Open table
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-      new byte [][] {FAM1, FAM2});
-    // Insert some values
-    Put put = new Put(ROW);
-    put.addColumn(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
-    table.put(put);
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException i) {
-      //ignore
-    }
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+      new byte [][] {FAM1, FAM2})) {
+      // Insert some values
+      Put put = new Put(ROW);
+      put.addColumn(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
+      table.put(put);
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException i) {
+        //ignore
+      }
 
-    put = new Put(ROW);
-    put.addColumn(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
-    table.put(put);
+      put = new Put(ROW);
+      put.addColumn(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
+      table.put(put);
 
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException i) {
-      //ignore
-    }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException i) {
+        //ignore
+      }
 
-    put = new Put(ROW);
-    put.addColumn(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
-    table.put(put);
+      put = new Put(ROW);
+      put.addColumn(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
+      table.put(put);
 
-    long times[] = new long[3];
+      long[] times = new long[3];
 
-    // First scan the memstore
+      // First scan the memstore
 
-    Scan scan = new Scan();
-    scan.addFamily(FAM1);
-    scan.addFamily(FAM2);
-    ResultScanner s = table.getScanner(scan);
-    try {
-      int index = 0;
-      Result r = null;
-      while ((r = s.next()) != null) {
-        for(Cell key : r.rawCells()) {
-          times[index++] = key.getTimestamp();
+      Scan scan = new Scan();
+      scan.addFamily(FAM1);
+      scan.addFamily(FAM2);
+      try (ResultScanner s = table.getScanner(scan)) {
+        int index = 0;
+        Result r = null;
+        while ((r = s.next()) != null) {
+          for (Cell key : r.rawCells()) {
+            times[index++] = key.getTimestamp();
+          }
         }
       }
-    } finally {
-      s.close();
-    }
-    for (int i = 0; i < times.length - 1; i++) {
-      for (int j = i + 1; j < times.length; j++) {
-        assertTrue(times[j] > times[i]);
-      }
-    }
-
-    // Flush data to disk and try again
-    TEST_UTIL.flush();
-
-    // Reset times
-    for(int i=0;i<times.length;i++) {
-      times[i] = 0;
-    }
-
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException i) {
-      //ignore
-    }
-    scan = new Scan();
-    scan.addFamily(FAM1);
-    scan.addFamily(FAM2);
-    s = table.getScanner(scan);
-    try {
-      int index = 0;
-      Result r = null;
-      while ((r = s.next()) != null) {
-        for(Cell key : r.rawCells()) {
-          times[index++] = key.getTimestamp();
+      for (int i = 0; i < times.length - 1; i++) {
+        for (int j = i + 1; j < times.length; j++) {
+          assertTrue(times[j] > times[i]);
         }
       }
-    } finally {
-      s.close();
-    }
-    for (int i = 0; i < times.length - 1; i++) {
-      for (int j = i + 1; j < times.length; j++) {
-        assertTrue(times[j] > times[i]);
+
+      // Flush data to disk and try again
+      TEST_UTIL.flush();
+
+      // Reset times
+      for (int i = 0; i < times.length; i++) {
+        times[i] = 0;
+      }
+
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException i) {
+        //ignore
+      }
+      scan = new Scan();
+      scan.addFamily(FAM1);
+      scan.addFamily(FAM2);
+      try (ResultScanner s = table.getScanner(scan)) {
+        int index = 0;
+        Result r = null;
+        while ((r = s.next()) != null) {
+          for (Cell key : r.rawCells()) {
+            times[index++] = key.getTimestamp();
+          }
+        }
+        for (int i = 0; i < times.length - 1; i++) {
+          for (int j = i + 1; j < times.length; j++) {
+            assertTrue(times[j] > times[i]);
+          }
+        }
       }
     }
   }
@@ -4210,21 +4257,21 @@ public class TestFromClientSide {
     for (int i = 0; i < tables.length; i++) {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
-    Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor[] ts = admin.listTables();
-    HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
-    Collections.addAll(result, ts);
-    int size = result.size();
-    assertTrue(size >= tables.length);
-    for (int i = 0; i < tables.length && i < size; i++) {
-      boolean found = false;
-      for (int j = 0; j < ts.length; j++) {
-        if (ts[j].getTableName().equals(tables[i])) {
-          found = true;
-          break;
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      List<TableDescriptor> ts = admin.listTableDescriptors();
+      HashSet<TableDescriptor> result = new HashSet<>(ts);
+      int size = result.size();
+      assertTrue(size >= tables.length);
+      for (int i = 0; i < tables.length && i < size; i++) {
+        boolean found = false;
+        for (int j = 0; j < ts.size(); j++) {
+          if (ts.get(j).getTableName().equals(tables[i])) {
+            found = true;
+            break;
+          }
         }
+        assertTrue("Not found: " + tables[i], found);
       }
-      assertTrue("Not found: " + tables[i], found);
     }
   }
 
@@ -4236,12 +4283,12 @@ public class TestFromClientSide {
   public void testUnmanagedHConnection() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    Table t = conn.getTable(tableName);
-    Admin admin = conn.getAdmin();
-    assertTrue(admin.tableExists(tableName));
-    assertTrue(t.get(new Get(ROW)).isEmpty());
-    admin.close();
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Table t = conn.getTable(tableName);
+        Admin admin = conn.getAdmin()) {
+      assertTrue(admin.tableExists(tableName));
+      assertTrue(t.get(new Get(ROW)).isEmpty());
+    }
   }
 
   /**
@@ -4252,29 +4299,30 @@ public class TestFromClientSide {
   public void testUnmanagedHConnectionReconnect() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    Table t = conn.getTable(tableName);
-    try (Admin admin = conn.getAdmin()) {
-      assertTrue(admin.tableExists(tableName));
-      assertTrue(t.get(new Get(ROW)).isEmpty());
-    }
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Table t = conn.getTable(tableName);
+           Admin admin = conn.getAdmin()) {
+        assertTrue(admin.tableExists(tableName));
+        assertTrue(t.get(new Get(ROW)).isEmpty());
+      }
 
-    // stop the master
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    cluster.stopMaster(0, false);
-    cluster.waitOnMaster(0);
+      // stop the master
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      cluster.stopMaster(0, false);
+      cluster.waitOnMaster(0);
 
-    // start up a new master
-    cluster.startMaster();
-    assertTrue(cluster.waitForActiveAndReadyMaster());
+      // start up a new master
+      cluster.startMaster();
+      assertTrue(cluster.waitForActiveAndReadyMaster());
 
-    // test that the same unmanaged connection works with a new
-    // Admin and can connect to the new master;
-    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    try (Admin admin = conn.getAdmin()) {
-      assertTrue(admin.tableExists(tableName));
-      assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-          .getLiveServerMetrics().size() == SLAVES + (tablesOnMaster ? 1 : 0));
+      // test that the same unmanaged connection works with a new
+      // Admin and can connect to the new master;
+      boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
+      try (Admin admin = conn.getAdmin()) {
+        assertTrue(admin.tableExists(tableName));
+        assertTrue(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+                .getLiveServerMetrics().size() == SLAVES + (tablesOnMaster ? 1 : 0));
+      }
     }
   }
 
@@ -4286,72 +4334,74 @@ public class TestFromClientSide {
     final byte[] attrValue = Bytes.toBytes("somevalue");
     byte[] value = Bytes.toBytes("value");
 
-    Table a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
-    Table b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY);
-    Put put = new Put(ROW);
-    put.addColumn(HConstants.CATALOG_FAMILY, null, value);
-    a.put(put);
+    try (Table a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
+        Table b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY)) {
+      Put put = new Put(ROW);
+      put.addColumn(HConstants.CATALOG_FAMILY, null, value);
+      a.put(put);
 
-    // open a new connection to A and a connection to b
-    Table newA = TEST_UTIL.getConnection().getTable(tableAname);
+      // open a new connection to A and a connection to b
+      try (Table newA = TEST_UTIL.getConnection().getTable(tableAname)) {
 
-    // copy data from A to B
-    Scan scan = new Scan();
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-    ResultScanner s = newA.getScanner(scan);
-    try {
-      for (Result r : s) {
-        put = new Put(r.getRow());
-        put.setDurability(Durability.SKIP_WAL);
-        for (Cell kv : r.rawCells()) {
-          put.add(kv);
+        // copy data from A to B
+        Scan scan = new Scan();
+        scan.addFamily(HConstants.CATALOG_FAMILY);
+        try (ResultScanner s = newA.getScanner(scan)) {
+          for (Result r : s) {
+            put = new Put(r.getRow());
+            put.setDurability(Durability.SKIP_WAL);
+            for (Cell kv : r.rawCells()) {
+              put.add(kv);
+            }
+            b.put(put);
+          }
         }
-        b.put(put);
       }
-    } finally {
-      s.close();
-    }
 
-    // Opening a new connection to A will cause the tables to be reloaded
-    Table anotherA = TEST_UTIL.getConnection().getTable(tableAname);
-    Get get = new Get(ROW);
-    get.addFamily(HConstants.CATALOG_FAMILY);
-    anotherA.get(get);
+      // Opening a new connection to A will cause the tables to be reloaded
+      try (Table anotherA = TEST_UTIL.getConnection().getTable(tableAname)) {
+        Get get = new Get(ROW);
+        get.addFamily(HConstants.CATALOG_FAMILY);
+        anotherA.get(get);
+      }
 
-    // We can still access A through newA because it has the table information
-    // cached. And if it needs to recalibrate, that will cause the information
-    // to be reloaded.
+      // We can still access A through newA because it has the table information
+      // cached. And if it needs to recalibrate, that will cause the information
+      // to be reloaded.
 
-    // Test user metadata
-    Admin admin = TEST_UTIL.getAdmin();
-    // make a modifiable descriptor
-    HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
-    // offline the table
-    admin.disableTable(tableAname);
-    // add a user attribute to HTD
-    desc.setValue(attrName, attrValue);
-    // add a user attribute to HCD
-    for (HColumnDescriptor c : desc.getFamilies())
-      c.setValue(attrName, attrValue);
-    // update metadata for all regions of this table
-    admin.modifyTable(tableAname, desc);
-    // enable the table
-    admin.enableTable(tableAname);
+      // Test user metadata
+      try (Admin admin = TEST_UTIL.getAdmin()) {
+        // make a modifiable descriptor
+        HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
+        // offline the table
+        admin.disableTable(tableAname);
+        // add a user attribute to HTD
+        desc.setValue(attrName, attrValue);
+        // add a user attribute to HCD
+        for (HColumnDescriptor c : desc.getFamilies()) {
+          c.setValue(attrName, attrValue);
+        }
+        // update metadata for all regions of this table
+        admin.modifyTable(desc);
+        // enable the table
+        admin.enableTable(tableAname);
+      }
 
-    // Test that attribute changes were applied
-    desc = a.getTableDescriptor();
-    assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
-    // check HTD attribute
-    value = desc.getValue(attrName);
-    assertFalse("missing HTD attribute value", value == null);
-    assertFalse("HTD attribute value is incorrect",
-      Bytes.compareTo(value, attrValue) != 0);
-    // check HCD attribute
-    for (HColumnDescriptor c : desc.getFamilies()) {
-      value = c.getValue(attrName);
-      assertFalse("missing HCD attribute value", value == null);
-      assertFalse("HCD attribute value is incorrect",
-        Bytes.compareTo(value, attrValue) != 0);
+      // Test that attribute changes were applied
+      HTableDescriptor desc = a.getTableDescriptor();
+      assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
+      // check HTD attribute
+      value = desc.getValue(attrName);
+      assertFalse("missing HTD attribute value", value == null);
+      assertFalse("HTD attribute value is incorrect",
+              Bytes.compareTo(value, attrValue) != 0);
+      // check HCD attribute
+      for (HColumnDescriptor c : desc.getFamilies()) {
+        value = c.getValue(attrName);
+        assertFalse("missing HCD attribute value", value == null);
+        assertFalse("HCD attribute value is incorrect",
+                Bytes.compareTo(value, attrValue) != 0);
+      }
     }
   }
 
@@ -4487,77 +4537,79 @@ public class TestFromClientSide {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte [] ROW1 = Bytes.toBytes("testRow1");
 
-    Table t = TEST_UTIL.createTable(tableName, FAMILY);
-    Put p = new Put(ROW);
-    p.addColumn(FAMILY, QUALIFIER, VALUE);
-    MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, p);
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      Put p = new Put(ROW);
+      p.addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, p);
 
-    p = new Put(ROW1);
-    p.addColumn(FAMILY, QUALIFIER, VALUE);
-    MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, p);
+      p = new Put(ROW1);
+      p.addColumn(FAMILY, QUALIFIER, VALUE);
+      MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, p);
 
-    MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
-    mrmBuilder.addMutationRequest(m1);
-    mrmBuilder.addMutationRequest(m2);
-    MutateRowsRequest mrm = mrmBuilder.build();
-    CoprocessorRpcChannel channel = t.coprocessorService(ROW);
-    MultiRowMutationService.BlockingInterface service =
-       MultiRowMutationService.newBlockingStub(channel);
-    service.mutateRows(null, mrm);
-    Get g = new Get(ROW);
-    Result r = t.get(g);
-    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
-    g = new Get(ROW1);
-    r = t.get(g);
-    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
+      MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
+      mrmBuilder.addMutationRequest(m1);
+      mrmBuilder.addMutationRequest(m2);
+      MutateRowsRequest mrm = mrmBuilder.build();
+      CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+      MultiRowMutationService.BlockingInterface service =
+              MultiRowMutationService.newBlockingStub(channel);
+      service.mutateRows(null, mrm);
+      Get g = new Get(ROW);
+      Result r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
+      g = new Get(ROW1);
+      r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));
+    }
   }
 
   @Test
   public void testRowMutation() throws Exception {
     LOG.info("Starting testRowMutation");
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table t = TEST_UTIL.createTable(tableName, FAMILY);
-    byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b")
-    };
-    RowMutations arm = new RowMutations(ROW);
-    Put p = new Put(ROW);
-    p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
-    arm.add(p);
-    t.mutateRow(arm);
-
-    Get g = new Get(ROW);
-    Result r = t.get(g);
-    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
-
-    arm = new RowMutations(ROW);
-    p = new Put(ROW);
-    p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
-    arm.add(p);
-    Delete d = new Delete(ROW);
-    d.addColumns(FAMILY, QUALIFIERS[0]);
-    arm.add(d);
-    // TODO: Trying mutateRow again.  The batch was failing with a one try only.
-    t.mutateRow(arm);
-    r = t.get(g);
-    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
-    assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
-
-    //Test that we get a region level exception
-    try {
-      arm = new RowMutations(ROW);
-      p = new Put(ROW);
-      p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] QUALIFIERS = new byte[][]{
+              Bytes.toBytes("a"), Bytes.toBytes("b")
+      };
+      RowMutations arm = new RowMutations(ROW);
+      Put p = new Put(ROW);
+      p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
       arm.add(p);
       t.mutateRow(arm);
-      fail("Expected NoSuchColumnFamilyException");
-    } catch(RetriesExhaustedWithDetailsException e) {
-      for(Throwable rootCause: e.getCauses()){
-        if(rootCause instanceof NoSuchColumnFamilyException){
-          return;
+
+      Get g = new Get(ROW);
+      Result r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+
+      arm = new RowMutations(ROW);
+      p = new Put(ROW);
+      p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
+      arm.add(p);
+      Delete d = new Delete(ROW);
+      d.addColumns(FAMILY, QUALIFIERS[0]);
+      arm.add(d);
+      // TODO: Trying mutateRow again.  The batch was failing with a one try only.
+      t.mutateRow(arm);
+      r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
+      assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+
+      //Test that we get a region level exception
+      try {
+        arm = new RowMutations(ROW);
+        p = new Put(ROW);
+        p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+        arm.add(p);
+        t.mutateRow(arm);
+        fail("Expected NoSuchColumnFamilyException");
+      } catch (RetriesExhaustedWithDetailsException e) {
+        for (Throwable rootCause : e.getCauses()) {
+          if (rootCause instanceof NoSuchColumnFamilyException) {
+            return;
+          }
         }
+        throw e;
       }
-      throw e;
     }
   }
 
@@ -4565,93 +4617,96 @@ public class TestFromClientSide {
   public void testBatchAppendWithReturnResultFalse() throws Exception {
     LOG.info("Starting testBatchAppendWithReturnResultFalse");
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
-    Append append1 = new Append(Bytes.toBytes("row1"));
-    append1.setReturnResults(false);
-    append1.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
-    Append append2 = new Append(Bytes.toBytes("row1"));
-    append2.setReturnResults(false);
-    append2.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value2"));
-    List<Append> appends = new ArrayList<>();
-    appends.add(append1);
-    appends.add(append2);
-    Object[] results = new Object[2];
-    table.batch(appends, results);
-    assertTrue(results.length == 2);
-    for(Object r : results) {
-      Result result = (Result)r;
-      assertTrue(result.isEmpty());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      Append append1 = new Append(Bytes.toBytes("row1"));
+      append1.setReturnResults(false);
+      append1.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
+      Append append2 = new Append(Bytes.toBytes("row1"));
+      append2.setReturnResults(false);
+      append2.addColumn(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value2"));
+      List<Append> appends = new ArrayList<>();
+      appends.add(append1);
+      appends.add(append2);
+      Object[] results = new Object[2];
+      table.batch(appends, results);
+      assertTrue(results.length == 2);
+      for (Object r : results) {
+        Result result = (Result) r;
+        assertTrue(result.isEmpty());
+      }
     }
-    table.close();
   }
 
   @Test
   public void testAppend() throws Exception {
     LOG.info("Starting testAppend");
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table t = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[] v1 = Bytes.toBytes("42");
-    byte[] v2 = Bytes.toBytes("23");
-    byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("c")
-    };
-    Append a = new Append(ROW);
-    a.addColumn(FAMILY, QUALIFIERS[0], v1);
-    a.addColumn(FAMILY, QUALIFIERS[1], v2);
-    a.setReturnResults(false);
-    assertEmptyResult(t.append(a));
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[] v1 = Bytes.toBytes("42");
+      byte[] v2 = Bytes.toBytes("23");
+      byte[][] QUALIFIERS = new byte[][]{
+              Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("c")
+      };
+      Append a = new Append(ROW);
+      a.addColumn(FAMILY, QUALIFIERS[0], v1);
+      a.addColumn(FAMILY, QUALIFIERS[1], v2);
+      a.setReturnResults(false);
+      assertEmptyResult(t.append(a));
 
-    a = new Append(ROW);
-    a.addColumn(FAMILY, QUALIFIERS[0], v2);
-    a.addColumn(FAMILY, QUALIFIERS[1], v1);
-    a.addColumn(FAMILY, QUALIFIERS[2], v2);
-    Result r = t.append(a);
-    assertEquals(0, Bytes.compareTo(Bytes.add(v1, v2), r.getValue(FAMILY, QUALIFIERS[0])));
-    assertEquals(0, Bytes.compareTo(Bytes.add(v2, v1), r.getValue(FAMILY, QUALIFIERS[1])));
-    // QUALIFIERS[2] previously not exist, verify both value and timestamp are correct
-    assertEquals(0, Bytes.compareTo(v2, r.getValue(FAMILY, QUALIFIERS[2])));
-    assertEquals(r.getColumnLatestCell(FAMILY, QUALIFIERS[0]).getTimestamp(),
-        r.getColumnLatestCell(FAMILY, QUALIFIERS[2]).getTimestamp());
+      a = new Append(ROW);
+      a.addColumn(FAMILY, QUALIFIERS[0], v2);
+      a.addColumn(FAMILY, QUALIFIERS[1], v1);
+      a.addColumn(FAMILY, QUALIFIERS[2], v2);
+      Result r = t.append(a);
+      assertEquals(0, Bytes.compareTo(Bytes.add(v1, v2), r.getValue(FAMILY, QUALIFIERS[0])));
+      assertEquals(0, Bytes.compareTo(Bytes.add(v2, v1), r.getValue(FAMILY, QUALIFIERS[1])));
+      // QUALIFIERS[2] previously not exist, verify both value and timestamp are correct
+      assertEquals(0, Bytes.compareTo(v2, r.getValue(FAMILY, QUALIFIERS[2])));
+      assertEquals(r.getColumnLatestCell(FAMILY, QUALIFIERS[0]).getTimestamp(),
+              r.getColumnLatestCell(FAMILY, QUALIFIERS[2]).getTimestamp());
+    }
   }
   private List<Result> doAppend(final boolean walUsed) throws IOException {
     LOG.info("Starting testAppend, walUsed is " + walUsed);
-    final TableName TABLENAME = TableName.valueOf(walUsed ? "testAppendWithWAL" : "testAppendWithoutWAL");
-    Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final byte[] row1 = Bytes.toBytes("c");
-    final byte[] row2 = Bytes.toBytes("b");
-    final byte[] row3 = Bytes.toBytes("a");
-    final byte[] qual = Bytes.toBytes("qual");
-    Put put_0 = new Put(row2);
-    put_0.addColumn(FAMILY, qual, Bytes.toBytes("put"));
-    Put put_1 = new Put(row3);
-    put_1.addColumn(FAMILY, qual, Bytes.toBytes("put"));
-    Append append_0 = new Append(row1);
-    append_0.addColumn(FAMILY, qual, Bytes.toBytes("i"));
-    Append append_1 = new Append(row1);
-    append_1.addColumn(FAMILY, qual, Bytes.toBytes("k"));
-    Append append_2 = new Append(row1);
-    append_2.addColumn(FAMILY, qual, Bytes.toBytes("e"));
-    if (!walUsed) {
-      append_2.setDurability(Durability.SKIP_WAL);
-    }
-    Append append_3 = new Append(row1);
-    append_3.addColumn(FAMILY, qual, Bytes.toBytes("a"));
-    Scan s = new Scan();
-    s.setCaching(1);
-    t.append(append_0);
-    t.put(put_0);
-    t.put(put_1);
-    List<Result> results = new LinkedList<>();
-    try (ResultScanner scanner = t.getScanner(s)) {
-      t.append(append_1);
-      t.append(append_2);
-      t.append(append_3);
-      for (Result r : scanner) {
-        results.add(r);
+    final TableName TABLENAME =
+            TableName.valueOf(walUsed ? "testAppendWithWAL" : "testAppendWithoutWAL");
+    try (Table t = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
+      final byte[] row1 = Bytes.toBytes("c");
+      final byte[] row2 = Bytes.toBytes("b");
+      final byte[] row3 = Bytes.toBytes("a");
+      final byte[] qual = Bytes.toBytes("qual");
+      Put put_0 = new Put(row2);
+      put_0.addColumn(FAMILY, qual, Bytes.toBytes("put"));
+      Put put_1 = new Put(row3);
+      put_1.addColumn(FAMILY, qual, Bytes.toBytes("put"));
+      Append append_0 = new Append(row1);
+      append_0.addColumn(FAMILY, qual, Bytes.toBytes("i"));
+      Append append_1 = new Append(row1);
+      append_1.addColumn(FAMILY, qual, Bytes.toBytes("k"));
+      Append append_2 = new Append(row1);
+      append_2.addColumn(FAMILY, qual, Bytes.toBytes("e"));
+      if (!walUsed) {
+        append_2.setDurability(Durability.SKIP_WAL);
       }
+      Append append_3 = new Append(row1);
+      append_3.addColumn(FAMILY, qual, Bytes.toBytes("a"));
+      Scan s = new Scan();
+      s.setCaching(1);
+      t.append(append_0);
+      t.put(put_0);
+      t.put(put_1);
+      List<Result> results = new LinkedList<>();
+      try (ResultScanner scanner = t.getScanner(s)) {
+        t.append(append_1);
+        t.append(append_2);
+        t.append(append_3);
+        for (Result r : scanner) {
+          results.add(r);
+        }
+      }
+      TEST_UTIL.deleteTable(TABLENAME);
+      return results;
     }
-    TEST_UTIL.deleteTable(TABLENAME);
-    return results;
   }
 
   @Test
@@ -4666,10 +4721,14 @@ public class TestFromClientSide {
       for (int j = 0; j != resultWithWal.rawCells().length; ++j) {
         Cell cellWithWal = resultWithWal.rawCells()[j];
         Cell cellWithoutWal = resultWithoutWal.rawCells()[j];
-        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal), CellUtil.cloneFamily(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal), CellUtil.cloneQualifier(cellWithoutWal)));
-        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal), CellUtil.cloneValue(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal),
+                CellUtil.cloneRow(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal),
+                CellUtil.cloneFamily(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal),
+                CellUtil.cloneQualifier(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal),
+                CellUtil.cloneValue(cellWithoutWal)));
       }
     }
   }
@@ -4684,28 +4743,30 @@ public class TestFromClientSide {
     conf.set(HConstants.HBASE_CLIENT_IPC_POOL_TYPE, "round-robin");
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
-    Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, Integer.MAX_VALUE);
+    try (Table table =
+                 TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, Integer.MAX_VALUE)) {
 
-    final long ts = EnvironmentEdgeManager.currentTime();
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions();
+      final long ts = EnvironmentEdgeManager.currentTime();
+      Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions();
 
-    for (int versions = 1; versions <= numVersions; versions++) {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
-      table.put(put);
+      for (int versions = 1; versions <= numVersions; versions++) {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
+        table.put(put);
 
-      Result result = table.get(get);
-      NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
-          .get(QUALIFIER);
+        Result result = table.get(get);
+        NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
+                .get(QUALIFIER);
 
-      assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
-          + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
-      for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
-        assertTrue("The value at time " + entry.getKey()
-            + " did not match what was put",
-            Bytes.equals(VALUE, entry.getValue()));
+        assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+                + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
+        for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+          assertTrue("The value at time " + entry.getKey()
+                          + " did not match what was put",
+                  Bytes.equals(VALUE, entry.getValue()));
+        }
       }
     }
   }
@@ -4720,76 +4781,77 @@ public class TestFromClientSide {
     conf.set(HConstants.HBASE_CLIENT_IPC_POOL_TYPE, "thread-local");
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
-    final Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },  3);
+    try (final Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },  3)) {
 
-    final long ts = EnvironmentEdgeManager.currentTime();
-    final Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions();
+      final long ts = EnvironmentEdgeManager.currentTime();
+      final Get get = new Get(ROW);
+      get.addColumn(FAMILY, QUALIFIER);
+      get.setMaxVersions();
 
-    for (int versions = 1; versions <= numVersions; versions++) {
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
-      table.put(put);
+      for (int versions = 1; versions <= numVersions; versions++) {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
+        table.put(put);
 
-      Result result = table.get(get);
-      NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
-          .get(QUALIFIER);
+        Result result = table.get(get);
+        NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
+                .get(QUALIFIER);
 
-      assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
-          + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
-      for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
-        assertTrue("The value at time " + entry.getKey()
-            + " did not match what was put",
-            Bytes.equals(VALUE, entry.getValue()));
-      }
-    }
-
-    final Object waitLock = new Object();
-    ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
-    final AtomicReference<AssertionError> error = new AtomicReference<>(null);
-    for (int versions = numVersions; versions < numVersions * 2; versions++) {
-      final int versionsCopy = versions;
-      executorService.submit(new Callable<Void>() {
-        @Override
-        public Void call() {
-          try {
-            Put put = new Put(ROW);
-            put.addColumn(FAMILY, QUALIFIER, ts + versionsCopy, VALUE);
-            table.put(put);
-
-            Result result = table.get(get);
-            NavigableMap<Long, byte[]> navigableMap = result.getMap()
-                .get(FAMILY).get(QUALIFIER);
-
-            assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
-                + Bytes.toString(QUALIFIER) + " did not match " + versionsCopy, versionsCopy,
-                navigableMap.size());
-            for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
-              assertTrue("The value at time " + entry.getKey()
-                  + " did not match what was put",
+        assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+                + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
+        for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+          assertTrue("The value at time " + entry.getKey()
+                          + " did not match what was put",
                   Bytes.equals(VALUE, entry.getValue()));
-            }
-            synchronized (waitLock) {
-              waitLock.wait();
-            }
-          } catch (Exception e) {
-          } catch (AssertionError e) {
-            // the error happens in a thread, it won't fail the test,
-            // need to pass it to the caller for proper handling.
-            error.set(e);
-            LOG.error(e.toString(), e);
-          }
-
-          return null;
         }
-      });
+      }
+
+      final Object waitLock = new Object();
+      ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
+      final AtomicReference<AssertionError> error = new AtomicReference<>(null);
+      for (int versions = numVersions; versions < numVersions * 2; versions++) {
+        final int versionsCopy = versions;
+        executorService.submit(new Callable<Void>() {
+          @Override
+          public Void call() {
+            try {
+              Put put = new Put(ROW);
+              put.addColumn(FAMILY, QUALIFIER, ts + versionsCopy, VALUE);
+              table.put(put);
+
+              Result result = table.get(get);
+              NavigableMap<Long, byte[]> navigableMap = result.getMap()
+                      .get(FAMILY).get(QUALIFIER);
+
+              assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+                      + Bytes.toString(QUALIFIER) + " did not match " + versionsCopy, versionsCopy,
+                      navigableMap.size());
+              for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
+                assertTrue("The value at time " + entry.getKey()
+                                + " did not match what was put",
+                        Bytes.equals(VALUE, entry.getValue()));
+              }
+              synchronized (waitLock) {
+                waitLock.wait();
+              }
+            } catch (Exception e) {
+            } catch (AssertionError e) {
+              // the error happens in a thread, it won't fail the test,
+              // need to pass it to the caller for proper handling.
+              error.set(e);
+              LOG.error(e.toString(), e);
+            }
+
+            return null;
+          }
+        });
+      }
+      synchronized (waitLock) {
+        waitLock.notifyAll();
+      }
+      executorService.shutdownNow();
+      assertNull(error.get());
     }
-    synchronized (waitLock) {
-      waitLock.notifyAll();
-    }
-    executorService.shutdownNow();
-    assertNull(error.get());
   }
 
   @Test
@@ -4797,93 +4859,95 @@ public class TestFromClientSide {
     final byte [] anotherrow = Bytes.toBytes("anotherrow");
     final byte [] value2 = Bytes.toBytes("abcd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    Put put1 = new Put(ROW);
-    put1.addColumn(FAMILY, QUALIFIER, VALUE);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      Put put1 = new Put(ROW);
+      put1.addColumn(FAMILY, QUALIFIER, VALUE);
 
-    // row doesn't exist, so using non-null value should be considered "not match".
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifEquals(VALUE).thenPut(put1);
-    assertFalse(ok);
+      // row doesn't exist, so using non-null value should be considered "not match".
+      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifEquals(VALUE).thenPut(put1);
+      assertFalse(ok);
 
-    // row doesn't exist, so using "ifNotExists" should be considered "match".
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
-    assertTrue(ok);
+      // row doesn't exist, so using "ifNotExists" should be considered "match".
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
+      assertTrue(ok);
 
-    // row now exists, so using "ifNotExists" should be considered "not match".
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
-    assertFalse(ok);
+      // row now exists, so using "ifNotExists" should be considered "not match".
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
+      assertFalse(ok);
 
-    Put put2 = new Put(ROW);
-    put2.addColumn(FAMILY, QUALIFIER, value2);
+      Put put2 = new Put(ROW);
+      put2.addColumn(FAMILY, QUALIFIER, value2);
 
-    // row now exists, use the matching value to check
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(VALUE).thenPut(put2);
-    assertTrue(ok);
+      // row now exists, use the matching value to check
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(VALUE).thenPut(put2);
+      assertTrue(ok);
 
-    Put put3 = new Put(anotherrow);
-    put3.addColumn(FAMILY, QUALIFIER, VALUE);
+      Put put3 = new Put(anotherrow);
+      put3.addColumn(FAMILY, QUALIFIER, VALUE);
 
-    // try to do CheckAndPut on different rows
-    try {
-      table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(value2).thenPut(put3);
-      fail("trying to check and modify different rows should have failed.");
-    } catch(Exception e) {}
-
+      // try to do CheckAndPut on different rows
+      try {
+        table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(value2).thenPut(put3);
+        fail("trying to check and modify different rows should have failed.");
+      } catch (Exception e) {
+      }
+    }
   }
 
   @Test
   public void testCheckAndMutateWithTimeRange() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    final long ts = System.currentTimeMillis() / 2;
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      final long ts = System.currentTimeMillis() / 2;
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .ifNotExists()
-      .thenPut(put);
-    assertTrue(ok);
+      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifNotExists()
+              .thenPut(put);
+      assertTrue(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenPut(put);
-    assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenPut(put);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
 
-    RowMutations rm = new RowMutations(ROW)
-      .add((Mutation) put);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenMutate(rm);
-    assertFalse(ok);
+      RowMutations rm = new RowMutations(ROW)
+              .add((Mutation) put);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenMutate(rm);
+      assertFalse(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenMutate(rm);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenMutate(rm);
+      assertTrue(ok);
 
-    Delete delete = new Delete(ROW)
-      .addColumn(FAMILY, QUALIFIER);
+      Delete delete = new Delete(ROW)
+              .addColumn(FAMILY, QUALIFIER);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenDelete(delete);
-    assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenDelete(delete);
+      assertFalse(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenDelete(delete);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenDelete(delete);
+      assertTrue(ok);
+    }
   }
 
   @Test
@@ -4893,99 +4957,102 @@ public class TestFromClientSide {
     final byte [] value3 = Bytes.toBytes("cccc");
     final byte [] value4 = Bytes.toBytes("dddd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
 
-    Put put2 = new Put(ROW);
-    put2.addColumn(FAMILY, QUALIFIER, value2);
+      Put put2 = new Put(ROW);
+      put2.addColumn(FAMILY, QUALIFIER, value2);
 
-    Put put3 = new Put(ROW);
-    put3.addColumn(FAMILY, QUALIFIER, value3);
+      Put put3 = new Put(ROW);
+      put3.addColumn(FAMILY, QUALIFIER, value3);
 
-    // row doesn't exist, so using "ifNotExists" should be considered "match".
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put2);
-    assertTrue(ok);
+      // row doesn't exist, so using "ifNotExists" should be considered "match".
+      boolean ok =
+              table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put2);
+      assertTrue(ok);
 
-    // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
-    // turns out "match"
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value1).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value1).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value1).thenPut(put2);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenPut(put2);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value1).thenPut(put3);
-    assertTrue(ok);
+      // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
+      // turns out "match"
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value1).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value1).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value1).thenPut(put2);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenPut(put2);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value1).thenPut(put3);
+      assertTrue(ok);
 
-    // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
-    // turns out "match"
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value4).thenPut(put3);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenPut(put3);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value4).thenPut(put3);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value4).thenPut(put3);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenPut(put3);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value4).thenPut(put2);
-    assertTrue(ok);
+      // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
+      // turns out "match"
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value4).thenPut(put3);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenPut(put3);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value4).thenPut(put3);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value4).thenPut(put3);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenPut(put3);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value4).thenPut(put2);
+      assertTrue(ok);
 
-    // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
-    // turns out "match"
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value2).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value2).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value2).thenPut(put2);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenPut(put2);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenPut(put2);
-    assertTrue(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value2).thenPut(put3);
-    assertTrue(ok);
+      // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
+      // turns out "match"
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value2).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value2).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value2).thenPut(put2);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenPut(put2);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenPut(put2);
+      assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value2).thenPut(put3);
+      assertTrue(ok);
+    }
   }
 
   @Test
   public void testCheckAndDelete() throws IOException {
     final byte [] value1 = Bytes.toBytes("aaaa");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        FAMILY);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+        FAMILY)) {
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, value1);
-    table.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, value1);
+      table.put(put);
 
-    Delete delete = new Delete(ROW);
-    delete.addColumns(FAMILY, QUALIFIER);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, QUALIFIER);
 
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifEquals(value1).thenDelete(delete);
-    assertTrue(ok);
+      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifEquals(value1).thenDelete(delete);
+      assertTrue(ok);
+    }
   }
 
   @Test
@@ -4995,89 +5062,90 @@ public class TestFromClientSide {
     final byte [] value3 = Bytes.toBytes("cccc");
     final byte [] value4 = Bytes.toBytes("dddd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        FAMILY);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
+        FAMILY)) {
 
-    Put put2 = new Put(ROW);
-    put2.addColumn(FAMILY, QUALIFIER, value2);
-    table.put(put2);
+      Put put2 = new Put(ROW);
+      put2.addColumn(FAMILY, QUALIFIER, value2);
+      table.put(put2);
 
-    Put put3 = new Put(ROW);
-    put3.addColumn(FAMILY, QUALIFIER, value3);
+      Put put3 = new Put(ROW);
+      put3.addColumn(FAMILY, QUALIFIER, value3);
 
-    Delete delete = new Delete(ROW);
-    delete.addColumns(FAMILY, QUALIFIER);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, QUALIFIER);
 
-    // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
-    // turns out "match"
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value1).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value1).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value1).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put2);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put2);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value1).thenDelete(delete);
-    assertTrue(ok);
+      // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
+      // turns out "match"
+      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value1).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value1).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value1).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put2);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put2);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value1).thenDelete(delete);
+      assertTrue(ok);
 
-    // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
-    // turns out "match"
-    table.put(put3);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value4).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value4).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value4).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put3);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put3);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value4).thenDelete(delete);
-    assertTrue(ok);
+      // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
+      // turns out "match"
+      table.put(put3);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value4).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value4).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value4).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put3);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put3);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value4).thenDelete(delete);
+      assertTrue(ok);
 
-    // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
-    // turns out "match"
-    table.put(put2);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER, value2).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.NOT_EQUAL, value2).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS, value2).thenDelete(delete);
-    assertFalse(ok);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put2);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenDelete(delete);
-    assertTrue(ok);
-    table.put(put2);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-        .ifMatches(CompareOperator.EQUAL, value2).thenDelete(delete);
-    assertTrue(ok);
+      // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
+      // turns out "match"
+      table.put(put2);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER, value2).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.NOT_EQUAL, value2).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS, value2).thenDelete(delete);
+      assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put2);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenDelete(delete);
+      assertTrue(ok);
+      table.put(put2);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifMatches(CompareOperator.EQUAL, value2).thenDelete(delete);
+      assertTrue(ok);
+    }
   }
 
   /**
@@ -5090,119 +5158,121 @@ public class TestFromClientSide {
 
     // Set up test table:
     // Create table:
-    Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILY);
-    int numOfRegions = -1;
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      numOfRegions = r.getStartKeys().length;
-    }
-    // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
-    // scan are forced to hit all the regions.
-    Put put1 = new Put(Bytes.toBytes("zzz1"));
-    put1.addColumn(FAMILY, QUALIFIER, VALUE);
-    Put put2 = new Put(Bytes.toBytes("zzz2"));
-    put2.addColumn(FAMILY, QUALIFIER, VALUE);
-    Put put3 = new Put(Bytes.toBytes("zzz3"));
-    put3.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(Arrays.asList(put1, put2, put3));
-
-    Scan scan1 = new Scan();
-    int numRecords = 0;
-    ResultScanner scanner = ht.getScanner(scan1);
-    for(Result result : scanner) {
-      numRecords++;
-    }
-    scanner.close();
-    LOG.info("test data has " + numRecords + " records.");
-
-    // by default, scan metrics collection is turned off
-    assertEquals(null, scan1.getScanMetrics());
-
-    // turn on scan metrics
-    Scan scan2 = new Scan();
-    scan2.setScanMetricsEnabled(true);
-    scan2.setCaching(numRecords+1);
-    scanner = ht.getScanner(scan2);
-    for (Result result : scanner.next(numRecords - 1)) {
-    }
-    scanner.close();
-    // closing the scanner will set the metrics.
-    assertNotNull(scan2.getScanMetrics());
-
-    // set caching to 1, because metrics are collected in each roundtrip only
-    scan2 = new Scan();
-    scan2.setScanMetricsEnabled(true);
-    scan2.setCaching(1);
-    scanner = ht.getScanner(scan2);
-    // per HBASE-5717, this should still collect even if you don't run all the way to
-    // the end of the scanner. So this is asking for 2 of the 3 rows we inserted.
-    for (Result result : scanner.next(numRecords - 1)) {
-    }
-    scanner.close();
-
-    ScanMetrics scanMetrics = scan2.getScanMetrics();
-    assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetrics.countOfRegions.get());
-
-    // check byte counters
-    scan2 = new Scan();
-    scan2.setScanMetricsEnabled(true);
-    scan2.setCaching(1);
-    scanner = ht.getScanner(scan2);
-    int numBytes = 0;
-    for (Result result : scanner.next(1)) {
-      for (Cell cell: result.listCells()) {
-        numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
+    try (Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILY)) {
+      int numOfRegions = -1;
+      try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        numOfRegions = r.getStartKeys().length;
       }
-    }
-    scanner.close();
-    scanMetrics = scan2.getScanMetrics();
-    assertEquals("Did not count the result bytes", numBytes,
-      scanMetrics.countOfBytesInResults.get());
+      // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
+      // scan are forced to hit all the regions.
+      Put put1 = new Put(Bytes.toBytes("zzz1"));
+      put1.addColumn(FAMILY, QUALIFIER, VALUE);
+      Put put2 = new Put(Bytes.toBytes("zzz2"));
+      put2.addColumn(FAMILY, QUALIFIER, VALUE);
+      Put put3 = new Put(Bytes.toBytes("zzz3"));
+      put3.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(Arrays.asList(put1, put2, put3));
 
-    // check byte counters on a small scan
-    scan2 = new Scan();
-    scan2.setScanMetricsEnabled(true);
-    scan2.setCaching(1);
-    scan2.setSmall(true);
-    scanner = ht.getScanner(scan2);
-    numBytes = 0;
-    for (Result result : scanner.next(1)) {
-      for (Cell cell: result.listCells()) {
-        numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
+      Scan scan1 = new Scan();
+      int numRecords = 0;
+      try (ResultScanner scanner = ht.getScanner(scan1)) {
+        for (Result result : scanner) {
+          numRecords++;
+        }
+
+        LOG.info("test data has " + numRecords + " records.");
+
+        // by default, scan metrics collection is turned off
+        assertEquals(null, scanner.getScanMetrics());
       }
-    }
-    scanner.close();
-    scanMetrics = scan2.getScanMetrics();
-    assertEquals("Did not count the result bytes", numBytes,
-      scanMetrics.countOfBytesInResults.get());
 
-    // now, test that the metrics are still collected even if you don't call close, but do
-    // run past the end of all the records
-    /** There seems to be a timing issue here.  Comment out for now. Fix when time.
-    Scan scanWithoutClose = new Scan();
-    scanWithoutClose.setCaching(1);
-    scanWithoutClose.setScanMetricsEnabled(true);
-    ResultScanner scannerWithoutClose = ht.getScanner(scanWithoutClose);
-    for (Result result : scannerWithoutClose.next(numRecords + 1)) {
-    }
-    ScanMetrics scanMetricsWithoutClose = getScanMetrics(scanWithoutClose);
-    assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetricsWithoutClose.countOfRegions.get());
-    */
+      // turn on scan metrics
+      Scan scan2 = new Scan();
+      scan2.setScanMetricsEnabled(true);
+      scan2.setCaching(numRecords + 1);
+      try (ResultScanner scanner = ht.getScanner(scan2)) {
+        for (Result result : scanner.next(numRecords - 1)) {
+        }
+      }
+      // closing the scanner will set the metrics.
+      assertNotNull(scan2.getScanMetrics());
 
-    // finally, test that the metrics are collected correctly if you both run past all the records,
-    // AND close the scanner
-    Scan scanWithClose = new Scan();
-    // make sure we can set caching up to the number of a scanned values
-    scanWithClose.setCaching(numRecords);
-    scanWithClose.setScanMetricsEnabled(true);
-    ResultScanner scannerWithClose = ht.getScanner(scanWithClose);
-    for (Result result : scannerWithClose.next(numRecords + 1)) {
+      // set caching to 1, because metrics are collected in each roundtrip only
+      scan2 = new Scan();
+      scan2.setScanMetricsEnabled(true);
+      scan2.setCaching(1);
+      try (ResultScanner scanner = ht.getScanner(scan2)) {
+        // per HBASE-5717, this should still collect even if you don't run all the way to
+        // the end of the scanner. So this is asking for 2 of the 3 rows we inserted.
+        for (Result result : scanner.next(numRecords - 1)) {
+        }
+      }
+      ScanMetrics scanMetrics = scan2.getScanMetrics();
+      assertEquals("Did not access all the regions in the table", numOfRegions,
+              scanMetrics.countOfRegions.get());
+
+      // check byte counters
+      scan2 = new Scan();
+      scan2.setScanMetricsEnabled(true);
+      scan2.setCaching(1);
+      try (ResultScanner scanner = ht.getScanner(scan2)) {
+        int numBytes = 0;
+        for (Result result : scanner.next(1)) {
+          for (Cell cell : result.listCells()) {
+            numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
+          }
+        }
+        scanMetrics = scanner.getScanMetrics();
+        assertEquals("Did not count the result bytes", numBytes,
+                scanMetrics.countOfBytesInResults.get());
+      }
+
+      // check byte counters on a small scan
+      scan2 = new Scan();
+      scan2.setScanMetricsEnabled(true);
+      scan2.setCaching(1);
+      scan2.setSmall(true);
+      try (ResultScanner scanner = ht.getScanner(scan2)) {
+        int numBytes = 0;
+        for (Result result : scanner.next(1)) {
+          for (Cell cell : result.listCells()) {
+            numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
+          }
+        }
+        scanMetrics = scanner.getScanMetrics();
+        assertEquals("Did not count the result bytes", numBytes,
+                scanMetrics.countOfBytesInResults.get());
+      }
+
+      // now, test that the metrics are still collected even if you don't call close, but do
+      // run past the end of all the records
+      /** There seems to be a timing issue here.  Comment out for now. Fix when time.
+       Scan scanWithoutClose = new Scan();
+       scanWithoutClose.setCaching(1);
+       scanWithoutClose.setScanMetricsEnabled(true);
+       ResultScanner scannerWithoutClose = ht.getScanner(scanWithoutClose);
+       for (Result result : scannerWithoutClose.next(numRecords + 1)) {
+       }
+       ScanMetrics scanMetricsWithoutClose = getScanMetrics(scanWithoutClose);
+       assertEquals("Did not access all the regions in the table", numOfRegions,
+       scanMetricsWithoutClose.countOfRegions.get());
+       */
+
+      // finally,
+      // test that the metrics are collected correctly if you both run past all the records,
+      // AND close the scanner
+      Scan scanWithClose = new Scan();
+      // make sure we can set caching up to the number of a scanned values
+      scanWithClose.setCaching(numRecords);
+      scanWithClose.setScanMetricsEnabled(true);
+      try (ResultScanner scannerWithClose = ht.getScanner(scanWithClose)) {
+        for (Result result : scannerWithClose.next(numRecords + 1)) {
+        }
+      }
+      ScanMetrics scanMetricsWithClose = scanWithClose.getScanMetrics();
+      assertEquals("Did not access all the regions in the table", numOfRegions,
+              scanMetricsWithClose.countOfRegions.get());
     }
-    scannerWithClose.close();
-    ScanMetrics scanMetricsWithClose = getScanMetrics(scanWithClose);
-    assertEquals("Did not access all the regions in the table", numOfRegions,
-        scanMetricsWithClose.countOfRegions.get());
   }
 
   private ScanMetrics getScanMetrics(Scan scan) throws Exception {
@@ -5224,101 +5294,102 @@ public class TestFromClientSide {
   public void testCacheOnWriteEvictOnClose() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] data = Bytes.toBytes("data");
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      // get the block cache and region
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        // get the block cache and region
+        String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
-          .getRegion(regionName);
-      HStore store = region.getStores().iterator().next();
-      CacheConfig cacheConf = store.getCacheConfig();
-      cacheConf.setCacheDataOnWrite(true);
-      cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+        HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
+                .getRegion(regionName);
+        HStore store = region.getStores().iterator().next();
+        CacheConfig cacheConf = store.getCacheConfig();
+        cacheConf.setCacheDataOnWrite(true);
+        cacheConf.setEvictOnClose(true);
+        BlockCache cache = cacheConf.getBlockCache().get();
 
-      // establish baseline stats
-      long startBlockCount = cache.getBlockCount();
-      long startBlockHits = cache.getStats().getHitCount();
-      long startBlockMiss = cache.getStats().getMissCount();
+        // establish baseline stats
+        long startBlockCount = cache.getBlockCount();
+        long startBlockHits = cache.getStats().getHitCount();
+        long startBlockMiss = cache.getStats().getMissCount();
 
-      // wait till baseline is stable, (minimal 500 ms)
-      for (int i = 0; i < 5; i++) {
-        Thread.sleep(100);
-        if (startBlockCount != cache.getBlockCount()
-            || startBlockHits != cache.getStats().getHitCount()
-            || startBlockMiss != cache.getStats().getMissCount()) {
-          startBlockCount = cache.getBlockCount();
-          startBlockHits = cache.getStats().getHitCount();
-          startBlockMiss = cache.getStats().getMissCount();
-          i = -1;
+        // wait till baseline is stable, (minimal 500 ms)
+        for (int i = 0; i < 5; i++) {
+          Thread.sleep(100);
+          if (startBlockCount != cache.getBlockCount()
+                  || startBlockHits != cache.getStats().getHitCount()
+                  || startBlockMiss != cache.getStats().getMissCount()) {
+            startBlockCount = cache.getBlockCount();
+            startBlockHits = cache.getStats().getHitCount();
+            startBlockMiss = cache.getStats().getMissCount();
+            i = -1;
+          }
         }
-      }
 
-      // insert data
-      Put put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER, data);
-      table.put(put);
-      assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
-      // data was in memstore so don't expect any changes
-      assertEquals(startBlockCount, cache.getBlockCount());
-      assertEquals(startBlockHits, cache.getStats().getHitCount());
-      assertEquals(startBlockMiss, cache.getStats().getMissCount());
-      // flush the data
-      System.out.println("Flushing cache");
-      region.flush(true);
-      // expect one more block in cache, no change in hits/misses
-      long expectedBlockCount = startBlockCount + 1;
-      long expectedBlockHits = startBlockHits;
-      long expectedBlockMiss = startBlockMiss;
-      assertEquals(expectedBlockCount, cache.getBlockCount());
-      assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-      assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-      // read the data and expect same blocks, one new hit, no misses
-      assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
-      assertEquals(expectedBlockCount, cache.getBlockCount());
-      assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
-      assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-      // insert a second column, read the row, no new blocks, one new hit
-      byte [] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
-      byte [] data2 = Bytes.add(data, data);
-      put = new Put(ROW);
-      put.addColumn(FAMILY, QUALIFIER2, data2);
-      table.put(put);
-      Result r = table.get(new Get(ROW));
-      assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
-      assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
-      assertEquals(expectedBlockCount, cache.getBlockCount());
-      assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
-      assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-      // flush, one new block
-      System.out.println("Flushing cache");
-      region.flush(true);
-      assertEquals(++expectedBlockCount, cache.getBlockCount());
-      assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-      assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-      // compact, net minus two blocks, two hits, no misses
-      System.out.println("Compacting");
-      assertEquals(2, store.getStorefilesCount());
-      store.triggerMajorCompaction();
-      region.compact(true);
-      store.closeAndArchiveCompactedFiles();
-      waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
-      assertEquals(1, store.getStorefilesCount());
-      expectedBlockCount -= 2; // evicted two blocks, cached none
-      assertEquals(expectedBlockCount, cache.getBlockCount());
-      expectedBlockHits += 2;
-      assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
-      assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-      // read the row, this should be a cache miss because we don't cache data
-      // blocks on compaction
-      r = table.get(new Get(ROW));
-      assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
-      assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
-      expectedBlockCount += 1; // cached one data block
-      assertEquals(expectedBlockCount, cache.getBlockCount());
-      assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-      assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
+        // insert data
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, data);
+        table.put(put);
+        assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
+        // data was in memstore so don't expect any changes
+        assertEquals(startBlockCount, cache.getBlockCount());
+        assertEquals(startBlockHits, cache.getStats().getHitCount());
+        assertEquals(startBlockMiss, cache.getStats().getMissCount());
+        // flush the data
+        System.out.println("Flushing cache");
+        region.flush(true);
+        // expect one more block in cache, no change in hits/misses
+        long expectedBlockCount = startBlockCount + 1;
+        long expectedBlockHits = startBlockHits;
+        long expectedBlockMiss = startBlockMiss;
+        assertEquals(expectedBlockCount, cache.getBlockCount());
+        assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+        assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+        // read the data and expect same blocks, one new hit, no misses
+        assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
+        assertEquals(expectedBlockCount, cache.getBlockCount());
+        assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
+        assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+        // insert a second column, read the row, no new blocks, one new hit
+        byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
+        byte[] data2 = Bytes.add(data, data);
+        put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER2, data2);
+        table.put(put);
+        Result r = table.get(new Get(ROW));
+        assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
+        assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
+        assertEquals(expectedBlockCount, cache.getBlockCount());
+        assertEquals(++expectedBlockHits, cache.getStats().getHitCount());
+        assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+        // flush, one new block
+        System.out.println("Flushing cache");
+        region.flush(true);
+        assertEquals(++expectedBlockCount, cache.getBlockCount());
+        assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+        assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+        // compact, net minus two blocks, two hits, no misses
+        System.out.println("Compacting");
+        assertEquals(2, store.getStorefilesCount());
+        store.triggerMajorCompaction();
+        region.compact(true);
+        store.closeAndArchiveCompactedFiles();
+        waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
+        assertEquals(1, store.getStorefilesCount());
+        expectedBlockCount -= 2; // evicted two blocks, cached none
+        assertEquals(expectedBlockCount, cache.getBlockCount());
+        expectedBlockHits += 2;
+        assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
+        assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+        // read the row, this should be a cache miss because we don't cache data
+        // blocks on compaction
+        r = table.get(new Get(ROW));
+        assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
+        assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
+        expectedBlockCount += 1; // cached one data block
+        assertEquals(expectedBlockCount, cache.getBlockCount());
+        assertEquals(expectedBlockHits, cache.getStats().getHitCount());
+        assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
+      }
     }
   }
 
@@ -5459,186 +5530,193 @@ public class TestFromClientSide {
   @Test
   public void testJira6912() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10);
+    try (Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10)) {
 
-    List<Put> puts = new ArrayList<Put>();
-    for (int i=0;i !=100; i++){
-      Put put = new Put(Bytes.toBytes(i));
-      put.addColumn(FAMILY, FAMILY, Bytes.toBytes(i));
-      puts.add(put);
+      List<Put> puts = new ArrayList<Put>();
+      for (int i = 0; i != 100; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn(FAMILY, FAMILY, Bytes.toBytes(i));
+        puts.add(put);
+      }
+      foo.put(puts);
+      // If i comment this out it works
+      TEST_UTIL.flush();
+
+      Scan scan = new Scan();
+      scan.setStartRow(Bytes.toBytes(1));
+      scan.setStopRow(Bytes.toBytes(3));
+      scan.addColumn(FAMILY, FAMILY);
+      scan.setFilter(new RowFilter(CompareOperator.NOT_EQUAL,
+              new BinaryComparator(Bytes.toBytes(1))));
+
+      try (ResultScanner scanner = foo.getScanner(scan)) {
+        Result[] bar = scanner.next(100);
+        assertEquals(1, bar.length);
+      }
     }
-    foo.put(puts);
-    // If i comment this out it works
-    TEST_UTIL.flush();
-
-    Scan scan = new Scan();
-    scan.setStartRow(Bytes.toBytes(1));
-    scan.setStopRow(Bytes.toBytes(3));
-    scan.addColumn(FAMILY, FAMILY);
-    scan.setFilter(new RowFilter(CompareOperator.NOT_EQUAL,
-        new BinaryComparator(Bytes.toBytes(1))));
-
-    ResultScanner scanner = foo.getScanner(scan);
-    Result[] bar = scanner.next(100);
-    assertEquals(1, bar.length);
   }
 
   @Test
   public void testScan_NullQualifier() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    table.put(put);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
 
-    put = new Put(ROW);
-    put.addColumn(FAMILY, null, VALUE);
-    table.put(put);
-    LOG.info("Row put");
+      put = new Put(ROW);
+      put.addColumn(FAMILY, null, VALUE);
+      table.put(put);
+      LOG.info("Row put");
 
-    Scan scan = new Scan();
-    scan.addColumn(FAMILY, null);
+      Scan scan = new Scan();
+      scan.addColumn(FAMILY, null);
 
-    ResultScanner scanner = table.getScanner(scan);
-    Result[] bar = scanner.next(100);
-    assertEquals(1, bar.length);
-    assertEquals(1, bar[0].size());
+      ResultScanner scanner = table.getScanner(scan);
+      Result[] bar = scanner.next(100);
+      assertEquals(1, bar.length);
+      assertEquals(1, bar[0].size());
 
-    scan = new Scan();
-    scan.addFamily(FAMILY);
+      scan = new Scan();
+      scan.addFamily(FAMILY);
 
-    scanner = table.getScanner(scan);
-    bar = scanner.next(100);
-    assertEquals(1, bar.length);
-    assertEquals(2, bar[0].size());
+      scanner = table.getScanner(scan);
+      bar = scanner.next(100);
+      assertEquals(1, bar.length);
+      assertEquals(2, bar[0].size());
+    }
   }
 
   @Test
   public void testNegativeTimestamp() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
 
-    try {
-      Put put = new Put(ROW, -1);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-      fail("Negative timestamps should not have been allowed");
-    } catch (IllegalArgumentException ex) {
-      assertTrue(ex.getMessage().contains("negative"));
+      try {
+        Put put = new Put(ROW, -1);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+        fail("Negative timestamps should not have been allowed");
+      } catch (IllegalArgumentException ex) {
+        assertTrue(ex.getMessage().contains("negative"));
+      }
+
+      try {
+        Put put = new Put(ROW);
+        long ts = -1;
+        put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
+        table.put(put);
+        fail("Negative timestamps should not have been allowed");
+      } catch (IllegalArgumentException ex) {
+        assertTrue(ex.getMessage().contains("negative"));
+      }
+
+      try {
+        Delete delete = new Delete(ROW, -1);
+        table.delete(delete);
+        fail("Negative timestamps should not have been allowed");
+      } catch (IllegalArgumentException ex) {
+        assertTrue(ex.getMessage().contains("negative"));
+      }
+
+      try {
+        Delete delete = new Delete(ROW);
+        delete.addFamily(FAMILY, -1);
+        table.delete(delete);
+        fail("Negative timestamps should not have been allowed");
+      } catch (IllegalArgumentException ex) {
+        assertTrue(ex.getMessage().contains("negative"));
+      }
+
+      try {
+        Scan scan = new Scan();
+        scan.setTimeRange(-1, 1);
+        table.getScanner(scan);
+        fail("Negative timestamps should not have been allowed");
+      } catch (IllegalArgumentException ex) {
+        assertTrue(ex.getMessage().contains("negative"));
+      }
+
+      // KeyValue should allow negative timestamps for backwards compat. Otherwise, if the user
+      // already has negative timestamps in cluster data, HBase won't be able to handle that
+      try {
+        new KeyValue(Bytes.toBytes(42), Bytes.toBytes(42), Bytes.toBytes(42), -1,
+                Bytes.toBytes(42));
+      } catch (IllegalArgumentException ex) {
+        fail("KeyValue SHOULD allow negative timestamps");
+      }
+
     }
-
-    try {
-      Put put = new Put(ROW);
-      long ts = -1;
-      put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
-      table.put(put);
-      fail("Negative timestamps should not have been allowed");
-    } catch (IllegalArgumentException ex) {
-      assertTrue(ex.getMessage().contains("negative"));
-    }
-
-    try {
-      Delete delete = new Delete(ROW, -1);
-      table.delete(delete);
-      fail("Negative timestamps should not have been allowed");
-    } catch (IllegalArgumentException ex) {
-      assertTrue(ex.getMessage().contains("negative"));
-    }
-
-    try {
-      Delete delete = new Delete(ROW);
-      delete.addFamily(FAMILY, -1);
-      table.delete(delete);
-      fail("Negative timestamps should not have been allowed");
-    } catch (IllegalArgumentException ex) {
-      assertTrue(ex.getMessage().contains("negative"));
-    }
-
-    try {
-      Scan scan = new Scan();
-      scan.setTimeRange(-1, 1);
-      table.getScanner(scan);
-      fail("Negative timestamps should not have been allowed");
-    } catch (IllegalArgumentException ex) {
-      assertTrue(ex.getMessage().contains("negative"));
-    }
-
-    // KeyValue should allow negative timestamps for backwards compat. Otherwise, if the user
-    // already has negative timestamps in cluster data, HBase won't be able to handle that
-    try {
-      new KeyValue(Bytes.toBytes(42), Bytes.toBytes(42), Bytes.toBytes(42), -1, Bytes.toBytes(42));
-    } catch (IllegalArgumentException ex) {
-      fail("KeyValue SHOULD allow negative timestamps");
-    }
-
-    table.close();
   }
 
   @Test
   public void testRawScanRespectsVersions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[] row = Bytes.toBytes("row");
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[] row = Bytes.toBytes("row");
 
-    // put the same row 4 times, with different values
-    Put p = new Put(row);
-    p.addColumn(FAMILY, QUALIFIER, 10, VALUE);
-    table.put(p);
-    p = new Put(row);
-    p.addColumn(FAMILY, QUALIFIER, 11, ArrayUtils.add(VALUE, (byte) 2));
-    table.put(p);
+      // put the same row 4 times, with different values
+      Put p = new Put(row);
+      p.addColumn(FAMILY, QUALIFIER, 10, VALUE);
+      table.put(p);
+      p = new Put(row);
+      p.addColumn(FAMILY, QUALIFIER, 11, ArrayUtils.add(VALUE, (byte) 2));
+      table.put(p);
 
-    p = new Put(row);
-    p.addColumn(FAMILY, QUALIFIER, 12, ArrayUtils.add(VALUE, (byte) 3));
-    table.put(p);
+      p = new Put(row);
+      p.addColumn(FAMILY, QUALIFIER, 12, ArrayUtils.add(VALUE, (byte) 3));
+      table.put(p);
 
-    p = new Put(row);
-    p.addColumn(FAMILY, QUALIFIER, 13, ArrayUtils.add(VALUE, (byte) 4));
-    table.put(p);
+      p = new Put(row);
+      p.addColumn(FAMILY, QUALIFIER, 13, ArrayUtils.add(VALUE, (byte) 4));
+      table.put(p);
 
-    int versions = 4;
-    Scan s = new Scan(row);
-    // get all the possible versions
-    s.setMaxVersions();
-    s.setRaw(true);
+      int versions = 4;
+      Scan s = new Scan(row);
+      // get all the possible versions
+      s.setMaxVersions();
+      s.setRaw(true);
 
-    ResultScanner scanner = table.getScanner(s);
-    int count = 0;
-    for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
-      count++;
+      try (ResultScanner scanner = table.getScanner(s)) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
+          count++;
+        }
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
+      }
+
+      // then if we decrease the number of versions, but keep the scan raw, we should see exactly
+      // that number of versions
+      versions = 2;
+      s.setMaxVersions(versions);
+      try (ResultScanner scanner = table.getScanner(s)) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
+          count++;
+        }
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
+      }
+
+      // finally, if we turn off raw scanning, but max out the number of versions, we should go back
+      // to seeing just three
+      versions = 3;
+      s.setMaxVersions(versions);
+      try (ResultScanner scanner = table.getScanner(s)) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertEquals("Found an unexpected number of results for the row!", versions,
+                  r.listCells().size());
+          count++;
+        }
+        assertEquals("Found more than a single row when raw scanning the table with a single row!",
+                1, count);
+      }
+
     }
-    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-      count);
-    scanner.close();
-
-    // then if we decrease the number of versions, but keep the scan raw, we should see exactly that
-    // number of versions
-    versions = 2;
-    s.setMaxVersions(versions);
-    scanner = table.getScanner(s);
-    count = 0;
-    for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
-      count++;
-    }
-    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-      count);
-    scanner.close();
-
-    // finally, if we turn off raw scanning, but max out the number of versions, we should go back
-    // to seeing just three
-    versions = 3;
-    s.setMaxVersions(versions);
-    scanner = table.getScanner(s);
-    count = 0;
-    for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
-      count++;
-    }
-    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
-      count);
-    scanner.close();
-
-    table.close();
     TEST_UTIL.deleteTable(tableName);
   }
 
@@ -5646,34 +5724,39 @@ public class TestFromClientSide {
   public void testEmptyFilterList() throws Exception {
     // Test Initialization.
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    // Insert one row each region
-    Put put = new Put(Bytes.toBytes("row"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    table.put(put);
+      // Insert one row each region
+      Put put = new Put(Bytes.toBytes("row"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
 
-    List<Result> scanResults = new LinkedList<>();
-    Scan scan = new Scan();
-    scan.setFilter(new FilterList());
-    try (ResultScanner scanner = table.getScanner(scan)) {
-      for (Result r : scanner) {
-        scanResults.add(r);
+      List<Result> scanResults = new LinkedList<>();
+      Scan scan = new Scan();
+      scan.setFilter(new FilterList());
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        for (Result r : scanner) {
+          scanResults.add(r);
+        }
       }
-    }
-    assertEquals(1, scanResults.size());
-    Get g = new Get(Bytes.toBytes("row"));
-    g.setFilter(new FilterList());
-    Result getResult = table.get(g);
-    Result scanResult = scanResults.get(0);
-    assertEquals(scanResult.rawCells().length, getResult.rawCells().length);
-    for (int i = 0; i != scanResult.rawCells().length; ++i) {
-      Cell scanCell = scanResult.rawCells()[i];
-      Cell getCell = getResult.rawCells()[i];
-      assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell), CellUtil.cloneRow(getCell)));
-      assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell), CellUtil.cloneFamily(getCell)));
-      assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell), CellUtil.cloneQualifier(getCell)));
-      assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell), CellUtil.cloneValue(getCell)));
+      assertEquals(1, scanResults.size());
+      Get g = new Get(Bytes.toBytes("row"));
+      g.setFilter(new FilterList());
+      Result getResult = table.get(g);
+      Result scanResult = scanResults.get(0);
+      assertEquals(scanResult.rawCells().length, getResult.rawCells().length);
+      for (int i = 0; i != scanResult.rawCells().length; ++i) {
+        Cell scanCell = scanResult.rawCells()[i];
+        Cell getCell = getResult.rawCells()[i];
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell),
+                CellUtil.cloneRow(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell),
+                CellUtil.cloneFamily(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell),
+                CellUtil.cloneQualifier(getCell)));
+        assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell),
+                CellUtil.cloneValue(getCell)));
+      }
     }
   }
 
@@ -5681,162 +5764,165 @@ public class TestFromClientSide {
   public void testSmallScan() throws Exception {
     // Test Initialization.
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    // Insert one row each region
-    int insertNum = 10;
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(Bytes.toBytes("row" + String.format("%03d", i)));
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
+      // Insert one row each region
+      int insertNum = 10;
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(Bytes.toBytes("row" + String.format("%03d", i)));
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+      }
+
+      // normal scan
+      try (ResultScanner scanner = table.getScanner(new Scan())) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertTrue(!r.isEmpty());
+          count++;
+        }
+        assertEquals(insertNum, count);
+      }
+
+      // small scan
+      Scan scan = new Scan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      scan.setSmall(true);
+      scan.setCaching(2);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertTrue(!r.isEmpty());
+          count++;
+        }
+        assertEquals(insertNum, count);
+      }
     }
-
-    // normal scan
-    ResultScanner scanner = table.getScanner(new Scan());
-    int count = 0;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-    }
-    assertEquals(insertNum, count);
-
-    // small scan
-    Scan scan = new Scan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    scan.setSmall(true);
-    scan.setCaching(2);
-    scanner = table.getScanner(scan);
-    count = 0;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-    }
-    assertEquals(insertNum, count);
-
   }
 
   @Test
   public void testSuperSimpleWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    Put put = new Put(Bytes.toBytes("0-b11111-0000000000000000000"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b11111-0000000000000000002"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b11111-0000000000000000004"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b11111-0000000000000000006"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b11111-0000000000000000008"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b22222-0000000000000000001"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b22222-0000000000000000003"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b22222-0000000000000000005"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b22222-0000000000000000007"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
-    Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
-        Bytes.toBytes("0-b11111-0000000000000000000"));
-    scan.setReversed(true);
-    ResultScanner scanner = ht.getScanner(scan);
-    Result result = scanner.next();
-    assertTrue(Bytes.equals(result.getRow(),
-        Bytes.toBytes("0-b11111-0000000000000000008")));
-    scanner.close();
-    ht.close();
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      Put put = new Put(Bytes.toBytes("0-b11111-0000000000000000000"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b11111-0000000000000000002"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b11111-0000000000000000004"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b11111-0000000000000000006"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b11111-0000000000000000008"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b22222-0000000000000000001"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b22222-0000000000000000003"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b22222-0000000000000000005"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b22222-0000000000000000007"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
+      Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
+              Bytes.toBytes("0-b11111-0000000000000000000"));
+      scan.setReversed(true);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        Result result = scanner.next();
+        assertTrue(Bytes.equals(result.getRow(),
+                Bytes.toBytes("0-b11111-0000000000000000008")));
+      }
+    }
   }
 
   @Test
   public void testFiltersWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[][] ROWS = makeN(ROW, 10);
-    byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col1-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col2-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col3-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col4-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col5-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col6-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col7-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col8-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col9-<d2v1>-<d3v2>") };
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(ROWS[i]);
-      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
-      ht.put(put);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 10);
+      byte[][] QUALIFIERS = {Bytes.toBytes("col0-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col2-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col4-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col6-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col8-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col9-<d2v1>-<d3v2>")};
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(ROWS[i]);
+        put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
+        ht.put(put);
+      }
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.addFamily(FAMILY);
+      Filter filter = new QualifierFilter(CompareOperator.EQUAL,
+              new RegexStringComparator("col[1-5]"));
+      scan.setFilter(filter);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int expectedIndex = 5;
+        for (Result result : scanner) {
+          assertEquals(1, result.size());
+          Cell c = result.rawCells()[0];
+          assertTrue(Bytes.equals(c.getRowArray(), c.getRowOffset(), c.getRowLength(),
+                  ROWS[expectedIndex], 0, ROWS[expectedIndex].length));
+          assertTrue(Bytes.equals(c.getQualifierArray(), c.getQualifierOffset(),
+                  c.getQualifierLength(), QUALIFIERS[expectedIndex], 0,
+                  QUALIFIERS[expectedIndex].length));
+          expectedIndex--;
+        }
+        assertEquals(0, expectedIndex);
+      }
     }
-    Scan scan = new Scan();
-    scan.setReversed(true);
-    scan.addFamily(FAMILY);
-    Filter filter = new QualifierFilter(CompareOperator.EQUAL,
-        new RegexStringComparator("col[1-5]"));
-    scan.setFilter(filter);
-    ResultScanner scanner = ht.getScanner(scan);
-    int expectedIndex = 5;
-    for (Result result : scanner) {
-      assertEquals(1, result.size());
-      Cell c = result.rawCells()[0];
-      assertTrue(Bytes.equals(c.getRowArray(), c.getRowOffset(), c.getRowLength(),
-        ROWS[expectedIndex], 0, ROWS[expectedIndex].length));
-      assertTrue(Bytes.equals(c.getQualifierArray(), c.getQualifierOffset(),
-        c.getQualifierLength(), QUALIFIERS[expectedIndex], 0, QUALIFIERS[expectedIndex].length));
-      expectedIndex--;
-    }
-    assertEquals(0, expectedIndex);
-    scanner.close();
-    ht.close();
   }
 
   @Test
   public void testKeyOnlyFilterWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[][] ROWS = makeN(ROW, 10);
-    byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col1-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col2-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col3-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col4-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col5-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col6-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col7-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col8-<d2v1>-<d3v2>"),
-        Bytes.toBytes("col9-<d2v1>-<d3v2>") };
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(ROWS[i]);
-      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
-      ht.put(put);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 10);
+      byte[][] QUALIFIERS = {Bytes.toBytes("col0-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col2-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col4-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col6-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col8-<d2v1>-<d3v2>"),
+              Bytes.toBytes("col9-<d2v1>-<d3v2>")};
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(ROWS[i]);
+        put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
+        ht.put(put);
+      }
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.addFamily(FAMILY);
+      Filter filter = new KeyOnlyFilter(true);
+      scan.setFilter(filter);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        int count = 0;
+        for (Result result : ht.getScanner(scan)) {
+          assertEquals(1, result.size());
+          assertEquals(Bytes.SIZEOF_INT, result.rawCells()[0].getValueLength());
+          assertEquals(VALUE.length, Bytes.toInt(CellUtil.cloneValue(result.rawCells()[0])));
+          count++;
+        }
+        assertEquals(10, count);
+      }
     }
-    Scan scan = new Scan();
-    scan.setReversed(true);
-    scan.addFamily(FAMILY);
-    Filter filter = new KeyOnlyFilter(true);
-    scan.setFilter(filter);
-    ResultScanner scanner = ht.getScanner(scan);
-    int count = 0;
-    for (Result result : ht.getScanner(scan)) {
-      assertEquals(1, result.size());
-      assertEquals(Bytes.SIZEOF_INT, result.rawCells()[0].getValueLength());
-      assertEquals(VALUE.length, Bytes.toInt(CellUtil.cloneValue(result.rawCells()[0])));
-      count++;
-    }
-    assertEquals(10, count);
-    scanner.close();
-    ht.close();
   }
 
   /**
@@ -5845,102 +5931,104 @@ public class TestFromClientSide {
   @Test
   public void testSimpleMissingWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    byte[][] ROWS = makeN(ROW, 4);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      byte[][] ROWS = makeN(ROW, 4);
 
-    // Try to get a row on an empty table
-    Scan scan = new Scan();
-    scan.setReversed(true);
-    Result result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      // Try to get a row on an empty table
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      Result result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[0]);
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan(ROWS[0]);
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan(ROWS[0], ROWS[1]);
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan(ROWS[0], ROWS[1]);
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan();
-    scan.setReversed(true);
-    scan.addFamily(FAMILY);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan();
+      scan.setReversed(true);
+      scan.addFamily(FAMILY);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    scan = new Scan();
-    scan.setReversed(true);
-    scan.addColumn(FAMILY, QUALIFIER);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
+      scan = new Scan();
+      scan.setReversed(true);
+      scan.addColumn(FAMILY, QUALIFIER);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
 
-    // Insert a row
+      // Insert a row
 
-    Put put = new Put(ROWS[2]);
-    put.addColumn(FAMILY, QUALIFIER, VALUE);
-    ht.put(put);
+      Put put = new Put(ROWS[2]);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
+      ht.put(put);
 
-    // Make sure we can scan the row
-    scan = new Scan();
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      // Make sure we can scan the row
+      scan = new Scan();
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    scan = new Scan(ROWS[3], ROWS[0]);
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      scan = new Scan(ROWS[3], ROWS[0]);
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    scan = new Scan(ROWS[2], ROWS[1]);
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
+      scan = new Scan(ROWS[2], ROWS[1]);
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
 
-    // Try to scan empty rows around it
-    // Introduced MemStore#shouldSeekForReverseScan to fix the following
-    scan = new Scan(ROWS[1]);
-    scan.setReversed(true);
-    result = getSingleScanResult(ht, scan);
-    assertNullResult(result);
-    ht.close();
+      // Try to scan empty rows around it
+      // Introduced MemStore#shouldSeekForReverseScan to fix the following
+      scan = new Scan(ROWS[1]);
+      scan.setReversed(true);
+      result = getSingleScanResult(ht, scan);
+      assertNullResult(result);
+    }
   }
 
   @Test
   public void testNullWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
-    // Null qualifier (should work)
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, null, VALUE);
-    ht.put(put);
-    scanTestNull(ht, ROW, FAMILY, VALUE, true);
-    Delete delete = new Delete(ROW);
-    delete.addColumns(FAMILY, null);
-    ht.delete(delete);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
+      // Null qualifier (should work)
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, null, VALUE);
+      ht.put(put);
+      scanTestNull(ht, ROW, FAMILY, VALUE, true);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, null);
+      ht.delete(delete);
+    }
+
     // Use a new table
-    ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY);
-    // Empty qualifier, byte[0] instead of null (should work)
-    put = new Put(ROW);
-    put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
-    ht.put(put);
-    scanTestNull(ht, ROW, FAMILY, VALUE, true);
-    TEST_UTIL.flush();
-    scanTestNull(ht, ROW, FAMILY, VALUE, true);
-    delete = new Delete(ROW);
-    delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
-    ht.delete(delete);
-    // Null value
-    put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, null);
-    ht.put(put);
-    Scan scan = new Scan();
-    scan.setReversed(true);
-    scan.addColumn(FAMILY, QUALIFIER);
-    Result result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
-    ht.close();
+    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY)) {
+      // Empty qualifier, byte[0] instead of null (should work)
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+      ht.put(put);
+      scanTestNull(ht, ROW, FAMILY, VALUE, true);
+      TEST_UTIL.flush();
+      scanTestNull(ht, ROW, FAMILY, VALUE, true);
+      Delete delete = new Delete(ROW);
+      delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+      ht.delete(delete);
+      // Null value
+      put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, null);
+      ht.put(put);
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.addColumn(FAMILY, QUALIFIER);
+      Result result = getSingleScanResult(ht, scan);
+      assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
+    }
   }
 
   @Test
@@ -5950,179 +6038,179 @@ public class TestFromClientSide {
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3)) {
 
-    Put put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
-    ht.put(put);
+      Put put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
+      ht.put(put);
 
-    Delete delete = new Delete(ROW);
-    delete.addFamily(FAMILIES[0], ts[0]);
-    ht.delete(delete);
+      Delete delete = new Delete(ROW);
+      delete.addFamily(FAMILIES[0], ts[0]);
+      ht.delete(delete);
 
-    Scan scan = new Scan(ROW);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[0]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    Result result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1] },
-        new byte[][] { VALUES[1] }, 0, 0);
+      Scan scan = new Scan(ROW);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[0]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      Result result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1]},
+              new byte[][]{VALUES[1]}, 0, 0);
 
-    // Test delete latest version
-    put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
-    put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
-    put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
-    ht.put(put);
+      // Test delete latest version
+      put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+      put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
+      put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
+      ht.put(put);
 
-    delete = new Delete(ROW);
-    delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
-    ht.delete(delete);
+      delete = new Delete(ROW);
+      delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
+      ht.delete(delete);
 
-    scan = new Scan(ROW);
-    scan.setReversed(true);
-    scan.addColumn(FAMILIES[0], QUALIFIER);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1],
-        ts[2], ts[3] }, new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      scan = new Scan(ROW);
+      scan.setReversed(true);
+      scan.addColumn(FAMILIES[0], QUALIFIER);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
+              ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
 
-    // Test for HBASE-1847
-    delete = new Delete(ROW);
-    delete.addColumn(FAMILIES[0], null);
-    ht.delete(delete);
+      // Test for HBASE-1847
+      delete = new Delete(ROW);
+      delete.addColumn(FAMILIES[0], null);
+      ht.delete(delete);
 
-    // Cleanup null qualifier
-    delete = new Delete(ROW);
-    delete.addColumns(FAMILIES[0], null);
-    ht.delete(delete);
+      // Cleanup null qualifier
+      delete = new Delete(ROW);
+      delete.addColumns(FAMILIES[0], null);
+      ht.delete(delete);
 
-    // Expected client behavior might be that you can re-put deleted values
-    // But alas, this is not to be. We can't put them back in either case.
+      // Expected client behavior might be that you can re-put deleted values
+      // But alas, this is not to be. We can't put them back in either case.
 
-    put = new Put(ROW);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
-    ht.put(put);
+      put = new Put(ROW);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+      ht.put(put);
 
-    // The Scanner returns the previous values, the expected-naive-unexpected
-    // behavior
+      // The Scanner returns the previous values, the expected-naive-unexpected
+      // behavior
 
-    scan = new Scan(ROW);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[0]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1],
-        ts[2], ts[3] }, new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      scan = new Scan(ROW);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[0]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[]{ts[1],
+              ts[2], ts[3]}, new byte[][]{VALUES[1], VALUES[2], VALUES[3]}, 0, 2);
 
-    // Test deleting an entire family from one row but not the other various
-    // ways
+      // Test deleting an entire family from one row but not the other various
+      // ways
 
-    put = new Put(ROWS[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
+      put = new Put(ROWS[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
 
-    put = new Put(ROWS[1]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
+      put = new Put(ROWS[1]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
 
-    put = new Put(ROWS[2]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
-    ht.put(put);
+      put = new Put(ROWS[2]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+      put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+      put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+      ht.put(put);
 
-    delete = new Delete(ROWS[0]);
-    delete.addFamily(FAMILIES[2]);
-    ht.delete(delete);
+      delete = new Delete(ROWS[0]);
+      delete.addFamily(FAMILIES[2]);
+      ht.delete(delete);
 
-    delete = new Delete(ROWS[1]);
-    delete.addColumns(FAMILIES[1], QUALIFIER);
-    ht.delete(delete);
+      delete = new Delete(ROWS[1]);
+      delete.addColumns(FAMILIES[1], QUALIFIER);
+      ht.delete(delete);
 
-    delete = new Delete(ROWS[2]);
-    delete.addColumn(FAMILIES[1], QUALIFIER);
-    delete.addColumn(FAMILIES[1], QUALIFIER);
-    delete.addColumn(FAMILIES[2], QUALIFIER);
-    ht.delete(delete);
+      delete = new Delete(ROWS[2]);
+      delete.addColumn(FAMILIES[1], QUALIFIER);
+      delete.addColumn(FAMILIES[1], QUALIFIER);
+      delete.addColumn(FAMILIES[2], QUALIFIER);
+      ht.delete(delete);
 
-    scan = new Scan(ROWS[0]);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[] { ts[0],
-        ts[1] }, new byte[][] { VALUES[0], VALUES[1] }, 0, 1);
+      scan = new Scan(ROWS[0]);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 2 keys but received " + result.size(),
+              result.size() == 2);
+      assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, new long[]{ts[0],
+              ts[1]}, new byte[][]{VALUES[0], VALUES[1]}, 0, 1);
 
-    scan = new Scan(ROWS[1]);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
+      scan = new Scan(ROWS[1]);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertTrue("Expected 2 keys but received " + result.size(),
+              result.size() == 2);
 
-    scan = new Scan(ROWS[2]);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    result = getSingleScanResult(ht, scan);
-    assertEquals(1, result.size());
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
-        new long[] { ts[2] }, new byte[][] { VALUES[2] }, 0, 0);
+      scan = new Scan(ROWS[2]);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      result = getSingleScanResult(ht, scan);
+      assertEquals(1, result.size());
+      assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
+              new long[]{ts[2]}, new byte[][]{VALUES[2]}, 0, 0);
 
-    // Test if we delete the family first in one row (HBASE-1541)
+      // Test if we delete the family first in one row (HBASE-1541)
 
-    delete = new Delete(ROWS[3]);
-    delete.addFamily(FAMILIES[1]);
-    ht.delete(delete);
+      delete = new Delete(ROWS[3]);
+      delete.addFamily(FAMILIES[1]);
+      ht.delete(delete);
 
-    put = new Put(ROWS[3]);
-    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
-    ht.put(put);
+      put = new Put(ROWS[3]);
+      put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
+      ht.put(put);
 
-    put = new Put(ROWS[4]);
-    put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
-    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
-    ht.put(put);
+      put = new Put(ROWS[4]);
+      put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
+      put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
+      ht.put(put);
 
-    scan = new Scan(ROWS[4]);
-    scan.setReversed(true);
-    scan.addFamily(FAMILIES[1]);
-    scan.addFamily(FAMILIES[2]);
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    ResultScanner scanner = ht.getScanner(scan);
-    result = scanner.next();
-    assertTrue("Expected 2 keys but received " + result.size(),
-        result.size() == 2);
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[1]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[1]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[1]), VALUES[2]));
-    result = scanner.next();
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
-    assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[3]));
-    assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[0]));
-    scanner.close();
-    ht.close();
+      scan = new Scan(ROWS[4]);
+      scan.setReversed(true);
+      scan.addFamily(FAMILIES[1]);
+      scan.addFamily(FAMILIES[2]);
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        result = scanner.next();
+        assertTrue("Expected 2 keys but received " + result.size(),
+                result.size() == 2);
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[4]));
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[1]), ROWS[4]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[1]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[1]), VALUES[2]));
+        result = scanner.next();
+        assertTrue("Expected 1 key but received " + result.size(),
+                result.size() == 1);
+        assertTrue(Bytes.equals(CellUtil.cloneRow(result.rawCells()[0]), ROWS[3]));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(result.rawCells()[0]), VALUES[0]));
+      }
+    }
   }
 
   /**
@@ -6140,48 +6228,50 @@ public class TestFromClientSide {
         Bytes.toBytes("007"),
         Bytes.add(Bytes.toBytes("007"), Bytes.multiple(maxByteArray, 4)),
         Bytes.toBytes("008"), Bytes.multiple(maxByteArray, 2) };
-    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows);
-    TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows)) {
+      TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
 
-    try(RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
-    }
-    // Insert one row each region
-    int insertNum = splitRows.length;
-    for (int i = 0; i < insertNum; i++) {
-      Put put = new Put(splitRows[i]);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-    }
-
-    // scan forward
-    ResultScanner scanner = table.getScanner(new Scan());
-    int count = 0;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-    }
-    assertEquals(insertNum, count);
-
-    // scan backward
-    Scan scan = new Scan();
-    scan.setReversed(true);
-    scanner = table.getScanner(scan);
-    count = 0;
-    byte[] lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+      try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
       }
-      lastRow = thisRow;
+      // Insert one row each region
+      int insertNum = splitRows.length;
+      for (int i = 0; i < insertNum; i++) {
+        Put put = new Put(splitRows[i]);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+      }
+
+      // scan forward
+      try (ResultScanner scanner = table.getScanner(new Scan())) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertTrue(!r.isEmpty());
+          count++;
+        }
+        assertEquals(insertNum, count);
+      }
+
+      // scan backward
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        int count = 0;
+        byte[] lastRow = null;
+        for (Result r : scanner) {
+          assertTrue(!r.isEmpty());
+          count++;
+          byte[] thisRow = r.getRow();
+          if (lastRow != null) {
+            assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                            + ",this row=" + Bytes.toString(thisRow),
+                    Bytes.compareTo(thisRow, lastRow) < 0);
+          }
+          lastRow = thisRow;
+        }
+        assertEquals(insertNum, count);
+      }
     }
-    assertEquals(insertNum, count);
-    table.close();
   }
 
   /**
@@ -6194,161 +6284,167 @@ public class TestFromClientSide {
     byte[][] splitRows = new byte[][]{
         Bytes.toBytes("000"), Bytes.toBytes("002"), Bytes.toBytes("004"),
         Bytes.toBytes("006"), Bytes.toBytes("008"), Bytes.toBytes("010")};
-    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows);
-    TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows)) {
+      TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
-      assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
+      try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+        assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
+      }
+      for (byte[] splitRow : splitRows) {
+        Put put = new Put(splitRow);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+
+        byte[] nextRow = Bytes.copy(splitRow);
+        nextRow[nextRow.length - 1]++;
+
+        put = new Put(nextRow);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+      }
+
+      // scan forward
+      try (ResultScanner scanner = table.getScanner(new Scan())) {
+        int count = 0;
+        for (Result r : scanner) {
+          assertTrue(!r.isEmpty());
+          count++;
+        }
+        assertEquals(12, count);
+      }
+
+      reverseScanTest(table, false);
+      reverseScanTest(table, true);
     }
-    for (byte[] splitRow : splitRows) {
-      Put put = new Put(splitRow);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-
-      byte[] nextRow = Bytes.copy(splitRow);
-      nextRow[nextRow.length - 1]++;
-
-      put = new Put(nextRow);
-      put.addColumn(FAMILY, QUALIFIER, VALUE);
-      table.put(put);
-    }
-
-    // scan forward
-    ResultScanner scanner = table.getScanner(new Scan());
-    int count = 0;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-    }
-    assertEquals(12, count);
-
-    reverseScanTest(table, false);
-    reverseScanTest(table, true);
-
-    table.close();
   }
 
   private void reverseScanTest(Table table, boolean small) throws IOException {
     // scan backward
     Scan scan = new Scan();
     scan.setReversed(true);
-    ResultScanner scanner = table.getScanner(scan);
-    int count = 0;
-    byte[] lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(12, count);
     }
-    assertEquals(12, count);
 
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
     scan.setStartRow(Bytes.toBytes("002"));
-    scanner = table.getScanner(scan);
-    count = 0;
-    lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(3, count); // 000 001 002
     }
-    assertEquals(3, count); // 000 001 002
 
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
     scan.setStartRow(Bytes.toBytes("002"));
     scan.setStopRow(Bytes.toBytes("000"));
-    scanner = table.getScanner(scan);
-    count = 0;
-    lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(2, count); // 001 002
     }
-    assertEquals(2, count); // 001 002
 
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
     scan.setStartRow(Bytes.toBytes("001"));
-    scanner = table.getScanner(scan);
-    count = 0;
-    lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(2, count); // 000 001
     }
-    assertEquals(2, count); // 000 001
 
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
     scan.setStartRow(Bytes.toBytes("000"));
-    scanner = table.getScanner(scan);
-    count = 0;
-    lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(1, count); // 000
     }
-    assertEquals(1, count); // 000
 
     scan = new Scan();
     scan.setSmall(small);
     scan.setReversed(true);
     scan.setStartRow(Bytes.toBytes("006"));
     scan.setStopRow(Bytes.toBytes("002"));
-    scanner = table.getScanner(scan);
-    count = 0;
-    lastRow = null;
-    for (Result r : scanner) {
-      assertTrue(!r.isEmpty());
-      count++;
-      byte[] thisRow = r.getRow();
-      if (lastRow != null) {
-        assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
-            + ",this row=" + Bytes.toString(thisRow),
-            Bytes.compareTo(thisRow, lastRow) < 0);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      byte[] lastRow = null;
+      for (Result r : scanner) {
+        assertTrue(!r.isEmpty());
+        count++;
+        byte[] thisRow = r.getRow();
+        if (lastRow != null) {
+          assertTrue("Error scan order, last row= " + Bytes.toString(lastRow)
+                          + ",this row=" + Bytes.toString(thisRow),
+                  Bytes.compareTo(thisRow, lastRow) < 0);
+        }
+        lastRow = thisRow;
       }
-      lastRow = thisRow;
+      assertEquals(4, count); // 003 004 005 006
     }
-    assertEquals(4, count); // 003 004 005 006
   }
 
   private static Pair<byte[][], byte[][]> getStartEndKeys(List<RegionLocations> regions) {
@@ -6384,20 +6480,21 @@ public class TestFromClientSide {
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd, KEYS);
-    HRegionLocator locator =
-      (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
-    List<HRegionLocation> results = locator.getAllRegionLocations();
-    int number = ((ConnectionImplementation)admin.getConnection())
-      .getNumberOfCachedRegionLocations(htd.getTableName());
-    assertEquals(results.size(), number);
-    ConnectionImplementation conn = ((ConnectionImplementation)admin.getConnection());
-    assertNotNull("Can't get cached location for row aaa",
-        conn.getCachedLocation(htd.getTableName(),Bytes.toBytes("aaa")));
-    for(byte[] startKey:HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE){
-      assertNotNull("Can't get cached location for row "+
-        Bytes.toString(startKey),(conn.getCachedLocation(htd.getTableName(),startKey)));
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.createTable(htd, KEYS);
+      HRegionLocator locator =
+              (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
+      List<HRegionLocation> results = locator.getAllRegionLocations();
+      int number = ((ConnectionImplementation) admin.getConnection())
+              .getNumberOfCachedRegionLocations(htd.getTableName());
+      assertEquals(results.size(), number);
+      ConnectionImplementation conn = ((ConnectionImplementation) admin.getConnection());
+      assertNotNull("Can't get cached location for row aaa",
+              conn.getCachedLocation(htd.getTableName(), Bytes.toBytes("aaa")));
+      for (byte[] startKey : HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE) {
+        assertNotNull("Can't get cached location for row " +
+                Bytes.toString(startKey), (conn.getCachedLocation(htd.getTableName(), startKey)));
+      }
     }
   }
 
@@ -6408,8 +6505,9 @@ public class TestFromClientSide {
     htd.setConfiguration(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024)); // 10K
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
-    Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(htd);
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.createTable(htd);
+    }
     // Will succeed
     try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
       t.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(0L)));
@@ -6438,110 +6536,108 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteSpecifiedVersionOfSpecifiedColumn() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    byte[][] VALUES = makeN(VALUE, 5);
-    long[] ts = { 1000, 2000, 3000, 4000, 5000 };
+      byte[][] VALUES = makeN(VALUE, 5);
+      long[] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
+      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
 
-    Put put = new Put(ROW);
-    // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
-    for (int t = 0; t < 4; t++) {
-      put.addColumn(FAMILY, QUALIFIER, ts[t], VALUES[t]);
+        Put put = new Put(ROW);
+        // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
+        for (int t = 0; t < 4; t++) {
+          put.addColumn(FAMILY, QUALIFIER, ts[t], VALUES[t]);
+        }
+        ht.put(put);
+
+        Delete delete = new Delete(ROW);
+        // Delete version 3000 of column FAMILY:QUALIFIER
+        delete.addColumn(FAMILY, QUALIFIER, ts[2]);
+        ht.delete(delete);
+
+        Get get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        get.setMaxVersions(Integer.MAX_VALUE);
+        Result result = ht.get(get);
+        // verify version 1000,2000,4000 remains for column FAMILY:QUALIFIER
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[0], ts[1], ts[3]}, new byte[][]{
+                VALUES[0], VALUES[1], VALUES[3]}, 0, 2);
+
+        delete = new Delete(ROW);
+        // Delete a version 5000 of column FAMILY:QUALIFIER which didn't exist
+        delete.addColumn(FAMILY, QUALIFIER, ts[4]);
+        ht.delete(delete);
+
+        get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        get.setMaxVersions(Integer.MAX_VALUE);
+        result = ht.get(get);
+        // verify version 1000,2000,4000 remains for column FAMILY:QUALIFIER
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[0], ts[1], ts[3]}, new byte[][]{
+                VALUES[0], VALUES[1], VALUES[3]}, 0, 2);
+      }
     }
-    ht.put(put);
-
-    Delete delete = new Delete(ROW);
-    // Delete version 3000 of column FAMILY:QUALIFIER
-    delete.addColumn(FAMILY, QUALIFIER, ts[2]);
-    ht.delete(delete);
-
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    // verify version 1000,2000,4000 remains for column FAMILY:QUALIFIER
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[0], ts[1], ts[3] }, new byte[][] {
-        VALUES[0], VALUES[1], VALUES[3] }, 0, 2);
-
-    delete = new Delete(ROW);
-    // Delete a version 5000 of column FAMILY:QUALIFIER which didn't exist
-    delete.addColumn(FAMILY, QUALIFIER, ts[4]);
-    ht.delete(delete);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    // verify version 1000,2000,4000 remains for column FAMILY:QUALIFIER
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[0], ts[1], ts[3] }, new byte[][] {
-        VALUES[0], VALUES[1], VALUES[3] }, 0, 2);
-
-    ht.close();
-    admin.close();
   }
 
   @Test
   public void testDeleteLatestVersionOfSpecifiedColumn() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    byte[][] VALUES = makeN(VALUE, 5);
-    long[] ts = { 1000, 2000, 3000, 4000, 5000 };
+      byte[][] VALUES = makeN(VALUE, 5);
+      long[] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
+      try (Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5)) {
 
-    Put put = new Put(ROW);
-    // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
-    for (int t = 0; t < 4; t++) {
-      put.addColumn(FAMILY, QUALIFIER, ts[t], VALUES[t]);
+        Put put = new Put(ROW);
+        // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
+        for (int t = 0; t < 4; t++) {
+          put.addColumn(FAMILY, QUALIFIER, ts[t], VALUES[t]);
+        }
+        ht.put(put);
+
+        Delete delete = new Delete(ROW);
+        // Delete latest version of column FAMILY:QUALIFIER
+        delete.addColumn(FAMILY, QUALIFIER);
+        ht.delete(delete);
+
+        Get get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        get.setMaxVersions(Integer.MAX_VALUE);
+        Result result = ht.get(get);
+        // verify version 1000,2000,3000 remains for column FAMILY:QUALIFIER
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[0], ts[1], ts[2]}, new byte[][]{
+                VALUES[0], VALUES[1], VALUES[2]}, 0, 2);
+
+        delete = new Delete(ROW);
+        // Delete two latest version of column FAMILY:QUALIFIER
+        delete.addColumn(FAMILY, QUALIFIER);
+        delete.addColumn(FAMILY, QUALIFIER);
+        ht.delete(delete);
+
+        get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        get.setMaxVersions(Integer.MAX_VALUE);
+        result = ht.get(get);
+        // verify version 1000 remains for column FAMILY:QUALIFIER
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[0]}, new byte[][]{VALUES[0]},
+                0, 0);
+
+        put = new Put(ROW);
+        // Put a version 5000 of column FAMILY:QUALIFIER
+        put.addColumn(FAMILY, QUALIFIER, ts[4], VALUES[4]);
+        ht.put(put);
+
+        get = new Get(ROW);
+        get.addColumn(FAMILY, QUALIFIER);
+        get.setMaxVersions(Integer.MAX_VALUE);
+        result = ht.get(get);
+        // verify version 1000,5000 remains for column FAMILY:QUALIFIER
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[0], ts[4]}, new byte[][]{
+                VALUES[0], VALUES[4]}, 0, 1);
+      }
     }
-    ht.put(put);
-
-    Delete delete = new Delete(ROW);
-    // Delete latest version of column FAMILY:QUALIFIER
-    delete.addColumn(FAMILY, QUALIFIER);
-    ht.delete(delete);
-
-    Get get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = ht.get(get);
-    // verify version 1000,2000,3000 remains for column FAMILY:QUALIFIER
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[0], ts[1], ts[2] }, new byte[][] {
-        VALUES[0], VALUES[1], VALUES[2] }, 0, 2);
-
-    delete = new Delete(ROW);
-    // Delete two latest version of column FAMILY:QUALIFIER
-    delete.addColumn(FAMILY, QUALIFIER);
-    delete.addColumn(FAMILY, QUALIFIER);
-    ht.delete(delete);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    // verify version 1000 remains for column FAMILY:QUALIFIER
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[0] }, new byte[][] { VALUES[0] },
-      0, 0);
-
-    put = new Put(ROW);
-    // Put a version 5000 of column FAMILY:QUALIFIER
-    put.addColumn(FAMILY, QUALIFIER, ts[4], VALUES[4]);
-    ht.put(put);
-
-    get = new Get(ROW);
-    get.addColumn(FAMILY, QUALIFIER);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    result = ht.get(get);
-    // verify version 1000,5000 remains for column FAMILY:QUALIFIER
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[0], ts[4] }, new byte[][] {
-        VALUES[0], VALUES[4] }, 0, 1);
-
-    ht.close();
-    admin.close();
   }
 
   /**
@@ -6549,137 +6645,143 @@ public class TestFromClientSide {
    */
   @Test
   public void testReadWithFilter() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY, 3);
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      final TableName tableName = TableName.valueOf(name.getMethodName());
+      try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 3)) {
 
-    byte[] VALUEA = Bytes.toBytes("value-a");
-    byte[] VALUEB = Bytes.toBytes("value-b");
-    long[] ts = { 1000, 2000, 3000, 4000 };
+        byte[] VALUEA = Bytes.toBytes("value-a");
+        byte[] VALUEB = Bytes.toBytes("value-b");
+        long[] ts = {1000, 2000, 3000, 4000};
 
-    Put put = new Put(ROW);
-    // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
-    for (int t = 0; t <= 3; t++) {
-      if (t <= 1) {
-        put.addColumn(FAMILY, QUALIFIER, ts[t], VALUEA);
-      } else {
-        put.addColumn(FAMILY, QUALIFIER, ts[t], VALUEB);
+        Put put = new Put(ROW);
+        // Put version 1000,2000,3000,4000 of column FAMILY:QUALIFIER
+        for (int t = 0; t <= 3; t++) {
+          if (t <= 1) {
+            put.addColumn(FAMILY, QUALIFIER, ts[t], VALUEA);
+          } else {
+            put.addColumn(FAMILY, QUALIFIER, ts[t], VALUEB);
+          }
+        }
+        table.put(put);
+
+        Scan scan =
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
+                        .setMaxVersions(3);
+        ResultScanner scanner = table.getScanner(scan);
+        Result result = scanner.next();
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
+
+        Get get =
+                new Get(ROW)
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
+                        .setMaxVersions(3);
+        result = table.get(get);
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
+
+        // Test with max versions 1, it should still read ts[1]
+        scan =
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
+                        .setMaxVersions(1);
+        scanner = table.getScanner(scan);
+        result = scanner.next();
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
+
+        // Test with max versions 1, it should still read ts[1]
+        get =
+                new Get(ROW)
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
+                        .setMaxVersions(1);
+        result = table.get(get);
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
+
+        // Test with max versions 5, it should still read ts[1]
+        scan =
+                new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL,
+                        new SubstringComparator("value-a")))
+                        .setMaxVersions(5);
+        scanner = table.getScanner(scan);
+        result = scanner.next();
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
+
+        // Test with max versions 5, it should still read ts[1]
+        get =
+                new Get(ROW)
+                        .setFilter(new ValueFilter(CompareOperator.EQUAL,
+                                new SubstringComparator("value-a")))
+                        .setMaxVersions(5);
+        result = table.get(get);
+        // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
+        assertNResult(result, ROW, FAMILY, QUALIFIER, new long[]{ts[1]}, new byte[][]{VALUEA}, 0,
+                0);
       }
     }
-    table.put(put);
-
-    Scan scan =
-        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(3);
-    ResultScanner scanner = table.getScanner(scan);
-    Result result = scanner.next();
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    Get get =
-        new Get(ROW)
-            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(3);
-    result = table.get(get);
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    // Test with max versions 1, it should still read ts[1]
-    scan =
-        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(1);
-    scanner = table.getScanner(scan);
-    result = scanner.next();
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    // Test with max versions 1, it should still read ts[1]
-    get =
-        new Get(ROW)
-            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(1);
-    result = table.get(get);
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    // Test with max versions 5, it should still read ts[1]
-    scan =
-        new Scan().setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(5);
-    scanner = table.getScanner(scan);
-    result = scanner.next();
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    // Test with max versions 5, it should still read ts[1]
-    get =
-        new Get(ROW)
-            .setFilter(new ValueFilter(CompareOperator.EQUAL, new SubstringComparator("value-a")))
-            .setMaxVersions(5);
-    result = table.get(get);
-    // ts[0] has gone from user view. Only read ts[2] which value is less or equal to 3
-    assertNResult(result, ROW, FAMILY, QUALIFIER, new long[] { ts[1] }, new byte[][] { VALUEA }, 0,
-      0);
-
-    table.close();
-    admin.close();
   }
 
   @Test
   public void testCellUtilTypeMethods() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
 
-    final byte[] row = Bytes.toBytes("p");
-    Put p = new Put(row);
-    p.addColumn(FAMILY, QUALIFIER, VALUE);
-    table.put(p);
+      final byte[] row = Bytes.toBytes("p");
+      Put p = new Put(row);
+      p.addColumn(FAMILY, QUALIFIER, VALUE);
+      table.put(p);
 
-    try (ResultScanner scanner = table.getScanner(new Scan())) {
-      Result result = scanner.next();
-      assertNotNull(result);
-      CellScanner cs = result.cellScanner();
-      assertTrue(cs.advance());
-      Cell c = cs.current();
-      assertTrue(CellUtil.isPut(c));
-      assertFalse(CellUtil.isDelete(c));
-      assertFalse(cs.advance());
-      assertNull(scanner.next());
-    }
+      try (ResultScanner scanner = table.getScanner(new Scan())) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        CellScanner cs = result.cellScanner();
+        assertTrue(cs.advance());
+        Cell c = cs.current();
+        assertTrue(CellUtil.isPut(c));
+        assertFalse(CellUtil.isDelete(c));
+        assertFalse(cs.advance());
+        assertNull(scanner.next());
+      }
 
-    Delete d = new Delete(row);
-    d.addColumn(FAMILY, QUALIFIER);
-    table.delete(d);
+      Delete d = new Delete(row);
+      d.addColumn(FAMILY, QUALIFIER);
+      table.delete(d);
 
-    Scan scan = new Scan();
-    scan.setRaw(true);
-    try (ResultScanner scanner = table.getScanner(scan)) {
-      Result result = scanner.next();
-      assertNotNull(result);
-      CellScanner cs = result.cellScanner();
-      assertTrue(cs.advance());
+      Scan scan = new Scan();
+      scan.setRaw(true);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        CellScanner cs = result.cellScanner();
+        assertTrue(cs.advance());
 
-      // First cell should be the delete (masking the Put)
-      Cell c = cs.current();
-      assertTrue("Cell should be a Delete: " + c, CellUtil.isDelete(c));
-      assertFalse("Cell should not be a Put: " + c, CellUtil.isPut(c));
+        // First cell should be the delete (masking the Put)
+        Cell c = cs.current();
+        assertTrue("Cell should be a Delete: " + c, CellUtil.isDelete(c));
+        assertFalse("Cell should not be a Put: " + c, CellUtil.isPut(c));
 
-      // Second cell should be the original Put
-      assertTrue(cs.advance());
-      c = cs.current();
-      assertFalse("Cell should not be a Delete: " + c, CellUtil.isDelete(c));
-      assertTrue("Cell should be a Put: " + c, CellUtil.isPut(c));
+        // Second cell should be the original Put
+        assertTrue(cs.advance());
+        c = cs.current();
+        assertFalse("Cell should not be a Delete: " + c, CellUtil.isDelete(c));
+        assertTrue("Cell should be a Put: " + c, CellUtil.isPut(c));
 
-      // No more cells in this row
-      assertFalse(cs.advance());
+        // No more cells in this row
+        assertFalse(cs.advance());
 
-      // No more results in this scan
-      assertNull(scanner.next());
+        // No more results in this scan
+        assertNull(scanner.next());
+      }
     }
   }
 
