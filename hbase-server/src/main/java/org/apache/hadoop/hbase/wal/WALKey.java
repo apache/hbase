@@ -29,20 +29,15 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
@@ -51,8 +46,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-
-
 
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
@@ -78,7 +71,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 // TODO: Cleanup. We have logSeqNum and then WriteEntry, both are sequence id'ing. Fix.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class WALKey implements SequenceId, Comparable<WALKey> {
-  private static final Log LOG = LogFactory.getLog(WALKey.class);
 
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl getMvcc() {
@@ -184,6 +176,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   private long nonce = HConstants.NO_NONCE;
   private MultiVersionConcurrencyControl mvcc;
   private MultiVersionConcurrencyControl.WriteEntry writeEntry;
+  private Map<String, byte[]> extendedAttributes;
+
   public static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
   // visible for deprecated HLogKey
@@ -192,7 +186,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
 
   public WALKey() {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null);
+        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
   @VisibleForTesting
@@ -202,7 +196,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     List<UUID> clusterIds = new ArrayList<UUID>();
     clusterIds.add(clusterId);
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds,
-        HConstants.NO_NONCE, HConstants.NO_NONCE, null);
+        HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
   public WALKey(final byte[] encodedRegionName, final TableName tablename) {
@@ -210,28 +204,30 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   }
 
   public WALKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
-    init(encodedRegionName,
-        tablename,
-        NO_SEQUENCE_ID,
-        now,
-        EMPTY_UUIDS,
-        HConstants.NO_NONCE,
-        HConstants.NO_NONCE,
-        null);
+    this(encodedRegionName, tablename, now, null);
   }
 
   public WALKey(final byte[] encodedRegionName,
                 final TableName tablename,
                 final long now,
                 MultiVersionConcurrencyControl mvcc) {
+    this(encodedRegionName, tablename, now, mvcc, null);
+  }
+
+  public WALKey(final byte[] encodedRegionName,
+      final TableName tablename,
+      final long now,
+      MultiVersionConcurrencyControl mvcc,
+      Map<String, byte[]> extendedAttributes) {
     init(encodedRegionName,
-        tablename,
-        NO_SEQUENCE_ID,
-        now,
-        EMPTY_UUIDS,
-        HConstants.NO_NONCE,
-        HConstants.NO_NONCE,
-        mvcc);
+      tablename,
+      NO_SEQUENCE_ID,
+      now,
+      EMPTY_UUIDS,
+      HConstants.NO_NONCE,
+      HConstants.NO_NONCE,
+      mvcc,
+      extendedAttributes);
   }
 
   /**
@@ -255,7 +251,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
                 long nonceGroup,
                 long nonce,
                 MultiVersionConcurrencyControl mvcc) {
-    init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc);
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc, null);
   }
 
   /**
@@ -275,7 +271,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   public WALKey(final byte[] encodedRegionName, final TableName tablename,
                 final long now, List<UUID> clusterIds, long nonceGroup,
                 final long nonce, final MultiVersionConcurrencyControl mvcc) {
-    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce, mvcc);
+    init(encodedRegionName, tablename, NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce, mvcc,
+      null);
   }
 
   /**
@@ -291,11 +288,34 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    * @param nonce
    */
   public WALKey(final byte[] encodedRegionName,
+      final TableName tablename,
+      long logSeqNum,
+      long nonceGroup,
+      long nonce,
+      final MultiVersionConcurrencyControl mvcc) {
+    this(encodedRegionName, tablename, logSeqNum, nonceGroup, nonce, mvcc, null);
+  }
+
+  /**
+   * Create the log key for writing to somewhere.
+   * We maintain the tablename mainly for debugging purposes.
+   * A regionName is always a sub-table object.
+   *
+   * @param encodedRegionName Encoded name of the region as returned by
+   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename
+   * @param logSeqNum
+   * @param nonceGroup
+   * @param nonce
+   * @param extendedAttributes
+   */
+  public WALKey(final byte[] encodedRegionName,
                 final TableName tablename,
                 long logSeqNum,
                 long nonceGroup,
                 long nonce,
-                final MultiVersionConcurrencyControl mvcc) {
+                final MultiVersionConcurrencyControl mvcc,
+                Map<String, byte[]> extendedAttributes) {
     init(encodedRegionName,
         tablename,
         logSeqNum,
@@ -303,7 +323,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
         EMPTY_UUIDS,
         nonceGroup,
         nonce,
-        mvcc);
+        mvcc,
+        extendedAttributes);
   }
 
   @InterfaceAudience.Private
@@ -314,7 +335,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
                       List<UUID> clusterIds,
                       long nonceGroup,
                       long nonce,
-                      MultiVersionConcurrencyControl mvcc) {
+                      MultiVersionConcurrencyControl mvcc,
+                      Map<String, byte[]> extendedAttributes) {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterIds = clusterIds;
@@ -323,6 +345,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.nonceGroup = nonceGroup;
     this.nonce = nonce;
     this.mvcc = mvcc;
+    this.extendedAttributes = extendedAttributes;
   }
 
   /**
@@ -441,6 +464,23 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     return clusterIds.isEmpty() ? HConstants.DEFAULT_CLUSTER_ID : clusterIds.get(0);
   }
 
+  /**
+   * Return a named String value injected into the WALKey during processing, such as by a
+   * coprocessor
+   * @param attributeKey The key of a key / value pair
+   */
+  public byte[] getExtendedAttribute(String attributeKey) {
+    return extendedAttributes != null ? extendedAttributes.get(attributeKey) : null;
+  }
+
+  /**
+   * Returns a map of all extended attributes injected into this WAL key.
+   */
+  public Map<String, byte[]> getExtendedAttributes() {
+    return extendedAttributes != null ? new HashMap<String, byte[]>(extendedAttributes) :
+      new HashMap<String, byte[]>();
+  }
+
   @Override
   public String toString() {
     return tablename + "/" + Bytes.toString(encodedRegionName) + "/" +
@@ -459,6 +499,12 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     stringMap.put("table", tablename);
     stringMap.put("region", Bytes.toStringBinary(encodedRegionName));
     stringMap.put("sequence", logSeqNum);
+    Map<String, byte[]> extendedAttributes = getExtendedAttributes();
+    if (extendedAttributes != null){
+      for (Map.Entry<String, byte[]> entry : extendedAttributes.entrySet()){
+        stringMap.put(entry.getKey(), Bytes.toStringBinary(entry.getValue()));
+      }
+    }
     return stringMap;
   }
 
@@ -566,6 +612,15 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));
       }
     }
+    if (extendedAttributes != null){
+      for (Map.Entry<String, byte[]> e : extendedAttributes.entrySet()){
+        WALProtos.Attribute attr = WALProtos.Attribute.newBuilder().
+          setKey(e.getKey()).
+          setValue((compressionContext == null) ? ByteStringer.wrap(e.getValue())
+            : compressor.compress(e.getValue(), compressionContext.tableDict)).build();
+        builder.addExtendedAttributes(attr);
+      }
+    }
     return builder;
   }
 
@@ -609,8 +664,16 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
     this.logSeqNum = walKey.getLogSequenceNumber();
     this.writeTime = walKey.getWriteTime();
-    if(walKey.hasOrigSequenceNumber()) {
+    if (walKey.hasOrigSequenceNumber()) {
       this.origLogSeqNum = walKey.getOrigSequenceNumber();
+    }
+    if (walKey.getExtendedAttributesCount() > 0){
+      this.extendedAttributes = new HashMap<>(walKey.getExtendedAttributesCount());
+      for (WALProtos.Attribute attr : walKey.getExtendedAttributesList()) {
+        byte[] value = (compressionContext == null) ? attr.getValue().toByteArray() :
+          uncompressor.uncompress(attr.getValue(), compressionContext.tableDict);
+        extendedAttributes.put(attr.getKey(), value);
+      }
     }
   }
 

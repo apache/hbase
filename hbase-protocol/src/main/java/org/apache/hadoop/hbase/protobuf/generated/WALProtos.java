@@ -1237,6 +1237,31 @@ public final class WALProtos {
      * <code>optional uint64 orig_sequence_number = 11;</code>
      */
     long getOrigSequenceNumber();
+
+    // repeated .hbase.pb.Attribute extended_attributes = 12;
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> 
+        getExtendedAttributesList();
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute getExtendedAttributes(int index);
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    int getExtendedAttributesCount();
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder> 
+        getExtendedAttributesOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder getExtendedAttributesOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.WALKey}
@@ -1364,6 +1389,14 @@ public final class WALProtos {
               origSequenceNumber_ = input.readUInt64();
               break;
             }
+            case 98: {
+              if (!((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+                extendedAttributes_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute>();
+                mutable_bitField0_ |= 0x00000800;
+              }
+              extendedAttributes_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -1377,6 +1410,9 @@ public final class WALProtos {
         }
         if (((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
           clusterIds_ = java.util.Collections.unmodifiableList(clusterIds_);
+        }
+        if (((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+          extendedAttributes_ = java.util.Collections.unmodifiableList(extendedAttributes_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -1686,6 +1722,42 @@ public final class WALProtos {
       return origSequenceNumber_;
     }
 
+    // repeated .hbase.pb.Attribute extended_attributes = 12;
+    public static final int EXTENDED_ATTRIBUTES_FIELD_NUMBER = 12;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> extendedAttributes_;
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> getExtendedAttributesList() {
+      return extendedAttributes_;
+    }
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder> 
+        getExtendedAttributesOrBuilderList() {
+      return extendedAttributes_;
+    }
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    public int getExtendedAttributesCount() {
+      return extendedAttributes_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute getExtendedAttributes(int index) {
+      return extendedAttributes_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder getExtendedAttributesOrBuilder(
+        int index) {
+      return extendedAttributes_.get(index);
+    }
+
     private void initFields() {
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -1698,6 +1770,7 @@ public final class WALProtos {
       nonceGroup_ = 0L;
       nonce_ = 0L;
       origSequenceNumber_ = 0L;
+      extendedAttributes_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1734,6 +1807,12 @@ public final class WALProtos {
       }
       for (int i = 0; i < getClusterIdsCount(); i++) {
         if (!getClusterIds(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getExtendedAttributesCount(); i++) {
+        if (!getExtendedAttributes(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -1777,6 +1856,9 @@ public final class WALProtos {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeUInt64(11, origSequenceNumber_);
+      }
+      for (int i = 0; i < extendedAttributes_.size(); i++) {
+        output.writeMessage(12, extendedAttributes_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -1830,6 +1912,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(11, origSequenceNumber_);
+      }
+      for (int i = 0; i < extendedAttributes_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(12, extendedAttributes_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1903,6 +1989,8 @@ public final class WALProtos {
         result = result && (getOrigSequenceNumber()
             == other.getOrigSequenceNumber());
       }
+      result = result && getExtendedAttributesList()
+          .equals(other.getExtendedAttributesList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1959,6 +2047,10 @@ public final class WALProtos {
       if (hasOrigSequenceNumber()) {
         hash = (37 * hash) + ORIG_SEQUENCE_NUMBER_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getOrigSequenceNumber());
+      }
+      if (getExtendedAttributesCount() > 0) {
+        hash = (37 * hash) + EXTENDED_ATTRIBUTES_FIELD_NUMBER;
+        hash = (53 * hash) + getExtendedAttributesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2070,6 +2162,7 @@ public final class WALProtos {
           getClusterIdFieldBuilder();
           getScopesFieldBuilder();
           getClusterIdsFieldBuilder();
+          getExtendedAttributesFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2112,6 +2205,12 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000200);
         origSequenceNumber_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000400);
+        if (extendedAttributesBuilder_ == null) {
+          extendedAttributes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+        } else {
+          extendedAttributesBuilder_.clear();
+        }
         return this;
       }
 
@@ -2198,6 +2297,15 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000100;
         }
         result.origSequenceNumber_ = origSequenceNumber_;
+        if (extendedAttributesBuilder_ == null) {
+          if (((bitField0_ & 0x00000800) == 0x00000800)) {
+            extendedAttributes_ = java.util.Collections.unmodifiableList(extendedAttributes_);
+            bitField0_ = (bitField0_ & ~0x00000800);
+          }
+          result.extendedAttributes_ = extendedAttributes_;
+        } else {
+          result.extendedAttributes_ = extendedAttributesBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2293,6 +2401,32 @@ public final class WALProtos {
         if (other.hasOrigSequenceNumber()) {
           setOrigSequenceNumber(other.getOrigSequenceNumber());
         }
+        if (extendedAttributesBuilder_ == null) {
+          if (!other.extendedAttributes_.isEmpty()) {
+            if (extendedAttributes_.isEmpty()) {
+              extendedAttributes_ = other.extendedAttributes_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+            } else {
+              ensureExtendedAttributesIsMutable();
+              extendedAttributes_.addAll(other.extendedAttributes_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.extendedAttributes_.isEmpty()) {
+            if (extendedAttributesBuilder_.isEmpty()) {
+              extendedAttributesBuilder_.dispose();
+              extendedAttributesBuilder_ = null;
+              extendedAttributes_ = other.extendedAttributes_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+              extendedAttributesBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getExtendedAttributesFieldBuilder() : null;
+            } else {
+              extendedAttributesBuilder_.addAllMessages(other.extendedAttributes_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2328,6 +2462,12 @@ public final class WALProtos {
         }
         for (int i = 0; i < getClusterIdsCount(); i++) {
           if (!getClusterIds(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getExtendedAttributesCount(); i++) {
+          if (!getExtendedAttributes(i).isInitialized()) {
             
             return false;
           }
@@ -3401,6 +3541,246 @@ public final class WALProtos {
         return this;
       }
 
+      // repeated .hbase.pb.Attribute extended_attributes = 12;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> extendedAttributes_ =
+        java.util.Collections.emptyList();
+      private void ensureExtendedAttributesIsMutable() {
+        if (!((bitField0_ & 0x00000800) == 0x00000800)) {
+          extendedAttributes_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute>(extendedAttributes_);
+          bitField0_ |= 0x00000800;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder> extendedAttributesBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> getExtendedAttributesList() {
+        if (extendedAttributesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(extendedAttributes_);
+        } else {
+          return extendedAttributesBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public int getExtendedAttributesCount() {
+        if (extendedAttributesBuilder_ == null) {
+          return extendedAttributes_.size();
+        } else {
+          return extendedAttributesBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute getExtendedAttributes(int index) {
+        if (extendedAttributesBuilder_ == null) {
+          return extendedAttributes_.get(index);
+        } else {
+          return extendedAttributesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder setExtendedAttributes(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute value) {
+        if (extendedAttributesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.set(index, value);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder setExtendedAttributes(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder builderForValue) {
+        if (extendedAttributesBuilder_ == null) {
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder addExtendedAttributes(org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute value) {
+        if (extendedAttributesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.add(value);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder addExtendedAttributes(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute value) {
+        if (extendedAttributesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.add(index, value);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder addExtendedAttributes(
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder builderForValue) {
+        if (extendedAttributesBuilder_ == null) {
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.add(builderForValue.build());
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder addExtendedAttributes(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder builderForValue) {
+        if (extendedAttributesBuilder_ == null) {
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder addAllExtendedAttributes(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute> values) {
+        if (extendedAttributesBuilder_ == null) {
+          ensureExtendedAttributesIsMutable();
+          super.addAll(values, extendedAttributes_);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder clearExtendedAttributes() {
+        if (extendedAttributesBuilder_ == null) {
+          extendedAttributes_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public Builder removeExtendedAttributes(int index) {
+        if (extendedAttributesBuilder_ == null) {
+          ensureExtendedAttributesIsMutable();
+          extendedAttributes_.remove(index);
+          onChanged();
+        } else {
+          extendedAttributesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder getExtendedAttributesBuilder(
+          int index) {
+        return getExtendedAttributesFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder getExtendedAttributesOrBuilder(
+          int index) {
+        if (extendedAttributesBuilder_ == null) {
+          return extendedAttributes_.get(index);  } else {
+          return extendedAttributesBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder> 
+           getExtendedAttributesOrBuilderList() {
+        if (extendedAttributesBuilder_ != null) {
+          return extendedAttributesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(extendedAttributes_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder addExtendedAttributesBuilder() {
+        return getExtendedAttributesFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder addExtendedAttributesBuilder(
+          int index) {
+        return getExtendedAttributesFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.Attribute extended_attributes = 12;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder> 
+           getExtendedAttributesBuilderList() {
+        return getExtendedAttributesFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder> 
+          getExtendedAttributesFieldBuilder() {
+        if (extendedAttributesBuilder_ == null) {
+          extendedAttributesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder>(
+                  extendedAttributes_,
+                  ((bitField0_ & 0x00000800) == 0x00000800),
+                  getParentForChildren(),
+                  isClean());
+          extendedAttributes_ = null;
+        }
+        return extendedAttributesBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:hbase.pb.WALKey)
     }
 
@@ -3410,6 +3790,624 @@ public final class WALProtos {
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.WALKey)
+  }
+
+  public interface AttributeOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string key = 1;
+    /**
+     * <code>required string key = 1;</code>
+     */
+    boolean hasKey();
+    /**
+     * <code>required string key = 1;</code>
+     */
+    java.lang.String getKey();
+    /**
+     * <code>required string key = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getKeyBytes();
+
+    // required bytes value = 2;
+    /**
+     * <code>required bytes value = 2;</code>
+     */
+    boolean hasValue();
+    /**
+     * <code>required bytes value = 2;</code>
+     */
+    com.google.protobuf.ByteString getValue();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.Attribute}
+   */
+  public static final class Attribute extends
+      com.google.protobuf.GeneratedMessage
+      implements AttributeOrBuilder {
+    // Use Attribute.newBuilder() to construct.
+    private Attribute(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private Attribute(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final Attribute defaultInstance;
+    public static Attribute getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public Attribute getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Attribute(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              key_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              value_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_hbase_pb_Attribute_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_hbase_pb_Attribute_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<Attribute> PARSER =
+        new com.google.protobuf.AbstractParser<Attribute>() {
+      public Attribute parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new Attribute(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Attribute> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string key = 1;
+    public static final int KEY_FIELD_NUMBER = 1;
+    private java.lang.Object key_;
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public boolean hasKey() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public java.lang.String getKey() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          key_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getKeyBytes() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        key_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required bytes value = 2;
+    public static final int VALUE_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString value_;
+    /**
+     * <code>required bytes value = 2;</code>
+     */
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required bytes value = 2;</code>
+     */
+    public com.google.protobuf.ByteString getValue() {
+      return value_;
+    }
+
+    private void initFields() {
+      key_ = "";
+      value_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasKey()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasValue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getKeyBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, value_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getKeyBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, value_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute) obj;
+
+      boolean result = true;
+      result = result && (hasKey() == other.hasKey());
+      if (hasKey()) {
+        result = result && getKey()
+            .equals(other.getKey());
+      }
+      result = result && (hasValue() == other.hasValue());
+      if (hasValue()) {
+        result = result && getValue()
+            .equals(other.getValue());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasKey()) {
+        hash = (37 * hash) + KEY_FIELD_NUMBER;
+        hash = (53 * hash) + getKey().hashCode();
+      }
+      if (hasValue()) {
+        hash = (37 * hash) + VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + getValue().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.Attribute}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.AttributeOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_hbase_pb_Attribute_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_hbase_pb_Attribute_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        key_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        value_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_hbase_pb_Attribute_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute build() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.key_ = key_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.value_ = value_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute.getDefaultInstance()) return this;
+        if (other.hasKey()) {
+          bitField0_ |= 0x00000001;
+          key_ = other.key_;
+          onChanged();
+        }
+        if (other.hasValue()) {
+          setValue(other.getValue());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasKey()) {
+          
+          return false;
+        }
+        if (!hasValue()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.Attribute) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string key = 1;
+      private java.lang.Object key_ = "";
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public boolean hasKey() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public java.lang.String getKey() {
+        java.lang.Object ref = key_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          key_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getKeyBytes() {
+        java.lang.Object ref = key_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          key_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder setKey(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder clearKey() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        key_ = getDefaultInstance().getKey();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder setKeyBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required bytes value = 2;
+      private com.google.protobuf.ByteString value_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes value = 2;</code>
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bytes value = 2;</code>
+       */
+      public com.google.protobuf.ByteString getValue() {
+        return value_;
+      }
+      /**
+       * <code>required bytes value = 2;</code>
+       */
+      public Builder setValue(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        value_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes value = 2;</code>
+       */
+      public Builder clearValue() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        value_ = getDefaultInstance().getValue();
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Attribute)
+    }
+
+    static {
+      defaultInstance = new Attribute(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.Attribute)
   }
 
   public interface FamilyScopeOrBuilder
@@ -11921,6 +12919,11 @@ public final class WALProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_WALKey_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_Attribute_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_Attribute_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_FamilyScope_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -11974,7 +12977,7 @@ public final class WALProtos {
       "as_compression\030\001 \001(\010\022\026\n\016encryption_key\030\002" +
       " \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\022\027\n\017wri" +
       "ter_cls_name\030\004 \001(\t\022\033\n\023cell_codec_cls_nam" +
-      "e\030\005 \001(\t\"\273\002\n\006WALKey\022\033\n\023encoded_region_nam" +
+      "e\030\005 \001(\t\"\355\002\n\006WALKey\022\033\n\023encoded_region_nam" +
       "e\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023log_seque" +
       "nce_number\030\003 \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022&\n\n" +
       "cluster_id\030\005 \001(\0132\016.hbase.pb.UUIDB\002\030\001\022%\n\006" +
@@ -11982,42 +12985,45 @@ public final class WALProtos {
       "ollowing_kv_count\030\007 \001(\r\022#\n\013cluster_ids\030\010" +
       " \003(\0132\016.hbase.pb.UUID\022\022\n\nnonceGroup\030\t \001(\004" +
       "\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_sequence_number\030" +
-      "\013 \001(\004\"F\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\'\n\n" +
-      "scope_type\030\002 \002(\0162\023.hbase.pb.ScopeType\"\276\001" +
-      "\n\024CompactionDescriptor\022\022\n\ntable_name\030\001 \002" +
-      "(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013famil" +
-      "y_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t\022\031" +
-      "\n\021compaction_output\030\005 \003(\t\022\026\n\016store_home_" +
-      "dir\030\006 \002(\t\022\023\n\013region_name\030\007 \001(\014\"\244\003\n\017Flush",
-      "Descriptor\0225\n\006action\030\001 \002(\0162%.hbase.pb.Fl" +
-      "ushDescriptor.FlushAction\022\022\n\ntable_name\030" +
-      "\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002(\014\022\035\n\025fl" +
-      "ush_sequence_number\030\004 \001(\004\022E\n\rstore_flush" +
-      "es\030\005 \003(\0132..hbase.pb.FlushDescriptor.Stor" +
-      "eFlushDescriptor\022\023\n\013region_name\030\006 \001(\014\032Y\n" +
-      "\024StoreFlushDescriptor\022\023\n\013family_name\030\001 \002" +
-      "(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\024\n\014flush_outp" +
-      "ut\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013START_FLUSH\020\000" +
-      "\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_FLUSH\020\002\022\020\n\014C",
-      "ANNOT_FLUSH\020\003\"q\n\017StoreDescriptor\022\023\n\013fami" +
-      "ly_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\022\n" +
-      "\nstore_file\030\003 \003(\t\022\035\n\025store_file_size_byt" +
-      "es\030\004 \001(\004\"\237\001\n\022BulkLoadDescriptor\022\'\n\ntable" +
-      "_name\030\001 \002(\0132\023.hbase.pb.TableName\022\033\n\023enco" +
-      "ded_region_name\030\002 \002(\014\022)\n\006stores\030\003 \003(\0132\031." +
-      "hbase.pb.StoreDescriptor\022\030\n\020bulkload_seq" +
-      "_num\030\004 \002(\003\"\272\002\n\025RegionEventDescriptor\022=\n\n" +
-      "event_type\030\001 \002(\0162).hbase.pb.RegionEventD" +
-      "escriptor.EventType\022\022\n\ntable_name\030\002 \002(\014\022",
-      "\033\n\023encoded_region_name\030\003 \002(\014\022\033\n\023log_sequ" +
-      "ence_number\030\004 \001(\004\022)\n\006stores\030\005 \003(\0132\031.hbas" +
-      "e.pb.StoreDescriptor\022$\n\006server\030\006 \001(\0132\024.h" +
-      "base.pb.ServerName\022\023\n\013region_name\030\007 \001(\014\"" +
-      ".\n\tEventType\022\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_" +
-      "CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027RE" +
-      "PLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_S" +
-      "COPE_GLOBAL\020\001B?\n*org.apache.hadoop.hbase" +
-      ".protobuf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
+      "\013 \001(\004\0220\n\023extended_attributes\030\014 \003(\0132\023.hba" +
+      "se.pb.Attribute\"\'\n\tAttribute\022\013\n\003key\030\001 \002(" +
+      "\t\022\r\n\005value\030\002 \002(\014\"F\n\013FamilyScope\022\016\n\006famil" +
+      "y\030\001 \002(\014\022\'\n\nscope_type\030\002 \002(\0162\023.hbase.pb.S" +
+      "copeType\"\276\001\n\024CompactionDescriptor\022\022\n\ntab" +
+      "le_name\030\001 \002(\014\022\033\n\023encoded_region_name\030\002 \002" +
+      "(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compaction_in",
+      "put\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016" +
+      "store_home_dir\030\006 \002(\t\022\023\n\013region_name\030\007 \001(" +
+      "\014\"\244\003\n\017FlushDescriptor\0225\n\006action\030\001 \002(\0162%." +
+      "hbase.pb.FlushDescriptor.FlushAction\022\022\n\n" +
+      "table_name\030\002 \002(\014\022\033\n\023encoded_region_name\030" +
+      "\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022E\n\r" +
+      "store_flushes\030\005 \003(\0132..hbase.pb.FlushDesc" +
+      "riptor.StoreFlushDescriptor\022\023\n\013region_na" +
+      "me\030\006 \001(\014\032Y\n\024StoreFlushDescriptor\022\023\n\013fami" +
+      "ly_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\024\n",
+      "\014flush_output\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013ST" +
+      "ART_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_F" +
+      "LUSH\020\002\022\020\n\014CANNOT_FLUSH\020\003\"q\n\017StoreDescrip" +
+      "tor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home_d" +
+      "ir\030\002 \002(\t\022\022\n\nstore_file\030\003 \003(\t\022\035\n\025store_fi" +
+      "le_size_bytes\030\004 \001(\004\"\237\001\n\022BulkLoadDescript" +
+      "or\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableN" +
+      "ame\022\033\n\023encoded_region_name\030\002 \002(\014\022)\n\006stor" +
+      "es\030\003 \003(\0132\031.hbase.pb.StoreDescriptor\022\030\n\020b" +
+      "ulkload_seq_num\030\004 \002(\003\"\272\002\n\025RegionEventDes",
+      "criptor\022=\n\nevent_type\030\001 \002(\0162).hbase.pb.R" +
+      "egionEventDescriptor.EventType\022\022\n\ntable_" +
+      "name\030\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002(\014\022" +
+      "\033\n\023log_sequence_number\030\004 \001(\004\022)\n\006stores\030\005" +
+      " \003(\0132\031.hbase.pb.StoreDescriptor\022$\n\006serve" +
+      "r\030\006 \001(\0132\024.hbase.pb.ServerName\022\023\n\013region_" +
+      "name\030\007 \001(\014\".\n\tEventType\022\017\n\013REGION_OPEN\020\000" +
+      "\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScop" +
+      "eType\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030RE" +
+      "PLICATION_SCOPE_GLOBAL\020\001B?\n*org.apache.h",
+      "adoop.hbase.protobuf.generatedB\tWALProto" +
+      "sH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -12035,21 +13041,27 @@ public final class WALProtos {
           internal_static_hbase_pb_WALKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_WALKey_descriptor,
-              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", "NonceGroup", "Nonce", "OrigSequenceNumber", });
-          internal_static_hbase_pb_FamilyScope_descriptor =
+              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", "NonceGroup", "Nonce", "OrigSequenceNumber", "ExtendedAttributes", });
+          internal_static_hbase_pb_Attribute_descriptor =
             getDescriptor().getMessageTypes().get(2);
+          internal_static_hbase_pb_Attribute_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_Attribute_descriptor,
+              new java.lang.String[] { "Key", "Value", });
+          internal_static_hbase_pb_FamilyScope_descriptor =
+            getDescriptor().getMessageTypes().get(3);
           internal_static_hbase_pb_FamilyScope_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FamilyScope_descriptor,
               new java.lang.String[] { "Family", "ScopeType", });
           internal_static_hbase_pb_CompactionDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(3);
+            getDescriptor().getMessageTypes().get(4);
           internal_static_hbase_pb_CompactionDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_CompactionDescriptor_descriptor,
               new java.lang.String[] { "TableName", "EncodedRegionName", "FamilyName", "CompactionInput", "CompactionOutput", "StoreHomeDir", "RegionName", });
           internal_static_hbase_pb_FlushDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(5);
           internal_static_hbase_pb_FlushDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FlushDescriptor_descriptor,
@@ -12061,25 +13073,25 @@ public final class WALProtos {
               internal_static_hbase_pb_FlushDescriptor_StoreFlushDescriptor_descriptor,
               new java.lang.String[] { "FamilyName", "StoreHomeDir", "FlushOutput", });
           internal_static_hbase_pb_StoreDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_hbase_pb_StoreDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_StoreDescriptor_descriptor,
               new java.lang.String[] { "FamilyName", "StoreHomeDir", "StoreFile", "StoreFileSizeBytes", });
           internal_static_hbase_pb_BulkLoadDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_BulkLoadDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_BulkLoadDescriptor_descriptor,
               new java.lang.String[] { "TableName", "EncodedRegionName", "Stores", "BulkloadSeqNum", });
           internal_static_hbase_pb_RegionEventDescriptor_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_hbase_pb_RegionEventDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionEventDescriptor_descriptor,
               new java.lang.String[] { "EventType", "TableName", "EncodedRegionName", "LogSequenceNumber", "Stores", "Server", "RegionName", });
           internal_static_hbase_pb_WALTrailer_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_hbase_pb_WALTrailer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_WALTrailer_descriptor,

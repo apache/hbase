@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
+import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +63,7 @@ public class WALUtil {
   public static long writeCompactionMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
       final CompactionDescriptor c, MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    long trx = writeMarker(wal, htd, hri, WALEdit.createCompaction(hri, c), mvcc, true);
+    long trx = writeMarker(wal, htd, hri, WALEdit.createCompaction(hri, c), mvcc, true, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
@@ -76,7 +76,7 @@ public class WALUtil {
   public static long writeFlushMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
       final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    long trx = writeMarker(wal, htd, hri, WALEdit.createFlushWALEdit(hri, f), mvcc, sync);
+    long trx = writeMarker(wal, htd, hri, WALEdit.createFlushWALEdit(hri, f), mvcc, sync, null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
     }
@@ -89,7 +89,8 @@ public class WALUtil {
   public static long writeRegionEventMarker(WAL wal, HTableDescriptor htd, HRegionInfo hri,
       final RegionEventDescriptor r, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    long trx = writeMarker(wal, htd, hri, WALEdit.createRegionEventWALEdit(hri, r), mvcc, true);
+    long trx = writeMarker(wal, htd, hri, WALEdit.createRegionEventWALEdit(hri, r), mvcc, true,
+      null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
@@ -110,7 +111,8 @@ public class WALUtil {
       final HRegionInfo hri, final WALProtos.BulkLoadDescriptor desc,
       final MultiVersionConcurrencyControl mvcc)
   throws IOException {
-    long trx = writeMarker(wal, htd, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, true);
+    long trx = writeMarker(wal, htd, hri, WALEdit.createBulkLoadEvent(hri, desc), mvcc, true,
+      null);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(desc));
     }
@@ -118,11 +120,12 @@ public class WALUtil {
   }
 
   private static long writeMarker(final WAL wal, final HTableDescriptor htd, final HRegionInfo hri,
-      final WALEdit edit, final MultiVersionConcurrencyControl mvcc, final boolean sync)
+      final WALEdit edit, final MultiVersionConcurrencyControl mvcc, final boolean sync,
+      final Map<String, byte[]> extendedAttributes)
   throws IOException {
     // TODO: Pass in current time to use?
-    WALKey key =
-      new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), System.currentTimeMillis(), mvcc);
+    WALKey key = new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), System.currentTimeMillis(),
+      mvcc, extendedAttributes);
     // Add it to the log but the false specifies that we don't need to add it to the memstore
     long trx = MultiVersionConcurrencyControl.NONE;
     try {

@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -28,7 +29,9 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -365,6 +369,31 @@ public class TestWALEntryStream {
     entryBatch = batcher.take();
     assertEquals(1, entryBatch.getNbEntries());
     assertEquals(getRow(entryBatch.getWalEntries().get(0)), "foo");
+  }
+
+  @Test
+  public void testWALKeySerialization() throws Exception {
+    Map<String, byte[]> attributes = new HashMap<String, byte[]>();
+    attributes.put("foo", Bytes.toBytes("foo-value"));
+    attributes.put("bar", Bytes.toBytes("bar-value"));
+    WALKey key = new WALKey(info.getEncodedNameAsBytes(), tableName,
+      System.currentTimeMillis(), 0L, 0L, mvcc, attributes);
+    assertEquals(attributes, key.getExtendedAttributes());
+
+    WALProtos.WALKey.Builder builder = key.getBuilder(null);
+    WALProtos.WALKey serializedKey = builder.build();
+
+    WALKey deserializedKey = new WALKey();
+    deserializedKey.readFieldsFromPb(serializedKey, null);
+
+    //equals() only checks region name, sequence id and write time
+    assertEquals(key, deserializedKey);
+    //can't use Map.equals() because byte arrays use reference equality
+    assertEquals(key.getExtendedAttributes().keySet(),
+      deserializedKey.getExtendedAttributes().keySet());
+    for (Map.Entry<String, byte[]> entry : deserializedKey.getExtendedAttributes().entrySet()) {
+      assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
+    }
   }
 
   private String getRow(WAL.Entry entry) {
