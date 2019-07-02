@@ -127,7 +127,7 @@ public class MiniZooKeeperCluster {
    * Selects a ZK client port.
    *
    * @param seedPort the seed port to start with; -1 means first time.
-   * @Returns a valid and unused client port
+   * @return a valid and unused client port
    */
   private int selectClientPort(int seedPort) {
     int i;
@@ -144,7 +144,8 @@ public class MiniZooKeeperCluster {
       }
     }
     // Make sure that the port is unused.
-    while (true) {
+    // break when an unused port is found
+    do {
       for (i = 0; i < clientPortList.size(); i++) {
         if (returnClientPort == clientPortList.get(i)) {
           // Already used. Update the port and retry.
@@ -152,10 +153,7 @@ public class MiniZooKeeperCluster {
           break;
         }
       }
-      if (i == clientPortList.size()) {
-        break; // found a unused port, exit
-      }
-    }
+    } while (i != clientPortList.size());
     return returnClientPort;
   }
 
