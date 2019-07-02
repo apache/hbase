@@ -471,6 +471,11 @@ public class WALFactory {
     return FSHLogProvider.createWriter(configuration, fs, path, false);
   }
 
+  @VisibleForTesting
+  public String getFactoryId() {
+    return factoryId;
+  }
+
   public final WALProvider getWALProvider() {
     return this.provider;
   }

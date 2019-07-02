@@ -405,7 +405,8 @@ public class TestHRegion {
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + testName);
     FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
-    region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
+    hLog.init();
+    HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
     HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     assertEquals(0, region.getMemStoreDataSize());
@@ -1204,6 +1205,7 @@ public class TestHRegion {
     FailAppendFlushMarkerWAL wal =
       new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
         method, walConf);
+    wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
     int i = 0;
@@ -1229,6 +1231,15 @@ public class TestHRegion {
     // throwing a DroppedSnapshotException to force an abort. Just clean up the mess.
     region.close(true);
     wal.close();
+
+    // 2. Test case where START_FLUSH succeeds but COMMIT_FLUSH will throw exception
+    wal.flushActions = new FlushAction [] {FlushAction.COMMIT_FLUSH};
+    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
+          method, walConf);
+    wal.init();
+    this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
+    region.put(put);
 
     // 2. Test case where START_FLUSH succeeds but COMMIT_FLUSH will throw exception
     wal.flushActions = new FlushAction [] {FlushAction.COMMIT_FLUSH};
@@ -2367,6 +2378,7 @@ public class TestHRegion {
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + "testDataInMemoryWithoutWAL");
     FSHLog hLog = new FSHLog(fs, rootDir, "testDataInMemoryWithoutWAL", CONF);
+    hLog.init();
     // This chunk creation is done throughout the code base. Do we want to move it into core?
     // It is missing from this test. W/o it we NPE.
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
