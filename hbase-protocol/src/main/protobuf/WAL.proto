@@ -62,7 +62,7 @@ message WALKey {
   optional uint64 nonceGroup = 9;
   optional uint64 nonce = 10;
   optional uint64 orig_sequence_number = 11;
-
+  repeated Attribute extended_attributes = 12;
 /*
   optional CustomEntryType custom_entry_type = 9;
 
@@ -70,6 +70,10 @@ message WALKey {
     COMPACTION = 0;
   }
 */
+}
+message Attribute {
+  required string key = 1;
+  required bytes value = 2;
 }
 
 enum ScopeType {
