@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
