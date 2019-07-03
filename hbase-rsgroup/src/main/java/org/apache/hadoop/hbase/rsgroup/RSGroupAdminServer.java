@@ -125,7 +125,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
     }
     for (RegionStateNode state : master.getAssignmentManager().getRegionsInTransition()) {
-      if (state.getRegionLocation().getAddress().equals(server)) {
+      if (state.getRegionLocation() != null &&
+          state.getRegionLocation().getAddress().equals(server)) {
         addRegion(regions, state.getRegionInfo());
       }
     }
