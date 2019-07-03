@@ -42,6 +42,8 @@
         <module>hbase-shaded-client-byo-hadoop</module>
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-mapreduce</module>
+        <module>hbase-shaded-testing-util</module>
+        <module>hbase-shaded-testing-util-tester</module>
         <module>hbase-shaded-check-invariants</module>
         <module>hbase-shaded-with-hadoop-check-invariants</module>
     </modules>
@@ -443,15 +445,6 @@
                                         <shadedPattern>${shaded.prefix}.net</shadedPattern>
                                     </relocation>
 
-                                    <!-- junit -->
-                                    <relocation>
-                                        <pattern>junit</pattern>
-                                        <shadedPattern>${shaded.prefix}.junit</shadedPattern>
-                                    </relocation>
-                                    <relocation>
-                                        <pattern>org.junit</pattern>
-                                        <shadedPattern>${shaded.prefix}.org.junit</shadedPattern>
-                                    </relocation>
                                 </relocations>
                                 <transformers>
                                   <!-- Need to filter out some extraneous license files.
@@ -461,7 +454,6 @@
                                     <resources>
                                       <resource>LICENSE.txt</resource>
                                       <resource>ASL2.0</resource>
-                                      <resource>LICENSE-junit.txt</resource>
                                       <!-- also this unneeded doc -->
                                       <resource>overview.html</resource>
                                     </resources>
@@ -470,6 +462,8 @@
                                   <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
                                     <addHeader>false</addHeader>
                                     <projectName>${project.name}</projectName>
+                                  </transformer>
+                                  <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer">
                                   </transformer>
                                 </transformers>
                                 <filters>
@@ -499,15 +493,6 @@
                                     <artifact>commons-beanutils:commons-beanutils-core</artifact>
                                     <excludes>
                                       <exclude>org/apache/commons/collections/*.class</exclude>
-                                    </excludes>
-                                  </filter>
-                                  <filter>
-                                    <!-- server side webapps that we don't need -->
-                                    <artifact>org.apache.hbase:hbase-server</artifact>
-                                    <excludes>
-                                      <exclude>hbase-webapps/*</exclude>
-                                      <exclude>hbase-webapps/**/*</exclude>
-                                      <exclude>**/*_jsp.class</exclude>
                                     </excludes>
                                   </filter>
                                   <filter>
