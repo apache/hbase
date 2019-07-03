@@ -32,6 +32,8 @@ allowed_expr+="|^org/apache/hadoop/"
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
 allowed_expr+="|^tables/"
+#   * contents of hbase-webapps
+allowed_expr+="|^hbase-webapps/"
 #   * Hadoop's and HBase's default configuration files, which have the form
 #     "_module_-default.xml"
 allowed_expr+="|^[^-]*-default.xml$"
