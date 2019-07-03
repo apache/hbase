@@ -78,10 +78,6 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
   }
 
   public void add(Procedure<TEnvironment> procedure) {
-    // On the assert, we expect WAITING_TIMEOUT but timing could make it so lock gets released by
-    // time we get here and in those cases the state could be back to RUNNABLE. Let it
-    assert procedure.getState() == ProcedureState.WAITING_TIMEOUT ||
-      procedure.getState() == ProcedureState.RUNNABLE;
     LOG.info("ADDED {}; timeout={}, timestamp={}", procedure, procedure.getTimeout(),
       procedure.getTimeoutTimestamp());
     queue.add(new DelayedProcedure<>(procedure));
