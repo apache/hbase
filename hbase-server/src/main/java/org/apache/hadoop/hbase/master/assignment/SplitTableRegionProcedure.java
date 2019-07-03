@@ -854,8 +854,7 @@ public class SplitTableRegionProcedure
     for (int i = 0; i < procs.length; ++i) {
       final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(getParentRegion(), i);
       procs[i] = env.getAssignmentManager().
-          createUnassignProcedure(hri, null, true,
-            !RegionReplicaUtil.isDefaultReplica(hri));
+          createUnassignProcedure(hri, null, true, !RegionReplicaUtil.isDefaultReplica(hri));
     }
     return procs;
   }
