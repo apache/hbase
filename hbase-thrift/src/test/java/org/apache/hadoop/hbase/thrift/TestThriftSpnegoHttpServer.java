@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.http.HttpHeaders;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -166,7 +167,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     setupUser(kdc, spnegoServerKeytab, spnegoServerPrincipal);
 
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.table.sanity.checks", false);
+    TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     addSecurityConfigurations(TEST_UTIL.getConfiguration());
 
     TestThriftHttpServer.setUpBeforeClass();
