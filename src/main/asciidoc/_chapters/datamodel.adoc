@@ -67,7 +67,7 @@ Timestamp::
 [[conceptual.view]]
 == Conceptual View
 
-You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/#understanding%20hbase[Understanding HBase and BigTable] by Jim R. Wilson.
+You can read a very understandable explanation of the HBase data model in the blog post link:https://dzone.com/articles/understanding-hbase-and-bigtab[Understanding HBase and BigTable] by Jim R. Wilson.
 Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction to Basic Schema Design] by Amandeep Khurana.
 
 It may help to read different perspectives to get a solid understanding of HBase schema design.
