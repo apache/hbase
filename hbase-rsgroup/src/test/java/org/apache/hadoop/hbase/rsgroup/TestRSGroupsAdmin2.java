@@ -681,7 +681,6 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // randomly set a region state to SPLITTING to make move abort
     RegionStateNode rsn = randomlySetRegionState(newGroup, RegionState.State.SPLITTING, tableName);
-    
     // move table to newGroup and check regions
     try {
       rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
@@ -693,7 +692,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       if (regionInfo.getTable().equals(tableName) && regionInfo.equals(rsn.getRegionInfo())) {
         assertNotEquals(master.getAssignmentManager().getRegionStates()
             .getRegionServerOfRegion(regionInfo).getAddress(), newGroupServer1);
-        }
+      }
     }
 
     // retry move table to newGroup adn check if all regions are corrected
@@ -714,7 +713,11 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableNames[0]);
     if(tableNames.length == 2) {
       Map<ServerName, List<String>> assignMap2 = getTableServerRegionMap().get(tableNames[1]);
-      assignMap2.forEach((k ,v) -> { if(!assignMap.containsKey(k)) assignMap.remove(k); });
+      assignMap2.forEach((k ,v) -> {
+        if(!assignMap.containsKey(k)) {
+          assignMap.remove(k);
+        }
+      });
     }
     String toCorrectRegionName = null;
     ServerName srcServer = null;
