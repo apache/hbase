@@ -536,7 +536,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       return tableRegions;
     }, rsn, changed);
     t1.start();
-
+    
     t1.join();
     t2.join();
 
@@ -624,7 +624,11 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableNames[0]);
     if(tableNames.length == 2) {
       Map<ServerName, List<String>> assignMap2 = getTableServerRegionMap().get(tableNames[1]);
-      assignMap2.forEach((k ,v) -> { if(!assignMap.containsKey(k)) assignMap.remove(k); });
+      assignMap2.forEach((k ,v) -> {
+        if(!assignMap.containsKey(k)) {
+          assignMap.remove(k);
+        }
+      });
     }
     String toCorrectRegionName = null;
     ServerName srcServer = null;
