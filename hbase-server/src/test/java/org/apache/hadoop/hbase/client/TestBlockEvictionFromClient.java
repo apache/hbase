@@ -114,8 +114,6 @@ public class TestBlockEvictionFromClient {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below
-                                                        // tests
     conf.setInt("hbase.regionserver.handler.count", 20);
     conf.setInt("hbase.bucketcache.size", 400);
     conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");

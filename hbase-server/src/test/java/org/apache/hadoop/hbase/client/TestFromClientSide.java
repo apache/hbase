@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -150,7 +151,7 @@ public class TestFromClientSide {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       Arrays.stream(cps).map(Class::getName).toArray(String[]::new));
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true); // enable for below tests
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }

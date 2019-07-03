@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -81,7 +80,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -169,14 +167,8 @@ import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifier;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -191,10 +183,7 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
-import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -203,6 +192,7 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
@@ -231,7 +221,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -408,12 +397,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Time stamp for when HMaster finishes becoming Active Master
   private long masterFinishedInitializationTime;
 
-  //should we check the compression codec type at master side, default true, HBASE-6370
-  private final boolean masterCheckCompression;
-
-  //should we check encryption settings at master side, default true
-  private final boolean masterCheckEncryption;
-
   Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   // monitor for snapshot of hbase tables
@@ -531,12 +514,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       if (this.conf.get("mapreduce.task.attempt.id") == null) {
         this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
       }
-
-      // should we check the compression codec type at master side, default true, HBASE-6370
-      this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
-
-      // should we check encryption settings at master side, default true
-      this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
       this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
 
@@ -2045,7 +2022,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.clusterSchemaService.getNamespace(namespace);
 
     RegionInfo[] newRegions = ModifyRegionUtils.createRegionInfos(desc, splitKeys);
-    sanityCheckTableDescriptor(desc);
+    TableDescriptorChecker.sanityCheck(conf, desc);
 
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
@@ -2099,224 +2076,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     return procId;
   }
 
-  /**
-   * Checks whether the table conforms to some sane limits, and configured
-   * values (compression, etc) work. Throws an exception if something is wrong.
-   * @throws IOException
-   */
-  private void sanityCheckTableDescriptor(final TableDescriptor htd) throws IOException {
-    final String CONF_KEY = "hbase.table.sanity.checks";
-    boolean logWarn = false;
-    if (!conf.getBoolean(CONF_KEY, true)) {
-      logWarn = true;
-    }
-    String tableVal = htd.getValue(CONF_KEY);
-    if (tableVal != null && !Boolean.valueOf(tableVal)) {
-      logWarn = true;
-    }
-
-    // check max file size
-    long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
-    long maxFileSize = htd.getMaxFileSize();
-    if (maxFileSize < 0) {
-      maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
-    }
-    if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
-      String message = "MAX_FILESIZE for table descriptor or "
-          + "\"hbase.hregion.max.filesize\" (" + maxFileSize
-          + ") is too small, which might cause over splitting into unmanageable "
-          + "number of regions.";
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-    }
-
-    // check flush size
-    long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
-    long flushSize = htd.getMemStoreFlushSize();
-    if (flushSize < 0) {
-      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
-    }
-    if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
-      String message = "MEMSTORE_FLUSHSIZE for table descriptor or "
-          + "\"hbase.hregion.memstore.flush.size\" ("+flushSize+") is too small, which might cause"
-          + " very frequent flushing.";
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-    }
-
-    // check that coprocessors and other specified plugin classes can be loaded
-    try {
-      checkClassLoading(conf, htd);
-    } catch (Exception ex) {
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, ex.getMessage(), null);
-    }
-
-    // check compression can be loaded
-    try {
-      checkCompression(htd);
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
-    }
-
-    // check encryption can be loaded
-    try {
-      checkEncryption(conf, htd);
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
-    }
-    // Verify compaction policy
-    try{
-      checkCompactionPolicy(conf, htd);
-    } catch(IOException e){
-      warnOrThrowExceptionForFailure(false, CONF_KEY, e.getMessage(), e);
-    }
-    // check that we have at least 1 CF
-    if (htd.getColumnFamilyCount() == 0) {
-      String message = "Table should have at least one column family.";
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-    }
-
-    // check that we have minimum 1 region replicas
-    int regionReplicas = htd.getRegionReplication();
-    if (regionReplicas < 1) {
-      String message = "Table region replication should be at least one.";
-      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-    }
-
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-      if (hcd.getTimeToLive() <= 0) {
-        String message = "TTL for column family " + hcd.getNameAsString() + " must be positive.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
-
-      // check blockSize
-      if (hcd.getBlocksize() < 1024 || hcd.getBlocksize() > 16 * 1024 * 1024) {
-        String message = "Block size for column family " + hcd.getNameAsString()
-            + "  must be between 1K and 16MB.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
-
-      // check versions
-      if (hcd.getMinVersions() < 0) {
-        String message = "Min versions for column family " + hcd.getNameAsString()
-          + "  must be positive.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
-      // max versions already being checked
-
-      // HBASE-13776 Setting illegal versions for ColumnFamilyDescriptor
-      //  does not throw IllegalArgumentException
-      // check minVersions <= maxVerions
-      if (hcd.getMinVersions() > hcd.getMaxVersions()) {
-        String message = "Min versions for column family " + hcd.getNameAsString()
-            + " must be less than the Max versions.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
-
-      // check replication scope
-      checkReplicationScope(hcd);
-      // check bloom filter type
-      checkBloomFilterType(hcd);
-
-      // check data replication factor, it can be 0(default value) when user has not explicitly
-      // set the value, in this case we use default replication factor set in the file system.
-      if (hcd.getDFSReplication() < 0) {
-        String message = "HFile Replication for column family " + hcd.getNameAsString()
-            + "  must be greater than zero.";
-        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
-      }
-
-      // TODO: should we check coprocessors and encryption ?
-    }
-  }
-
-  private void checkReplicationScope(ColumnFamilyDescriptor hcd) throws IOException{
-    // check replication scope
-    WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(hcd.getScope());
-    if (scop == null) {
-      String message = "Replication scope for column family "
-          + hcd.getNameAsString() + " is " + hcd.getScope() + " which is invalid.";
-
-      LOG.error(message);
-      throw new DoNotRetryIOException(message);
-    }
-  }
-
-  private void checkCompactionPolicy(Configuration conf, TableDescriptor htd)
-      throws IOException {
-    // FIFO compaction has some requirements
-    // Actually FCP ignores periodic major compactions
-    String className = htd.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
-    if (className == null) {
-      className =
-          conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-            ExploringCompactionPolicy.class.getName());
-    }
-
-    int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
-    String sv = htd.getValue(HStore.BLOCKING_STOREFILES_KEY);
-    if (sv != null) {
-      blockingFileCount = Integer.parseInt(sv);
-    } else {
-      blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
-    }
-
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-      String compactionPolicy =
-          hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
-      if (compactionPolicy == null) {
-        compactionPolicy = className;
-      }
-      if (!compactionPolicy.equals(FIFOCompactionPolicy.class.getName())) {
-        continue;
-      }
-      // FIFOCompaction
-      String message = null;
-
-      // 1. Check TTL
-      if (hcd.getTimeToLive() == ColumnFamilyDescriptorBuilder.DEFAULT_TTL) {
-        message = "Default TTL is not supported for FIFO compaction";
-        throw new IOException(message);
-      }
-
-      // 2. Check min versions
-      if (hcd.getMinVersions() > 0) {
-        message = "MIN_VERSION > 0 is not supported for FIFO compaction";
-        throw new IOException(message);
-      }
-
-      // 3. blocking file count
-      sv = hcd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
-      if (sv != null) {
-        blockingFileCount = Integer.parseInt(sv);
-      }
-      if (blockingFileCount < 1000) {
-        message =
-            "Blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
-                + " is below recommended minimum of 1000 for column family "+ hcd.getNameAsString();
-        throw new IOException(message);
-      }
-    }
-  }
-
-  private static void checkBloomFilterType(ColumnFamilyDescriptor cfd)
-      throws IOException {
-    Configuration conf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
-    try {
-      BloomFilterUtil.getBloomFilterParam(cfd.getBloomFilterType(), conf);
-    } catch (IllegalArgumentException e) {
-      throw new DoNotRetryIOException("Failed to get bloom filter param", e);
-    }
-  }
-
-  // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
-  private static void warnOrThrowExceptionForFailure(boolean logWarn, String confKey,
-      String message, Exception cause) throws IOException {
-    if (!logWarn) {
-      throw new DoNotRetryIOException(message + " Set " + confKey +
-          " to false at conf or table descriptor if you want to bypass sanity checks", cause);
-    }
-    LOG.warn(message);
-  }
-
   private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZNodePaths.joinZNode(
       zooKeeper.getZNodePaths().backupMasterAddressesZNode, serverName.toString());
@@ -2368,41 +2127,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     } finally {
       status.cleanup();
     }
-  }
-
-  private void checkCompression(final TableDescriptor htd)
-  throws IOException {
-    if (!this.masterCheckCompression) return;
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-      checkCompression(hcd);
-    }
-  }
-
-  private void checkCompression(final ColumnFamilyDescriptor hcd)
-  throws IOException {
-    if (!this.masterCheckCompression) return;
-    CompressionTest.testCompression(hcd.getCompressionType());
-    CompressionTest.testCompression(hcd.getCompactionCompressionType());
-  }
-
-  private void checkEncryption(final Configuration conf, final TableDescriptor htd)
-  throws IOException {
-    if (!this.masterCheckEncryption) return;
-    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-      checkEncryption(conf, hcd);
-    }
-  }
-
-  private void checkEncryption(final Configuration conf, final ColumnFamilyDescriptor hcd)
-  throws IOException {
-    if (!this.masterCheckEncryption) return;
-    EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
-  }
-
-  private void checkClassLoading(final Configuration conf, final TableDescriptor htd)
-  throws IOException {
-    RegionSplitPolicy.getSplitPolicyClass(htd, conf);
-    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, htd);
   }
 
   private static boolean isCatalogTable(final TableName tableName) {
@@ -2645,7 +2369,7 @@ public class HMaster extends HRegionServer implements MasterServices {
             TableDescriptor oldDescriptor = getMaster().getTableDescriptors().get(tableName);
             TableDescriptor newDescriptor = getMaster().getMasterCoprocessorHost()
                 .preModifyTable(tableName, oldDescriptor, newDescriptorGetter.get());
-            sanityCheckTableDescriptor(newDescriptor);
+            TableDescriptorChecker.sanityCheck(conf, newDescriptor);
             LOG.info("{} modify table {} from {} to {}", getClientIdAuditPrefix(), tableName,
               oldDescriptor, newDescriptor);
 
