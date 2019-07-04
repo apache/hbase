@@ -1882,26 +1882,25 @@ public final class ZKUtil {
         } else if (zNode.equals(zkw.getZNodePaths().queuesZNode)) {
           appendRSZnodes(zkw, zNode, sb);
         } else if (zNode.equals(zkw.getZNodePaths().hfileRefsZNode)) {
-          appendHFileRefsZnodes(zkw, zNode, sb);
+          appendHFileRefsZNodes(zkw, zNode, sb);
         }
       }
     }
   }
 
-  private static void appendHFileRefsZnodes(ZKWatcher zkw, String hfileRefsZnode,
+  private static void appendHFileRefsZNodes(ZKWatcher zkw, String hFileRefsZNode,
                                             StringBuilder sb) throws KeeperException {
-    sb.append("\n").append(hfileRefsZnode).append(": ");
+    sb.append("\n").append(hFileRefsZNode).append(": ");
     final List<String> hFileRefChildrenNoWatchList =
-            ZKUtil.listChildrenNoWatch(zkw, hfileRefsZnode);
-    if (hFileRefChildrenNoWatchList == null) {
-      return;
-    }
-    for (String peerIdZNode : hFileRefChildrenNoWatchList) {
-      String zNodeToProcess = ZNodePaths.joinZNode(hfileRefsZnode, peerIdZNode);
-      sb.append("\n").append(zNodeToProcess).append(": ");
-      List<String> peerHFileRefsZNodes = ZKUtil.listChildrenNoWatch(zkw, zNodeToProcess);
-      if (peerHFileRefsZNodes != null) {
-        sb.append(String.join(", ", peerHFileRefsZNodes));
+            ZKUtil.listChildrenNoWatch(zkw, hFileRefsZNode);
+    if (hFileRefChildrenNoWatchList != null) {
+      for (String peerIdZNode : hFileRefChildrenNoWatchList) {
+        String zNodeToProcess = ZNodePaths.joinZNode(hFileRefsZNode, peerIdZNode);
+        sb.append("\n").append(zNodeToProcess).append(": ");
+        List<String> peerHFileRefsZNodes = ZKUtil.listChildrenNoWatch(zkw, zNodeToProcess);
+        if (peerHFileRefsZNodes != null) {
+          sb.append(String.join(", ", peerHFileRefsZNodes));
+        }
       }
     }
   }
