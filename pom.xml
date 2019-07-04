@@ -764,6 +764,8 @@
               <exclude>src/main/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
+              <!-- hbase-error-prone module is in a profile which is not used for rat check -->
+              <exclude>hbase-error-prone/target/**</exclude>
             </excludes>
           </configuration>
         </plugin>
