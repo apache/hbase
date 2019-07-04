@@ -1003,9 +1003,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected void checkScanOrder(Cell prevKV, Cell kv,
       CellComparator comparator) throws IOException {
     // Check that the heap gives us KVs in an increasing order.
-    assert prevKV == null || comparator == null
-        || comparator.compare(prevKV, kv) <= 0 : "Key " + prevKV
-        + " followed by a " + "smaller key " + kv + " in cf " + store;
+    assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 : "Key "
+        + prevKV + " followed by a smaller key " + kv + " in cf " + store;
   }
 
   protected boolean seekToNextRow(Cell c) throws IOException {
