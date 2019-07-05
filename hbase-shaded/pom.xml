@@ -41,6 +41,7 @@
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-server</module>
         <module>hbase-shaded-testing-util</module>
+        <module>hbase-shaded-testing-util-tester</module>
         <module>hbase-shaded-check-invariants</module>
     </modules>
     <dependencies>
