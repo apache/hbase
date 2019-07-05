@@ -22,10 +22,14 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ ClientTests.class, MediumTests.class })
 public class TestShadedHBaseTestingUtility {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
