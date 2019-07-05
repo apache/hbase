@@ -101,7 +101,7 @@ public class MetricsRegionServer {
 
   public void updatePutBatch(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
-      tableMetrics.updatePut(tn, t);
+      tableMetrics.updatePutBatch(tn, t);
     }
     if (t > 1000) {
       serverSource.incrSlowPut();
@@ -125,7 +125,7 @@ public class MetricsRegionServer {
 
   public void updateDeleteBatch(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
-      tableMetrics.updateDelete(tn, t);
+      tableMetrics.updateDeleteBatch(tn, t);
     }
     if (t > 1000) {
       serverSource.incrSlowDelete();
