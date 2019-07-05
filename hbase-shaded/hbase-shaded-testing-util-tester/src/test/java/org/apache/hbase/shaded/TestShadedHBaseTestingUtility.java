@@ -18,16 +18,13 @@
  */
 package org.apache.hbase.shaded;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class TestShadedHBaseTestingUtility {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
