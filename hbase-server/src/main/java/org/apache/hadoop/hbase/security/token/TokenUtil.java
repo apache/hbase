@@ -45,10 +45,11 @@ public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
 
-  /**
-   * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
-   * @deprecated Please use the corresponding method in {@link ClientTokenUtil} instead.
-   */
+    /**
+     * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.AsyncConnection)}.
+     * @deprecated External users should not use this method. Please post on the HBase dev mailing list if you need this method. Internal
+     * HBase code should use {@link ClientTokenUtil} instead.
+     */
   @Deprecated
   public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
       AsyncConnection conn) {
@@ -57,7 +58,8 @@ public class TokenUtil {
 
   /**
    * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection)}.
-   * @deprecated Please use the corresponding method in {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing list if you need this method. Internal
+   * HBase code should use {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(Connection conn)
@@ -68,7 +70,8 @@ public class TokenUtil {
 
   /**
    * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
-   * @deprecated Please use the corresponding method in {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing list if you need this method. Internal
+   * HBase code should use {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
@@ -78,7 +81,8 @@ public class TokenUtil {
   /**
    * See {@link ClientTokenUtil#obtainToken(org.apache.hadoop.hbase.client.Connection,
    * org.apache.hadoop.hbase.security.User)}.
-   * @deprecated Please use the corresponding method in {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing list if you need this method. Internal
+   * HBase code should use {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static Token<AuthenticationTokenIdentifier> obtainToken(
@@ -98,7 +102,8 @@ public class TokenUtil {
 
   /**
    * See {@link ClientTokenUtil#toToken(org.apache.hadoop.security.token.Token)}.
-   * @deprecated Please use the corresponding method in {@link ClientTokenUtil} instead.
+   * @deprecated External users should not use this method. Please post on the HBase dev mailing list if you need this method. Internal
+   * HBase code should use {@link ClientTokenUtil} instead.
    */
   @Deprecated
   public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {

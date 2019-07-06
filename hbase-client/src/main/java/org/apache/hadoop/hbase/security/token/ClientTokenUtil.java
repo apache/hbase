@@ -86,7 +86,7 @@ public final class ClientTokenUtil {
       });
     return future;
   }
-  
+
   /**
    * Obtain and return an authentication token for the current user.
    * @param conn The HBase cluster connection
