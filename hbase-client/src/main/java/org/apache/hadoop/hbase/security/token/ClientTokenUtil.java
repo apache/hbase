@@ -73,10 +73,11 @@ public final class ClientTokenUtil {
       return future;
     }
     AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
-    table.<AuthenticationProtos.AuthenticationService.Interface, AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
+    table.<AuthenticationProtos.AuthenticationService.Interface,
+        AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
       AuthenticationProtos.AuthenticationService::newStub,
-      (s, c, r) -> s.getAuthenticationToken(c,
-        AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance(), r),
+          (s, c, r) -> s.getAuthenticationToken(c,
+              AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance(), r),
       HConstants.EMPTY_START_ROW).whenComplete((resp, error) -> {
         if (error != null) {
           future.completeExceptionally(ProtobufUtil.handleRemoteException(error));
