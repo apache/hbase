@@ -210,18 +210,15 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    */
   private void moveServerRegionsFromGroup(Set<Address> servers, String targetGroupName)
     throws IOException {
-    moveRegionsBetweenGroups(servers, targetGroupName,
-      rs -> getRegions(rs),
-      info -> {
-        try {
-          RSGroupInfo group = getRSGroupInfo(targetGroupName);
-          return group.containsTable(info.getTable());
-        } catch (IOException e) {
-          e.printStackTrace();
-          return false;
-        }
-      },
-      rs -> rs.getHostname());
+    moveRegionsBetweenGroups(servers, targetGroupName, rs -> getRegions(rs), info -> {
+      try {
+        RSGroupInfo group = getRSGroupInfo(targetGroupName);
+        return group.containsTable(info.getTable());
+      } catch (IOException e) {
+        e.printStackTrace();
+        return false;
+      }
+    }, rs -> rs.getHostname());
   }
 
   /**
@@ -233,26 +230,27 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    */
   private void moveTableRegionsToGroup(Set<TableName> tables, String targetGroupName)
     throws IOException {
-    moveRegionsBetweenGroups(tables, targetGroupName,
-      table -> master.getAssignmentManager().getRegionStates().getRegionsOfTable(table),
-      info -> {
-        try {
-          RSGroupInfo group = getRSGroupInfo(targetGroupName);
-          ServerName sn =
+    moveRegionsBetweenGroups(tables, targetGroupName, table -> {
+      if (master.getAssignmentManager().isTableDisabled(table)) {
+        return new ArrayList<>();
+      }
+      return master.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+    }, info -> {
+      try {
+        RSGroupInfo group = getRSGroupInfo(targetGroupName);
+        ServerName sn =
             master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(info);
-          return group.containsServer(sn.getAddress());
-        } catch (IOException e) {
-          e.printStackTrace();
-          return false;
-        }
-      },
-      table -> table.getNameWithNamespaceInclAsString());
+        return group.containsServer(sn.getAddress());
+      } catch (IOException e) {
+        e.printStackTrace();
+        return false;
+      }
+    }, table -> table.getNameWithNamespaceInclAsString());
   }
 
   private <T> void moveRegionsBetweenGroups(Set<T> regionsOwners, String targetGroupName,
-    Function<T, List<RegionInfo>> getRegionsInfo,
-    Function<RegionInfo,Boolean> validation,
-    Function<T,String> getOwnerName) throws IOException {
+      Function<T, List<RegionInfo>> getRegionsInfo, Function<RegionInfo, Boolean> validation,
+      Function<T, String> getOwnerName) throws IOException {
     boolean hasRegionsToMove;
     int retry = 0;
     Set<T> allOwners = new HashSet<>(regionsOwners);
@@ -260,24 +258,24 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     IOException toThrow = null;
     do {
       hasRegionsToMove = false;
-      for (Iterator<T> iter = allOwners.iterator(); iter.hasNext();) {
+      for (Iterator<T> iter = allOwners.iterator(); iter.hasNext(); ) {
         T owner = iter.next();
         // Get regions that are associated with this server and filter regions by group tables.
         for (RegionInfo region : getRegionsInfo.apply(owner)) {
           if (!validation.apply(region)) {
             LOG.info("Moving region {}, which do not belong to RSGroup {}",
-              region.getShortNameToLog(), targetGroupName);
+                region.getShortNameToLog(), targetGroupName);
             try {
               this.master.getAssignmentManager().move(region);
               failedRegions.remove(region);
-            }catch (IOException ioe){
+            } catch (IOException ioe) {
               LOG.debug("Move region {} from group failed, will retry, current retry time is {}",
-                region.getShortNameToLog(), retry, ioe);
+                  region.getShortNameToLog(), retry, ioe);
               toThrow = ioe;
               failedRegions.add(region);
             }
             if (master.getAssignmentManager().getRegionStates().
-              getRegionState(region).isFailedOpen()) {
+                getRegionState(region).isFailedOpen()) {
               continue;
             }
             hasRegionsToMove = true;
@@ -302,11 +300,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     //has up to max retry time or there are no more regions to move
     if (hasRegionsToMove) {
       // print failed moved regions, for later process conveniently
-      String msg = String.format("move regions for group %s failed, failed regions: %s",
-          targetGroupName, failedRegions);
+      String msg = String
+          .format("move regions for group %s failed, failed regions: %s", targetGroupName,
+              failedRegions);
       LOG.error(msg);
-      throw new DoNotRetryIOException(msg +
-          ", just record the last failed region's cause, more details in server log", toThrow);
+      throw new DoNotRetryIOException(
+          msg + ", just record the last failed region's cause, more details in server log",
+          toThrow);
     }
   }
 
