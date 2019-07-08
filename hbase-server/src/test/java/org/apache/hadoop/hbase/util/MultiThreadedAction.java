@@ -320,7 +320,8 @@ public abstract class MultiThreadedAction {
    * @param verifyCfAndColumnIntegrity verify that cf/column set in the result is complete. Note
    *                                   that to use this multiPut should be used, or verification
    *                                   has to happen after writes, otherwise there can be races.
-   * @return the verified result from get or scan
+   * @return true if the values of row result makes sense for row/cf/column combination and true if
+   *         the cf/column set in the result is complete, false otherwise.
    */
   public boolean verifyResultAgainstDataGenerator(Result result, boolean verifyValues,
       boolean verifyCfAndColumnIntegrity) {
