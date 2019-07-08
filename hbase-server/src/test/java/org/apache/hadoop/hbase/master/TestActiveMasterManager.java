@@ -191,14 +191,15 @@ public class TestActiveMasterManager {
     assertTrue(t.isActiveMaster);
 
     LOG.info("Deleting master node");
+
     ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
   }
 
   /**
    * Assert there is an active master and that it has the specified address.
-   * @param zk single zookeeper watcher
+   * @param zk single Zookeeper watcher
    * @param expectedAddress the expected address of the master
-   * @throws KeeperException unexpected zookeeper exception
+   * @throws KeeperException unexpected Zookeeper exception
    * @throws IOException if an IO problem is encountered
    */
   private void assertMaster(ZKWatcher zk,

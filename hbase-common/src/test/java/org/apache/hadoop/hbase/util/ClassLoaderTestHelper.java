@@ -53,6 +53,7 @@ public class ClassLoaderTestHelper {
    *
    * @param archiveFile the target jar archive
    * @param tobeJared a list of files to be jared
+   * @return true if a jar archive is build, false otherwise
    */
   private static boolean createJarArchive(File archiveFile, File[] tobeJared) {
     try {
