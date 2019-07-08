@@ -504,6 +504,7 @@ public class TestQuotaThrottle {
     triggerTableCacheRefresh(true, TABLE_NAMES[0]);
   }
 
+  @Test
   public void testTableWriteCapacityUnitThrottle() throws Exception {
     final Admin admin = TEST_UTIL.getHBaseAdmin();
 
