@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -255,6 +256,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     boolean hasRegionsToMove;
     int retry = 0;
     Set<T> allOwners = new HashSet<>(regionsOwners);
+    Set<RegionInfo> failedRegions = new HashSet<>();
+    IOException toThrow = null;
     do {
       hasRegionsToMove = false;
       for (Iterator<T> iter = allOwners.iterator(); iter.hasNext();) {
@@ -266,9 +269,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
               region.getShortNameToLog(), targetGroupName);
             try {
               this.master.getAssignmentManager().move(region);
+              failedRegions.remove(region);
             }catch (IOException ioe){
-              LOG.error("Move region {} from group failed, will retry, current retry time is {}",
+              LOG.debug("Move region {} from group failed, will retry, current retry time is {}",
                 region.getShortNameToLog(), retry, ioe);
+              toThrow = ioe;
+              failedRegions.add(region);
             }
             if (master.getAssignmentManager().getRegionStates().
               getRegionState(region).isFailedOpen()) {
@@ -291,7 +297,17 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.warn("Sleep interrupted", e);
         Thread.currentThread().interrupt();
       }
-    } while (hasRegionsToMove && retry <= 50);
+    } while (hasRegionsToMove && retry <= moveMaxRetry);
+
+    //has up to max retry time or there are no more regions to move
+    if (hasRegionsToMove) {
+      // print failed moved regions, for later process conveniently
+      String msg = String.format("move regions for group %s failed, failed regions: %s",
+          targetGroupName, failedRegions);
+      LOG.error(msg);
+      throw new DoNotRetryIOException(msg +
+          ", just record the last failed region's cause, more details in server log", toThrow);
+    }
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
