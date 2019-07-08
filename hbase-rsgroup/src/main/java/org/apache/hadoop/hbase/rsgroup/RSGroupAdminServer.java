@@ -210,15 +210,18 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    */
   private void moveServerRegionsFromGroup(Set<Address> servers, String targetGroupName)
     throws IOException {
-    moveRegionsBetweenGroups(servers, targetGroupName, rs -> getRegions(rs), info -> {
-      try {
-        RSGroupInfo group = getRSGroupInfo(targetGroupName);
-        return group.containsTable(info.getTable());
-      } catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, rs -> rs.getHostname());
+    moveRegionsBetweenGroups(servers, targetGroupName,
+        rs -> getRegions(rs),
+        info -> {
+          try {
+            RSGroupInfo group = getRSGroupInfo(targetGroupName);
+            return group.containsTable(info.getTable());
+          } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+          }
+        },
+        rs -> rs.getHostname());
   }
 
   /**
@@ -230,22 +233,25 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    */
   private void moveTableRegionsToGroup(Set<TableName> tables, String targetGroupName)
     throws IOException {
-    moveRegionsBetweenGroups(tables, targetGroupName, table -> {
-      if (master.getAssignmentManager().isTableDisabled(table)) {
-        return new ArrayList<>();
-      }
-      return master.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
-    }, info -> {
-      try {
-        RSGroupInfo group = getRSGroupInfo(targetGroupName);
-        ServerName sn =
-            master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(info);
-        return group.containsServer(sn.getAddress());
-      } catch (IOException e) {
-        e.printStackTrace();
-        return false;
-      }
-    }, table -> table.getNameWithNamespaceInclAsString());
+    moveRegionsBetweenGroups(tables, targetGroupName,
+        table -> {
+          if (master.getAssignmentManager().isTableDisabled(table)) {
+            return new ArrayList<>();
+          }
+          return master.getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+        },
+        info -> {
+          try {
+            RSGroupInfo group = getRSGroupInfo(targetGroupName);
+            ServerName sn =
+                master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(info);
+            return group.containsServer(sn.getAddress());
+          } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+          }
+        },
+        table -> table.getNameWithNamespaceInclAsString());
   }
 
   private <T> void moveRegionsBetweenGroups(Set<T> regionsOwners, String targetGroupName,
