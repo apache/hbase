@@ -1783,6 +1783,25 @@ We use Git for source code management and latest development happens on `master`
 branches for past major/minor/maintenance releases and important features and bug fixes are often
  back-ported to them.
 
+=== Policy for Fix Version in JIRA
+
+Currently branch-1 points to branch-1.5 as the upcoming HBase 1.x release. The policy for Fix
+Version in Jira is defined below.
+
+To determine if a given fix is in a given release purely from the release numbers following rules
+are defined:
+
+Fix version of X.Y.Z => fixed in all releases X.Y.Z' (where Z' = Z).
+Fix version of X.Y.0 => fixed in all releases X.Y'.* (where Y' = Y).
+Fix version of X.0.0 => fixed in all releases X'.\*.* (where X' = X).
+
+By this policy, fix version of 1.3.0 implies 1.4.0, but 1.3.2 does not imply 1.4.0 as we could not
+tell purely from the numbers which release came first.
+
+Also, branch-1 and branch-1.4 have diverged so a fix in one does not necessarily mean a fix is in
+the other. There are few things committed to branch-1 which are not in branch-1.4. Fix versions are
+set accordingly (1.5.0 is in the set, 1.4.0 is not).
+
 [[code.standards]]
 === Code Standards
 
