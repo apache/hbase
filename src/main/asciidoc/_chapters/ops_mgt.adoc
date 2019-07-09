@@ -1738,6 +1738,100 @@ hbase.regionserver.authenticationFailures::
 hbase.regionserver.mutationsWithoutWALCount ::
   Count of writes submitted with a flag indicating they should bypass the write ahead log
 
+[[rs_meta_metrics]]
+=== Meta Table Load Metrics
+
+HBase meta table metrics collection feature is available in HBase 1.4+ but it is disabled by default, as it can
+affect the performance of the cluster. When it is enabled, it helps to monitor client access patterns by collecting
+the following statistics:
+
+* number of get, put and delete operations on the `hbase:meta` table
+* number of get, put and delete operations made by the top-N clients
+* number of operations related to each table
+* number of operations related to the top-N regions
+
+
+When to use the feature::
+  This feature can help to identify hot spots in the meta table by showing the regions or tables where the meta info is
+  modified (e.g. by create, drop, split or move tables) or retrieved most frequently. It can also help to find misbehaving
+  client applications by showing which clients are using the meta table most heavily, which can for example suggest the
+  lack of meta table buffering or the lack of re-using open client connections in the client application.
+
+.Possible side-effects of enabling this feature
+[WARNING]
+====
+Having large number of clients and regions in the cluster can cause the registration and tracking of a large amount of
+metrics, which can increase the memory and CPU footprint of the HBase region server handling the `hbase:meta` table.
+It can also cause the significant increase of the JMX dump size, which can affect the monitoring or log aggregation
+system you use beside HBase. It is recommended to turn on this feature only during debugging.
+====
+
+Where to find the metrics in JMX::
+  Each metric attribute name will start with the ‘MetaTable_’ prefix. For all the metrics you will see five different
+  JMX attributes: count, mean rate, 1 minute rate, 5 minute rate and 15 minute rate. You will find these metrics in JMX
+  under the following MBean:
+  `Hadoop -> HBase -> RegionServer -> Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics`.
+
+.Examples: some Meta Table metrics you can see in your JMX dump
+[source,json]
+----
+{
+  "MetaTable_get_request_count": 77309,
+  "MetaTable_put_request_mean_rate": 0.06339092997186495,
+  "MetaTable_table_MyTestTable_request_15min_rate": 1.1020599841623246,
+  "MetaTable_client_/172.30.65.42_lossy_request_count": 1786
+  "MetaTable_client_/172.30.65.45_put_request_5min_rate": 0.6189810954855728,
+  "MetaTable_region_1561131112259.c66e4308d492936179352c80432ccfe0._lossy_request_count": 38342,
+  "MetaTable_region_1561131043640.5bdffe4b9e7e334172065c853cf0caa6._lossy_request_1min_rate": 0.04925099917433935,
+}
+----
+
+Configuration::
+  To turn on this feature, you have to enable a custom coprocessor by adding the following section to hbase-site.xml.
+  This coprocessor will run on all the HBase RegionServers, but will be active (i.e. consume memory / CPU) only on
+  the server, where the `hbase:meta` table is located. It will produce JMX metrics which can be downloaded from the
+  web UI of the given RegionServer or by a simple REST call. These metrics will not be present in the JMX dump of the
+  other RegionServers.
+
+.Enabling the Meta Table Metrics feature
+[source,xml]
+----
+<property>
+    <name>hbase.coprocessor.region.classes</name>
+    <value>org.apache.hadoop.hbase.coprocessor.MetaTableMetrics</value>
+</property>
+----
+
+.How the top-N metrics are calculated?
+[NOTE]
+====
+The 'top-N' type of metrics will be counted using the Lossy Counting Algorithm (as defined in
+link:http://www.vldb.org/conf/2002/S10P03.pdf[Motwani, R; Manku, G.S (2002). "Approximate frequency counts over data streams"]),
+which is designed to identify elements in a data stream whose frequency count exceed a user-given threshold.
+The frequency computed by this algorithm is not always accurate but has an error threshold that can be specified by the
+user as a configuration parameter. The run time space required by the algorithm is inversely proportional to the
+specified error threshold, hence larger the error parameter, the smaller the footprint and the less accurate are the
+metrics.
+
+You can specify the error rate of the algorithm as a floating-point value between 0 and 1 (exclusive), it's default
+value is 0.02. Having the error rate set to `E` and having `N` as the total number of meta table operations, then
+(assuming the uniform distribution of the activity of low frequency elements) at most `7 / E` meters will be kept and
+each kept element will have a frequency higher than `E * N`.
+
+An example: Let’s assume we are interested in the HBase clients that are most active in accessing the meta table.
+When there was 1,000,000 operations on the meta table so far and the error rate parameter is set to 0.02, then we can
+assume that only at most 350 client IP address related counters will be present in JMX and each of these clients
+accessed the meta table at least 20,000 times.
+
+[source,xml]
+----
+<property>
+    <name>hbase.util.default.lossycounting.errorrate</name>
+    <value>0.02</value>
+</property>
+----
+====
+
 [[ops.monitoring]]
 == HBase Monitoring
 
