@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * ByteBuffAllocator is used for allocating/freeing the ByteBuffers from/to NIO ByteBuffer pool, and
@@ -159,7 +160,10 @@ public class ByteBuffAllocator {
    * reservoir is enabled and the reservoir has enough buffers, otherwise the allocator will just
    * allocate the insufficient buffers from on-heap to meet the requirement.
    * @param conf which get the arguments to initialize the allocator.
-   * @param reservoirEnabled indicate whether the reservoir is enabled or disabled.
+   * @param reservoirEnabled indicate whether the reservoir is enabled or disabled. NOTICE: if
+   *          reservoir is enabled, then we will use the pool allocator to allocate off-heap
+   *          ByteBuffers and use the HEAP allocator to allocate heap ByteBuffers. Otherwise if
+   *          reservoir is disabled then all allocations will happen in HEAP instance.
    * @return ByteBuffAllocator to manage the byte buffers.
    */
   public static ByteBuffAllocator create(Configuration conf, boolean reservoirEnabled) {
@@ -192,7 +196,7 @@ public class ByteBuffAllocator {
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
       return new ByteBuffAllocator(true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
     } else {
-      return new ByteBuffAllocator(false, 0, poolBufSize, Integer.MAX_VALUE);
+      return HEAP;
     }
   }
 
@@ -247,12 +251,22 @@ public class ByteBuffAllocator {
     return maxBufCount;
   }
 
-  public double getHeapAllocationRatio() {
-    long heapAllocBytes = heapAllocationBytes.sum(), poolAllocBytes = poolAllocationBytes.sum();
-    double heapDelta = heapAllocBytes - lastHeapAllocationBytes;
-    double poolDelta = poolAllocBytes - lastPoolAllocationBytes;
-    lastHeapAllocationBytes = heapAllocBytes;
-    lastPoolAllocationBytes = poolAllocBytes;
+  public static double getHeapAllocationRatio(ByteBuffAllocator... allocators) {
+    double heapDelta = 0.0, poolDelta = 0.0;
+    long heapAllocBytes, poolAllocBytes;
+    // If disabled the pool allocator, then we use the global HEAP allocator. otherwise we use
+    // the pool allocator to allocate offheap ByteBuffers and use the HEAP to allocate heap
+    // ByteBuffers. So here we use a HashSet to remove the duplicated allocator object in disable
+    // case.
+    for (ByteBuffAllocator alloc : Sets.newHashSet(allocators)) {
+      heapAllocBytes = alloc.heapAllocationBytes.sum();
+      poolAllocBytes = alloc.poolAllocationBytes.sum();
+      heapDelta += (heapAllocBytes - alloc.lastHeapAllocationBytes);
+      poolDelta += (poolAllocBytes - alloc.lastPoolAllocationBytes);
+      alloc.lastHeapAllocationBytes = heapAllocBytes;
+      alloc.lastPoolAllocationBytes = poolAllocBytes;
+    }
+    // Calculate the heap allocation ratio.
     if (Math.abs(heapDelta + poolDelta) < 1e-3) {
       return 0.0;
     }
