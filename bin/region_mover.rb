@@ -41,6 +41,10 @@ import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil
 import org.apache.hadoop.hbase.ServerName
 import org.apache.hadoop.hbase.HRegionInfo
+import org.apache.hadoop.hbase.rsgroup.RSGroupAdmin
+import org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient
+import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.net.Address
 
 # Name of this script
 NAME = "region_mover"
@@ -176,6 +180,33 @@ def getServers(admin)
   return servers
 end
 
+# Gets all servers in the same rsgroup as the given server
+def getSameRSGroupServers(admin, rsgroupAdmin, hostname, port)
+  servers = []
+  rsGroupInfo = rsgroupAdmin.getRSGroupOfServer(Address.fromParts(hostname, java.lang.Integer.parseInt(port)))
+  if (rsGroupInfo != nil )
+    serverAddrSet = rsGroupInfo.getServers()
+    serverInfos = admin.getClusterStatus().getServerInfo()
+
+    for server in serverInfos
+      tmpAddr = Address.fromParts(server.getHostname(), server.getPort())
+      if (serverAddrSet.contains(tmpAddr))
+        servers << server.getServerName()
+      end
+    end
+  else
+    puts "Server is stopped!!!"
+  end
+
+  return servers
+end
+
+# Determine whether rsgroup has been enabled
+def isEnableRSGroup(admin)
+  coprocessorList = java.util.Arrays.asList(admin.getMasterCoprocessors());
+  return coprocessorList.contains("RSGroupAdminEndpoint")
+end
+
 # Remove the servername whose hostname portion matches from the passed
 # array of servers.  Returns as side-effect the servername removed.
 def stripServer(servers, hostname, port)
@@ -298,7 +329,17 @@ def unloadRegions(options, hostname, port)
   config = getConfiguration()
   # Get an admin instance
   admin = HBaseAdmin.new(config)
-  servers = getServers(admin)
+
+  servers = nil
+  if isEnableRSGroup(admin)
+    conn = ConnectionFactory.createConnection(config)
+    rsgroupAdmin = RSGroupAdminClient.new(conn)
+    servers = getSameRSGroupServers(admin, rsgroupAdmin, hostname, port)
+    conn.close()
+  else
+    servers = getServers(admin)
+  end
+
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
   servername = stripServer(servers, hostname, port)
