@@ -368,7 +368,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
         RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo
           .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
-        rsGroupInfoList.add(RSGroupProtobufUtil.toGroupInfo(proto));
+        rsGroupInfoList.add(ProtobufUtil.toGroupInfo(proto));
       }
     }
     return rsGroupInfoList;
@@ -391,7 +391,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             ByteArrayInputStream bis =
               new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
             RSGroupInfoList
-              .add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+              .add(ProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
           }
         }
         LOG.debug("Read ZK GroupInfo count:" + RSGroupInfoList.size());
@@ -467,7 +467,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // populate puts
     for (RSGroupInfo RSGroupInfo : groupMap.values()) {
-      RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+      RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
       Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
       p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
       mutations.add(p);
@@ -540,7 +540,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
       for (RSGroupInfo RSGroupInfo : newGroupMap.values()) {
         String znode = ZNodePaths.joinZNode(groupBasePath, RSGroupInfo.getName());
-        RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+        RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
         LOG.debug("Updating znode: " + znode);
         ZKUtil.createAndFailSilent(watcher, znode);
         zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
