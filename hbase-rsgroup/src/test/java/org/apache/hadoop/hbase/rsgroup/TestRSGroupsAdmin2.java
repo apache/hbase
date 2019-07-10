@@ -492,7 +492,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     final RegionStateNode rsn = gotPair.getSecond();
     AtomicBoolean changed = new AtomicBoolean(false);
     Thread t1 = recoverRegionStateThread(movedServer,
-        server -> master.getAssignmentManager().getRegionsOnServer(movedServer), rsn, changed);
+      server -> master.getAssignmentManager().getRegionsOnServer(movedServer), rsn, changed);
     t1.start();
 
     // move target server to group
