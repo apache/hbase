@@ -536,16 +536,8 @@ public class TestHFileArchiving {
     Path sourceFile = new Path(rootDir, file);
     FileSystem fileSystem = UTIL.getTestFileSystem();
     fileSystem.createNewFile(sourceFile);
-    try {
-      // Try to archive the file but with null regionDir, can't delete sourceFile
-      HFileArchiver.archiveRegion(fileSystem, null, null, null);
-    } catch (IOException e) {
-      assertTrue(fileSystem.exists(sourceFile));
-    } finally {
-      fileSystem.delete(sourceFile, false);
-      fileSystem.delete(rootDir, true);
-    }
-    assertFalse(fileSystem.exists(sourceFile));
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, null, null, null));
   }
 
   @Test
@@ -560,15 +552,8 @@ public class TestHFileArchiving {
     fileSystem.createNewFile(sourceFile);
     Path sourceRegionDir = new Path(rootDir, regionDir);
     fileSystem.mkdirs(sourceRegionDir);
-    try {
-      // Try to archive the file
-      HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir);
-    } catch (IOException e) {
-      fileSystem.delete(sourceFile, false);
-    } finally {
-      fileSystem.delete(rootDir, true);
-    }
-    assertFalse(fileSystem.exists(sourceFile));
+    // Try to archive the file
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
   }
 
   // Avoid passing a null master to CleanerChore, see HBASE-21175
