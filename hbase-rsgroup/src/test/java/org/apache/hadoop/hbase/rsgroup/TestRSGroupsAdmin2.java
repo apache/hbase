@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -490,26 +491,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     final ServerName movedServer = gotPair.getFirst();
     final RegionStateNode rsn = gotPair.getSecond();
     AtomicBoolean changed = new AtomicBoolean(false);
-    Thread t1 = new Thread(() -> {
-      LOG.debug("thread1 start running, will recover region state");
-      long current = System.currentTimeMillis();
-      while (System.currentTimeMillis() - current <= 50000) {
-        List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(movedServer);
-        LOG.debug("server region size is:{}", regions.size());
-        assert regions.size() >= 1;
-        // when there is exactly one region left, we can determine the move operation encountered
-        // exception caused by the strange region state.
-        if (regions.size() == 1) {
-          assertEquals(regions.get(0).getRegionNameAsString(),
-              rsn.getRegionInfo().getRegionNameAsString());
-          rsn.setState(RegionState.State.OPEN);
-          LOG.info("set region {} state OPEN", rsn.getRegionInfo().getRegionNameAsString());
-          changed.set(true);
-          break;
-        }
-        sleep(5000);
-      }
-    });
+    Thread t1 = recoverRegionStateThread(movedServer,
+        server -> master.getAssignmentManager().getRegionsOnServer(movedServer), rsn, changed);
     t1.start();
 
     // move target server to group
@@ -573,32 +556,17 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     final ServerName ss = gotPair.getFirst();
     final RegionStateNode rsn = gotPair.getSecond();
     AtomicBoolean changed = new AtomicBoolean(false);
-    Thread t1 = new Thread(() -> {
-      LOG.info("thread1 start running, will recover region state");
-      long current = System.currentTimeMillis();
-      while (System.currentTimeMillis() - current <= 50000) {
-        List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(ss);
-        List<RegionInfo> tableRegions = new ArrayList<>();
-        for (RegionInfo regionInfo : regions) {
-          if (regionInfo.getTable().equals(tableName)) {
-            tableRegions.add(regionInfo);
-          }
+
+    Thread t1 = recoverRegionStateThread(ss, server -> {
+      List<RegionInfo> regions = master.getAssignmentManager().getRegionsOnServer(ss);
+      List<RegionInfo> tableRegions = new ArrayList<>();
+      for (RegionInfo regionInfo : regions) {
+        if (regionInfo.getTable().equals(tableName)) {
+          tableRegions.add(regionInfo);
         }
-        LOG.debug("server table region size is:{}", tableRegions.size());
-        assert tableRegions.size() >= 1;
-        // when there is exactly one region left, we can determine the move operation encountered
-        // exception caused by the strange region state.
-        if (tableRegions.size() == 1) {
-          assertEquals(tableRegions.get(0).getRegionNameAsString(),
-              rsn.getRegionInfo().getRegionNameAsString());
-          rsn.setState(RegionState.State.OPEN);
-          LOG.info("set region {} state OPEN", rsn.getRegionInfo().getRegionNameAsString());
-          changed.set(true);
-          break;
-        }
-        sleep(5000);
       }
-    });
+      return tableRegions;
+    }, rsn, changed);
     t1.start();
 
     t1.join();
@@ -620,6 +588,31 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
         return false;
       }
     });
+  }
+
+  public <T> Thread recoverRegionStateThread(T owner, Function<T, List<RegionInfo>> getRegions,
+      RegionStateNode rsn, AtomicBoolean changed){
+    return new Thread(() -> {
+      LOG.info("thread1 start running, will recover region state");
+      long current = System.currentTimeMillis();
+      while (System.currentTimeMillis() - current <= 50000) {
+        List<RegionInfo> regions = getRegions.apply(owner);
+        LOG.debug("server table region size is:{}", regions.size());
+        assert regions.size() >= 1;
+        // when there is exactly one region left, we can determine the move operation encountered
+        // exception caused by the strange region state.
+        if (regions.size() == 1) {
+          assertEquals(regions.get(0).getRegionNameAsString(),
+              rsn.getRegionInfo().getRegionNameAsString());
+          rsn.setState(RegionState.State.OPEN);
+          LOG.info("set region {} state OPEN", rsn.getRegionInfo().getRegionNameAsString());
+          changed.set(true);
+          break;
+        }
+        sleep(5000);
+      }
+    });
+
   }
 
   @Test
@@ -709,5 +702,4 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     rsn.setState(RegionState.State.SPLITTING);
     return new Pair<>(toMoveServer, rsn);
   }
-
 }

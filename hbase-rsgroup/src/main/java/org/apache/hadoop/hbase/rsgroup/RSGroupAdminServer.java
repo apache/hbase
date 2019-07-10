@@ -260,7 +260,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     boolean hasRegionsToMove;
     int retry = 0;
     Set<T> allOwners = new HashSet<>(regionsOwners);
-    Set<RegionInfo> failedRegions = new HashSet<>();
+    Set<String> failedRegions = new HashSet<>();
     IOException toThrow = null;
     do {
       hasRegionsToMove = false;
@@ -273,12 +273,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
                 region.getShortNameToLog(), targetGroupName);
             try {
               this.master.getAssignmentManager().move(region);
-              failedRegions.remove(region);
+              failedRegions.remove(region.getRegionNameAsString());
             } catch (IOException ioe) {
               LOG.debug("Move region {} from group failed, will retry, current retry time is {}",
                   region.getShortNameToLog(), retry, ioe);
               toThrow = ioe;
-              failedRegions.add(region);
+              failedRegions.add(region.getRegionNameAsString());
             }
             if (master.getAssignmentManager().getRegionStates().
                 getRegionState(region).isFailedOpen()) {
