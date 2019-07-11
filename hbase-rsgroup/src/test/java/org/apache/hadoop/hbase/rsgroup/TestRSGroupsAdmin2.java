@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.apache.hadoop.hbase.rsgroup.RSGroupAdminServer.DEFAULT_MAX_RETRY_VALUE;
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -470,22 +471,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
     final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    final int tableRegionCount = 10;
-    // All the regions created below will be assigned to the default group.
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, tableRegionCount);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null) {
-          return false;
-        }
-        return getTableRegionMap().get(tableName).size() >= tableRegionCount;
-      }
-    });
-
-    Pair<ServerName, RegionStateNode> gotPair = setARegionState(newGroup);
+    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup,
+        10);
 
     // start thread to recover region state
     final ServerName movedServer = gotPair.getFirst();
@@ -524,22 +511,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   @Test
   public void testFailedMoveBeforeRetryExhaustedWhenMoveTable() throws Exception {
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    final int tableRegionCount = 5;
-    // All the regions created below will be assigned to the default group.
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, tableRegionCount);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null) {
-          return false;
-        }
-        return getTableRegionMap().get(tableName).size() >= tableRegionCount;
-      }
-    });
-
-    Pair<ServerName, RegionStateNode> gotPair = setARegionState(newGroup);
+    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup, 5);
 
     // move table to group
     Thread t2 = new Thread(() -> {
@@ -590,12 +562,12 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
   }
 
-  public <T> Thread recoverRegionStateThread(T owner, Function<T, List<RegionInfo>> getRegions,
+  private <T> Thread recoverRegionStateThread(T owner, Function<T, List<RegionInfo>> getRegions,
       RegionStateNode rsn, AtomicBoolean changed){
     return new Thread(() -> {
       LOG.info("thread1 start running, will recover region state");
       long current = System.currentTimeMillis();
-      while (System.currentTimeMillis() - current <= 50000) {
+      while (System.currentTimeMillis() - current <= DEFAULT_MAX_RETRY_VALUE * 1000) {
         List<RegionInfo> regions = getRegions.apply(owner);
         LOG.debug("server table region size is:{}", regions.size());
         assert regions.size() >= 1;
@@ -612,7 +584,6 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
         sleep(5000);
       }
     });
-
   }
 
   @Test
@@ -620,25 +591,12 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
     final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
-    final byte[] familyNameBytes = Bytes.toBytes("f");
-    final int tableRegionCount = 10;
-    // All the regions created below will be assigned to the default group.
-    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, tableRegionCount);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null) {
-          return false;
-        }
-        return getTableRegionMap().get(tableName).size() >= tableRegionCount;
-      }
-    });
-
-    Pair<ServerName, RegionStateNode> gotPair = setARegionState(newGroup);
+    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup,
+        10);
     try{
       rsGroupAdmin.moveServers(Sets.newHashSet(gotPair.getFirst().getAddress()),
           newGroup.getName());
+      fail("move servers to group should fail");
     }catch (IOException e){
       assertTrue(e.getMessage().contains(
           gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
@@ -648,8 +606,19 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   @Test
   public void testFailedMoveWhenMoveTable() throws Exception{
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
+    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup, 5);
+    try{
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
+      fail("move tables to group should fail");
+    }catch (IOException e){
+      assertTrue(e.getMessage().contains(
+          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
+    }
+  }
+
+  private Pair<ServerName, RegionStateNode> createTableAndSetARegionState(RSGroupInfo rsGroupInfo,
+      int tableRegionCount) throws Exception{
     final byte[] familyNameBytes = Bytes.toBytes("f");
-    final int tableRegionCount = 10;
     // All the regions created below will be assigned to the default group.
     TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, tableRegionCount);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -663,13 +632,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       }
     });
 
-    Pair<ServerName, RegionStateNode> gotPair = setARegionState(newGroup);
-    try{
-      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-    }catch (IOException e){
-      assertTrue(e.getMessage().contains(
-          gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
-    }
+    return setARegionState(rsGroupInfo);
   }
 
   /**

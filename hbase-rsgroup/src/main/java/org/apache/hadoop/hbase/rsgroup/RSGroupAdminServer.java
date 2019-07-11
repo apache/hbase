@@ -57,19 +57,27 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 @InterfaceAudience.Private
 public class RSGroupAdminServer implements RSGroupAdmin {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupAdminServer.class);
-  public static final String KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE = "should keep at least " +
+  static final String KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE = "should keep at least " +
           "one server in 'default' RSGroup.";
 
   private MasterServices master;
   private final RSGroupInfoManager rsGroupInfoManager;
 
-  private String FAILED_MOVE_MAX_RETRY = "hbase.rsgroup.move.max.retry";
+  /** Define the config key of retries threshold when movements failed */
+  //made package private for testing
+  static final String FAILED_MOVE_MAX_RETRY = "hbase.rsgroup.move.max.retry";
+
+  /** Define the default number of retries */
+  //made package private for testing
+  static final int DEFAULT_MAX_RETRY_VALUE = 50;
+
   private int moveMaxRetry;
 
   public RSGroupAdminServer(MasterServices master, RSGroupInfoManager rsGroupInfoManager) {
     this.master = master;
     this.rsGroupInfoManager = rsGroupInfoManager;
-    this.moveMaxRetry = master.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY, 50);
+    this.moveMaxRetry = master.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY,
+        DEFAULT_MAX_RETRY_VALUE);
   }
 
   @Override
