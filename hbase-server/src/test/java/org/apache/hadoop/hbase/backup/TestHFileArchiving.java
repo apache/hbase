@@ -527,7 +527,7 @@ public class TestHFileArchiving {
   }
 
   @Test
-  public void testUnDeletedRegionWithoutArchive() throws IOException {
+  public void testArchiveRegionTableAndRegionDirsNull() throws IOException {
     Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
             TableName.valueOf(name.getMethodName())), "abcdef");
     Path familyDir = new Path(regionDir, "cf");
@@ -537,11 +537,11 @@ public class TestHFileArchiving {
     FileSystem fileSystem = UTIL.getTestFileSystem();
     fileSystem.createNewFile(sourceFile);
     // Try to archive the file but with null regionDir, can't delete sourceFile
-    assertFalse(HFileArchiver.archiveRegion(fileSystem, null, null, null));
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
   }
 
   @Test
-  public void testDeleteRegionWithoutArchive() throws IOException {
+  public void testArchiveRegionWithTableDirNull() throws IOException {
     Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
             TableName.valueOf(name.getMethodName())), "xyzabc");
     Path familyDir = new Path(regionDir, "rd");
@@ -554,6 +554,26 @@ public class TestHFileArchiving {
     fileSystem.mkdirs(sourceRegionDir);
     // Try to archive the file
     assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
+    assertFalse(fileSystem.exists(sourceRegionDir));
+  }
+
+  @Test
+  public void testArchiveRegionWithRegionDirNull() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "elgn4nf");
+    Path familyDir = new Path(regionDir, "rdar");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "2");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(),
+            null));
+    assertTrue(fileSystem.exists(sourceRegionDir));
+    fileSystem.delete(sourceRegionDir, true);
   }
 
   // Avoid passing a null master to CleanerChore, see HBASE-21175
