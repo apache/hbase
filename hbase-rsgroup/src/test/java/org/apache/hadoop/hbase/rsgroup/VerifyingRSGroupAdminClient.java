@@ -52,7 +52,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
       throws IOException {
     wrapped = RSGroupAdmin;
     table = ConnectionFactory.createConnection(conf)
-            .getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
+        .getTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
     zkw = new ZKWatcher(conf, this.getClass().getSimpleName(), null);
   }
 
@@ -126,8 +126,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
       RSGroupProtos.RSGroupInfo proto =
           RSGroupProtos.RSGroupInfo.parseFrom(
               result.getValue(
-                  RSGroupInfoManager.META_FAMILY_BYTES,
-                  RSGroupInfoManager.META_QUALIFIER_BYTES));
+                  RSGroupInfoManagerImpl.META_FAMILY_BYTES,
+                  RSGroupInfoManagerImpl.META_QUALIFIER_BYTES));
       groupMap.put(proto.getName(), ProtobufUtil.toGroupInfo(proto));
     }
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
