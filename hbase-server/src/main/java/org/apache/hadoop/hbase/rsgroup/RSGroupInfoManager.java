@@ -15,37 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface used to manage RSGroupInfo storage. An implementation
- * has the option to support offline mode.
- * See {@link RSGroupBasedLoadBalancer}
+ * Interface used to manage RSGroupInfo storage. An implementation has the option to support offline
+ * mode. See {@code RSGroupBasedLoadBalancer}.
  */
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
-
-  String REASSIGN_WAIT_INTERVAL_KEY = "hbase.rsgroup.reassign.wait";
-  long DEFAULT_REASSIGN_WAIT_INTERVAL = 30 * 1000L;
-
-  //Assigned before user tables
-  TableName RSGROUP_TABLE_NAME =
-      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
-  String rsGroupZNode = "rsgroup";
-  byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
-  byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
-  byte[] ROW_KEY = {0};
 
   void start();
 
@@ -86,7 +70,6 @@ public interface RSGroupInfoManager {
 
   /**
    * Set the group membership of a set of tables
-   *
    * @param tableNames set of tables to move
    * @param groupName name of group of tables to move to
    */
@@ -104,7 +87,6 @@ public interface RSGroupInfoManager {
 
   /**
    * Whether the manager is able to fully return group metadata
-   *
    * @return whether the manager is in online mode
    */
   boolean isOnline();
@@ -116,8 +98,8 @@ public interface RSGroupInfoManager {
    * @param srcGroup groupName being moved from
    * @param dstGroup groupName being moved to
    */
-  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
-      String srcGroup, String dstGroup) throws IOException;
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String srcGroup,
+      String dstGroup) throws IOException;
 
   /**
    * Remove decommissioned servers from rsgroup
