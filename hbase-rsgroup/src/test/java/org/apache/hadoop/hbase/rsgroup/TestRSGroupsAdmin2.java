@@ -567,6 +567,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     return new Thread(() -> {
       LOG.info("thread1 start running, will recover region state");
       long current = System.currentTimeMillis();
+      // wait until there is only left the region we changed state and recover its state.
+      // wait time is set according to the number of max retries, all except failed regions will be
+      // moved in one retry, and will sleep 1s until next retry.
       while (System.currentTimeMillis() - current <= DEFAULT_MAX_RETRY_VALUE * 1000) {
         List<RegionInfo> regions = getRegions.apply(owner);
         LOG.debug("server table region size is:{}", regions.size());
