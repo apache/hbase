@@ -15,10 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.protobuf.ServiceException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,10 +34,12 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,14 +48,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -66,10 +63,14 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -79,6 +80,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -91,13 +93,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * RSGroupInfo Map at {@link #rsGroupMap} and a Map of tables to the name of the rsgroup they belong
  * too (in {@link #tableMap}). These Maps are persisted to the hbase:rsgroup table (and cached in
  * zk) on each modification.
- * <p>
+ * <p/>
  * Mutations on state are synchronized but reads can continue without having to wait on an instance
  * monitor, mutations do wholesale replace of the Maps on update -- Copy-On-Write; the local Maps of
  * state are read-only, just-in-case (see flushConfig).
- * <p>
+ * <p/>
  * Reads must not block else there is a danger we'll deadlock.
- * <p>
+ * <p/>
  * Clients of this class, the {@link RSGroupAdminEndpoint} for example, want to query and then act
  * on the results of the query modifying cache in zookeeper without another thread making
  * intermediate modifications. These clients synchronize on the 'this' instance so no other has
@@ -106,6 +108,24 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 @InterfaceAudience.Private
 final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupInfoManagerImpl.class);
+
+  private static final String REASSIGN_WAIT_INTERVAL_KEY = "hbase.rsgroup.reassign.wait";
+  private static final long DEFAULT_REASSIGN_WAIT_INTERVAL = 30 * 1000L;
+
+  // Assigned before user tables
+  @VisibleForTesting
+  static final TableName RSGROUP_TABLE_NAME =
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
+
+  private static final String RS_GROUP_ZNODE = "rsgroup";
+
+  @VisibleForTesting
+  static final byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
+
+  @VisibleForTesting
+  static final byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
+
+  private static final byte[] ROW_KEY = { 0 };
 
   /** Table descriptor for <code>hbase:rsgroup</code> catalog table */
   private static final TableDescriptor RSGROUP_TABLE_DESC;
@@ -129,7 +149,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private volatile Map<TableName, String> tableMap = Collections.emptyMap();
 
   private final MasterServices masterServices;
-  private final Connection conn;
+  private final AsyncClusterConnection conn;
   private final ZKWatcher watcher;
   private final RSGroupStartupWorker rsGroupStartupWorker;
   // contains list of groups that were last flushed to persistent store
@@ -141,7 +161,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private RSGroupInfoManagerImpl(MasterServices masterServices) throws IOException {
     this.masterServices = masterServices;
     this.watcher = masterServices.getZooKeeper();
-    this.conn = masterServices.getConnection();
+    this.conn = masterServices.getAsyncClusterConnection();
     this.rsGroupStartupWorker = new RSGroupStartupWorker();
   }
 
@@ -357,25 +377,25 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
-  List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
+  private List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
     List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
-    try (Table table = conn.getTable(RSGROUP_TABLE_NAME);
-        ResultScanner scanner = table.getScanner(new Scan())) {
+    AsyncTable<?> table = conn.getTable(RSGROUP_TABLE_NAME);
+    try (ResultScanner scanner = table.getScanner(META_FAMILY_BYTES, META_QUALIFIER_BYTES)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
           break;
         }
         RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo
-          .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
+            .parseFrom(result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
         rsGroupInfoList.add(ProtobufUtil.toGroupInfo(proto));
       }
     }
     return rsGroupInfoList;
   }
 
-  List<RSGroupInfo> retrieveGroupListFromZookeeper() throws IOException {
-    String groupBasePath = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, rsGroupZNode);
+  private List<RSGroupInfo> retrieveGroupListFromZookeeper() throws IOException {
+    String groupBasePath = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, RS_GROUP_ZNODE);
     List<RSGroupInfo> RSGroupInfoList = Lists.newArrayList();
     // Overwrite any info stored by table, this takes precedence
     try {
@@ -527,7 +547,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     resetRSGroupAndTableMaps(newGroupMap, newTableMap);
 
     try {
-      String groupBasePath = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, rsGroupZNode);
+      String groupBasePath =
+          ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, RS_GROUP_ZNODE);
       ZKUtil.createAndFailSilent(watcher, groupBasePath, ProtobufMagic.PB_MAGIC);
 
       List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<>(newGroupMap.size());
@@ -790,11 +811,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             createRSGroupTable();
           }
           // try reading from the table
-          try (Table table = conn.getTable(RSGROUP_TABLE_NAME)) {
-            table.get(new Get(ROW_KEY));
-          }
-          LOG.info(
-            "RSGroup table=" + RSGROUP_TABLE_NAME + " is online, refreshing cached information");
+          FutureUtils.get(conn.getTable(RSGROUP_TABLE_NAME).get(new Get(ROW_KEY)));
+          LOG.info("RSGroup table={} is online, refreshing cached information", RSGROUP_TABLE_NAME);
           RSGroupInfoManagerImpl.this.refresh(true);
           online = true;
           // flush any inconsistencies between ZK and HTable
@@ -836,8 +854,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       } else {
         Procedure<?> result = masterServices.getMasterProcedureExecutor().getResult(procId);
         if (result != null && result.isFailed()) {
-          throw new IOException(
-            "Failed to create group table. " + MasterProcedureUtil.unwrapRemoteIOException(result));
+          throw new IOException("Failed to create group table. " +
+              MasterProcedureUtil.unwrapRemoteIOException(result));
         }
       }
     }
@@ -852,33 +870,24 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   private void multiMutate(List<Mutation> mutations) throws IOException {
-    try (Table table = conn.getTable(RSGROUP_TABLE_NAME)) {
-      CoprocessorRpcChannel channel = table.coprocessorService(ROW_KEY);
-      MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder =
-        MultiRowMutationProtos.MutateRowsRequest.newBuilder();
-      for (Mutation mutation : mutations) {
-        if (mutation instanceof Put) {
-          mmrBuilder.addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.PUT,
-            mutation));
-        } else if (mutation instanceof Delete) {
-          mmrBuilder.addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
-            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.DELETE,
-            mutation));
-        } else {
-          throw new DoNotRetryIOException(
+    MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
+    for (Mutation mutation : mutations) {
+      if (mutation instanceof Put) {
+        builder
+            .addMutationRequest(ProtobufUtil.toMutation(MutationProto.MutationType.PUT, mutation));
+      } else if (mutation instanceof Delete) {
+        builder.addMutationRequest(
+          ProtobufUtil.toMutation(MutationProto.MutationType.DELETE, mutation));
+      } else {
+        throw new DoNotRetryIOException(
             "multiMutate doesn't support " + mutation.getClass().getName());
-        }
-      }
-
-      MultiRowMutationProtos.MultiRowMutationService.BlockingInterface service =
-        MultiRowMutationProtos.MultiRowMutationService.newBlockingStub(channel);
-      try {
-        service.mutateRows(null, mmrBuilder.build());
-      } catch (ServiceException ex) {
-        ProtobufUtil.toIOException(ex);
       }
     }
+    MutateRowsRequest request = builder.build();
+    AsyncTable<?> table = conn.getTable(RSGROUP_TABLE_NAME);
+    FutureUtils.get(table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
+      MultiRowMutationService::newStub,
+      (stub, controller, done) -> stub.mutateRows(controller, request, done), ROW_KEY));
   }
 
   private void checkGroupName(String groupName) throws ConstraintException {

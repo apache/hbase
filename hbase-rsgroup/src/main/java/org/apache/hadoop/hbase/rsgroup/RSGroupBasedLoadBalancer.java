@@ -121,8 +121,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState)
       throws HBaseIOException {
     if (!isOnline()) {
-      throw new ConstraintException(RSGroupInfoManager.RSGROUP_TABLE_NAME +
-          " is not online, unable to perform balance");
+      throw new ConstraintException(
+          RSGroupInfoManager.class.getSimpleName() + " is not online, unable to perform balance");
     }
 
     // Calculate correct assignments and a list of RegionPlan for mis-placed regions
