@@ -140,7 +140,7 @@ public class TestRSGroupsOfflineMode {
       }
     });
     // Move table to group and wait.
-    groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManager.RSGROUP_TABLE_NAME), newGroup);
+    groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME), newGroup);
     LOG.info("Waiting for move table...");
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -169,7 +169,7 @@ public class TestRSGroupsOfflineMode {
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Verify the group affiliation that's loaded from ZK instead of tables.
-    assertEquals(newGroup, groupMgr.getRSGroupOfTable(RSGroupInfoManager.RSGROUP_TABLE_NAME));
+    assertEquals(newGroup, groupMgr.getRSGroupOfTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME));
     assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
     // Kill final regionserver to see the failover happens for all tables except GROUP table since
     // it's group does not have any online RS.
@@ -182,7 +182,7 @@ public class TestRSGroupsOfflineMode {
         return failoverRS.getRegions(failoverTable).size() >= 1;
       }
     });
-    Assert.assertEquals(0, failoverRS.getRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
+    Assert.assertEquals(0, failoverRS.getRegions(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME).size());
 
     // Need this for minicluster to shutdown cleanly.
     master.stopMaster();
