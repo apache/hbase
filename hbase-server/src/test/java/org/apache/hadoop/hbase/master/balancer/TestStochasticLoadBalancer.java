@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -121,7 +122,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   };
 
   private ServerMetrics mockServerMetricsWithCpRequests(ServerName server,
-      List<RegionInfo> regionsOnServer, long cpRequestCount) {
+                                                        List<RegionInfo> regionsOnServer,
+                                                        long cpRequestCount) {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(RegionInfo info : regionsOnServer){
@@ -455,6 +457,17 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     plans = loadBalancer.balanceCluster(serverMap);
     assertNull(plans);
+  }
+
+  @Test
+  public void testAdditionalCostFunction() {
+    conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
+            DummyCostFunction.class.getName());
+
+    loadBalancer.setConf(conf);
+    assertTrue(Arrays.
+            asList(loadBalancer.getCostFunctionNames()).
+            contains(DummyCostFunction.class.getSimpleName()));
   }
 
   // This mock allows us to test the LocalityCostFunction
