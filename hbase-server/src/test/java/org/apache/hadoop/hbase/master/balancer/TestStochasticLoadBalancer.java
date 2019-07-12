@@ -17,14 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,6 +46,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancer extends BalancerTestBase {
@@ -121,7 +119,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   };
 
   private ServerMetrics mockServerMetricsWithCpRequests(ServerName server,
-      List<RegionInfo> regionsOnServer, long cpRequestCount) {
+                                                        List<RegionInfo> regionsOnServer,
+                                                        long cpRequestCount) {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(RegionInfo info : regionsOnServer){
@@ -455,6 +454,17 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     plans = loadBalancer.balanceCluster(serverMap);
     assertNull(plans);
+  }
+
+  @Test
+  public void testAdditionalCostFunction() {
+    conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
+            DummyCostFunction.class.getName());
+
+    loadBalancer.setConf(conf);
+    assertTrue(Arrays.
+            asList(loadBalancer.getCostFunctionNames()).
+            contains(DummyCostFunction.class.getSimpleName()));
   }
 
   // This mock allows us to test the LocalityCostFunction
