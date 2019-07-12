@@ -439,7 +439,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       newHighestProcessedAppendTxid = entry.getTxid();
       iter.remove();
       if (appended) {
-        unackedAppends.addLast(entry);
+        // This is possible, when we fail to sync, we will add the unackedAppends back to
+        // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
+        if (unackedAppends.isEmpty() || unackedAppends.peekLast().getTxid() < entry.getTxid()) {
+          unackedAppends.addLast(entry);
+        }
         if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
           break;
         }
