@@ -1750,6 +1750,7 @@ the following statistics:
 * number of operations related to each table
 * number of operations related to the top-N regions
 
+
 When to use the feature::
   This feature can help to identify hot spots in the meta table by showing the regions or tables where the meta info is
   modified (e.g. by create, drop, split or move tables) or retrieved most frequently. It can also help to find misbehaving
@@ -1769,7 +1770,21 @@ Where to find the metrics in JMX::
   Each metric attribute name will start with the ‘MetaTable_’ prefix. For all the metrics you will see five different
   JMX attributes: count, mean rate, 1 minute rate, 5 minute rate and 15 minute rate. You will find these metrics in JMX
   under the following MBean:
-  `Hadoop -> HBase -> RegionServer -> Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics`
+  `Hadoop -> HBase -> RegionServer -> Coprocessor.Region.CP_org.apache.hadoop.hbase.coprocessor.MetaTableMetrics`.
+
+.Examples: some Meta Table metrics you can see in your JMX dump
+[source,json]
+----
+{
+  "MetaTable_get_request_count": 77309,
+  "MetaTable_put_request_mean_rate": 0.06339092997186495,
+  "MetaTable_table_MyTestTable_request_15min_rate": 1.1020599841623246,
+  "MetaTable_client_/172.30.65.42_lossy_request_count": 1786
+  "MetaTable_client_/172.30.65.45_put_request_5min_rate": 0.6189810954855728,
+  "MetaTable_region_1561131112259.c66e4308d492936179352c80432ccfe0._lossy_request_count": 38342,
+  "MetaTable_region_1561131043640.5bdffe4b9e7e334172065c853cf0caa6._lossy_request_1min_rate": 0.04925099917433935,
+}
+----
 
 Configuration::
   To turn on this feature, you have to enable a custom coprocessor by adding the following section to hbase-site.xml.
