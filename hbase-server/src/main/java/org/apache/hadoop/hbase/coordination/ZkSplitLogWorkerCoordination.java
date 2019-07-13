@@ -320,34 +320,10 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
   }
 
   /**
-   * This function calculates how many splitters this RS should create based on expected average
-   * tasks per RS and the hard limit upper bound(maxConcurrentTasks) set by configuration. <br>
-   * At any given time, a RS allows spawn MIN(Expected Tasks/RS, Hard Upper Bound)
-   * @param numTasks total number of split tasks available
-   * @return number of tasks this RS can grab
-   */
-  private int getNumExpectedTasksPerRS(int numTasks) {
-    // at lease one RS(itself) available
-    int availableRSs = 1;
-    try {
-      List<String> regionServers =
-          ZKUtil.listChildrenNoWatch(watcher, watcher.getZNodePaths().rsZNode);
-      availableRSs = Math.max(availableRSs, (regionServers == null) ? 0 : regionServers.size());
-    } catch (KeeperException e) {
-      // do nothing
-      LOG.debug("getAvailableRegionServers got ZooKeeper exception", e);
-    }
-    int expectedTasksPerRS = (numTasks / availableRSs) + ((numTasks % availableRSs == 0) ? 0 : 1);
-    return Math.max(1, expectedTasksPerRS); // at least be one
-  }
-
-  /**
-   * @param expectedTasksPerRS Average number of tasks to be handled by each RS
    * @return true if more splitters are available, otherwise false.
    */
-  private boolean areSplittersAvailable(int expectedTasksPerRS) {
-    return (Math.min(expectedTasksPerRS, maxConcurrentTasks)
-        - this.tasksInProgress.get()) > 0;
+  private boolean areSplittersAvailable() {
+    return maxConcurrentTasks - tasksInProgress.get() > 0;
   }
 
   /**
@@ -428,13 +404,14 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
         }
       }
       int numTasks = paths.size();
-      int expectedTasksPerRS = getNumExpectedTasksPerRS(numTasks);
       boolean taskGrabbed = false;
       for (int i = 0; i < numTasks; i++) {
         while (!shouldStop) {
-          if (this.areSplittersAvailable(expectedTasksPerRS)) {
-            LOG.debug("Current region server " + server.getServerName()
+          if (this.areSplittersAvailable()) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Current region server " + server.getServerName()
                 + " is ready to take more tasks, will get task list and try grab tasks again.");
+            }
             int idx = (i + offset) % paths.size();
             // don't call ZKSplitLog.getNodeName() because that will lead to
             // double encoding of the path name
@@ -442,8 +419,10 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
                 watcher.getZNodePaths().splitLogZNode, paths.get(idx)));
             break;
           } else {
-            LOG.debug("Current region server " + server.getServerName() + " has "
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Current region server " + server.getServerName() + " has "
                 + this.tasksInProgress.get() + " tasks in progress and can't take more.");
+            }
             Thread.sleep(100);
           }
         }
