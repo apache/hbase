@@ -614,7 +614,6 @@ public final class SnapshotInfo extends AbstractHBaseTool {
    * @param uniqueHFilesArchiveSize {@link AtomicLong} the accumulated store file size in archive
    * @param uniqueHFilesSize {@link AtomicLong} the accumulated store file size shared
    * @param uniqueHFilesMobSize {@link AtomicLong} the accumulated mob store file size shared
-   * @return the snapshot stats
    */
   private static void getSnapshotFilesMap(final Configuration conf,
       final SnapshotDescription snapshot, final ExecutorService exec,

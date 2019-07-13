@@ -3715,7 +3715,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param startKey
    * @param endKey
    * @param numRegions the number of regions to be created. it has to be greater than 3.
-   * @return
+   * @return resulting split keys
    */
   public byte[][] getRegionSplitStartKeys(byte[] startKey, byte[] endKey, int numRegions){
     assertTrue(numRegions>3);
