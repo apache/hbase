@@ -78,10 +78,10 @@ public class RecoverableZooKeeper {
   // An identifier of this process in the cluster
   private final String identifier;
   private final byte[] id;
-  private Watcher watcher;
-  private int sessionTimeout;
-  private String quorumServers;
-  private int maxMultiSize;
+  private final Watcher watcher;
+  private final int sessionTimeout;
+  private final String quorumServers;
+  private final int maxMultiSize;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="None. Its always been this way.")
