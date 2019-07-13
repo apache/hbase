@@ -108,7 +108,7 @@ class NamespaceStateManager extends ZooKeeperListener {
     }
     return true;
   }
-  
+
   /**
    * Check and update region count for an existing table. To handle scenarios like restore snapshot
    * @param TableName name of the table for region count needs to be checked and updated
@@ -117,7 +117,7 @@ class NamespaceStateManager extends ZooKeeperListener {
    *           namespace
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr) 
+  synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr)
       throws IOException {
     String namespace = name.getNamespaceAsString();
     NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
@@ -185,7 +185,8 @@ class NamespaceStateManager extends ZooKeeperListener {
 
   /**
    * Delete the namespace state.
-   * @param An instance of NamespaceTableAndRegionInfo
+   *
+   * @param namespace the name of the namespace to delete
    */
   void deleteNamespace(String namespace) {
     this.nsStateCache.remove(namespace);

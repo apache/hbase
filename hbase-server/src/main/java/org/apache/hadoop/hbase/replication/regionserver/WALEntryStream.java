@@ -81,10 +81,9 @@ public class WALEntryStream implements Iterator<Entry>, Closeable, Iterable<Entr
   /**
    * Create an entry stream over the given queue at the given start position
    * @param logQueue the queue of WAL paths
-   * @param fs {@link FileSystem} to use to create {@link Reader} for this stream
-   * @param conf {@link Configuration} to use to create {@link Reader} for this stream
+   * @param conf the {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
-   * @param metrics replication metrics
+   * @param metrics the replication metrics
    * @throws IOException
    */
   public WALEntryStream(PriorityBlockingQueue<Path> logQueue, FileSystem fs, Configuration conf,
