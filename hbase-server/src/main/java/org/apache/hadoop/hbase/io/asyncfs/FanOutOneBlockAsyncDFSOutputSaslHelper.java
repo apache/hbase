@@ -318,7 +318,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     /**
      * Creates a new SaslClientCallbackHandler.
      * @param userName SASL user name
-     * @Param password SASL password
+     * @param password SASL password
      */
     public SaslClientCallbackHandler(String userName, char[] password) {
       this.password = password;
