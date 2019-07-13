@@ -244,7 +244,7 @@ public final class ZKUtil {
     private static final Map<String, String> BASIC_JAAS_OPTIONS = new HashMap<>();
     static {
       String jaasEnvVar = System.getenv("HBASE_JAAS_DEBUG");
-      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
+      if ("true".equalsIgnoreCase(jaasEnvVar)) {
         BASIC_JAAS_OPTIONS.put("debug", "true");
       }
     }
@@ -351,7 +351,7 @@ public final class ZKUtil {
     throws KeeperException {
     try {
       Stat s = zkw.getRecoverableZooKeeper().exists(znode, zkw);
-      boolean exists = s != null ? true : false;
+      boolean exists = s != null;
       if (exists) {
         LOG.debug(zkw.prefix("Set watcher on existing znode=" + znode));
       } else {
@@ -441,8 +441,7 @@ public final class ZKUtil {
           ZKWatcher zkw, String znode)
     throws KeeperException {
     try {
-      List<String> children = zkw.getRecoverableZooKeeper().getChildren(znode, zkw);
-      return children;
+      return zkw.getRecoverableZooKeeper().getChildren(znode, zkw);
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
           "because node does not exist (not an error)"));
@@ -1744,9 +1743,12 @@ public final class ZKUtil {
         sb.append("<<FAILED LOOKUP: " + e.getMessage() + ">>");
       }
       sb.append("\nBackup master addresses:");
-      for (String child : listChildrenNoWatch(zkw,
-              zkw.getZNodePaths().backupMasterAddressesZNode)) {
-        sb.append("\n ").append(child);
+      final List<String> backupMasterChildrenNoWatchList = listChildrenNoWatch(zkw,
+              zkw.getZNodePaths().backupMasterAddressesZNode);
+      if (backupMasterChildrenNoWatchList != null) {
+        for (String child : backupMasterChildrenNoWatchList) {
+          sb.append("\n ").append(child);
+        }
       }
       sb.append("\nRegion server holding hbase:meta: "
         + new MetaTableLocator().getMetaRegionLocation(zkw));
@@ -1758,8 +1760,12 @@ public final class ZKUtil {
                     + new MetaTableLocator().getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
-      for (String child : listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode)) {
-        sb.append("\n ").append(child);
+      final List<String> rsChildrenNoWatchList =
+              listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
+      if (rsChildrenNoWatchList != null) {
+        for (String child : rsChildrenNoWatchList) {
+          sb.append("\n ").append(child);
+        }
       }
       try {
         getReplicationZnodesDump(zkw, sb);
@@ -1810,31 +1816,33 @@ public final class ZKUtil {
     // do a ls -r on this znode
     sb.append("\n").append(replicationZnode).append(": ");
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
-    Collections.sort(children);
-    for (String child : children) {
-      String znode = ZNodePaths.joinZNode(replicationZnode, child);
-      if (znode.equals(zkw.getZNodePaths().peersZNode)) {
-        appendPeersZnodes(zkw, znode, sb);
-      } else if (znode.equals(zkw.getZNodePaths().queuesZNode)) {
-        appendRSZnodes(zkw, znode, sb);
-      } else if (znode.equals(zkw.getZNodePaths().hfileRefsZNode)) {
-        appendHFileRefsZnodes(zkw, znode, sb);
+    if (children != null) {
+      Collections.sort(children);
+      for (String child : children) {
+        String zNode = ZNodePaths.joinZNode(replicationZnode, child);
+        if (zNode.equals(zkw.getZNodePaths().peersZNode)) {
+          appendPeersZnodes(zkw, zNode, sb);
+        } else if (zNode.equals(zkw.getZNodePaths().queuesZNode)) {
+          appendRSZnodes(zkw, zNode, sb);
+        } else if (zNode.equals(zkw.getZNodePaths().hfileRefsZNode)) {
+          appendHFileRefsZNodes(zkw, zNode, sb);
+        }
       }
     }
   }
 
-  private static void appendHFileRefsZnodes(ZKWatcher zkw, String hfileRefsZnode,
+  private static void appendHFileRefsZNodes(ZKWatcher zkw, String hFileRefsZNode,
                                             StringBuilder sb) throws KeeperException {
-    sb.append("\n").append(hfileRefsZnode).append(": ");
-    for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, hfileRefsZnode)) {
-      String znodeToProcess = ZNodePaths.joinZNode(hfileRefsZnode, peerIdZnode);
-      sb.append("\n").append(znodeToProcess).append(": ");
-      List<String> peerHFileRefsZnodes = ZKUtil.listChildrenNoWatch(zkw, znodeToProcess);
-      int size = peerHFileRefsZnodes.size();
-      for (int i = 0; i < size; i++) {
-        sb.append(peerHFileRefsZnodes.get(i));
-        if (i != size - 1) {
-          sb.append(", ");
+    sb.append("\n").append(hFileRefsZNode).append(": ");
+    final List<String> hFileRefChildrenNoWatchList =
+            ZKUtil.listChildrenNoWatch(zkw, hFileRefsZNode);
+    if (hFileRefChildrenNoWatchList != null) {
+      for (String peerIdZNode : hFileRefChildrenNoWatchList) {
+        String zNodeToProcess = ZNodePaths.joinZNode(hFileRefsZNode, peerIdZNode);
+        sb.append("\n").append(zNodeToProcess).append(": ");
+        List<String> peerHFileRefsZNodes = ZKUtil.listChildrenNoWatch(zkw, zNodeToProcess);
+        if (peerHFileRefsZNodes != null) {
+          sb.append(String.join(", ", peerHFileRefsZNodes));
         }
       }
     }
@@ -1946,10 +1954,10 @@ public final class ZKUtil {
    * @return The array of response strings.
    * @throws IOException When the socket communication fails.
    */
-  public static String[] getServerStats(String server, int timeout)
+  private static String[] getServerStats(String server, int timeout)
     throws IOException {
     String[] sp = server.split(":");
-    if (sp == null || sp.length == 0) {
+    if (sp.length == 0) {
       return null;
     }
 
@@ -2085,7 +2093,7 @@ public final class ZKUtil {
    * @see #logZKTree(ZKWatcher, String)
    * @throws KeeperException if an unexpected exception occurs
    */
-  protected static void logZKTree(ZKWatcher zkw, String root, String prefix)
+  private static void logZKTree(ZKWatcher zkw, String root, String prefix)
       throws KeeperException {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, root);
 
