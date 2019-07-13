@@ -129,12 +129,11 @@ public class TestCatalogJanitorInMemoryStates {
 
   }
 
-  /*
- * Splits a region
- * @param t Region to split.
- * @return List of region locations
- * @throws IOException, InterruptedException
- */
+  /**
+   * Splits a region
+   * @param r Region to split.
+   * @return List of region locations
+   */
   private List<HRegionLocation> splitRegion(final RegionInfo r)
       throws Exception {
     List<HRegionLocation> locations = new ArrayList<>();
