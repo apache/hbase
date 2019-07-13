@@ -867,7 +867,6 @@ public class StripeStoreFileManager
 
     /**
      * Remove compacted files.
-     * @param compactedFiles Compacted files.
      */
     private void removeCompactedFiles() throws IOException {
       for (HStoreFile oldFile : this.compactedFiles) {
