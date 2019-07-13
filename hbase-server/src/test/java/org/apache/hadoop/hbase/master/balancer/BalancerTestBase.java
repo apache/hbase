@@ -296,7 +296,7 @@ public class BalancerTestBase {
    *
    * @param list
    * @param plans
-   * @return
+   * @return a list of all added {@link ServerAndLoad} values.
    */
   protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list,
                                           List<RegionPlan> plans,

@@ -79,6 +79,10 @@ public class RandomKeyValueUtil {
    * Generates a random key that is guaranteed to increase as the given index i
    * increases. The result consists of a prefix, which is a deterministic
    * increasing function of i, and a random suffix.
+   *
+   * @param rand random number generator to use
+   * @param i the index to use
+   * @return the random key
    */
   public static byte[] randomOrderedKey(Random rand, int i) {
     StringBuilder k = new StringBuilder();

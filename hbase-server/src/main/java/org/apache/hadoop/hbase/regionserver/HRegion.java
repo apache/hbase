@@ -3199,6 +3199,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  /**
+   * Called to do a piece of the batch that came in to {@link #batchMutate(Mutation[], long, long)}
+   * In here we also handle replay of edits on region recover. Also gets change in size brought
+   * about by applying {@code batchOp}.
+   */
   private long doMiniBatchMutation(BatchOperationInProgress<?> batchOp) throws IOException {
     boolean isInReplay = batchOp.isInReplay();
     // variable to note if all Put items are for the same CF -- metrics related
