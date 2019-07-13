@@ -130,7 +130,6 @@ public class TestMobStoreScanner {
    *
    * @param reversed if true, scan will be backward order
    * @param mobScanRaw if true, scan will get the mob reference
-   * @return this
    */
   public void setScan(Scan scan, boolean reversed, boolean mobScanRaw) {
     scan.setReversed(reversed);

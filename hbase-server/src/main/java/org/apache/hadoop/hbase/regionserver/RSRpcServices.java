@@ -536,7 +536,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Starts the nonce operation for a mutation, if needed.
    * @param mutation Mutation.
    * @param nonceGroup Nonce group from the request.
-   * @returns whether to proceed this mutation.
+   * @return whether to proceed this mutation.
    */
   private boolean startNonceOperation(final MutationProto mutation, long nonceGroup)
       throws IOException {
