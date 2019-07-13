@@ -301,7 +301,7 @@ public class TestRegionPlacement {
    * @param plan The assignment plan
    * @param p1 The first switch position
    * @param p2 The second switch position
-   * @return
+   * @return the shuffled assignment plan
    */
   private FavoredNodesPlan shuffleAssignmentPlan(FavoredNodesPlan plan,
       FavoredNodesPlan.Position p1, FavoredNodesPlan.Position p2) throws IOException {

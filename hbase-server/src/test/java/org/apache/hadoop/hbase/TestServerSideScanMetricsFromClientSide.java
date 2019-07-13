@@ -109,12 +109,12 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
+   * @param rows the rows to use
+   * @param families the column families to use
+   * @param qualifiers the column qualifiers to use
+   * @param value the value to put
+   * @return the putted input values added in puts
+   * @throws IOException If an IO problem is encountered
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
@@ -139,7 +139,7 @@ public class TestServerSideScanMetricsFromClientSide {
    * @return The approximate heap size of a cell in the test table. All cells should have
    *         approximately the same heap size, so the value is cached to avoid repeating the
    *         calculation
-   * @throws Exception
+   * @throws Exception on unexpected failure
    */
   private long getCellHeapSize() throws Exception {
     if (CELL_HEAP_SIZE == -1) {
@@ -323,11 +323,11 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   /**
-   * Run the scan to completetion and check the metric against the specified value
-   * @param scan
-   * @param metricKey
-   * @param expectedValue
-   * @throws Exception
+   * Run the scan to completion and check the metric against the specified value
+   * @param scan The scan instance to use to record metrics
+   * @param metricKey The metric key name
+   * @param expectedValue The expected value of metric
+   * @throws Exception on unexpected failure
    */
   public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());

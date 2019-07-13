@@ -792,7 +792,7 @@ public class TestHStore {
    * @param numRows
    * @param qualifier
    * @param family
-   * @return
+   * @return the rows key-value list
    */
   List<Cell> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
