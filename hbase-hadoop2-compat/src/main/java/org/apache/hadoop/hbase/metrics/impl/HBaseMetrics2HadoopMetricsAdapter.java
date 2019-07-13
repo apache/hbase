@@ -138,10 +138,9 @@ public class HBaseMetrics2HadoopMetricsAdapter {
   /**
    * Add Histogram value-distribution data to a Hadoop-Metrics2 record building.
    *
-   * @param builder A Hadoop-Metrics2 record builder.
    * @param name A base name for this record.
-   * @param desc A description for this record.
-   * @param snapshot The distribution of measured values.
+   * @param histogram A histogram to measure distribution of values.
+   * @param builder A Hadoop-Metrics2 record builder.
    */
   private void addHistogram(String name, Histogram histogram, MetricsRecordBuilder builder) {
     MutableHistogram.snapshot(name, EMPTY_STRING, histogram, builder, true);
