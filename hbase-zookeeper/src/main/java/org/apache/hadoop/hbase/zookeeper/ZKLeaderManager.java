@@ -45,9 +45,9 @@ public class ZKLeaderManager extends ZKListener {
 
   private final Object lock = new Object();
   private final AtomicBoolean leaderExists = new AtomicBoolean();
-  private String leaderZNode;
-  private byte[] nodeId;
-  private Stoppable candidate;
+  private final String leaderZNode;
+  private final byte[] nodeId;
+  private final Stoppable candidate;
 
   public ZKLeaderManager(ZKWatcher watcher, String leaderZNode,
                          byte[] identifier, Stoppable candidate) {
