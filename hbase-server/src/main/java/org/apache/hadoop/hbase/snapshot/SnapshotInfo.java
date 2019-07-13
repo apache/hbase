@@ -582,7 +582,6 @@ public final class SnapshotInfo extends Configured implements Tool {
    * @param filesMap {@link Map} the map to put the mapping entries
    * @param uniqueHFilesArchiveSize {@link AtomicLong} the accumulated store file size in archive
    * @param uniqueHFilesSize {@link AtomicLong} the accumulated store file size shared
-   * @return the snapshot stats
    */
   private static void getSnapshotFilesMap(final Configuration conf,
       final SnapshotDescription snapshot, final ExecutorService exec,
