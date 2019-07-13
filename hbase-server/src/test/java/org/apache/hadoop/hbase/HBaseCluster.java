@@ -118,14 +118,12 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Stops the given region server, by attempting a gradual stop.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
   public abstract void stopRegionServer(ServerName serverName) throws IOException;
 
   /**
    * Wait for the specified region server to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public void waitForRegionServerToStart(String hostname, int port, long timeout)
@@ -145,7 +143,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified region server to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForRegionServerToStop(ServerName serverName, long timeout)
@@ -175,7 +172,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified zookeeper node to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForZkNodeToStart(ServerName serverName, long timeout)
@@ -183,7 +179,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified zookeeper node to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForZkNodeToStop(ServerName serverName, long timeout)
@@ -212,7 +207,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified datanode to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStart(ServerName serverName, long timeout)
@@ -220,7 +214,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified datanode to stop the thread / process.
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForDataNodeToStop(ServerName serverName, long timeout)
@@ -248,7 +241,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified namenode to join the cluster
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForNameNodeToStart(ServerName serverName, long timeout)
@@ -256,7 +248,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Wait for the specified namenode to stop
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
   public abstract void waitForNameNodeToStop(ServerName serverName, long timeout)
@@ -266,7 +257,6 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * Starts a new master on the given hostname or if this is a mini/local cluster,
    * starts a master locally.
    * @param hostname the hostname to start the master on
-   * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
   public abstract void startMaster(String hostname, int port) throws IOException;

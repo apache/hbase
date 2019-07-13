@@ -149,7 +149,7 @@ public final class VersionInfoUtil {
   /**
    * Returns the version components
    * Examples: "1.4.3" returns [1, 4, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
-   * @returns the components of the version string
+   * @return the components of the version string
    */
   private static String[] getVersionComponents(final HBaseProtos.VersionInfo versionInfo) {
     return versionInfo.getVersion().split("[\\.-]");
