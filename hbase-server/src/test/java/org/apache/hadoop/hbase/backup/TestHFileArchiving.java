@@ -528,14 +528,8 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveRegionTableAndRegionDirsNull() throws IOException {
-    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
-            TableName.valueOf(name.getMethodName())), "abcdef");
-    Path familyDir = new Path(regionDir, "cf");
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
-    Path file = new Path(familyDir, "0");
-    Path sourceFile = new Path(rootDir, file);
     FileSystem fileSystem = UTIL.getTestFileSystem();
-    fileSystem.createNewFile(sourceFile);
     // Try to archive the file but with null regionDir, can't delete sourceFile
     assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
   }
