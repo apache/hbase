@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
-
+import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
@@ -37,6 +39,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -52,43 +55,47 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @VisibleForTesting
 public class LogRoller extends HasThread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(LogRoller.class);
-  private final ReentrantLock rollLock = new ReentrantLock();
-  private final AtomicBoolean rollLog = new AtomicBoolean(false);
-  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
+  private final ConcurrentMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
   private final Server server;
   protected final RegionServerServices services;
-  private volatile long lastrolltime = System.currentTimeMillis();
+  private volatile long lastRollTime = System.currentTimeMillis();
   // Period to roll log.
-  private final long rollperiod;
+  private final long rollPeriod;
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
   private long checkLowReplicationInterval;
 
   private volatile boolean running = true;
 
-  public void addWAL(final WAL wal) {
-    if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
-      wal.registerWALActionsListener(new WALActionsListener() {
-        @Override
-        public void logRollRequested(WALActionsListener.RollRequestReason reason) {
-          walNeedsRoll.put(wal, Boolean.TRUE);
-          // TODO logs will contend with each other here, replace with e.g. DelayedQueue
-          synchronized(rollLog) {
-            rollLog.set(true);
-            rollLog.notifyAll();
+  public void addWAL(WAL wal) {
+    // check without lock first
+    if (walNeedsRoll.containsKey(wal)) {
+      return;
+    }
+    // this is to avoid race between addWAL and requestRollAll.
+    synchronized (this) {
+      if (walNeedsRoll.putIfAbsent(wal, Boolean.FALSE) == null) {
+        wal.registerWALActionsListener(new WALActionsListener() {
+          @Override
+          public void logRollRequested(WALActionsListener.RollRequestReason reason) {
+            // TODO logs will contend with each other here, replace with e.g. DelayedQueue
+            synchronized (LogRoller.this) {
+              walNeedsRoll.put(wal, Boolean.TRUE);
+              LogRoller.this.notifyAll();
+            }
           }
-        }
-      });
+        });
+      }
     }
   }
 
   public void requestRollAll() {
-    for (WAL wal : walNeedsRoll.keySet()) {
-      walNeedsRoll.put(wal, Boolean.TRUE);
-    }
-    synchronized(rollLog) {
-      rollLog.set(true);
-      rollLog.notifyAll();
+    synchronized (this) {
+      List<WAL> wals = new ArrayList<WAL>(walNeedsRoll.keySet());
+      for (WAL wal : wals) {
+        walNeedsRoll.put(wal, Boolean.TRUE);
+      }
+      notifyAll();
     }
   }
 
@@ -97,7 +104,7 @@ public class LogRoller extends HasThread implements Closeable {
     super("LogRoller");
     this.server = server;
     this.services = services;
-    this.rollperiod = this.server.getConfiguration().
+    this.rollPeriod = this.server.getConfiguration().
       getLong("hbase.regionserver.logroll.period", 3600000);
     this.threadWakeFrequency = this.server.getConfiguration().
       getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -105,19 +112,10 @@ public class LogRoller extends HasThread implements Closeable {
         "hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
   }
 
-  @Override
-  public void interrupt() {
-    // Wake up if we are waiting on rollLog. For tests.
-    synchronized (rollLog) {
-      this.rollLog.notify();
-    }
-    super.interrupt();
-  }
-
   /**
    * we need to check low replication in period, see HBASE-18132
    */
-  void checkLowReplication(long now) {
+  private void checkLowReplication(long now) {
     try {
       for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
         WAL wal = entry.getKey();
@@ -152,47 +150,49 @@ public class LogRoller extends HasThread implements Closeable {
   @Override
   public void run() {
     while (running) {
+      boolean periodic = false;
       long now = System.currentTimeMillis();
       checkLowReplication(now);
-      boolean periodic = false;
-      if (!rollLog.get()) {
-        periodic = (now - this.lastrolltime) > this.rollperiod;
-        if (!periodic) {
-          synchronized (rollLog) {
-            try {
-              if (!rollLog.get()) {
-                rollLog.wait(this.threadWakeFrequency);
-              }
-            } catch (InterruptedException e) {
-              // Fall through
-            }
-          }
-          continue;
-        }
-        // Time for periodic roll
-        LOG.debug("Wal roll period {} ms elapsed", this.rollperiod);
+      periodic = (now - this.lastRollTime) > this.rollPeriod;
+      if (periodic) {
+        // Time for periodic roll, fall through
+        LOG.debug("Wal roll period {} ms elapsed", this.rollPeriod);
       } else {
-        LOG.debug("WAL roll requested");
+        synchronized (this) {
+          if (walNeedsRoll.values().stream().anyMatch(Boolean::booleanValue)) {
+            // WAL roll requested, fall through
+            LOG.debug("WAL roll requested");
+          } else {
+            try {
+              wait(this.threadWakeFrequency);
+            } catch (InterruptedException e) {
+              // restore the interrupt state
+              Thread.currentThread().interrupt();
+            }
+            // goto the beginning to check whether again whether we should fall through to roll
+            // several WALs, and also check whether we should quit.
+            continue;
+          }
+        }
       }
-      rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
-        this.lastrolltime = now;
-        for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
-          final WAL wal = entry.getKey();
-          // Force the roll if the logroll.period is elapsed or if a roll was requested.
-          // The returned value is an array of actual region names.
-          final byte [][] regionsToFlush = wal.rollWriter(periodic ||
-              entry.getValue().booleanValue());
+        this.lastRollTime = System.currentTimeMillis();
+        for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
+            .hasNext();) {
+          Entry<WAL, Boolean> entry = iter.next();
+          WAL wal = entry.getKey();
+          // reset the flag in front to avoid missing roll request before we return from rollWriter.
           walNeedsRoll.put(wal, Boolean.FALSE);
+            // Force the roll if the logroll.period is elapsed or if a roll was requested.
+            // The returned value is an array of actual region names.
+            byte[][]   regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
           if (regionsToFlush != null) {
             for (byte[] r : regionsToFlush) {
-              scheduleFlush(r);
+              scheduleFlush(Bytes.toString(r));
             }
           }
         }
-      } catch (FailedLogCloseException e) {
-        abort("Failed log close in log roller", e);
-      } catch (java.net.ConnectException e) {
+      } catch (FailedLogCloseException | ConnectException e) {
         abort("Failed log close in log roller", e);
       } catch (IOException ex) {
         // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
@@ -201,12 +201,6 @@ public class LogRoller extends HasThread implements Closeable {
       } catch (Exception ex) {
         LOG.error("Log rolling failed", ex);
         abort("Log rolling failed", ex);
-      } finally {
-        try {
-          rollLog.set(false);
-        } finally {
-          rollLock.unlock();
-        }
       }
     }
     LOG.info("LogRoller exiting.");
@@ -215,22 +209,20 @@ public class LogRoller extends HasThread implements Closeable {
   /**
    * @param encodedRegionName Encoded name of region to flush.
    */
-  private void scheduleFlush(final byte [] encodedRegionName) {
-    boolean scheduled = false;
-    HRegion r = (HRegion) this.services.getRegion(Bytes.toString(encodedRegionName));
-    FlushRequester requester = null;
-    if (r != null) {
-      requester = this.services.getFlushRequester();
-      if (requester != null) {
-        // force flushing all stores to clean old logs
-        requester.requestFlush(r, true, FlushLifeCycleTracker.DUMMY);
-        scheduled = true;
-      }
+  private void scheduleFlush(String encodedRegionName) {
+    HRegion r = (HRegion) this.services.getRegion(encodedRegionName);
+    if (r == null) {
+      LOG.warn("Failed to schedule flush of {}, because it is not online on us", encodedRegionName);
+      return;
     }
-    if (!scheduled) {
-      LOG.warn("Failed to schedule flush of {}, region={}, requester={}",
-        Bytes.toString(encodedRegionName), r, requester);
+    FlushRequester requester = this.services.getFlushRequester();
+    if (requester == null) {
+      LOG.warn("Failed to schedule flush of {}, region={}, because FlushRequester is null",
+        encodedRegionName, r);
+      return;
     }
+    // force flushing all stores to clean old logs
+    requester.requestFlush(r, true, FlushLifeCycleTracker.DUMMY);
   }
 
   /**
@@ -239,12 +231,7 @@ public class LogRoller extends HasThread implements Closeable {
    */
   @VisibleForTesting
   public boolean walRollFinished() {
-    for (boolean needRoll : walNeedsRoll.values()) {
-      if (needRoll) {
-        return false;
-      }
-    }
-    return true;
+    return walNeedsRoll.values().stream().allMatch(needRoll -> !needRoll);
   }
 
   @Override
