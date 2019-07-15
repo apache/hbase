@@ -335,19 +335,6 @@ under the License.
   <supplement>
     <project>
       <groupId>javax.servlet.jsp</groupId>
-      <artifactId>jsp-api</artifactId>
-      <licenses>
-        <license>
-          <name>CDDL 1.1</name>
-          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-    </project>
-  </supplement>
-  <supplement>
-    <project>
-      <groupId>javax.servlet.jsp</groupId>
       <artifactId>javax.servlet.jsp-api</artifactId>
       <licenses>
         <license>

@@ -39,6 +39,12 @@
             <artifactId>hadoop-common</artifactId>
             <type>test-jar</type>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.servlet.jsp</groupId>
+                    <artifactId>jsp-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
