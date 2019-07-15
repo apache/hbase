@@ -280,6 +280,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected final String implClassName;
 
+  protected final AtomicBoolean rollRequested = new AtomicBoolean(false);
+
   public long getFilenum() {
     return this.filenum.get();
   }
@@ -681,11 +683,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
-   * <p>
-   * Cleans up current writer closing it and then puts in place the passed in
-   * <code>nextWriter</code>.
-   * </p>
-   * <p>
+   * Cleans up current writer closing it and then puts in place the passed in {@code nextWriter}.
+   * <p/>
    * <ul>
    * <li>In the case of creating a new WAL, oldPath will be null.</li>
    * <li>In the case of rolling over from one file to the next, none of the parameters will be null.
@@ -693,7 +692,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * <li>In the case of closing out this FSHLog with no further use newPath and nextWriter will be
    * null.</li>
    * </ul>
-   * </p>
    * @param oldPath may be null
    * @param newPath may be null
    * @param nextWriter may be null
@@ -875,8 +873,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return cachedSyncFutures.get().reset(sequence);
   }
 
+  protected boolean isLogRollRequested() {
+    return rollRequested.get();
+  }
+
   protected final void requestLogRoll(boolean tooFewReplicas) {
-    if (!this.listeners.isEmpty()) {
+    // If we have already requested a roll, don't do it again
+    // And only set rollRequested to true when there is a registered listener
+    if (!this.listeners.isEmpty() && rollRequested.compareAndSet(false, true)) {
       for (WALActionsListener i : this.listeners) {
         i.logRollRequested(tooFewReplicas);
       }
@@ -1031,6 +1035,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected abstract W createWriterInstance(Path path)
       throws IOException, CommonFSUtils.StreamLacksCapabilityException;
 
+  /**
+   * Notice that you need to clear the {@link #rollRequested} flag in this method, as the new writer
+   * will begin to work before returning from this method. If we clear the flag after returning from
+   * this call, we may miss a roll request. The implementation class should choose a proper place to
+   * clear the {@link #rollRequested} flag so we do not miss a roll request, typically before you
+   * start writing to the new writer.
+   */
   protected abstract void doReplaceWriter(Path oldPath, Path newPath, W nextWriter)
       throws IOException;
 
