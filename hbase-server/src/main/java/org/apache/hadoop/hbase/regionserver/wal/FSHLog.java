@@ -381,6 +381,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     } finally {
       // Let the writer thread go regardless, whether error or not.
       if (zigzagLatch != null) {
+        // Reset rollRequested status
+        rollRequested.set(false);
         zigzagLatch.releaseSafePoint();
         // syncFuture will be null if we failed our wait on safe point above. Otherwise, if
         // latch was obtained successfully, the sync we threw in either trigger the latch or it

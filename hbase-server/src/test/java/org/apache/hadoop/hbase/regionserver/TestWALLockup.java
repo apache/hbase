@@ -436,7 +436,7 @@ public class TestWALLockup {
       // To stop logRoller, its server has to say it is stopped.
       Mockito.when(server.isStopped()).thenReturn(true);
       if (logRoller != null) {
-        logRoller.interrupt();
+        logRoller.close();
       }
       if (dodgyWAL != null) {
         dodgyWAL.close();
