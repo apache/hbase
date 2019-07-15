@@ -1569,6 +1569,7 @@ public class TestFromClientSide {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testVersionLimits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
@@ -5984,6 +5985,7 @@ public class TestFromClientSide {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testDeletesWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] ROWS = makeNAscii(ROW, 6);
