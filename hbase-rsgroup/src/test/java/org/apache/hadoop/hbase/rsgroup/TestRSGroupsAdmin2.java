@@ -471,7 +471,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
     final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
-    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup,
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
         10);
 
     // start thread to recover region state
@@ -511,7 +511,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   @Test
   public void testFailedMoveBeforeRetryExhaustedWhenMoveTable() throws Exception {
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
-    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup, 5);
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
+        5);
 
     // move table to group
     Thread t2 = new Thread(() -> {
@@ -594,12 +595,13 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
     final RSGroupInfo newGroup = rsGroupAdmin.getRSGroupInfo(groupName);
-    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup,
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
         10);
     try{
       rsGroupAdmin.moveServers(Sets.newHashSet(gotPair.getFirst().getAddress()),
           newGroup.getName());
-      fail("move servers to group should fail");
+      fail("should get IOException when retry exhausted but there still exists failed moved "
+          + "regions");
     }catch (IOException e){
       assertTrue(e.getMessage().contains(
           gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
@@ -609,17 +611,19 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   @Test
   public void testFailedMoveWhenMoveTable() throws Exception{
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
-    Pair<ServerName, RegionStateNode> gotPair = createTableAndSetARegionState(newGroup, 5);
+    Pair<ServerName, RegionStateNode> gotPair = createTableWithRegionSplitting(newGroup,
+        5);
     try{
       rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
-      fail("move tables to group should fail");
+      fail("should get IOException when retry exhausted but there still exists failed moved "
+          + "regions");
     }catch (IOException e){
       assertTrue(e.getMessage().contains(
           gotPair.getSecond().getRegionInfo().getRegionNameAsString()));
     }
   }
 
-  private Pair<ServerName, RegionStateNode> createTableAndSetARegionState(RSGroupInfo rsGroupInfo,
+  private Pair<ServerName, RegionStateNode> createTableWithRegionSplitting(RSGroupInfo rsGroupInfo,
       int tableRegionCount) throws Exception{
     final byte[] familyNameBytes = Bytes.toBytes("f");
     // All the regions created below will be assigned to the default group.
@@ -635,7 +639,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       }
     });
 
-    return setARegionState(rsGroupInfo);
+    return randomlySetOneRegionStateToSplitting(rsGroupInfo);
   }
 
   /**
@@ -644,8 +648,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
    * @return source server of region, and region state
    * @throws IOException if methods called throw
    */
-  private Pair<ServerName, RegionStateNode> setARegionState(RSGroupInfo newGroup)
-      throws IOException{
+  private Pair<ServerName, RegionStateNode> randomlySetOneRegionStateToSplitting(
+      RSGroupInfo newGroup) throws IOException{
     // get target server to move, which should has more than one regions
     // randomly set a region state to SPLITTING to make move fail
     Map<ServerName, List<String>> assignMap = getTableServerRegionMap().get(tableName);
