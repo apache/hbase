@@ -442,6 +442,10 @@ module Hbase
       encodedRegionName = region.getRegionInfo().getEncodedName()
       command(:unassign, encodedRegionName, true)
     end
+
+    define_test "list regions should allow table name" do
+      command(:list_regions, @test_name)
+    end
   end
 
   # Simple administration methods tests
