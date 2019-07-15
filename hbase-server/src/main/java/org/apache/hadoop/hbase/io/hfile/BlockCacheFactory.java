@@ -81,7 +81,7 @@ public final class BlockCacheFactory {
    * TODO: this config point is completely wrong, as it's used to determine the
    * target block size of BlockCache instances. Rename.
    */
-  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
+  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.blockcache.minblocksize";
 
   private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
   private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
