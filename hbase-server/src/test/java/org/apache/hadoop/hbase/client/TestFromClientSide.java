@@ -1156,20 +1156,28 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
+  public void testNull_TableName() {
     // Null table name (should NOT work)
     try {
       TEST_UTIL.createTable((TableName)null, FAMILY);
       fail("Creating a table with null name passed, should have failed");
     } catch(Exception e) {}
+  }
+
+  @Test
+  public void testNull_FamilyName() {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Null family (should NOT work)
     try {
       TEST_UTIL.createTable(tableName, new byte[][]{null});
       fail("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
+  }
+
+  @Test
+  public void testNull_RowAndQualifier() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
@@ -1201,9 +1209,13 @@ public class TestFromClientSide {
         assertEmptyResult(result);
       }
     }
+  }
 
-    // Use a new table
-    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY)) {
+  @Test
+  public void testNull_EmptyQualifier() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
       // Empty qualifier, byte[0] instead of null (should work)
       try {
@@ -1234,7 +1246,14 @@ public class TestFromClientSide {
       } catch (Exception e) {
         throw new IOException("Using a row with null qualifier threw exception, should ");
       }
+    }
+  }
 
+  @Test
+  public void testNull_Value() throws IOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
       // Null value
       try {
         Put put = new Put(ROW);
