@@ -45,3 +45,6 @@ This product includes portions of the Guava project v14 and v21, specifically
 Copyright (C) 2007 The Guava Authors
 
 Licensed under the Apache License, Version 2.0
+--
+This product includes portions of Jetty project, specially
+'hbase-shaded-hbase-shaded-testing-util/src/main/resources/org/apache/hadoop/hbase/shaded/org/mortbay/jetty/webapp/webdefault.xml'

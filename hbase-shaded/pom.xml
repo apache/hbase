@@ -40,6 +40,8 @@
     <modules>
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-server</module>
+        <module>hbase-shaded-testing-util</module>
+        <module>hbase-shaded-testing-util-tester</module>
         <module>hbase-shaded-check-invariants</module>
     </modules>
     <dependencies>
@@ -382,6 +384,8 @@
                                     <addHeader>false</addHeader>
                                     <projectName>${project.name}</projectName>
                                   </transformer>
+                                  <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer">
+                                  </transformer>
                                 </transformers>
                                 <filters>
                                   <filter>
@@ -390,14 +394,6 @@
                                     <excludes>
                                       <exclude>META-INF/ECLIPSEF.SF</exclude>
                                       <exclude>META-INF/ECLIPSEF.RSA</exclude>
-                                    </excludes>
-                                  </filter>
-                                  <filter>
-                                    <!-- server side webapps that we don't need -->
-                                    <artifact>org.apache.hbase:hbase-server</artifact>
-                                    <excludes>
-                                      <exclude>hbase-webapps/*</exclude>
-                                      <exclude>hbase-webapps/**/*</exclude>
                                     </excludes>
                                   </filter>
                                   <filter>
