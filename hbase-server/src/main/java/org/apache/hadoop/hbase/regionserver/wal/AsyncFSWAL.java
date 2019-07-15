@@ -729,6 +729,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       int nextEpoch = currentEpoch == MAX_EPOCH ? 0 : currentEpoch + 1;
       // set a new epoch and also clear waitingRoll and writerBroken
       this.epochAndState = nextEpoch << 2;
+      // Reset rollRequested status
+      rollRequested.set(false);
       consumeExecutor.execute(consumer);
     } finally {
       consumeLock.unlock();
