@@ -177,10 +177,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
               + " does not exist.");
     }
     RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
-    if (srcGrp.getName().equals(targetGroupName)) {
-      throw new ConstraintException("Target RSGroup " + targetGroupName +
-              " is same as source " + srcGrp.getName() + " RSGroup.");
-    }
+
     // Only move online servers
     checkOnlineServersOnly(servers);
 
@@ -351,10 +348,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         throw new ConstraintException("Source RSGroup for server " + firstServer
             + " does not exist.");
       }
-      if (srcGrp.getName().equals(targetGroupName)) {
-        throw new ConstraintException("Target RSGroup " + targetGroupName +
-            " is same as source " + srcGrp + " RSGroup.");
-      }
       // Only move online servers (when moving from 'default') or servers from other
       // groups. This prevents bogus servers from entering groups
       if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName())) {
@@ -405,16 +398,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         if(destGroup.getServers().size() < 1) {
           throw new ConstraintException("Target RSGroup must have at least one server.");
         }
-      }
-
-      for (TableName table : tables) {
-        String srcGroup = rsGroupInfoManager.getRSGroupOfTable(table);
-        if(srcGroup != null && srcGroup.equals(targetGroup)) {
-          throw new ConstraintException(
-              "Source RSGroup " + srcGroup + " is same as target " + targetGroup +
-              " RSGroup for table " + table);
-        }
-        LOG.info("Moving table {} to RSGroup {}", table.getNameAsString(), targetGroup);
       }
       rsGroupInfoManager.moveTables(tables, targetGroup);
 
