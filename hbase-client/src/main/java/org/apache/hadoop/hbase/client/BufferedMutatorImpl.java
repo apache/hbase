@@ -359,7 +359,9 @@ public class BufferedMutatorImpl implements BufferedMutator {
         // be released.
         for(AsyncRequestFuture toWait:waitList) {
           toWait.waitUntilDone();
-          errors.add(toWait.getErrors());
+          if (toWait.hasError()) {
+            errors.add(toWait.getErrors());
+          }
         }
         synchronized(asfList) {
           asfList.removeAll(waitList);
