@@ -462,7 +462,6 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
   }
 
   @Test
-<<<<<<< HEAD
   public void testFailedMoveBeforeRetryExhaustedWhenMoveServer() throws Exception {
     String groupName = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(groupName);
