@@ -528,6 +528,13 @@ Caching for the input Scan is configured via `hbase.client.scanner.caching`     
 By default, CopyTable utility only copies the latest version of row cells unless `--versions=n` is explicitly specified in the command.
 ====
 
+.Data Load
+[NOTE]
+====
+CopyTable does not perform a diff, it copies all Cells in between the specified startrow/stoprow starttime/endtime range.
+This means that already existing cells with same values will still be copied.
+====
+
 See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
           HBase Backups with CopyTable] blog post for more on `CopyTable`.
 
