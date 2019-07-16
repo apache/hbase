@@ -22,7 +22,8 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
- * We've deprecated this tool in hbase-2+ because it destroyed the hbase2 meta table.
+ * @deprecated Since 2.0.0. Will be removed in 3.0.0. We've deprecated this tool in hbase-2+
+ * because it destroyed the hbase2 meta table.
  */
 @Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
@@ -36,8 +37,8 @@ public class OfflineMetaRepair {
    * @throws Exception
    */
   public static void main(String[] args) throws Exception {
-    System.err.println("We no longer support this tool in HBase-2+."
-      + " Please use HBCK2: https://github.com/apache/hbase-operator-tools/");
+    System.err.println("This tool is no longer supported in HBase-2+."
+      + " Please refer to https://hbase.apache.org/book.html#HBCK2");
     System.exit(1);
   }
 }
