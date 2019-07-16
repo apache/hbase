@@ -41,6 +41,10 @@ import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil
 import org.apache.hadoop.hbase.ServerName
 import org.apache.hadoop.hbase.HRegionInfo
+import org.apache.hadoop.hbase.rsgroup.RSGroupAdmin
+import org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient
+import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.net.Address
 
 # Name of this script
 NAME = "region_mover"
@@ -299,6 +303,17 @@ def unloadRegions(options, hostname, port)
   # Get an admin instance
   admin = HBaseAdmin.new(config)
   servers = getServers(admin)
+  # If rsgroup enable, get servers belongs to the same rsgroup as given server
+  if isEnableRSGroup(admin)
+    $LOG.info("RegionServer group is enabled.")
+    begin
+      conn = ConnectionFactory.createConnection(config)
+      rsgroupAdmin = RSGroupAdminClient.new(conn)
+      servers = getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
+    ensure
+      conn.close()
+    end
+  end
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
   servername = stripServer(servers, hostname, port)
@@ -432,6 +447,29 @@ def getFilename(options, targetServer, port)
   return filename
 end
 
+# Get servers in the same regionserver group as the given server
+def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
+  results = []
+  rsgroup = rsgroupAdmin.getRSGroupOfServer(Address.fromParts(hostname,
+    java.lang.Integer.parseInt(port)))
+  # rsgroup must be default or others, can't be nil
+  $LOG.info("Getting servers list from group: " + rsgroup.getName())
+  rsservers = rsgroup.getServers()
+  servers.each do |server|
+    servername = ServerName.parseServerName(server)
+    tmp = Address.fromParts(servername.getHostname(), servername.getPort())
+    if rsservers.contains(tmp)
+      results << servername.getServerName()
+    end
+  end
+  return results
+end
+
+# Determine whether rsgroup has been enabled
+def isEnableRSGroup(admin)
+  coprocessors = java.util.Arrays.asList(admin.getMasterCoprocessors());
+  return coprocessors.contains("RSGroupAdminEndpoint")
+end
 
 # Do command-line parsing
 options = {}
