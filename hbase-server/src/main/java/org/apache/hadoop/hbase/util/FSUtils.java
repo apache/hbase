@@ -421,23 +421,29 @@ public abstract class FSUtils extends CommonFSUtils {
       boolean message, int wait, int retries)
   throws IOException, DeserializationException {
     String version = getVersion(fs, rootdir);
+    String msg;
     if (version == null) {
       if (!metaRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
         setVersion(fs, rootdir, wait, retries);
         return;
+      } else {
+        msg = "hbase.version file is missing. Is your hbase.rootdir valid? " +
+            "You can restore hbase.version file by running 'HBCK2 filesystem -fix'. " +
+            "See https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2";
       }
-    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) return;
+    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
+      return;
+    } else {
+      msg = "HBase file layout needs to be upgraded. Current filesystem version is " + version +
+          " but software requires version " + HConstants.FILE_SYSTEM_VERSION +
+          ". Consult http://hbase.apache.org/book.html for further information about " +
+          "upgrading HBase.";
+    }
 
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
-    String msg = "HBase file layout needs to be upgraded."
-      + " You have version " + version
-      + " and I want version " + HConstants.FILE_SYSTEM_VERSION
-      + ". Consult http://hbase.apache.org/book.html for further information about upgrading HBase."
-      + " Is your hbase.rootdir valid? If so, you may need to run "
-      + "'hbase hbck -fixVersionFile'.";
     if (message) {
       System.out.println("WARNING! " + msg);
     }
