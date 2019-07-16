@@ -349,7 +349,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
         asf = ap.submit(createTask(access));
       }
 
-      if (flushAll) {
+      if (flushAll || writeBufferSize == 0) {
         // if we have setWriteBufferPeriodicFlushTimeoutMs we may have concurrent update
         List<AsyncRequestFuture> waitList;
         synchronized(asfList) {

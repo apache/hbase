@@ -603,6 +603,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
               } else {
                 // see #HBASE-14359 for more details
                 LOG.warn("Caught unexpected exception/error: ", t);
+                completed = true;
               }
               asyncProcess.decTaskCounters(multiAction.getRegions(), server);
               // We're likely to fail again, but this will increment the attempt counter,
