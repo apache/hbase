@@ -17,25 +17,22 @@
  */
 package org.apache.hadoop.hbase.util.hbck;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
  * @deprecated Since 2.0.0. Will be removed in 3.0.0. We've deprecated this tool in hbase-2+
- * because it destroyed the hbase2 meta table.
+ *             because it destroyed the hbase2 meta table.
  */
 @Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
-public class OfflineMetaRepair {
+public final class OfflineMetaRepair {
 
-  /**
-   * Main program
-   *
-   * @param args
-   * @throws Exception
-   */
+  // Private constructor included here to avoid checkstyle warnings
+  private OfflineMetaRepair() {}
+
   public static void main(String[] args) throws Exception {
     System.err.println("This tool is no longer supported in HBase-2+."
       + " Please refer to https://hbase.apache.org/book.html#HBCK2");
