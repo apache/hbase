@@ -269,7 +269,9 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public void startRegionServer(String hostname, int port) throws IOException {
-    this.startRegionServer();
+    final Configuration newConf = HBaseConfiguration.create(conf);
+    newConf.setInt(HConstants.REGIONSERVER_PORT, port);
+    startRegionServer(newConf);
   }
 
   @Override
@@ -404,12 +406,17 @@ public class MiniHBaseCluster extends HBaseCluster {
   public JVMClusterUtil.RegionServerThread startRegionServer()
       throws IOException {
     final Configuration newConf = HBaseConfiguration.create(conf);
+    return startRegionServer(newConf);
+  }
+
+  private JVMClusterUtil.RegionServerThread startRegionServer(Configuration configuration)
+      throws IOException {
     User rsUser =
-        HBaseTestingUtility.getDifferentUser(newConf, ".hfs."+index++);
+        HBaseTestingUtility.getDifferentUser(configuration, ".hfs."+index++);
     JVMClusterUtil.RegionServerThread t =  null;
     try {
       t = hbaseCluster.addRegionServer(
-          newConf, hbaseCluster.getRegionServers().size(), rsUser);
+          configuration, hbaseCluster.getRegionServers().size(), rsUser);
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
