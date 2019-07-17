@@ -465,7 +465,7 @@ ZooKeeper session timeout in milliseconds. It is used in two different ways.
       session timeout will be the one specified by this configuration. But, a region server that connects
       to an ensemble managed with a different configuration will be subjected that ensemble's maxSessionTimeout. So,
       even though HBase might propose using 90 seconds, the ensemble can have a max timeout lower than this and
-      it will take precedence. The current default that ZK ships with is 40 seconds, which is lower than HBase's.
+      it will take precedence. The current default maxSessionTimeout that ZK ships with is 40 seconds, which is lower than HBase's.
 
 +
 .Default
