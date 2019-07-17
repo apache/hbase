@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -165,7 +166,6 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.junit.After;
 import org.junit.Assert;
@@ -401,6 +401,7 @@ public class TestHRegion {
     String testName = "testMemstoreSizeAccountingWithFailedPostBatchMutate";
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + testName);
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
     hLog.init();
     region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
@@ -2427,7 +2428,16 @@ public class TestHRegion {
         return null;
       }
     }).when(mockedCPHost).preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class));
+    ColumnFamilyDescriptorBuilder builder = ColumnFamilyDescriptorBuilder.
+        newBuilder(COLUMN_FAMILY_BYTES);
+    ScanInfo info = new ScanInfo(CONF, builder.build(), Long.MAX_VALUE,
+        Long.MAX_VALUE, region.getCellComparator());
+    Mockito.when(mockedCPHost.preFlushScannerOpen(Mockito.any(HStore.class),
+        Mockito.any())).thenReturn(info);
+    Mockito.when(mockedCPHost.preFlush(Mockito.any(), Mockito.any(StoreScanner.class),
+        Mockito.any())).thenAnswer(i -> i.getArgument(1));
     region.setCoprocessorHost(mockedCPHost);
+
     region.put(originalPut);
     region.setCoprocessorHost(normalCPHost);
     final long finalSize = region.getDataInMemoryWithoutWAL();

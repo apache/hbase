@@ -48,15 +48,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * Used in HBase's transaction log (WAL) to represent a collection of edits (Cell/KeyValue objects)
  * that came in as a single transaction. All the edits for a given transaction are written out as a
  * single record, in PB format, followed (optionally) by Cells written via the WALCellEncoder.
- * <p>This class is LimitedPrivate for CPs to read-only. The {@link #add} methods are
- * classified as private methods, not for use by CPs.</p>
  * <p>WALEdit will accumulate a Set of all column family names referenced by the Cells
  * {@link #add(Cell)}'d. This is an optimization. Usually when loading a WALEdit, we have the
  * column family name to-hand.. just shove it into the WALEdit if available. Doing this, we can
  * save on a parse of each Cell to figure column family down the line when we go to add the
  * WALEdit to the WAL file. See the hand-off in FSWALEntry Constructor.
  */
-// TODO: Do not expose this class to Coprocessors. It has set methods. A CP might meddle.
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
     HBaseInterfaceAudience.COPROC })
 public class WALEdit implements HeapSize {
@@ -163,13 +160,11 @@ public class WALEdit implements HeapSize {
     return this.replay;
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell, byte [] family) {
     getOrCreateFamilies().add(family);
     return addCell(cell);
   }
 
-  @InterfaceAudience.Private
   public WALEdit add(Cell cell) {
     // We clone Family each time we add a Cell. Expensive but safe. For CPU savings, use
     // add(Map) or add(Cell, family).

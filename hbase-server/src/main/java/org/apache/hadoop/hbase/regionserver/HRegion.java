@@ -7951,6 +7951,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (walEdit.isReplay()) {
       walKey.setOrigLogSeqNum(origLogSeqNum);
     }
+    if (this.coprocessorHost != null) {
+      this.coprocessorHost.preWALAppend(walKey, walEdit);
+    }
     WriteEntry writeEntry = null;
     try {
       long txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);
