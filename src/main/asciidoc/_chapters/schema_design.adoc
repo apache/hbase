@@ -1142,6 +1142,7 @@ Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 * In `hbase-site.xml`, set `zookeeper.session.timeout` to 30 seconds or less to bound failure detection (20-30 seconds is a good start).
+- Notice: the `sessionTimeout` of zookeeper is limited between 2 times and 20 times the `tickTime`(the basic time unit in milliseconds used by ZooKeeper.the default value is 2000ms.It is used to do heartbeats and the minimum session timeout will be twice the tickTime).
 * Detect and avoid unhealthy or failed HDFS DataNodes: in `hdfs-site.xml` and `hbase-site.xml`, set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
