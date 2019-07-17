@@ -81,6 +81,17 @@ public class IdLock {
               existing.wait();
             } catch (InterruptedException e) {
               --existing.numWaiters;  // Remove ourselves from waiters.
+              // HBASE-21292/HBASE-22706
+              // There is a rare case that interrupting and the lock owner thread call
+              // releaseLockEntry at the same time. Since the owner thread found there
+              // still one waiting, it won't remove the entry from the map. If the interrupted
+              // thread is the last one waiting on the lock, and since an exception is thrown,
+              // the 'existing' entry will stay in the map forever. Later threads which try to
+              // get this lock will stuck in a infinite loop because
+              // existing = map.putIfAbsent(entry.id, entry)) != null and existing.isLocked=false.
+              if (!existing.isLocked && existing.numWaiters == 0) {
+                map.remove(existing.id);
+              }
               throw new InterruptedIOException(
                   "Interrupted waiting to acquire sparse lock");
             }
