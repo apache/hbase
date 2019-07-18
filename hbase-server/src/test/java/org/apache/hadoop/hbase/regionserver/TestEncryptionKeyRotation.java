@@ -35,7 +35,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -133,27 +134,14 @@ public class TestEncryptionKeyRotation {
 
     // And major compact
     TEST_UTIL.getAdmin().majorCompact(htd.getTableName());
-    final List<Path> updatePaths = findCompactedStorefilePaths(htd.getTableName());
-    TEST_UTIL.waitFor(30000, 1000, true, new Predicate<Exception>() {
+    // waiting for the major compaction to complete
+    TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
       @Override
-      public boolean evaluate() throws Exception {
-        // When compaction has finished, all of the original files will be
-        // gone
-        boolean found = false;
-        for (Path path: updatePaths) {
-          found = TEST_UTIL.getTestFileSystem().exists(path);
-          if (found) {
-            LOG.info("Found " + path);
-            break;
-          }
-        }
-        return !found;
+      public boolean evaluate() throws IOException {
+        return TEST_UTIL.getAdmin().getCompactionState(htd.getTableName()) ==
+            CompactionState.NONE;
       }
     });
-
-    // Verify we have store file(s) with only the new key
-    Thread.sleep(1000);
-    waitForCompaction(htd.getTableName());
     List<Path> pathsAfterCompaction = findStorefilePaths(htd.getTableName());
     assertTrue(pathsAfterCompaction.size() > 0);
     for (Path path: pathsAfterCompaction) {
@@ -207,33 +195,6 @@ public class TestEncryptionKeyRotation {
     for (Path path: storeFilePaths) {
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(initialCFKey.getEncoded(), extractHFileKey(path)));
-    }
-  }
-
-  private static void waitForCompaction(TableName tableName)
-      throws IOException, InterruptedException {
-    boolean compacted = false;
-    for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getRegions(tableName)) {
-      for (HStore store : ((HRegion) region).getStores()) {
-        compacted = false;
-        while (!compacted) {
-          if (store.getStorefiles() != null) {
-            while (store.getStorefilesCount() != 1) {
-              Thread.sleep(100);
-            }
-            for (HStoreFile storefile : store.getStorefiles()) {
-              if (!storefile.isCompactedAway()) {
-                compacted = true;
-                break;
-              }
-              Thread.sleep(100);
-            }
-          } else {
-            break;
-          }
-        }
-      }
     }
   }
 
