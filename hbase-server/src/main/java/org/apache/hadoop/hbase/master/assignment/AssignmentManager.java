@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -155,6 +156,8 @@ public class AssignmentManager implements ServerListener {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final RegionStates regionStates = new RegionStates();
   private final RegionStateStore regionStateStore;
+
+  private final Map<ServerName, Set<byte[]>> rsReports = new HashMap<>();
 
   private final boolean shouldAssignRegionsWithFavoredNodes;
   private final int assignDispatchWaitQueueMaxSize;
@@ -960,6 +963,11 @@ public class AssignmentManager implements ServerListener {
         LOG.warn("Got a report from a server result in state " + serverNode.getState());
         return;
       }
+    }
+
+    // Track the regionserver reported online regions in memory.
+    synchronized (rsReports) {
+      rsReports.put(serverName, regionNames);
     }
 
     if (regionNames.isEmpty()) {
@@ -1881,5 +1889,54 @@ public class AssignmentManager implements ServerListener {
   @VisibleForTesting
   MasterServices getMaster() {
     return master;
+  }
+
+  /**
+   * Found the potentially problematic opened regions. There are three case:
+   * case 1. Master thought this region opened, but no regionserver reported it.
+   * case 2. Master thought this region opened on Server1, but regionserver reported Server2
+   * case 3. More than one regionservers reported opened this region
+   *
+   * @return the map of potentially problematic opened regions. Key is the region name. Value is
+   *         a pair of location in meta and the regionservers which reported opened this region.
+   */
+  public Map<String, Pair<ServerName, Set<ServerName>>> getProblematicRegions() {
+    Map<String, Set<ServerName>> reportedOnlineRegions = new HashMap<>();
+    synchronized (rsReports) {
+      for (Map.Entry<ServerName, Set<byte[]>> entry : rsReports.entrySet()) {
+        for (byte[] regionName : entry.getValue()) {
+          reportedOnlineRegions
+              .computeIfAbsent(RegionInfo.getRegionNameAsString(regionName), r -> new HashSet<>())
+              .add(entry.getKey());
+        }
+      }
+    }
+
+    Map<String, Pair<ServerName, Set<ServerName>>> problematicRegions = new HashMap<>();
+    List<RegionState> rits = regionStates.getRegionsStateInTransition();
+    for (RegionState regionState : regionStates.getRegionStates()) {
+      // Only consider the opened region and not in transition
+      if (!rits.contains(regionState) && regionState.isOpened()) {
+        String regionName = regionState.getRegion().getRegionNameAsString();
+        ServerName serverName = regionState.getServerName();
+        if (reportedOnlineRegions.containsKey(regionName)) {
+          Set<ServerName> reportedServers = reportedOnlineRegions.get(regionName);
+          if (reportedServers.contains(serverName)) {
+            if (reportedServers.size() > 1) {
+              // More than one regionserver reported opened this region
+              problematicRegions.put(regionName, new Pair<>(serverName, reportedServers));
+            }
+          } else {
+            // Master thought this region opened on Server1, but regionserver reported Server2
+            problematicRegions.put(regionName, new Pair<>(serverName, reportedServers));
+          }
+        } else {
+          // Master thought this region opened, but no regionserver reported it.
+          problematicRegions.put(regionName, new Pair<>(serverName, new HashSet<>()));
+        }
+      }
+    }
+
+    return problematicRegions;
   }
 }
