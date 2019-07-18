@@ -129,7 +129,7 @@
 </jsp:include>
 
 <%
-if ( fqtn != null ) {
+if (fqtn != null && master.isInitialized()) {
   try {
   table = master.getConnection().getTable(TableName.valueOf(fqtn));
   if (table.getDescriptor().getRegionReplication() > 1) {
@@ -703,7 +703,7 @@ Actions:
   </div> <%
   }
 }
-  else { // handle the case for fqtn is null with error message + redirect
+  else { // handle the case for fqtn is null or master is not initialized with error message + redirect
 %>
 <div class="container-fluid content">
     <div class="row inner_header">
