@@ -56,9 +56,12 @@ int numOfPages = (int) Math.ceil(totalSize * 1.0 / sizePerPage);
     <h2><a name="problem-regions">Problematic Regions</a></h2>
     <p>
         <span>
-            <% problematicRegions.size() %> problematic region(s). Notice: the reported online
-             regionservers may be not right when there are regions in transition. Please check them
-              in regionserver's web UI.
+            <% problematicRegions.size() %> problematic region(s). There are three case: 1. Master
+             thought this region opened, but no regionserver reported it. 2. Master thought this
+              region opened on Server1, but regionserver reported Server2. 3. More than one
+               regionservers reported opened this region. Notice: the reported online regionservers
+                may be not right when there are regions in transition. Please check them in
+                 regionserver's web UI.
         </span>
     </p>
     <div class="tabbable">
