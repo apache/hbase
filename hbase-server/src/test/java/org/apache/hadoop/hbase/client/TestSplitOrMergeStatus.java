@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -26,15 +27,24 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
+import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -55,13 +65,13 @@ public class TestSplitOrMergeStatus {
   @Rule
   public TestName name = new TestName();
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -151,6 +161,58 @@ public class TestSplitOrMergeStatus {
     assertFalse(admin.isSplitEnabled());
     assertFalse(admin.isMergeEnabled());
     admin.close();
+  }
+
+  @Test
+  public void testSplitRegionReplicaRitRecovery() throws Exception {
+    int startRowNum = 11;
+    int rowCount = 60;
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2).build());
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    ServerName serverName =
+        RegionReplicaTestHelper.getRSCarryingReplica(TEST_UTIL, tableName, 1).get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tableName);
+    insertData(tableName, startRowNum, rowCount);
+    int splitRowNum = startRowNum + rowCount / 2;
+    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions.get(0), splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    // Disable the table
+    long procId1 = procExec
+        .submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId1);
+    // Delete Table
+    long procId2 =
+        procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId2);
+    AssignmentTestingUtil.killRs(TEST_UTIL, serverName);
+    Threads.sleepWithoutInterrupt(5000);
+    boolean hasRegionsInTransition = TEST_UTIL.getMiniHBaseCluster().getMaster()
+        .getAssignmentManager().getRegionStates().hasRegionsInTransition();
+    assertEquals(false, hasRegionsInTransition);
+  }
+
+  private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
+    return TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  }
+
+  private void insertData(final TableName tableName, int startRow, int rowCount)
+      throws IOException {
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
+    Put p;
+    for (int i = 0; i < rowCount; i++) {
+      p = new Put(Bytes.toBytes("" + (startRow + i)));
+      p.addColumn(FAMILY, Bytes.toBytes("q1"), Bytes.toBytes(i));
+      t.put(p);
+    }
   }
 
   private void initSwitchStatus(Admin admin) throws IOException {
