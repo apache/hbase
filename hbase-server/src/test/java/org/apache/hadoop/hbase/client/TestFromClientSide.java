@@ -1156,7 +1156,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull_TableName() {
+  public void testNullTableName() {
     // Null table name (should NOT work)
     try {
       TEST_UTIL.createTable((TableName)null, FAMILY);
@@ -1165,7 +1165,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull_FamilyName() {
+  public void testNullFamilyName() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Null family (should NOT work)
@@ -1176,7 +1176,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull_RowAndQualifier() throws Exception {
+  public void testNullRowAndQualifier() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
@@ -1212,7 +1212,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull_EmptyQualifier() throws Exception {
+  public void testNullEmptyQualifier() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
@@ -1250,7 +1250,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testNull_Value() throws IOException {
+  public void testNullValue() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
