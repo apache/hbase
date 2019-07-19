@@ -70,6 +70,12 @@ public class BufferedMutatorParams implements Cloneable {
     return rpcTimeout;
   }
 
+  public BufferedMutatorParams operationTimeout(final int operationTimeout) {
+    this.operationTimeout = operationTimeout;
+    return this;
+  }
+
+  @deprecated Use {@link #operationTimeout()}
   public BufferedMutatorParams opertationTimeout(final int operationTimeout) {
     this.operationTimeout = operationTimeout;
     return this;
