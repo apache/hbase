@@ -21,11 +21,15 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
@@ -105,18 +109,16 @@ public interface Hbck extends Abortable, Closeable {
   List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
       throws IOException;
 
-  List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
-      throws IOException;
-
   /**
-   * This method is to get the regions which left by failed split/merge procedures for a certain
-   * table. There are two kinds of region this method will return. One is orphan regions left on FS,
-   * which left because split/merge procedure crashed before updating meta. And the other one is
-   * unassigned split daughter region or merged region, which left because split/merge procedure
-   * crashed before assignment.
-   * @param tableName table to check
-   * @return Map of problematic regions
+   * Use {@link #scheduleServerCrashProcedures(List)} instead.
+   * @deprecated since 2.2.1. Will removed in 3.0.0.
    */
-  Map<String, MasterProtos.RegionErrorType>
-      getFailedSplitMergeLegacyRegions(List<TableName> tableName) throws IOException;
+  @Deprecated
+  default List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
+      throws IOException {
+    return scheduleServerCrashProcedures(
+        serverNames.stream().map(ProtobufUtil::toServerName).collect(Collectors.toList()));
+  }
+
+  List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames) throws IOException;
 }
