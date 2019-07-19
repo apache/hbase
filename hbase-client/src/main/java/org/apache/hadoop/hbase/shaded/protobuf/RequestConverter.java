@@ -1898,11 +1898,10 @@ public final class RequestConverter {
   }
 
   public static MasterProtos.ScheduleServerCrashProcedureRequest
-      toScheduleServerCrashProcedureRequest(List<ServerName> serverNames) {
-    MasterProtos.ScheduleServerCrashProcedureRequest.Builder builder =
+      toScheduleServerCrashProcedureRequest(List<HBaseProtos.ServerName> serverNames) {
+    MasterProtos.ScheduleServerCrashProcedureRequest.Builder b =
         MasterProtos.ScheduleServerCrashProcedureRequest.newBuilder();
-    serverNames.stream().map(ProtobufUtil::toServerName).forEach(sn -> builder.addServerName(sn));
-    return builder.build();
+    return b.addAllServerName(serverNames).build();
   }
 
   private static List<RegionSpecifier> toEncodedRegionNameRegionSpecifiers(

@@ -20,15 +20,11 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
@@ -108,16 +104,6 @@ public interface Hbck extends Abortable, Closeable {
   List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override, boolean recursive)
       throws IOException;
 
-  /**
-   * Use {@link #scheduleServerCrashProcedures(List)} instead.
-   * @deprecated since 2.2.1. Will removed in 3.0.0.
-   */
-  @Deprecated
-  default List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
-      throws IOException {
-    return scheduleServerCrashProcedures(
-        serverNames.stream().map(ProtobufUtil::toServerName).collect(Collectors.toList()));
-  }
-
-  List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames) throws IOException;
+  List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
+      throws IOException;
 }

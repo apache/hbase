@@ -23,10 +23,10 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
@@ -157,7 +157,7 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames)
+  public List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
       throws IOException {
     try {
       MasterProtos.ScheduleServerCrashProcedureResponse response =
