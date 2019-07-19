@@ -292,7 +292,7 @@ public class TestSimpleRpcScheduler {
 
       CallRunner scanCallTask = mock(CallRunner.class);
       RpcServer.Call scanCall = mock(RpcServer.Call.class);
-      scanCall.param = ScanRequest.newBuilder().setScannerId(1).build();
+      scanCall.param = ScanRequest.newBuilder().build();
       RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
       when(scanCallTask.getCall()).thenReturn(scanCall);
       when(scanCall.getHeader()).thenReturn(scanHead);

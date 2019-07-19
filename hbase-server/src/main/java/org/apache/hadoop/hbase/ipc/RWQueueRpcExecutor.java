@@ -234,12 +234,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   }
 
   private boolean isScanRequest(final RequestHeader header, final Message param) {
-    if (param instanceof ScanRequest) {
-      // The first scan request will be executed as a "short read"
-      ScanRequest request = (ScanRequest)param;
-      return request.hasScannerId();
-    }
-    return false;
+    return param instanceof ScanRequest;
   }
 
   @Override
