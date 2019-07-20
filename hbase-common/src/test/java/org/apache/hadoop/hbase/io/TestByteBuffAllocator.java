@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.io;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.getHeapAllocationRatio;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -162,7 +164,7 @@ public class TestByteBuffAllocator {
   @Test
   public void testAllocateOneBuffer() {
     // Allocate from on-heap
-    ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
+    ByteBuffAllocator allocator = HEAP;
     ByteBuff buf = allocator.allocateOneBuffer();
     assertTrue(buf.hasArray());
     assertEquals(ByteBuffAllocator.DEFAULT_BUFFER_SIZE, buf.remaining());
@@ -366,5 +368,38 @@ public class TestByteBuffAllocator {
     Assert.assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
     conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false);
     Assert.assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
+  }
+
+  @Test
+  public void testHeapAllocationRatio() {
+    Configuration conf = new Configuration();
+    conf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, 11);
+    conf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 2048);
+    ByteBuffAllocator alloc1 = ByteBuffAllocator.create(conf, true);
+    Assert.assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
+    alloc1.allocate(1);
+    Assert.assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
+
+    alloc1.allocate(2048 / 6 - 1);
+    Assert.assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
+
+    alloc1.allocate(24);
+    alloc1.allocate(1024);
+    Assert.assertEquals(getHeapAllocationRatio(alloc1), 24 / (24f + 2048), 1e-6);
+    Assert.assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
+
+    // Allocate something from HEAP
+    HEAP.allocate(1024);
+    alloc1.allocate(24);
+    alloc1.allocate(1024);
+    Assert.assertEquals(getHeapAllocationRatio(HEAP, alloc1), (1024f + 24) / (1024f + 24 + 2048),
+      1e-6);
+    Assert.assertEquals(getHeapAllocationRatio(HEAP, alloc1), 0.0f, 1e-6);
+
+    // Check duplicated heap allocator, say even if we passed (HEAP, HEAP, alloc1), it will only
+    // caculate the allocation from (HEAP, alloc1).
+    HEAP.allocate(1024);
+    alloc1.allocate(1024);
+    Assert.assertEquals(getHeapAllocationRatio(HEAP, HEAP, alloc1), 1024f / (1024f + 2048f), 1e-6);
   }
 }
