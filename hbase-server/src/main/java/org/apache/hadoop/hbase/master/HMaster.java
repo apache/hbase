@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
+import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
@@ -382,6 +383,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private RegionNormalizerChore normalizerChore;
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
+  private SnapshotCleanerChore snapshotCleanerChore = null;
 
   CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
@@ -1457,6 +1459,16 @@ public class HMaster extends HRegionServer implements MasterServices {
       replicationPeerManager);
     getChoreService().scheduleChore(replicationBarrierCleaner);
 
+    final boolean isSnapshotChoreDisabled = conf.getBoolean(HConstants.SNAPSHOT_CLEANER_DISABLE,
+        false);
+    if (isSnapshotChoreDisabled) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
+      }
+    } else {
+      this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
+      getChoreService().scheduleChore(this.snapshotCleanerChore);
+    }
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
@@ -1574,6 +1586,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       choreService.cancelChore(this.logCleaner);
       choreService.cancelChore(this.hfileCleaner);
       choreService.cancelChore(this.replicationBarrierCleaner);
+      choreService.cancelChore(this.snapshotCleanerChore);
     }
   }
 

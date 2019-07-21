@@ -1108,11 +1108,15 @@ module Hbase
         @admin.snapshot(snapshot_name, table_name)
       else
         args.each do |arg|
+          ttl = arg[TTL]
+          ttl = ttl ? ttl.to_java(:long) : -1
+          snapshot_props = java.util.HashMap.new
+          snapshot_props.put("TTL", ttl)
           if arg[SKIP_FLUSH] == true
             @admin.snapshot(snapshot_name, table_name,
-                            org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH)
+                            org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH, snapshot_props)
           else
-            @admin.snapshot(snapshot_name, table_name)
+            @admin.snapshot(snapshot_name, table_name, snapshot_props)
           end
         end
       end

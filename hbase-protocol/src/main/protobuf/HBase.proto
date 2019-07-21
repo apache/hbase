@@ -184,6 +184,7 @@ message SnapshotDescription {
   optional Type type = 4 [default = FLUSH];
   optional int32 version = 5;
   optional string owner = 6;
+  optional int64 ttl = 7 [default = 0];
 }
 
 /**
