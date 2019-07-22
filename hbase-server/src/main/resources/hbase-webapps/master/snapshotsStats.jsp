@@ -65,6 +65,7 @@
         <th>Snapshot Name</th>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>TTL(Sec)</th>
         <th>Shared Storefile Size</th>
         <th>Mob Storefile Size</th>
         <th>Archived Storefile Size</th>
@@ -82,6 +83,13 @@
       <td><a href="/table.jsp?name=<%= snapshotTable.getNameAsString() %>">
         <%= snapshotTable.getNameAsString() %></a></td>
       <td><%= new Date(snapshotDesc.getCreationTime()) %></td>
+      <td>
+        <% if (snapshotDesc.getTtl() == 0) { %>
+          FOREVER
+        <% } else { %>
+          <%= snapshotDesc.getTtl() %>
+        <% } %>
+      </td>
       <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
       <td><%= StringUtils.humanReadableInt(stats.getMobStoreFilesSize())  %></td>
       <td><%= StringUtils.humanReadableInt(stats.getArchivedStoreFileSize()) %>

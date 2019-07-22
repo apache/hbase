@@ -1864,4 +1864,23 @@ possible configurations would overwhelm and obscure the important.
     <description>Default is 5 minutes. Make it 30 seconds for tests. See
     HBASE-19794 for some context.</description>
   </property>
+  <property>
+    <name>hbase.master.cleaner.snapshot.interval</name>
+    <value>1800000</value>
+    <description>
+      Snapshot Cleanup chore interval in milliseconds.
+      The cleanup thread keeps running at this interval
+      to find all snapshots that are expired based on TTL
+      and delete them.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.snapshot.ttl</name>
+    <value>0</value>
+    <description>
+      Default Snapshot TTL to be considered when the user does not specify TTL while
+      creating snapshot. Default value 0 indicates FOREVERE - snapshot should not be
+      automatically deleted until it is manually deleted
+    </description>
+  </property>
 </configuration>

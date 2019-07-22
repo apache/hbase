@@ -2846,6 +2846,47 @@ A snapshot is only a representation of a table during a window of time.
 The amount of time the snapshot operation will take to reach each Region Server may vary from a few seconds to a minute, depending on the resource load and speed of the hardware or network, among other factors.
 There is also no way to know whether a given insert or update is in memory or has been flushed.
 
+
+.Take a Snapshot With TTL
+Snapshots have a lifecycle that is independent from the table from which they are created.
+Although data in a table may be stored with TTL the data files containing them become
+frozen by the snapshot. Space consumed by expired cells will not be reclaimed by normal
+table housekeeping like compaction. While this is expected it can be inconvenient at scale.
+When many snapshots are under management and the data in various tables is expired by
+TTL some notion of optional TTL (and optional default TTL) for snapshots could be useful.
+
+
+----
+hbase> snapshot 'mytable', 'snapshot1234', {TTL => 86400}
+----
+
+The above command creates snapshot `snapshot1234` with TTL of 86400 sec(24 hours)
+and hence, the snapshot is supposed to be cleaned up after 24 hours
+
+
+
+.Default Snapshot TTL:
+
+- FOREVER by default
+- User specified Default TTL with config `hbase.master.snapshot.ttl`
+
+
+While creating a Snapshot, if TTL in seconds is not specified, by default the snapshot
+would not be deleted automatically. i.e. it would be retained forever until it is
+manually deleted. However, the user can update this default TTL behavior by
+providing default TTL in sec for key: `hbase.master.snapshot.ttl`.
+Value 0 for this config indicates TTL: FOREVER
+
+
+
+
+At any point of time, if Snapshot cleanup is supposed to be stopped due to
+some snapshot restore activity, it is advisable to disable Snapshot Cleaner with
+ config:
+
+`hbase.master.cleaner.snapshot.disable`: "true"
+
+
 [[ops.snapshots.list]]
 === Listing Snapshots
 
