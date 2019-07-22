@@ -2131,3 +2131,33 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `0.5`
 
+
+[[hbase.master.cleaner.snapshot.interval]]
+*`hbase.master.cleaner.snapshot.interval`*::
++
+.Description
+
+    Snapshot Cleanup chore interval in milliseconds.
+    The cleanup thread keeps running at this interval
+    to find all snapshots that are expired based on TTL
+    and delete them.
+
++
+.Default
+`1800000`
+
+
+[[hbase.master.snapshot.ttl]]
+*`hbase.master.snapshot.ttl`*::
++
+.Description
+
+      Default Snapshot TTL to be considered when the user
+      does not specify TTL while creating snapshot.
+      Default value 0 indicates FOREVERE - snapshot should not be
+      automatically deleted until it is manually deleted
+
+
++
+.Default
+`0`

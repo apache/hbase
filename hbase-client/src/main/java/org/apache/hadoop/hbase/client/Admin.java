@@ -2069,13 +2069,59 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Take a snapshot and wait for the server to complete that snapshot (blocking). Only a single
-   * snapshot should be taken at a time for an instance of HBase, or results may be undefined (you
-   * can tell multiple HBase clusters to snapshot at the same time, but only one at a time for a
-   * single cluster). Snapshots are considered unique based on <b>the name of the snapshot</b>.
-   * Attempts to take a snapshot with the same name (even a different type or with different
-   * parameters) will fail with a {@link SnapshotCreationException} indicating the duplicate naming.
-   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
+   * snapshot</b>. Snapshots are taken sequentially even when requested concurrently, across
+   * all tables. Attempts to take a snapshot with the same name (even a different type or with
+   * different parameters) will fail with a {@link SnapshotCreationException} indicating the
+   * duplicate naming. Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * Snapshot can live with ttl seconds.
+   *
+   * @param snapshotName  name to give the snapshot on the filesystem. Must be unique from all other
+   *                      snapshots stored on the cluster
+   * @param tableName     name of the table to snapshot
+   * @param type          type of snapshot to take
+   * @param snapshotProps snapshot additional properties e.g. TTL
+   * @throws IOException               we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException  if the snapshot request is formatted incorrectly
+   */
+  default void snapshot(String snapshotName, TableName tableName, SnapshotType type,
+                        Map<String, Object> snapshotProps) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(new SnapshotDescription(snapshotName, tableName, type, snapshotProps));
+  }
+
+  /**
+   * Create typed snapshot of the table. Snapshots are considered unique based on <b>the name of the
+   * snapshot</b>. Snapshots are taken sequentially even when requested concurrently, across
+   * all tables. Attempts to take a snapshot with the same name (even a different type or with
+   * different parameters) will fail with a {@link SnapshotCreationException} indicating the
+   * duplicate naming. Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
+   * Snapshot can live with ttl seconds.
+   *
+   * @param snapshotName  name to give the snapshot on the filesystem. Must be unique from all other
+   *                      snapshots stored on the cluster
+   * @param tableName     name of the table to snapshot
+   * @param snapshotProps snapshot additional properties e.g. TTL
+   * @throws IOException               we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException  if the snapshot request is formatted incorrectly
+   */
+  default void snapshot(String snapshotName, TableName tableName,
+                        Map<String, Object> snapshotProps) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(new SnapshotDescription(snapshotName, tableName, SnapshotType.FLUSH, snapshotProps));
+  }
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot (blocking). Snapshots are
+   * considered unique based on <b>the name of the snapshot</b>. Snapshots are taken sequentially
+   * even when requested concurrently, across all tables. Attempts to take a snapshot with the same
+   * name (even a different type or with different parameters) will fail with a
+   * {@link SnapshotCreationException} indicating the duplicate naming. Snapshot names follow the
+   * same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}. You should
    * probably use {@link #snapshot(String, org.apache.hadoop.hbase.TableName)} or
    * {@link #snapshot(byte[], org.apache.hadoop.hbase.TableName)} unless you are sure about the type

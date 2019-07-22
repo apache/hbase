@@ -29,6 +29,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -2933,12 +2934,15 @@ public final class ProtobufUtil {
     if (snapshotDesc.getCreationTime() != -1L) {
       builder.setCreationTime(snapshotDesc.getCreationTime());
     }
+    if (snapshotDesc.getTtl() != -1L &&
+        snapshotDesc.getTtl() < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)) {
+      builder.setTtl(snapshotDesc.getTtl());
+    }
     if (snapshotDesc.getVersion() != -1) {
       builder.setVersion(snapshotDesc.getVersion());
     }
     builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
-    SnapshotProtos.SnapshotDescription snapshot = builder.build();
-    return snapshot;
+    return builder.build();
   }
 
   /**
@@ -2950,10 +2954,12 @@ public final class ProtobufUtil {
    */
   public static SnapshotDescription
       createSnapshotDesc(SnapshotProtos.SnapshotDescription snapshotDesc) {
+    final Map<String, Object> snapshotProps = new HashMap<>();
+    snapshotProps.put("TTL", snapshotDesc.getTtl());
     return new SnapshotDescription(snapshotDesc.getName(),
-        snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
-        createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
-        snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+            snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
+            createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
+            snapshotDesc.getCreationTime(), snapshotDesc.getVersion(), snapshotProps);
   }
 
   public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
