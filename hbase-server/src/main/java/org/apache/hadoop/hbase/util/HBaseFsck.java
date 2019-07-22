@@ -60,7 +60,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -112,8 +111,6 @@ import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -131,8 +128,6 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -1527,173 +1522,6 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * This borrows code from MasterFileSystem.bootstrap(). Explicitly creates it's own WAL, so be
-   * sure to close it as well as the region when you're finished.
-   * @param walFactoryID A unique identifier for WAL factory. Filesystem implementations will use
-   *          this ID to make a directory inside WAL directory path.
-   * @return an open hbase:meta HRegion
-   */
-  private HRegion createNewMeta(String walFactoryID) throws IOException {
-    Path rootdir = FSUtils.getRootDir(getConf());
-    Configuration c = getConf();
-    RegionInfo metaHRI = RegionInfoBuilder.FIRST_META_REGIONINFO;
-    TableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
-    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, false);
-    // The WAL subsystem will use the default rootDir rather than the passed in rootDir
-    // unless I pass along via the conf.
-    Configuration confForWAL = new Configuration(c);
-    confForWAL.set(HConstants.HBASE_DIR, rootdir.toString());
-    WAL wal = new WALFactory(confForWAL, walFactoryID).getWAL(metaHRI);
-    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
-    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
-    return meta;
-  }
-
-  /**
-   * Generate set of puts to add to new meta.  This expects the tables to be
-   * clean with no overlaps or holes.  If there are any problems it returns null.
-   *
-   * @return An array list of puts to do in bulk, null if tables have problems
-   */
-  private ArrayList<Put> generatePuts(SortedMap<TableName, TableInfo> tablesInfo)
-      throws IOException {
-    ArrayList<Put> puts = new ArrayList<>();
-    boolean hasProblems = false;
-    for (Entry<TableName, TableInfo> e : tablesInfo.entrySet()) {
-      TableName name = e.getKey();
-
-      // skip "hbase:meta"
-      if (name.compareTo(TableName.META_TABLE_NAME) == 0) {
-        continue;
-      }
-
-      TableInfo ti = e.getValue();
-      puts.add(MetaTableAccessor.makePutFromTableState(
-        new TableState(ti.tableName, TableState.State.ENABLED),
-        EnvironmentEdgeManager.currentTime()));
-      for (Entry<byte[], Collection<HbckInfo>> spl : ti.sc.getStarts().asMap()
-          .entrySet()) {
-        Collection<HbckInfo> his = spl.getValue();
-        int sz = his.size();
-        if (sz != 1) {
-          // problem
-          LOG.error("Split starting at " + Bytes.toStringBinary(spl.getKey())
-              + " had " +  sz + " regions instead of exactly 1." );
-          hasProblems = true;
-          continue;
-        }
-
-        // add the row directly to meta.
-        HbckInfo hi = his.iterator().next();
-        RegionInfo hri = hi.getHdfsHRI(); // hi.metaEntry;
-        Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
-        puts.add(p);
-      }
-    }
-    return hasProblems ? null : puts;
-  }
-
-  /**
-   * Suggest fixes for each table
-   */
-  private void suggestFixes(
-      SortedMap<TableName, TableInfo> tablesInfo) throws IOException {
-    logParallelMerge();
-    for (TableInfo tInfo : tablesInfo.values()) {
-      TableIntegrityErrorHandler handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
-      tInfo.checkRegionChain(handler);
-    }
-  }
-
-  /**
-   * Rebuilds meta from information in hdfs/fs.  Depends on configuration settings passed into
-   * hbck constructor to point to a particular fs/dir. Assumes HBase is OFFLINE.
-   *
-   * @param fix flag that determines if method should attempt to fix holes
-   * @return true if successful, false if attempt failed.
-   */
-  public boolean rebuildMeta(boolean fix) throws IOException,
-      InterruptedException {
-
-    // TODO check to make sure hbase is offline. (or at least the table
-    // currently being worked on is off line)
-
-    // Determine what's on HDFS
-    LOG.info("Loading HBase regioninfo from HDFS...");
-    loadHdfsRegionDirs(); // populating regioninfo table.
-
-    int errs = errors.getErrorList().size();
-    tablesInfo = loadHdfsRegionInfos(); // update tableInfos based on region info in fs.
-    checkHdfsIntegrity(false, false);
-
-    // make sure ok.
-    if (errors.getErrorList().size() != errs) {
-      // While in error state, iterate until no more fixes possible
-      while(true) {
-        fixes = 0;
-        suggestFixes(tablesInfo);
-        errors.clear();
-        loadHdfsRegionInfos(); // update tableInfos based on region info in fs.
-        checkHdfsIntegrity(shouldFixHdfsHoles(), shouldFixHdfsOverlaps());
-
-        int errCount = errors.getErrorList().size();
-
-        if (fixes == 0) {
-          if (errCount > 0) {
-            return false; // failed to fix problems.
-          } else {
-            break; // no fixes and no problems? drop out and fix stuff!
-          }
-        }
-      }
-    }
-
-    // we can rebuild, move old meta out of the way and start
-    LOG.info("HDFS regioninfo's seems good.  Sidelining old hbase:meta");
-    Path backupDir = sidelineOldMeta();
-
-    LOG.info("Creating new hbase:meta");
-    String walFactoryId = "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8);
-    HRegion meta = createNewMeta(walFactoryId);
-
-    // populate meta
-    List<Put> puts = generatePuts(tablesInfo);
-    if (puts == null) {
-      LOG.error(HBaseMarkers.FATAL, "Problem encountered when creating new hbase:meta "
-          + "entries. You may need to restore the previously sidelined hbase:meta");
-      return false;
-    }
-    meta.batchMutate(puts.toArray(new Put[puts.size()]), HConstants.NO_NONCE, HConstants.NO_NONCE);
-    meta.close();
-    if (meta.getWAL() != null) {
-      meta.getWAL().close();
-    }
-    // clean up the temporary hbck meta recovery WAL directory
-    removeHBCKMetaRecoveryWALDir(walFactoryId);
-    LOG.info("Success! hbase:meta table rebuilt.");
-    LOG.info("Old hbase:meta is moved into " + backupDir);
-    return true;
-  }
-
-  /**
-   * Removes the empty Meta recovery WAL directory.
-   * @param walFactoryId A unique identifier for WAL factory which was used by Filesystem to make a
-   *          Meta recovery WAL directory inside WAL directory path.
-   */
-  private void removeHBCKMetaRecoveryWALDir(String walFactoryId) throws IOException {
-    Path walLogDir = new Path(new Path(CommonFSUtils.getWALRootDir(getConf()),
-		HConstants.HREGION_LOGDIR_NAME), walFactoryId);
-    FileSystem fs = CommonFSUtils.getWALFileSystem(getConf());
-    FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
-    if (walFiles == null || walFiles.length == 0) {
-      LOG.info("HBCK meta recovery WAL directory is empty, removing it now.");
-      if (!FSUtils.deleteDirectory(fs, walLogDir)) {
-        LOG.warn("Couldn't clear the HBCK Meta recovery WAL directory " + walLogDir);
-      }
-    }
-  }
-
-  /**
    * Log an appropriate message about whether or not overlapping merges are computed in parallel.
    */
   private void logParallelMerge() {
@@ -1819,46 +1647,6 @@ public class HBaseFsck extends Configured implements Closeable {
       throw new IOException(msg);
     }
     return sidelineRegionDir;
-  }
-
-  /**
-   * Side line an entire table.
-   */
-  void sidelineTable(FileSystem fs, TableName tableName, Path hbaseDir,
-      Path backupHbaseDir) throws IOException {
-    Path tableDir = FSUtils.getTableDir(hbaseDir, tableName);
-    if (fs.exists(tableDir)) {
-      Path backupTableDir= FSUtils.getTableDir(backupHbaseDir, tableName);
-      fs.mkdirs(backupTableDir.getParent());
-      boolean success = fs.rename(tableDir, backupTableDir);
-      if (!success) {
-        throw new IOException("Failed to move  " + tableName + " from "
-            +  tableDir + " to " + backupTableDir);
-      }
-    } else {
-      LOG.info("No previous " + tableName +  " exists.  Continuing.");
-    }
-  }
-
-  /**
-   * @return Path to backup of original directory
-   */
-  Path sidelineOldMeta() throws IOException {
-    // put current hbase:meta aside.
-    Path hbaseDir = FSUtils.getRootDir(getConf());
-    FileSystem fs = hbaseDir.getFileSystem(getConf());
-    Path backupDir = getSidelineDir();
-    fs.mkdirs(backupDir);
-
-    try {
-      sidelineTable(fs, TableName.META_TABLE_NAME, hbaseDir, backupDir);
-    } catch (IOException e) {
-        LOG.error(HBaseMarkers.FATAL, "... failed to sideline meta. Currently in "
-            + "inconsistent state.  To restore try to rename hbase:meta in " +
-            backupDir.getName() + " to " + hbaseDir.getName() + ".", e);
-      throw e; // throw original exception
-    }
-    return backupDir;
   }
 
   /**
