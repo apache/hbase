@@ -37,12 +37,14 @@
   SnapshotInfo.SnapshotStats stats = null;
   TableName snapshotTable = null;
   boolean tableExists = false;
+  long snapshotTtl = 0;
   try (Admin admin = master.getConnection().getAdmin()) {
     for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
       if (snapshotName.equals(snapshotDesc.getName())) {
         snapshot = snapshotDesc;
         stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
         snapshotTable = TableName.valueOf(snapshot.getTable());
+        snapshotTtl = snapshot.getTtl();
         tableExists = admin.tableExists(snapshotTable);
         break;
       }
@@ -128,6 +130,7 @@
     <tr>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>Time To Live(Sec)</th>
         <th>Type</th>
         <th>Format Version</th>
         <th>State</th>
@@ -143,6 +146,13 @@
           <% } %>
         </td>
         <td><%= new Date(snapshot.getCreationTime()) %></td>
+        <td>
+          <% if (snapshotTtl == 0) { %>
+            FOREVER
+          <% } else { %>
+            <%= snapshotTtl %>
+          <% } %>
+        </td>
         <td><%= snapshot.getType() %></td>
         <td><%= snapshot.getVersion() %></td>
         <% if (stats.isSnapshotCorrupted()) { %>

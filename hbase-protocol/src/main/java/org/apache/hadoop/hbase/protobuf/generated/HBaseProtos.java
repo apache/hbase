@@ -17205,6 +17205,16 @@ public final class HBaseProtos {
      * <code>optional .hbase.pb.UsersAndPermissions users_and_permissions = 7;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder getUsersAndPermissionsOrBuilder();
+
+    // optional int64 ttl = 8 [default = 0];
+    /**
+     * <code>optional int64 ttl = 8 [default = 0];</code>
+     */
+    boolean hasTtl();
+    /**
+     * <code>optional int64 ttl = 8 [default = 0];</code>
+     */
+    long getTtl();
   }
   /**
    * Protobuf type {@code hbase.pb.SnapshotDescription}
@@ -17309,6 +17319,11 @@ public final class HBaseProtos {
                 usersAndPermissions_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000040;
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              ttl_ = input.readInt64();
               break;
             }
           }
@@ -17653,6 +17668,22 @@ public final class HBaseProtos {
       return usersAndPermissions_;
     }
 
+    // optional int64 ttl = 8 [default = 0];
+    public static final int TTL_FIELD_NUMBER = 8;
+    private long ttl_;
+    /**
+     * <code>optional int64 ttl = 8 [default = 0];</code>
+     */
+    public boolean hasTtl() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional int64 ttl = 8 [default = 0];</code>
+     */
+    public long getTtl() {
+      return ttl_;
+    }
+
     private void initFields() {
       name_ = "";
       table_ = "";
@@ -17661,6 +17692,7 @@ public final class HBaseProtos {
       version_ = 0;
       owner_ = "";
       usersAndPermissions_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance();
+      ttl_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -17705,6 +17737,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeMessage(7, usersAndPermissions_);
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeInt64(8, ttl_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -17741,6 +17776,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, usersAndPermissions_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(8, ttl_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -17800,6 +17839,11 @@ public final class HBaseProtos {
         result = result && getUsersAndPermissions()
             .equals(other.getUsersAndPermissions());
       }
+      result = result && (hasTtl() == other.hasTtl());
+      if (hasTtl()) {
+        result = result && (getTtl()
+            == other.getTtl());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -17840,6 +17884,10 @@ public final class HBaseProtos {
       if (hasUsersAndPermissions()) {
         hash = (37 * hash) + USERS_AND_PERMISSIONS_FIELD_NUMBER;
         hash = (53 * hash) + getUsersAndPermissions().hashCode();
+      }
+      if (hasTtl()) {
+        hash = (37 * hash) + TTL_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getTtl());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -17974,6 +18022,8 @@ public final class HBaseProtos {
           usersAndPermissionsBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000040);
+        ttl_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -18034,6 +18084,10 @@ public final class HBaseProtos {
         } else {
           result.usersAndPermissions_ = usersAndPermissionsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.ttl_ = ttl_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -18076,6 +18130,9 @@ public final class HBaseProtos {
         }
         if (other.hasUsersAndPermissions()) {
           mergeUsersAndPermissions(other.getUsersAndPermissions());
+        }
+        if (other.hasTtl()) {
+          setTtl(other.getTtl());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -18579,6 +18636,39 @@ public final class HBaseProtos {
         return usersAndPermissionsBuilder_;
       }
 
+      // optional int64 ttl = 8 [default = 0];
+      private long ttl_ ;
+      /**
+       * <code>optional int64 ttl = 8 [default = 0];</code>
+       */
+      public boolean hasTtl() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional int64 ttl = 8 [default = 0];</code>
+       */
+      public long getTtl() {
+        return ttl_;
+      }
+      /**
+       * <code>optional int64 ttl = 8 [default = 0];</code>
+       */
+      public Builder setTtl(long value) {
+        bitField0_ |= 0x00000080;
+        ttl_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 ttl = 8 [default = 0];</code>
+       */
+      public Builder clearTtl() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        ttl_ = 0L;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotDescription)
     }
 
@@ -18760,21 +18850,21 @@ public final class HBaseProtos {
       "rsion_major\030\007 \001(\r\022\025\n\rversion_minor\030\010 \001(\r" +
       "\"Q\n\020RegionServerInfo\022\020\n\010infoPort\030\001 \001(\005\022+" +
       "\n\014version_info\030\002 \001(\0132\025.hbase.pb.VersionI" +
-      "nfo\"\223\002\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
+      "nfo\"\243\002\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
       "\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
       "\0010\0227\n\004type\030\004 \001(\0162\".hbase.pb.SnapshotDesc" +
       "ription.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005\022\r\n\005",
       "owner\030\006 \001(\t\022<\n\025users_and_permissions\030\007 \001" +
-      "(\0132\035.hbase.pb.UsersAndPermissions\".\n\004Typ" +
-      "e\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020" +
-      "\002*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQ" +
-      "UAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREAT" +
-      "ER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n" +
-      "\010TimeUnit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECON" +
-      "DS\020\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007M" +
-      "INUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n*org.apa" +
-      "che.hadoop.hbase.protobuf.generatedB\013HBa",
-      "seProtosH\001\240\001\001"
+      "(\0132\035.hbase.pb.UsersAndPermissions\022\016\n\003ttl" +
+      "\030\010 \001(\003:\0010\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH" +
+      "\020\001\022\r\n\tSKIPFLUSH\020\002*r\n\013CompareType\022\010\n\004LESS" +
+      "\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_" +
+      "EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER" +
+      "\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS" +
+      "\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013" +
+      "\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004D" +
+      "AYS\020\007B>\n*org.apache.hadoop.hbase.protobu",
+      "f.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -18918,7 +19008,7 @@ public final class HBaseProtos {
           internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SnapshotDescription_descriptor,
-              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", "UsersAndPermissions", });
+              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", "UsersAndPermissions", "Ttl", });
           return null;
         }
       };

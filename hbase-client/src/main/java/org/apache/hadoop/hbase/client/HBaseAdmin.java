@@ -38,7 +38,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
-
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -3611,8 +3611,8 @@ public class HBaseAdmin implements Admin {
    * Create snapshot for the given table of given flush type.
    * <p>
    * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
-   * snapshot with the same name (even a different type or with different parameters) will fail with
-   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * snapshot with the same name (even a different type or with different parameters) will fail
+   * with a {@link SnapshotCreationException} indicating the duplicate naming.
    * <p>
    * Snapshot names follow the same naming constraints as tables in HBase.
    * @param snapshotName name of the snapshot to be created
@@ -3627,6 +3627,30 @@ public class HBaseAdmin implements Admin {
       IOException, SnapshotCreationException, IllegalArgumentException {
       snapshot(Bytes.toString(snapshotName), Bytes.toString(tableName), flushType);
   }
+
+  /**
+   * Create snapshot for the given table of given flush type.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail
+   * with a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @param flushType if the snapshot should be taken without flush memstore first
+   * @param snapshotProps snapshot parameters
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+   public void snapshot(final byte[] snapshotName, final byte[] tableName,
+       final SnapshotDescription.Type flushType, Map<String,Object> snapshotProps)
+       throws IOException, SnapshotCreationException, IllegalArgumentException {
+     snapshot(Bytes.toString(snapshotName), TableName.valueOf(tableName), flushType,
+       snapshotProps);
+   }
+
   /**
    public void snapshot(final String snapshotName,
     * Create a timestamp consistent snapshot for the given table.
@@ -3671,34 +3695,46 @@ public class HBaseAdmin implements Admin {
    *          snapshots stored on the cluster
    * @param tableName name of the table to snapshot
    * @param type type of snapshot to take
+   * @param snapshotProps snapshot parameters
    * @throws IOException we fail to reach the master
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
   @Override
-  public void snapshot(final String snapshotName,
-                       final TableName tableName,
-                      SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
-      IllegalArgumentException {
+  public void snapshot(final String snapshotName, final TableName tableName,
+      SnapshotDescription.Type type, Map<String,Object> snapshotProps)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setTable(tableName.getNameAsString());
     builder.setName(snapshotName);
     builder.setType(type);
+    builder.setTtl(getTtlFromSnapshotProps(snapshotProps));
     snapshot(builder.build());
+  }
+
+  private long getTtlFromSnapshotProps(Map<String, Object> snapshotProps) {
+    return MapUtils.getLongValue(snapshotProps, "TTL", -1);
+  }
+
+  public void snapshot(final String snapshotName,
+      final TableName tableName,
+     SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
+  IllegalArgumentException {
+    snapshot(snapshotName, tableName, type, null);
   }
 
   public void snapshot(final String snapshotName,
                        final String tableName,
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
-    snapshot(snapshotName, TableName.valueOf(tableName), type);
+    snapshot(snapshotName, TableName.valueOf(tableName), type, null);
   }
 
   public void snapshot(final String snapshotName,
                        final byte[] tableName,
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
-    snapshot(snapshotName, TableName.valueOf(tableName), type);
+    snapshot(snapshotName, TableName.valueOf(tableName), type, null);
   }
 
   /**

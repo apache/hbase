@@ -361,12 +361,12 @@ public final class SnapshotInfo extends Configured implements Tool {
     // List Available Snapshots
     if (listSnapshots) {
       SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-      System.out.printf("%-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME", "TABLE NAME");
+      System.out.printf("%-20s | %-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME", "TTL IN SEC",
+              "TABLE NAME");
       for (SnapshotDescription desc: getSnapshotList(conf)) {
-        System.out.printf("%-20s | %20s | %s%n",
-                          desc.getName(),
-                          df.format(new Date(desc.getCreationTime())),
-                          desc.getTable());
+        System.out.printf("%-20s | %20s | %20s | %s%n", desc.getName(),
+                df.format(new Date(desc.getCreationTime())), desc.getTtl(),
+                desc.getTable());
       }
       return 0;
     }
@@ -424,6 +424,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.out.println("  Table: " + snapshotDesc.getTable());
     System.out.println(" Format: " + snapshotDesc.getVersion());
     System.out.println("Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
+    System.out.println("    Ttl: " + snapshotDesc.getTtl());
     System.out.println("  Owner: " + snapshotDesc.getOwner());
     System.out.println();
   }

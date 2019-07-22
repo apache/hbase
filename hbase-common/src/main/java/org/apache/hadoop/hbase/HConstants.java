@@ -1331,6 +1331,15 @@ public final class HConstants {
       + System.getProperty("user.name") + "/hbase-staging";
   public static final String DEFAULT_LOSSY_COUNTING_ERROR_RATE =
       "hbase.util.default.lossycounting.errorrate";
+
+  // Default TTL - FOREVER
+  public static final long DEFAULT_SNAPSHOT_TTL = 0;
+
+  // User defined Default TTL config key
+  public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  public static final String SNAPSHOT_CLEANER_DISABLE = "hbase.master.cleaner.snapshot.disable";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

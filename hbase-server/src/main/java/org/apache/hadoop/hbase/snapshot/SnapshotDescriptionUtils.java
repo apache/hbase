@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
@@ -125,6 +126,8 @@ public final class SnapshotDescriptionUtils {
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
 
+  // Default value if no ttl is specified for Snapshot
+  private static final long NO_SNAPSHOT_TTL_SPECIFIED = 0;
 
   public static final String MASTER_SNAPSHOT_TIMEOUT_MILLIS = "hbase.snapshot.master.timeout.millis";
 
@@ -316,6 +319,21 @@ public final class SnapshotDescriptionUtils {
       builder.setCreationTime(time);
       snapshot = builder.build();
     }
+    long ttl = snapshot.getTtl();
+    // set default ttl(sec) if it is not set already or the value is out of the range
+    if (ttl == SnapshotDescriptionUtils.NO_SNAPSHOT_TTL_SPECIFIED ||
+        ttl > TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)) {
+      final long defaultSnapshotTtl = conf.getLong(HConstants.DEFAULT_SNAPSHOT_TTL_CONFIG_KEY,
+          HConstants.DEFAULT_SNAPSHOT_TTL);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Snapshot current TTL value: " + ttl + " resetting it to default value: " +
+          defaultSnapshotTtl);
+      }
+      ttl = defaultSnapshotTtl;
+    }
+    SnapshotDescription.Builder builder = snapshot.toBuilder();
+    builder.setTtl(ttl);
+    snapshot = builder.build();
 
     // set the acl to snapshot if security feature is enabled.
     if(isSecurityAvailable(conf)){
