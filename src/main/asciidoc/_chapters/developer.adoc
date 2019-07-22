@@ -1435,7 +1435,7 @@ ConnectionCount=1 (was 1)
 
 * All tests must be categorized, if not they could be skipped.
 * All tests should be written to be as fast as possible.
-* See <<hbase.unittests,hbase.unittests> for test case categories and corresponding timeouts.
+* See <<hbase.unittests,hbase.unittests>> for test case categories and corresponding timeouts.
   This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
 
 [[hbase.tests.sleeps]]
