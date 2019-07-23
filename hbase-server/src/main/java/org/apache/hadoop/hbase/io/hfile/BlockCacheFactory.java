@@ -78,38 +78,20 @@ public final class BlockCacheFactory {
   /**
    * The target block size used by blockcache instances. Defaults to
    * {@link HConstants#DEFAULT_BLOCKSIZE}.
+   * TODO: this config point is completely wrong, as it's used to determine the
+   * target block size of BlockCache instances. Rename.
    */
-  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.blockcache.minblocksize";
+  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
   private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
   private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
 
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY = "hbase.blockcache.external.class";
 
-  /**
-   * @deprecated use {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY} instead.
-   */
-  @Deprecated
-  static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.blockcache.minblocksize";
-
-  /**
-   * The config point hbase.offheapcache.minblocksize is completely wrong, which is replaced by
-   * {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY}. Keep the old config key here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY, BLOCKCACHE_BLOCKSIZE_KEY);
-  }
-
   private BlockCacheFactory() {
   }
 
   public static BlockCache createBlockCache(Configuration conf) {
-    if (conf.get(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY) != null) {
-      LOG.warn("The config key {} is deprecated now, instead please use {}. In future release "
-            + "we will remove the deprecated config.", DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY,
-        BLOCKCACHE_BLOCKSIZE_KEY);
-    }
     FirstLevelBlockCache l1Cache = createFirstLevelCache(conf);
     if (l1Cache == null) {
       return null;
