@@ -1155,24 +1155,20 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
-  public void testNullTableName() {
+  @Test(expected = IOException.class)
+  public void testNullTableName() throws IOException {
     // Null table name (should NOT work)
-    try {
-      TEST_UTIL.createTable((TableName)null, FAMILY);
-      fail("Creating a table with null name passed, should have failed");
-    } catch(Exception e) {}
+    TEST_UTIL.createTable((TableName)null, FAMILY);
+    fail("Creating a table with null name passed, should have failed");
   }
 
-  @Test
-  public void testNullFamilyName() {
+  @Test(expected = IOException.class)
+  public void testNullFamilyName() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Null family (should NOT work)
-    try {
-      TEST_UTIL.createTable(tableName, new byte[][]{null});
-      fail("Creating a table with a null family passed, should fail");
-    } catch(Exception e) {}
+    TEST_UTIL.createTable(tableName, new byte[][]{null});
+    fail("Creating a table with a null family passed, should fail");
   }
 
   @Test
@@ -1244,7 +1240,7 @@ public class TestFromClientSide {
         assertEmptyResult(result);
 
       } catch (Exception e) {
-        throw new IOException("Using a row with null qualifier threw exception, should ");
+        throw new IOException("Using a row with null qualifier should not throw exception");
       }
     }
   }
