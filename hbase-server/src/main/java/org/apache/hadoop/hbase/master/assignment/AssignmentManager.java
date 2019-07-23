@@ -1385,8 +1385,6 @@ public class AssignmentManager {
 
   private class RegionMetaLoadingVisitor implements RegionStateStore.RegionStateVisitor  {
 
-    int totalLoadedRegions;
-
     @Override
     public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
     final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
@@ -1406,7 +1404,6 @@ public class AssignmentManager {
         localState = State.OFFLINE;
       }
       RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
-      totalLoadedRegions++;
       // Do not need to lock on regionNode, as we can make sure that before we finish loading
       // meta, all the related procedures can not be executed. The only exception is for meta
       // region related operations, but here we do not load the informations for meta region.
