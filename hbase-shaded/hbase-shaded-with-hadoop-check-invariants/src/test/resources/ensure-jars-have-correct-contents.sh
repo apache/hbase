@@ -73,6 +73,8 @@ allowed_expr+="|^org/apache/hbase/"
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
 allowed_expr+="|^tables/"
+#   * contents of hbase-webapps
+allowed_expr+="|^hbase-webapps/"
 #   * HBase's default configuration files, which have the form
 #     "_module_-default.xml"
 allowed_expr+="|^hbase-default.xml$"
