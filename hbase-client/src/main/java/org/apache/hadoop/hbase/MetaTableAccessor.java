@@ -810,7 +810,7 @@ public class MetaTableAccessor {
    * Returns the column family used for meta columns.
    * @return HConstants.CATALOG_FAMILY.
    */
-  private static byte[] getCatalogFamily() {
+  public static byte[] getCatalogFamily() {
     return HConstants.CATALOG_FAMILY;
   }
 
@@ -826,7 +826,7 @@ public class MetaTableAccessor {
    * Returns the column qualifier for serialized region info
    * @return HConstants.REGIONINFO_QUALIFIER
    */
-  private static byte[] getRegionInfoColumn() {
+  public static byte[] getRegionInfoColumn() {
     return HConstants.REGIONINFO_QUALIFIER;
   }
 
@@ -1025,7 +1025,7 @@ public class MetaTableAccessor {
    * @return An RegionInfo instance or null.
    */
   @Nullable
-  private static RegionInfo getRegionInfo(final Result r, byte [] qualifier) {
+  public static RegionInfo getRegionInfo(final Result r, byte [] qualifier) {
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), qualifier);
     if (cell == null) return null;
     return RegionInfo.parseFromOrNull(cell.getValueArray(),
