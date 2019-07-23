@@ -129,10 +129,8 @@ public class CacheConfig {
   /**
    * The target block size used by blockcache instances. Defaults to
    * {@link HConstants#DEFAULT_BLOCKSIZE}.
-   * TODO: this config point is completely wrong, as it's used to determine the
-   * target block size of BlockCache instances. Rename.
    */
-  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
+  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.blockcache.minblocksize";
 
   private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
   private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
@@ -140,6 +138,21 @@ public class CacheConfig {
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY="hbase.blockcache.external.class";
   private static final String DROP_BEHIND_CACHE_COMPACTION_KEY="hbase.hfile.drop.behind.compaction";
   private static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
+
+  /**
+   * @deprecated use {@link CacheConfig#BLOCKCACHE_BLOCKSIZE_KEY} instead.
+   */
+  @Deprecated
+  static final String DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
+
+  /**
+   * The config point hbase.offheapcache.minblocksize is completely wrong, which is replaced by
+   * {@link BlockCacheFactory#BLOCKCACHE_BLOCKSIZE_KEY}. Keep the old config key here for backward
+   * compatibility.
+   */
+  static {
+    Configuration.addDeprecation(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY, BLOCKCACHE_BLOCKSIZE_KEY);
+  }
 
   /**
    * Enum of all built in external block caches.
@@ -675,6 +688,11 @@ public class CacheConfig {
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
+    if (conf.get(DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY) != null) {
+      LOG.warn("The config key " + DEPRECATED_BLOCKCACHE_BLOCKSIZE_KEY +
+          " is deprecated now, instead please use " + BLOCKCACHE_BLOCKSIZE_KEY  +". "
+          + "In future release we will remove the deprecated config.");
+    }
     LruBlockCache l1 = getL1(conf);
     // blockCacheDisabled is set as a side-effect of getL1Internal(), so check it again after the call.
     if (blockCacheDisabled) return null;
