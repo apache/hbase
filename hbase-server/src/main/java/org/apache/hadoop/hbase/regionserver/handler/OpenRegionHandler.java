@@ -298,9 +298,9 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   /**
-   * Thread to run region post open tasks. Call {@link #getException()} after
-   * the thread finishes to check for exceptions running
-   * {@link RegionServerServices#postOpenDeployTasks(HRegion)
+   * Thread to run region post open tasks. Call {@link #getException()} after the thread finishes
+   * to check for exceptions running
+   * {@link RegionServerServices#postOpenDeployTasks(PostOpenDeployContext)}
    */
   static class PostOpenDeployTasksThread extends Thread {
     private Throwable exception = null;
