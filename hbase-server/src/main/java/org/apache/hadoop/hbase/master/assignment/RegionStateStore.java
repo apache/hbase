@@ -96,6 +96,23 @@ public class RegionStateStore {
     });
   }
 
+  /**
+   * Queries META table for the passed region encoded name,
+   * delegating action upon results to the <code>RegionStateVisitor</code>
+   * passed as second parameter.
+   * @param regionEncodedName encoded name for the Region we want to query META for.
+   * @param visitor The <code>RegionStateVisitor</code> instance to react over the query results.
+   * @throws IOException If some error occurs while querying META or parsing results.
+   */
+  public void visitMetaForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
+    throws IOException {
+    Result result = MetaTableAccessor.
+      scanByRegionEncodedName(master.getConnection(), regionEncodedName);
+    if(result != null) {
+      visitMetaEntry(visitor, result);
+    }
+  }
+
   private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
       throws IOException {
     final RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
