@@ -43,9 +43,9 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+            <scope>test</scope>
         </dependency>
 
-        <!-- adding shaded-client as the first item on the classpath -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-shaded-client</artifactId>
