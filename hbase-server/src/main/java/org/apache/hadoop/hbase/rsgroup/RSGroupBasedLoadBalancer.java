@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
@@ -56,18 +55,17 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
- * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721)
- * It does region balance based on a table's group membership.
- *
- * Most assignment methods contain two exclusive code paths: Online - when the group
- * table is online and Offline - when it is unavailable.
- *
- * During Offline, assignments are assigned based on cached information in zookeeper.
- * If unavailable (ie bootstrap) then regions are assigned randomly.
- *
- * Once the GROUP table has been assigned, the balancer switches to Online and will then
- * start providing appropriate assignments for user tables.
- *
+ * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721) It does
+ * region balance based on a table's group membership.
+ * <p/>
+ * Most assignment methods contain two exclusive code paths: Online - when the group table is online
+ * and Offline - when it is unavailable.
+ * <p/>
+ * During Offline, assignments are assigned based on cached information in zookeeper. If unavailable
+ * (ie bootstrap) then regions are assigned randomly.
+ * <p/>
+ * Once the GROUP table has been assigned, the balancer switches to Online and will then start
+ * providing appropriate assignments for user tables.
  */
 @InterfaceAudience.Private
 public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
