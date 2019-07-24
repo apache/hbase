@@ -1387,7 +1387,7 @@ public class AssignmentManager {
 
     @Override
     public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
-    final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
+      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
       if (state == null && regionLocation == null && lastHost == null &&
         openSeqNum == SequenceId.NO_SEQUENCE_ID) {
         // This is a row with nothing in it.
