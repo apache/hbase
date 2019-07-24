@@ -76,7 +76,7 @@ public class BufferedMutatorParams implements Cloneable {
   }
 
   /**
-   * @deprecated Use {@link #operationTimeout()}
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Use {@link #operationTimeout()}
    */
   @Deprecated
   public BufferedMutatorParams opertationTimeout(final int operationTimeout) {
