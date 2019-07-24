@@ -1434,18 +1434,15 @@ public class AssignmentManager {
    *                          <code>AssignmentManager.regionStateStore</code> cache
    * @return <code>RegionInfo</code> instance for the given region if it is present in META
    *          and got successfully loaded into <code>AssignmentManager.regionStateStore</code>
-   *          cache.
-   * @throws UnknownRegionException if any errors occur while querying meta or if given
-   *         region couldn't be found in META.
+   *          cache, <b>null</b> otherwise.
+   * @throws UnknownRegionException if any errors occur while querying meta.
    */
   public RegionInfo loadRegionFromMeta(String regionEncodedName) throws UnknownRegionException {
     try {
       RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
       regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
-      RegionInfo regionInfo = regionStates.getRegionState(regionEncodedName).getRegion();
-      if(regionInfo==null){
-        throw new UnknownRegionException("Region not found in META.");
-      }
+      RegionInfo regionInfo = regionStates.getRegionState(regionEncodedName) == null ? null :
+        regionStates.getRegionState(regionEncodedName).getRegion();
       return regionInfo;
     }catch(IOException e){
       LOG.error("Error trying to load region {} from META", regionEncodedName, e);
