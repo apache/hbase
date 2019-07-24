@@ -1388,7 +1388,8 @@
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.9.2</jackson.version>
+    <jackson.version>2.9.9</jackson.version>
+    <jackson.databind.version>2.9.9.1</jackson.databind.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.3.19.v20170502</jetty.version>
     <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
@@ -1874,7 +1875,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson.databind.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jamon</groupId>
