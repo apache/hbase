@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hbase.util.HbckErrorReporter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSUtils.FamilyDirFilter;
 import org.apache.hadoop.hbase.util.FSUtils.HFileFilter;
 import org.apache.hadoop.hbase.util.FSUtils.RegionDirFilter;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 
 /**
  * This class marches through all of the region's hfiles and verifies that
@@ -523,7 +523,7 @@ public class HFileCorruptionChecker {
    * Print a human readable summary of hfile quarantining operations.
    * @param out
    */
-  public void report(ErrorReporter out) {
+  public void report(HbckErrorReporter out) {
     out.print("Checked " + hfilesChecked.get() + " hfile for corruption");
     out.print("  HFiles corrupted:                  " + corrupted.size());
     if (inQuarantineMode) {
