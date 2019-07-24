@@ -408,6 +408,26 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   }
 
   /**
+   * Check if a empty directory with no subdirs or subfiles can be deleted
+   * @param dir Path of the directory
+   * @return True if the directory can be deleted, otherwise false
+   */
+  private boolean isEmptyDirDeletable(Path dir) {
+    for (T cleaner : cleanersChain) {
+      if (cleaner.isStopped() || this.getStopper().isStopped()) {
+        LOG.warn("A file cleaner {} is stopped, won't delete the empty directory {}",
+          this.getName(), dir);
+        return false;
+      }
+      if (!cleaner.isEmptyDirDeletable(dir)) {
+        // If one of the cleaner need the empty directory, skip delete it
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Delete the given files
    * @param filesToDelete files to delete
    * @return number of deleted files
@@ -513,9 +533,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         allSubdirsDeleted = deleteAction(() -> getCleanResult(tasks), "subdirs");
       }
 
-      boolean result = allFilesDeleted && allSubdirsDeleted;
-      // if and only if files and subdirs under current dir are deleted successfully, and
-      // it is not the root dir, then task will try to delete it.
+      boolean result = allFilesDeleted && allSubdirsDeleted && isEmptyDirDeletable(dir);
+      // if and only if files and subdirs under current dir are deleted successfully, and the empty
+      // directory can be deleted, and it is not the root dir then task will try to delete it.
       if (result && !root) {
         result &= deleteAction(() -> fs.delete(dir, false), "dir");
       }
