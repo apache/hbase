@@ -30,7 +30,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.HBaseFsck;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.HbckErrorReporter.ERROR_CODE;
 
 public class HbckTestingUtil {
   private static ExecutorService exec = new ScheduledThreadPoolExecutor(10);
