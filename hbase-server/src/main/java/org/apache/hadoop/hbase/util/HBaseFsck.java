@@ -26,7 +26,6 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -42,9 +41,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -58,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +74,6 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -114,11 +111,10 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.HbckErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
-import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -140,11 +136,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
-import org.apache.hbase.thirdparty.com.google.common.collect.TreeMultimap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
@@ -206,7 +198,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private static boolean rsSupportsOffline = true;
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
-  private static final String TO_BE_LOADED = "to_be_loaded";
+
   /**
    * Here is where hbase-1.x used to default the lock for hbck1.
    * It puts in place a lock when it goes to write/make changes.
@@ -291,15 +283,15 @@ public class HBaseFsck extends Configured implements Closeable {
   /*********
    * State
    *********/
-  final private ErrorReporter errors;
+  final private HbckErrorReporter errors;
   int fixes = 0;
 
   /**
    * This map contains the state of all hbck items.  It maps from encoded region
-   * name to HbckInfo structure.  The information contained in HbckInfo is used
+   * name to HbckRegionInfo structure.  The information contained in HbckRegionInfo is used
    * to detect and correct consistency (hdfs/meta/deployment) problems.
    */
-  private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<>();
+  private TreeMap<String, HbckRegionInfo> regionInfoMap = new TreeMap<>();
   // Empty regioninfo qualifiers in hbase:meta
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<>();
 
@@ -313,12 +305,12 @@ public class HBaseFsck extends Configured implements Closeable {
    * unless checkMetaOnly is specified, in which case, it contains only
    * the meta table
    */
-  private SortedMap<TableName, TableInfo> tablesInfo = new ConcurrentSkipListMap<>();
+  private SortedMap<TableName, HbckTableInfo> tablesInfo = new ConcurrentSkipListMap<>();
 
   /**
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
-  private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
+  private List<HbckRegionInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<>());
 
   private Map<TableName, Set<String>> orphanTableDirs = new HashMap<>();
   private Map<TableName, TableState> tableStates = new HashMap<>();
@@ -837,7 +829,7 @@ public class HBaseFsck extends Configured implements Closeable {
     return errors.summarize();
   }
 
-  public static byte[] keyOnly (byte[] b) {
+  public static byte[] keyOnly(byte[] b) {
     if (b == null)
       return b;
     int rowlength = Bytes.toShort(b, 0);
@@ -965,8 +957,8 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * Iterates through the list of all orphan/invalid regiondirs.
    */
-  private void adoptHdfsOrphans(Collection<HbckInfo> orphanHdfsDirs) throws IOException {
-    for (HbckInfo hi : orphanHdfsDirs) {
+  private void adoptHdfsOrphans(Collection<HbckRegionInfo> orphanHdfsDirs) throws IOException {
+    for (HbckRegionInfo hi : orphanHdfsDirs) {
       LOG.info("Attempting to handle orphan hdfs dir: " + hi.getHdfsRegionDir());
       adoptHdfsOrphan(hi);
     }
@@ -982,7 +974,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * overlapping regions.
    */
   @SuppressWarnings("deprecation")
-  private void adoptHdfsOrphan(HbckInfo hi) throws IOException {
+  private void adoptHdfsOrphan(HbckRegionInfo hi) throws IOException {
     Path p = hi.getHdfsRegionDir();
     FileSystem fs = p.getFileSystem(getConf());
     FileStatus[] dirs = fs.listStatus(p);
@@ -993,9 +985,9 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     TableName tableName = hi.getTableName();
-    TableInfo tableInfo = tablesInfo.get(tableName);
+    HbckTableInfo tableInfo = tablesInfo.get(tableName);
     Preconditions.checkNotNull(tableInfo, "Table '" + tableName + "' not present!");
-    TableDescriptor template = tableInfo.getHTD();
+    TableDescriptor template = tableInfo.getTableDescriptor();
 
     // find min and max key values
     Pair<byte[],byte[]> orphanRegionRange = null;
@@ -1272,62 +1264,24 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  public ErrorReporter getErrors() {
+  public HbckErrorReporter getErrors() {
     return errors;
-  }
-
-  /**
-   * Read the .regioninfo file from the file system.  If there is no
-   * .regioninfo, add it to the orphan hdfs region list.
-   */
-  private void loadHdfsRegioninfo(HbckInfo hbi) throws IOException {
-    Path regionDir = hbi.getHdfsRegionDir();
-    if (regionDir == null) {
-      if (hbi.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-        // Log warning only for default/ primary replica with no region dir
-        LOG.warn("No HDFS region dir found: " + hbi + " meta=" + hbi.metaEntry);
-      }
-      return;
-    }
-
-    if (hbi.hdfsEntry.hri != null) {
-      // already loaded data
-      return;
-    }
-
-    FileSystem fs = FileSystem.get(getConf());
-    RegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-    LOG.debug("RegionInfo read: " + hri.toString());
-    hbi.hdfsEntry.hri = hri;
-  }
-
-  /**
-   * Exception thrown when a integrity repair operation fails in an
-   * unresolvable way.
-   */
-  public static class RegionRepairException extends IOException {
-    private static final long serialVersionUID = 1L;
-    final IOException ioe;
-    public RegionRepairException(String s, IOException ioe) {
-      super(s);
-      this.ioe = ioe;
-    }
   }
 
   /**
    * Populate hbi's from regionInfos loaded from file system.
    */
-  private SortedMap<TableName, TableInfo> loadHdfsRegionInfos()
+  private SortedMap<TableName, HbckTableInfo> loadHdfsRegionInfos()
       throws IOException, InterruptedException {
     tablesInfo.clear(); // regenerating the data
     // generate region split structure
-    Collection<HbckInfo> hbckInfos = regionInfoMap.values();
+    Collection<HbckRegionInfo> hbckRegionInfos = regionInfoMap.values();
 
     // Parallelized read of .regioninfo files.
-    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<>(hbckInfos.size());
+    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<>(hbckRegionInfos.size());
     List<Future<Void>> hbiFutures;
 
-    for (HbckInfo hbi : hbckInfos) {
+    for (HbckRegionInfo hbi : hbckRegionInfos) {
       WorkItemHdfsRegionInfo work = new WorkItemHdfsRegionInfo(hbi, this, errors);
       hbis.add(work);
     }
@@ -1349,7 +1303,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Path hbaseRoot = FSUtils.getRootDir(getConf());
     FileSystem fs = hbaseRoot.getFileSystem(getConf());
     // serialized table info gathering.
-    for (HbckInfo hbi: hbckInfos) {
+    for (HbckRegionInfo hbi: hbckRegionInfos) {
 
       if (hbi.getHdfsHRI() == null) {
         // was an orphan
@@ -1365,10 +1319,10 @@ public class HBaseFsck extends Configured implements Closeable {
         continue;
       }
 
-      TableInfo modTInfo = tablesInfo.get(tableName);
+      HbckTableInfo modTInfo = tablesInfo.get(tableName);
       if (modTInfo == null) {
         // only executed once per table.
-        modTInfo = new TableInfo(tableName);
+        modTInfo = new HbckTableInfo(tableName, this);
         tablesInfo.put(tableName, modTInfo);
         try {
           TableDescriptor htd =
@@ -1403,7 +1357,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * @return a set of column families
    * @throws IOException
    */
-  private Set<String> getColumnFamilyList(Set<String> columns, HbckInfo hbi) throws IOException {
+  private Set<String> getColumnFamilyList(Set<String> columns, HbckRegionInfo hbi)
+      throws IOException {
     Path regionDir = hbi.getHdfsRegionDir();
     FileSystem fs = regionDir.getFileSystem(getConf());
     FileStatus[] subDirs = fs.listStatus(regionDir, new FSUtils.FamilyDirFilter(fs));
@@ -1522,11 +1477,11 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  private SortedMap<TableName, TableInfo> checkHdfsIntegrity(boolean fixHoles,
+  private SortedMap<TableName, HbckTableInfo> checkHdfsIntegrity(boolean fixHoles,
       boolean fixOverlaps) throws IOException {
     LOG.info("Checking HBase region split map from HDFS data...");
     logParallelMerge();
-    for (TableInfo tInfo : tablesInfo.values()) {
+    for (HbckTableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler;
       if (fixHoles || fixOverlaps) {
         handler = tInfo.new HDFSIntegrityFixer(tInfo, errors, getConf(),
@@ -1542,7 +1497,7 @@ public class HBaseFsck extends Configured implements Closeable {
     return tablesInfo;
   }
 
-  private Path getSidelineDir() throws IOException {
+  Path getSidelineDir() throws IOException {
     if (sidelineDir == null) {
       Path hbaseDir = FSUtils.getRootDir(getConf());
       Path hbckDir = new Path(hbaseDir, HConstants.HBCK_SIDELINEDIR_NAME);
@@ -1555,7 +1510,7 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * Sideline a region dir (instead of deleting it)
    */
-  Path sidelineRegionDir(FileSystem fs, HbckInfo hi) throws IOException {
+  Path sidelineRegionDir(FileSystem fs, HbckRegionInfo hi) throws IOException {
     return sidelineRegionDir(fs, null, hi);
   }
 
@@ -1568,7 +1523,7 @@ public class HBaseFsck extends Configured implements Closeable {
    *     on. If NULL, it is ignored.
    */
   Path sidelineRegionDir(FileSystem fs,
-      String parentDir, HbckInfo hi) throws IOException {
+      String parentDir, HbckRegionInfo hi) throws IOException {
     TableName tableName = hi.getTableName();
     Path regionDir = hi.getHdfsRegionDir();
 
@@ -1656,7 +1611,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Check if the specified region's table is disabled.
    * @param tableName table to check status of
    */
-  private boolean isTableDisabled(TableName tableName) {
+  boolean isTableDisabled(TableName tableName) {
     return tableStates.containsKey(tableName)
         && tableStates.get(tableName)
         .inStates(TableState.State.DISABLED, TableState.State.DISABLING);
@@ -1750,12 +1705,13 @@ public class HBaseFsck extends Configured implements Closeable {
         return false;
       }
       ServerName sn = metaLocation.getServerName();
-      MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, EnvironmentEdgeManager.currentTime());
-      HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegionInfo().getEncodedName());
-      if (hbckInfo == null) {
-        regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), new HbckInfo(m));
+      HbckRegionInfo.MetaEntry m = new HbckRegionInfo.MetaEntry(metaLocation.getRegion(), sn,
+          EnvironmentEdgeManager.currentTime());
+      HbckRegionInfo hbckRegionInfo = regionInfoMap.get(metaLocation.getRegion().getEncodedName());
+      if (hbckRegionInfo == null) {
+        regionInfoMap.put(metaLocation.getRegion().getEncodedName(), new HbckRegionInfo(m));
       } else {
-        hbckInfo.metaEntry = m;
+        hbckRegionInfo.setMetaEntry(m);
       }
     }
     return true;
@@ -1821,7 +1777,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // for the non-primary ones. Keeps code cleaner this way.
 
     List<CheckRegionConsistencyWorkItem> workItems = new ArrayList<>(regionInfoMap.size());
-    for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
+    for (java.util.Map.Entry<String, HbckRegionInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
         workItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
       }
@@ -1833,7 +1789,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Run a pass over the replicas and fix any assignment issues that exist on the currently
     // deployed/undeployed replicas.
     List<CheckRegionConsistencyWorkItem> replicaWorkItems = new ArrayList<>(regionInfoMap.size());
-    for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
+    for (java.util.Map.Entry<String, HbckRegionInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
         replicaWorkItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
       }
@@ -1888,9 +1844,9 @@ public class HBaseFsck extends Configured implements Closeable {
 
   class CheckRegionConsistencyWorkItem implements Callable<Void> {
     private final String key;
-    private final HbckInfo hbi;
+    private final HbckRegionInfo hbi;
 
-    CheckRegionConsistencyWorkItem(String key, HbckInfo hbi) {
+    CheckRegionConsistencyWorkItem(String key, HbckRegionInfo hbi) {
       this.key = key;
       this.hbi = hbi;
     }
@@ -1914,7 +1870,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  private void addSkippedRegion(final HbckInfo hbi) {
+  private void addSkippedRegion(final HbckRegionInfo hbi) {
     Set<String> skippedRegionNames = skippedRegions.get(hbi.getTableName());
     if (skippedRegionNames == null) {
       skippedRegionNames = new HashSet<>();
@@ -1933,7 +1889,7 @@ public class HBaseFsck extends Configured implements Closeable {
     for (Entry<TableName, TableState> entry : tableStates.entrySet()) {
       TableName tableName = entry.getKey();
       TableState tableState = entry.getValue();
-      TableInfo tableInfo = tablesInfo.get(tableName);
+      HbckTableInfo tableInfo = tablesInfo.get(tableName);
       if (isTableIncluded(tableName)
           && !tableName.isSystemTable()
           && tableInfo == null) {
@@ -1996,8 +1952,8 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * Deletes region from meta table
    */
-  private void deleteMetaRegion(HbckInfo hi) throws IOException {
-    deleteMetaRegion(hi.metaEntry.getRegionName());
+  private void deleteMetaRegion(HbckRegionInfo hi) throws IOException {
+    deleteMetaRegion(hi.getMetaEntry().getRegionName());
   }
 
   /**
@@ -2012,14 +1968,14 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * Reset the split parent region info in meta table
    */
-  private void resetSplitParent(HbckInfo hi) throws IOException {
-    RowMutations mutations = new RowMutations(hi.metaEntry.getRegionName());
-    Delete d = new Delete(hi.metaEntry.getRegionName());
+  private void resetSplitParent(HbckRegionInfo hi) throws IOException {
+    RowMutations mutations = new RowMutations(hi.getMetaEntry().getRegionName());
+    Delete d = new Delete(hi.getMetaEntry().getRegionName());
     d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
     d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     mutations.add(d);
 
-    RegionInfo hri = RegionInfoBuilder.newBuilder(hi.metaEntry)
+    RegionInfo hri = RegionInfoBuilder.newBuilder(hi.getMetaEntry())
         .setOffline(false)
         .setSplit(false)
         .build();
@@ -2027,7 +1983,7 @@ public class HBaseFsck extends Configured implements Closeable {
     mutations.add(p);
 
     meta.mutateRow(mutations);
-    LOG.info("Reset split parent " + hi.metaEntry.getRegionNameAsString() + " in META" );
+    LOG.info("Reset split parent " + hi.getMetaEntry().getRegionNameAsString() + " in META");
   }
 
   /**
@@ -2038,12 +1994,12 @@ public class HBaseFsck extends Configured implements Closeable {
    * table.  The problem has to do with in-memory only master state, so
    * restarting the HMaster or failing over to another should fix this.
    */
-  private void offline(byte[] regionName) throws IOException {
+  void offline(byte[] regionName) throws IOException {
     String regionString = Bytes.toStringBinary(regionName);
     if (!rsSupportsOffline) {
-      LOG.warn("Using unassign region " + regionString
-          + " instead of using offline method, you should"
-          + " restart HMaster after these repairs");
+      LOG.warn(
+          "Using unassign region " + regionString + " instead of using offline method, you should" +
+              " restart HMaster after these repairs");
       admin.unassign(regionName, true);
       return;
     }
@@ -2054,50 +2010,16 @@ public class HBaseFsck extends Configured implements Closeable {
       admin.offline(regionName);
     } catch (IOException ioe) {
       String notFoundMsg = "java.lang.NoSuchMethodException: " +
-        "org.apache.hadoop.hbase.master.HMaster.offline([B)";
+          "org.apache.hadoop.hbase.master.HMaster.offline([B)";
       if (ioe.getMessage().contains(notFoundMsg)) {
-        LOG.warn("Using unassign region " + regionString
-            + " instead of using offline method, you should"
-            + " restart HMaster after these repairs");
+        LOG.warn("Using unassign region " + regionString +
+            " instead of using offline method, you should" +
+            " restart HMaster after these repairs");
         rsSupportsOffline = false; // in the future just use unassign
         admin.unassign(regionName, true);
         return;
       }
       throw ioe;
-    }
-  }
-
-  private void undeployRegions(HbckInfo hi) throws IOException, InterruptedException {
-    undeployRegionsForHbi(hi);
-    // undeploy replicas of the region (but only if the method is invoked for the primary)
-    if (hi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-      return;
-    }
-    int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
-    for (int i = 1; i < numReplicas; i++) {
-      if (hi.getPrimaryHRIForDeployedReplica() == null) continue;
-      RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
-          hi.getPrimaryHRIForDeployedReplica(), i);
-      HbckInfo h = regionInfoMap.get(hri.getEncodedName());
-      if (h != null) {
-        undeployRegionsForHbi(h);
-        //set skip checks; we undeployed it, and we don't want to evaluate this anymore
-        //in consistency checks
-        h.setSkipChecks(true);
-      }
-    }
-  }
-
-  private void undeployRegionsForHbi(HbckInfo hi) throws IOException, InterruptedException {
-    for (OnlineEntry rse : hi.deployedEntries) {
-      LOG.debug("Undeploy region "  + rse.hri + " from " + rse.hsa);
-      try {
-        HBaseFsckRepair.closeRegionSilentlyAndWait(connection, rse.hsa, rse.hri);
-        offline(rse.hri.getRegionName());
-      } catch (IOException ioe) {
-        LOG.warn("Got exception when attempting to offline region "
-            + Bytes.toString(rse.hri.getRegionName()), ioe);
-      }
     }
   }
 
@@ -2113,8 +2035,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * the offline ipc call exposed on the master (&lt;0.90.5, &lt;0.92.0) a master
    * restart or failover may be required.
    */
-  private void closeRegion(HbckInfo hi) throws IOException, InterruptedException {
-    if (hi.metaEntry == null && hi.hdfsEntry == null) {
+  void closeRegion(HbckRegionInfo hi) throws IOException, InterruptedException {
+    if (hi.getMetaEntry() == null && hi.getHdfsEntry() == null) {
       undeployRegions(hi);
       return;
     }
@@ -2161,7 +2083,42 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  private void tryAssignmentRepair(HbckInfo hbi, String msg) throws IOException,
+  private void undeployRegions(HbckRegionInfo hi) throws IOException, InterruptedException {
+    undeployRegionsForHbi(hi);
+    // undeploy replicas of the region (but only if the method is invoked for the primary)
+    if (hi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+      return;
+    }
+    int numReplicas = admin.getDescriptor(hi.getTableName()).getRegionReplication();
+    for (int i = 1; i < numReplicas; i++) {
+      if (hi.getPrimaryHRIForDeployedReplica() == null) continue;
+      RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
+          hi.getPrimaryHRIForDeployedReplica(), i);
+      HbckRegionInfo h = regionInfoMap.get(hri.getEncodedName());
+      if (h != null) {
+        undeployRegionsForHbi(h);
+        //set skip checks; we undeployed it, and we don't want to evaluate this anymore
+        //in consistency checks
+        h.setSkipChecks(true);
+      }
+    }
+  }
+
+  private void undeployRegionsForHbi(HbckRegionInfo hi) throws IOException, InterruptedException {
+    for (HbckRegionInfo.OnlineEntry rse : hi.getOnlineEntries()) {
+      LOG.debug("Undeploy region "  + rse.getRegionInfo() + " from " + rse.getServerName());
+      try {
+        HBaseFsckRepair
+            .closeRegionSilentlyAndWait(connection, rse.getServerName(), rse.getRegionInfo());
+        offline(rse.getRegionInfo().getRegionName());
+      } catch (IOException ioe) {
+        LOG.warn("Got exception when attempting to offline region "
+            + Bytes.toString(rse.getRegionInfo().getRegionName()), ioe);
+      }
+    }
+  }
+
+  private void tryAssignmentRepair(HbckRegionInfo hbi, String msg) throws IOException,
     KeeperException, InterruptedException {
     // If we are trying to fix the errors
     if (shouldFixAssignments()) {
@@ -2170,7 +2127,7 @@ public class HBaseFsck extends Configured implements Closeable {
       setShouldRerun();
       RegionInfo hri = hbi.getHdfsHRI();
       if (hri == null) {
-        hri = hbi.metaEntry;
+        hri = hbi.getMetaEntry();
       }
       HBaseFsckRepair.fixUnassigned(admin, hri);
       HBaseFsckRepair.waitUntilAssigned(admin, hri);
@@ -2180,7 +2137,7 @@ public class HBaseFsck extends Configured implements Closeable {
       int replicationCount = admin.getTableDescriptor(hri.getTable()).getRegionReplication();
       for (int i = 1; i < replicationCount; i++) {
         hri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
-        HbckInfo h = regionInfoMap.get(hri.getEncodedName());
+        HbckRegionInfo h = regionInfoMap.get(hri.getEncodedName());
         if (h != null) {
           undeployRegions(h);
           //set skip checks; we undeploy & deploy it; we don't want to evaluate this hbi anymore
@@ -2197,23 +2154,23 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * Check a single region for consistency and correct deployment.
    */
-  private void checkRegionConsistency(final String key, final HbckInfo hbi)
-  throws IOException, KeeperException, InterruptedException {
+  private void checkRegionConsistency(final String key, final HbckRegionInfo hbi)
+      throws IOException, KeeperException, InterruptedException {
 
     if (hbi.isSkipChecks()) return;
     String descriptiveName = hbi.toString();
-    boolean inMeta = hbi.metaEntry != null;
+    boolean inMeta = hbi.getMetaEntry() != null;
     // In case not checking HDFS, assume the region is on HDFS
     boolean inHdfs = !shouldCheckHdfs() || hbi.getHdfsRegionDir() != null;
-    boolean hasMetaAssignment = inMeta && hbi.metaEntry.regionServer != null;
-    boolean isDeployed = !hbi.deployedOn.isEmpty();
-    boolean isMultiplyDeployed = hbi.deployedOn.size() > 1;
+    boolean hasMetaAssignment = inMeta && hbi.getMetaEntry().regionServer != null;
+    boolean isDeployed = !hbi.getDeployedOn().isEmpty();
+    boolean isMultiplyDeployed = hbi.getDeployedOn().size() > 1;
     boolean deploymentMatchesMeta =
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
-      hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
+      hbi.getMetaEntry().regionServer.equals(hbi.getDeployedOn().get(0));
     boolean splitParent =
-        inMeta && hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
-    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry.getTable());
+        inMeta && hbi.getMetaEntry().isSplit() && hbi.getMetaEntry().isOffline();
+    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.getMetaEntry().getTable());
     boolean recentlyModified = inHdfs &&
       hbi.getModTime() + timelag > EnvironmentEdgeManager.currentTime();
 
@@ -2238,7 +2195,7 @@ public class HBaseFsck extends Configured implements Closeable {
     } else if (!inMeta && !inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META_HDFS, "Region "
           + descriptiveName + ", key=" + key + ", not on HDFS or in hbase:meta but " +
-          "deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+          "deployed on " + Joiner.on(", ").join(hbi.getDeployedOn()));
       if (shouldFixAssignments()) {
         undeployRegions(hbi);
       }
@@ -2265,9 +2222,9 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         RegionInfo hri = hbi.getHdfsHRI();
-        TableInfo tableInfo = tablesInfo.get(hri.getTable());
+        HbckTableInfo tableInfo = tablesInfo.get(hri.getTable());
 
-        for (RegionInfo region : tableInfo.getRegionsFromMeta()) {
+        for (RegionInfo region : tableInfo.getRegionsFromMeta(this.regionInfoMap)) {
           if (Bytes.compareTo(region.getStartKey(), hri.getStartKey()) <= 0
               && (region.getEndKey().length == 0 || Bytes.compareTo(region.getEndKey(),
                 hri.getEndKey()) >= 0)
@@ -2304,7 +2261,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     } else if (!inMeta && inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META, "Region " + descriptiveName
-          + " not in META, but deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+          + " not in META, but deployed on " + Joiner.on(", ").join(hbi.getDeployedOn()));
       debugLsr(hbi.getHdfsRegionDir());
       if (hbi.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
         // for replicas, this means that we should undeploy the region (we would have
@@ -2333,10 +2290,10 @@ public class HBaseFsck extends Configured implements Closeable {
     } else if (inMeta && inHdfs && !isDeployed && splitParent) {
       // check whether this is an actual error, or just transient state where parent
       // is not cleaned
-      if (hbi.metaEntry.splitA != null && hbi.metaEntry.splitB != null) {
+      if (hbi.getMetaEntry().splitA != null && hbi.getMetaEntry().splitB != null) {
         // check that split daughters are there
-        HbckInfo infoA = this.regionInfoMap.get(hbi.metaEntry.splitA.getEncodedName());
-        HbckInfo infoB = this.regionInfoMap.get(hbi.metaEntry.splitB.getEncodedName());
+        HbckRegionInfo infoA = this.regionInfoMap.get(hbi.getMetaEntry().splitA.getEncodedName());
+        HbckRegionInfo infoB = this.regionInfoMap.get(hbi.getMetaEntry().splitB.getEncodedName());
         if (infoA != null && infoB != null) {
           // we already processed or will process daughters. Move on, nothing to see here.
           hbi.setSkipChecks(true);
@@ -2371,7 +2328,7 @@ public class HBaseFsck extends Configured implements Closeable {
     } else if (inMeta && !inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_HDFS, "Region " + descriptiveName
           + " found in META, but not in HDFS, " +
-          "and deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+          "and deployed on " + Joiner.on(", ").join(hbi.getDeployedOn()));
       // We treat HDFS as ground truth.  Any information in meta is transient
       // and equivalent data can be regenerated.  So, lets unassign and remove
       // these problems from META.
@@ -2390,33 +2347,33 @@ public class HBaseFsck extends Configured implements Closeable {
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
       errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED,
           "Region " + descriptiveName + " should not be deployed according " +
-          "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
+          "to META, but is deployed on " + Joiner.on(", ").join(hbi.getDeployedOn()));
       if (shouldFixAssignments()) {
         errors.print("Trying to close the region " + descriptiveName);
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
       }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError(ERROR_CODE.MULTI_DEPLOYED, "Region " + descriptiveName
-          + " is listed in hbase:meta on region server " + hbi.metaEntry.regionServer
+          + " is listed in hbase:meta on region server " + hbi.getMetaEntry().regionServer
           + " but is multiply assigned to region servers " +
-          Joiner.on(", ").join(hbi.deployedOn));
+          Joiner.on(", ").join(hbi.getDeployedOn()));
       // If we are trying to fix the errors
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META, "Region "
           + descriptiveName + " listed in hbase:meta on region server " +
-          hbi.metaEntry.regionServer + " but found on region server " +
-          hbi.deployedOn.get(0));
+          hbi.getMetaEntry().regionServer + " but found on region server " +
+          hbi.getDeployedOn().get(0));
       // If we are trying to fix the errors
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.getMetaEntry(), hbi.getDeployedOn());
         HBaseFsckRepair.waitUntilAssigned(admin, hbi.getHdfsHRI());
       }
     } else {
@@ -2437,12 +2394,12 @@ public class HBaseFsck extends Configured implements Closeable {
    * repeated or overlapping ones.
    * @throws IOException
    */
-  SortedMap<TableName, TableInfo> checkIntegrity() throws IOException {
+  SortedMap<TableName, HbckTableInfo> checkIntegrity() throws IOException {
     tablesInfo = new TreeMap<>();
     LOG.debug("There are " + regionInfoMap.size() + " region info entries");
-    for (HbckInfo hbi : regionInfoMap.values()) {
+    for (HbckRegionInfo hbi : regionInfoMap.values()) {
       // Check only valid, working regions
-      if (hbi.metaEntry == null) {
+      if (hbi.getMetaEntry() == null) {
         // this assumes that consistency check has run loadMetaEntry
         Path p = hbi.getHdfsRegionDir();
         if (p == null) {
@@ -2452,11 +2409,11 @@ public class HBaseFsck extends Configured implements Closeable {
         // TODO test.
         continue;
       }
-      if (hbi.metaEntry.regionServer == null) {
+      if (hbi.getMetaEntry().regionServer == null) {
         errors.detail("Skipping region because no region server: " + hbi);
         continue;
       }
-      if (hbi.metaEntry.isOffline()) {
+      if (hbi.getMetaEntry().isOffline()) {
         errors.detail("Skipping region because it is offline: " + hbi);
         continue;
       }
@@ -2470,15 +2427,17 @@ public class HBaseFsck extends Configured implements Closeable {
       // the region chain in META
       //if (hbi.foundRegionDir == null) continue;
       //if (hbi.deployedOn.size() != 1) continue;
-      if (hbi.deployedOn.isEmpty()) continue;
+      if (hbi.getDeployedOn().isEmpty()) {
+        continue;
+      }
 
       // We should be safe here
-      TableName tableName = hbi.metaEntry.getTable();
-      TableInfo modTInfo = tablesInfo.get(tableName);
+      TableName tableName = hbi.getMetaEntry().getTable();
+      HbckTableInfo modTInfo = tablesInfo.get(tableName);
       if (modTInfo == null) {
-        modTInfo = new TableInfo(tableName);
+        modTInfo = new HbckTableInfo(tableName, this);
       }
-      for (ServerName server : hbi.deployedOn) {
+      for (ServerName server : hbi.getDeployedOn()) {
         modTInfo.addServer(server);
       }
 
@@ -2492,7 +2451,7 @@ public class HBaseFsck extends Configured implements Closeable {
     loadTableInfosForTablesWithNoRegion();
 
     logParallelMerge();
-    for (TableInfo tInfo : tablesInfo.values()) {
+    for (HbckTableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
       if (!tInfo.checkRegionChain(handler)) {
         errors.report("Found inconsistency in table " + tInfo.getName());
@@ -2513,7 +2472,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       TableName tableName = htd.getTableName();
       if (isTableIncluded(tableName) && !tablesInfo.containsKey(tableName)) {
-        TableInfo tableInfo = new TableInfo(tableName);
+        HbckTableInfo tableInfo = new HbckTableInfo(tableName, this);
         tableInfo.htds.add(htd);
         tablesInfo.put(htd.getTableName(), tableInfo);
       }
@@ -2521,10 +2480,10 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Merge hdfs data by moving from contained HbckInfo into targetRegionDir.
+   * Merge hdfs data by moving from contained HbckRegionInfo into targetRegionDir.
    * @return number of file move fixes done to merge regions.
    */
-  public int mergeRegionDirs(Path targetRegionDir, HbckInfo contained) throws IOException {
+  public int mergeRegionDirs(Path targetRegionDir, HbckRegionInfo contained) throws IOException {
     int fileMoves = 0;
     String thread = Thread.currentThread().getName();
     LOG.debug("[" + thread + "] Contained region dir after close and pause");
@@ -2598,9 +2557,10 @@ public class HBaseFsck extends Configured implements Closeable {
 
   static class WorkItemOverlapMerge implements Callable<Void> {
     private TableIntegrityErrorHandler handler;
-    Collection<HbckInfo> overlapgroup;
+    Collection<HbckRegionInfo> overlapgroup;
 
-    WorkItemOverlapMerge(Collection<HbckInfo> overlapgroup, TableIntegrityErrorHandler handler) {
+    WorkItemOverlapMerge(Collection<HbckRegionInfo> overlapgroup,
+        TableIntegrityErrorHandler handler) {
       this.handler = handler;
       this.overlapgroup = overlapgroup;
     }
@@ -2611,756 +2571,6 @@ public class HBaseFsck extends Configured implements Closeable {
       return null;
     }
   };
-
-
-  /**
-   * Maintain information about a particular table.
-   */
-  public class TableInfo {
-    TableName tableName;
-    TreeSet <ServerName> deployedOn;
-
-    // backwards regions
-    final List<HbckInfo> backwards = new ArrayList<>();
-
-    // sidelined big overlapped regions
-    final Map<Path, HbckInfo> sidelinedRegions = new HashMap<>();
-
-    // region split calculator
-    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<>(cmp);
-
-    // Histogram of different TableDescriptors found.  Ideally there is only one!
-    final Set<TableDescriptor> htds = new HashSet<>();
-
-    // key = start split, values = set of splits in problem group
-    final Multimap<byte[], HbckInfo> overlapGroups =
-      TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, cmp);
-
-    // list of regions derived from meta entries.
-    private ImmutableList<RegionInfo> regionsFromMeta = null;
-
-    TableInfo(TableName name) {
-      this.tableName = name;
-      deployedOn = new TreeSet <>();
-    }
-
-    /**
-     * @return descriptor common to all regions.  null if are none or multiple!
-     */
-    private TableDescriptor getHTD() {
-      if (htds.size() == 1) {
-        return (TableDescriptor)htds.toArray()[0];
-      } else {
-        LOG.error("None/Multiple table descriptors found for table '"
-          + tableName + "' regions: " + htds);
-      }
-      return null;
-    }
-
-    public void addRegionInfo(HbckInfo hir) {
-      if (Bytes.equals(hir.getEndKey(), HConstants.EMPTY_END_ROW)) {
-        // end key is absolute end key, just add it.
-        // ignore replicas other than primary for these checks
-        if (hir.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) sc.add(hir);
-        return;
-      }
-
-      // if not the absolute end key, check for cycle
-      if (Bytes.compareTo(hir.getStartKey(), hir.getEndKey()) > 0) {
-        errors.reportError(
-            ERROR_CODE.REGION_CYCLE,
-            String.format("The endkey for this region comes before the "
-                + "startkey, startkey=%s, endkey=%s",
-                Bytes.toStringBinary(hir.getStartKey()),
-                Bytes.toStringBinary(hir.getEndKey())), this, hir);
-        backwards.add(hir);
-        return;
-      }
-
-      // main case, add to split calculator
-      // ignore replicas other than primary for these checks
-      if (hir.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) sc.add(hir);
-    }
-
-    public void addServer(ServerName server) {
-      this.deployedOn.add(server);
-    }
-
-    public TableName getName() {
-      return tableName;
-    }
-
-    public int getNumRegions() {
-      return sc.getStarts().size() + backwards.size();
-    }
-
-    public synchronized ImmutableList<RegionInfo> getRegionsFromMeta() {
-      // lazy loaded, synchronized to ensure a single load
-      if (regionsFromMeta == null) {
-        List<RegionInfo> regions = new ArrayList<>();
-        for (HbckInfo h : HBaseFsck.this.regionInfoMap.values()) {
-          if (tableName.equals(h.getTableName())) {
-            if (h.metaEntry != null) {
-              regions.add(h.metaEntry);
-            }
-          }
-        }
-        regionsFromMeta = Ordering.from(RegionInfo.COMPARATOR).immutableSortedCopy(regions);
-      }
-
-      return regionsFromMeta;
-    }
-
-    private class IntegrityFixSuggester extends TableIntegrityErrorHandlerImpl {
-      ErrorReporter errors;
-
-      IntegrityFixSuggester(TableInfo ti, ErrorReporter errors) {
-        this.errors = errors;
-        setTableInfo(ti);
-      }
-
-      @Override
-      public void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException{
-        errors.reportError(ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-            "First region should start with an empty key.  You need to "
-            + " create a new region and regioninfo in HDFS to plug the hole.",
-            getTableInfo(), hi);
-      }
-
-      @Override
-      public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
-        errors.reportError(ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
-            "Last region should end with an empty key. You need to "
-                + "create a new region and regioninfo in HDFS to plug the hole.", getTableInfo());
-      }
-
-      @Override
-      public void handleDegenerateRegion(HbckInfo hi) throws IOException{
-        errors.reportError(ERROR_CODE.DEGENERATE_REGION,
-            "Region has the same start and end key.", getTableInfo(), hi);
-      }
-
-      @Override
-      public void handleDuplicateStartKeys(HbckInfo r1, HbckInfo r2) throws IOException{
-        byte[] key = r1.getStartKey();
-        // dup start key
-        errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
-            "Multiple regions have the same startkey: "
-            + Bytes.toStringBinary(key), getTableInfo(), r1);
-        errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
-            "Multiple regions have the same startkey: "
-            + Bytes.toStringBinary(key), getTableInfo(), r2);
-      }
-
-      @Override
-      public void handleSplit(HbckInfo r1, HbckInfo r2) throws IOException{
-        byte[] key = r1.getStartKey();
-        // dup start key
-        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
-          "Multiple regions have the same regionID: "
-            + Bytes.toStringBinary(key), getTableInfo(), r1);
-        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
-          "Multiple regions have the same regionID: "
-            + Bytes.toStringBinary(key), getTableInfo(), r2);
-      }
-
-      @Override
-      public void handleOverlapInRegionChain(HbckInfo hi1, HbckInfo hi2) throws IOException{
-        errors.reportError(ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
-            "There is an overlap in the region chain.",
-            getTableInfo(), hi1, hi2);
-      }
-
-      @Override
-      public void handleHoleInRegionChain(byte[] holeStart, byte[] holeStop) throws IOException{
-        errors.reportError(
-            ERROR_CODE.HOLE_IN_REGION_CHAIN,
-            "There is a hole in the region chain between "
-                + Bytes.toStringBinary(holeStart) + " and "
-                + Bytes.toStringBinary(holeStop)
-                + ".  You need to create a new .regioninfo and region "
-                + "dir in hdfs to plug the hole.");
-      }
-    };
-
-    /**
-     * This handler fixes integrity errors from hdfs information.  There are
-     * basically three classes of integrity problems 1) holes, 2) overlaps, and
-     * 3) invalid regions.
-     *
-     * This class overrides methods that fix holes and the overlap group case.
-     * Individual cases of particular overlaps are handled by the general
-     * overlap group merge repair case.
-     *
-     * If hbase is online, this forces regions offline before doing merge
-     * operations.
-     */
-    private class HDFSIntegrityFixer extends IntegrityFixSuggester {
-      Configuration conf;
-
-      boolean fixOverlaps = true;
-
-      HDFSIntegrityFixer(TableInfo ti, ErrorReporter errors, Configuration conf,
-          boolean fixHoles, boolean fixOverlaps) {
-        super(ti, errors);
-        this.conf = conf;
-        this.fixOverlaps = fixOverlaps;
-        // TODO properly use fixHoles
-      }
-
-      /**
-       * This is a special case hole -- when the first region of a table is
-       * missing from META, HBase doesn't acknowledge the existance of the
-       * table.
-       */
-      @Override
-      public void handleRegionStartKeyNotEmpty(HbckInfo next) throws IOException {
-        errors.reportError(ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-            "First region should start with an empty key.  Creating a new " +
-            "region and regioninfo in HDFS to plug the hole.",
-            getTableInfo(), next);
-        TableDescriptor htd = getTableInfo().getHTD();
-        // from special EMPTY_START_ROW to next region's startKey
-        RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(HConstants.EMPTY_START_ROW)
-            .setEndKey(next.getStartKey())
-            .build();
-
-        // TODO test
-        HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-        LOG.info("Table region start key was not empty.  Created new empty region: "
-            + newRegion + " " +region);
-        fixes++;
-      }
-
-      @Override
-      public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
-        errors.reportError(ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
-            "Last region should end with an empty key.  Creating a new "
-                + "region and regioninfo in HDFS to plug the hole.", getTableInfo());
-        TableDescriptor htd = getTableInfo().getHTD();
-        // from curEndKey to EMPTY_START_ROW
-        RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(curEndKey)
-            .setEndKey(HConstants.EMPTY_START_ROW)
-            .build();
-
-        HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-        LOG.info("Table region end key was not empty.  Created new empty region: " + newRegion
-            + " " + region);
-        fixes++;
-      }
-
-      /**
-       * There is a hole in the hdfs regions that violates the table integrity
-       * rules.  Create a new empty region that patches the hole.
-       */
-      @Override
-      public void handleHoleInRegionChain(byte[] holeStartKey, byte[] holeStopKey) throws IOException {
-        errors.reportError(
-            ERROR_CODE.HOLE_IN_REGION_CHAIN,
-            "There is a hole in the region chain between "
-                + Bytes.toStringBinary(holeStartKey) + " and "
-                + Bytes.toStringBinary(holeStopKey)
-                + ".  Creating a new regioninfo and region "
-                + "dir in hdfs to plug the hole.");
-        TableDescriptor htd = getTableInfo().getHTD();
-        RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(holeStartKey)
-            .setEndKey(holeStopKey)
-            .build();
-        HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-        LOG.info("Plugged hole by creating new empty region: "+ newRegion + " " +region);
-        fixes++;
-      }
-
-      /**
-       * This takes set of overlapping regions and merges them into a single
-       * region.  This covers cases like degenerate regions, shared start key,
-       * general overlaps, duplicate ranges, and partial overlapping regions.
-       *
-       * Cases:
-       * - Clean regions that overlap
-       * - Only .oldlogs regions (can't find start/stop range, or figure out)
-       *
-       * This is basically threadsafe, except for the fixer increment in mergeOverlaps.
-       */
-      @Override
-      public void handleOverlapGroup(Collection<HbckInfo> overlap)
-          throws IOException {
-        Preconditions.checkNotNull(overlap);
-        Preconditions.checkArgument(overlap.size() >0);
-
-        if (!this.fixOverlaps) {
-          LOG.warn("Not attempting to repair overlaps.");
-          return;
-        }
-
-        if (overlap.size() > maxMerge) {
-          LOG.warn("Overlap group has " + overlap.size() + " overlapping " +
-            "regions which is greater than " + maxMerge + ", the max number of regions to merge");
-          if (sidelineBigOverlaps) {
-            // we only sideline big overlapped groups that exceeds the max number of regions to merge
-            sidelineBigOverlaps(overlap);
-          }
-          return;
-        }
-        if (shouldRemoveParents()) {
-          removeParentsAndFixSplits(overlap);
-        }
-        mergeOverlaps(overlap);
-      }
-
-      void removeParentsAndFixSplits(Collection<HbckInfo> overlap) throws IOException {
-        Pair<byte[], byte[]> range = null;
-        HbckInfo parent = null;
-        HbckInfo daughterA = null;
-        HbckInfo daughterB = null;
-        Collection<HbckInfo> daughters = new ArrayList<HbckInfo>(overlap);
-
-        String thread = Thread.currentThread().getName();
-        LOG.info("== [" + thread + "] Attempting fix splits in overlap state.");
-
-        // we only can handle a single split per group at the time
-        if (overlap.size() > 3) {
-          LOG.info("Too many overlaps were found on this group, falling back to regular merge.");
-          return;
-        }
-
-        for (HbckInfo hi : overlap) {
-          if (range == null) {
-            range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
-          } else {
-            if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getStartKey(), range.getFirst()) < 0) {
-              range.setFirst(hi.getStartKey());
-            }
-            if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getEndKey(), range.getSecond()) > 0) {
-              range.setSecond(hi.getEndKey());
-            }
-          }
-        }
-
-        LOG.info("This group range is [" + Bytes.toStringBinary(range.getFirst()) + ", "
-          + Bytes.toStringBinary(range.getSecond()) + "]");
-
-        // attempt to find a possible parent for the edge case of a split
-        for (HbckInfo hi : overlap) {
-          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0
-            && Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
-            LOG.info("This is a parent for this group: " + hi.toString());
-            parent = hi;
-          }
-        }
-
-        // Remove parent regions from daughters collection
-        if (parent != null) {
-          daughters.remove(parent);
-        }
-
-        // Lets verify that daughters share the regionID at split time and they
-        // were created after the parent
-        for (HbckInfo hi : daughters) {
-          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0) {
-            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
-              daughterA = hi;
-            }
-          }
-          if (Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
-            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
-              daughterB = hi;
-            }
-          }
-        }
-
-        // daughters must share the same regionID and we should have a parent too
-        if (daughterA.getHdfsHRI().getRegionId() != daughterB.getHdfsHRI().getRegionId() || parent == null)
-          return;
-
-        FileSystem fs = FileSystem.get(conf);
-        LOG.info("Found parent: " + parent.getRegionNameAsString());
-        LOG.info("Found potential daughter a: " + daughterA.getRegionNameAsString());
-        LOG.info("Found potential daughter b: " + daughterB.getRegionNameAsString());
-        LOG.info("Trying to fix parent in overlap by removing the parent.");
-        try {
-          closeRegion(parent);
-        } catch (IOException ioe) {
-          LOG.warn("Parent region could not be closed, continuing with regular merge...", ioe);
-          return;
-        } catch (InterruptedException ie) {
-          LOG.warn("Parent region could not be closed, continuing with regular merge...", ie);
-          return;
-        }
-
-        try {
-          offline(parent.getRegionName());
-        } catch (IOException ioe) {
-          LOG.warn("Unable to offline parent region: " + parent.getRegionNameAsString()
-            + ".  Just continuing with regular merge... ", ioe);
-          return;
-        }
-
-        try {
-          HBaseFsckRepair.removeParentInMeta(conf, parent.getHdfsHRI());
-        } catch (IOException ioe) {
-          LOG.warn("Unable to remove parent region in META: " + parent.getRegionNameAsString()
-            + ".  Just continuing with regular merge... ", ioe);
-          return;
-        }
-
-        sidelineRegionDir(fs, parent);
-        LOG.info("[" + thread + "] Sidelined parent region dir "+ parent.getHdfsRegionDir() + " into " +
-          getSidelineDir());
-        debugLsr(parent.getHdfsRegionDir());
-
-        // Make sure we don't have the parents and daughters around
-        overlap.remove(parent);
-        overlap.remove(daughterA);
-        overlap.remove(daughterB);
-
-        LOG.info("Done fixing split.");
-
-      }
-
-      void mergeOverlaps(Collection<HbckInfo> overlap)
-          throws IOException {
-        String thread = Thread.currentThread().getName();
-        LOG.info("== [" + thread + "] Merging regions into one region: "
-          + Joiner.on(",").join(overlap));
-        // get the min / max range and close all concerned regions
-        Pair<byte[], byte[]> range = null;
-        for (HbckInfo hi : overlap) {
-          if (range == null) {
-            range = new Pair<>(hi.getStartKey(), hi.getEndKey());
-          } else {
-            if (RegionSplitCalculator.BYTES_COMPARATOR
-                .compare(hi.getStartKey(), range.getFirst()) < 0) {
-              range.setFirst(hi.getStartKey());
-            }
-            if (RegionSplitCalculator.BYTES_COMPARATOR
-                .compare(hi.getEndKey(), range.getSecond()) > 0) {
-              range.setSecond(hi.getEndKey());
-            }
-          }
-          // need to close files so delete can happen.
-          LOG.debug("[" + thread + "] Closing region before moving data around: " +  hi);
-          LOG.debug("[" + thread + "] Contained region dir before close");
-          debugLsr(hi.getHdfsRegionDir());
-          try {
-            LOG.info("[" + thread + "] Closing region: " + hi);
-            closeRegion(hi);
-          } catch (IOException ioe) {
-            LOG.warn("[" + thread + "] Was unable to close region " + hi
-              + ".  Just continuing... ", ioe);
-          } catch (InterruptedException e) {
-            LOG.warn("[" + thread + "] Was unable to close region " + hi
-              + ".  Just continuing... ", e);
-          }
-
-          try {
-            LOG.info("[" + thread + "] Offlining region: " + hi);
-            offline(hi.getRegionName());
-          } catch (IOException ioe) {
-            LOG.warn("[" + thread + "] Unable to offline region from master: " + hi
-              + ".  Just continuing... ", ioe);
-          }
-        }
-
-        // create new empty container region.
-        TableDescriptor htd = getTableInfo().getHTD();
-        // from start key to end Key
-        RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-            .setStartKey(range.getFirst())
-            .setEndKey(range.getSecond())
-            .build();
-        HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-        LOG.info("[" + thread + "] Created new empty container region: " +
-            newRegion + " to contain regions: " + Joiner.on(",").join(overlap));
-        debugLsr(region.getRegionFileSystem().getRegionDir());
-
-        // all target regions are closed, should be able to safely cleanup.
-        boolean didFix= false;
-        Path target = region.getRegionFileSystem().getRegionDir();
-        for (HbckInfo contained : overlap) {
-          LOG.info("[" + thread + "] Merging " + contained  + " into " + target );
-          int merges = mergeRegionDirs(target, contained);
-          if (merges > 0) {
-            didFix = true;
-          }
-        }
-        if (didFix) {
-          fixes++;
-        }
-      }
-
-      /**
-       * Sideline some regions in a big overlap group so that it
-       * will have fewer regions, and it is easier to merge them later on.
-       *
-       * @param bigOverlap the overlapped group with regions more than maxMerge
-       * @throws IOException
-       */
-      void sidelineBigOverlaps(
-          Collection<HbckInfo> bigOverlap) throws IOException {
-        int overlapsToSideline = bigOverlap.size() - maxMerge;
-        if (overlapsToSideline > maxOverlapsToSideline) {
-          overlapsToSideline = maxOverlapsToSideline;
-        }
-        List<HbckInfo> regionsToSideline =
-          RegionSplitCalculator.findBigRanges(bigOverlap, overlapsToSideline);
-        FileSystem fs = FileSystem.get(conf);
-        for (HbckInfo regionToSideline: regionsToSideline) {
-          try {
-            LOG.info("Closing region: " + regionToSideline);
-            closeRegion(regionToSideline);
-          } catch (IOException ioe) {
-            LOG.warn("Was unable to close region " + regionToSideline
-              + ".  Just continuing... ", ioe);
-          } catch (InterruptedException e) {
-            LOG.warn("Was unable to close region " + regionToSideline
-              + ".  Just continuing... ", e);
-          }
-
-          try {
-            LOG.info("Offlining region: " + regionToSideline);
-            offline(regionToSideline.getRegionName());
-          } catch (IOException ioe) {
-            LOG.warn("Unable to offline region from master: " + regionToSideline
-              + ".  Just continuing... ", ioe);
-          }
-
-          LOG.info("Before sideline big overlapped region: " + regionToSideline.toString());
-          Path sidelineRegionDir = sidelineRegionDir(fs, TO_BE_LOADED, regionToSideline);
-          if (sidelineRegionDir != null) {
-            sidelinedRegions.put(sidelineRegionDir, regionToSideline);
-            LOG.info("After sidelined big overlapped region: "
-              + regionToSideline.getRegionNameAsString()
-              + " to " + sidelineRegionDir.toString());
-            fixes++;
-          }
-        }
-      }
-    }
-
-    /**
-     * Check the region chain (from META) of this table.  We are looking for
-     * holes, overlaps, and cycles.
-     * @return false if there are errors
-     * @throws IOException
-     */
-    public boolean checkRegionChain(TableIntegrityErrorHandler handler) throws IOException {
-      // When table is disabled no need to check for the region chain. Some of the regions
-      // accidently if deployed, this below code might report some issues like missing start
-      // or end regions or region hole in chain and may try to fix which is unwanted.
-      if (isTableDisabled(this.tableName)) {
-        return true;
-      }
-      int originalErrorsCount = errors.getErrorList().size();
-      Multimap<byte[], HbckInfo> regions = sc.calcCoverage();
-      SortedSet<byte[]> splits = sc.getSplits();
-
-      byte[] prevKey = null;
-      byte[] problemKey = null;
-
-      if (splits.isEmpty()) {
-        // no region for this table
-        handler.handleHoleInRegionChain(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      }
-
-      for (byte[] key : splits) {
-        Collection<HbckInfo> ranges = regions.get(key);
-        if (prevKey == null && !Bytes.equals(key, HConstants.EMPTY_BYTE_ARRAY)) {
-          for (HbckInfo rng : ranges) {
-            handler.handleRegionStartKeyNotEmpty(rng);
-          }
-        }
-
-        // check for degenerate ranges
-        for (HbckInfo rng : ranges) {
-          // special endkey case converts '' to null
-          byte[] endKey = rng.getEndKey();
-          endKey = (endKey.length == 0) ? null : endKey;
-          if (Bytes.equals(rng.getStartKey(),endKey)) {
-            handler.handleDegenerateRegion(rng);
-          }
-        }
-
-        if (ranges.size() == 1) {
-          // this split key is ok -- no overlap, not a hole.
-          if (problemKey != null) {
-            LOG.warn("reached end of problem group: " + Bytes.toStringBinary(key));
-          }
-          problemKey = null; // fell through, no more problem.
-        } else if (ranges.size() > 1) {
-          // set the new problem key group name, if already have problem key, just
-          // keep using it.
-          if (problemKey == null) {
-            // only for overlap regions.
-            LOG.warn("Naming new problem group: " + Bytes.toStringBinary(key));
-            problemKey = key;
-          }
-          overlapGroups.putAll(problemKey, ranges);
-
-          // record errors
-          ArrayList<HbckInfo> subRange = new ArrayList<>(ranges);
-          //  this dumb and n^2 but this shouldn't happen often
-          for (HbckInfo r1 : ranges) {
-            if (r1.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) continue;
-            subRange.remove(r1);
-            for (HbckInfo r2 : subRange) {
-              if (r2.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) continue;
-              // general case of same start key
-              if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
-                handler.handleDuplicateStartKeys(r1,r2);
-              } else if (Bytes.compareTo(r1.getEndKey(), r2.getStartKey())==0 &&
-                r1.getHdfsHRI().getRegionId() == r2.getHdfsHRI().getRegionId()) {
-                LOG.info("this is a split, log to splits");
-                handler.handleSplit(r1, r2);
-              } else {
-                // overlap
-                handler.handleOverlapInRegionChain(r1, r2);
-              }
-            }
-          }
-
-        } else if (ranges.isEmpty()) {
-          if (problemKey != null) {
-            LOG.warn("reached end of problem group: " + Bytes.toStringBinary(key));
-          }
-          problemKey = null;
-
-          byte[] holeStopKey = sc.getSplits().higher(key);
-          // if higher key is null we reached the top.
-          if (holeStopKey != null) {
-            // hole
-            handler.handleHoleInRegionChain(key, holeStopKey);
-          }
-        }
-        prevKey = key;
-      }
-
-      // When the last region of a table is proper and having an empty end key, 'prevKey'
-      // will be null.
-      if (prevKey != null) {
-        handler.handleRegionEndKeyNotEmpty(prevKey);
-      }
-
-      // TODO fold this into the TableIntegrityHandler
-      if (getConf().getBoolean("hbasefsck.overlap.merge.parallel", true)) {
-        boolean ok = handleOverlapsParallel(handler, prevKey);
-        if (!ok) {
-          return false;
-        }
-      } else {
-        for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
-          handler.handleOverlapGroup(overlap);
-        }
-      }
-
-      if (details) {
-        // do full region split map dump
-        errors.print("---- Table '"  +  this.tableName
-            + "': region split map");
-        dump(splits, regions);
-        errors.print("---- Table '"  +  this.tableName
-            + "': overlap groups");
-        dumpOverlapProblems(overlapGroups);
-        errors.print("There are " + overlapGroups.keySet().size()
-            + " overlap groups with " + overlapGroups.size()
-            + " overlapping regions");
-      }
-      if (!sidelinedRegions.isEmpty()) {
-        LOG.warn("Sidelined big overlapped regions, please bulk load them!");
-        errors.print("---- Table '"  +  this.tableName
-            + "': sidelined big overlapped regions");
-        dumpSidelinedRegions(sidelinedRegions);
-      }
-      return errors.getErrorList().size() == originalErrorsCount;
-    }
-
-    private boolean handleOverlapsParallel(TableIntegrityErrorHandler handler, byte[] prevKey)
-        throws IOException {
-      // we parallelize overlap handler for the case we have lots of groups to fix.  We can
-      // safely assume each group is independent.
-      List<WorkItemOverlapMerge> merges = new ArrayList<>(overlapGroups.size());
-      List<Future<Void>> rets;
-      for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
-        //
-        merges.add(new WorkItemOverlapMerge(overlap, handler));
-      }
-      try {
-        rets = executor.invokeAll(merges);
-      } catch (InterruptedException e) {
-        LOG.error("Overlap merges were interrupted", e);
-        return false;
-      }
-      for(int i=0; i<merges.size(); i++) {
-        WorkItemOverlapMerge work = merges.get(i);
-        Future<Void> f = rets.get(i);
-        try {
-          f.get();
-        } catch(ExecutionException e) {
-          LOG.warn("Failed to merge overlap group" + work, e.getCause());
-        } catch (InterruptedException e) {
-          LOG.error("Waiting for overlap merges was interrupted", e);
-          return false;
-        }
-      }
-      return true;
-    }
-
-    /**
-     * This dumps data in a visually reasonable way for visual debugging
-     *
-     * @param splits
-     * @param regions
-     */
-    void dump(SortedSet<byte[]> splits, Multimap<byte[], HbckInfo> regions) {
-      // we display this way because the last end key should be displayed as well.
-      StringBuilder sb = new StringBuilder();
-      for (byte[] k : splits) {
-        sb.setLength(0); // clear out existing buffer, if any.
-        sb.append(Bytes.toStringBinary(k) + ":\t");
-        for (HbckInfo r : regions.get(k)) {
-          sb.append("[ "+ r.toString() + ", "
-              + Bytes.toStringBinary(r.getEndKey())+ "]\t");
-        }
-        errors.print(sb.toString());
-      }
-    }
-  }
-
-  public void dumpOverlapProblems(Multimap<byte[], HbckInfo> regions) {
-    // we display this way because the last end key should be displayed as
-    // well.
-    for (byte[] k : regions.keySet()) {
-      errors.print(Bytes.toStringBinary(k) + ":");
-      for (HbckInfo r : regions.get(k)) {
-        errors.print("[ " + r.toString() + ", "
-            + Bytes.toStringBinary(r.getEndKey()) + "]");
-      }
-      errors.print("----");
-    }
-  }
-
-  public void dumpSidelinedRegions(Map<Path, HbckInfo> regions) {
-    for (Map.Entry<Path, HbckInfo> entry: regions.entrySet()) {
-      TableName tableName = entry.getValue().getTableName();
-      Path path = entry.getKey();
-      errors.print("This sidelined region dir should be bulk loaded: "
-        + path.toString());
-      errors.print("Bulk load command looks like: "
-        + "hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles "
-        + path.toUri().getPath() + " "+ tableName);
-    }
-  }
-
-  public Multimap<byte[], HbckInfo> getOverlapGroups(
-      TableName table) {
-    TableInfo ti = tablesInfo.get(table);
-    return ti.overlapGroups;
-  }
 
   /**
    * Return a list of user-space table names whose metadata have not been
@@ -3375,8 +2585,8 @@ public class HBaseFsck extends Configured implements Closeable {
     List<TableName> tableNames = new ArrayList<>();
     long now = EnvironmentEdgeManager.currentTime();
 
-    for (HbckInfo hbi : regionInfoMap.values()) {
-      MetaEntry info = hbi.metaEntry;
+    for (HbckRegionInfo hbi : regionInfoMap.values()) {
+      HbckRegionInfo.MetaEntry info = hbi.getMetaEntry();
 
       // if the start key is zero, then we have found the first region of a table.
       // pick only those tables that were not modified in the last few milliseconds.
@@ -3408,10 +2618,10 @@ public class HBaseFsck extends Configured implements Closeable {
    * region name. If the region has not been seen yet, a new entry is added
    * and returned.
    */
-  private synchronized HbckInfo getOrCreateInfo(String name) {
-    HbckInfo hbi = regionInfoMap.get(name);
+  private synchronized HbckRegionInfo getOrCreateInfo(String name) {
+    HbckRegionInfo hbi = regionInfoMap.get(name);
     if (hbi == null) {
-      hbi = new HbckInfo(null);
+      hbi = new HbckRegionInfo(null);
       regionInfoMap.put(name, hbi);
     }
     return hbi;
@@ -3437,9 +2647,9 @@ public class HBaseFsck extends Configured implements Closeable {
     * @throws InterruptedException
     */
   boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
-    Map<Integer, HbckInfo> metaRegions = new HashMap<>();
-    for (HbckInfo value : regionInfoMap.values()) {
-      if (value.metaEntry != null && value.metaEntry.isMetaRegion()) {
+    Map<Integer, HbckRegionInfo> metaRegions = new HashMap<>();
+    for (HbckRegionInfo value : regionInfoMap.values()) {
+      if (value.getMetaEntry() != null && value.getMetaEntry().isMetaRegion()) {
         metaRegions.put(value.getReplicaId(), value);
       }
     }
@@ -3449,10 +2659,10 @@ public class HBaseFsck extends Configured implements Closeable {
     // There will be always entries in regionInfoMap corresponding to hbase:meta & its replicas
     // Check the deployed servers. It should be exactly one server for each replica.
     for (int i = 0; i < metaReplication; i++) {
-      HbckInfo metaHbckInfo = metaRegions.remove(i);
+      HbckRegionInfo metaHbckRegionInfo = metaRegions.remove(i);
       List<ServerName> servers = new ArrayList<>();
-      if (metaHbckInfo != null) {
-        servers = metaHbckInfo.deployedOn;
+      if (metaHbckRegionInfo != null) {
+        servers = metaHbckRegionInfo.getDeployedOn();
       }
       if (servers.size() != 1) {
         noProblem = false;
@@ -3461,19 +2671,20 @@ public class HBaseFsck extends Configured implements Closeable {
         } else if (servers.size() > 1) {
           errors
           .reportError(ERROR_CODE.MULTI_META_REGION, "hbase:meta, replicaId " +
-                       metaHbckInfo.getReplicaId() + " is found on more than one region.");
+                       metaHbckRegionInfo.getReplicaId() + " is found on more than one region.");
           if (shouldFixAssignments()) {
             errors.print("Trying to fix a problem with hbase:meta, replicaId " +
-                         metaHbckInfo.getReplicaId() +"..");
+                metaHbckRegionInfo.getReplicaId() + "..");
             setShouldRerun();
             // try fix it (treat is a dupe assignment)
-            HBaseFsckRepair.fixMultiAssignment(connection, metaHbckInfo.metaEntry, servers);
+            HBaseFsckRepair
+                .fixMultiAssignment(connection, metaHbckRegionInfo.getMetaEntry(), servers);
           }
         }
       }
     }
     // unassign whatever is remaining in metaRegions. They are excess replicas.
-    for (Map.Entry<Integer, HbckInfo> entry : metaRegions.entrySet()) {
+    for (Map.Entry<Integer, HbckRegionInfo> entry : metaRegions.entrySet()) {
       noProblem = false;
       errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED,
           "hbase:meta replicas are deployed in excess. Configured " + metaReplication +
@@ -3490,10 +2701,11 @@ public class HBaseFsck extends Configured implements Closeable {
     return noProblem;
   }
 
-  private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
-  KeeperException {
+  private void unassignMetaReplica(HbckRegionInfo hi)
+      throws IOException, InterruptedException, KeeperException {
     undeployRegions(hi);
-    ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    ZKUtil
+        .deleteNode(zkw, zkw.getZNodePaths().getZNodeForReplica(hi.getMetaEntry().getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)
@@ -3561,17 +2773,18 @@ public class HBaseFsck extends Configured implements Closeable {
             sn = h.getServerName();
             hri = h.getRegionInfo();
 
-            MetaEntry m = null;
+            HbckRegionInfo.MetaEntry m = null;
             if (hri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-              m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
+              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, daughters.getFirst(),
+                  daughters.getSecond());
             } else {
-              m = new MetaEntry(hri, sn, ts, null, null);
+              m = new HbckRegionInfo.MetaEntry(hri, sn, ts, null, null);
             }
-            HbckInfo previous = regionInfoMap.get(hri.getEncodedName());
+            HbckRegionInfo previous = regionInfoMap.get(hri.getEncodedName());
             if (previous == null) {
-              regionInfoMap.put(hri.getEncodedName(), new HbckInfo(m));
-            } else if (previous.metaEntry == null) {
-              previous.metaEntry = m;
+              regionInfoMap.put(hri.getEncodedName(), new HbckRegionInfo(m));
+            } else if (previous.getMetaEntry() == null) {
+              previous.setMetaEntry(m);
             } else {
               throw new IOException("Two entries in hbase:meta are same " + previous);
             }
@@ -3581,7 +2794,7 @@ public class HBaseFsck extends Configured implements Closeable {
               mergeRegions.getFirst(), mergeRegions.getSecond() }) {
             if (mergeRegion != null) {
               // This region is already been merged
-              HbckInfo hbInfo = getOrCreateInfo(mergeRegion.getEncodedName());
+              HbckRegionInfo hbInfo = getOrCreateInfo(mergeRegion.getEncodedName());
               hbInfo.setMerged(true);
             }
           }
@@ -3608,309 +2821,13 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Stores the regioninfo entries scanned from META
-   */
-  static class MetaEntry extends HRegionInfo {
-    ServerName regionServer;   // server hosting this region
-    long modTime;          // timestamp of most recent modification metadata
-    RegionInfo splitA, splitB; //split daughters
-
-    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime) {
-      this(rinfo, regionServer, modTime, null, null);
-    }
-
-    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime,
-        RegionInfo splitA, RegionInfo splitB) {
-      super(rinfo);
-      this.regionServer = regionServer;
-      this.modTime = modTime;
-      this.splitA = splitA;
-      this.splitB = splitB;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      boolean superEq = super.equals(o);
-      if (!superEq) {
-        return superEq;
-      }
-
-      MetaEntry me = (MetaEntry) o;
-      if (!regionServer.equals(me.regionServer)) {
-        return false;
-      }
-      return (modTime == me.modTime);
-    }
-
-    @Override
-    public int hashCode() {
-      int hash = Arrays.hashCode(getRegionName());
-      hash = (int) (hash ^ getRegionId());
-      hash ^= Arrays.hashCode(getStartKey());
-      hash ^= Arrays.hashCode(getEndKey());
-      hash ^= Boolean.valueOf(isOffline()).hashCode();
-      hash ^= getTable().hashCode();
-      if (regionServer != null) {
-        hash ^= regionServer.hashCode();
-      }
-      hash = (int) (hash ^ modTime);
-      return hash;
-    }
-  }
-
-  /**
-   * Stores the regioninfo entries from HDFS
-   */
-  static class HdfsEntry {
-    RegionInfo hri;
-    Path hdfsRegionDir = null;
-    long hdfsRegionDirModTime  = 0;
-    boolean hdfsRegioninfoFilePresent = false;
-    boolean hdfsOnlyEdits = false;
-  }
-
-  /**
-   * Stores the regioninfo retrieved from Online region servers.
-   */
-  static class OnlineEntry {
-    RegionInfo hri;
-    ServerName hsa;
-
-    @Override
-    public String toString() {
-      return hsa.toString() + ";" + hri.getRegionNameAsString();
-    }
-  }
-
-  /**
-   * Maintain information about a particular region.  It gathers information
-   * from three places -- HDFS, META, and region servers.
-   */
-  public static class HbckInfo implements KeyRange {
-    private MetaEntry metaEntry = null; // info in META
-    private HdfsEntry hdfsEntry = null; // info in HDFS
-    private List<OnlineEntry> deployedEntries = Lists.newArrayList(); // on Region Server
-    private List<ServerName> deployedOn = Lists.newArrayList(); // info on RS's
-    private boolean skipChecks = false; // whether to skip further checks to this region info.
-    private boolean isMerged = false;// whether this region has already been merged into another one
-    private int deployedReplicaId = RegionInfo.DEFAULT_REPLICA_ID;
-    private RegionInfo primaryHRIForDeployedReplica = null;
-
-    HbckInfo(MetaEntry metaEntry) {
-      this.metaEntry = metaEntry;
-    }
-
-    public synchronized int getReplicaId() {
-      return metaEntry != null? metaEntry.getReplicaId(): deployedReplicaId;
-    }
-
-    public synchronized void addServer(RegionInfo hri, ServerName server) {
-      OnlineEntry rse = new OnlineEntry() ;
-      rse.hri = hri;
-      rse.hsa = server;
-      this.deployedEntries.add(rse);
-      this.deployedOn.add(server);
-      // save the replicaId that we see deployed in the cluster
-      this.deployedReplicaId = hri.getReplicaId();
-      this.primaryHRIForDeployedReplica =
-          RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
-    }
-
-    @Override
-    public synchronized String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append("{ meta => ");
-      sb.append((metaEntry != null)? metaEntry.getRegionNameAsString() : "null");
-      sb.append( ", hdfs => " + getHdfsRegionDir());
-      sb.append( ", deployed => " + Joiner.on(", ").join(deployedEntries));
-      sb.append( ", replicaId => " + getReplicaId());
-      sb.append(" }");
-      return sb.toString();
-    }
-
-    @Override
-    public byte[] getStartKey() {
-      if (this.metaEntry != null) {
-        return this.metaEntry.getStartKey();
-      } else if (this.hdfsEntry != null) {
-        return this.hdfsEntry.hri.getStartKey();
-      } else {
-        LOG.error("Entry " + this + " has no meta or hdfs region start key.");
-        return null;
-      }
-    }
-
-    @Override
-    public byte[] getEndKey() {
-      if (this.metaEntry != null) {
-        return this.metaEntry.getEndKey();
-      } else if (this.hdfsEntry != null) {
-        return this.hdfsEntry.hri.getEndKey();
-      } else {
-        LOG.error("Entry " + this + " has no meta or hdfs region start key.");
-        return null;
-      }
-    }
-
-    public TableName getTableName() {
-      if (this.metaEntry != null) {
-        return this.metaEntry.getTable();
-      } else if (this.hdfsEntry != null) {
-        // we are only guaranteed to have a path and not an HRI for hdfsEntry,
-        // so we get the name from the Path
-        Path tableDir = this.hdfsEntry.hdfsRegionDir.getParent();
-        return FSUtils.getTableName(tableDir);
-      } else {
-        // return the info from the first online/deployed hri
-        for (OnlineEntry e : deployedEntries) {
-          return e.hri.getTable();
-        }
-        return null;
-      }
-    }
-
-    public String getRegionNameAsString() {
-      if (metaEntry != null) {
-        return metaEntry.getRegionNameAsString();
-      } else if (hdfsEntry != null) {
-        if (hdfsEntry.hri != null) {
-          return hdfsEntry.hri.getRegionNameAsString();
-        }
-      } else {
-        // return the info from the first online/deployed hri
-        for (OnlineEntry e : deployedEntries) {
-          return e.hri.getRegionNameAsString();
-        }
-      }
-      return null;
-    }
-
-    public byte[] getRegionName() {
-      if (metaEntry != null) {
-        return metaEntry.getRegionName();
-      } else if (hdfsEntry != null) {
-        return hdfsEntry.hri.getRegionName();
-      } else {
-        // return the info from the first online/deployed hri
-        for (OnlineEntry e : deployedEntries) {
-          return e.hri.getRegionName();
-        }
-        return null;
-      }
-    }
-
-    public RegionInfo getPrimaryHRIForDeployedReplica() {
-      return primaryHRIForDeployedReplica;
-    }
-
-    Path getHdfsRegionDir() {
-      if (hdfsEntry == null) {
-        return null;
-      }
-      return hdfsEntry.hdfsRegionDir;
-    }
-
-    boolean containsOnlyHdfsEdits() {
-      if (hdfsEntry == null) {
-        return false;
-      }
-      return hdfsEntry.hdfsOnlyEdits;
-    }
-
-    boolean isHdfsRegioninfoPresent() {
-      if (hdfsEntry == null) {
-        return false;
-      }
-      return hdfsEntry.hdfsRegioninfoFilePresent;
-    }
-
-    long getModTime() {
-      if (hdfsEntry == null) {
-        return 0;
-      }
-      return hdfsEntry.hdfsRegionDirModTime;
-    }
-
-    RegionInfo getHdfsHRI() {
-      if (hdfsEntry == null) {
-        return null;
-      }
-      return hdfsEntry.hri;
-    }
-
-    public void setSkipChecks(boolean skipChecks) {
-      this.skipChecks = skipChecks;
-    }
-
-    public boolean isSkipChecks() {
-      return skipChecks;
-    }
-
-    public void setMerged(boolean isMerged) {
-      this.isMerged = isMerged;
-    }
-
-    public boolean isMerged() {
-      return this.isMerged;
-    }
-  }
-
-  final static Comparator<HbckInfo> cmp = new Comparator<HbckInfo>() {
-    @Override
-    public int compare(HbckInfo l, HbckInfo r) {
-      if (l == r) {
-        // same instance
-        return 0;
-      }
-
-      int tableCompare = l.getTableName().compareTo(r.getTableName());
-      if (tableCompare != 0) {
-        return tableCompare;
-      }
-
-      int startComparison = RegionSplitCalculator.BYTES_COMPARATOR.compare(
-          l.getStartKey(), r.getStartKey());
-      if (startComparison != 0) {
-        return startComparison;
-      }
-
-      // Special case for absolute endkey
-      byte[] endKey = r.getEndKey();
-      endKey = (endKey.length == 0) ? null : endKey;
-      byte[] endKey2 = l.getEndKey();
-      endKey2 = (endKey2.length == 0) ? null : endKey2;
-      int endComparison = RegionSplitCalculator.BYTES_COMPARATOR.compare(
-          endKey2,  endKey);
-
-      if (endComparison != 0) {
-        return endComparison;
-      }
-
-      // use regionId as tiebreaker.
-      // Null is considered after all possible values so make it bigger.
-      if (l.hdfsEntry == null && r.hdfsEntry == null) {
-        return 0;
-      }
-      if (l.hdfsEntry == null && r.hdfsEntry != null) {
-        return 1;
-      }
-      // l.hdfsEntry must not be null
-      if (r.hdfsEntry == null) {
-        return -1;
-      }
-      // both l.hdfsEntry and r.hdfsEntry must not be null.
-      return Long.compare(l.hdfsEntry.hri.getRegionId(), r.hdfsEntry.hri.getRegionId());
-    }
-  };
-
-  /**
    * Prints summary of all tables found on the system.
    */
-  private void printTableSummary(SortedMap<TableName, TableInfo> tablesInfo) {
+  private void printTableSummary(SortedMap<TableName, HbckTableInfo> tablesInfo) {
     StringBuilder sb = new StringBuilder();
     int numOfSkippedRegions;
     errors.print("Summary:");
-    for (TableInfo tInfo : tablesInfo.values()) {
+    for (HbckTableInfo tInfo : tablesInfo.values()) {
       numOfSkippedRegions = (skippedRegions.containsKey(tInfo.getName())) ?
           skippedRegions.get(tInfo.getName()).size() : 0;
 
@@ -3941,54 +2858,21 @@ public class HBaseFsck extends Configured implements Closeable {
     }
   }
 
-  static ErrorReporter getErrorReporter(
-      final Configuration conf) throws ClassNotFoundException {
-    Class<? extends ErrorReporter> reporter = conf.getClass("hbasefsck.errorreporter", PrintingErrorReporter.class, ErrorReporter.class);
+  static HbckErrorReporter getErrorReporter(final Configuration conf)
+      throws ClassNotFoundException {
+    Class<? extends HbckErrorReporter> reporter =
+        conf.getClass("hbasefsck.errorreporter", PrintingErrorReporter.class,
+            HbckErrorReporter.class);
     return ReflectionUtils.newInstance(reporter, conf);
   }
 
-  public interface ErrorReporter {
-    enum ERROR_CODE {
-      UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
-      NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META,
-      NOT_DEPLOYED,
-      MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
-      FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
-      HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
-      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      LINGERING_HFILELINK, WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR,
-      ORPHAN_TABLE_STATE, NO_TABLE_STATE, UNDELETED_REPLICATION_QUEUE, DUPE_ENDKEYS,
-      UNSUPPORTED_OPTION
-    }
-    void clear();
-    void report(String message);
-    void reportError(String message);
-    void reportError(ERROR_CODE errorCode, String message);
-    void reportError(ERROR_CODE errorCode, String message, TableInfo table);
-    void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info);
-    void reportError(
-      ERROR_CODE errorCode,
-      String message,
-      TableInfo table,
-      HbckInfo info1,
-      HbckInfo info2
-    );
-    int summarize();
-    void detail(String details);
-    ArrayList<ERROR_CODE> getErrorList();
-    void progress();
-    void print(String message);
-    void resetErrors();
-    boolean tableHasErrors(TableInfo table);
-  }
-
-  static class PrintingErrorReporter implements ErrorReporter {
+  static class PrintingErrorReporter implements HbckErrorReporter {
     public int errorCount = 0;
     private int showProgress;
     // How frequently calls to progress() will create output
     private static final int progressThreshold = 100;
 
-    Set<TableInfo> errorTables = new HashSet<>();
+    Set<HbckTableInfo> errorTables = new HashSet<>();
 
     // for use by unit tests to verify which errors were discovered
     private ArrayList<ERROR_CODE> errorList = new ArrayList<>();
@@ -4016,22 +2900,23 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     @Override
-    public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+    public synchronized void reportError(ERROR_CODE errorCode, String message,
+        HbckTableInfo table) {
       errorTables.add(table);
       reportError(errorCode, message);
     }
 
     @Override
-    public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table,
-                                         HbckInfo info) {
+    public synchronized void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table,
+                                         HbckRegionInfo info) {
       errorTables.add(table);
       String reference = "(region " + info.getRegionNameAsString() + ")";
       reportError(errorCode, reference + " " + message);
     }
 
     @Override
-    public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table,
-                                         HbckInfo info1, HbckInfo info2) {
+    public synchronized void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table,
+                                         HbckRegionInfo info1, HbckRegionInfo info2) {
       errorTables.add(table);
       String reference = "(regions " + info1.getRegionNameAsString()
           + " and " + info2.getRegionNameAsString() + ")";
@@ -4082,7 +2967,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     @Override
-    public boolean tableHasErrors(TableInfo table) {
+    public boolean tableHasErrors(HbckTableInfo table) {
       return errorTables.contains(table);
     }
 
@@ -4116,11 +3001,11 @@ public class HBaseFsck extends Configured implements Closeable {
   static class WorkItemRegion implements Callable<Void> {
     private final HBaseFsck hbck;
     private final ServerName rsinfo;
-    private final ErrorReporter errors;
+    private final HbckErrorReporter errors;
     private final ClusterConnection connection;
 
-    WorkItemRegion(HBaseFsck hbck, ServerName info,
-                   ErrorReporter errors, ClusterConnection connection) {
+    WorkItemRegion(HBaseFsck hbck, ServerName info, HbckErrorReporter errors,
+        ClusterConnection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
       this.errors = errors;
@@ -4150,8 +3035,9 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         // check to see if the existence of this region matches the region in META
-        for (RegionInfo r:regions) {
-          HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
+
+        for (RegionInfo r : regions) {
+          HbckRegionInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
           hbi.addServer(r, rsinfo);
         }
       } catch (IOException e) {          // unable to connect to the region server.
@@ -4180,11 +3066,10 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   class WorkItemHdfsDir implements Callable<Void> {
     private FileStatus tableDir;
-    private ErrorReporter errors;
+    private HbckErrorReporter errors;
     private FileSystem fs;
 
-    WorkItemHdfsDir(FileSystem fs, ErrorReporter errors,
-                    FileStatus status) {
+    WorkItemHdfsDir(FileSystem fs, HbckErrorReporter errors, FileStatus status) {
       this.fs = fs;
       this.tableDir = status;
       this.errors = errors;
@@ -4229,16 +3114,16 @@ public class HBaseFsck extends Configured implements Closeable {
                   }
                 }
 
-                HbckInfo hbi = HBaseFsck.this.getOrCreateInfo(encodedName);
-                HdfsEntry he = new HdfsEntry();
+                HbckRegionInfo hbi = HBaseFsck.this.getOrCreateInfo(encodedName);
+                HbckRegionInfo.HdfsEntry he = new HbckRegionInfo.HdfsEntry();
                 synchronized (hbi) {
                   if (hbi.getHdfsRegionDir() != null) {
                     errors.print("Directory " + encodedName + " duplicate??" +
                                  hbi.getHdfsRegionDir());
                   }
 
-                  he.hdfsRegionDir = regionDir.getPath();
-                  he.hdfsRegionDirModTime = regionDir.getModificationTime();
+                  he.regionDir = regionDir.getPath();
+                  he.regionDirModTime = regionDir.getModificationTime();
                   he.hdfsRegioninfoFilePresent = regioninfoFileExists;
                   // we add to orphan list when we attempt to read .regioninfo
 
@@ -4255,7 +3140,7 @@ public class HBaseFsck extends Configured implements Closeable {
                       break;
                     }
                   }
-                  hbi.hdfsEntry = he;
+                  hbi.setHdfsEntry(he);
                 }
               } catch (Exception e) {
                 LOG.error("Could not load region dir", e);
@@ -4299,11 +3184,11 @@ public class HBaseFsck extends Configured implements Closeable {
    * regioninfo list.
    */
   static class WorkItemHdfsRegionInfo implements Callable<Void> {
-    private HbckInfo hbi;
+    private HbckRegionInfo hbi;
     private HBaseFsck hbck;
-    private ErrorReporter errors;
+    private HbckErrorReporter errors;
 
-    WorkItemHdfsRegionInfo(HbckInfo hbi, HBaseFsck hbck, ErrorReporter errors) {
+    WorkItemHdfsRegionInfo(HbckRegionInfo hbi, HBaseFsck hbck, HbckErrorReporter errors) {
       this.hbi = hbi;
       this.hbck = hbck;
       this.errors = errors;
@@ -4315,7 +3200,7 @@ public class HBaseFsck extends Configured implements Closeable {
       if (hbi.getHdfsHRI() == null) {
         try {
           errors.progress();
-          hbck.loadHdfsRegioninfo(hbi);
+          hbi.loadHdfsRegioninfo(hbck.getConf());
         } catch (IOException ioe) {
           String msg = "Orphan region in HDFS: Unable to load .regioninfo from table "
               + hbi.getTableName() + " in hdfs dir "
@@ -4343,6 +3228,10 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public static void setDisplayFullReport() {
     details = true;
+  }
+
+  public static boolean shouldDisplayFullReport() {
+    return details;
   }
 
   /**
@@ -4987,7 +3876,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * ls -r for debugging purposes
    */
   public static void debugLsr(Configuration conf,
-      Path p, ErrorReporter errors) throws IOException {
+      Path p, HbckErrorReporter errors) throws IOException {
     if (!LOG.isDebugEnabled() || p == null) {
       return;
     }

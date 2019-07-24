@@ -32,15 +32,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
-import org.apache.hadoop.hbase.util.HBaseFsck;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
+import org.apache.hadoop.hbase.util.HbckErrorReporter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * Check and fix undeleted replication queues for removed peerId.
  */
 @InterfaceAudience.Private
 public class ReplicationChecker {
-  private final ErrorReporter errorReporter;
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationChecker.class);
+
+  private final HbckErrorReporter errorReporter;
   // replicator with its queueIds for removed peers
   private Map<String, List<String>> undeletedQueueIds = new HashMap<>();
   // replicator with its undeleted queueIds for removed peers in hfile-refs queue
@@ -48,14 +51,14 @@ public class ReplicationChecker {
   private final ReplicationZKNodeCleaner cleaner;
 
   public ReplicationChecker(Configuration conf, ZKWatcher zkw, ClusterConnection connection,
-                            ErrorReporter errorReporter) throws IOException {
+      HbckErrorReporter errorReporter) throws IOException {
     this.cleaner = new ReplicationZKNodeCleaner(conf, zkw, connection);
     this.errorReporter = errorReporter;
   }
 
   public boolean hasUnDeletedQueues() {
-    return errorReporter.getErrorList().contains(
-      HBaseFsck.ErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE);
+    return errorReporter.getErrorList()
+        .contains(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE);
   }
 
   public void checkUnDeletedQueues() throws IOException {
@@ -67,7 +70,7 @@ public class ReplicationChecker {
         String msg = "Undeleted replication queue for removed peer found: "
             + String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
               replicator, queueId);
-        errorReporter.reportError(HBaseFsck.ErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE,
+        errorReporter.reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE,
           msg);
       }
     }
@@ -81,7 +84,7 @@ public class ReplicationChecker {
       String msg = "Undeleted replication hfile-refs queue for removed peer found: "
           + undeletedHFileRefsQueueIds + " under hfile-refs node";
       errorReporter
-          .reportError(HBaseFsck.ErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg);
+          .reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg);
     }
   }
 

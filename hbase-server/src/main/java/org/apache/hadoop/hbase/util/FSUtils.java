@@ -48,6 +48,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -72,7 +73,6 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -1207,10 +1207,10 @@ public abstract class FSUtils extends CommonFSUtils {
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
-  public static Map<String, Path> getTableStoreFilePathMap(
-      Map<String, Path> resultMap,
+  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
       final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
-      ExecutorService executor, final ErrorReporter errors) throws IOException, InterruptedException {
+      ExecutorService executor, final HbckErrorReporter errors)
+      throws IOException, InterruptedException {
 
     final Map<String, Path> finalResultMap =
         resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
@@ -1373,7 +1373,7 @@ public abstract class FSUtils extends CommonFSUtils {
    */
   public static Map<String, Path> getTableStoreFilePathMap(
     final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
-    ExecutorService executor, ErrorReporter errors)
+    ExecutorService executor, HbckErrorReporter errors)
   throws IOException, InterruptedException {
     ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<>(1024, 0.75f, 32);
 
