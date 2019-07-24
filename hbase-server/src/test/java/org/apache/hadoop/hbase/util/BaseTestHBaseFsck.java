@@ -65,9 +65,6 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
-import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
-import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.rules.TestName;
@@ -462,7 +459,7 @@ public class BaseTestHBaseFsck {
   }
 
 
-  static class MockErrorReporter implements ErrorReporter {
+  static class MockErrorReporter implements HbckErrorReporter {
     static int calledCount = 0;
 
     @Override
@@ -486,19 +483,19 @@ public class BaseTestHBaseFsck {
     }
 
     @Override
-    public void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+    public void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table) {
       calledCount++;
     }
 
     @Override
     public void reportError(ERROR_CODE errorCode,
-        String message, TableInfo table, HbckInfo info) {
+        String message, HbckTableInfo table, HbckRegionInfo info) {
       calledCount++;
     }
 
     @Override
     public void reportError(ERROR_CODE errorCode, String message,
-        TableInfo table, HbckInfo info1, HbckInfo info2) {
+        HbckTableInfo table, HbckRegionInfo info1, HbckRegionInfo info2) {
       calledCount++;
     }
 
@@ -534,7 +531,7 @@ public class BaseTestHBaseFsck {
     }
 
     @Override
-    public boolean tableHasErrors(TableInfo table) {
+    public boolean tableHasErrors(HbckTableInfo table) {
       calledCount++;
       return false;
     }
