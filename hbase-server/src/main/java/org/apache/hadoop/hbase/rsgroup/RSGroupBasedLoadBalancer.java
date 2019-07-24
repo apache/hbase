@@ -272,24 +272,20 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     List<ServerName> servers,
     ListMultimap<String, RegionInfo> regionMap,
     ListMultimap<String, ServerName> serverMap) throws HBaseIOException {
-    try {
-      for (RegionInfo region : regions) {
-        String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
-        if (groupName == null) {
-          LOG.info("Group not found for table " + region.getTable() + ", using default");
-          groupName = RSGroupInfo.DEFAULT_GROUP;
-        }
-        regionMap.put(groupName, region);
+    for (RegionInfo region : regions) {
+      String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
+      if (groupName == null) {
+        LOG.info("Group not found for table " + region.getTable() + ", using default");
+        groupName = RSGroupInfo.DEFAULT_GROUP;
       }
-      for (String groupKey : regionMap.keySet()) {
-        RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupKey);
-        serverMap.putAll(groupKey, filterOfflineServers(info, servers));
-        if(serverMap.get(groupKey).size() < 1) {
-          serverMap.put(groupKey, LoadBalancer.BOGUS_SERVER_NAME);
-        }
+      regionMap.put(groupName, region);
+    }
+    for (String groupKey : regionMap.keySet()) {
+      RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupKey);
+      serverMap.putAll(groupKey, filterOfflineServers(info, servers));
+      if (serverMap.get(groupKey).size() < 1) {
+        serverMap.put(groupKey, LoadBalancer.BOGUS_SERVER_NAME);
       }
-    } catch(IOException e) {
-      throw new HBaseIOException("Failed to generate group maps", e);
     }
   }
 
@@ -374,17 +370,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       List<RegionInfo> regions = assignments.getValue();
       for (RegionInfo region : regions) {
         RSGroupInfo targetRSGInfo = null;
-        try {
-          String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
-          if (groupName == null) {
-            LOG.info("Group not found for table " + region.getTable() + ", using default");
-            groupName = RSGroupInfo.DEFAULT_GROUP;
-          }
-          targetRSGInfo = rsGroupInfoManager.getRSGroup(groupName);
-        } catch (IOException exp) {
-          LOG.debug("RSGroup information null for region of table " + region.getTable(),
-              exp);
+        String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
+        if (groupName == null) {
+          LOG.info("Group not found for table " + region.getTable() + ", using default");
+          groupName = RSGroupInfo.DEFAULT_GROUP;
         }
+        targetRSGInfo = rsGroupInfoManager.getRSGroup(groupName);
         if (targetRSGInfo == null ||
             !targetRSGInfo.containsServer(currentHostServer.getAddress())) { // region is mis-placed
           regionPlansForMisplacedRegions.add(new RegionPlan(region, currentHostServer, null));

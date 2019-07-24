@@ -73,7 +73,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     }
 
     master = ((HasMasterServices) env).getMasterServices();
-    groupInfoManager = RSGroupInfoManagerImpl.getInstance(master);
+    groupInfoManager = master.getRSRSGroupInfoManager();
     groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
     Class<?> clazz =
         master.getConfiguration().getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, null);
