@@ -284,8 +284,11 @@ public class TestZooKeeperTableArchiveClient {
     for (Path file : files) {
       String tableName = file.getParent().getParent().getParent().getName();
       // check to which table this file belongs
-      if (tableName.equals(otherTable)) initialCountForOtherTable++;
-      else if (tableName.equals(STRING_TABLE_NAME)) initialCountForPrimary++;
+      if (tableName.equals(otherTable)) {
+        initialCountForOtherTable++;
+      } else if (tableName.equals(STRING_TABLE_NAME)) {
+        initialCountForPrimary++;
+      }
     }
 
     assertTrue("Didn't archive files for:" + STRING_TABLE_NAME, initialCountForPrimary > 0);
@@ -308,11 +311,13 @@ public class TestZooKeeperTableArchiveClient {
       String tableName = file.getParent().getParent().getParent().getName();
       // ensure we don't have files from the non-archived table
       assertFalse("Have a file from the non-archived table: " + file, tableName.equals(otherTable));
-      if (tableName.equals(STRING_TABLE_NAME)) archivedForPrimary++;
+      if (tableName.equals(STRING_TABLE_NAME)) {
+        archivedForPrimary++;
+      }
     }
 
-    assertEquals("Not all archived files for the primary table were retained.", initialCountForPrimary,
-      archivedForPrimary);
+    assertEquals("Not all archived files for the primary table were retained.",
+        initialCountForPrimary, archivedForPrimary);
 
     // but we still have the archive directory
     assertTrue("Archive directory was deleted via archiver", fs.exists(archiveDir));
@@ -389,7 +394,10 @@ public class TestZooKeeperTableArchiveClient {
 
         @SuppressWarnings("unchecked")
         Iterable<FileStatus> ret = (Iterable<FileStatus>) invocation.callRealMethod();
-        if (counter[0] >= expected) finished.countDown();
+        if (counter[0] >= expected) {
+          finished.countDown();
+        }
+
         return ret;
       }
     }).when(delegateSpy).getDeletableFiles(Mockito.anyList());
@@ -414,7 +422,11 @@ public class TestZooKeeperTableArchiveClient {
     for (FileStatus file : files) {
       if (file.isDirectory()) {
         List<Path> subFiles = getAllFiles(fs, file.getPath());
-        if (subFiles != null) allFiles.addAll(subFiles);
+
+        if (subFiles != null) {
+          allFiles.addAll(subFiles);
+        }
+
         continue;
       }
       allFiles.add(file.getPath());
@@ -441,7 +453,7 @@ public class TestZooKeeperTableArchiveClient {
    * Create a new hfile in the passed region
    * @param region region to operate on
    * @param columnFamily family for which to add data
-   * @throws IOException
+   * @throws IOException if doing the put or flush fails
    */
   private void createHFileInRegion(HRegion region, byte[] columnFamily) throws IOException {
     // put one row in the region
@@ -453,7 +465,7 @@ public class TestZooKeeperTableArchiveClient {
   }
 
   /**
-   * @param cleaner
+   * @param cleaner the cleaner to use
    */
   private void runCleaner(HFileCleaner cleaner, CountDownLatch finished, Stoppable stop)
       throws InterruptedException {

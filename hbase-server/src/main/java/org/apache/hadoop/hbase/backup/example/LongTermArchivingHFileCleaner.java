@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * {@link BaseHFileCleanerDelegate} that only cleans HFiles that don't belong to a table that is
  * currently being archived.
  * <p>
- * This only works properly if the 
+ * This only works properly if the
  * {@link org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner}
  *  is also enabled (it always should be), since it may take a little time
  *  for the ZK notification to propagate, in which case we may accidentally
@@ -53,14 +53,18 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   public boolean isFileDeletable(FileStatus fStat) {
     try {
       // if its a directory, then it can be deleted
-      if (fStat.isDirectory()) return true;
+      if (fStat.isDirectory()) {
+        return true;
+      }
       
       Path file = fStat.getPath();
       // check to see if
       FileStatus[] deleteStatus = FSUtils.listStatus(this.fs, file, null);
       // if the file doesn't exist, then it can be deleted (but should never
       // happen since deleted files shouldn't get passed in)
-      if (deleteStatus == null) return true;
+      if (deleteStatus == null) {
+        return true;
+      }
 
       // otherwise, we need to check the file's table and see its being archived
       Path family = file.getParent();
@@ -69,7 +73,8 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
       String tableName = table.getName();
       boolean ret = !archiveTracker.keepHFiles(tableName);
-      LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" + tableName);
+      LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" +
+          tableName);
       return ret;
     } catch (IOException e) {
       LOG.error("Failed to lookup status of:" + fStat.getPath() + ", keeping it just incase.", e);
@@ -97,13 +102,14 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public void stop(String reason) {
-    if (this.isStopped()) return;
+    if (this.isStopped()) {
+      return;
+    }
+
     super.stop(reason);
     if (this.archiveTracker != null) {
       LOG.info("Stopping " + this.archiveTracker);
       this.archiveTracker.stop();
     }
-
   }
-
 }
