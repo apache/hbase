@@ -862,6 +862,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     int[] removeRegion(int[] regions, int regionIndex) {
+      // check bounds
+      if (regionIndex < 0 || regionIndex >= regions.length) {
+          return Arrays.copyOf(regions, regions.length);
+      }
       //TODO: this maybe costly. Consider using linked lists
       int[] newRegions = new int[regions.length - 1];
       int i = 0;
