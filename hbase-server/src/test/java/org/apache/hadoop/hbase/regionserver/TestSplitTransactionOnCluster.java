@@ -565,6 +565,7 @@ public class TestSplitTransactionOnCluster {
         rst.getRegionServer().compactedFileDischarger.setUseExecutor(oldSetting);
       }
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      ProcedureTestingUtility.waitAllProcedures(cluster.getMaster().getMasterProcedureExecutor());
       LOG.info("Starting run of CatalogJanitor");
       cluster.getMaster().getCatalogJanitor().run();
       ProcedureTestingUtility.waitAllProcedures(cluster.getMaster().getMasterProcedureExecutor());
