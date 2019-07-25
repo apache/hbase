@@ -197,7 +197,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         if (!misplacedRegions.contains(region)) {
           String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
           if (groupName == null) {
-            LOG.info("Group not found for table " + region.getTable() + ", using default");
+            LOG.debug("Group not found for table " + region.getTable() + ", using default");
             groupName = RSGroupInfo.DEFAULT_GROUP;
           }
           groupToRegion.put(groupName, region);
@@ -232,7 +232,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       for (RegionInfo region : misplacedRegions) {
         String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
         if (groupName == null) {
-          LOG.info("Group not found for table " + region.getTable() + ", using default");
+          LOG.debug("Group not found for table " + region.getTable() + ", using default");
           groupName = RSGroupInfo.DEFAULT_GROUP;
         }
         RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupName);
@@ -277,7 +277,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       for (RegionInfo region : regions) {
         String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
         if (groupName == null) {
-          LOG.info("Group not found for table " + region.getTable() + ", using default");
+          LOG.debug("Group not found for table " + region.getTable() + ", using default");
           groupName = RSGroupInfo.DEFAULT_GROUP;
         }
         regionMap.put(groupName, region);
@@ -339,7 +339,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       ServerName assignedServer = region.getValue();
       String groupName = rsGroupInfoManager.getRSGroupOfTable(regionInfo.getTable());
       if (groupName == null) {
-        LOG.info("Group not found for table " + regionInfo.getTable() + ", using default");
+        LOG.debug("Group not found for table " + regionInfo.getTable() + ", using default");
         groupName = RSGroupInfo.DEFAULT_GROUP;
       }
       RSGroupInfo info = rsGroupInfoManager.getRSGroup(groupName);
@@ -389,7 +389,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         try {
           String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
           if (groupName == null) {
-            LOG.info("Group not found for table " + region.getTable() + ", using default");
+            LOG.debug("Group not found for table " + region.getTable() + ", using default");
             groupName = RSGroupInfo.DEFAULT_GROUP;
           }
           targetRSGInfo = rsGroupInfoManager.getRSGroup(groupName);
