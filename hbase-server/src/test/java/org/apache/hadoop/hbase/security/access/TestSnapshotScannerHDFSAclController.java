@@ -33,6 +33,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -81,6 +84,7 @@ public class TestSnapshotScannerHDFSAclController {
   private static FileSystem fs = null;
   private static Path rootDir = null;
   private static User unGrantUser = null;
+  private static SnapshotScannerHDFSAclHelper helper;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -107,6 +111,7 @@ public class TestSnapshotScannerHDFSAclController {
     rootDir = TEST_UTIL.getDefaultRootDirPath();
     fs = rootDir.getFileSystem(conf);
     unGrantUser = User.createUserForTesting(conf, UN_GRANT_USER, new String[] {});
+    helper = new SnapshotScannerHDFSAclHelper(conf, admin.getConnection());
 
     // set hbase directory permission
     FsPermission commonDirectoryPermission =
@@ -132,7 +137,9 @@ public class TestSnapshotScannerHDFSAclController {
       path = path.getParent();
     }
 
-    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
+    SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
+        .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
+    TEST_UTIL.waitFor(1200000, () -> coprocessor.checkInitialized("check initialized"));
   }
 
   @AfterClass
@@ -472,25 +479,25 @@ public class TestSnapshotScannerHDFSAclController {
       // delete
       admin.disableTable(table);
       admin.deleteTable(table);
-      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
+      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
 
       // restore snapshot and restore acl
       admin.restoreSnapshot(snapshot, true, true);
       TestHDFSAclHelper.put2(t);
       // snapshot
       admin.snapshot(snapshot2, table);
-      // delete
-      admin.disableTable(table);
-      admin.deleteTable(table);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, 10);
 
+      // delete
+      admin.disableTable(table);
+      admin.deleteTable(table);
       // restore snapshot and skip restore acl
       admin.restoreSnapshot(snapshot);
       admin.snapshot(snapshot3, table);
 
-      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
-      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, 10);
+      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
+      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot3, -1);
     }
   }
@@ -524,7 +531,7 @@ public class TestSnapshotScannerHDFSAclController {
       admin.disableTable(tableName1);
       admin.deleteTable(tableName1);
       // grantUser2 and grantUser3 should have data/ns acl
-      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser1, snapshot1, 6);
+      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser1, snapshot1, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser2, snapshot2, 6);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser3, snapshot2, 6);
     }
@@ -572,11 +579,6 @@ public class TestSnapshotScannerHDFSAclController {
     Path archiveTableDir = HFileArchiveUtil.getTableArchivePath(rootDir, table);
     assertTrue(fs.exists(archiveTableDir));
 
-    // delete table and grant user can scan snapshot
-    admin.disableTable(table);
-    admin.deleteTable(table);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
-
     // Check SnapshotScannerHDFSAclCleaner method
     assertTrue(SnapshotScannerHDFSAclCleaner.isArchiveTableDir(archiveTableDir));
     assertTrue(SnapshotScannerHDFSAclCleaner.isArchiveNamespaceDir(archiveTableDir.getParent()));
@@ -602,11 +604,112 @@ public class TestSnapshotScannerHDFSAclController {
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
     }
   }
+
+  @Test
+  public void testModifyTable() throws Exception {
+    String namespace = name.getMethodName();
+    TableName table = TableName.valueOf(namespace, "t1");
+    String snapshot = namespace + "t1";
+    TableName table2 = TableName.valueOf(namespace, "t2");
+
+    String tableUserName = name.getMethodName();
+    User tableUser = User.createUserForTesting(conf, tableUserName, new String[] {});
+    String tableUserName2 = tableUserName + "2";
+    User tableUser2 = User.createUserForTesting(conf, tableUserName2, new String[] {});
+    String tableUserName3 = tableUserName + "3";
+    User tableUser3 = User.createUserForTesting(conf, tableUserName3, new String[] {});
+    String nsUserName = tableUserName + "-ns";
+    User nsUser = User.createUserForTesting(conf, nsUserName, new String[] {});
+    String globalUserName = tableUserName + "-global";
+    User globalUser = User.createUserForTesting(conf, globalUserName, new String[] {});
+    String globalUserName2 = tableUserName + "-global-2";
+    User globalUser2 = User.createUserForTesting(conf, globalUserName2, new String[] {});
+
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalUserName, READ);
+    TestHDFSAclHelper.createNamespace(TEST_UTIL, namespace);
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsUserName, namespace, READ);
+    TableDescriptor td = TestHDFSAclHelper.createUserScanSnapshotDisabledTable(TEST_UTIL, table);
+    admin.snapshot(snapshot, table);
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalUserName2, READ);
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName, table, READ);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableUserName2, table, TestHDFSAclHelper.COLUMN1, null,
+      READ);
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName3, table, WRITE);
+
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, nsUser, snapshot, -1);
+    // Global permission is set before table is created, the acl is inherited
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser, snapshot, 6);
+    // Global permission is set after table is created, the table dir acl is skip
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser2, snapshot, -1);
+
+    // enable user scan snapshot
+    admin.modifyTable(TableDescriptorBuilder.newBuilder(td)
+        .setValue(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, "true").build());
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, 6);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, nsUser, snapshot, 6);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser, snapshot, 6);
+    // disable user scan snapshot
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, tableUserName2, namespace, READ);
+    TestHDFSAclHelper.createTable(TEST_UTIL, table2);
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName3, table2, READ);
+    admin.modifyTable(TableDescriptorBuilder.newBuilder(td)
+        .setValue(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, "false").build());
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, nsUser, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser2, snapshot, -1);
+    List<Path> namespaceRootPaths = helper.getNamespaceRootPaths(namespace);
+    List<Path> tableRootPaths = helper.getTableRootPaths(table, false);
+    // check access
+    for (Path path : tableRootPaths) {
+      checkUserAclEntry(path, tableUserName, false, false);
+      checkUserAclEntry(path, tableUserName2, false, false);
+      checkUserAclEntry(path, tableUserName3, false, false);
+      checkUserAclEntry(path, nsUserName, false, false);
+      checkUserAclEntry(path, globalUserName, false, false);
+      checkUserAclEntry(path, globalUserName2, false, false);
+    }
+    for (Path path : namespaceRootPaths) {
+      checkUserAclEntry(path, tableUserName, false, false);
+      checkUserAclEntry(path, tableUserName2, true, true);
+      checkUserAclEntry(path, tableUserName3, true, false);
+      checkUserAclEntry(path, nsUserName, true, true);
+      checkUserAclEntry(path, globalUserName, true, true);
+      checkUserAclEntry(path, globalUserName2, true, true);
+    }
+  }
+
+  private void checkUserAclEntry(Path path, String userName, boolean requireAccessAcl,
+      boolean requireDefaultAcl) throws IOException {
+    boolean accessAclEntry = false;
+    boolean defaultAclEntry = false;
+    if (fs.exists(path)) {
+      for (AclEntry aclEntry : fs.getAclStatus(path).getEntries()) {
+        String user = aclEntry.getName();
+        if (user != null && user.equals(userName)) {
+          if (aclEntry.getScope() == AclEntryScope.DEFAULT) {
+            defaultAclEntry = true;
+          } else if (aclEntry.getScope() == AclEntryScope.ACCESS) {
+            accessAclEntry = true;
+          }
+        }
+      }
+    }
+    String message = "require user: " + userName + ", path: " + path.toString() + " acl";
+    Assert.assertEquals(message, requireAccessAcl, accessAclEntry);
+    Assert.assertEquals(message, requireDefaultAcl, defaultAclEntry);
+  }
 }
 
 final class TestHDFSAclHelper {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestHDFSAclHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHDFSAclHelper.class);
 
   private TestHDFSAclHelper() {
   }
@@ -616,10 +719,9 @@ final class TestHDFSAclHelper {
     SecureTestUtil.grantOnTable(util, user, tableName, null, null, actions);
   }
 
-  private static void createNamespace(HBaseTestingUtility util, String namespace)
-      throws IOException {
-    if (!Arrays.stream(util.getAdmin().listNamespaceDescriptors())
-        .anyMatch(ns -> ns.getName().equals(namespace))) {
+  static void createNamespace(HBaseTestingUtility util, String namespace) throws IOException {
+    if (Arrays.stream(util.getAdmin().listNamespaceDescriptors())
+        .noneMatch(ns -> ns.getName().equals(namespace))) {
       NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
       util.getAdmin().createNamespace(namespaceDescriptor);
     }
@@ -627,11 +729,8 @@ final class TestHDFSAclHelper {
 
   static Table createTable(HBaseTestingUtility util, TableName tableName) throws IOException {
     createNamespace(util, tableName.getNamespaceAsString());
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build())
-        .setOwner(User.createUserForTesting(util.getConfiguration(), "owner", new String[] {}))
-        .build();
+    TableDescriptor td = getTableDescriptorBuilder(util, tableName)
+        .setValue(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     return util.createTable(td, splits);
   }
@@ -644,9 +743,28 @@ final class TestHDFSAclHelper {
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).setMobEnabled(true)
             .setMobThreshold(0).build())
         .setOwner(User.createUserForTesting(util.getConfiguration(), "owner", new String[] {}))
-        .build();
+        .setValue(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     return util.createTable(td, splits);
+  }
+
+  static TableDescriptor createUserScanSnapshotDisabledTable(HBaseTestingUtility util,
+      TableName tableName) throws IOException {
+    createNamespace(util, tableName.getNamespaceAsString());
+    TableDescriptor td = getTableDescriptorBuilder(util, tableName).build();
+    byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
+    try (Table t = util.createTable(td, splits)) {
+      put(t);
+    }
+    return td;
+  }
+
+  private static TableDescriptorBuilder getTableDescriptorBuilder(HBaseTestingUtility util,
+      TableName tableName) {
+    return TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build())
+        .setOwner(User.createUserForTesting(util.getConfiguration(), "owner", new String[] {}));
   }
 
   static void createTableAndPut(HBaseTestingUtility util, TableName tableNam) throws IOException {
@@ -701,7 +819,7 @@ final class TestHDFSAclHelper {
 
   private static PrivilegedExceptionAction<Void> getScanSnapshotAction(Configuration conf,
       String snapshotName, long expectedRowCount) {
-    PrivilegedExceptionAction<Void> action = () -> {
+    return () -> {
       try {
         Path restoreDir = new Path(SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_TMP_DIR_DEFAULT);
         Scan scan = new Scan();
@@ -723,6 +841,5 @@ final class TestHDFSAclHelper {
       }
       return null;
     };
-    return action;
   }
 }
