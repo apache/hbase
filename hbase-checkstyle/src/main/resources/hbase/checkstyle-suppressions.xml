@@ -40,6 +40,7 @@
   <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestServletFilter.java"/>
   <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestGlobalFilter.java"/>
   <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.http.TestPathFilter.java"/>
+  <suppress checks="EmptyBlockCheck" files="org.apache.hadoop.hbase.backup.example.TestZooKeeperTableArchiveClient.java"/>
   <suppress checks="EqualsHashCode" files="org.apache.hadoop.hbase.favored.StartcodeAgnosticServerName.java"/>
   <suppress checks="MethodLength" files="org.apache.hadoop.hbase.tool.coprocessor.Branch1CoprocessorMethods.java"/>
   <suppress checks="IllegalImport" message="org\.apache\.htrace\.core"/>
