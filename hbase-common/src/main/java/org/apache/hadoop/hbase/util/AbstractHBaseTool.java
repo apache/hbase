@@ -67,7 +67,7 @@ public abstract class AbstractHBaseTool implements Tool {
   private HashMap<Option, Integer> optionsOrder = new HashMap<>();
   private int optionsCount = 0;
 
-  private class OptionsOrderComparator implements Comparator<Option> {
+  public class OptionsOrderComparator implements Comparator<Option> {
     @Override
     public int compare(Option o1, Option o2) {
       return optionsOrder.get(o1) - optionsOrder.get(o2);
