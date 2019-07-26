@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Test implementation of a coprocessor endpoint exposing the
- * {@link TestRpcServiceProtos.TestProtobufRpcProto} service methods. For internal use by unit tests
- * only.
+ * {@link org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto}
+ * service methods. For internal use by unit tests only.
  */
 public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobufRpcProto
         implements MasterCoprocessor, RegionCoprocessor {

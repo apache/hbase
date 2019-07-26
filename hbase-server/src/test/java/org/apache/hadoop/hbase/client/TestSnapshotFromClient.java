@@ -219,7 +219,7 @@ public class TestSnapshotFromClient {
     String snapshot = SNAPSHOT_NAME;
 
     admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME,
-        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION));
+        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION, null));
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot

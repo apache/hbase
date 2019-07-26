@@ -45,9 +45,8 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Uses the load tester
  */
-@Category({IOTests.class, MediumTests.class})
-public class TestLoadAndSwitchEncodeOnDisk extends
-    TestMiniClusterLoadSequential {
+@Category({ IOTests.class, MediumTests.class })
+public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

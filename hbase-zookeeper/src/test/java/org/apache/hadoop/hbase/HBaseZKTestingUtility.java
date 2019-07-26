@@ -146,7 +146,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Shuts down zk cluster created by call to {@link #startMiniZKCluster(File)} or does nothing.
+   * Shuts down zk cluster created by call to {@link #startMiniZKCluster()} or does nothing.
    * @see #startMiniZKCluster()
    */
   public void shutdownMiniZKCluster() throws IOException {

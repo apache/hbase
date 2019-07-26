@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -33,7 +34,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
@@ -156,7 +156,7 @@ public class HBaseHbck implements Hbck {
   }
 
   @Override
-  public List<Long> scheduleServerCrashProcedure(List<HBaseProtos.ServerName> serverNames)
+  public List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames)
       throws IOException {
     try {
       MasterProtos.ScheduleServerCrashProcedureResponse response =
@@ -168,20 +168,6 @@ public class HBaseHbck implements Hbck {
         serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
             .collect(Collectors.toList())),
         se);
-      throw new IOException(se);
-    }
-  }
-
-  @Override
-  public Map<String, MasterProtos.RegionErrorType>
-      getFailedSplitMergeLegacyRegions(List<TableName> tableNames) throws IOException {
-    try {
-      MasterProtos.GetFailedSplitMergeLegacyRegionsResponse response =
-          this.hbck.getFailedSplitMergeLegacyRegions(rpcControllerFactory.newController(),
-            RequestConverter.toGetFailedSplitMergeLegacyRegionsRequest(tableNames));
-      return response.getErrorsMap();
-    } catch (ServiceException se) {
-      LOG.debug("get failed split/merge legacy regions failed", se);
       throw new IOException(se);
     }
   }

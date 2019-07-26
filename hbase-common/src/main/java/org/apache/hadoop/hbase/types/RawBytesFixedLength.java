@@ -47,7 +47,7 @@ public class RawBytesFixedLength extends FixedLengthWrapper<byte[]> {
    * Create a {@code RawBytesFixedLength} of the specified {@code length}.
    */
   public RawBytesFixedLength(int length) {
-    super(new RawBytes(), length);
+    super(new RawBytes(Order.ASCENDING), length);
   }
 
   /**

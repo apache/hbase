@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -64,6 +65,23 @@ public class RegionServicesForStores {
 
   public WAL getWAL() {
     return region.getWAL();
+  }
+
+  private static ByteBuffAllocator ALLOCATOR_FOR_TEST;
+
+  private static synchronized ByteBuffAllocator getAllocatorForTest() {
+    if (ALLOCATOR_FOR_TEST == null) {
+      ALLOCATOR_FOR_TEST = ByteBuffAllocator.HEAP;
+    }
+    return ALLOCATOR_FOR_TEST;
+  }
+
+  public ByteBuffAllocator getByteBuffAllocator() {
+    if (rsServices != null && rsServices.getRpcServer() != null) {
+      return rsServices.getRpcServer().getByteBuffAllocator();
+    } else {
+      return getAllocatorForTest();
+    }
   }
 
   private static ThreadPoolExecutor INMEMORY_COMPACTION_POOL_FOR_TEST;

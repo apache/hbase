@@ -30,7 +30,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -114,8 +113,6 @@ public class TestBlockEvictionFromClient {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below
-                                                        // tests
     conf.setInt("hbase.regionserver.handler.count", 20);
     conf.setInt("hbase.bucketcache.size", 400);
     conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
@@ -441,9 +438,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -536,9 +533,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -670,9 +667,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -758,9 +755,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -925,9 +922,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -952,9 +949,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1043,9 +1040,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1079,9 +1076,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1160,9 +1157,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1186,9 +1183,9 @@ public class TestBlockEvictionFromClient {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
         if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
+          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
         } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
         } else {
           continue;
         }
@@ -1214,9 +1211,9 @@ public class TestBlockEvictionFromClient {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRefCount(cacheKey);
+        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
       } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
       } else {
         continue;
       }
@@ -1293,9 +1290,9 @@ public class TestBlockEvictionFromClient {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
       if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRefCount(cacheKey);
+        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
       } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
+        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
       } else {
         continue;
       }
@@ -1562,8 +1559,6 @@ public class TestBlockEvictionFromClient {
   }
 
   public static class CustomInnerRegionObserver implements RegionCoprocessor, RegionObserver {
-    static final AtomicLong sleepTime = new AtomicLong(0);
-    static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     static final AtomicInteger countOfGets = new AtomicInteger(0);
     static final AtomicBoolean waitForGets = new AtomicBoolean(false);

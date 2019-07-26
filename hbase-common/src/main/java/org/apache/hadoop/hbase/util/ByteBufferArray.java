@@ -20,16 +20,15 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -38,283 +37,250 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
- * This class manages an array of ByteBuffers with a default size 4MB. These
- * buffers are sequential and could be considered as a large buffer.It supports
- * reading/writing data from this large buffer with a position and offset
+ * This class manages an array of ByteBuffers with a default size 4MB. These buffers are sequential
+ * and could be considered as a large buffer.It supports reading/writing data from this large buffer
+ * with a position and offset
  */
 @InterfaceAudience.Private
 public class ByteBufferArray {
   private static final Logger LOG = LoggerFactory.getLogger(ByteBufferArray.class);
 
   public static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-  @VisibleForTesting
-  ByteBuffer buffers[];
-  private int bufferSize;
-  @VisibleForTesting
-  int bufferCount;
+  private final int bufferSize;
+  private final int bufferCount;
+  final ByteBuffer[] buffers;
 
   /**
-   * We allocate a number of byte buffers as the capacity. In order not to out
-   * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}),
-   * we will allocate one additional buffer with capacity 0;
+   * We allocate a number of byte buffers as the capacity.
    * @param capacity total size of the byte buffer array
    * @param allocator the ByteBufferAllocator that will create the buffers
    * @throws IOException throws IOException if there is an exception thrown by the allocator
    */
-  public ByteBufferArray(long capacity, ByteBufferAllocator allocator)
-      throws IOException {
-    this.bufferSize = DEFAULT_BUFFER_SIZE;
-    if (this.bufferSize > (capacity / 16))
-      this.bufferSize = (int) roundUp(capacity / 16, 32768);
-    this.bufferCount = (int) (roundUp(capacity, bufferSize) / bufferSize);
-    LOG.info("Allocating buffers total=" + StringUtils.byteDesc(capacity)
-        + ", sizePerBuffer=" + StringUtils.byteDesc(bufferSize) + ", count="
-        + bufferCount);
-    buffers = new ByteBuffer[bufferCount + 1];
-    createBuffers(allocator);
+  public ByteBufferArray(long capacity, ByteBufferAllocator allocator) throws IOException {
+    this(getBufferSize(capacity), getBufferCount(capacity),
+        Runtime.getRuntime().availableProcessors(), capacity, allocator);
   }
 
   @VisibleForTesting
-  void createBuffers(ByteBufferAllocator allocator)
-      throws IOException {
-    int threadCount = getThreadCount();
-    ExecutorService service = new ThreadPoolExecutor(threadCount, threadCount, 0L,
-        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-    int perThreadCount = (int)Math.floor((double) (bufferCount) / threadCount);
-    int lastThreadCount = bufferCount - (perThreadCount * (threadCount - 1));
-    Future<ByteBuffer[]>[] futures = new Future[threadCount];
+  ByteBufferArray(int bufferSize, int bufferCount, int threadCount, long capacity,
+      ByteBufferAllocator alloc) throws IOException {
+    this.bufferSize = bufferSize;
+    this.bufferCount = bufferCount;
+    LOG.info("Allocating buffers total={}, sizePerBuffer={}, count={}",
+      StringUtils.byteDesc(capacity), StringUtils.byteDesc(bufferSize), bufferCount);
+    this.buffers = new ByteBuffer[bufferCount];
+    createBuffers(threadCount, alloc);
+  }
+
+  private void createBuffers(int threadCount, ByteBufferAllocator alloc) throws IOException {
+    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+    int perThreadCount = bufferCount / threadCount;
+    int reminder = bufferCount % threadCount;
     try {
+      List<Future<ByteBuffer[]>> futures = new ArrayList<>(threadCount);
+      // Dispatch the creation task to each thread.
       for (int i = 0; i < threadCount; i++) {
-        // Last thread will have to deal with a different number of buffers
-        int buffersToCreate = (i == threadCount - 1) ? lastThreadCount : perThreadCount;
-        futures[i] = service.submit(
-          new BufferCreatorCallable(bufferSize, buffersToCreate, allocator));
-      }
-      int bufferIndex = 0;
-      for (Future<ByteBuffer[]> future : futures) {
-        try {
-          ByteBuffer[] buffers = future.get();
-          for (ByteBuffer buffer : buffers) {
-            this.buffers[bufferIndex++] = buffer;
+        final int chunkSize = perThreadCount + ((i == threadCount - 1) ? reminder : 0);
+        futures.add(pool.submit(() -> {
+          ByteBuffer[] chunk = new ByteBuffer[chunkSize];
+          for (int k = 0; k < chunkSize; k++) {
+            chunk[k] = alloc.allocate(bufferSize);
           }
-        } catch (InterruptedException | ExecutionException e) {
-          LOG.error("Buffer creation interrupted", e);
-          throw new IOException(e);
+          return chunk;
+        }));
+      }
+      // Append the buffers created by each thread.
+      int bufferIndex = 0;
+      try {
+        for (Future<ByteBuffer[]> f : futures) {
+          for (ByteBuffer b : f.get()) {
+            this.buffers[bufferIndex++] = b;
+          }
         }
+        assert bufferIndex == bufferCount;
+      } catch (Exception e) {
+        LOG.error("Buffer creation interrupted", e);
+        throw new IOException(e);
       }
     } finally {
-      service.shutdownNow();
+      pool.shutdownNow();
     }
-    // always create on heap empty dummy buffer at last
-    this.buffers[bufferCount] = ByteBuffer.allocate(0);
   }
 
   @VisibleForTesting
-  int getThreadCount() {
-    return Runtime.getRuntime().availableProcessors();
+  static int getBufferSize(long capacity) {
+    int bufferSize = DEFAULT_BUFFER_SIZE;
+    if (bufferSize > (capacity / 16)) {
+      bufferSize = (int) roundUp(capacity / 16, 32768);
+    }
+    return bufferSize;
   }
 
-  /**
-   * A callable that creates buffers of the specified length either onheap/offheap using the
-   * {@link ByteBufferAllocator}
-   */
-  private static class BufferCreatorCallable implements Callable<ByteBuffer[]> {
-    private final int bufferCapacity;
-    private final int bufferCount;
-    private final ByteBufferAllocator allocator;
-
-    BufferCreatorCallable(int bufferCapacity, int bufferCount, ByteBufferAllocator allocator) {
-      this.bufferCapacity = bufferCapacity;
-      this.bufferCount = bufferCount;
-      this.allocator = allocator;
-    }
-
-    @Override
-    public ByteBuffer[] call() throws Exception {
-      ByteBuffer[] buffers = new ByteBuffer[this.bufferCount];
-      for (int i = 0; i < this.bufferCount; i++) {
-        buffers[i] = allocator.allocate(this.bufferCapacity);
-      }
-      return buffers;
-    }
+  private static int getBufferCount(long capacity) {
+    int bufferSize = getBufferSize(capacity);
+    return (int) (roundUp(capacity, bufferSize) / bufferSize);
   }
 
-  private long roundUp(long n, long to) {
+  private static long roundUp(long n, long to) {
     return ((n + to - 1) / to) * to;
   }
 
   /**
-   * Transfers bytes from this buffer array into the given destination array
-   * @param start start position in the ByteBufferArray
-   * @param len The maximum number of bytes to be written to the given array
-   * @param dstArray The array into which bytes are to be written
+   * Transfers bytes from this buffers array into the given destination {@link ByteBuff}
+   * @param offset start position in this big logical array.
+   * @param dst the destination ByteBuff. Notice that its position will be advanced.
    * @return number of bytes read
    */
-  public int getMultiple(long start, int len, byte[] dstArray) {
-    return getMultiple(start, len, dstArray, 0);
+  public int read(long offset, ByteBuff dst) {
+    return internalTransfer(offset, dst, READER);
   }
 
   /**
-   * Transfers bytes from this buffer array into the given destination array
-   * @param start start offset of this buffer array
-   * @param len The maximum number of bytes to be written to the given array
-   * @param dstArray The array into which bytes are to be written
-   * @param dstOffset The offset within the given array of the first byte to be
-   *          written
-   * @return number of bytes read
+   * Transfers bytes from the given source {@link ByteBuff} into this buffer array
+   * @param offset start offset of this big logical array.
+   * @param src the source ByteBuff. Notice that its position will be advanced.
+   * @return number of bytes write
    */
-  public int getMultiple(long start, int len, byte[] dstArray, int dstOffset) {
-    multiple(start, len, dstArray, dstOffset, GET_MULTIPLE_VISTOR);
-    return len;
+  public int write(long offset, ByteBuff src) {
+    return internalTransfer(offset, src, WRITER);
   }
 
-  private final static Visitor GET_MULTIPLE_VISTOR = new Visitor() {
-    @Override
-    public void visit(ByteBuffer bb, int pos, byte[] array, int arrayIdx, int len) {
-      ByteBufferUtils.copyFromBufferToArray(array, bb, pos, arrayIdx, len);
-    }
+  /**
+   * Transfer bytes from source {@link ByteBuff} to destination {@link ByteBuffer}. Position of both
+   * source and destination will be advanced.
+   */
+  private static final BiConsumer<ByteBuffer, ByteBuff> WRITER = (dst, src) -> {
+    int off = src.position(), len = dst.remaining();
+    src.get(dst, off, len);
+    src.position(off + len);
   };
 
   /**
-   * Transfers bytes from the given source array into this buffer array
-   * @param start start offset of this buffer array
-   * @param len The maximum number of bytes to be read from the given array
-   * @param srcArray The array from which bytes are to be read
+   * Transfer bytes from source {@link ByteBuffer} to destination {@link ByteBuff}, Position of both
+   * source and destination will be advanced.
    */
-  public void putMultiple(long start, int len, byte[] srcArray) {
-    putMultiple(start, len, srcArray, 0);
+  private static final BiConsumer<ByteBuffer, ByteBuff> READER = (src, dst) -> {
+    int off = dst.position(), len = src.remaining(), srcOff = src.position();
+    dst.put(off, ByteBuff.wrap(src), srcOff, len);
+    src.position(srcOff + len);
+    dst.position(off + len);
+  };
+
+  /**
+   * Transferring all remaining bytes from b to the buffers array starting at offset, or
+   * transferring bytes from the buffers array at offset to b until b is filled. Notice that
+   * position of ByteBuff b will be advanced.
+   * @param offset where we start in the big logical array.
+   * @param b the ByteBuff to transfer from or to
+   * @param transfer the transfer interface.
+   * @return the length of bytes we transferred.
+   */
+  private int internalTransfer(long offset, ByteBuff b, BiConsumer<ByteBuffer, ByteBuff> transfer) {
+    int expectedTransferLen = b.remaining();
+    if (expectedTransferLen == 0) {
+      return 0;
+    }
+    BufferIterator it = new BufferIterator(offset, expectedTransferLen);
+    while (it.hasNext()) {
+      ByteBuffer a = it.next();
+      transfer.accept(a, b);
+      assert !a.hasRemaining();
+    }
+    assert expectedTransferLen == it.getSum() : "Expected transfer length (=" + expectedTransferLen
+        + ") don't match the actual transfer length(=" + it.getSum() + ")";
+    return expectedTransferLen;
   }
 
   /**
-   * Transfers bytes from the given source array into this buffer array
-   * @param start start offset of this buffer array
-   * @param len The maximum number of bytes to be read from the given array
-   * @param srcArray The array from which bytes are to be read
-   * @param srcOffset The offset within the given array of the first byte to be
-   *          read
+   * Creates a sub-array from a given array of ByteBuffers from the given offset to the length
+   * specified. For eg, if there are 4 buffers forming an array each with length 10 and if we call
+   * asSubByteBuffers(5, 10) then we will create an sub-array consisting of two BBs and the first
+   * one be a BB from 'position' 5 to a 'length' 5 and the 2nd BB will be from 'position' 0 to
+   * 'length' 5.
+   * @param offset the position in the whole array which is composited by multiple byte buffers.
+   * @param len the length of bytes
+   * @return the underlying ByteBuffers, each ByteBuffer is a slice from the backend and will have a
+   *         zero position.
    */
-  public void putMultiple(long start, int len, byte[] srcArray, int srcOffset) {
-    multiple(start, len, srcArray, srcOffset, PUT_MULTIPLE_VISITOR);
+  public ByteBuffer[] asSubByteBuffers(long offset, final int len) {
+    BufferIterator it = new BufferIterator(offset, len);
+    ByteBuffer[] mbb = new ByteBuffer[it.getBufferCount()];
+    for (int i = 0; i < mbb.length; i++) {
+      assert it.hasNext();
+      mbb[i] = it.next();
+    }
+    assert it.getSum() == len;
+    return mbb;
   }
 
-  private final static Visitor PUT_MULTIPLE_VISITOR = new Visitor() {
-    @Override
-    public void visit(ByteBuffer bb, int pos, byte[] array, int arrayIdx, int len) {
-      ByteBufferUtils.copyFromArrayToBuffer(bb, pos, array, arrayIdx, len);
-    }
-  };
+  /**
+   * Iterator to fetch ByteBuffers from offset with given length in this big logical array.
+   */
+  private class BufferIterator implements Iterator<ByteBuffer> {
+    private final int len;
+    private int startBuffer, startOffset, endBuffer, endOffset;
+    private int curIndex, sum = 0;
 
-  private interface Visitor {
+    private int index(long pos) {
+      return (int) (pos / bufferSize);
+    }
+
+    private int offset(long pos) {
+      return (int) (pos % bufferSize);
+    }
+
+    public BufferIterator(long offset, int len) {
+      assert len >= 0 && offset >= 0;
+      this.len = len;
+
+      this.startBuffer = index(offset);
+      this.startOffset = offset(offset);
+
+      this.endBuffer = index(offset + len);
+      this.endOffset = offset(offset + len);
+      if (startBuffer < endBuffer && endOffset == 0) {
+        endBuffer--;
+        endOffset = bufferSize;
+      }
+      assert startBuffer >= 0 && startBuffer < bufferCount;
+      assert endBuffer >= 0 && endBuffer < bufferCount;
+
+      // initialize the index to the first buffer index.
+      this.curIndex = startBuffer;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return this.curIndex <= endBuffer;
+    }
+
     /**
-     * Visit the given byte buffer, if it is a read action, we will transfer the
-     * bytes from the buffer to the destination array, else if it is a write
-     * action, we will transfer the bytes from the source array to the buffer
-     * @param bb byte buffer
-     * @param pos Start position in ByteBuffer
-     * @param array a source or destination byte array
-     * @param arrayOffset offset of the byte array
-     * @param len read/write length
+     * The returned ByteBuffer is an sliced one, it won't affect the position or limit of the
+     * original one.
      */
-    void visit(ByteBuffer bb, int pos, byte[] array, int arrayOffset, int len);
-  }
-
-  /**
-   * Access(read or write) this buffer array with a position and length as the
-   * given array. Here we will only lock one buffer even if it may be need visit
-   * several buffers. The consistency is guaranteed by the caller.
-   * @param start start offset of this buffer array
-   * @param len The maximum number of bytes to be accessed
-   * @param array The array from/to which bytes are to be read/written
-   * @param arrayOffset The offset within the given array of the first byte to
-   *          be read or written
-   * @param visitor implement of how to visit the byte buffer
-   */
-  void multiple(long start, int len, byte[] array, int arrayOffset, Visitor visitor) {
-    assert len >= 0;
-    long end = start + len;
-    int startBuffer = (int) (start / bufferSize), startOffset = (int) (start % bufferSize);
-    int endBuffer = (int) (end / bufferSize), endOffset = (int) (end % bufferSize);
-    assert array.length >= len + arrayOffset;
-    assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert (endBuffer >= 0 && endBuffer < bufferCount)
-        || (endBuffer == bufferCount && endOffset == 0);
-    if (startBuffer >= buffers.length || startBuffer < 0) {
-      String msg = "Failed multiple, start=" + start + ",startBuffer="
-          + startBuffer + ",bufferSize=" + bufferSize;
-      LOG.error(msg);
-      throw new RuntimeException(msg);
-    }
-    int srcIndex = 0, cnt = -1;
-    for (int i = startBuffer; i <= endBuffer; ++i) {
-      ByteBuffer bb = buffers[i].duplicate();
-      int pos = 0;
-      if (i == startBuffer) {
-        cnt = bufferSize - startOffset;
-        if (cnt > len) cnt = len;
-        pos = startOffset;
-      } else if (i == endBuffer) {
-        cnt = endOffset;
+    @Override
+    public ByteBuffer next() {
+      ByteBuffer bb = buffers[curIndex].duplicate();
+      if (curIndex == startBuffer) {
+        bb.position(startOffset).limit(Math.min(bufferSize, startOffset + len));
+      } else if (curIndex == endBuffer) {
+        bb.position(0).limit(endOffset);
       } else {
-        cnt = bufferSize;
+        bb.position(0).limit(bufferSize);
       }
-      visitor.visit(bb, pos, array, srcIndex + arrayOffset, cnt);
-      srcIndex += cnt;
+      curIndex++;
+      sum += bb.remaining();
+      // Make sure that its pos is zero, it's important because MBB will count from zero for all nio
+      // ByteBuffers.
+      return bb.slice();
     }
-    assert srcIndex == len;
-  }
 
-  /**
-   * Creates a ByteBuff from a given array of ByteBuffers from the given offset to the
-   * length specified. For eg, if there are 4 buffers forming an array each with length 10 and
-   * if we call asSubBuffer(5, 10) then we will create an MBB consisting of two BBs
-   * and the first one be a BB from 'position' 5 to a 'length' 5 and the 2nd BB will be from
-   * 'position' 0 to 'length' 5.
-   * @param offset
-   * @param len
-   * @return a ByteBuff formed from the underlying ByteBuffers
-   */
-  public ByteBuff asSubByteBuff(long offset, int len) {
-    assert len >= 0;
-    long end = offset + len;
-    int startBuffer = (int) (offset / bufferSize), startBufferOffset = (int) (offset % bufferSize);
-    int endBuffer = (int) (end / bufferSize), endBufferOffset = (int) (end % bufferSize);
-    // Last buffer in the array is a dummy one with 0 capacity. Avoid sending back that
-    if (endBuffer == this.bufferCount) {
-      endBuffer--;
-      endBufferOffset = bufferSize;
+    int getSum() {
+      return sum;
     }
-    assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert (endBuffer >= 0 && endBuffer < bufferCount)
-        || (endBuffer == bufferCount && endBufferOffset == 0);
-    if (startBuffer >= buffers.length || startBuffer < 0) {
-      String msg = "Failed subArray, start=" + offset + ",startBuffer=" + startBuffer
-          + ",bufferSize=" + bufferSize;
-      LOG.error(msg);
-      throw new RuntimeException(msg);
-    }
-    int srcIndex = 0, cnt = -1;
-    ByteBuffer[] mbb = new ByteBuffer[endBuffer - startBuffer + 1];
-    for (int i = startBuffer, j = 0; i <= endBuffer; ++i, j++) {
-      ByteBuffer bb = buffers[i].duplicate();
-      if (i == startBuffer) {
-        cnt = bufferSize - startBufferOffset;
-        if (cnt > len) cnt = len;
-        bb.limit(startBufferOffset + cnt).position(startBufferOffset);
-      } else if (i == endBuffer) {
-        cnt = endBufferOffset;
-        bb.position(0).limit(cnt);
-      } else {
-        cnt = bufferSize;
-        bb.position(0).limit(cnt);
-      }
-      mbb[j] = bb.slice();
-      srcIndex += cnt;
-    }
-    assert srcIndex == len;
-    if (mbb.length > 1) {
-      return new MultiByteBuff(mbb);
-    } else {
-      return new SingleByteBuff(mbb[0]);
+
+    int getBufferCount() {
+      return this.endBuffer - this.startBuffer + 1;
     }
   }
 }

@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -86,23 +85,21 @@ public class HFileArchiver {
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    Path regionDir = HRegion.getRegionDir(rootDir, info);
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, info);
     return fs.exists(regionDir);
   }
 
   /**
-   * Cleans up all the files for a HRegion by archiving the HFiles to the
-   * archive directory
+   * Cleans up all the files for a HRegion by archiving the HFiles to the archive directory
    * @param conf the configuration to use
    * @param fs the file system object
    * @param info RegionInfo for region to be deleted
-   * @throws IOException
    */
   public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     archiveRegion(fs, rootDir, FSUtils.getTableDir(rootDir, info.getTable()),
-      HRegion.getRegionDir(rootDir, info));
+      FSUtils.getRegionDirFromRootDir(rootDir, info));
   }
 
   /**
@@ -123,7 +120,9 @@ public class HFileArchiver {
     if (tableDir == null || regionDir == null) {
       LOG.error("No archive directory could be found because tabledir (" + tableDir
           + ") or regiondir (" + regionDir + "was null. Deleting files instead.");
-      deleteRegionWithoutArchiving(fs, regionDir);
+      if (regionDir != null) {
+        deleteRegionWithoutArchiving(fs, regionDir);
+      }
       // we should have archived, but failed to. Doesn't matter if we deleted
       // the archived files correctly or not.
       return false;

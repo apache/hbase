@@ -286,12 +286,12 @@ public class TestMultiByteBuff {
     multi.putInt(45);
     multi.position(1);
     multi.limit(multi.position() + (2 * Bytes.SIZEOF_LONG));
-    MultiByteBuff sliced = multi.slice();
+    ByteBuff sliced = multi.slice();
     assertEquals(0, sliced.position());
     assertEquals((2 * Bytes.SIZEOF_LONG), sliced.limit());
     assertEquals(l1, sliced.getLong());
     assertEquals(l2, sliced.getLong());
-    MultiByteBuff dup = multi.duplicate();
+    ByteBuff dup = multi.duplicate();
     assertEquals(1, dup.position());
     assertEquals(dup.position() + (2 * Bytes.SIZEOF_LONG), dup.limit());
     assertEquals(l1, dup.getLong());
@@ -456,5 +456,30 @@ public class TestMultiByteBuff {
     assertEquals(s, mbb.getShort());
     assertEquals(i, mbb.getInt());
     assertEquals(l, mbb.getLong());
+  }
+
+  @Test
+  public void testGetByteBufferWithOffsetAndPos() {
+    byte[] a = Bytes.toBytes("abcd");
+    byte[] b = Bytes.toBytes("efghijkl");
+    ByteBuffer aa = ByteBuffer.wrap(a);
+    ByteBuffer bb = ByteBuffer.wrap(b);
+    MultiByteBuff mbb = new MultiByteBuff(aa, bb);
+    ByteBuffer out = ByteBuffer.allocate(12);
+    mbb.get(out, 0, 1);
+    assertEquals(out.position(), 1);
+    assertTrue(Bytes.equals(Bytes.toBytes("a"), 0, 1, out.array(), 0, 1));
+
+    mbb.get(out, 1, 4);
+    assertEquals(out.position(), 5);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcde"), 0, 5, out.array(), 0, 5));
+
+    mbb.get(out, 10, 1);
+    assertEquals(out.position(), 6);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcdek"), 0, 6, out.array(), 0, 6));
+
+    mbb.get(out, 0, 6);
+    assertEquals(out.position(), 12);
+    assertTrue(Bytes.equals(Bytes.toBytes("abcdekabcdef"), 0, 12, out.array(), 0, 12));
   }
 }

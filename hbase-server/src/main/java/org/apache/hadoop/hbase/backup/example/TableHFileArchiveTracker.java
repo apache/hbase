@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.backup.example;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * archive.
  */
 @InterfaceAudience.Private
-public class TableHFileArchiveTracker extends ZKListener {
+public final class TableHFileArchiveTracker extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(TableHFileArchiveTracker.class);
   public static final String HFILE_ARCHIVE_ZNODE_PARENT = "hfilearchive";
   private HFileArchiveTableMonitor monitor;
@@ -67,7 +67,9 @@ public class TableHFileArchiveTracker extends ZKListener {
   @Override
   public void nodeCreated(String path) {
     // if it is the archive path
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " created");
     // since we are already enabled, just update a single table
@@ -75,7 +77,6 @@ public class TableHFileArchiveTracker extends ZKListener {
 
     // the top level node has come up, so read in all the tables
     if (table.length() == 0) {
-
       checkEnabledAndUpdate();
       return;
     }
@@ -90,7 +91,9 @@ public class TableHFileArchiveTracker extends ZKListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " children changed.");
     // a table was added to the archive
@@ -134,7 +137,9 @@ public class TableHFileArchiveTracker extends ZKListener {
 
   @Override
   public void nodeDeleted(String path) {
-    if (!path.startsWith(archiveHFileZNode)) return;
+    if (!path.startsWith(archiveHFileZNode)) {
+      return;
+    }
 
     LOG.debug("Archive node: " + path + " deleted");
     String table = path.substring(archiveHFileZNode.length());
@@ -260,7 +265,10 @@ public class TableHFileArchiveTracker extends ZKListener {
    * Stop this tracker and the passed zookeeper
    */
   public void stop() {
-    if (this.stopped) return;
+    if (this.stopped) {
+      return;
+    }
+
     this.stopped = true;
     this.watcher.close();
   }

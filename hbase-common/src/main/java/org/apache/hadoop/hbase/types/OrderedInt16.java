@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedInt16 extends OrderedBytesBase<Short> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt16 ASCENDING = new OrderedInt16(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt16 DESCENDING = new OrderedInt16(Order.DESCENDING);
 
-  protected OrderedInt16(Order order) {
+  /**
+   * Creates a new 16-bit {@code short} with a fixed-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedInt16(Order order) {
     super(order);
   }
 
@@ -66,6 +78,9 @@ public class OrderedInt16 extends OrderedBytesBase<Short> {
 
   /**
    * Read a {@code short} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code float} from
+   * @return the {@code short} read from buffer
    */
   public short decodeShort(PositionedByteRange src) {
     return OrderedBytes.decodeInt16(src);
@@ -73,6 +88,10 @@ public class OrderedInt16 extends OrderedBytesBase<Short> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeShort(PositionedByteRange dst, short val) {
     return OrderedBytes.encodeInt16(dst, val, order);

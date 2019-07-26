@@ -50,9 +50,9 @@ final class BucketProtoUtils {
   }
 
   private static BucketCacheProtos.BackingMap toPB(
-      Map<BlockCacheKey, BucketCache.BucketEntry> backingMap) {
+      Map<BlockCacheKey, BucketEntry> backingMap) {
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
-    for (Map.Entry<BlockCacheKey, BucketCache.BucketEntry> entry : backingMap.entrySet()) {
+    for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
       builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder()
           .setKey(toPB(entry.getKey()))
           .setValue(toPB(entry.getValue()))
@@ -101,11 +101,11 @@ final class BucketProtoUtils {
     }
   }
 
-  private static BucketCacheProtos.BucketEntry toPB(BucketCache.BucketEntry entry) {
+  private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder()
         .setOffset(entry.offset())
         .setLength(entry.getLength())
-        .setDeserialiserIndex(entry.deserialiserIndex)
+        .setDeserialiserIndex(entry.deserializerIndex)
         .setAccessCounter(entry.getAccessCounter())
         .setPriority(toPB(entry.getPriority()))
         .build();
@@ -124,16 +124,16 @@ final class BucketProtoUtils {
     }
   }
 
-  static ConcurrentHashMap<BlockCacheKey, BucketCache.BucketEntry> fromPB(
+  static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(
       Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap)
       throws IOException {
-    ConcurrentHashMap<BlockCacheKey, BucketCache.BucketEntry> result = new ConcurrentHashMap<>();
+    ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
           protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
-      BucketCache.BucketEntry value = new BucketCache.BucketEntry(
+      BucketEntry value = new BucketEntry(
           protoValue.getOffset(),
           protoValue.getLength(),
           protoValue.getAccessCounter(),
@@ -146,8 +146,8 @@ final class BucketProtoUtils {
       }
       // Convert it to the identifier for the deserializer that we have in this runtime
       if (deserializerClass.equals(HFileBlock.BlockDeserializer.class.getName())) {
-        int actualIndex = HFileBlock.BLOCK_DESERIALIZER.getDeserialiserIdentifier();
-        value.deserialiserIndex = (byte) actualIndex;
+        int actualIndex = HFileBlock.BLOCK_DESERIALIZER.getDeserializerIdentifier();
+        value.deserializerIndex = (byte) actualIndex;
       } else {
         // We could make this more plugable, but right now HFileBlock is the only implementation
         // of Cacheable outside of tests, so this might not ever matter.

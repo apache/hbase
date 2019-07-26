@@ -529,4 +529,12 @@ public interface MasterServices extends Server {
    * @return the {@link ZKPermissionWatcher}
    */
   ZKPermissionWatcher getZKPermissionWatcher();
+
+  /**
+   * Execute region plans with throttling
+   * @param plans to execute
+   * @return succeeded plans
+   */
+  List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans);
+
 }

@@ -148,7 +148,7 @@ public class TestRecoveredEdits {
     // There should be no store files.
     assertTrue(storeFiles.isEmpty());
     region.close();
-    Path regionDir = region.getRegionDir(hbaseRootDir, hri);
+    Path regionDir = FSUtils.getRegionDirFromRootDir(hbaseRootDir, hri);
     Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir);
     // This is a little fragile getting this path to a file of 10M of edits.
     Path recoveredEditsFile = new Path(

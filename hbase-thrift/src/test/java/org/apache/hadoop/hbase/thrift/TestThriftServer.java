@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -114,7 +115,7 @@ public class TestThriftServer {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(COALESCE_INC_KEY, true);
-    UTIL.getConfiguration().setBoolean("hbase.table.sanity.checks", false);
+    UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     UTIL.getConfiguration().setInt("hbase.client.retries.number", 3);
     UTIL.startMiniCluster();
   }

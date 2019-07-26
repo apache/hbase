@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -33,24 +35,59 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestRawString {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRawString.class);
 
-  static final String[] VALUES = new String[] {
+  private static final String[] VALUES = new String[] {
     "", "1", "22", "333", "4444", "55555", "666666", "7777777", "88888888", "999999999",
   };
 
   @Test
+  public void testIsOrderPreservingIsTrue() {
+    final DataType<String> type = new RawString(Order.ASCENDING);
+
+    assertTrue(type.isOrderPreserving());
+  }
+
+  @Test
+  public void testGetOrderIsCorrectOrder() {
+    final DataType<String> type = new RawString(Order.ASCENDING);
+
+    assertEquals(Order.ASCENDING, type.getOrder());
+  }
+
+  @Test
+  public void testIsNullableIsFalse() {
+    final DataType<String> type = new RawString(Order.ASCENDING);
+
+    assertFalse(type.isNullable());
+  }
+
+  @Test
+  public void testIsSkippableIsFalse() {
+    final DataType<String> type = new RawString(Order.ASCENDING);
+
+    assertFalse(type.isSkippable());
+  }
+
+  @Test
+  public void testEncodedClassIsString() {
+    final DataType<String> type = new RawString(Order.ASCENDING);
+
+    assertEquals(String.class, type.encodedClass());
+  }
+
+  @Test
   public void testReadWrite() {
-    for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
-      RawString type =
-          Order.ASCENDING == ord ? RawString.ASCENDING : RawString.DESCENDING;
-      for (String val : VALUES) {
-        PositionedByteRange buff = new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
+    for (final Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
+      final RawString type =
+          Order.ASCENDING == ord ? new RawString(Order.ASCENDING) : new RawString(Order.DESCENDING);
+      for (final String val : VALUES) {
+        final PositionedByteRange buff =
+            new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
         assertEquals(buff.getLength(), type.encode(buff, val));
-        byte[] expected = Bytes.toBytes(val);
+        final byte[] expected = Bytes.toBytes(val);
         ord.apply(expected);
         assertArrayEquals(expected, buff.getBytes());
         buff.setPosition(0);

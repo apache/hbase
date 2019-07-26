@@ -639,15 +639,14 @@ public class MergeTableRegionsProcedure
    * @param regionFs region file system
    * @param mergedDir the temp directory of merged region
    */
-  private void mergeStoreFiles(
-      final MasterProcedureEnv env, final HRegionFileSystem regionFs, final Path mergedDir)
-      throws IOException {
+  private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
+      final Path mergedDir) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
 
-    for (String family : regionFs.getFamilies()) {
-      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(Bytes.toBytes(family));
+    for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
+      String family = hcd.getNameAsString();
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
 
       if (storeFiles != null && storeFiles.size() > 0) {
@@ -655,9 +654,9 @@ public class MergeTableRegionsProcedure
           // Create reference file(s) of the region in mergedDir.
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          regionFs.mergeStoreFile(mergedRegion, family,
-              new HStoreFile(mfs.getFileSystem(), storeFileInfo, conf, CacheConfig.DISABLED,
-                  hcd.getBloomFilterType(), true), mergedDir);
+          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(mfs.getFileSystem(),
+              storeFileInfo, conf, CacheConfig.DISABLED, hcd.getBloomFilterType(), true),
+            mergedDir);
         }
       }
     }
@@ -773,16 +772,16 @@ public class MergeTableRegionsProcedure
   }
 
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {
-    FileSystem walFS = env.getMasterServices().getMasterWalManager().getFileSystem();
+    MasterFileSystem fs = env.getMasterFileSystem();
     long maxSequenceId = -1L;
     for (RegionInfo region : regionsToMerge) {
       maxSequenceId =
-        Math.max(maxSequenceId, WALSplitUtil.getMaxRegionSequenceId(
-            walFS, getWALRegionDir(env, region)));
+        Math.max(maxSequenceId, WALSplitUtil.getMaxRegionSequenceId(env.getMasterConfiguration(),
+          region, fs::getFileSystem, fs::getWALFileSystem));
     }
     if (maxSequenceId > 0) {
-      WALSplitUtil.writeRegionSequenceIdFile(walFS, getWALRegionDir(env, mergedRegion),
-          maxSequenceId);
+      WALSplitUtil.writeRegionSequenceIdFile(fs.getWALFileSystem(),
+        getWALRegionDir(env, mergedRegion), maxSequenceId);
     }
   }
 

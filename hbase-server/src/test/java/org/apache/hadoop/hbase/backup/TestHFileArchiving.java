@@ -155,7 +155,7 @@ public class TestHFileArchiving {
 
     // now attempt to depose the region
     Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
@@ -206,7 +206,7 @@ public class TestHFileArchiving {
 
     // make sure there are some files in the regiondir
     Path rootDir = FSUtils.getRootDir(fs.getConf());
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
     FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {
@@ -273,7 +273,7 @@ public class TestHFileArchiving {
     Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
 
     HFileArchiver.archiveRegions(UTIL.getConfiguration(), fs, rootDir, tableDir, regionDirList);
@@ -311,7 +311,7 @@ public class TestHFileArchiving {
     Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(rootDir, regions.get(0).getRegionInfo().getTable());
     List<Path> regionDirList = regions.stream()
-      .map(region -> FSUtils.getRegionDir(tableDir, region.getRegionInfo()))
+      .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region.getRegionInfo()))
       .collect(Collectors.toList());
 
     // To create a permission denied error, we do archive regions as a non-current user
@@ -524,6 +524,50 @@ public class TestHFileArchiving {
       choreService.shutdown();
       fs.delete(rootDir, true);
     }
+  }
+
+  @Test
+  public void testArchiveRegionTableAndRegionDirsNull() throws IOException {
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, null));
+  }
+
+  @Test
+  public void testArchiveRegionWithTableDirNull() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "xyzabc");
+    Path familyDir = new Path(regionDir, "rd");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "1");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    // Try to archive the file
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, null, sourceRegionDir));
+    assertFalse(fileSystem.exists(sourceRegionDir));
+  }
+
+  @Test
+  public void testArchiveRegionWithRegionDirNull() throws IOException {
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+            TableName.valueOf(name.getMethodName())), "elgn4nf");
+    Path familyDir = new Path(regionDir, "rdar");
+    Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
+    Path file = new Path(familyDir, "2");
+    Path sourceFile = new Path(rootDir, file);
+    FileSystem fileSystem = UTIL.getTestFileSystem();
+    fileSystem.createNewFile(sourceFile);
+    Path sourceRegionDir = new Path(rootDir, regionDir);
+    fileSystem.mkdirs(sourceRegionDir);
+    // Try to archive the file but with null regionDir, can't delete sourceFile
+    assertFalse(HFileArchiver.archiveRegion(fileSystem, rootDir, sourceRegionDir.getParent(),
+            null));
+    assertTrue(fileSystem.exists(sourceRegionDir));
+    fileSystem.delete(sourceRegionDir, true);
   }
 
   // Avoid passing a null master to CleanerChore, see HBASE-21175

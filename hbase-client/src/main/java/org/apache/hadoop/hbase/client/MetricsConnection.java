@@ -246,8 +246,7 @@ public class MetricsConnection implements StatisticTrackable {
   /** Default load factor from {@link java.util.HashMap#DEFAULT_LOAD_FACTOR} */
   private static final float LOAD_FACTOR = 0.75f;
   /**
-   * Anticipated number of concurrent accessor threads, from
-   * {@link ConnectionImplementation#getBatchPool()}
+   * Anticipated number of concurrent accessor threads
    */
   private static final int CONCURRENCY_LEVEL = 256;
 

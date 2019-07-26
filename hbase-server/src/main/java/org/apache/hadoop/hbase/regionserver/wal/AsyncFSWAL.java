@@ -439,7 +439,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       newHighestProcessedAppendTxid = entry.getTxid();
       iter.remove();
       if (appended) {
-        unackedAppends.addLast(entry);
+        // This is possible, when we fail to sync, we will add the unackedAppends back to
+        // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
+        if (unackedAppends.isEmpty() || unackedAppends.peekLast().getTxid() < entry.getTxid()) {
+          unackedAppends.addLast(entry);
+        }
         if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
           break;
         }
@@ -725,6 +729,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       int nextEpoch = currentEpoch == MAX_EPOCH ? 0 : currentEpoch + 1;
       // set a new epoch and also clear waitingRoll and writerBroken
       this.epochAndState = nextEpoch << 2;
+      // Reset rollRequested status
+      rollRequested.set(false);
       consumeExecutor.execute(consumer);
     } finally {
       consumeLock.unlock();

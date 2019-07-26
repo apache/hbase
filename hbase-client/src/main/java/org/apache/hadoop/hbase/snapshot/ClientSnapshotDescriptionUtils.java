@@ -61,8 +61,15 @@ public class ClientSnapshotDescriptionUtils {
     if (ssd == null) {
       return null;
     }
-    return "{ ss=" + ssd.getName() +
-           " table=" + (ssd.hasTable()?TableName.valueOf(ssd.getTable()):"") +
-           " type=" + ssd.getType() + " }";
+    return new StringBuilder("{ ss=")
+            .append(ssd.getName())
+            .append(" table=")
+            .append(ssd.hasTable() ? TableName.valueOf(ssd.getTable()) : "")
+            .append(" type=")
+            .append(ssd.getType())
+            .append(" ttl=")
+            .append(ssd.getTtl())
+            .append(" }")
+            .toString();
   }
 }

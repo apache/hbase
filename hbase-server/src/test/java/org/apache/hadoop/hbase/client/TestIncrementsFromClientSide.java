@@ -53,7 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Run Increment tests that use the HBase clients; {@link HTable}.
+ * Run Increment tests that use the HBase clients; {@link TableBuilder}.
  *
  * Test is parameterized to run the slow and fast increment code paths. If fast, in the @before, we
  * do a rolling restart of the single regionserver so that it can pick up the go fast configuration.
@@ -83,7 +83,6 @@ public class TestIncrementsFromClientSide {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }

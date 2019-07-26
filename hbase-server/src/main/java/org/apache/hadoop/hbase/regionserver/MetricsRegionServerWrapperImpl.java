@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
@@ -58,6 +59,7 @@ class MetricsRegionServerWrapperImpl
 
   private final HRegionServer regionServer;
   private final MetricsWALSource metricsWALSource;
+  private final ByteBuffAllocator allocator;
 
   private Optional<BlockCache> blockCache;
   private Optional<MobFileCache> mobFileCache;
@@ -129,15 +131,15 @@ class MetricsRegionServerWrapperImpl
     initBlockCache();
     initMobFileCache();
 
-    this.period =
-        regionServer.conf.getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
-          HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD);
+    this.period = regionServer.conf.getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
+      HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD);
 
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new RegionServerMetricsWrapperRunnable();
     this.executor.scheduleWithFixedDelay(this.runnable, this.period, this.period,
       TimeUnit.MILLISECONDS);
     this.metricsWALSource = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    this.allocator = regionServer.getRpcServer().getByteBuffAllocator();
 
     try {
       this.dfsHedgedReadMetrics = FSUtils.getDFSHedgedReadMetrics(regionServer.getConfiguration());
@@ -1005,5 +1007,30 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getTrailerHitCount() {
     return this.cacheStats.map(CacheStats::getTrailerHitCount).orElse(0L);
+  }
+
+  @Override
+  public long getByteBuffAllocatorHeapAllocationBytes() {
+    return this.allocator.getHeapAllocationBytes();
+  }
+
+  @Override
+  public long getByteBuffAllocatorPoolAllocationBytes() {
+    return this.allocator.getPoolAllocationBytes();
+  }
+
+  @Override
+  public double getByteBuffAllocatorHeapAllocRatio() {
+    return ByteBuffAllocator.getHeapAllocationRatio(allocator, ByteBuffAllocator.HEAP);
+  }
+
+  @Override
+  public long getByteBuffAllocatorTotalBufferCount() {
+    return this.allocator.getTotalBufferCount();
+  }
+
+  @Override
+  public long getByteBuffAllocatorUsedBufferCount() {
+    return this.allocator.getUsedBufferCount();
   }
 }

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
 import java.util.Collection;
-import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
-import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
+import org.apache.hadoop.hbase.util.HbckRegionInfo;
+import org.apache.hadoop.hbase.util.HbckTableInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,13 +30,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract public class TableIntegrityErrorHandlerImpl implements
     TableIntegrityErrorHandler {
-  TableInfo ti;
+  HbckTableInfo ti;
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public TableInfo getTableInfo() {
+  public HbckTableInfo getTableInfo() {
     return ti;
   }
 
@@ -44,7 +44,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void setTableInfo(TableInfo ti2) {
+  public void setTableInfo(HbckTableInfo ti2) {
     this.ti = ti2;
   }
 
@@ -52,7 +52,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException {
+  public void handleRegionStartKeyNotEmpty(HbckRegionInfo hi) throws IOException {
   }
 
   /**
@@ -66,14 +66,14 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void handleDegenerateRegion(HbckInfo hi) throws IOException {
+  public void handleDegenerateRegion(HbckRegionInfo hi) throws IOException {
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public void handleDuplicateStartKeys(HbckInfo hi1, HbckInfo hi2)
+  public void handleDuplicateStartKeys(HbckRegionInfo hi1, HbckRegionInfo hi2)
       throws IOException {
   }
 
@@ -81,7 +81,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void handleOverlapInRegionChain(HbckInfo hi1, HbckInfo hi2)
+  public void handleOverlapInRegionChain(HbckRegionInfo hi1, HbckRegionInfo hi2)
       throws IOException {
   }
 
@@ -97,7 +97,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void handleOverlapGroup(Collection<HbckInfo> overlap)
+  public void handleOverlapGroup(Collection<HbckRegionInfo> overlap)
       throws IOException {
   }
 

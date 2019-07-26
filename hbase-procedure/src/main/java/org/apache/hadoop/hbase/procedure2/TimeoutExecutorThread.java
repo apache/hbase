@@ -78,7 +78,6 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
   }
 
   public void add(Procedure<TEnvironment> procedure) {
-    assert procedure.getState() == ProcedureState.WAITING_TIMEOUT;
     LOG.info("ADDED {}; timeout={}, timestamp={}", procedure, procedure.getTimeout(),
       procedure.getTimeoutTimestamp());
     queue.add(new DelayedProcedure<>(procedure));

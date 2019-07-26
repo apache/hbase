@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.ClassRule;
@@ -31,28 +33,41 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestOrderedBlob {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestOrderedBlob.class);
 
-  static final byte[][] VALUES = new byte[][] {
+  private static final byte[][] VALUES = new byte[][] {
     null, Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
     Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
     Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"),
   };
 
   @Test
+  public void testIsSkippableFalse() {
+    final DataType<byte[]> type = new OrderedBlob(Order.ASCENDING);
+
+    assertFalse(type.isSkippable());
+  }
+
+  @Test
   public void testEncodedLength() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(20);
-    for (DataType<byte[]> type : new OrderedBlob[] { OrderedBlob.ASCENDING, OrderedBlob.DESCENDING }) {
-      for (byte[] val : VALUES) {
+    for (final DataType<byte[]> type : new OrderedBlob[] { new OrderedBlob(Order.ASCENDING),
+      new OrderedBlob(Order.DESCENDING) }) {
+      for (final byte[] val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);
-        assertEquals(
-          "encodedLength does not match actual, " + Bytes.toStringBinary(val),
+        assertEquals("encodedLength does not match actual, " + Bytes.toStringBinary(val),
           buff.getPosition(), type.encodedLength(val));
       }
     }
+  }
+
+  @Test
+  public void testEncodedClassByteArray() {
+    final DataType<byte[]> type = new OrderedBlob(Order.ASCENDING);
+
+    assertEquals(byte[].class, type.encodedClass());
   }
 }

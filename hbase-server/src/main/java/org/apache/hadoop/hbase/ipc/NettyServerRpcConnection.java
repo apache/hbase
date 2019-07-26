@@ -59,12 +59,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   void process(final ByteBuf buf) throws IOException, InterruptedException {
     if (connectionHeaderRead) {
-      this.callCleanup = new RpcServer.CallCleanup() {
-        @Override
-        public void run() {
-          buf.release();
-        }
-      };
+      this.callCleanup = buf::release;
       process(new SingleByteBuff(buf.nioBuffer()));
     } else {
       ByteBuffer connectionHeader = ByteBuffer.allocate(buf.readableBytes());
@@ -121,7 +116,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
       long size, final InetAddress remoteAddress, int timeout,
       CallCleanup reqCleanup) {
     return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
-        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
+        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
         this.rpcServer.cellBlockBuilder, reqCleanup);
   }
 

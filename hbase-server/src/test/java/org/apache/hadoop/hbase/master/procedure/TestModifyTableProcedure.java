@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -174,7 +175,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
         new HTableDescriptor(UTIL.getAdmin().getDescriptor(tableName));
     htd2.removeFamily(Bytes.toBytes(cf3));
     // Disable Sanity check
-    htd2.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    htd2.setConfiguration(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
 
     long procId2 =
         ProcedureTestingUtility.submitAndWait(procExec,

@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -150,7 +151,7 @@ public class TestFromClientSide {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       Arrays.stream(cps).map(Class::getName).toArray(String[]::new));
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true); // enable for below tests
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -1154,21 +1155,25 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
-  public void testNull() throws Exception {
+  @Test(expected = IOException.class)
+  public void testNullTableName() throws IOException {
+    // Null table name (should NOT work)
+    TEST_UTIL.createTable((TableName)null, FAMILY);
+    fail("Creating a table with null name passed, should have failed");
+  }
+
+  @Test(expected = IOException.class)
+  public void testNullFamilyName() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    // Null table name (should NOT work)
-    try {
-      TEST_UTIL.createTable((TableName)null, FAMILY);
-      fail("Creating a table with null name passed, should have failed");
-    } catch(Exception e) {}
-
     // Null family (should NOT work)
-    try {
-      TEST_UTIL.createTable(tableName, new byte[][]{null});
-      fail("Creating a table with a null family passed, should fail");
-    } catch(Exception e) {}
+    TEST_UTIL.createTable(tableName, new byte[][]{null});
+    fail("Creating a table with a null family passed, should fail");
+  }
+
+  @Test
+  public void testNullRowAndQualifier() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
@@ -1200,9 +1205,13 @@ public class TestFromClientSide {
         assertEmptyResult(result);
       }
     }
+  }
 
-    // Use a new table
-    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY)) {
+  @Test
+  public void testNullEmptyQualifier() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
 
       // Empty qualifier, byte[0] instead of null (should work)
       try {
@@ -1231,9 +1240,16 @@ public class TestFromClientSide {
         assertEmptyResult(result);
 
       } catch (Exception e) {
-        throw new IOException("Using a row with null qualifier threw exception, should ");
+        throw new IOException("Using a row with null qualifier should not throw exception");
       }
+    }
+  }
 
+  @Test
+  public void testNullValue() throws IOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+
+    try (Table ht = TEST_UTIL.createTable(tableName, FAMILY)) {
       // Null value
       try {
         Put put = new Put(ROW);
@@ -1549,6 +1565,7 @@ public class TestFromClientSide {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testVersionLimits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
@@ -5964,6 +5981,7 @@ public class TestFromClientSide {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   public void testDeletesWithReverseScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] ROWS = makeNAscii(ROW, 6);

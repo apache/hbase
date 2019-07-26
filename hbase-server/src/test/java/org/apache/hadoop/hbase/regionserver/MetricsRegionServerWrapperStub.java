@@ -116,6 +116,31 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getByteBuffAllocatorHeapAllocationBytes() {
+    return 0;
+  }
+
+  @Override
+  public long getByteBuffAllocatorPoolAllocationBytes() {
+    return 0;
+  }
+
+  @Override
+  public double getByteBuffAllocatorHeapAllocRatio() {
+    return 0;
+  }
+
+  @Override
+  public long getByteBuffAllocatorTotalBufferCount() {
+    return 0;
+  }
+
+  @Override
+  public long getByteBuffAllocatorUsedBufferCount() {
+    return 0;
+  }
+
+  @Override
   public long getReadRequestsCount() {
     return 997;
   }

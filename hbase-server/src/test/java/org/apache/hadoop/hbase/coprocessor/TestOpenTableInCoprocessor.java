@@ -94,9 +94,8 @@ public class TestOpenTableInCoprocessor {
   public static class CustomThreadPoolCoprocessor implements RegionCoprocessor, RegionObserver {
 
     /**
-     * Get a pool that has only ever one thread. A second action added to the pool (running
-     * concurrently), will cause an exception.
-     * @return
+     * @return a pool that has one thread only at every time. A second action added to the pool (
+     *         running concurrently), will cause an exception.
      */
     private ExecutorService getPool() {
       int maxThreads = 1;

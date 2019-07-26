@@ -1028,7 +1028,7 @@ public final class CellUtil {
    * @param length
    * @return iterator for the tags
    * @deprecated As of 2.0.0 and will be removed in 3.0.0
-   *             Instead use {@link #tagsIterator(Cell)}
+   *             Instead use {@link PrivateCellUtil#tagsIterator(Cell)}
    */
   @Deprecated
   public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {

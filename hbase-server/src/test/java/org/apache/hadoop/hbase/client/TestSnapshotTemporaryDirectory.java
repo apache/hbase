@@ -471,9 +471,8 @@ public class TestSnapshotTemporaryDirectory {
   private void takeSnapshot(TableName tableName, String snapshotName, boolean disabled)
       throws IOException {
     SnapshotType type = disabled ? SnapshotType.DISABLED : SnapshotType.FLUSH;
-    SnapshotDescription desc =
-        new SnapshotDescription(snapshotName, tableName.getNameAsString(), type, null, -1,
-            manifestVersion);
+    SnapshotDescription desc = new SnapshotDescription(snapshotName, tableName, type, null, -1,
+        manifestVersion, null);
     admin.snapshot(desc);
   }
 }

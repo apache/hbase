@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedString extends OrderedBytesBase<String> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedString ASCENDING = new OrderedString(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedString DESCENDING = new OrderedString(Order.DESCENDING);
 
-  protected OrderedString(Order order) {
+  /**
+   * Creates a new variable-length {@link String}.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedString(Order order) {
     super(order);
   }
 

@@ -20,25 +20,65 @@ package org.apache.hadoop.hbase.nio;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.util.List;
 
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.io.netty.util.internal.ObjectUtil;
+
+
 /**
- * An abstract class that abstracts out as to how the byte buffers are used,
- * either single or multiple. We have this interface because the java's ByteBuffers
- * cannot be sub-classed. This class provides APIs similar to the ones provided
- * in java's nio ByteBuffers and allows you to do positional reads/writes and relative
- * reads and writes on the underlying BB. In addition to it, we have some additional APIs which
- * helps us in the read path.
+ * An abstract class that abstracts out as to how the byte buffers are used, either single or
+ * multiple. We have this interface because the java's ByteBuffers cannot be sub-classed. This class
+ * provides APIs similar to the ones provided in java's nio ByteBuffers and allows you to do
+ * positional reads/writes and relative reads and writes on the underlying BB. In addition to it, we
+ * have some additional APIs which helps us in the read path. <br/>
+ * The ByteBuff implement {@link HBaseReferenceCounted} interface which mean need to maintains a
+ * {@link RefCnt} inside, if ensure that the ByteBuff won't be used any more, we must do a
+ * {@link ByteBuff#release()} to recycle its NIO ByteBuffers. when considering the
+ * {@link ByteBuff#duplicate()} or {@link ByteBuff#slice()}, releasing either the duplicated one or
+ * the original one will free its memory, because they share the same NIO ByteBuffers. when you want
+ * to retain the NIO ByteBuffers even if the origin one called {@link ByteBuff#release()}, you can
+ * do like this:
+ *
+ * <pre>
+ *   ByteBuff original = ...;
+ *   ByteBuff dup = original.duplicate();
+ *   dup.retain();
+ *   original.release();
+ *   // The NIO buffers can still be accessed unless you release the duplicated one
+ *   dup.get(...);
+ *   dup.release();
+ *   // Both the original and dup can not access the NIO buffers any more.
+ * </pre>
  */
 @InterfaceAudience.Private
-// TODO to have another name. This can easily get confused with netty's ByteBuf
-public abstract class ByteBuff {
+public abstract class ByteBuff implements HBaseReferenceCounted {
+  private static final String REFERENCE_COUNT_NAME = "ReferenceCount";
   private static final int NIO_BUFFER_LIMIT = 64 * 1024; // should not be more than 64KB.
+
+  protected RefCnt refCnt;
+
+  /*************************** Methods for reference count **********************************/
+
+  protected void checkRefCount() {
+    ObjectUtil.checkPositive(refCnt(), REFERENCE_COUNT_NAME);
+  }
+
+  public int refCnt() {
+    return refCnt.refCnt();
+  }
+
+  @Override
+  public boolean release() {
+    return refCnt.release();
+  }
+
+  /******************************* Methods for ByteBuff **************************************/
 
   /**
    * @return this ByteBuff's current position
@@ -491,55 +531,7 @@ public abstract class ByteBuff {
     return tmpLength;
   }
 
-  /**
-   * Similar to {@link WritableUtils#readVLong(java.io.DataInput)} but reads from a
-   * {@link ByteBuff}.
-   */
-  public static long readVLong(ByteBuff in) {
-    byte firstByte = in.get();
-    int len = WritableUtils.decodeVIntSize(firstByte);
-    if (len == 1) {
-      return firstByte;
-    }
-    long i = 0;
-    for (int idx = 0; idx < len-1; idx++) {
-      byte b = in.get();
-      i = i << 8;
-      i = i | (b & 0xFF);
-    }
-    return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
-  }
-
-  /**
-   * Search sorted array "a" for byte "key".
-   * 
-   * @param a Array to search. Entries must be sorted and unique.
-   * @param fromIndex First index inclusive of "a" to include in the search.
-   * @param toIndex Last index exclusive of "a" to include in the search.
-   * @param key The byte to search for.
-   * @return The index of key if found. If not found, return -(index + 1), where
-   *         negative indicates "not found" and the "index + 1" handles the "-0"
-   *         case.
-   */
-  public static int unsignedBinarySearch(ByteBuff a, int fromIndex, int toIndex, byte key) {
-    int unsignedKey = key & 0xff;
-    int low = fromIndex;
-    int high = toIndex - 1;
-
-    while (low <= high) {
-      int mid = low + ((high - low) >> 1);
-      int midVal = a.get(mid) & 0xff;
-
-      if (midVal < unsignedKey) {
-        low = mid + 1;
-      } else if (midVal > unsignedKey) {
-        high = mid - 1;
-      } else {
-        return mid; // key found
-      }
-    }
-    return -(low + 1); // key not found.
-  }
+  public abstract ByteBuffer[] nioByteBuffers();
 
   @Override
   public String toString() {
@@ -547,22 +539,58 @@ public abstract class ByteBuff {
         ", cap= " + capacity() + "]";
   }
 
-  public static String toStringBinary(final ByteBuff b, int off, int len) {
-    StringBuilder result = new StringBuilder();
-    // Just in case we are passed a 'len' that is > buffer length...
-    if (off >= b.capacity())
-      return result.toString();
-    if (off + len > b.capacity())
-      len = b.capacity() - off;
-    for (int i = off; i < off + len; ++i) {
-      int ch = b.get(i) & 0xFF;
-      if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
-          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0) {
-        result.append((char) ch);
-      } else {
-        result.append(String.format("\\x%02X", ch));
-      }
+  /********************************* ByteBuff wrapper methods ***********************************/
+
+  /**
+   * In theory, the upstream should never construct an ByteBuff by passing an given refCnt, so
+   * please don't use this public method in other place. Make the method public here because the
+   * BucketEntry#wrapAsCacheable in hbase-server module will use its own refCnt and ByteBuffers from
+   * IOEngine to composite an HFileBlock's ByteBuff, we didn't find a better way so keep the public
+   * way here.
+   */
+  public static ByteBuff wrap(ByteBuffer[] buffers, RefCnt refCnt) {
+    if (buffers == null || buffers.length == 0) {
+      throw new IllegalArgumentException("buffers shouldn't be null or empty");
     }
-    return result.toString();
+    return buffers.length == 1 ? new SingleByteBuff(refCnt, buffers[0])
+        : new MultiByteBuff(refCnt, buffers);
+  }
+
+  public static ByteBuff wrap(ByteBuffer[] buffers, Recycler recycler) {
+    return wrap(buffers, RefCnt.create(recycler));
+  }
+
+  public static ByteBuff wrap(ByteBuffer[] buffers) {
+    return wrap(buffers, RefCnt.create());
+  }
+
+  public static ByteBuff wrap(List<ByteBuffer> buffers, Recycler recycler) {
+    return wrap(buffers, RefCnt.create(recycler));
+  }
+
+  public static ByteBuff wrap(List<ByteBuffer> buffers) {
+    return wrap(buffers, RefCnt.create());
+  }
+
+  public static ByteBuff wrap(ByteBuffer buffer) {
+    return wrap(buffer, RefCnt.create());
+  }
+
+  /**
+   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
+   */
+  private static ByteBuff wrap(List<ByteBuffer> buffers, RefCnt refCnt) {
+    if (buffers == null || buffers.size() == 0) {
+      throw new IllegalArgumentException("buffers shouldn't be null or empty");
+    }
+    return buffers.size() == 1 ? new SingleByteBuff(refCnt, buffers.get(0))
+        : new MultiByteBuff(refCnt, buffers.toArray(new ByteBuffer[0]));
+  }
+
+  /**
+   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
+   */
+  private static ByteBuff wrap(ByteBuffer buffer, RefCnt refCnt) {
+    return new SingleByteBuff(refCnt, buffer);
   }
 }

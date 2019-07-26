@@ -95,7 +95,6 @@ public class ForeignExceptionDispatcher implements ForeignExceptionListener, For
 
   /**
    * Sends an exception to all listeners.
-   * @param message human readable message passed to the listener
    * @param e {@link ForeignException} containing the cause.  Can be null.
    */
   private void dispatch(ForeignException e) {

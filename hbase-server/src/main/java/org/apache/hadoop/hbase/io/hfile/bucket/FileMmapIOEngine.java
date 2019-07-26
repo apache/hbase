@@ -24,7 +24,6 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferAllocator;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
@@ -101,8 +100,7 @@ public abstract class FileMmapIOEngine implements IOEngine {
   }
 
   @Override
-  public abstract Cacheable read(long offset, int length,
-      CacheableDeserializer<Cacheable> deserializer) throws IOException;
+  public abstract Cacheable read(BucketEntry be) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to file
@@ -112,17 +110,12 @@ public abstract class FileMmapIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
-    assert srcBuffer.hasArray();
-    bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
+    bufferArray.write(offset, ByteBuff.wrap(srcBuffer));
   }
 
   @Override
   public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    // This singleByteBuff can be considered to be array backed
-    assert srcBuffer.hasArray();
-    bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
-      srcBuffer.arrayOffset());
+    bufferArray.write(offset, srcBuffer);
   }
 
   /**

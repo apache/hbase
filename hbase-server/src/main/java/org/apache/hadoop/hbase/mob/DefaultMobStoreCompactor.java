@@ -244,19 +244,21 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 writer.append(c);
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
-                // the mob cell from the mob file, and write it back to the store file.
-                Cell mobCell = mobStore.resolve(c, false);
-                if (mobCell.getValueLength() != 0) {
-                  // put the mob data back to the store file
-                  PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
-                  writer.append(mobCell);
-                  cellsCountCompactedFromMob++;
-                  cellsSizeCompactedFromMob += mobCell.getValueLength();
-                } else {
-                  // If the value of a file is empty, there might be issues when retrieving,
-                  // directly write the cell to the store file, and leave it to be handled by the
-                  // next compaction.
-                  writer.append(c);
+                // the mob cell from the mob file, and write it back to the store file. Must
+                // close the mob scanner once the life cycle finished.
+                try (MobCell mobCell = mobStore.resolve(c, false)) {
+                  if (mobCell.getCell().getValueLength() != 0) {
+                    // put the mob data back to the store file
+                    PrivateCellUtil.setSequenceId(mobCell.getCell(), c.getSequenceId());
+                    writer.append(mobCell.getCell());
+                    cellsCountCompactedFromMob++;
+                    cellsSizeCompactedFromMob += mobCell.getCell().getValueLength();
+                  } else {
+                    // If the value of a file is empty, there might be issues when retrieving,
+                    // directly write the cell to the store file, and leave it to be handled by the
+                    // next compaction.
+                    writer.append(c);
+                  }
                 }
               }
             } else {
@@ -309,13 +311,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         // logging at DEBUG level
         if (LOG.isDebugEnabled()) {
           if ((now - lastMillis) >= COMPACTION_PROGRESS_LOG_INTERVAL) {
-            LOG.debug("Compaction progress: "
-                + compactionName
-                + " "
-                + progress
-                + String.format(", rate=%.2f kB/sec", (bytesWrittenProgressForLog / 1024.0)
-                    / ((now - lastMillis) / 1000.0)) + ", throughputController is "
-                + throughputController);
+            String rate = String.format("%.2f",
+              (bytesWrittenProgressForLog / 1024.0) / ((now - lastMillis) / 1000.0));
+            LOG.debug("Compaction progress: {} {}, rate={} KB/sec, throughputController is {}",
+              compactionName, progress, rate, throughputController);
             lastMillis = now;
             bytesWrittenProgressForLog = 0;
           }
@@ -328,6 +327,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new InterruptedIOException(
           "Interrupted while control throughput of compacting " + compactionName);
     } finally {
+      // Clone last cell in the final because writer will append last cell when committing. If
+      // don't clone here and once the scanner get closed, then the memory of last cell will be
+      // released. (HBASE-22582)
+      ((ShipperListener) writer).beforeShipped();
       throughputController.finish(compactionName);
       if (!finished && mobFileWriter != null) {
         abortWriter(mobFileWriter);

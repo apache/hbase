@@ -79,7 +79,7 @@
     </head>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
-      <item name="License" href="licenses.html"/>
+      <item name="License" href="https://www.apache.org/licenses/"/>
       <item name="Downloads" href="downloads.html"/>
       <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
       <item name="Code Of Conduct" href="coc.html"/>
@@ -87,7 +87,8 @@
       <item name="Mailing Lists" href="mailing-lists.html"/>
       <item name="Team" href="team.html"/>
       <item name="ReviewBoard" href="https://reviews.apache.org/"/>
-      <item name="Thanks" href="sponsors.html"/>
+      <item name="HBase Sponsors" href="sponsors.html"/>
+      <item name="Thanks" href="https://www.apache.org/foundation/thanks.html"/>
       <item name="Powered by HBase" href="poweredbyhbase.html"/>
       <item name="Other resources" href="resources.html"/>
     </menu>

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.createBucketEntry;
+import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.getByteBuff;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -29,11 +31,11 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.BufferGrabbingDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -109,9 +111,10 @@ public class TestFileIOEngine {
         data1[j] = (byte) (Math.random() * 255);
       }
       fileIOEngine.write(ByteBuffer.wrap(data1), offset);
-      BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-      fileIOEngine.read(offset, len, deserializer);
-      ByteBuff data2 = deserializer.getDeserializedByteBuff();
+
+      BucketEntry be = createBucketEntry(offset, len);
+      fileIOEngine.read(be);
+      ByteBuff data2 = getByteBuff(be);
       assertArrayEquals(data1, data2.array());
     }
   }
@@ -121,9 +124,9 @@ public class TestFileIOEngine {
     byte[] data1 = new byte[0];
 
     fileIOEngine.write(ByteBuffer.wrap(data1), 0);
-    BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-    fileIOEngine.read(0, 0, deserializer);
-    ByteBuff data2 = deserializer.getDeserializedByteBuff();
+    BucketEntry be = createBucketEntry(0, 0);
+    fileIOEngine.read(be);
+    ByteBuff data2 = getByteBuff(be);
     assertArrayEquals(data1, data2.array());
   }
 
@@ -132,15 +135,22 @@ public class TestFileIOEngine {
     fileIOEngine.closeFileChannels();
     int len = 5;
     long offset = 0L;
-    byte[] data1 = new byte[len];
-    for (int j = 0; j < data1.length; ++j) {
-      data1[j] = (byte) (Math.random() * 255);
+    int val = (int) (Math.random() * 255);
+    for (int i = 0; i < 2; i++) {
+      ByteBuff src = TestByteBufferIOEngine.createByteBuffer(len, val, i % 2 == 0);
+      int pos = src.position(), lim = src.limit();
+      fileIOEngine.write(src, offset);
+      src.position(pos).limit(lim);
+
+      BucketEntry be = createBucketEntry(offset, len);
+      fileIOEngine.read(be);
+      ByteBuff dst = getByteBuff(be);
+
+      Assert.assertEquals(src.remaining(), len);
+      Assert.assertEquals(dst.remaining(), len);
+      Assert.assertEquals(0,
+        ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
     }
-    fileIOEngine.write(ByteBuffer.wrap(data1), offset);
-    BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-    fileIOEngine.read(offset, len, deserializer);
-    ByteBuff data2 = deserializer.getDeserializedByteBuff();
-    assertArrayEquals(data1, data2.array());
   }
 
   @Test

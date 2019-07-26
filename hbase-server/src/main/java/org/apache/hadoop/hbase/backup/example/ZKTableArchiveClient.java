@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.client.Connection;
@@ -109,7 +110,7 @@ public class ZKTableArchiveClient extends Configured {
    * @param table name of the table to check
    * @return <tt>true</tt> if it is, <tt>false</tt> otherwise
    * @throws IOException if a connection to ZooKeeper cannot be established
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public boolean getArchivingEnabled(byte[] table) throws IOException, KeeperException {
     HFileArchiveManager manager = createHFileArchiveManager();

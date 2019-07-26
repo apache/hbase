@@ -26,10 +26,10 @@ import java.util.Optional;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
-import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -67,7 +67,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   protected long startTime;
   protected final long deadline;// the deadline to handle this call, if exceed we can drop it.
 
-  protected final ByteBufferPool reservoir;
+  protected final ByteBuffAllocator bbAllocator;
 
   protected final CellBlockBuilder cellBlockBuilder;
 
@@ -91,11 +91,11 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
-      justification="Can't figure why this complaint is happening... see below")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
+      justification = "Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-      Message param, CellScanner cellScanner, T connection, long size,
-      InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
+      Message param, CellScanner cellScanner, T connection, long size, InetAddress remoteAddress,
+      long receiveTime, int timeout, ByteBuffAllocator byteBuffAllocator,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;
     this.service = service;
@@ -118,7 +118,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.remoteAddress = remoteAddress;
     this.timeout = timeout;
     this.deadline = this.timeout > 0 ? this.receiveTime + this.timeout : Long.MAX_VALUE;
-    this.reservoir = reservoir;
+    this.bbAllocator = byteBuffAllocator;
     this.cellBlockBuilder = cellBlockBuilder;
     this.reqCleanup = reqCleanup;
   }
@@ -199,9 +199,9 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
       // high when we can avoid a big buffer allocation on each rpc.
       List<ByteBuffer> cellBlock = null;
       int cellBlockSize = 0;
-      if (this.reservoir != null) {
+      if (bbAllocator.isReservoirEnabled()) {
         this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.connection.codec,
-          this.connection.compressionCodec, cells, this.reservoir);
+          this.connection.compressionCodec, cells, bbAllocator);
         if (this.cellBlockStream != null) {
           cellBlock = this.cellBlockStream.getByteBuffers();
           cellBlockSize = this.cellBlockStream.size();

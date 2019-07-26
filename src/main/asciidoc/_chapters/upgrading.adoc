@@ -346,10 +346,11 @@ As noted in the section <<basic.prerequisites>>, HBase 2.0+ requires a minimum o
 .HBCK must match HBase server version
 You *must not* use an HBase 1.x version of HBCK against an HBase 2.0+ cluster. HBCK is strongly tied to the HBase server version. Using the HBCK tool from an earlier release against an HBase 2.0+ cluster will destructively alter said cluster in unrecoverable ways.
 
-As of HBase 2.0, HBCK (A.K.A _HBCK1_ or _hbck1_) is a read-only tool that can report the status of some non-public system internals. You should not rely on the format nor content of these internals to remain consistent across HBase releases.
+As of HBase 2.0, HBCK (A.K.A _HBCK1_ or _hbck1_) is a read-only tool that can report the status of some non-public system internals but will often misread state because it does not understand the workings of hbase2.
 
 To read about HBCK's replacement, see <<HBCK2>> in <<ops_mgt>>.
 
+IMPORTANT: Related, before you upgrade, ensure that _hbck1_ reports no `INCONSISTENCIES`. Fixing hbase1-type inconsistencies post-upgrade is an involved process.
 
 ////
 Link to a ref guide section on HBCK in 2.0 that explains use and calls out the inability of clients and server sides to detect version of each other.
@@ -733,6 +734,7 @@ rolling upgrade of a 1.4 cluster.
 .Pre-Requirements
 * Upgrade to the latest 1.4.x release. Pre 1.4 releases may also work but are not tested, so please upgrade to 1.4.3+ before upgrading to 2.x, unless you are an expert and familiar with the region assignment and crash processing. See the section <<upgrade1.4>> on how to upgrade to 1.4.x.
 * Make sure that the zk-less assignment is enabled, i.e, set `hbase.assignment.usezk` to `false`. This is the most important thing. It allows the 1.x master to assign/unassign regions to/from 2.x region servers. See the release note section of link:https://issues.apache.org/jira/browse/HBASE-11059[HBASE-11059] on how to migrate from zk based assignment to zk less assignment.
+* Before you upgrade, ensure that _hbck1_ reports no `INCONSISTENCIES`. Fixing hbase1-type inconsistencies post-upgrade is an involved process.
 * We have tested rolling upgrading from 1.4.3 to 2.1.0, but it should also work if you want to upgrade to 2.0.x.
 
 .Instructions
@@ -753,6 +755,7 @@ NOTE: If you have success running this prescription, please notify the dev list 
 
 To upgrade an existing HBase 1.x cluster, you should:
 
+* Ensure that _hbck1_ reports no `INCONSISTENCIES`. Fixing hbase1-type inconsistencies post-upgrade is an involved process. Fix all _hbck1_ complaints before proceeding.
 * Clean shutdown of existing 1.x cluster
 * Update coprocessors
 * Upgrade Master roles first

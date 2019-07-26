@@ -49,6 +49,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -67,14 +68,13 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -423,23 +423,29 @@ public abstract class FSUtils extends CommonFSUtils {
       boolean message, int wait, int retries)
   throws IOException, DeserializationException {
     String version = getVersion(fs, rootdir);
+    String msg;
     if (version == null) {
       if (!metaRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
         setVersion(fs, rootdir, wait, retries);
         return;
+      } else {
+        msg = "hbase.version file is missing. Is your hbase.rootdir valid? " +
+            "You can restore hbase.version file by running 'HBCK2 filesystem -fix'. " +
+            "See https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2";
       }
-    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) return;
+    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
+      return;
+    } else {
+      msg = "HBase file layout needs to be upgraded. Current filesystem version is " + version +
+          " but software requires version " + HConstants.FILE_SYSTEM_VERSION +
+          ". Consult http://hbase.apache.org/book.html for further information about " +
+          "upgrading HBase.";
+    }
 
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
-    String msg = "HBase file layout needs to be upgraded."
-      + " You have version " + version
-      + " and I want version " + HConstants.FILE_SYSTEM_VERSION
-      + ". Consult http://hbase.apache.org/book.html for further information about upgrading HBase."
-      + " Is your hbase.rootdir valid? If so, you may need to run "
-      + "'hbase hbck -fixVersionFile'.";
     if (message) {
       System.out.println("WARNING! " + msg);
     }
@@ -708,17 +714,12 @@ public abstract class FSUtils extends CommonFSUtils {
 
   /**
    * Checks if meta region exists
-   *
    * @param fs file system
-   * @param rootdir root directory of HBase installation
+   * @param rootDir root directory of HBase installation
    * @return true if exists
-   * @throws IOException e
    */
-  @SuppressWarnings("deprecation")
-  public static boolean metaRegionExists(FileSystem fs, Path rootdir)
-  throws IOException {
-    Path metaRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.FIRST_META_REGIONINFO);
+  public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
+    Path metaRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.FIRST_META_REGIONINFO);
     return fs.exists(metaRegionDir);
   }
 
@@ -1044,7 +1045,11 @@ public abstract class FSUtils extends CommonFSUtils {
     return regionDirs;
   }
 
-  public static Path getRegionDir(Path tableDir, RegionInfo region) {
+  public static Path getRegionDirFromRootDir(Path rootDir, RegionInfo region) {
+    return getRegionDirFromTableDir(getTableDir(rootDir, region.getTable()), region);
+  }
+
+  public static Path getRegionDirFromTableDir(Path tableDir, RegionInfo region) {
     return new Path(tableDir, ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 
@@ -1218,10 +1223,10 @@ public abstract class FSUtils extends CommonFSUtils {
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
-  public static Map<String, Path> getTableStoreFilePathMap(
-      Map<String, Path> resultMap,
+  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
       final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
-      ExecutorService executor, final ErrorReporter errors) throws IOException, InterruptedException {
+      ExecutorService executor, final HbckErrorReporter errors)
+      throws IOException, InterruptedException {
 
     final Map<String, Path> finalResultMap =
         resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
@@ -1384,7 +1389,7 @@ public abstract class FSUtils extends CommonFSUtils {
    */
   public static Map<String, Path> getTableStoreFilePathMap(
     final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
-    ExecutorService executor, ErrorReporter errors)
+    ExecutorService executor, HbckErrorReporter errors)
   throws IOException, InterruptedException {
     ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<>(1024, 0.75f, 32);
 

@@ -46,6 +46,5 @@ public class TestIncrementFromClientSideWithCoprocessor extends TestIncrementsFr
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName(), NoOpScanPolicyObserver.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
   }
 }

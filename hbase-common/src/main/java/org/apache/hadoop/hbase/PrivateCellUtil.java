@@ -1210,8 +1210,8 @@ public final class PrivateCellUtil {
 
   /**
    * Compare cell's row against given comparator
-   * @param cell
-   * @param comparator
+   * @param cell the cell to use for comparison
+   * @param comparator the {@link CellComparator} to use for comparison
    * @return result comparing cell's row
    */
   public static int compareRow(Cell cell, ByteArrayComparable comparator) {
@@ -1224,8 +1224,8 @@ public final class PrivateCellUtil {
 
   /**
    * Compare cell's column family against given comparator
-   * @param cell
-   * @param comparator
+   * @param cell the cell to use for comparison
+   * @param comparator the {@link CellComparator} to use for comparison
    * @return result comparing cell's column family
    */
   public static int compareFamily(Cell cell, ByteArrayComparable comparator) {
@@ -1239,8 +1239,8 @@ public final class PrivateCellUtil {
 
   /**
    * Compare cell's qualifier against given comparator
-   * @param cell
-   * @param comparator
+   * @param cell the cell to use for comparison
+   * @param comparator the {@link CellComparator} to use for comparison
    * @return result comparing cell's qualifier
    */
   public static int compareQualifier(Cell cell, ByteArrayComparable comparator) {
@@ -1277,8 +1277,8 @@ public final class PrivateCellUtil {
 
   /**
    * Compare cell's value against given comparator
-   * @param cell
-   * @param comparator
+   * @param cell the cell to use for comparison
+   * @param comparator the {@link CellComparator} to use for comparison
    * @return result comparing cell's value
    */
   public static int compareValue(Cell cell, ByteArrayComparable comparator) {
@@ -2578,7 +2578,7 @@ public final class PrivateCellUtil {
    * the index block, bloom keys from the bloom blocks This byte[] is expected to be serialized in
    * the KeyValue serialization format If the KeyValue (Cell's) serialization format changes this
    * method cannot be used.
-   * @param comparator the cell comparator
+   * @param comparator the {@link CellComparator} to use for comparison
    * @param left the cell to be compared
    * @param key the serialized key part of a KeyValue
    * @param offset the offset in the key byte[]
@@ -2605,8 +2605,14 @@ public final class PrivateCellUtil {
    * method is used both in the normal comparator and the "same-prefix" comparator. Note that we are
    * assuming that row portions of both KVs have already been parsed and found identical, and we
    * don't validate that assumption here.
-   * @param commonPrefix the length of the common prefix of the two key-values being compared,
-   *          including row length and row
+   * @param comparator the {@link CellComparator} to use for comparison
+   * @param left the cell to be compared
+   * @param right the serialized key part of a key-value
+   * @param roffset the offset in the key byte[]
+   * @param rlength the length of the key byte[]
+   * @param rowlength the row length
+   * @return greater than 0 if left cell is bigger, less than 0 if right cell is bigger, 0 if both
+   *         cells are equal
    */
   static final int compareWithoutRow(CellComparator comparator, Cell left, byte[] right,
       int roffset, int rlength, short rowlength) {

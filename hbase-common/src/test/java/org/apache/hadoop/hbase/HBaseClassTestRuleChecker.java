@@ -32,7 +32,7 @@ import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunListener.ThreadSafe;
 
 /**
- * A RunListener to confirm that we have a {@link CategoryBasedTimeout} class rule for every test.
+ * A RunListener to confirm that we have a {@link HBaseClassTestRule} class rule for every test.
  */
 @InterfaceAudience.Private
 @ThreadSafe

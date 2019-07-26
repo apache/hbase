@@ -230,7 +230,7 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
-  public long getMemStoreLimit();
+  long getMemStoreLimit();
   /**
    * Get the size (in bytes) of the block cache that is free.
    */
@@ -295,42 +295,42 @@ public interface MetricsRegionServerWrapper {
   /**
    * Hit count of L1 cache.
    */
-  public long getL1CacheHitCount();
+  long getL1CacheHitCount();
 
   /**
    * Miss count of L1 cache.
    */
-  public long getL1CacheMissCount();
+  long getL1CacheMissCount();
 
   /**
    * Hit ratio of L1 cache.
    */
-  public double getL1CacheHitRatio();
+  double getL1CacheHitRatio();
 
   /**
    * Miss ratio of L1 cache.
    */
-  public double getL1CacheMissRatio();
+  double getL1CacheMissRatio();
 
   /**
    * Hit count of L2 cache.
    */
-  public long getL2CacheHitCount();
+  long getL2CacheHitCount();
 
   /**
    * Miss count of L2 cache.
    */
-  public long getL2CacheMissCount();
+  long getL2CacheMissCount();
 
   /**
    * Hit ratio of L2 cache.
    */
-  public double getL2CacheHitRatio();
+  double getL2CacheHitRatio();
 
   /**
    * Miss ratio of L2 cache.
    */
-  public double getL2CacheMissRatio();
+  double getL2CacheMissRatio();
 
   /**
    * Force a re-computation of the metrics.
@@ -523,4 +523,14 @@ public interface MetricsRegionServerWrapper {
   long getTrailerHitCount();
 
   long getTotalRowActionRequestCount();
+
+  long getByteBuffAllocatorHeapAllocationBytes();
+
+  long getByteBuffAllocatorPoolAllocationBytes();
+
+  double getByteBuffAllocatorHeapAllocRatio();
+
+  long getByteBuffAllocatorTotalBufferCount();
+
+  long getByteBuffAllocatorUsedBufferCount();
 }

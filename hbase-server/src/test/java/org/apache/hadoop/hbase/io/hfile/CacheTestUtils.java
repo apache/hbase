@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -147,7 +148,6 @@ public class CacheTestUtils {
       if (buf != null) {
         assertEquals(block.block, buf);
       }
-
     }
 
     // Re-add some duplicate blocks. Hope nothing breaks.
@@ -169,16 +169,15 @@ public class CacheTestUtils {
 
   }
 
-  public static void hammerSingleKey(final BlockCache toBeTested,
-      int BlockSize, int numThreads, int numQueries) throws Exception {
+  public static void hammerSingleKey(final BlockCache toBeTested, int numThreads, int numQueries)
+      throws Exception {
     final BlockCacheKey key = new BlockCacheKey("key", 0);
     final byte[] buf = new byte[5 * 1024];
     Arrays.fill(buf, (byte) 5);
 
     final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
     Configuration conf = new Configuration();
-    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(
-        conf);
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
 
     final AtomicInteger totalQueries = new AtomicInteger();
     toBeTested.cacheBlock(key, bac);
@@ -187,8 +186,8 @@ public class CacheTestUtils {
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
         @Override
         public void doAnAction() throws Exception {
-          ByteArrayCacheable returned = (ByteArrayCacheable) toBeTested
-              .getBlock(key, false, false, true);
+          ByteArrayCacheable returned =
+              (ByteArrayCacheable) toBeTested.getBlock(key, false, false, true);
           if (returned != null) {
             assertArrayEquals(buf, returned.buf);
           } else {
@@ -222,78 +221,24 @@ public class CacheTestUtils {
     ctx.stop();
   }
 
-  public static void hammerEviction(final BlockCache toBeTested, int BlockSize,
-      int numThreads, int numQueries) throws Exception {
-
-    Configuration conf = new Configuration();
-    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(
-        conf);
-
-    final AtomicInteger totalQueries = new AtomicInteger();
-
-    for (int i = 0; i < numThreads; i++) {
-      final int finalI = i;
-
-      final byte[] buf = new byte[5 * 1024];
-      TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
-        @Override
-        public void doAnAction() throws Exception {
-          for (int j = 0; j < 100; j++) {
-            BlockCacheKey key = new BlockCacheKey("key_" + finalI + "_" + j, 0);
-            Arrays.fill(buf, (byte) (finalI * j));
-            final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
-
-            ByteArrayCacheable gotBack = (ByteArrayCacheable) toBeTested
-                .getBlock(key, true, false, true);
-            if (gotBack != null) {
-              assertArrayEquals(gotBack.buf, bac.buf);
-            } else {
-              toBeTested.cacheBlock(key, bac);
-            }
-          }
-          totalQueries.incrementAndGet();
-        }
-      };
-
-      t.setDaemon(true);
-      ctx.addThread(t);
-    }
-
-    ctx.startThreads();
-    while (totalQueries.get() < numQueries && ctx.shouldRun()) {
-      Thread.sleep(10);
-    }
-    ctx.stop();
-
-    assertTrue(toBeTested.getStats().getEvictedCount() > 0);
-  }
-
   public static class ByteArrayCacheable implements Cacheable {
 
     static final CacheableDeserializer<Cacheable> blockDeserializer =
-      new CacheableDeserializer<Cacheable>() {
+        new CacheableDeserializer<Cacheable>() {
+          @Override
+          public int getDeserializerIdentifier() {
+            return deserializerIdentifier;
+          }
 
-      @Override
-      public Cacheable deserialize(ByteBuff b) throws IOException {
-        int len = b.getInt();
-        Thread.yield();
-        byte buf[] = new byte[len];
-        b.get(buf);
-        return new ByteArrayCacheable(buf);
-      }
-
-      @Override
-      public int getDeserialiserIdentifier() {
-        return deserializerIdentifier;
-      }
-
-
-      @Override
-      public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType)
-          throws IOException {
-        return deserialize(b);
-      }
-    };
+          @Override
+          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
+            int len = b.getInt();
+            Thread.yield();
+            byte buf[] = new byte[len];
+            b.get(buf);
+            return new ByteArrayCacheable(buf);
+          }
+        };
 
     final byte[] buf;
 
@@ -334,11 +279,6 @@ public class CacheTestUtils {
     public BlockType getBlockType() {
       return BlockType.DATA;
     }
-
-    @Override
-    public MemoryType getMemoryType() {
-      return MemoryType.EXCLUSIVE;
-    }
   }
 
 
@@ -366,11 +306,11 @@ public class CacheTestUtils {
                           .withBytesPerCheckSum(0)
                           .withChecksumType(ChecksumType.NULL)
                           .build();
-      HFileBlock generated = new HFileBlock(BlockType.DATA,
-          onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-          prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize,
-          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta);
+      HFileBlock generated =
+          new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
+              prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
+              onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
+              ByteBuffAllocator.HEAP);
 
       String strKey;
       /* No conflicting keys */
@@ -401,13 +341,18 @@ public class CacheTestUtils {
   }
 
   public static void getBlockAndAssertEquals(BlockCache cache, BlockCacheKey key,
-                                             Cacheable blockToCache, ByteBuffer destBuffer,
-                                             ByteBuffer expectedBuffer) {
+      Cacheable blockToCache, ByteBuffer destBuffer, ByteBuffer expectedBuffer) {
     destBuffer.clear();
     cache.cacheBlock(key, blockToCache);
     Cacheable actualBlock = cache.getBlock(key, false, false, false);
-    actualBlock.serialize(destBuffer, true);
-    assertEquals(expectedBuffer, destBuffer);
-    cache.returnBlock(key, actualBlock);
+    try {
+      actualBlock.serialize(destBuffer, true);
+      assertEquals(expectedBuffer, destBuffer);
+    } finally {
+      // Release the reference count increased by getBlock.
+      if (actualBlock != null) {
+        actualBlock.release();
+      }
+    }
   }
 }

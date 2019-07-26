@@ -82,7 +82,7 @@ EOF
         error = false
         admin_instance = admin.instance_variable_get('@admin')
         conn_instance = admin_instance.getConnection
-        cluster_status = admin_instance.getClusterStatus
+        cluster_status = org.apache.hadoop.hbase.ClusterStatus.new(admin_instance.getClusterMetrics)
         hregion_locator_instance = conn_instance.getRegionLocator(TableName.valueOf(table_name))
         hregion_locator_list = hregion_locator_instance.getAllRegionLocations.to_a
         results = []
@@ -103,7 +103,7 @@ EOF
           end
 
           regions.each do |hregion|
-            hregion_info = hregion.getRegionInfo
+            hregion_info = hregion.getRegion
             server_name = hregion.getServerName
             region_load_map = cluster_status.getLoad(server_name).getRegionsLoad
             region_load = region_load_map.get(hregion_info.getRegionName)

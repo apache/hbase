@@ -749,7 +749,7 @@ See link:https://issues.apache.org/jira/browse/HBASE-6389[HBASE-6389 Modify the
 [[sect.zookeeper.session.timeout]]
 ===== `zookeeper.session.timeout`
 
-The default timeout is three minutes (specified in milliseconds). This means that if a server crashes, it will be three minutes before the Master notices the crash and starts recovery.
+The default timeout is 90 seconds (specified in milliseconds). This means that if a server crashes, it will be 90 seconds before the Master notices the crash and starts recovery.
 You might need to tune the timeout down to a minute or even less so the Master notices failures sooner.
 Before changing this value, be sure you have your JVM garbage collection configuration under control, otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer. (You might be fine with this -- you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
 
