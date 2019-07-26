@@ -868,6 +868,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       int[] newRegions = new int[regions.length - 1];
       int i = 0;
       for (i = 0; i < regions.length; i++) {
+        if (i == regions.length - 1) {
+          return Arrays.copyOf(regions, regions.length);
+        }
         if (regions[i] == regionIndex) {
           break;
         }
