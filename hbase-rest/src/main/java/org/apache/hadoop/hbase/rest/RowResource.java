@@ -751,7 +751,7 @@ public class RowResource extends ResourceBase {
                   .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
                   .build();
         }
-        append.add(parts[0], parts[1], cell.getValue());
+        append.addColumn(parts[0], parts[1], cell.getValue());
       }
 
       if (LOG.isDebugEnabled()) {
