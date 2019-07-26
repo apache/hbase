@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Tracker on cluster settings up in zookeeper.
- * This is not related to {@link org.apache.hadoop.hbase.ClusterStatus}. That class
+ * This is not related to {@link org.apache.hadoop.hbase.ClusterMetrics}. That class
  * is a data structure that holds snapshot of current view on cluster. This class
  * is about tracking cluster attributes up in zookeeper.
  *

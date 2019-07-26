@@ -89,8 +89,6 @@ public class TestClientClusterStatus {
     // or more requests than expected.
     Assert.assertEquals(status0.getLiveServerMetrics().size(),
         status1.getLiveServerMetrics().size());
-    checkPbObjectNotNull(new ClusterStatus(status0));
-    checkPbObjectNotNull(new ClusterStatus(status1));
   }
 
   @Test
@@ -109,28 +107,26 @@ public class TestClientClusterStatus {
     Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus status
-          = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
+        ClusterMetrics status = ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
         Assert.assertNotNull(status);
-        return status.getRegionsCount() > 0;
+        return status.getRegionCount() > 0;
       }
     });
     // Retrieve live servers and dead servers info.
     EnumSet<Option> options =
         EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS, Option.SERVERS_NAME);
-    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
-    checkPbObjectNotNull(status);
+    ClusterMetrics status = ADMIN.getClusterMetrics(options);
     Assert.assertNotNull(status);
-    Assert.assertNotNull(status.getServers());
+    Assert.assertNotNull(status.getLiveServerMetrics().keySet());
     // exclude a dead region server
     Assert.assertEquals(SLAVES -1, numRs);
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
-    Assert.assertEquals(status.getServers().size(), numRs);
-    Assert.assertTrue(status.getRegionsCount() > 0);
+    Assert.assertEquals(status.getLiveServerMetrics().keySet().size(), numRs);
+    Assert.assertTrue(status.getRegionCount() > 0);
     Assert.assertNotNull(status.getDeadServerNames());
-    Assert.assertEquals(1, status.getDeadServersSize());
+    Assert.assertEquals(1, status.getDeadServerNames().size());
     ServerName deadServerName = status.getDeadServerNames().iterator().next();
     Assert.assertEquals(DEAD.getServerName(), deadServerName);
     Assert.assertNotNull(status.getServersName());
@@ -158,9 +154,9 @@ public class TestClientClusterStatus {
     Assert.assertEquals(MASTERS, masterThreads.size());
     // Retrieve master and backup masters infos only.
     EnumSet<Option> options = EnumSet.of(Option.MASTER, Option.BACKUP_MASTERS);
-    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
-    Assert.assertTrue(status.getMaster().equals(activeName));
-    Assert.assertEquals(MASTERS - 1, status.getBackupMastersSize());
+    ClusterMetrics status = ADMIN.getClusterMetrics(options);
+    Assert.assertTrue(status.getMasterName().equals(activeName));
+    Assert.assertEquals(MASTERS - 1, status.getBackupMasterNames().size());
   }
 
   @Test
@@ -168,8 +164,8 @@ public class TestClientClusterStatus {
     EnumSet<Option> options =
         EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
                    Option.CLUSTER_ID, Option.BALANCER_ON);
-    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
-    Assert.assertTrue(status.getMasterCoprocessors().length == 1);
+    ClusterMetrics status = ADMIN.getClusterMetrics(options);
+    Assert.assertTrue(status.getMasterCoprocessorNames().size() == 1);
     Assert.assertNotNull(status.getHBaseVersion());
     Assert.assertNotNull(status.getClusterId());
     Assert.assertTrue(status.getAverageLoad() == 0.0);
@@ -190,21 +186,6 @@ public class TestClientClusterStatus {
       .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
     Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
     Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
-  }
-
-  /**
-   * HBASE-19496 do the refactor for ServerLoad and RegionLoad so the inner pb object is useless
-   * now. However, they are Public classes, and consequently we must make sure the all pb objects
-   * have initialized.
-   */
-  private static void checkPbObjectNotNull(ClusterStatus status) {
-    for (ServerName name : status.getLiveServerMetrics().keySet()) {
-      ServerLoad load = status.getLoad(name);
-      Assert.assertNotNull(load.obtainServerLoadPB());
-      for (RegionLoad rl : load.getRegionsLoad().values()) {
-        Assert.assertNotNull(rl.regionLoadPB);
-      }
-    }
   }
 
   public static class MyObserver implements MasterCoprocessor, MasterObserver {
