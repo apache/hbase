@@ -870,6 +870,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         if (regions[i] == regionIndex) {
           break;
         }
+        if (i == regions.length - 1) {
+            return Arrays.copyOf(regions, regions.length);
+        }
         newRegions[i] = regions[i];
       }
       System.arraycopy(regions, i+1, newRegions, i, newRegions.length - i);
