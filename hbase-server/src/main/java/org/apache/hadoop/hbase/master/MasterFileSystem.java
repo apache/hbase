@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -192,7 +191,9 @@ public class MasterFileSystem {
     return this.fs;
   }
 
-  protected FileSystem getWALFileSystem() { return this.walFs; }
+  public FileSystem getWALFileSystem() {
+    return this.walFs;
+  }
 
   public Configuration getConfiguration() {
     return this.conf;
@@ -210,7 +211,9 @@ public class MasterFileSystem {
    *   different if hfiles on one fs and WALs on another. The 'WALs' dir gets made underneath
    *   the root dir returned here; i.e. this is '/hbase', not '/hbase/WALs'.
    */
-  public Path getWALRootDir() { return this.walRootDir; }
+  public Path getWALRootDir() {
+    return this.walRootDir;
+  }
 
   /**
    * @return HBase temp dir.

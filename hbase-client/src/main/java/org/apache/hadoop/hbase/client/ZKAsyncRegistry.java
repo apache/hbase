@@ -152,9 +152,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
           }
           Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
           if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-            future.completeExceptionally(
-              new IOException("Meta region is in state " + stateAndServerName.getFirst()));
-            return;
+            LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
           locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
             getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());

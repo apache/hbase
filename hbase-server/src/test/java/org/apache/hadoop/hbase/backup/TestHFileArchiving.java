@@ -145,7 +145,7 @@ public class TestHFileArchiving {
 
     // now attempt to depose the region
     Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
@@ -196,7 +196,7 @@ public class TestHFileArchiving {
 
     // make sure there are some files in the regiondir
     Path rootDir = FSUtils.getRootDir(fs.getConf());
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, region.getRegionInfo());
     FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {

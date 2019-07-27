@@ -72,10 +72,11 @@ class WALEntryStream implements Closeable {
   /**
    * Create an entry stream over the given queue at the given start position
    * @param logQueue the queue of WAL paths
-   * @param conf {@link Configuration} to use to create {@link Reader} for this stream
+   * @param conf the {@link Configuration} to use to create {@link Reader} for this stream
    * @param startPosition the position in the first WAL to start reading at
+   * @param walFileLengthProvider provides the length of the WAL file
    * @param serverName the server name which all WALs belong to
-   * @param metrics replication metrics
+   * @param metrics the replication metrics
    * @throws IOException
    */
   public WALEntryStream(PriorityBlockingQueue<Path> logQueue, Configuration conf,

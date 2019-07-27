@@ -167,9 +167,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   // notice that, modification to this field is only allowed under the protection of consumeLock.
   private volatile int epochAndState;
 
-  // used to guard the log roll request when we exceed the log roll size.
-  private boolean rollRequested;
-
   private boolean readyForRolling;
 
   private final Condition readyForRollingCond = consumeLock.newCondition();
@@ -337,10 +334,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       // closed soon.
       return;
     }
-    if (writer.getLength() < logrollsize || rollRequested) {
+    if (writer.getLength() < logrollsize || isLogRollRequested()) {
       return;
     }
-    rollRequested = true;
     requestLogRoll();
   }
 
@@ -438,7 +434,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       newHighestProcessedAppendTxid = entry.getTxid();
       iter.remove();
       if (appended) {
-        unackedAppends.addLast(entry);
+        // This is possible, when we fail to sync, we will add the unackedAppends back to
+        // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
+        if (unackedAppends.isEmpty() || unackedAppends.peekLast().getTxid() < entry.getTxid()) {
+          unackedAppends.addLast(entry);
+        }
         if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
           break;
         }
@@ -663,7 +663,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
     }
     this.fileLengthAtLastSync = nextWriter.getLength();
-    this.rollRequested = false;
     this.highestProcessedAppendTxidAtLastSync = 0L;
     consumeLock.lock();
     try {
@@ -672,6 +671,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       int nextEpoch = currentEpoch == MAX_EPOCH ? 0 : currentEpoch + 1;
       // set a new epoch and also clear waitingRoll and writerBroken
       this.epochAndState = nextEpoch << 2;
+      // Reset rollRequested status
+      rollRequested.set(false);
       consumeExecutor.execute(consumer);
     } finally {
       consumeLock.unlock();

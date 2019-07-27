@@ -334,7 +334,12 @@ public class TestZKProcedure {
 
   /**
    * Wait for the coordinator task to complete, and verify all the mocks
-   * @param task to wait on
+   * @param proc the {@link Procedure} to execute
+   * @param prepare the mock prepare
+   * @param commit the mock commit
+   * @param cleanup the mock cleanup
+   * @param finish the mock finish
+   * @param opHasError the operation error state
    * @throws Exception on unexpected failure
    */
   private void waitAndVerifyProc(Procedure proc, VerificationMode prepare,
@@ -358,7 +363,12 @@ public class TestZKProcedure {
 
   /**
    * Wait for the coordinator task to complete, and verify all the mocks
-   * @param task to wait on
+   * @param op the {@link Subprocedure} to use
+   * @param prepare the mock prepare
+   * @param commit the mock commit
+   * @param cleanup the mock cleanup
+   * @param finish the mock finish
+   * @param opHasError the operation error state
    * @throws Exception on unexpected failure
    */
   private void waitAndVerifySubproc(Subprocedure op, VerificationMode prepare,

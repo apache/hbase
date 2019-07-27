@@ -70,8 +70,6 @@ class SyncFuture {
   /**
    * Call this method to clear old usage and get it ready for new deploy.
    * @param txid the new transaction id
-   * @param span current span, detached from caller. Don't forget to attach it when resuming after a
-   *          call to {@link #get(long)}.
    * @return this
    */
   synchronized SyncFuture reset(long txid) {

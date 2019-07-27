@@ -310,13 +310,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         // logging at DEBUG level
         if (LOG.isDebugEnabled()) {
           if ((now - lastMillis) >= COMPACTION_PROGRESS_LOG_INTERVAL) {
-            LOG.debug("Compaction progress: "
-                + compactionName
-                + " "
-                + progress
-                + String.format(", rate=%.2f kB/sec", (bytesWrittenProgressForLog / 1024.0)
-                    / ((now - lastMillis) / 1000.0)) + ", throughputController is "
-                + throughputController);
+            String rate = String.format("%.2f",
+              (bytesWrittenProgressForLog / 1024.0) / ((now - lastMillis) / 1000.0));
+            LOG.debug("Compaction progress: {} {}, rate={} KB/sec, throughputController is {}",
+              compactionName, progress, rate, throughputController);
             lastMillis = now;
             bytesWrittenProgressForLog = 0;
           }
@@ -329,6 +326,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       throw new InterruptedIOException(
           "Interrupted while control throughput of compacting " + compactionName);
     } finally {
+      // Clone last cell in the final because writer will append last cell when committing. If
+      // don't clone here and once the scanner get closed, then the memory of last cell will be
+      // released. (HBASE-22582)
+      ((ShipperListener) writer).beforeShipped();
       throughputController.finish(compactionName);
       if (!finished && mobFileWriter != null) {
         abortWriter(mobFileWriter);

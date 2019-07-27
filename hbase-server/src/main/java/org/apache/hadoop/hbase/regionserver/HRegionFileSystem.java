@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -50,13 +51,12 @@ import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * View to an on-disk Region.
@@ -629,18 +629,25 @@ public class HRegionFileSystem {
   /**
    * Create the region splits directory.
    */
-  public void createSplitsDir() throws IOException {
+  public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
     Path splitdir = getSplitsDir();
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
       if (!deleteDir(splitdir)) {
-        throw new IOException("Failed deletion of " + splitdir
-            + " before creating them again.");
+        throw new IOException("Failed deletion of " + splitdir + " before creating them again.");
       }
     }
     // splitDir doesn't exists now. No need to do an exists() call for it.
     if (!createDir(splitdir)) {
       throw new IOException("Failed create of " + splitdir);
+    }
+    Path daughterATmpDir = getSplitsDir(daughterA);
+    if (!createDir(daughterATmpDir)) {
+      throw new IOException("Failed create of " + daughterATmpDir);
+    }
+    Path daughterBTmpDir = getSplitsDir(daughterB);
+    if (!createDir(daughterBTmpDir)) {
+      throw new IOException("Failed create of " + daughterBTmpDir);
     }
   }
 

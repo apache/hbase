@@ -218,8 +218,7 @@ public class EntityLock {
     }
 
     /**
-     * Shutdown the thread cleanly, quietly. We done.
-     * @return
+     * @return Shuts down the thread clean and quietly.
      */
     Thread shutdown() {
       shutdown = true;

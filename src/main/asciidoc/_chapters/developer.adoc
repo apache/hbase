@@ -1263,7 +1263,7 @@ ConnectionCount=1 (was 1)
 
 * All tests must be categorized, if not they could be skipped.
 * All tests should be written to be as fast as possible.
-* See <<hbase.unittests,hbase.unittests> for test case categories and corresponding timeouts.
+* See <<hbase.unittests,hbase.unittests>> for test case categories and corresponding timeouts.
   This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
 
 [[hbase.tests.sleeps]]
@@ -1591,6 +1591,18 @@ properties file, which may be `hbase-site.xml` or a different properties file.
 We use Git for source code management and latest development happens on `master` branch. There are
 branches for past major/minor/maintenance releases and important features and bug fixes are often
  back-ported to them.
+
+=== Policy for Fix Version in JIRA
+
+To determine if a given fix is in a given release purely from the release numbers following rules
+are defined:
+
+Fix version of X.Y.Z => fixed in all releases X.Y.Z' (where Z' = Z). +
+Fix version of X.Y.0 => fixed in all releases X.Y'.* (where Y' = Y). +
+Fix version of X.0.0 => fixed in all releases X'.\*.* (where X' = X). +
+
+By this policy, fix version of 1.3.0 implies 1.4.0, but 1.3.2 does not imply 1.4.0 as we could not
+tell purely from the numbers which release came first.
 
 [[code.standards]]
 === Code Standards

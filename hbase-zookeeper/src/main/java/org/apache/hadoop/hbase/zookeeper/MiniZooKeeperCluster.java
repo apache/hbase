@@ -54,21 +54,21 @@ public class MiniZooKeeperCluster {
 
   private static final int TICK_TIME = 2000;
   private static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
-  private int connectionTimeout;
+  private final int connectionTimeout;
 
   private boolean started;
 
   /** The default port. If zero, we use a random port. */
   private int defaultClientPort = 0;
 
-  private List<NIOServerCnxnFactory> standaloneServerFactoryList;
-  private List<ZooKeeperServer> zooKeeperServers;
-  private List<Integer> clientPortList;
+  private final List<NIOServerCnxnFactory> standaloneServerFactoryList;
+  private final List<ZooKeeperServer> zooKeeperServers;
+  private final List<Integer> clientPortList;
 
   private int activeZKServerIndex;
   private int tickTime = 0;
 
-  private Configuration configuration;
+  private final Configuration configuration;
 
   public MiniZooKeeperCluster() {
     this(new Configuration());
@@ -96,6 +96,7 @@ public class MiniZooKeeperCluster {
 
   /**
    * Get the list of client ports.
+   *
    * @return clientPortList the client port list
    */
   @VisibleForTesting
@@ -124,7 +125,7 @@ public class MiniZooKeeperCluster {
    * Selects a ZK client port.
    *
    * @param seedPort the seed port to start with; -1 means first time.
-   * @Returns a valid and unused client port
+   * @return a valid and unused client port
    */
   private int selectClientPort(int seedPort) {
     int i;
@@ -141,7 +142,8 @@ public class MiniZooKeeperCluster {
       }
     }
     // Make sure that the port is unused.
-    while (true) {
+    // break when an unused port is found
+    do {
       for (i = 0; i < clientPortList.size(); i++) {
         if (returnClientPort == clientPortList.get(i)) {
           // Already used. Update the port and retry.
@@ -149,10 +151,7 @@ public class MiniZooKeeperCluster {
           break;
         }
       }
-      if (i == clientPortList.size()) {
-        break; // found a unused port, exit
-      }
-    }
+    } while (i != clientPortList.size());
     return returnClientPort;
   }
 
@@ -161,7 +160,7 @@ public class MiniZooKeeperCluster {
   }
 
   public int getBackupZooKeeperServerNum() {
-    return zooKeeperServers.size()-1;
+    return zooKeeperServers.size() - 1;
   }
 
   public int getZooKeeperServerNum() {
@@ -177,7 +176,7 @@ public class MiniZooKeeperCluster {
     System.setProperty("zookeeper.preAllocSize", "100");
     FileTxnLog.setPreallocSize(100 * 1024);
     // allow all 4 letter words
-    System.setProperty("zookeeper.4lw.commands.whitelist","*");
+    System.setProperty("zookeeper.4lw.commands.whitelist", "*");
   }
 
   public int startup(File baseDir) throws IOException, InterruptedException {
@@ -210,7 +209,7 @@ public class MiniZooKeeperCluster {
 
     // running all the ZK servers
     for (int i = 0; i < numZooKeeperServers; i++) {
-      File dir = new File(baseDir, "zookeeper_"+i).getAbsoluteFile();
+      File dir = new File(baseDir, "zookeeper_" + i).getAbsoluteFile();
       createDir(dir);
       int tickTimeToUse;
       if (this.tickTime > 0) {
@@ -266,8 +265,7 @@ public class MiniZooKeeperCluster {
       // We have selected a port as a client port.  Update clientPortList if necessary.
       if (clientPortList.size() <= i) { // it is not in the list, add the port
         clientPortList.add(currentClientPort);
-      }
-      else if (clientPortList.get(i) <= 0) { // the list has invalid port, update with valid port
+      } else if (clientPortList.get(i) <= 0) { // the list has invalid port, update with valid port
         clientPortList.remove(i);
         clientPortList.add(i, currentClientPort);
       }
@@ -403,13 +401,10 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        Socket sock = new Socket("localhost", port);
-        try {
+        try (Socket sock = new Socket("localhost", port)) {
           OutputStream outstream = sock.getOutputStream();
           outstream.write("stat".getBytes());
           outstream.flush();
-        } finally {
-          sock.close();
         }
       } catch (IOException e) {
         return true;

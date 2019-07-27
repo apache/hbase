@@ -79,9 +79,9 @@ public class RecoverableZooKeeper {
   // An identifier of this process in the cluster
   private final String identifier;
   private final byte[] id;
-  private Watcher watcher;
-  private int sessionTimeout;
-  private String quorumServers;
+  private final Watcher watcher;
+  private final int sessionTimeout;
+  private final String quorumServers;
 
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
