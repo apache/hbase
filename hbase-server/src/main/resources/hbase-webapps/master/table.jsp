@@ -251,8 +251,7 @@ if (fqtn != null && master.isInitialized()) {
 </tbody>
 </table>
 <%} else {
-  Admin admin = master.getConnection().getAdmin();
-  RegionLocator r = master.getClusterConnection().getRegionLocator(table.getName());
+  RegionLocator r = master.getConnection().getRegionLocator(table.getName());
   try { %>
 <h2>Table Attributes</h2>
 <table class="table table-striped">
