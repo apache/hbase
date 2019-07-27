@@ -108,7 +108,7 @@ public class RegionStateStore {
     throws IOException {
     Result result = MetaTableAccessor.
       scanByRegionEncodedName(master.getConnection(), regionEncodedName);
-    if(result != null) {
+    if (result != null) {
       visitMetaEntry(visitor, result);
     }
   }

@@ -1383,6 +1383,13 @@ public class AssignmentManager {
     }
   }
 
+  /* AM internal RegionStateStore.RegionStateVisitor implementation. To be used when
+   * scanning META table for region rows, using RegionStateStore utility methods. RegionStateStore
+   * methods will convert Result into proper RegionInfo instances, but those would still need to be
+   * added into AssignmentManager.regionStates in-memory cache.
+   * RegionMetaLoadingVisitor.visitRegionState method provides the logic for adding RegionInfo
+   * instances as loaded from latest META scan into AssignmentManager.regionStates.
+   */
   private class RegionMetaLoadingVisitor implements RegionStateStore.RegionStateVisitor  {
 
     @Override
@@ -1441,10 +1448,9 @@ public class AssignmentManager {
     try {
       RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
       regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
-      RegionInfo regionInfo = regionStates.getRegionState(regionEncodedName) == null ? null :
+      return regionStates.getRegionState(regionEncodedName) == null ? null :
         regionStates.getRegionState(regionEncodedName).getRegion();
-      return regionInfo;
-    }catch(IOException e){
+    } catch(IOException e) {
       LOG.error("Error trying to load region {} from META", regionEncodedName, e);
       throw new UnknownRegionException("Error while trying load region from meta");
     }
