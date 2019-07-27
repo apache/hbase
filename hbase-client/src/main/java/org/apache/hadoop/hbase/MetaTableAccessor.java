@@ -384,7 +384,7 @@ public class MetaTableAccessor {
    * @throws IOException if any errors occur while querying META.
    */
   public static Result scanByRegionEncodedName(Connection connection,
-    String regionEncodedName) throws IOException {
+      String regionEncodedName) throws IOException {
     RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
       new SubstringComparator(regionEncodedName));
     Scan scan = getMetaScan(connection, 1);

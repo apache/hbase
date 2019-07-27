@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
@@ -889,6 +890,27 @@ public class TestMetaTableAccessor {
         meta.close();
       }
     }
+  }
+
+  @Test
+  public void testScanByRegionEncodedNameExistingRegion() throws Exception {
+    final TableName tableName = TableName.valueOf("testScanByRegionEncodedNameExistingRegion");
+    UTIL.createTable(tableName, "cf");
+    final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
+    final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
+    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
+    assertNotNull(result);
+    assertTrue(result.advance());
+    final String resultingRowKey = CellUtil.getCellKeyAsString(result.current());
+    assertTrue(resultingRowKey.contains(encodedName));
+    UTIL.deleteTable(tableName);
+  }
+
+  @Test
+  public void testScanByRegionEncodedNameNonExistingRegion() throws Exception {
+    final String encodedName = "nonexistingregion";
+    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
+    assertNull(result);
   }
 }
 

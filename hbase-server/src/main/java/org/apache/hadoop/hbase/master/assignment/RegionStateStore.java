@@ -105,7 +105,7 @@ public class RegionStateStore {
    * @throws IOException If some error occurs while querying META or parsing results.
    */
   public void visitMetaForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
-    throws IOException {
+      throws IOException {
     Result result = MetaTableAccessor.
       scanByRegionEncodedName(master.getConnection(), regionEncodedName);
     if (result != null) {
