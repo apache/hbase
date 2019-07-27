@@ -385,6 +385,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
   private SnapshotCleanerChore snapshotCleanerChore = null;
 
+  private HbckChecker hbckChecker;
   CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
@@ -1108,6 +1109,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
+    this.hbckChecker = new HbckChecker(this);
+    getChoreService().scheduleChore(hbckChecker);
     this.serverManager.startChore();
 
     // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
@@ -1587,6 +1590,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       choreService.cancelChore(this.hfileCleaner);
       choreService.cancelChore(this.replicationBarrierCleaner);
       choreService.cancelChore(this.snapshotCleanerChore);
+      choreService.cancelChore(this.hbckChecker);
     }
   }
 
@@ -3755,5 +3759,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       return new HashMap<>();
     }
     return super.getWalGroupsReplicationStatus();
+  }
+
+  public HbckChecker getHbckChecker() {
+    return this.hbckChecker;
   }
 }
