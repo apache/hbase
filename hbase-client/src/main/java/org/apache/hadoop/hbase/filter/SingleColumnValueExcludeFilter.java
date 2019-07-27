@@ -115,7 +115,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
       SingleColumnValueFilter.createFilterFromArguments(filterArguments);
     SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter (
       tempFilter.getFamily(), tempFilter.getQualifier(),
-      tempFilter.getOperator(), tempFilter.getComparator());
+      tempFilter.getCompareOperator(), tempFilter.getComparator());
 
     if (filterArguments.size() == 6) {
       filter.setFilterIfMissing(tempFilter.getFilterIfMissing());
