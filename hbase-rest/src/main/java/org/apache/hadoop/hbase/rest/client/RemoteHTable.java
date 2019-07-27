@@ -698,8 +698,7 @@ public class RemoteHTable implements Table {
 
   private boolean doCheckAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value,
       Delete delete) throws IOException {
-    Put put = new Put(row);
-    put.setFamilyCellMap(delete.getFamilyCellMap());
+    Put put = new Put(row, HConstants.LATEST_TIMESTAMP, delete.getFamilyCellMap());
     // column to check-the-value
     put.add(new KeyValue(row, family, qualifier, value));
     CellSetModel model = buildModelFromPut(put);

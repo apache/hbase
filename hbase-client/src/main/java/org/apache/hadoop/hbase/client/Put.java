@@ -27,7 +27,6 @@ import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -179,18 +178,6 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * See {@link #addColumn(byte[], byte[], byte[])}. This version expects
-   * that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
-   */
-  @Deprecated
-  public Put addImmutable(byte [] family, byte [] qualifier, byte [] value) {
-    return addImmutable(family, qualifier, this.ts, value);
-  }
-
-  /**
    * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
    * @param family family name
@@ -210,30 +197,6 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * See {@link #addColumn(byte[], byte[], long, byte[])}. This version expects
-   * that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
-   */
-  @Deprecated
-  public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
-    // Family can not be null, otherwise NullPointerException is thrown when putting the cell into familyMap
-    if (family == null) {
-      throw new IllegalArgumentException("Family cannot be null");
-    }
-
-    // Check timestamp
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-
-    List<Cell> list = getCellList(family);
-    list.add(new IndividualBytesFieldCell(this.row, family, qualifier, ts, KeyValue.Type.Put, value));
-    return this;
-  }
-
-  /**
    * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
    * @param family family name
@@ -243,24 +206,6 @@ public class Put extends Mutation implements HeapSize {
    * @return this
    */
   public Put addColumn(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-    List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, null);
-    list.add(kv);
-    return this;
-  }
-
-  /**
-   * See {@link #addColumn(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
-   * that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
-   */
-  @Deprecated
-  public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
     }

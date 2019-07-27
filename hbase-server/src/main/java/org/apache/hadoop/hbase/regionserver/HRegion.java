@@ -4488,8 +4488,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
     familyMap.put(family, edits);
-    Put p = new Put(row);
-    p.setFamilyCellMap(familyMap);
+    Put p = new Put(row, HConstants.LATEST_TIMESTAMP, familyMap);
     doBatchMutate(p);
   }
 
