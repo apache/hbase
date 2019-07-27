@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,9 +31,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.HbckChecker;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,41 +43,52 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
-public class TestAMProblematicRegions extends TestAssignmentManagerBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestAMProblematicRegions.class);
+public class TestHbckChecker extends TestAssignmentManagerBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestHbckChecker.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAMProblematicRegions.class);
+      HBaseClassTestRule.forClass(TestHbckChecker.class);
+
+  private HbckChecker hbckChecker;
+
+  @Before
+  public void setUp() throws Exception {
+    super.setUp();
+    hbckChecker = new HbckChecker(master);
+  }
 
   @Test
   public void testForMeta() {
     byte[] metaRegionNameAsBytes = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName();
-    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString();
+    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName();
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
     assertEquals(NSERVERS, serverNames.size());
 
-    Map<String, Pair<ServerName, Set<ServerName>>> problematicRegions = am.getProblematicRegions();
+    hbckChecker.choreForTesting();
+    Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
+        hbckChecker.getInconsistentRegions();
 
     // Test for case1: Master thought this region opened, but no regionserver reported it.
-    assertTrue(problematicRegions.containsKey(metaRegionName));
-    Pair<ServerName, Set<ServerName>> pair = problematicRegions.get(metaRegionName);
+    assertTrue(inconsistentRegions.containsKey(metaRegionName));
+    Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(metaRegionName);
     ServerName locationInMeta = pair.getFirst();
-    Set<ServerName> reportedRegionServers = pair.getSecond();
+    List<ServerName> reportedRegionServers = pair.getSecond();
     assertTrue(serverNames.contains(locationInMeta));
     assertEquals(0, reportedRegionServers.size());
 
     // Reported right region location. Then not in problematic regions.
     am.reportOnlineRegions(locationInMeta, Collections.singleton(metaRegionNameAsBytes));
-    problematicRegions = am.getProblematicRegions();
-    assertFalse(problematicRegions.containsKey(metaRegionName));
+    hbckChecker.choreForTesting();
+    inconsistentRegions = hbckChecker.getInconsistentRegions();
+    assertFalse(inconsistentRegions.containsKey(metaRegionName));
   }
 
   @Test
   public void testForUserTable() throws Exception {
     TableName tableName = TableName.valueOf("testForUserTable");
     RegionInfo hri = createRegionInfo(tableName, 1);
-    String regionName = hri.getRegionNameAsString();
+    String regionName = hri.getEncodedName();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
     Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
     waitOnFuture(future);
@@ -85,11 +97,13 @@ public class TestAMProblematicRegions extends TestAssignmentManagerBase {
     assertEquals(NSERVERS, serverNames.size());
 
     // Test for case1: Master thought this region opened, but no regionserver reported it.
-    Map<String, Pair<ServerName, Set<ServerName>>> problematicRegions = am.getProblematicRegions();
-    assertTrue(problematicRegions.containsKey(regionName));
-    Pair<ServerName, Set<ServerName>> pair = problematicRegions.get(regionName);
+    hbckChecker.choreForTesting();
+    Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
+        hbckChecker.getInconsistentRegions();
+    assertTrue(inconsistentRegions.containsKey(regionName));
+    Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
     ServerName locationInMeta = pair.getFirst();
-    Set<ServerName> reportedRegionServers = pair.getSecond();
+    List<ServerName> reportedRegionServers = pair.getSecond();
     assertTrue(serverNames.contains(locationInMeta));
     assertEquals(0, reportedRegionServers.size());
 
@@ -99,9 +113,10 @@ public class TestAMProblematicRegions extends TestAssignmentManagerBase {
     final ServerName anotherServer =
         serverNames.stream().filter(s -> !s.equals(tempLocationInMeta)).findFirst().get();
     am.reportOnlineRegions(anotherServer, Collections.singleton(hri.getRegionName()));
-    problematicRegions = am.getProblematicRegions();
-    assertTrue(problematicRegions.containsKey(regionName));
-    pair = problematicRegions.get(regionName);
+    hbckChecker.choreForTesting();
+    inconsistentRegions = hbckChecker.getInconsistentRegions();
+    assertTrue(inconsistentRegions.containsKey(regionName));
+    pair = inconsistentRegions.get(regionName);
     locationInMeta = pair.getFirst();
     reportedRegionServers = pair.getSecond();
     assertEquals(1, reportedRegionServers.size());
@@ -110,9 +125,10 @@ public class TestAMProblematicRegions extends TestAssignmentManagerBase {
 
     // Test for case3: More than one regionservers reported opened this region.
     am.reportOnlineRegions(locationInMeta, Collections.singleton(hri.getRegionName()));
-    problematicRegions = am.getProblematicRegions();
-    assertTrue(problematicRegions.containsKey(regionName));
-    pair = problematicRegions.get(regionName);
+    hbckChecker.choreForTesting();
+    inconsistentRegions = hbckChecker.getInconsistentRegions();
+    assertTrue(inconsistentRegions.containsKey(regionName));
+    pair = inconsistentRegions.get(regionName);
     locationInMeta = pair.getFirst();
     reportedRegionServers = pair.getSecond();
     assertEquals(2, reportedRegionServers.size());
@@ -121,7 +137,8 @@ public class TestAMProblematicRegions extends TestAssignmentManagerBase {
 
     // Reported right region location. Then not in problematic regions.
     am.reportOnlineRegions(anotherServer, Collections.EMPTY_SET);
-    problematicRegions = am.getProblematicRegions();
-    assertFalse(problematicRegions.containsKey(regionName));
+    hbckChecker.choreForTesting();
+    inconsistentRegions = hbckChecker.getInconsistentRegions();
+    assertFalse(inconsistentRegions.containsKey(regionName));
   }
 }

@@ -1381,6 +1381,12 @@ public class AssignmentManager {
       LOG.info("Skip to add SCP for {} since this server should be OFFLINE already", serverName);
       return -1;
     }
+
+    // Remove the in-memory rsReports result
+    synchronized (rsReports) {
+      rsReports.remove(serverName);
+    }
+
     // we hold the write lock here for fencing on reportRegionStateTransition. Once we set the
     // server state to CRASHED, we will no longer accept the reportRegionStateTransition call from
     // this server. This is used to simplify the implementation for TRSP and SCP, where we can make
@@ -1951,51 +1957,13 @@ public class AssignmentManager {
   }
 
   /**
-   * Found the potentially problematic opened regions. There are three case:
-   * case 1. Master thought this region opened, but no regionserver reported it.
-   * case 2. Master thought this region opened on Server1, but regionserver reported Server2
-   * case 3. More than one regionservers reported opened this region
-   *
-   * @return the map of potentially problematic opened regions. Key is the region name. Value is
-   *         a pair of location in meta and the regionservers which reported opened this region.
+   * @return a snapshot of rsReports
    */
-  public Map<String, Pair<ServerName, Set<ServerName>>> getProblematicRegions() {
-    Map<String, Set<ServerName>> reportedOnlineRegions = new HashMap<>();
+  public Map<ServerName, Set<byte[]>> getRSReports() {
+    Map<ServerName, Set<byte[]>> rsReportsSnapshot = new HashMap<>();
     synchronized (rsReports) {
-      for (Map.Entry<ServerName, Set<byte[]>> entry : rsReports.entrySet()) {
-        for (byte[] regionName : entry.getValue()) {
-          reportedOnlineRegions
-              .computeIfAbsent(RegionInfo.getRegionNameAsString(regionName), r -> new HashSet<>())
-              .add(entry.getKey());
-        }
-      }
+      rsReports.entrySet().forEach(e -> rsReportsSnapshot.put(e.getKey(), e.getValue()));
     }
-
-    Map<String, Pair<ServerName, Set<ServerName>>> problematicRegions = new HashMap<>();
-    List<RegionState> rits = regionStates.getRegionsStateInTransition();
-    for (RegionState regionState : regionStates.getRegionStates()) {
-      // Only consider the opened region and not in transition
-      if (!rits.contains(regionState) && regionState.isOpened()) {
-        String regionName = regionState.getRegion().getRegionNameAsString();
-        ServerName serverName = regionState.getServerName();
-        if (reportedOnlineRegions.containsKey(regionName)) {
-          Set<ServerName> reportedServers = reportedOnlineRegions.get(regionName);
-          if (reportedServers.contains(serverName)) {
-            if (reportedServers.size() > 1) {
-              // More than one regionserver reported opened this region
-              problematicRegions.put(regionName, new Pair<>(serverName, reportedServers));
-            }
-          } else {
-            // Master thought this region opened on Server1, but regionserver reported Server2
-            problematicRegions.put(regionName, new Pair<>(serverName, reportedServers));
-          }
-        } else {
-          // Master thought this region opened, but no regionserver reported it.
-          problematicRegions.put(regionName, new Pair<>(serverName, new HashSet<>()));
-        }
-      }
-    }
-
-    return problematicRegions;
+    return rsReportsSnapshot;
   }
 }
