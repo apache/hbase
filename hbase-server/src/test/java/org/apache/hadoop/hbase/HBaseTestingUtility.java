@@ -51,7 +51,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -75,7 +74,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Hbck;
-import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -2540,24 +2538,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz")
   };
 
-  /**
-   * Create rows in hbase:meta for regions of the specified table with the specified
-   * start keys.  The first startKey should be a 0 length byte array if you
-   * want to form a proper range of regions.
-   * @param conf
-   * @param htd
-   * @param startKeys
-   * @return list of region info for regions added to meta
-   * @throws IOException
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #createMultiRegionsInMeta(Configuration, TableDescriptor, byte[][])}
-   */
-  @Deprecated
-  public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
-      final HTableDescriptor htd, byte [][] startKeys) throws IOException {
-    return createMultiRegionsInMeta(conf, (TableDescriptor) htd, startKeys)
-        .stream().map(ImmutableHRegionInfo::new).collect(Collectors.toList());
-  }
   /**
    * Create rows in hbase:meta for regions of the specified table with the specified
    * start keys.  The first startKey should be a 0 length byte array if you
