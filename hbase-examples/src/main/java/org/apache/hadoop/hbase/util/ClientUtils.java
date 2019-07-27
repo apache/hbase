@@ -21,9 +21,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
@@ -43,13 +40,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Common Utility class for clients
  */
 @InterfaceAudience.Private
-public class ClientUtils {
+public final class ClientUtils {
 
   private ClientUtils() {
     // Empty block
   }
-
-  private static final CharsetDecoder DECODER = Charset.forName("UTF-8").newDecoder();
 
   /**
    * To authenticate the demo client, kinit should be invoked ahead. Here we try to get the
@@ -90,7 +85,7 @@ public class ClientUtils {
    *
    * @param rowResult Holds row name and then a map of columns to cells
    */
-  public static void printRow(TRowResult rowResult) {
+  public static void printRow(final TRowResult rowResult) {
 
     TreeMap<String, TCell> sorted = new TreeMap<>();
     for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
@@ -114,10 +109,10 @@ public class ClientUtils {
    * @param buf byte array buffer
    * @return UTF8 decoded string value
    */
-  public static String utf8(byte[] buf) {
+  public static String utf8(final byte[] buf) {
     try {
-      return DECODER.decode(ByteBuffer.wrap(buf)).toString();
-    } catch (CharacterCodingException e) {
+      return Bytes.toString(buf);
+    } catch (IllegalArgumentException e) {
       return "[INVALID UTF-8]";
     }
   }
