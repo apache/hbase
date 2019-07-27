@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
-import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -495,16 +494,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
-  }
-
-  /**
-   * @return META table descriptor
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getMetaTableDescriptorBuilder()}
-   */
-  @Deprecated
-  public HTableDescriptor getMetaTableDescriptor() {
-    return new ImmutableHTableDescriptor(getMetaTableDescriptorBuilder().build());
   }
 
   /**
