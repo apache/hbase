@@ -29,6 +29,7 @@
   import="java.util.Map"
   import="java.util.Objects"
   import="java.util.TreeMap"
+  import=" java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HTableDescriptor"
@@ -38,8 +39,10 @@
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.TableNotFoundException"
-  import="org.apache.hadoop.hbase.client.Admin"
+  import="org.apache.hadoop.hbase.client.AsyncAdmin"
+  import="org.apache.hadoop.hbase.client.AsyncConnection"
   import="org.apache.hadoop.hbase.client.CompactionState"
+  import="org.apache.hadoop.hbase.client.ConnectionFactory"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
   import="org.apache.hadoop.hbase.client.RegionLocator"
@@ -122,6 +125,8 @@
       pageTitle = "Table: " + escaped_fqtn;
   }
   pageContext.setAttribute("pageTitle", pageTitle);
+  AsyncConnection connection = ConnectionFactory.createAsyncConnection(master.getConfiguration()).get();
+  AsyncAdmin admin = connection.getAdminBuilder().setOperationTimeout(5, TimeUnit.SECONDS).build();
 %>
 
 <jsp:include page="header.jsp">
@@ -148,7 +153,6 @@ if (fqtn != null && master.isInitialized()) {
         </div>
 <p><hr><p>
 <%
-  try (Admin admin = master.getConnection().getAdmin()) {
     if (action.equals("split")) {
       if (key != null && key.length() > 0) {
         admin.split(TableName.valueOf(fqtn), Bytes.toBytes(key));
@@ -159,7 +163,7 @@ if (fqtn != null && master.isInitialized()) {
     %> Split request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
-        List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn));
+        List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn)).get();
         byte[] row = Bytes.toBytes(key);
 
         for (RegionInfo region : regions) {
@@ -173,11 +177,10 @@ if (fqtn != null && master.isInitialized()) {
     %> Compact request accepted. <%
     } else if (action.equals("merge")) {
         if (left != null && left.length() > 0 && right != null && right.length() > 0) {
-            admin.mergeRegionsAsync(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
+            admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
         }
         %> Merge request accepted. <%
     }
-  }
 %>
 <jsp:include page="redirect.jsp" />
 </div>
@@ -253,7 +256,6 @@ if (fqtn != null && master.isInitialized()) {
 </tbody>
 </table>
 <%} else {
-  Admin admin = master.getConnection().getAdmin();
   RegionStates states = master.getAssignmentManager().getRegionStates();
   Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
   Map<String, RegionState.State> stateMap = new HashMap<>();
@@ -273,7 +275,7 @@ if (fqtn != null && master.isInitialized()) {
   </tr>
   <tr>
       <td>Enabled</td>
-      <td><%= admin.isTableEnabled(table.getName()) %></td>
+      <td><%= admin.isTableEnabled(table.getName()).get() %></td>
       <td>Is the table enabled</td>
   </tr>
   <tr>
@@ -281,7 +283,7 @@ if (fqtn != null && master.isInitialized()) {
       <td>
 <%
   try {
-    CompactionState compactionState = admin.getCompactionState(table.getName());
+    CompactionState compactionState = admin.getCompactionState(table.getName()).get();
 %>
 <%= compactionState %>
 <%
@@ -522,7 +524,7 @@ if (fqtn != null && master.isInitialized()) {
   if (urlRegionServer != null) {
   %>
   <td>
-     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
+     <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
   </td>
   <%
   } else {
@@ -597,7 +599,7 @@ if (withReplica) {
     %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
   }
 } finally {
-  admin.close();
+  connection.close();
 }
 } // end else
 %>
