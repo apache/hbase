@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.codehaus.jackson.map.SerializationConfig.Feature.SORT_PROPERTIES_ALPHABETICALLY;
-
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -96,7 +96,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.stats.UniformSample;
@@ -128,7 +127,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
-    MAPPER.configure(SORT_PROPERTIES_ALPHABETICALLY, true);
+    MAPPER.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
   }
 
   public static final String TABLE_NAME = "TestTable";

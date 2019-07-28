@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
@@ -27,8 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -221,8 +221,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     if (hosts != null) {
       // Iterate through the list of hosts, stopping once you've reached the requested hostname.
       for (JsonNode host : hosts) {
-        if (host.get("hostname").getTextValue().equals(hostname)) {
-          hostId = host.get("hostId").getTextValue();
+        if (host.get("hostname").textValue().equals(hostname)) {
+          hostId = host.get("hostId").textValue();
           break;
         }
       }
@@ -271,12 +271,12 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     if (roles != null) {
       // Iterate through the list of roles, stopping once the requested one is found.
       for (JsonNode role : roles) {
-        if (role.get("hostRef").get("hostId").getTextValue().equals(hostId) &&
+        if (role.get("hostRef").get("hostId").textValue().equals(hostId) &&
             role.get("type")
-                .getTextValue()
+                .textValue()
                 .toLowerCase()
                 .equals(roleType.toLowerCase())) {
-          roleValue = role.get(property).getTextValue();
+          roleValue = role.get(property).textValue();
           break;
         }
       }
@@ -305,8 +305,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     if (services != null) {
       // Iterate through the list of services, stopping once the requested one is found.
       for (JsonNode serviceEntry : services) {
-        if (serviceEntry.get("type").getTextValue().equals(service.toString())) {
-          serviceName = serviceEntry.get("name").getTextValue();
+        if (serviceEntry.get("type").textValue().equals(service.toString())) {
+          serviceName = serviceEntry.get("name").textValue();
           break;
         }
       }

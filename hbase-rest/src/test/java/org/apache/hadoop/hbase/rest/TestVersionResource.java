@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 

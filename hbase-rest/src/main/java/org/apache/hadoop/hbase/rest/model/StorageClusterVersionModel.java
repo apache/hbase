@@ -19,14 +19,14 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import org.codehaus.jackson.annotate.JsonValue;
-
 import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * Simple representation of the version of the storage cluster

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import org.apache.hadoop.hbase.util.FastLongHistogram;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 /**
  * Snapshot of block cache age in cache.
