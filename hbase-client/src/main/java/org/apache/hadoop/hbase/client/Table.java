@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
@@ -521,7 +520,7 @@ public interface Table extends Closeable {
   @Deprecated
   default <T extends Service, R> Map<byte[], R> coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T, R> callable)
-      throws ServiceException, Throwable {
+      throws Throwable {
     Map<byte[], R> results =
       Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
@@ -568,7 +567,7 @@ public interface Table extends Closeable {
   @Deprecated
   default <T extends Service, R> void coprocessorService(final Class<T> service, byte[] startKey,
       byte[] endKey, final Batch.Call<T, R> callable, final Batch.Callback<R> callback)
-      throws ServiceException, Throwable {
+      throws Throwable {
     throw new NotImplementedException("Add an implementation!");
   }
 
@@ -596,7 +595,7 @@ public interface Table extends Closeable {
   @Deprecated
   default <R extends Message> Map<byte[], R> batchCoprocessorService(
       Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
-      byte[] endKey, R responsePrototype) throws ServiceException, Throwable {
+      byte[] endKey, R responsePrototype) throws Throwable {
     final Map<byte[], R> results =
       Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
@@ -641,7 +640,7 @@ public interface Table extends Closeable {
   default <R extends Message> void batchCoprocessorService(
       Descriptors.MethodDescriptor methodDescriptor, Message request, byte[] startKey,
       byte[] endKey, R responsePrototype, Batch.Callback<R> callback)
-      throws ServiceException, Throwable {
+      throws Throwable {
     throw new NotImplementedException("Add an implementation!");
   }
 

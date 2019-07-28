@@ -1467,7 +1467,7 @@ public interface Admin extends Abortable, Closeable {
    * unknown
    */
   boolean isSnapshotFinished(SnapshotDescription snapshot)
-      throws IOException, HBaseSnapshotException, UnknownSnapshotException;
+      throws IOException, UnknownSnapshotException;
 
   /**
    * Restore the specified snapshot on the original table. (The table must be disabled) If the
@@ -1521,13 +1521,11 @@ public interface Admin extends Abortable, Closeable {
    * Create a new table by cloning the snapshot content.
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
-   * @throws IOException if a remote or network exception occurs
-   * @throws TableExistsException if table to be created already exists
+   * @throws IOException if a remote or network exception occurs or table to be created already exists
    * @throws RestoreSnapshotException if snapshot failed to be cloned
-   * @throws IllegalArgumentException if the specified table has not a valid name
    */
   default void cloneSnapshot(String snapshotName, TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+      throws IOException, RestoreSnapshotException {
     cloneSnapshot(snapshotName, tableName, false);
   }
 
@@ -1536,13 +1534,11 @@ public interface Admin extends Abortable, Closeable {
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to clone acl into newly created table
-   * @throws IOException if a remote or network exception occurs
-   * @throws TableExistsException if table to be created already exists
+   * @throws IOException if a remote or network exception occurs or table to be created already exists
    * @throws RestoreSnapshotException if snapshot failed to be cloned
-   * @throws IllegalArgumentException if the specified table has not a valid name
    */
   default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+      throws IOException, RestoreSnapshotException {
     get(cloneSnapshotAsync(snapshotName, tableName, restoreAcl), getSyncWaitTimeout(),
       TimeUnit.MILLISECONDS);
   }
@@ -1570,13 +1566,11 @@ public interface Admin extends Abortable, Closeable {
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to clone acl into newly created table
-   * @throws IOException if a remote or network exception occurs
-   * @throws TableExistsException if table to be created already exists
+   * @throws IOException if a remote or network exception occurs or table to be created already exists
    * @throws RestoreSnapshotException if snapshot failed to be cloned
-   * @throws IllegalArgumentException if the specified table has not a valid name
    */
   Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException;
+      throws IOException, RestoreSnapshotException;
 
   /**
    * Execute a distributed procedure on a cluster.
