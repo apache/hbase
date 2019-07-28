@@ -1155,14 +1155,14 @@ public class TestFromClientSide {
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = NullPointerException.class)
   public void testNullTableName() throws IOException {
     // Null table name (should NOT work)
     TEST_UTIL.createTable((TableName)null, FAMILY);
     fail("Creating a table with null name passed, should have failed");
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testNullFamilyName() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 

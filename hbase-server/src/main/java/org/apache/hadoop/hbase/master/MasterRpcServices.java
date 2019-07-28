@@ -2383,11 +2383,12 @@ public class MasterRpcServices extends RSRpcServices
       SetTableStateInMetaRequest request) throws ServiceException {
     TableName tn = ProtobufUtil.toTableName(request.getTableName());
     try {
-      HBaseProtos.TableState prevState =
-          this.master.getTableStateManager().getTableState(tn).convert();
-      this.master.getTableStateManager().setTableState(tn,
-          TableState.convert(tn, request.getTableState()).getState());
-      return GetTableStateResponse.newBuilder().setTableState(prevState).build();
+      TableState prevState = this.master.getTableStateManager().getTableState(tn);
+      TableState newState = TableState.convert(tn, request.getTableState());
+      LOG.info("{} set table={} state from {} to {}", master.getClientIdAuditPrefix(),
+          tn, prevState.getState(), newState.getState());
+      this.master.getTableStateManager().setTableState(tn, newState.getState());
+      return GetTableStateResponse.newBuilder().setTableState(prevState.convert()).build();
     } catch (Exception e) {
       throw new ServiceException(e);
     }
@@ -2424,7 +2425,6 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.AssignsResponse assigns(RpcController controller,
       MasterProtos.AssignsRequest request)
     throws ServiceException {
-    LOG.info(master.getClientIdAuditPrefix() + " assigns");
     if (this.master.getMasterProcedureExecutor() == null) {
       throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
     }
@@ -2432,6 +2432,7 @@ public class MasterRpcServices extends RSRpcServices
         MasterProtos.AssignsResponse.newBuilder();
     try {
       boolean override = request.getOverride();
+      LOG.info("{} assigns, override={}", master.getClientIdAuditPrefix(), override);
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
@@ -2456,7 +2457,6 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.UnassignsResponse unassigns(RpcController controller,
       MasterProtos.UnassignsRequest request)
       throws ServiceException {
-    LOG.info(master.getClientIdAuditPrefix() + " unassigns");
     if (this.master.getMasterProcedureExecutor() == null) {
       throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
     }
@@ -2464,6 +2464,7 @@ public class MasterRpcServices extends RSRpcServices
         MasterProtos.UnassignsResponse.newBuilder();
     try {
       boolean override = request.getOverride();
+      LOG.info("{} unassigns, override={}", master.getClientIdAuditPrefix(), override);
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
@@ -2495,6 +2496,9 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.BypassProcedureResponse bypassProcedure(RpcController controller,
       MasterProtos.BypassProcedureRequest request) throws ServiceException {
     try {
+      LOG.info("{} bypass procedures={}, waitTime={}, override={}, recursive={}",
+          master.getClientIdAuditPrefix(), request.getProcIdList(), request.getWaitTime(),
+          request.getOverride(), request.getRecursive());
       List<Boolean> ret =
           master.getMasterProcedureExecutor().bypassProcedure(request.getProcIdList(),
           request.getWaitTime(), request.getOverride(), request.getRecursive());
@@ -2513,6 +2517,8 @@ public class MasterRpcServices extends RSRpcServices
     try {
       for (HBaseProtos.ServerName serverName : serverNames) {
         ServerName server = ProtobufUtil.toServerName(serverName);
+        LOG.info("{} schedule ServerCrashProcedure for {}",
+            master.getClientIdAuditPrefix(), server);
         if (shouldSubmitSCP(server)) {
           master.getServerManager().moveFromOnlineToDeadServers(server);
           ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();

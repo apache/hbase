@@ -152,20 +152,6 @@ public class Append extends Mutation {
    * @param qualifier column qualifier
    * @param value value to append to specified column
    * @return this
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #addColumn(byte[], byte[], byte[])} instead
-   */
-  @Deprecated
-  public Append add(byte [] family, byte [] qualifier, byte [] value) {
-    return this.addColumn(family, qualifier, value);
-  }
-
-  /**
-   * Add the specified column and value to this Append operation.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param value value to append to specified column
-   * @return this
    */
   public Append addColumn(byte[] family, byte[] qualifier, byte[] value) {
     KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);
@@ -207,17 +193,6 @@ public class Append extends Mutation {
   @Override
   public Append setDurability(Durability d) {
     return (Append) super.setDurability(d);
-  }
-
-  /**
-   * Method for setting the Append's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Append#Append(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  @Override
-  public Append setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
-    return (Append) super.setFamilyCellMap(map);
   }
 
   @Override
