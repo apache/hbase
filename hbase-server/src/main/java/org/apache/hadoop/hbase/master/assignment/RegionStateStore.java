@@ -260,7 +260,7 @@ public class RegionStateStore {
   }
 
   public void deleteRegions(final List<RegionInfo> regions) throws IOException {
-    MetaTableAccessor.deleteRegions(master.getConnection(), regions);
+    MetaTableAccessor.deleteRegionInfos(master.getConnection(), regions);
   }
 
   // ==========================================================================
