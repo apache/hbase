@@ -20,20 +20,13 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.security.PrivilegedExceptionAction;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import javax.security.auth.Subject;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.sasl.Sasl;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
@@ -42,6 +35,8 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSaslClientTransport;
@@ -57,7 +52,6 @@ public class DemoClient {
 
   static protected int port;
   static protected String host;
-  CharsetDecoder decoder = null;
 
   private static boolean secure = false;
   private static String serverPrincipal = "hbase";
@@ -98,16 +92,6 @@ public class DemoClient {
   }
 
   DemoClient() {
-    decoder = Charset.forName("UTF-8").newDecoder();
-  }
-
-  // Helper to translate byte[]'s to UTF8 strings
-  private String utf8(byte[] buf) {
-    try {
-      return decoder.decode(ByteBuffer.wrap(buf)).toString();
-    } catch (CharacterCodingException e) {
-      return "[INVALID UTF-8]";
-    }
   }
 
     // Helper to translate strings to UTF8 bytes
@@ -148,15 +132,15 @@ public class DemoClient {
     System.out.println("scanning tables...");
 
     for (ByteBuffer name : client.getTableNames()) {
-      System.out.println("  found: " + utf8(name.array()));
+      System.out.println("  found: " + ClientUtils.utf8(name.array()));
 
-      if (utf8(name.array()).equals(utf8(t))) {
+      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t))) {
         if (client.isTableEnabled(name)) {
-          System.out.println("    disabling table: " + utf8(name.array()));
+          System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
           client.disableTable(name);
         }
 
-        System.out.println("    deleting table: " + utf8(name.array()));
+        System.out.println("    deleting table: " + ClientUtils.utf8(name.array()));
         client.deleteTable(name);
       }
     }
@@ -174,7 +158,7 @@ public class DemoClient {
     col.timeToLive = Integer.MAX_VALUE;
     columns.add(col);
 
-    System.out.println("creating table: " + utf8(t));
+    System.out.println("creating table: " + ClientUtils.utf8(t));
 
     try {
       client.createTable(ByteBuffer.wrap(t), columns);
@@ -182,11 +166,12 @@ public class DemoClient {
       System.out.println("WARN: " + ae.message);
     }
 
-    System.out.println("column families in " + utf8(t) + ": ");
+    System.out.println("column families in " + ClientUtils.utf8(t) + ": ");
     Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(ByteBuffer.wrap(t));
 
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
+      System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
+          + col2.maxVersions);
     }
 
     Map<ByteBuffer, ByteBuffer> dummyAttributes = null;
@@ -360,31 +345,15 @@ public class DemoClient {
     StringBuilder rowStr = new StringBuilder();
 
     for (TCell cell : versions) {
-      rowStr.append(utf8(cell.value.array()));
+      rowStr.append(ClientUtils.utf8(cell.value.array()));
       rowStr.append("; ");
     }
 
-    System.out.println("row: " + utf8(row.array()) + ", values: " + rowStr);
+    System.out.println("row: " + ClientUtils.utf8(row.array()) + ", values: " + rowStr);
   }
 
   private void printRow(TRowResult rowResult) {
-    // copy values into a TreeMap to get them in sorted order
-    TreeMap<String, TCell> sorted = new TreeMap<>();
-
-    for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
-      sorted.put(utf8(column.getKey().array()), column.getValue());
-    }
-
-    StringBuilder rowStr = new StringBuilder();
-
-    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
-      rowStr.append(entry.getKey());
-      rowStr.append(" => ");
-      rowStr.append(utf8(entry.getValue().value.array()));
-      rowStr.append("; ");
-    }
-
-    System.out.println("row: " + utf8(rowResult.row.array()) + ", cols: " + rowStr);
+    ClientUtils.printRow(rowResult);
   }
 
   private void printRow(List<TRowResult> rows) {
@@ -398,37 +367,7 @@ public class DemoClient {
       return new Subject();
     }
 
-    /*
-     * To authenticate the DemoClient, kinit should be invoked ahead.
-     * Here we try to get the Kerberos credential from the ticket cache.
-     */
-    LoginContext context = new LoginContext("", new Subject(), null,
-        new Configuration() {
-          @Override
-          public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<>();
-            options.put("useKeyTab", "false");
-            options.put("storeKey", "false");
-            options.put("doNotPrompt", "true");
-            options.put("useTicketCache", "true");
-            options.put("renewTGT", "true");
-            options.put("refreshKrb5Config", "true");
-            options.put("isInitiator", "true");
-            String ticketCache = System.getenv("KRB5CCNAME");
-
-            if (ticketCache != null) {
-              options.put("ticketCache", ticketCache);
-            }
-
-            options.put("debug", "true");
-
-            return new AppConfigurationEntry[]{
-              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                            options)};
-          }
-        });
-
+    LoginContext context = ClientUtils.getLoginContext();
     context.login();
     return context.getSubject();
   }
