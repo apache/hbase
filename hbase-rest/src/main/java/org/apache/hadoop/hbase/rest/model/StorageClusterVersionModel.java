@@ -19,13 +19,10 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import org.codehaus.jackson.annotate.JsonValue;
-
 import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlValue;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 

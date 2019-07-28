@@ -113,6 +113,26 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.jaxrs</groupId>
+      <artifactId>jackson-jaxrs-json-provider</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
     </dependency>
@@ -123,10 +143,46 @@
     <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-client</artifactId>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>jackson-jaxrs-json-provider</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -153,10 +209,49 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-rest</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-jaxrs</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-xc</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-core-asl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-mapper-asl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>jackson-jaxrs-json-provider</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <scope>test</scope>
     </dependency>
  </dependencies>
  <profiles>
@@ -191,10 +286,46 @@ if we can combine these profiles somehow -->
              <dependency>
                  <groupId>org.apache.hadoop</groupId>
                  <artifactId>hadoop-mapreduce-client-core</artifactId>
+                 <exclusions>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-jaxrs</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-xc</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-core-asl</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-mapper-asl</artifactId>
+                     </exclusion>
+                 </exclusions>
              </dependency>
              <dependency>
                  <groupId>org.apache.hadoop</groupId>
                  <artifactId>hadoop-common</artifactId>
+                 <exclusions>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-jaxrs</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-xc</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-core-asl</artifactId>
+                     </exclusion>
+                     <exclusion>
+                         <groupId>org.codehaus.jackson</groupId>
+                         <artifactId>jackson-mapper-asl</artifactId>
+                     </exclusion>
+                 </exclusions>
              </dependency>
          </dependencies>
          <build>
@@ -241,10 +372,26 @@ if we can combine these profiles somehow -->
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <exclusions>
-            <exclusion>
-              <groupId>org.apache.htrace</groupId>
-              <artifactId>htrace-core</artifactId>
-            </exclusion>
+              <exclusion>
+                <groupId>org.apache.htrace</groupId>
+                <artifactId>htrace-core</artifactId>
+              </exclusion>
+              <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-jaxrs</artifactId>
+              </exclusion>
+              <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-xc</artifactId>
+              </exclusion>
+              <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
           </exclusions>
         </dependency>
         <dependency>

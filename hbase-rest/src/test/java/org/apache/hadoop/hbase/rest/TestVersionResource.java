@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -39,8 +42,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
 
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -48,7 +50,6 @@ import org.apache.hadoop.hbase.rest.model.TestNamespacesInstanceModel;
 import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import static org.junit.Assert.*;
 

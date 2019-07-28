@@ -22,6 +22,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -62,10 +67,6 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -357,7 +358,7 @@ public class TestTableScan {
 
     count = 0;
     JsonFactory jfactory = new JsonFactory(mapper);
-    JsonParser jParser = jfactory.createJsonParser(response.getStream());
+    JsonParser jParser = jfactory.createParser(response.getStream());
     boolean found = false;
     while (jParser.nextToken() != JsonToken.END_OBJECT) {
       if(jParser.getCurrentToken() == JsonToken.START_OBJECT && found) {

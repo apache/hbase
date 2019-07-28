@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NavigableMap;
@@ -30,11 +35,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
 
 /**
  * Utilty for aggregating counts in CachedBlocks and toString/toJSON CachedBlocks and BlockCaches.
@@ -52,9 +52,9 @@ public class BlockCacheUtil {
    */
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
-    MAPPER.configure(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false);
-    MAPPER.configure(SerializationConfig.Feature.FLUSH_AFTER_WRITE_VALUE, true);
-    MAPPER.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+    MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+    MAPPER.configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, true);
+    MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
   }
 
   /**

@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * HLogPrettyPrinter prints the contents of a given HLog with a variety of

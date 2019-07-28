@@ -19,23 +19,21 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.LinkedList;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestPerformanceEvaluation {
+
   @Test
-  public void testSerialization()
-  throws JsonGenerationException, JsonMappingException, IOException {
+  public void testSerialization() throws IOException {
     PerformanceEvaluation.TestOptions options = new PerformanceEvaluation.TestOptions();
     assertTrue(!options.isAutoFlush());
     options.setAutoFlush(true);

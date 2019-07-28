@@ -1278,7 +1278,9 @@
     <httpcore.version>4.4.4</httpcore.version>
     <metrics-core.version>2.2.0</metrics-core.version>
     <guava.version>12.0.1</guava.version>
-    <jackson.version>1.9.13</jackson.version>
+    <jackson1.version>1.9.13</jackson1.version>
+    <jackson2.version>2.9.9</jackson2.version>
+    <jackson2.databind.version>2.9.9.2</jackson2.databind.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.2.2</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>
@@ -1307,7 +1309,7 @@
     <kerby.version>1.0.1</kerby.version>
     <!-- Plugin Dependencies -->
     <error-prone.version>2.1.1</error-prone.version>
-    <maven.assembly.version>2.5</maven.assembly.version>
+    <maven.assembly.version>3.1.1</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <maven.compiler.version>3.6.1</maven.compiler.version>
     <jamon.plugin.version>2.4.1</jamon.plugin.version>
@@ -1776,22 +1778,42 @@
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-core-asl</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson1.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson1.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-jaxrs</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson1.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-xc</artifactId>
-        <version>${jackson.version}</version>
+        <version>${jackson1.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson2.databind.version}</version>
       </dependency>
       <dependency>
         <!--If this is not in the runtime lib, we get odd

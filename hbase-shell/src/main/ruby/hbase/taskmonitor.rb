@@ -82,7 +82,7 @@ module Hbase
     def tasksOnHost(filter,host)
 
       java_import 'java.net.URL'
-      java_import 'org.codehaus.jackson.map.ObjectMapper'
+      java_import 'com.fasterxml.jackson.databind.ObjectMapper'
 
       infoport = @admin.getClusterStatus().getLoad(host).getInfoServerPort().to_s
 

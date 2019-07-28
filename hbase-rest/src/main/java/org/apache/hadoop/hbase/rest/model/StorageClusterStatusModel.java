@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -560,6 +562,8 @@ public class StorageClusterStatusModel
    */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "LiveNodes")
+  // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
+  @JsonProperty("LiveNodes")
   public List<Node> getLiveNodes() {
     return liveNodes;
   }
@@ -569,6 +573,8 @@ public class StorageClusterStatusModel
    */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "DeadNodes")
+  // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
+  @JsonProperty("DeadNodes")
   public List<String> getDeadNodes() {
     return deadNodes;
   }

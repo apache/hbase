@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -44,9 +48,6 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.annotate.JsonAnyGetter;
-import org.codehaus.jackson.annotate.JsonAnySetter;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * A representation of HBase table descriptors.
