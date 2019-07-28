@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.DataCacheEntry;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.IndexCacheEntry;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,7 +74,7 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testBucketCache() throws IOException {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
     CacheConfig cc = new CacheConfig(this.conf);
@@ -94,7 +92,7 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testLruBlockCache() throws JsonGenerationException, JsonMappingException, IOException {
+  public void testLruBlockCache() throws IOException {
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
@@ -123,8 +121,7 @@ public class TestBlockCacheReporting {
     }
   }
 
-  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf) throws IOException {
     for (Map.Entry<String, NavigableSet<CachedBlock>> e:
         cbsbf.getCachedBlockStatsByFile().entrySet()) {
       int count = 0;
@@ -146,8 +143,7 @@ public class TestBlockCacheReporting {
     }
   }
 
-  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc)
-  throws JsonGenerationException, JsonMappingException, IOException {
+  private BlockCacheUtil.CachedBlocksByFile logPerBlock(final BlockCache bc) throws IOException {
     BlockCacheUtil.CachedBlocksByFile cbsbf = new BlockCacheUtil.CachedBlocksByFile();
     for (CachedBlock cb: bc) {
       LOG.info(cb.toString());

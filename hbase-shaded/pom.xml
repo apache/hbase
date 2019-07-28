@@ -190,10 +190,6 @@
 
                                     <!-- top level org -->
                                     <relocation>
-                                        <pattern>org.codehaus</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.codehaus</shadedPattern>
-                                    </relocation>
-                                    <relocation>
                                         <pattern>org.jcodings</pattern>
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.org.jcodings</shadedPattern>
                                     </relocation>

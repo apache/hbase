@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.util.ArrayList;

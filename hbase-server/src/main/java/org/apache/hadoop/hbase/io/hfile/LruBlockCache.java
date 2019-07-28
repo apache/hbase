@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
@@ -46,8 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest.provider;
 
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 import javax.ws.rs.ext.Provider;
 

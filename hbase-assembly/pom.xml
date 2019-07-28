@@ -166,6 +166,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-rest</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-thrift</artifactId>
     </dependency>
     <!-- To dump tools in hbase-procedure into cached_classpath.txt. -->
@@ -218,6 +222,10 @@
        <artifactId>hbase-resource-bundle</artifactId>
        <version>${project.version}</version>
        <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
     </dependency>
   </dependencies>
 </project>

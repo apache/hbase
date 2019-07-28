@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 // imports for things that haven't moved yet.

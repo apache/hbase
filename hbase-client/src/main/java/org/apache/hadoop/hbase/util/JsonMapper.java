@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * Utility class for converting objects to JSON

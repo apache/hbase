@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -36,7 +38,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
-import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * Representation of a cell. A cell is a single value associated a column and
