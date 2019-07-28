@@ -20,17 +20,14 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
@@ -41,6 +38,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
@@ -62,7 +60,6 @@ public class HttpDoAsClient {
 
   static protected int port;
   static protected String host;
-  CharsetDecoder decoder = null;
   private static boolean secure = false;
   static protected String doAsUser = null;
   static protected String principal = null;
@@ -96,16 +93,6 @@ public class HttpDoAsClient {
   }
 
   HttpDoAsClient() {
-    decoder = Charset.forName("UTF-8").newDecoder();
-  }
-
-  // Helper to translate byte[]'s to UTF8 strings
-  private String utf8(byte[] buf) {
-    try {
-      return decoder.decode(ByteBuffer.wrap(buf)).toString();
-    } catch (CharacterCodingException e) {
-      return "[INVALID UTF-8]";
-    }
   }
 
   // Helper to translate strings to UTF8 bytes
@@ -135,13 +122,13 @@ public class HttpDoAsClient {
     //
     System.out.println("scanning tables...");
     for (ByteBuffer name : refresh(client, httpClient).getTableNames()) {
-      System.out.println("  found: " + utf8(name.array()));
-      if (utf8(name.array()).equals(utf8(t))) {
+      System.out.println("  found: " + ClientUtils.utf8(name.array()));
+      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t))) {
         if (refresh(client, httpClient).isTableEnabled(name)) {
-          System.out.println("    disabling table: " + utf8(name.array()));
+          System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
           refresh(client, httpClient).disableTable(name);
         }
-        System.out.println("    deleting table: " + utf8(name.array()));
+        System.out.println("    deleting table: " + ClientUtils.utf8(name.array()));
         refresh(client, httpClient).deleteTable(name);
       }
     }
@@ -163,7 +150,7 @@ public class HttpDoAsClient {
     col.timeToLive = Integer.MAX_VALUE;
     columns.add(col);
 
-    System.out.println("creating table: " + utf8(t));
+    System.out.println("creating table: " + ClientUtils.utf8(t));
     try {
 
       refresh(client, httpClient).createTable(ByteBuffer.wrap(t), columns);
@@ -171,11 +158,12 @@ public class HttpDoAsClient {
       System.out.println("WARN: " + ae.message);
     }
 
-    System.out.println("column families in " + utf8(t) + ": ");
+    System.out.println("column families in " + ClientUtils.utf8(t) + ": ");
     Map<ByteBuffer, ColumnDescriptor> columnMap = refresh(client, httpClient)
         .getColumnDescriptors(ByteBuffer.wrap(t));
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + Integer.toString(col2.maxVersions));
+      System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
+          + col2.maxVersions);
     }
 
     transport.close();
@@ -227,28 +215,14 @@ public class HttpDoAsClient {
   private void printVersions(ByteBuffer row, List<TCell> versions) {
     StringBuilder rowStr = new StringBuilder();
     for (TCell cell : versions) {
-      rowStr.append(utf8(cell.value.array()));
+      rowStr.append(ClientUtils.utf8(cell.value.array()));
       rowStr.append("; ");
     }
-    System.out.println("row: " + utf8(row.array()) + ", values: " + rowStr);
+    System.out.println("row: " + ClientUtils.utf8(row.array()) + ", values: " + rowStr);
   }
 
   private void printRow(TRowResult rowResult) {
-    // copy values into a TreeMap to get them in sorted order
-
-    TreeMap<String, TCell> sorted = new TreeMap<>();
-    for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
-      sorted.put(utf8(column.getKey().array()), column.getValue());
-    }
-
-    StringBuilder rowStr = new StringBuilder();
-    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
-      rowStr.append(entry.getKey());
-      rowStr.append(" => ");
-      rowStr.append(utf8(entry.getValue().value.array()));
-      rowStr.append("; ");
-    }
-    System.out.println("row: " + utf8(rowResult.row.array()) + ", cols: " + rowStr);
+    ClientUtils.printRow(rowResult);
   }
 
   static Subject getSubject() throws Exception {

@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.sasl.Sasl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
@@ -149,35 +149,7 @@ public class DemoClient {
 
   static Subject getSubject() throws Exception {
     if (!secure) return new Subject();
-
-    /*
-     * To authenticate the DemoClient, kinit should be invoked ahead.
-     * Here we try to get the Kerberos credential from the ticket cache.
-     */
-    LoginContext context = new LoginContext("", new Subject(), null,
-      new Configuration() {
-        @Override
-        public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-          Map<String, String> options = new HashMap<>();
-          options.put("useKeyTab", "false");
-          options.put("storeKey", "false");
-          options.put("doNotPrompt", "true");
-          options.put("useTicketCache", "true");
-          options.put("renewTGT", "true");
-          options.put("refreshKrb5Config", "true");
-          options.put("isInitiator", "true");
-          String ticketCache = System.getenv("KRB5CCNAME");
-          if (ticketCache != null) {
-            options.put("ticketCache", ticketCache);
-          }
-          options.put("debug", "true");
-
-          return new AppConfigurationEntry[]{
-              new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                  AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                  options)};
-        }
-      });
+    LoginContext context = ClientUtils.getLoginContext();
     context.login();
     return context.getSubject();
   }
