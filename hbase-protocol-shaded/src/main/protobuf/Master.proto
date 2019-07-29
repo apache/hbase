@@ -358,6 +358,13 @@ message IsNormalizerEnabledResponse {
   required bool enabled = 1;
 }
 
+message RunHbckChoreRequest {
+}
+
+message RunHbckChoreResponse {
+  required bool ran = 1;
+}
+
 message RunCatalogScanRequest {
 }
 
@@ -1138,4 +1145,10 @@ service HbckService {
   /** Schedule a ServerCrashProcedure to help recover a crash server */
   rpc ScheduleServerCrashProcedure(ScheduleServerCrashProcedureRequest)
     returns(ScheduleServerCrashProcedureResponse);
+
+  /**
+   * Request HBCK chore to run at master side.
+   */
+  rpc RunHbckChore(RunHbckChoreRequest)
+    returns(RunHbckChoreResponse);
 }
