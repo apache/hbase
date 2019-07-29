@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
-import java.io.IOException;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HDFS_URI_SCHEME;
+import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_SCHEME;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_SCHEME;
+import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
 
+import java.io.IOException;
+import java.util.Objects;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.security.token.Token;
 
 /**
  * Helper class to obtain a filesystem delegation token.
@@ -54,18 +60,46 @@ public class FsDelegationToken {
   }
 
   /**
-   * Acquire the delegation token for the specified filesytem.
+   * Acquire the delegation token for the specified filesystem.
    * Before requesting a new delegation token, tries to find one already available.
+   * Currently supports checking existing delegation tokens for swebhdfs, webhdfs and hdfs.
    *
    * @param fs the filesystem that requires the delegation token
    * @throws IOException on fs.getDelegationToken() failure
    */
   public void acquireDelegationToken(final FileSystem fs)
       throws IOException {
+    String tokenKind;
+    String scheme = fs.getUri().getScheme();
+    if (SWEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = SWEBHDFS_TOKEN_KIND.toString();
+    } else if (WEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = WEBHDFS_TOKEN_KIND.toString();
+    } else if (HDFS_URI_SCHEME.equalsIgnoreCase(scheme)) {
+      tokenKind = HDFS_DELEGATION_KIND.toString();
+    } else {
+      LOG.warn("Unknown FS URI scheme: " + scheme);
+      // Preserve default behavior
+      tokenKind = HDFS_DELEGATION_KIND.toString();
+    }
+
+    acquireDelegationToken(tokenKind, fs);
+  }
+
+  /**
+   * Acquire the delegation token for the specified filesystem and token kind.
+   * Before requesting a new delegation token, tries to find one already available.
+   *
+   * @param tokenKind non-null token kind to get delegation token from the {@link UserProvider}
+   * @param fs the filesystem that requires the delegation token
+   * @throws IOException on fs.getDelegationToken() failure
+   */
+  public void acquireDelegationToken(final String tokenKind, final FileSystem fs)
+      throws IOException {
+    Objects.requireNonNull(tokenKind, "tokenKind:null");
     if (userProvider.isHadoopSecurityEnabled()) {
       this.fs = fs;
-      userToken = userProvider.getCurrent().getToken("HDFS_DELEGATION_TOKEN",
-                                                      fs.getCanonicalServiceName());
+      userToken = userProvider.getCurrent().getToken(tokenKind, fs.getCanonicalServiceName());
       if (userToken == null) {
         hasForwardedToken = false;
         try {
