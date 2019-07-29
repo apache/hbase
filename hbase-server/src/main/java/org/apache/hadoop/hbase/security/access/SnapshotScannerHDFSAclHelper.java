@@ -23,7 +23,6 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
-import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -58,6 +59,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -128,20 +130,16 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
       pathHelper.getTmpDir(), pathHelper.getArchiveDir());
     paths.addAll(getGlobalRootPaths());
     for (Path path : paths) {
-      if (!fs.exists(path)) {
-        fs.mkdirs(path);
-      }
+      createDirIfNotExist(path);
       fs.setPermission(path, new FsPermission(
           conf.get(COMMON_DIRECTORY_PERMISSION, COMMON_DIRECTORY_PERMISSION_DEFAULT)));
     }
     // create snapshot restore directory
     Path restoreDir =
         new Path(conf.get(SNAPSHOT_RESTORE_TMP_DIR, SNAPSHOT_RESTORE_TMP_DIR_DEFAULT));
-    if (!fs.exists(restoreDir)) {
-      fs.mkdirs(restoreDir);
-      fs.setPermission(restoreDir, new FsPermission(conf.get(SNAPSHOT_RESTORE_DIRECTORY_PERMISSION,
-        SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT)));
-    }
+    createDirIfNotExist(restoreDir);
+    fs.setPermission(restoreDir, new FsPermission(conf.get(SNAPSHOT_RESTORE_DIRECTORY_PERMISSION,
+      SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT)));
   }
 
   /**
@@ -198,11 +196,12 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
       long start = System.currentTimeMillis();
       TableName tableName = snapshot.getTableName();
       // global user permission can be inherited from default acl automatically
-      Set<String> userSet = getUsersWithTableReadAction(tableName);
-      userSet.addAll(getUsersWithNamespaceReadAction(tableName.getNamespaceAsString()));
-      Path path = pathHelper.getSnapshotDir(snapshot.getName());
-      handleHDFSAcl(new HDFSAclOperation(fs, path, userSet, HDFSAclOperation.OperationType.MODIFY,
-          true, HDFSAclOperation.AclType.DEFAULT_ADN_ACCESS)).get();
+      Set<String> userSet = getUsersWithTableReadAction(tableName, true, false);
+      if (userSet.size() > 0) {
+        Path path = pathHelper.getSnapshotDir(snapshot.getName());
+        handleHDFSAcl(new HDFSAclOperation(fs, path, userSet, HDFSAclOperation.OperationType.MODIFY,
+            true, HDFSAclOperation.AclType.DEFAULT_ADN_ACCESS)).get();
+      }
       LOG.info("Set HDFS acl when snapshot {}, cost {} ms", snapshot.getName(),
         System.currentTimeMillis() - start);
       return true;
@@ -213,71 +212,70 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   }
 
   /**
-   * Reset acl when truncate table
-   * @param tableName the specific table
-   * @return false if an error occurred, otherwise true
-   */
-  public boolean resetTableAcl(TableName tableName) {
-    try {
-      long start = System.currentTimeMillis();
-      // global and namespace user permission can be inherited from default acl automatically
-      setTableAcl(tableName, getUsersWithTableReadAction(tableName));
-      LOG.info("Set HDFS acl when truncate {}, cost {} ms", tableName,
-        System.currentTimeMillis() - start);
-      return true;
-    } catch (Exception e) {
-      LOG.error("Set HDFS acl error when truncate {}", tableName, e);
-      return false;
-    }
-  }
-
-  /**
    * Remove table access acl from namespace dir when delete table
    * @param tableName the table
    * @param removeUsers the users whose access acl will be removed
    * @return false if an error occurred, otherwise true
    */
-  public boolean removeNamespaceAcl(TableName tableName, Set<String> removeUsers) {
+  public boolean removeNamespaceAccessAcl(TableName tableName, Set<String> removeUsers,
+      String operation) {
     try {
       long start = System.currentTimeMillis();
-      List<AclEntry> aclEntries = removeUsers.stream()
-          .map(removeUser -> aclEntry(ACCESS, removeUser)).collect(Collectors.toList());
-      String namespace = tableName.getNamespaceAsString();
-      List<Path> nsPaths = Lists.newArrayList(pathHelper.getTmpNsDir(namespace),
-        pathHelper.getDataNsDir(namespace), pathHelper.getMobDataNsDir(namespace));
-      // If table has no snapshots, then remove archive ns HDFS acl, otherwise reserve the archive
-      // ns acl to make the snapshots can be scanned, in the second case, need to remove the archive
-      // ns acl when all snapshots of the deleted table are deleted (will do it in later work).
-      if (getTableSnapshotPaths(tableName).isEmpty()) {
-        nsPaths.add(pathHelper.getArchiveNsDir(namespace));
+      if (removeUsers.size() > 0) {
+        handleNamespaceAccessAcl(tableName.getNamespaceAsString(), removeUsers,
+          HDFSAclOperation.OperationType.REMOVE);
       }
-      for (Path nsPath : nsPaths) {
-        fs.removeAclEntries(nsPath, aclEntries);
-      }
-      LOG.info("Remove HDFS acl when delete table {}, cost {} ms", tableName,
+      LOG.info("Remove HDFS acl when {} table {}, cost {} ms", operation, tableName,
         System.currentTimeMillis() - start);
       return true;
     } catch (Exception e) {
-      LOG.error("Set HDFS acl error when delete table {}", tableName, e);
+      LOG.error("Remove HDFS acl error when {} table {}", operation, tableName, e);
       return false;
     }
   }
 
   /**
-   * Set table owner acl when create table
+   * Add table user acls
    * @param tableName the table
-   * @param user the table owner
+   * @param users the table users with READ permission
    * @return false if an error occurred, otherwise true
    */
-  public boolean addTableAcl(TableName tableName, String user) {
+  public boolean addTableAcl(TableName tableName, Set<String> users, String operation) {
     try {
       long start = System.currentTimeMillis();
-      setTableAcl(tableName, Sets.newHashSet(user));
-      LOG.info("Set HDFS acl when create table {}, cost {} ms", tableName,
+      if (users.size() > 0) {
+        HDFSAclOperation.OperationType operationType = HDFSAclOperation.OperationType.MODIFY;
+        handleNamespaceAccessAcl(tableName.getNamespaceAsString(), users, operationType);
+        handleTableAcl(Sets.newHashSet(tableName), users, new HashSet<>(0), new HashSet<>(0),
+          operationType);
+      }
+      LOG.info("Set HDFS acl when {} table {}, cost {} ms", operation, tableName,
         System.currentTimeMillis() - start);
       return true;
     } catch (Exception e) {
-      LOG.error("Set HDFS acl error when create table {}", tableName, e);
+      LOG.error("Set HDFS acl error when {} table {}", operation, tableName, e);
+      return false;
+    }
+  }
+
+  /**
+   * Remove table acls when modify table
+   * @param tableName the table
+   * @param users the table users with READ permission
+   * @return false if an error occurred, otherwise true
+   */
+  public boolean removeTableAcl(TableName tableName, Set<String> users) {
+    try {
+      long start = System.currentTimeMillis();
+      if (users.size() > 0) {
+        handleTableAcl(Sets.newHashSet(tableName), users, new HashSet<>(0), new HashSet<>(0),
+          HDFSAclOperation.OperationType.REMOVE);
+      }
+      LOG.info("Set HDFS acl when create or modify table {}, cost {} ms", tableName,
+        System.currentTimeMillis() - start);
+      return true;
+    } catch (Exception e) {
+      LOG.error("Set HDFS acl error when create or modify table {}", tableName, e);
       return false;
     }
   }
@@ -327,6 +325,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
       HDFSAclOperation.OperationType operationType)
       throws ExecutionException, InterruptedException, IOException {
     namespaces.removeAll(skipNamespaces);
+    namespaces.remove(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
     // handle namespace root directories HDFS acls
     List<HDFSAclOperation> hdfsAclOperations = new ArrayList<>();
     Set<String> skipTableNamespaces =
@@ -354,7 +353,8 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     Set<TableName> tables = new HashSet<>();
     for (String namespace : namespaces) {
       tables.addAll(admin.listTableDescriptorsByNamespace(Bytes.toBytes(namespace)).stream()
-          .map(TableDescriptor::getTableName).collect(Collectors.toSet()));
+          .filter(this::isTableUserScanSnapshotEnabled).map(TableDescriptor::getTableName)
+          .collect(Collectors.toSet()));
     }
     handleTableAcl(tables, users, skipNamespaces, skipTables, operationType);
   }
@@ -396,12 +396,11 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     future.get();
   }
 
-  private void setTableAcl(TableName tableName, Set<String> users)
-      throws ExecutionException, InterruptedException, IOException {
-    HDFSAclOperation.OperationType operationType = HDFSAclOperation.OperationType.MODIFY;
-    handleNamespaceAccessAcl(tableName.getNamespaceAsString(), users, operationType);
-    handleTableAcl(Sets.newHashSet(tableName), users, new HashSet<>(0), new HashSet<>(0),
-      operationType);
+  void createTableDirectories(TableName tableName) throws IOException {
+    List<Path> paths = getTableRootPaths(tableName, false);
+    for (Path path : paths) {
+      createDirIfNotExist(path);
+    }
   }
 
   /**
@@ -417,13 +416,10 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    * return paths that user will namespace permission will visit
    * @param namespace the namespace
    * @return the path list
-   * @throws IOException if an error occurred
    */
   List<Path> getNamespaceRootPaths(String namespace) {
-    List<Path> paths =
-        Lists.newArrayList(pathHelper.getTmpNsDir(namespace), pathHelper.getDataNsDir(namespace),
-          pathHelper.getMobDataNsDir(namespace), pathHelper.getArchiveNsDir(namespace));
-    return paths;
+    return Lists.newArrayList(pathHelper.getTmpNsDir(namespace), pathHelper.getDataNsDir(namespace),
+      pathHelper.getMobDataNsDir(namespace), pathHelper.getArchiveNsDir(namespace));
   }
 
   /**
@@ -452,27 +448,76 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   }
 
   /**
+   * Return users with global read permission
+   * @return users with global read permission
+   * @throws IOException if an error occurred
+   */
+  private Set<String> getUsersWithGlobalReadAction() throws IOException {
+    return getUsersWithReadAction(PermissionStorage.getGlobalPermissions(conf));
+  }
+
+  /**
    * Return users with namespace read permission
    * @param namespace the namespace
+   * @param includeGlobal true if include users with global read action
    * @return users with namespace read permission
    * @throws IOException if an error occurred
    */
-  private Set<String> getUsersWithNamespaceReadAction(String namespace) throws IOException {
-    return PermissionStorage.getNamespacePermissions(conf, namespace).entries().stream()
-        .filter(entry -> entry.getValue().getPermission().implies(READ))
-        .map(entry -> entry.getKey()).collect(Collectors.toSet());
+  Set<String> getUsersWithNamespaceReadAction(String namespace, boolean includeGlobal)
+      throws IOException {
+    Set<String> users =
+        getUsersWithReadAction(PermissionStorage.getNamespacePermissions(conf, namespace));
+    if (includeGlobal) {
+      users.addAll(getUsersWithGlobalReadAction());
+    }
+    return users;
   }
 
   /**
    * Return users with table read permission
    * @param tableName the table
+   * @param includeNamespace true if include users with namespace read action
+   * @param includeGlobal true if include users with global read action
    * @return users with table read permission
    * @throws IOException if an error occurred
    */
-  private Set<String> getUsersWithTableReadAction(TableName tableName) throws IOException {
-    return PermissionStorage.getTablePermissions(conf, tableName).entries().stream()
-        .filter(entry -> entry.getValue().getPermission().implies(READ))
-        .map(entry -> entry.getKey()).collect(Collectors.toSet());
+  Set<String> getUsersWithTableReadAction(TableName tableName, boolean includeNamespace,
+      boolean includeGlobal) throws IOException {
+    Set<String> users =
+        getUsersWithReadAction(PermissionStorage.getTablePermissions(conf, tableName));
+    if (includeNamespace) {
+      users
+          .addAll(getUsersWithNamespaceReadAction(tableName.getNamespaceAsString(), includeGlobal));
+    }
+    return users;
+  }
+
+  private Set<String>
+      getUsersWithReadAction(ListMultimap<String, UserPermission> permissionMultimap) {
+    return permissionMultimap.entries().stream()
+        .filter(entry -> checkUserPermission(entry.getValue())).map(Map.Entry::getKey)
+        .collect(Collectors.toSet());
+  }
+
+  private boolean checkUserPermission(UserPermission userPermission) {
+    boolean result = containReadAction(userPermission);
+    if (result && userPermission.getPermission() instanceof TablePermission) {
+      result = isNotFamilyOrQualifierPermission((TablePermission) userPermission.getPermission());
+    }
+    return result;
+  }
+
+  boolean containReadAction(UserPermission userPermission) {
+    return userPermission.getPermission().implies(Permission.Action.READ);
+  }
+
+  boolean isNotFamilyOrQualifierPermission(TablePermission tablePermission) {
+    return !tablePermission.hasFamily() && !tablePermission.hasQualifier();
+  }
+
+  boolean isTableUserScanSnapshotEnabled(TableDescriptor tableDescriptor) {
+    return tableDescriptor == null ? false
+        : Boolean.valueOf(tableDescriptor.getValue(USER_SCAN_SNAPSHOT_ENABLE));
   }
 
   PathHelper getPathHelper() {
@@ -517,6 +562,18 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     return new AclEntry.Builder().setScope(scope)
         .setType(AuthUtil.isGroupPrincipal(name) ? GROUP : USER).setName(name)
         .setPermission(READ_EXECUTE).build();
+  }
+
+  void createDirIfNotExist(Path path) throws IOException {
+    if (!fs.exists(path)) {
+      fs.mkdirs(path);
+    }
+  }
+
+  void deleteEmptyDir(Path path) throws IOException {
+    if (fs.exists(path) && fs.listStatus(path).length == 0) {
+      fs.delete(path, false);
+    }
   }
 
   /**
