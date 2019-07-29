@@ -262,36 +262,6 @@ public class Increment extends Mutation {
     return sb.toString();
   }
 
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             No replacement.
-   */
-  @Deprecated
-  @Override
-  public int hashCode() {
-    // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
-    // matches how equals works currently and gets rid of the findbugs warning.
-    return Bytes.hashCode(this.getRow());
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Row#COMPARATOR} instead
-   */
-  @Deprecated
-  @Override
-  public boolean equals(Object obj) {
-    // TODO: This is wrong.  Can't have two the same just because on same row.
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null || getClass() != obj.getClass()) {
-      return false;
-    }
-    Row other = (Row) obj;
-    return compareTo(other) == 0;
-  }
-
   @Override
   protected long extraHeapSize(){
     return HEAP_OVERHEAD;
@@ -310,17 +280,6 @@ public class Increment extends Mutation {
   @Override
   public Increment setDurability(Durability d) {
     return (Increment) super.setDurability(d);
-  }
-
-  /**
-   * Method for setting the Increment's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Increment#Increment(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  @Override
-  public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
-    return (Increment) super.setFamilyCellMap(map);
   }
 
   @Override
