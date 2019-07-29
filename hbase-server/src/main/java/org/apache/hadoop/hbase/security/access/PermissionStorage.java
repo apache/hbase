@@ -508,6 +508,11 @@ public final class PermissionStorage {
       false);
   }
 
+  public static ListMultimap<String, UserPermission> getGlobalPermissions(Configuration conf)
+      throws IOException {
+    return getPermissions(conf, null, null, null, null, null, false);
+  }
+
   /**
    * Reads user permission assignments stored in the <code>l:</code> column family of the first
    * table row in <code>_acl_</code>.
