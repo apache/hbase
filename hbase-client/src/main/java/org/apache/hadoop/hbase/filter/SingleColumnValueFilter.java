@@ -138,15 +138,6 @@ public class SingleColumnValueFilter extends FilterBase {
     this.latestVersionOnly = latestVersionOnly;
   }
 
-  /**
-   * @return operator
-   * @deprecated  since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()} instead.
-   */
-  @Deprecated
-  public CompareOperator getOperator() {
-    return CompareOperator.valueOf(op.name());
-  }
-
   public CompareOperator getCompareOperator() {
     return op;
   }

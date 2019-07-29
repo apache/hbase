@@ -339,7 +339,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           if (qualifier != null) {
             this.qualifier = Bytes.toString(Base64.getEncoder().encode(qualifier));
           }
-          this.op = scvf.getOperator().toString();
+          this.op = scvf.getCompareOperator().toString();
           this.comparator =
             new ByteArrayComparableModel(scvf.getComparator());
           if (scvf.getFilterIfMissing()) {
