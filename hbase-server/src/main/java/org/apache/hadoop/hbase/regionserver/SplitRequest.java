@@ -140,7 +140,7 @@ class SplitRequest implements Runnable {
             + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
       }
       // Always log the split transaction journal
-      LOG.info("Split transaction journal:\n\t" + StringUtils.join("\n\t", st.getJournal()));
+      LOG.info("Split transaction journal:\n" + st.toString());
     }
   }
 
