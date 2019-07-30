@@ -88,7 +88,7 @@ public class TestCatalogJanitorCluster {
     assertTrue(report.isEmpty());
     // Now remove first region in table t2 to see if catalogjanitor scan notices.
     List<RegionInfo> t2Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T2);
-    MetaTableAccessor.deleteRegion(TEST_UTIL.getConnection(), t2Ris.get(0));
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t2Ris.get(0));
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
