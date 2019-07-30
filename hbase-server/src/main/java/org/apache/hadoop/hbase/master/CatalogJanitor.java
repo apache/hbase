@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +29,7 @@ import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -43,8 +43,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -240,7 +243,7 @@ public class CatalogJanitor extends ScheduledChore {
    * @return Returns last published Report that comes of last successful scan
    *   of hbase:meta.
    */
-  Report getLastReport() {
+  public Report getLastReport() {
     return this.lastReport;
   }
 
@@ -444,29 +447,49 @@ public class CatalogJanitor extends ScheduledChore {
   }
 
   /**
-   * Report made by {@link ReportMakingVisitor}.
+   * Report made by ReportMakingVisitor
    */
-  static class Report {
+  public static class Report {
     private final long now = EnvironmentEdgeManager.currentTime();
 
     // Keep Map of found split parents. These are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
     final Map<RegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
     final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
-
-    final List<Pair<MetaRow, MetaRow>> holes = new ArrayList<>();
-    final List<Pair<MetaRow, MetaRow>> overlaps = new ArrayList<>();
-    final Map<ServerName, RegionInfo> unknownServers = new HashMap<ServerName, RegionInfo>();
-    final List<byte []> emptyRegionInfo = new ArrayList<>();
     int count = 0;
+
+    private final List<Pair<MetaRow, MetaRow>> holes = new ArrayList<>();
+    private final List<Pair<MetaRow, MetaRow>> overlaps = new ArrayList<>();
+    private final List<Pair<MetaRow, ServerName>> unknownServers = new ArrayList<>();
+    private final List<byte []> emptyRegionInfo = new ArrayList<>();
 
     @VisibleForTesting
     Report() {}
 
+    public long getCreateTime() {
+      return this.now;
+    }
+
+    public List<Pair<MetaRow, MetaRow>> getHoles() {
+      return this.holes;
+    }
+
+    public List<Pair<MetaRow, MetaRow>> getOverlaps() {
+      return this.overlaps;
+    }
+
+    public List<Pair<MetaRow, ServerName>> getUnknownServers() {
+      return unknownServers;
+    }
+
+    public List<byte[]> getEmptyRegionInfo() {
+      return emptyRegionInfo;
+    }
+
     /**
      * @return True if an 'empty' lastReport -- no problems found.
      */
-    boolean isEmpty() {
+    public boolean isEmpty() {
       return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty() &&
           this.emptyRegionInfo.isEmpty();
     }
@@ -478,28 +501,28 @@ public class CatalogJanitor extends ScheduledChore {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("hole=" + Bytes.toString(p.getFirst().metaRow) + "/" +
-            Bytes.toString(p.getSecond().metaRow));
+        sb.append("hole=" + Bytes.toStringBinary(p.getFirst().metaRow) + "/" +
+            Bytes.toStringBinary(p.getSecond().metaRow));
       }
       for (Pair<MetaRow, MetaRow> p: this.overlaps) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("overlap=").append(Bytes.toString(p.getFirst().metaRow)).append("/").
-            append(Bytes.toString(p.getSecond().metaRow));
+        sb.append("overlap=").append(Bytes.toStringBinary(p.getFirst().metaRow)).append("/").
+            append(Bytes.toStringBinary(p.getSecond().metaRow));
       }
       for (byte [] r: this.emptyRegionInfo) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("empty=").append(Bytes.toString(r));
+        sb.append("empty=").append(Bytes.toStringBinary(r));
       }
-      for (Map.Entry<ServerName, RegionInfo> e: this.unknownServers.entrySet()) {
+      for (Pair<MetaRow, ServerName> p: this.unknownServers) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("unknown_server=").append(e.getKey()).append("/").
-            append(e.getValue().getRegionNameAsString());
+        sb.append("unknown_server=").append(p.getSecond()).append("/").
+            append(Bytes.toStringBinary(p.getFirst().metaRow));
       }
       return sb.toString();
     }
@@ -508,7 +531,7 @@ public class CatalogJanitor extends ScheduledChore {
   /**
    * Simple datastructure to hold a MetaRow content.
    */
-  static class MetaRow {
+  public static class MetaRow {
     /**
      * A marker for use in case where there is a hole at the very
      * first row in hbase:meta. Should never happen.
@@ -519,16 +542,24 @@ public class CatalogJanitor extends ScheduledChore {
     /**
      * Row from hbase:meta table.
      */
-    final byte [] metaRow;
+    private final byte [] metaRow;
 
     /**
      * The decoded RegionInfo gotten from hbase:meta.
      */
-    final RegionInfo regionInfo;
+    private final RegionInfo regionInfo;
 
     MetaRow(byte [] metaRow, RegionInfo regionInfo) {
       this.metaRow = metaRow;
       this.regionInfo = regionInfo;
+    }
+
+    public RegionInfo getRegionInfo() {
+      return regionInfo;
+    }
+
+    public byte[] getMetaRow() {
+      return metaRow;
     }
   }
 
@@ -608,13 +639,14 @@ public class CatalogJanitor extends ScheduledChore {
             MetaTableAccessor.getRegionInfoColumn());
       } else {
         ri = locations.getDefaultRegionLocation().getRegion();
-        checkServer(locations);
+        checkServer(metaTableRow.getRow(), locations);
       }
 
       if (ri == null) {
         this.report.emptyRegionInfo.add(metaTableRow.getRow());
         return ri;
       }
+
       MetaRow mrri = new MetaRow(metaTableRow.getRow(), ri);
       // If table is disabled, skip integrity check.
       if (!isTableDisabled(ri)) {
@@ -673,7 +705,7 @@ public class CatalogJanitor extends ScheduledChore {
     /**
      * Run through referenced servers and save off unknown and the dead.
      */
-    private void checkServer(RegionLocations locations) {
+    private void checkServer(byte [] metaTableRow, RegionLocations locations) {
       if (this.services == null) {
         // Can't do this test if no services.
         return;
@@ -691,7 +723,8 @@ public class CatalogJanitor extends ScheduledChore {
             isServerKnownAndOnline(sn);
         switch (state) {
           case UNKNOWN:
-            this.report.unknownServers.put(sn, location.getRegion());
+            this.report.unknownServers.add(
+                new Pair(new MetaRow(metaTableRow, location.getRegion()), sn));
             break;
 
           default:
@@ -736,20 +769,22 @@ public class CatalogJanitor extends ScheduledChore {
   public static void main(String [] args) throws IOException {
     checkLog4jProperties();
     ReportMakingVisitor visitor = new ReportMakingVisitor(null);
-    try (Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create())) {
+    Configuration configuration = HBaseConfiguration.create();
+    configuration.setBoolean("hbase.defaults.for.version.skip", true);
+    try (Connection connection = ConnectionFactory.createConnection(configuration)) {
       /* Used to generate an overlap.
-      Get g = new Get(Bytes.toBytes("t2,40,1563939166317.5a8be963741d27e9649e5c67a34259d9."));
+      */
+      Get g = new Get(Bytes.toBytes("t2,40,1564119846424.1db8c57d64e0733e0f027aaeae7a0bf0."));
       g.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
       try (Table t = connection.getTable(TableName.META_TABLE_NAME)) {
         Result r = t.get(g);
         byte [] row = g.getRow();
-        row[row.length - 3] <<= ((byte)row[row.length -3]);
+        row[row.length - 2] <<= ((byte)row[row.length - 2]);
         Put p = new Put(g.getRow());
         p.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
             r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
         t.put(p);
       }
-      */
       MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null);
       Report report = visitor.getReport();
       LOG.info(report != null? report.toString(): "empty");
