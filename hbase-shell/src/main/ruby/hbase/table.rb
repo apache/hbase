@@ -741,7 +741,7 @@ EOF
         if column == 'info:regioninfo' || column == 'info:splitA' || column == 'info:splitB'
           hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
                                                                     kv.getValueOffset, kv.getValueLength)
-          return format('timestamp=%d, value=%s', kv.getTimestamp, hri.toString)
+          return format('timestamp=%d, value=%s', kv.getTimestamp, hri.nil? ? '' : hri.toString)
         end
         if column == 'info:serverstartcode'
           if kv.getValueLength > 0

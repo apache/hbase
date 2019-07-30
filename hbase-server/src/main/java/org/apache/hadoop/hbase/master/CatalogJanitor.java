@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,26 +18,34 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.GCMergedRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
@@ -45,51 +53,59 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Triple;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
- * table on a period looking for unused regions to garbage collect.
+ * A janitor for the catalog tables. Scans the <code>hbase:meta</code> catalog
+ * table on a period. Makes a lastReport on state of hbase:meta. Looks for unused
+ * regions to garbage collect. Scan of hbase:meta runs if we are NOT in maintenance
+ * mode, if we are NOT shutting down, AND if the assignmentmanager is loaded.
+ * Playing it safe, we will garbage collect no-longer needed region references
+ * only if there are no regions-in-transition (RIT).
  */
-@InterfaceAudience.Private
+// TODO: Only works with single hbase:meta region currently.  Fix.
+// TODO: Should it start over every time? Could it continue if runs into problem? Only if
+// problem does not mess up 'results'.
+@org.apache.yetus.audience.InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
-
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   private final MasterServices services;
-  private final Connection connection;
-  // PID of the last Procedure launched herein. Keep around for Tests.
+
+  /**
+   * Saved report from last hbase:meta scan to completion. May be stale if having trouble
+   * completing scan. Check its date.
+   */
+  private volatile Report lastReport;
 
   CatalogJanitor(final MasterServices services) {
     super("CatalogJanitor-" + services.getServerName().toShortString(), services,
       services.getConfiguration().getInt("hbase.catalogjanitor.interval", 300000));
     this.services = services;
-    this.connection = services.getConnection();
   }
 
   @Override
   protected boolean initialChore() {
     try {
-      if (this.enabled.get()) scan();
+      if (getEnabled()) {
+        scan();
+      }
     } catch (IOException e) {
-      LOG.warn("Failed initial scan of catalog table", e);
+      LOG.warn("Failed initial janitorial scan of hbase:meta table", e);
       return false;
     }
     return true;
   }
 
-  /**
-   * @param enabled
-   */
-  public boolean setEnabled(final boolean enabled) {
+  boolean setEnabled(final boolean enabled) {
     boolean alreadyEnabled = this.enabled.getAndSet(enabled);
     // If disabling is requested on an already enabled chore, we could have an active
     // scan still going on, callers might not be aware of that and do further action thinkng
@@ -111,98 +127,134 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (this.enabled.get() && !this.services.isInMaintenanceMode() &&
-        !this.services.getServerManager().isClusterShutdown() && am != null &&
-        am.isMetaLoaded() && !am.hasRegionsInTransition()) {
+      if (getEnabled() && !this.services.isInMaintenanceMode() &&
+          !this.services.getServerManager().isClusterShutdown() &&
+          isMetaLoaded(am)) {
         scan();
       } else {
-        LOG.warn("CatalogJanitor is disabled! Enabled=" + this.enabled.get() +
+        LOG.warn("CatalogJanitor is disabled! Enabled=" + getEnabled() + 
           ", maintenanceMode=" + this.services.isInMaintenanceMode() + ", am=" + am +
-          ", metaLoaded=" + (am != null && am.isMetaLoaded()) + ", hasRIT=" +
-          (am != null && am.hasRegionsInTransition()) + " clusterShutDown=" + this.services
-          .getServerManager().isClusterShutdown());
+          ", metaLoaded=" + isMetaLoaded(am) + ", hasRIT=" + isRIT(am) +
+          " clusterShutDown=" + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
-      LOG.warn("Failed scan of catalog table", e);
+      LOG.warn("Failed janitorial scan of hbase:meta table", e);
+    }
+  }
+
+  private static boolean isMetaLoaded(AssignmentManager am) {
+    return am != null && am.isMetaLoaded();
+  }
+
+  private static boolean isRIT(AssignmentManager am) {
+    return isMetaLoaded(am) && am.hasRegionsInTransition();
+  }
+
+  /**
+   * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
+   * garbage to collect.
+   * @return How many items gc'd whether for merge or split.
+   */
+  int scan() throws IOException {
+    int gcs = 0;
+    try {
+      if (!alreadyRunning.compareAndSet(false, true)) {
+        LOG.debug("CatalogJanitor already running");
+        return gcs;
+      }
+      Report report = scanForReport();
+      this.lastReport = report;
+      if (!report.isEmpty()) {
+        LOG.warn(report.toString());
+      }
+
+      if (isRIT(this.services.getAssignmentManager())) {
+        LOG.warn("Playing-it-safe skipping merge/split gc'ing of regions from hbase:meta while " +
+            "regions-in-transition (RIT)");
+      }
+      Map<RegionInfo, Result> mergedRegions = report.mergedRegions;
+      for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
+        if (this.services.isInMaintenanceMode()) {
+          // Stop cleaning if the master is in maintenance mode
+          break;
+        }
+
+        PairOfSameType<RegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
+        RegionInfo regionA = p.getFirst();
+        RegionInfo regionB = p.getSecond();
+        if (regionA == null || regionB == null) {
+          LOG.warn("Unexpected references regionA="
+              + (regionA == null ? "null" : regionA.getShortNameToLog())
+              + ",regionB="
+              + (regionB == null ? "null" : regionB.getShortNameToLog())
+              + " in merged region " + e.getKey().getShortNameToLog());
+        } else {
+          if (cleanMergeRegion(e.getKey(), regionA, regionB)) {
+            gcs++;
+          }
+        }
+      }
+      // Clean split parents
+      Map<RegionInfo, Result> splitParents = report.splitParents;
+
+      // Now work on our list of found parents. See if any we can clean up.
+      // regions whose parents are still around
+      HashSet<String> parentNotCleaned = new HashSet<>();
+      for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
+        if (this.services.isInMaintenanceMode()) {
+          // Stop cleaning if the master is in maintenance mode
+          break;
+        }
+
+        if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
+            cleanParent(e.getKey(), e.getValue())) {
+          gcs++;
+        } else {
+          // We could not clean the parent, so it's daughters should not be
+          // cleaned either (HBASE-6160)
+          PairOfSameType<RegionInfo> daughters =
+              MetaTableAccessor.getDaughterRegions(e.getValue());
+          parentNotCleaned.add(daughters.getFirst().getEncodedName());
+          parentNotCleaned.add(daughters.getSecond().getEncodedName());
+        }
+      }
+      return gcs;
+    } finally {
+      alreadyRunning.set(false);
     }
   }
 
   /**
-   * Scans hbase:meta and returns a number of scanned rows, and a map of merged
-   * regions, and an ordered map of split parents.
-   * @return triple of scanned rows, map of merged regions and map of split
-   *         parent regioninfos
-   * @throws IOException
+   * Scan hbase:meta.
+   * @return Return generated {@link Report}
    */
-  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
-    getMergedRegionsAndSplitParents() throws IOException {
-    return getMergedRegionsAndSplitParents(null);
+  Report scanForReport() throws IOException {
+    ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
+    // Null tablename means scan all of meta.
+    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
+    return visitor.getReport();
   }
 
   /**
-   * Scans hbase:meta and returns a number of scanned rows, and a map of merged
-   * regions, and an ordered map of split parents. if the given table name is
-   * null, return merged regions and split parents of all tables, else only the
-   * specified table
-   * @param tableName null represents all tables
-   * @return triple of scanned rows, and map of merged regions, and map of split
-   *         parent regioninfos
-   * @throws IOException
+   * @return Returns last published Report that comes of last successful scan
+   *   of hbase:meta.
    */
-  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
-    getMergedRegionsAndSplitParents(final TableName tableName) throws IOException {
-    final boolean isTableSpecified = (tableName != null);
-    // TODO: Only works with single hbase:meta region currently.  Fix.
-    final AtomicInteger count = new AtomicInteger(0);
-    // Keep Map of found split parents.  There are candidates for cleanup.
-    // Use a comparator that has split parents come before its daughters.
-    final Map<RegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
-    final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
-    // This visitor collects split parents and counts rows in the hbase:meta table
-
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r == null || r.isEmpty()) return true;
-        count.incrementAndGet();
-        RegionInfo info = MetaTableAccessor.getRegionInfo(r);
-        if (info == null) return true; // Keep scanning
-        if (isTableSpecified
-            && info.getTable().compareTo(tableName) > 0) {
-          // Another table, stop scanning
-          return false;
-        }
-        if (LOG.isTraceEnabled()) LOG.trace("" + info + " IS-SPLIT_PARENT=" + info.isSplitParent());
-        if (info.isSplitParent()) splitParents.put(info, r);
-        if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
-          mergedRegions.put(info, r);
-        }
-        // Returning true means "keep scanning"
-        return true;
-      }
-    };
-
-    // Run full scan of hbase:meta catalog table passing in our custom visitor with
-    // the start row
-    MetaTableAccessor.scanMetaForTableRegions(this.connection, visitor, tableName);
-
-    return new Triple<>(count.get(), mergedRegions, splitParents);
+  Report getLastReport() {
+    return this.lastReport;
   }
 
   /**
    * If merged region no longer holds reference to the merge regions, archive
    * merge region on hdfs and perform deleting references in hbase:meta
-   * @param mergedRegion
    * @return true if we delete references in merged region on hbase:meta and archive
    *         the files on the file system
-   * @throws IOException
    */
-  boolean cleanMergeRegion(final RegionInfo mergedRegion,
-      final RegionInfo regionA, final RegionInfo regionB) throws IOException {
+  private boolean cleanMergeRegion(final RegionInfo mergedRegion,
+     final RegionInfo regionA, final RegionInfo regionB) throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
-    TableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
+    TableDescriptor htd = getDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
@@ -228,81 +280,7 @@ public class CatalogJanitor extends ScheduledChore {
   }
 
   /**
-   * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
-   * garbage to collect.
-   * @return number of archiving jobs started.
-   * @throws IOException
-   */
-  int scan() throws IOException {
-    int result = 0;
-
-    try {
-      if (!alreadyRunning.compareAndSet(false, true)) {
-        LOG.debug("CatalogJanitor already running");
-        return result;
-      }
-      Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>> scanTriple =
-        getMergedRegionsAndSplitParents();
-      /**
-       * clean merge regions first
-       */
-      Map<RegionInfo, Result> mergedRegions = scanTriple.getSecond();
-      for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
-        if (this.services.isInMaintenanceMode()) {
-          // Stop cleaning if the master is in maintenance mode
-          break;
-        }
-
-        PairOfSameType<RegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
-        RegionInfo regionA = p.getFirst();
-        RegionInfo regionB = p.getSecond();
-        if (regionA == null || regionB == null) {
-          LOG.warn("Unexpected references regionA="
-              + (regionA == null ? "null" : regionA.getShortNameToLog())
-              + ",regionB="
-              + (regionB == null ? "null" : regionB.getShortNameToLog())
-              + " in merged region " + e.getKey().getShortNameToLog());
-        } else {
-          if (cleanMergeRegion(e.getKey(), regionA, regionB)) {
-            result++;
-          }
-        }
-      }
-      /**
-       * clean split parents
-       */
-      Map<RegionInfo, Result> splitParents = scanTriple.getThird();
-
-      // Now work on our list of found parents. See if any we can clean up.
-      // regions whose parents are still around
-      HashSet<String> parentNotCleaned = new HashSet<>();
-      for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
-        if (this.services.isInMaintenanceMode()) {
-          // Stop cleaning if the master is in maintenance mode
-          break;
-        }
-
-        if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-            cleanParent(e.getKey(), e.getValue())) {
-          result++;
-        } else {
-          // We could not clean the parent, so it's daughters should not be
-          // cleaned either (HBASE-6160)
-          PairOfSameType<RegionInfo> daughters =
-              MetaTableAccessor.getDaughterRegions(e.getValue());
-          parentNotCleaned.add(daughters.getFirst().getEncodedName());
-          parentNotCleaned.add(daughters.getSecond().getEncodedName());
-        }
-      }
-      return result;
-    } finally {
-      alreadyRunning.set(false);
-    }
-  }
-
-  /**
-   * Compare HRegionInfos in a way that has split parents sort BEFORE their
-   * daughters.
+   * Compare HRegionInfos in a way that has split parents sort BEFORE their daughters.
    */
   static class SplitParentFirstComparator implements Comparator<RegionInfo> {
     Comparator<byte[]> rowEndKeyComparator = new Bytes.RowEndKeyComparator();
@@ -310,14 +288,22 @@ public class CatalogJanitor extends ScheduledChore {
     public int compare(RegionInfo left, RegionInfo right) {
       // This comparator differs from the one RegionInfo in that it sorts
       // parent before daughters.
-      if (left == null) return -1;
-      if (right == null) return 1;
+      if (left == null) {
+        return -1;
+      }
+      if (right == null) {
+        return 1;
+      }
       // Same table name.
       int result = left.getTable().compareTo(right.getTable());
-      if (result != 0) return result;
+      if (result != 0) {
+        return result;
+      }
       // Compare start keys.
       result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
-      if (result != 0) return result;
+      if (result != 0) {
+        return result;
+      }
       // Compare end keys, but flip the operands so parent comes first
       result = rowEndKeyComparator.compare(right.getEndKey(), left.getEndKey());
 
@@ -332,7 +318,6 @@ public class CatalogJanitor extends ScheduledChore {
    * <code>metaRegionName</code>
    * @return True if we removed <code>parent</code> from meta table and from
    * the filesystem.
-   * @throws IOException
    */
   boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
@@ -381,11 +366,11 @@ public class CatalogJanitor extends ScheduledChore {
    * @param parent Parent region
    * @param daughter Daughter region
    * @return A pair where the first boolean says whether or not the daughter
-   * region directory exists in the filesystem and then the second boolean says
-   * whether the daughter has references to the parent.
-   * @throws IOException
+   *   region directory exists in the filesystem and then the second boolean says
+   *   whether the daughter has references to the parent.
    */
-  Pair<Boolean, Boolean> checkDaughterInFs(final RegionInfo parent, final RegionInfo daughter)
+  private Pair<Boolean, Boolean> checkDaughterInFs(final RegionInfo parent,
+    final RegionInfo daughter)
   throws IOException {
     if (daughter == null)  {
       return new Pair<>(Boolean.FALSE, Boolean.FALSE);
@@ -397,7 +382,7 @@ public class CatalogJanitor extends ScheduledChore {
 
     Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
 
-    HRegionFileSystem regionFs = null;
+    HRegionFileSystem regionFs;
 
     try {
       if (!FSUtils.isExists(fs, daughterRegionDir)) {
@@ -410,7 +395,7 @@ public class CatalogJanitor extends ScheduledChore {
     }
 
     boolean references = false;
-    TableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
+    TableDescriptor parentDescriptor = getDescriptor(parent.getTable());
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
@@ -425,23 +410,19 @@ public class CatalogJanitor extends ScheduledChore {
           + ", to: " + parent.getEncodedName() + " assuming has references", e);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
-    return new Pair<>(Boolean.TRUE, Boolean.valueOf(references));
+    return new Pair<>(Boolean.TRUE, references);
   }
 
-  private TableDescriptor getTableDescriptor(final TableName tableName)
-      throws FileNotFoundException, IOException {
+  private TableDescriptor getDescriptor(final TableName tableName) throws IOException {
     return this.services.getTableDescriptors().get(tableName);
   }
 
   /**
    * Checks if the specified region has merge qualifiers, if so, try to clean
    * them
-   * @param region
    * @return true if the specified region doesn't have merge qualifier now
-   * @throws IOException
    */
-  public boolean cleanMergeQualifier(final RegionInfo region)
-      throws IOException {
+  public boolean cleanMergeQualifier(final RegionInfo region) throws IOException {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<RegionInfo, RegionInfo> mergeRegions = MetaTableAccessor
@@ -458,7 +439,284 @@ public class CatalogJanitor extends ScheduledChore {
           + " has only one merge qualifier in META.");
       return false;
     }
-    return cleanMergeRegion(region, mergeRegions.getFirst(),
-        mergeRegions.getSecond());
+    return cleanMergeRegion(region, mergeRegions.getFirst(), mergeRegions.getSecond());
+  }
+
+  /**
+   * Report made by {@link ReportMakingVisitor}.
+   */
+  static class Report {
+    private final long now = EnvironmentEdgeManager.currentTime();
+
+    // Keep Map of found split parents. These are candidates for cleanup.
+    // Use a comparator that has split parents come before its daughters.
+    final Map<RegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
+    final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
+
+    final List<Pair<MetaRow, MetaRow>> holes = new ArrayList<>();
+    final List<Pair<MetaRow, MetaRow>> overlaps = new ArrayList<>();
+    final Map<ServerName, RegionInfo> unknownServers = new HashMap<ServerName, RegionInfo>();
+    final List<byte []> emptyRegionInfo = new ArrayList<>();
+    int count = 0;
+
+    @VisibleForTesting
+    Report() {}
+
+    /**
+     * @return True if an 'empty' lastReport -- no problems found.
+     */
+    boolean isEmpty() {
+      return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty() &&
+          this.emptyRegionInfo.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+      for (Pair<MetaRow, MetaRow> p: this.holes) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append("hole=" + Bytes.toString(p.getFirst().metaRow) + "/" +
+            Bytes.toString(p.getSecond().metaRow));
+      }
+      for (Pair<MetaRow, MetaRow> p: this.overlaps) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append("overlap=").append(Bytes.toString(p.getFirst().metaRow)).append("/").
+            append(Bytes.toString(p.getSecond().metaRow));
+      }
+      for (byte [] r: this.emptyRegionInfo) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append("empty=").append(Bytes.toString(r));
+      }
+      for (Map.Entry<ServerName, RegionInfo> e: this.unknownServers.entrySet()) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append("unknown_server=").append(e.getKey()).append("/").
+            append(e.getValue().getRegionNameAsString());
+      }
+      return sb.toString();
+    }
+  }
+
+  /**
+   * Simple datastructure to hold a MetaRow content.
+   */
+  static class MetaRow {
+    /**
+     * A marker for use in case where there is a hole at the very
+     * first row in hbase:meta. Should never happen.
+     */
+    private static final MetaRow UNDEFINED =
+        new MetaRow(HConstants.EMPTY_START_ROW, RegionInfo.UNDEFINED);
+
+    /**
+     * Row from hbase:meta table.
+     */
+    final byte [] metaRow;
+
+    /**
+     * The decoded RegionInfo gotten from hbase:meta.
+     */
+    final RegionInfo regionInfo;
+
+    MetaRow(byte [] metaRow, RegionInfo regionInfo) {
+      this.metaRow = metaRow;
+      this.regionInfo = regionInfo;
+    }
+  }
+
+  /**
+   * Visitor we use in here in CatalogJanitor to go against hbase:meta table.
+   * Generates a Report made of a collection of split parents and counts of rows
+   * in the hbase:meta table. Also runs hbase:meta consistency checks to
+   * generate more report. Report is NOT ready until after this visitor has been
+   * {@link #close()}'d.
+   */
+  static class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
+    private final MasterServices services;
+    private volatile boolean closed;
+
+    /**
+     * Report is not done until after the close has been called.
+     * @see #close()
+     * @see #getReport()
+     */
+    private Report report = new Report();
+
+    /**
+     * RegionInfo from previous row.
+     */
+    private MetaRow previous = null;
+
+    ReportMakingVisitor(MasterServices services) {
+      this.services = services;
+    }
+
+    /**
+     * Do not call until after {@link #close()}.
+     * Will throw a {@link RuntimeException} if you do.
+     */
+    Report getReport() {
+      if (!this.closed) {
+        throw new RuntimeException("Report not ready until after close()");
+      }
+      return this.report;
+    }
+
+    @Override
+    public boolean visit(Result r) {
+      if (r == null || r.isEmpty()) {
+        return true;
+      }
+      this.report.count++;
+      RegionInfo regionInfo = metaTableConsistencyCheck(r);
+      if (regionInfo != null) {
+        LOG.trace(regionInfo.toString());
+        if (regionInfo.isSplitParent()) { // splitParent means split and offline.
+          this.report.splitParents.put(regionInfo, r);
+        }
+        if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
+          this.report.mergedRegions.put(regionInfo, r);
+        }
+      }
+      // Returning true means "keep scanning"
+      return true;
+    }
+
+    /**
+     * Check row.
+     * @param metaTableRow Row from hbase:meta table.
+     * @return Returns default regioninfo found in row parse as a convenience to save
+     *   on having to do a double-parse of Result.
+     */
+    private RegionInfo metaTableConsistencyCheck(Result metaTableRow) {
+      // Locations comes back null if the RegionInfo field is empty.
+      // If locations is null, ensure the regioninfo is for sure empty before progressing.
+      // If really empty, report as missing regioninfo!  Otherwise, can run server check
+      // and get RegionInfo from locations.
+      RegionLocations locations = MetaTableAccessor.getRegionLocations(metaTableRow);
+      RegionInfo ri = (locations == null)?
+          MetaTableAccessor.getRegionInfo(metaTableRow, MetaTableAccessor.getRegionInfoColumn()):
+          locations.getDefaultRegionLocation().getRegion();
+
+      if (ri == null) {
+        this.report.emptyRegionInfo.add(metaTableRow.getRow());
+        return ri;
+      }
+      MetaRow mrri = new MetaRow(metaTableRow.getRow(), ri);
+      // If table is disabled, skip integrity check.
+      if (!isTableDisabled(ri)) {
+        if (isTableTransition(ri)) {
+          // On table transition, look to see if last region was last in table
+          // and if this is the first. Report 'hole' if neither is true.
+          // HBCK1 used to have a special category for missing start or end keys.
+          // We'll just lump them in as 'holes'.
+          if ((this.previous != null && !this.previous.regionInfo.isLast()) || !ri.isFirst()) {
+            addHole(this.previous == null? MetaRow.UNDEFINED: this.previous, mrri);
+          }
+        } else {
+          if (!this.previous.regionInfo.isNext(ri)) {
+            if (this.previous.regionInfo.isOverlap(ri)) {
+              addOverlap(this.previous, mrri);
+            } else {
+              addHole(this.previous, mrri);
+            }
+          }
+        }
+      }
+      this.previous = mrri;
+      return ri;
+    }
+
+    private void addOverlap(MetaRow a, MetaRow b) {
+      this.report.overlaps.add(new Pair<>(a, b));
+    }
+
+    private void addHole(MetaRow a, MetaRow b) {
+      this.report.holes.add(new Pair<>(a, b));
+    }
+
+    /**
+     * @return True if table is disabled or disabling; defaults false!
+     */
+    boolean isTableDisabled(RegionInfo ri) {
+      if (ri == null) {
+        return false;
+      }
+      if (this.services == null) {
+        return false;
+      }
+      if (this.services.getTableStateManager() == null) {
+        return false;
+      }
+      TableState state = null;
+      try {
+        state = this.services.getTableStateManager().getTableState(ri.getTable());
+      } catch (IOException e) {
+        LOG.warn("Failed getting table state", e);
+      }
+      return state != null && state.isDisabledOrDisabling();
+    }
+
+    /**
+     * @return True iff first row in hbase:meta or if we've broached a new table in hbase:meta
+     */
+    private boolean isTableTransition(RegionInfo ri) {
+      return this.previous == null ||
+          !this.previous.regionInfo.getTable().equals(ri.getTable());
+    }
+
+    @Override
+    public void close() throws IOException {
+      this.closed = true;
+    }
+  }
+
+  private static void checkLog4jProperties() {
+    String filename = "log4j.properties";
+    try {
+      final InputStream inStream =
+          CatalogJanitor.class.getClassLoader().getResourceAsStream(filename);
+      if (inStream != null) {
+        new Properties().load(inStream);
+      } else {
+        System.out.println("No " + filename + " on classpath; Add one else no logging output!");
+      }
+    } catch (IOException e) {
+      LOG.error("Log4j check failed", e);
+    }
+  }
+
+  /**
+   * For testing against a cluster.
+   * Doesn't have a MasterServices context so does not report on good vs bad servers.
+   */
+  public static void main(String [] args) throws IOException {
+    checkLog4jProperties();
+    ReportMakingVisitor visitor = new ReportMakingVisitor(null);
+    try (Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create())) {
+      /* Used to generate an overlap.
+      Get g = new Get(Bytes.toBytes("t2,40,1563939166317.5a8be963741d27e9649e5c67a34259d9."));
+      g.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      try (Table t = connection.getTable(TableName.META_TABLE_NAME)) {
+        Result r = t.get(g);
+        byte [] row = g.getRow();
+        row[row.length - 3] <<= ((byte)row[row.length -3]);
+        Put p = new Put(g.getRow());
+        p.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+            r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+        t.put(p);
+      }
+      */
+      MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null);
+      Report report = visitor.getReport();
+      LOG.info(report != null? report.toString(): "empty");
+    }
   }
 }

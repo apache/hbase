@@ -1359,7 +1359,7 @@ public class Bytes implements Comparable<Bytes> {
    */
   public static int compareTo(final byte [] left, final byte [] right) {
     return LexicographicalComparerHolder.BEST_COMPARER.
-      compareTo(left, 0, left.length, right, 0, right.length);
+      compareTo(left, 0, left == null? 0: left.length, right, 0, right == null? 0: right.length);
   }
 
   /**
