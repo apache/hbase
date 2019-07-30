@@ -1416,7 +1416,8 @@ public class MasterRpcServices extends RSRpcServices
       RunCatalogScanRequest req) throws ServiceException {
     rpcPreCheck("runCatalogScan");
     try {
-      return ResponseConverter.buildRunCatalogScanResponse(master.catalogJanitorChore.scan());
+      return ResponseConverter.buildRunCatalogScanResponse(
+          this.master.catalogJanitorChore.scan());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
