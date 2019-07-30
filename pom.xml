@@ -1506,6 +1506,7 @@
     <maven.compiler.version>3.8.0</maven.compiler.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
+    <maven.project.info.report.version>2.9</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <spotbugs.version>3.1.11</spotbugs.version>
     <surefire.version>2.22.2</surefire.version>
@@ -3720,7 +3721,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.9</version>
+        <version>${maven.project.info.report.version}</version>
         <reportSets>
           <reportSet>
             <reports>
