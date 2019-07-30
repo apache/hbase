@@ -2072,7 +2072,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should store permission changes in addition to auth results
-          AUDITLOG.trace("Granted permission " + perm.toString());
+          AUDITLOG.trace("User {} granted permission {}", caller, perm);
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
@@ -2129,7 +2129,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should record all permission changes
-          AUDITLOG.trace("Revoked permission " + perm.toString());
+          AUDITLOG.trace("User {} revoked permission {}", caller, perm);
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
