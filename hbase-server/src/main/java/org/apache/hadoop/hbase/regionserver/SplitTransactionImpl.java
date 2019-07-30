@@ -578,7 +578,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(copyOfParent);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
     mutations.add(putParent);
-    
+
     //Puts for daughters
     Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA);
     Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB);
@@ -827,7 +827,7 @@ public class SplitTransactionImpl implements SplitTransaction {
       return splitStoreFile(family, sf);
     }
   }
-  
+
   @Override
   public boolean rollback(final Server server, final RegionServerServices services)
       throws IOException {
@@ -964,5 +964,24 @@ public class SplitTransactionImpl implements SplitTransaction {
   @Override
   public RegionServerServices getRegionServerServices() {
     return rsServices;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < journal.size(); i++) {
+      JournalEntry je = journal.get(i);
+      sb.append( je.toString());
+      if (i != 0) {
+        JournalEntry jep = journal.get(i-1);
+        long delta = je.getTimeStamp() - jep.getTimeStamp();
+        if (delta != 0) {
+          sb.append(" (+" + delta + " ms)\n");
+        } else {
+          sb.append("\n");
+        }
+      }
+    }
+    return sb.toString();
   }
 }
