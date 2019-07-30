@@ -3047,8 +3047,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   void delete(NavigableMap<byte[], List<Cell>> familyMap,
       Durability durability) throws IOException {
-    Delete delete = new Delete(FOR_UNIT_TESTS_ONLY);
-    delete.setFamilyCellMap(familyMap);
+    Delete delete = new Delete(FOR_UNIT_TESTS_ONLY, HConstants.LATEST_TIMESTAMP, familyMap);
     delete.setDurability(durability);
     doBatchMutate(delete);
   }
