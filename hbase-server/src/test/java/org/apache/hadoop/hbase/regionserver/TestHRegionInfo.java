@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -51,6 +50,7 @@ import org.junit.rules.TestName;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionInfo {
@@ -61,73 +61,6 @@ public class TestHRegionInfo {
 
   @Rule
   public TestName name = new TestName();
-
-  @Test
-  public void testIsStart() {
-    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isFirst());
-    org.apache.hadoop.hbase.client.RegionInfo ri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(Bytes.toBytes("not_start")).build();
-    assertFalse(ri.isFirst());
-  }
-
-  @Test
-  public void testIsEnd() {
-    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isFirst());
-    org.apache.hadoop.hbase.client.RegionInfo ri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setEndKey(Bytes.toBytes("not_end")).build();
-    assertFalse(ri.isLast());
-  }
-
-  @Test
-  public void testIsNext() {
-    byte [] bytes = Bytes.toBytes("row");
-    org.apache.hadoop.hbase.client.RegionInfo ri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setEndKey(bytes).build();
-    org.apache.hadoop.hbase.client.RegionInfo ri2 =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(bytes).build();
-    assertFalse(ri.isNext(RegionInfoBuilder.FIRST_META_REGIONINFO));
-    assertTrue(ri.isNext(ri2));
-  }
-
-  @Test
-  public void testIsOverlap() {
-    byte [] a = Bytes.toBytes("a");
-    byte [] b = Bytes.toBytes("b");
-    byte [] c = Bytes.toBytes("c");
-    byte [] d = Bytes.toBytes("d");
-    org.apache.hadoop.hbase.client.RegionInfo all =
-        RegionInfoBuilder.FIRST_META_REGIONINFO;
-    org.apache.hadoop.hbase.client.RegionInfo ari =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setEndKey(a).build();
-    org.apache.hadoop.hbase.client.RegionInfo abri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(a).setEndKey(b).build();
-    org.apache.hadoop.hbase.client.RegionInfo adri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(a).setEndKey(d).build();
-    org.apache.hadoop.hbase.client.RegionInfo cdri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(c).setEndKey(d).build();
-    org.apache.hadoop.hbase.client.RegionInfo dri =
-        org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
-            setStartKey(d).build();
-    assertTrue(all.isOverlap(all));
-    assertTrue(all.isOverlap(abri));
-    assertFalse(abri.isOverlap(cdri));
-    assertTrue(all.isOverlap(ari));
-    assertFalse(ari.isOverlap(abri));
-    assertFalse(ari.isOverlap(abri));
-    assertTrue(ari.isOverlap(all));
-    assertTrue(dri.isOverlap(all));
-    assertTrue(abri.isOverlap(adri));
-    assertFalse(dri.isOverlap(ari));
-    assertTrue(abri.isOverlap(adri));
-  }
 
   @Test
   public void testPb() throws DeserializationException {
@@ -346,7 +279,7 @@ public class TestHRegionInfo {
     assertEquals(hri, convertedHri);
 
     // test convert RegionInfo without replicaId
-    HBaseProtos.RegionInfo info = HBaseProtos.RegionInfo.newBuilder()
+    RegionInfo info = RegionInfo.newBuilder()
       .setTableName(HBaseProtos.TableName.newBuilder()
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier()))
         .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace()))

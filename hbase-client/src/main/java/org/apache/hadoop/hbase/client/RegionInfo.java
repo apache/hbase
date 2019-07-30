@@ -70,8 +70,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 @InterfaceAudience.Public
 public interface RegionInfo {
-  public static final RegionInfo UNDEFINED =
-      RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
   /**
    * Separator used to demarcate the encodedName in a region name
    * in the new format. See description on new format above.
@@ -776,56 +774,5 @@ public interface RegionInfo {
       in.close();
     }
     return ris;
-  }
-
-
-  /**
-   * @return True if this is first Region in Table
-   */
-  default boolean isFirst() {
-    return Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW);
-  }
-
-  /**
-   * @return True if this is last Region in Table
-   */
-  default boolean isLast() {
-    return Bytes.equals(getEndKey(), HConstants.EMPTY_START_ROW);
-  }
-
-  /**
-   * @return True if regions are adjacent, if 'after' next. Does not do tablename compare.
-   */
-  default boolean isNext(RegionInfo after) {
-    return Bytes.equals(getEndKey(), after.getStartKey());
-  }
-
-  /**
-   * @return True if RegionInfo is degenerate... if startKey > endKey.
-   */
-  default boolean isDegenerate() {
-    return !isLast() && Bytes.compareTo(getStartKey(), getEndKey()) > 0;
-  }
-
-  /**
-   * @return True if an overlap in region range. Does not do tablename compare.
-   *   Does not check if <code>other</code> has degenerate range.
-   * @see #isDegenerate()
-   */
-  default boolean isOverlap(RegionInfo other) {
-    int startKeyCompare = Bytes.compareTo(getStartKey(), other.getStartKey());
-    if (startKeyCompare == 0) {
-      return true;
-    }
-    if (startKeyCompare < 0) {
-      if (isLast()) {
-        return true;
-      }
-      return Bytes.compareTo(getEndKey(), other.getStartKey()) > 0;
-    }
-    if (other.isLast()) {
-      return true;
-    }
-    return Bytes.compareTo(getStartKey(), other.getEndKey()) < 0;
   }
 }
