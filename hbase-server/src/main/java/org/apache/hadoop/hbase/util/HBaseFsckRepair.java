@@ -202,6 +202,6 @@ public class HBaseFsckRepair {
    */
   public static void removeParentInMeta(Configuration conf, RegionInfo hri) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
-    MetaTableAccessor.deleteRegion(conn, hri);
+    MetaTableAccessor.deleteRegionInfo(conn, hri);
   }
 }
