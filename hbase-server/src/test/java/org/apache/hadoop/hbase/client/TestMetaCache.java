@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.RetryImmediatelyException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -143,12 +145,14 @@ public class TestMetaCache {
           table.mutateRow(mutations);
         } catch (IOException ex) {
           // Only keep track of the last exception that updated the meta cache
-          if (ClientExceptionsUtil.isMetaClearingException(ex) || success) {
+          if ((ClientExceptionsUtil.isMetaClearingException(ex)
+              && !ClientExceptionsUtil.isRegionServerOverloadedException(ex)) || success) {
             exp = ex;
           }
         }
         // Do not test if we did not touch the meta cache in this iteration.
-        if (exp != null && ClientExceptionsUtil.isMetaClearingException(exp)) {
+        if (exp != null && ClientExceptionsUtil.isMetaClearingException(exp)
+            && !ClientExceptionsUtil.isRegionServerOverloadedException(exp)) {
           assertNull(conn.getCachedLocation(TABLE_NAME, row));
         } else if (success) {
           assertNotNull(conn.getCachedLocation(TABLE_NAME, row));
@@ -207,7 +211,9 @@ public class TestMetaCache {
         add(new RpcThrottlingException(" "));
         add(new MultiActionResultTooLarge(" "));
         add(new RetryImmediatelyException(" "));
+        add(new RequestTooBigException());
         add(new CallQueueTooBigException());
+        add(new CallDroppedException());
     }};
   }
 
