@@ -437,7 +437,7 @@ public class RestoreSnapshotProcedure
       // not overwritten/removed, so you end up with old informations
       // that are not correct after the restore.
       if (regionsToRemove != null) {
-        MetaTableAccessor.deleteRegions(conn, regionsToRemove);
+        MetaTableAccessor.deleteRegionInfos(conn, regionsToRemove);
         deleteRegionsFromInMemoryStates(regionsToRemove, env, regionReplication);
       }
 

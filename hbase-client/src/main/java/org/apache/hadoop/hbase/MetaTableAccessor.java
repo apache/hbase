@@ -1819,7 +1819,8 @@ public class MetaTableAccessor {
    * @param regionInfo region to be deleted from META
    * @throws IOException
    */
-  public static void deleteRegion(Connection connection, RegionInfo regionInfo) throws IOException {
+  public static void deleteRegionInfo(Connection connection, RegionInfo regionInfo)
+      throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(regionInfo.getRegionName());
     delete.addFamily(getCatalogFamily(), time);
@@ -1832,16 +1833,17 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param regionsInfo list of regions to be deleted from META
    */
-  public static void deleteRegions(Connection connection, List<RegionInfo> regionsInfo)
+  public static void deleteRegionInfos(Connection connection, List<RegionInfo> regionsInfo)
       throws IOException {
-    deleteRegions(connection, regionsInfo, EnvironmentEdgeManager.currentTime());
+    deleteRegionInfos(connection, regionsInfo, EnvironmentEdgeManager.currentTime());
   }
+
   /**
    * Deletes the specified regions from META.
    * @param connection connection we're using
    * @param regionsInfo list of regions to be deleted from META
    */
-  public static void deleteRegions(Connection connection, List<RegionInfo> regionsInfo, long ts)
+  public static void deleteRegionInfos(Connection connection, List<RegionInfo> regionsInfo, long ts)
       throws IOException {
     List<Delete> deletes = new ArrayList<>(regionsInfo.size());
     for (RegionInfo hri : regionsInfo) {
@@ -1860,11 +1862,11 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param regionInfos list of regions to be added to META
    */
-  public static void overwriteRegions(Connection connection,
-      List<RegionInfo> regionInfos, int regionReplication) throws IOException {
+  public static void overwriteRegions(Connection connection, List<RegionInfo> regionInfos,
+      int regionReplication) throws IOException {
     // use master time for delete marker and the Put
     long now = EnvironmentEdgeManager.currentTime();
-    deleteRegions(connection, regionInfos, now);
+    deleteRegionInfos(connection, regionInfos, now);
     // Why sleep? This is the easiest way to ensure that the previous deletes does not
     // eclipse the following puts, that might happen in the same ts from the server.
     // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
