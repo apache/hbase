@@ -92,11 +92,11 @@ public class TestCatalogJanitorCluster {
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
-    assertEquals(1, report.holes.size());
-    assertTrue(report.holes.get(0).getFirst().regionInfo.getTable().equals(T1));
-    assertTrue(report.holes.get(0).getFirst().regionInfo.isLast());
-    assertTrue(report.holes.get(0).getSecond().regionInfo.getTable().equals(T2));
-    assertEquals(0, report.overlaps.size());
+    assertEquals(1, report.getHoles().size());
+    assertTrue(report.getHoles().get(0).getFirst().getRegionInfo().getTable().equals(T1));
+    assertTrue(report.getHoles().get(0).getFirst().getRegionInfo().isLast());
+    assertTrue(report.getHoles().get(0).getSecond().getRegionInfo().getTable().equals(T2));
+    assertEquals(0, report.getOverlaps().size());
     // Next, add overlaps to first row in t3
     List<RegionInfo> t3Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T3);
     RegionInfo ri = t3Ris.get(0);
@@ -113,12 +113,12 @@ public class TestCatalogJanitorCluster {
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
     // We added two overlaps so total three.
-    assertEquals(3, report.overlaps.size());
+    assertEquals(3, report.getOverlaps().size());
     // Assert hole is still there.
-    assertEquals(1, report.holes.size());
+    assertEquals(1, report.getHoles().size());
     // Assert other attributes are empty still.
-    assertTrue(report.emptyRegionInfo.isEmpty());
-    assertTrue(report.unknownServers.isEmpty());
+    assertTrue(report.getEmptyRegionInfo().isEmpty());
+    assertTrue(report.getUnknownServers().isEmpty());
     // Now make bad server in t1.
     List<RegionInfo> t1Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T1);
     RegionInfo t1Ri1 = t1Ris.get(1);
@@ -129,7 +129,7 @@ public class TestCatalogJanitorCluster {
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
-    assertEquals(1, report.unknownServers.size());
+    assertEquals(1, report.getUnknownServers().size());
     // Finally, make an empty regioninfo in t1.
     RegionInfo t1Ri2 = t1Ris.get(2);
     Put pEmptyRI = new Put(t1Ri2.getRegionName());
@@ -138,7 +138,7 @@ public class TestCatalogJanitorCluster {
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pEmptyRI));
     gc = janitor.scan();
     report = janitor.getLastReport();
-    assertEquals(1, report.emptyRegionInfo.size());
+    assertEquals(1, report.getEmptyRegionInfo().size());
   }
 
   /**

@@ -18,15 +18,23 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+         import="java.time.Instant"
+         import="java.time.ZoneId"
          import="java.util.Date"
          import="java.util.List"
          import="java.util.Map"
          import="java.util.stream.Collectors"
+         import="java.time.ZonedDateTime"
+         import="java.time.format.DateTimeFormatter"
 %>
 <%@ page import="org.apache.hadoop.hbase.master.HbckChecker" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
 <%@ page import="org.apache.hadoop.hbase.ServerName" %>
+<%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
+<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor" %>
+<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.Report" %>
+<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.MetaRow" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
@@ -43,6 +51,14 @@
     startTimestamp = hbckChecker.getCheckingStartTimestamp();
     endTimestamp = hbckChecker.getCheckingEndTimestamp();
   }
+  ZonedDateTime zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(startTimestamp),
+    ZoneId.systemDefault());
+  String iso8601start = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+  zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(endTimestamp),
+    ZoneId.systemDefault());
+  String iso8601end = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+  CatalogJanitor cj = master.getCatalogJanitor();
+  CatalogJanitor.Report report = cj == null? null: cj.getLastReport();
 %>
 <jsp:include page="header.jsp">
   <jsp:param name="pageTitle" value="${pageTitle}"/>
@@ -61,29 +77,32 @@
 
   <div class="row">
     <div class="page-header">
-      <h1>HBCK Report</h1>
+      <h1>HBCK Chore Report</h1>
       <p>
-        <span>Checking started at <%= new Date(startTimestamp) %> and generated report at <%= new Date(endTimestamp) %></span>
+        <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute 'hbck_chore_run' in hbase shell to generate a new sub-report.</span>
       </p>
     </div>
   </div>
+
 
   <div class="row">
     <div class="page-header">
       <h2>Inconsistent Regions</h2>
-      <p>
-        <span>
-        There are three case: 1. Master thought this region opened, but no regionserver reported it.
-        2. Master thought this region opened on Server1, but regionserver reported Server2.
-        3. More than one regionservers reported opened this region.
-        Notice: the reported online regionservers may be not right when there are regions in transition.
-        Please check them in regionserver's web UI.
-        </span>
-      </p>
     </div>
   </div>
 
   <% if (inconsistentRegions != null && inconsistentRegions.size() > 0) { %>
+      <p>
+        <span>
+        There are three cases: 1. Master thought this region opened, but no regionserver reported it (Fix: use assigns
+        command; 2. Master thought this region opened on Server1, but regionserver reported Server2 (Fix:
+        need to check the server is still exist. If not, schedule SCP for it. If exist, restart Server2 and Server1):
+        3. More than one regionservers reported opened this region (Fix: restart the RegionServers).
+        Notice: the reported online regionservers may be not right when there are regions in transition.
+        Please check them in regionserver's web UI.
+        </span>
+      </p>
+
   <table class="table table-striped">
     <tr>
       <th>Region</th>
@@ -145,6 +164,114 @@
 
     <p><%= orphanRegionsOnFS.size() %> region(s) in set.</p>
   </table>
+  <% } %>
+
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
+    </div>
+  </div>
+  <% if (report != null && !report.isEmpty()) {
+    zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(report.getCreateTime()),
+      ZoneId.systemDefault());
+    String iso8601reportTime = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
+      ZoneId.systemDefault());
+    String iso8601Now = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+  %>
+  <p>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</p>
+      <% if (!report.getHoles().isEmpty()) { %>
+          <div class="row inner_header">
+            <div class="page-header">
+              <h2>Holes</h2>
+            </div>
+          </div>
+          <table class="table table-striped">
+            <tr>
+              <th>Row before hole</th>
+              <th>RegionInfo</th>
+              <th>Row after hole</th>
+              <th>RegionInfo</th>
+            </tr>
+            <% for (Pair<MetaRow, MetaRow> p : report.getHoles()) { %>
+            <tr>
+              <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
+              <td><%= p.getFirst().getRegionInfo() %></td>
+              <td><%= Bytes.toStringBinary(p.getSecond().getMetaRow()) %></td>
+              <td><%= p.getSecond().getRegionInfo() %></td>
+            </tr>
+            <% } %>
+
+            <p><%= report.getHoles().size() %> hole(s).</p>
+          </table>
+      <% } %>
+      <% if (!report.getOverlaps().isEmpty()) { %>
+            <div class="row inner_header">
+              <div class="page-header">
+                <h2>Overlaps</h2>
+              </div>
+            </div>
+            <table class="table table-striped">
+              <tr>
+                <th>Row</th>
+                <th>RegionInfo</th>
+                <th>Other Row</th>
+                <th>Other RegionInfo</th>
+              </tr>
+              <% for (Pair<MetaRow, MetaRow> p : report.getOverlaps()) { %>
+              <tr>
+                <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
+                <td><%= p.getFirst().getRegionInfo() %></td>
+                <td><%= Bytes.toStringBinary(p.getSecond().getMetaRow()) %></td>
+                <td><%= p.getSecond().getRegionInfo() %></td>
+              </tr>
+              <% } %>
+
+              <p><%= report.getOverlaps().size() %> overlap(s).</p>
+            </table>
+      <% } %>
+      <% if (!report.getUnknownServers().isEmpty()) { %>
+            <div class="row inner_header">
+              <div class="page-header">
+                <h2>Unknown Servers</h2>
+              </div>
+            </div>
+            <table class="table table-striped">
+              <tr>
+                <th>Row</th>
+                <th>ServerName</th>
+                <th>RegionInfo</th>
+              </tr>
+              <% for (Pair<MetaRow, ServerName> p: report.getUnknownServers()) { %>
+              <tr>
+                <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
+                <td><%= p.getSecond() %></td>
+                <td><%= p.getFirst().getRegionInfo() %></td>
+              </tr>
+              <% } %>
+
+              <p><%= report.getUnknownServers().size() %> unknown servers(s).</p>
+            </table>
+      <% } %>
+      <% if (!report.getEmptyRegionInfo().isEmpty()) { %>
+            <div class="row inner_header">
+              <div class="page-header">
+                <h2>Empty <em>info:regioninfo</em></h2>
+              </div>
+            </div>
+            <table class="table table-striped">
+              <tr>
+                <th>Row</th>
+              </tr>
+              <% for (byte [] row: report.getEmptyRegionInfo()) { %>
+              <tr>
+                <td><%= Bytes.toStringBinary(row) %></td>
+              </tr>
+              <% } %>
+
+              <p><%= report.getEmptyRegionInfo().size() %> emptyRegionInfo(s).</p>
+            </table>
+      <% } %>
   <% } %>
 
   <% } %>
