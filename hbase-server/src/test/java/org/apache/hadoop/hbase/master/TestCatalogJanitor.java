@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -308,13 +309,8 @@ public class TestCatalogJanitor {
 
     final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
     CatalogJanitor spy = spy(this.janitor);
-
-    CatalogJanitor.Report report = new CatalogJanitor.Report();
-    report.count = 10;
-    report.mergedRegions.putAll(mergedRegions);
-    report.splitParents.putAll(splitParents);
-
-    doReturn(report).when(spy).scanForReport();
+    doReturn(new Triple<>(10, mergedRegions, splitParents)).when(spy).
+      getMergedRegionsAndSplitParents();
 
     // Create ref from splita to parent
     LOG.info("parent=" + parent.getShortNameToLog() + ", splita=" + splita.getShortNameToLog());
@@ -323,16 +319,14 @@ public class TestCatalogJanitor {
     LOG.info("Created reference " + splitaRef);
 
     // Parent and splita should not be removed because a reference from splita to parent.
-    int gcs = spy.scan();
-    assertEquals(0, gcs);
+    assertEquals(0, spy.scan());
 
     // Now delete the ref
     FileSystem fs = FileSystem.get(HTU.getConfiguration());
     assertTrue(fs.delete(splitaRef, true));
 
     //now, both parent, and splita can be deleted
-    gcs = spy.scan();
-    assertEquals(2, gcs);
+    assertEquals(2, spy.scan());
   }
 
   /**
