@@ -351,8 +351,8 @@ public class DeleteTableProcedure
    * that have to do with this table. See HBASE-12980.
    * @throws IOException
    */
-  private static void cleanAnyRemainingRows(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+  private static void cleanRegionsInMeta(final MasterProcedureEnv env, final TableName tableName)
+      throws IOException {
     Connection connection = env.getMasterServices().getConnection();
     Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
@@ -363,19 +363,17 @@ public class DeleteTableProcedure
         }
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName +
-          " from " + TableName.META_TABLE_NAME);
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
+            + TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }
   }
 
-  protected static void deleteFromMeta(final MasterProcedureEnv env,
-      final TableName tableName, List<RegionInfo> regions) throws IOException {
-    MetaTableAccessor.deleteRegions(env.getMasterServices().getConnection(), regions);
-
+  protected static void deleteFromMeta(final MasterProcedureEnv env, final TableName tableName,
+      List<RegionInfo> regions) throws IOException {
     // Clean any remaining rows for this table.
-    cleanAnyRemainingRows(env, tableName);
+    cleanRegionsInMeta(env, tableName);
 
     // clean region references from the server manager
     env.getMasterServices().getServerManager().removeRegions(regions);

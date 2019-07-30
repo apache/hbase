@@ -592,7 +592,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     List<RegionInfo> regionInfos = MetaTableAccessor.getTableRegions(connection, tableName);
     for (RegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        MetaTableAccessor.deleteRegion(connection, regionInfo);
+        MetaTableAccessor.deleteRegionInfo(connection, regionInfo);
         break;
       }
     }
