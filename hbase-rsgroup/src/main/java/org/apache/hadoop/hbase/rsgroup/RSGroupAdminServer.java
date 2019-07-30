@@ -97,8 +97,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * Check passed name. Fail if nulls or if corresponding RSGroupInfo not found.
    * @return The RSGroupInfo named <code>name</code>
    */
-  private RSGroupInfo getAndCheckRSGroupInfo(String name)
-  throws IOException {
+  private RSGroupInfo getAndCheckRSGroupInfo(String name) throws IOException {
     if (StringUtils.isEmpty(name)) {
       throw new ConstraintException("RSGroup cannot be null.");
     }
@@ -305,8 +304,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       value="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
       justification="Ignoring complaint because don't know what it is complaining about")
   @Override
-  public void moveServers(Set<Address> servers, String targetGroupName)
-  throws IOException {
+  public void moveServers(Set<Address> servers, String targetGroupName) throws IOException {
     if (servers == null) {
       throw new ConstraintException("The list of servers to move cannot be null.");
     }
