@@ -131,6 +131,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
@@ -1731,6 +1732,16 @@ public final class ProtobufUtil {
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
+  }
+
+  public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoadInfo(
+      GetRegionLoadResponse regionLoadResponse) {
+    List<org.apache.hadoop.hbase.RegionLoad> regionLoadList =
+        new ArrayList<>(regionLoadResponse.getRegionLoadsCount());
+    for (RegionLoad regionLoad : regionLoadResponse.getRegionLoadsList()) {
+      regionLoadList.add(new org.apache.hadoop.hbase.RegionLoad(regionLoad));
+    }
+    return regionLoadList;
   }
 
   /**

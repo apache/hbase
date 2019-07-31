@@ -110,7 +110,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
     init(numMasters, numRegionServers, rsPorts, masterClass, regionserverClass);
-    this.initialClusterStatus = getClusterMetrics();
+    this.initialClusterStatus = getClusterStatus();
   }
 
   public Configuration getConfiguration() {
@@ -435,9 +435,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     ServerName rsServerName = t.getRegionServer().getServerName();
 
     long start = System.currentTimeMillis();
-    ClusterMetrics clusterStatus = getClusterMetrics();
+    ClusterStatus clusterStatus = getClusterStatus();
     while ((System.currentTimeMillis() - start) < timeout) {
-      if (clusterStatus != null && clusterStatus.getLiveServerMetrics().containsKey(rsServerName)) {
+      if (clusterStatus != null && clusterStatus.getServers().contains(rsServerName)) {
         return t;
       }
       Threads.sleep(100);
@@ -657,6 +657,16 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   @Override
   public void close() throws IOException {
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getClusterMetrics()} instead.
+   */
+  @Deprecated
+  public ClusterStatus getClusterStatus() throws IOException {
+    HMaster master = getMaster();
+    return master == null ? null : new ClusterStatus(master.getClusterMetrics());
   }
 
   @Override
