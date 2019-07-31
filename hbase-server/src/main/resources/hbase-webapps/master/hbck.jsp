@@ -36,7 +36,6 @@
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
 <%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor" %>
 <%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.Report" %>
-<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.MetaRow" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
@@ -196,17 +195,13 @@
           </div>
           <table class="table table-striped">
             <tr>
-              <th>Row before hole</th>
               <th>RegionInfo</th>
-              <th>Row after hole</th>
               <th>RegionInfo</th>
             </tr>
-            <% for (Pair<MetaRow, MetaRow> p : report.getHoles()) { %>
+            <% for (Pair<RegionInfo, RegionInfo> p : report.getHoles()) { %>
             <tr>
-              <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
-              <td><%= p.getFirst().getRegionInfo() %></td>
-              <td><%= Bytes.toStringBinary(p.getSecond().getMetaRow()) %></td>
-              <td><%= p.getSecond().getRegionInfo() %></td>
+              <td><%= p.getFirst() %></td>
+              <td><%= p.getSecond() %></td>
             </tr>
             <% } %>
 
@@ -221,17 +216,13 @@
             </div>
             <table class="table table-striped">
               <tr>
-                <th>Row</th>
                 <th>RegionInfo</th>
-                <th>Other Row</th>
                 <th>Other RegionInfo</th>
               </tr>
-              <% for (Pair<MetaRow, MetaRow> p : report.getOverlaps()) { %>
+              <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
               <tr>
-                <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
-                <td><%= p.getFirst().getRegionInfo() %></td>
-                <td><%= Bytes.toStringBinary(p.getSecond().getMetaRow()) %></td>
-                <td><%= p.getSecond().getRegionInfo() %></td>
+                <td><%= p.getFirst() %></td>
+                <td><%= p.getSecond() %></td>
               </tr>
               <% } %>
 
@@ -246,15 +237,13 @@
             </div>
             <table class="table table-striped">
               <tr>
-                <th>Row</th>
-                <th>ServerName</th>
                 <th>RegionInfo</th>
+                <th>ServerName</th>
               </tr>
-              <% for (Pair<MetaRow, ServerName> p: report.getUnknownServers()) { %>
+              <% for (Pair<RegionInfo, ServerName> p: report.getUnknownServers()) { %>
               <tr>
-                <td><%= Bytes.toStringBinary(p.getFirst().getMetaRow()) %></td>
+                <td><%= p.getFirst() %></td>
                 <td><%= p.getSecond() %></td>
-                <td><%= p.getFirst().getRegionInfo() %></td>
               </tr>
               <% } %>
 

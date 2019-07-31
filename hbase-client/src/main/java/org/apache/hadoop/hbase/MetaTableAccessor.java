@@ -1831,9 +1831,8 @@ public class MetaTableAccessor {
    */
   public static void deleteRegionInfo(Connection connection, RegionInfo regionInfo)
       throws IOException {
-    long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(regionInfo.getRegionName());
-    delete.addFamily(getCatalogFamily(), time);
+    delete.addFamily(getCatalogFamily(), HConstants.LATEST_TIMESTAMP);
     deleteFromMetaTable(connection, delete);
     LOG.info("Deleted " + regionInfo.getRegionNameAsString());
   }

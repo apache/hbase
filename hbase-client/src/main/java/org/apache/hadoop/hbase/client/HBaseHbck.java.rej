@@ -1,0 +1,17 @@
+diff a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/HBaseHbck.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/HBaseHbck.java	(rejected hunks)
+@@ -186,4 +187,13 @@ public class HBaseHbck implements Hbck {
+       throw new IOException(se);
+     }
+   }
+-}
+\ No newline at end of file
++
++  @Override
++  public void fixMeta() throws IOException {
++    try {
++      this.hbck.fixMeta(rpcControllerFactory.newController(), FixMetaRequest.newBuilder().build());
++    } catch (ServiceException se) {
++      throw new IOException(se);
++    }
++  }
++}
