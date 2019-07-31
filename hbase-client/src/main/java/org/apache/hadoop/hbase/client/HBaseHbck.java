@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
@@ -183,6 +184,15 @@ public class HBaseHbck implements Hbck {
       return response.getRan();
     } catch (ServiceException se) {
       LOG.debug("Failed to run HBCK chore", se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public void fixMeta() throws IOException {
+    try {
+      this.hbck.fixMeta(rpcControllerFactory.newController(), FixMetaRequest.newBuilder().build());
+    } catch (ServiceException se) {
       throw new IOException(se);
     }
   }
