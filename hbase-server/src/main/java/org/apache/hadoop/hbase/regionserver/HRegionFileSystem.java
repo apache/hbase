@@ -860,6 +860,7 @@ public class HRegionFileSystem {
 
   /**
    * Write the .regioninfo file on-disk.
+   * Overwrites if exists already.
    */
   private static void writeRegionInfoFileContent(final Configuration conf, final FileSystem fs,
       final Path regionInfoFile, final byte[] content) throws IOException {
@@ -982,13 +983,12 @@ public class HRegionFileSystem {
       Path regionDir = regionFs.getRegionDir();
       if (fs.exists(regionDir)) {
         LOG.warn("Trying to create a region that already exists on disk: " + regionDir);
-        throw new IOException("The specified region already exists on disk: " + regionDir);
-      }
-
-      // Create the region directory
-      if (!createDirOnFileSystem(fs, conf, regionDir)) {
-        LOG.warn("Unable to create the region directory: " + regionDir);
-        throw new IOException("Unable to create region directory: " + regionDir);
+      } else {
+        // Create the region directory
+        if (!createDirOnFileSystem(fs, conf, regionDir)) {
+          LOG.warn("Unable to create the region directory: " + regionDir);
+          throw new IOException("Unable to create region directory: " + regionDir);
+        }
       }
 
       // Write HRI to a file in case we need to recover hbase:meta
