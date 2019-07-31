@@ -40,7 +40,7 @@
 @rem see http://hbase.apache.org/book.html#performance
 @rem JDK6 on Windows has a known bug for IPv6, use preferIPv4Stack unless JDK7.
 @rem @rem See TestIPv6NIOServerSocketChannel.
-set HBASE_OPTS="-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"
+set HBASE_OPTS=%HBASE_OPTS% "-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"
 
 @rem Uncomment below to enable java garbage collection logging for the server-side processes
 @rem this enables basic gc logging for the server processes to the .out file
