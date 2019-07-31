@@ -40,7 +40,7 @@
 @rem see http://wiki.apache.org/hadoop/PerformanceTuning
 @rem JDK6 on Windows has a known bug for IPv6, use preferIPv4Stack unless JDK7.
 @rem @rem See TestIPv6NIOServerSocketChannel.
-set HBASE_OPTS="-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"
+set HBASE_OPTS=%HBASE_OPTS% "-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"
 
 @rem Configure PermSize. Only needed in JDK7. You can safely remove it for JDK8+
 set HBASE_MASTER_OPTS=%HBASE_MASTER_OPTS% "-XX:PermSize=128m" "-XX:MaxPermSize=128m" "-XX:ReservedCodeCacheSize=256m"
