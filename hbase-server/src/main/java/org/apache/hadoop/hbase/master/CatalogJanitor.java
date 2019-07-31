@@ -458,9 +458,9 @@ public class CatalogJanitor extends ScheduledChore {
     final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
     int count = 0;
 
-    private final List<Pair<MetaRow, MetaRow>> holes = new ArrayList<>();
-    private final List<Pair<MetaRow, MetaRow>> overlaps = new ArrayList<>();
-    private final List<Pair<MetaRow, ServerName>> unknownServers = new ArrayList<>();
+    private final List<Pair<RegionInfo, RegionInfo>> holes = new ArrayList<>();
+    private final List<Pair<RegionInfo, RegionInfo>> overlaps = new ArrayList<>();
+    private final List<Pair<RegionInfo, ServerName>> unknownServers = new ArrayList<>();
     private final List<byte []> emptyRegionInfo = new ArrayList<>();
 
     @VisibleForTesting
@@ -470,15 +470,15 @@ public class CatalogJanitor extends ScheduledChore {
       return this.now;
     }
 
-    public List<Pair<MetaRow, MetaRow>> getHoles() {
+    public List<Pair<RegionInfo, RegionInfo>> getHoles() {
       return this.holes;
     }
 
-    public List<Pair<MetaRow, MetaRow>> getOverlaps() {
+    public List<Pair<RegionInfo, RegionInfo>> getOverlaps() {
       return this.overlaps;
     }
 
-    public List<Pair<MetaRow, ServerName>> getUnknownServers() {
+    public List<Pair<RegionInfo, ServerName>> getUnknownServers() {
       return unknownServers;
     }
 
@@ -497,19 +497,19 @@ public class CatalogJanitor extends ScheduledChore {
     @Override
     public String toString() {
       StringBuffer sb = new StringBuffer();
-      for (Pair<MetaRow, MetaRow> p: this.holes) {
+      for (Pair<RegionInfo, RegionInfo> p: this.holes) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("hole=" + Bytes.toStringBinary(p.getFirst().metaRow) + "/" +
-            Bytes.toStringBinary(p.getSecond().metaRow));
+        sb.append("hole=" + p.getFirst().getRegionNameAsString() + "/" +
+            p.getSecond().getRegionNameAsString());
       }
-      for (Pair<MetaRow, MetaRow> p: this.overlaps) {
+      for (Pair<RegionInfo, RegionInfo> p: this.overlaps) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("overlap=").append(Bytes.toStringBinary(p.getFirst().metaRow)).append("/").
-            append(Bytes.toStringBinary(p.getSecond().metaRow));
+        sb.append("overlap=" + p.getFirst().getRegionNameAsString() + "/" +
+            p.getSecond().getRegionNameAsString());
       }
       for (byte [] r: this.emptyRegionInfo) {
         if (sb.length() > 0) {
@@ -517,49 +517,14 @@ public class CatalogJanitor extends ScheduledChore {
         }
         sb.append("empty=").append(Bytes.toStringBinary(r));
       }
-      for (Pair<MetaRow, ServerName> p: this.unknownServers) {
+      for (Pair<RegionInfo, ServerName> p: this.unknownServers) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
         sb.append("unknown_server=").append(p.getSecond()).append("/").
-            append(Bytes.toStringBinary(p.getFirst().metaRow));
+            append(p.getFirst().getRegionNameAsString());
       }
       return sb.toString();
-    }
-  }
-
-  /**
-   * Simple datastructure to hold a MetaRow content.
-   */
-  public static class MetaRow {
-    /**
-     * A marker for use in case where there is a hole at the very
-     * first row in hbase:meta. Should never happen.
-     */
-    private static final MetaRow UNDEFINED =
-        new MetaRow(HConstants.EMPTY_START_ROW, RegionInfo.UNDEFINED);
-
-    /**
-     * Row from hbase:meta table.
-     */
-    private final byte [] metaRow;
-
-    /**
-     * The decoded RegionInfo gotten from hbase:meta.
-     */
-    private final RegionInfo regionInfo;
-
-    MetaRow(byte [] metaRow, RegionInfo regionInfo) {
-      this.metaRow = metaRow;
-      this.regionInfo = regionInfo;
-    }
-
-    public RegionInfo getRegionInfo() {
-      return regionInfo;
-    }
-
-    public byte[] getMetaRow() {
-      return metaRow;
     }
   }
 
@@ -584,7 +549,7 @@ public class CatalogJanitor extends ScheduledChore {
     /**
      * RegionInfo from previous row.
      */
-    private MetaRow previous = null;
+    private RegionInfo previous = null;
 
     ReportMakingVisitor(MasterServices services) {
       this.services = services;
@@ -647,7 +612,12 @@ public class CatalogJanitor extends ScheduledChore {
         return ri;
       }
 
-      MetaRow mrri = new MetaRow(metaTableRow.getRow(), ri);
+      if (!Bytes.equals(metaTableRow.getRow(), ri.getRegionName())) {
+        LOG.warn("INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; " +
+                "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
+            Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
+        return null;
+      }
       // If table is disabled, skip integrity check.
       if (!isTableDisabled(ri)) {
         if (isTableTransition(ri)) {
@@ -655,28 +625,28 @@ public class CatalogJanitor extends ScheduledChore {
           // and if this is the first. Report 'hole' if neither is true.
           // HBCK1 used to have a special category for missing start or end keys.
           // We'll just lump them in as 'holes'.
-          if ((this.previous != null && !this.previous.regionInfo.isLast()) || !ri.isFirst()) {
-            addHole(this.previous == null? MetaRow.UNDEFINED: this.previous, mrri);
+          if ((this.previous != null && !this.previous.isLast()) || !ri.isFirst()) {
+            addHole(this.previous == null? RegionInfo.UNDEFINED: this.previous, ri);
           }
         } else {
-          if (!this.previous.regionInfo.isNext(ri)) {
-            if (this.previous.regionInfo.isOverlap(ri)) {
-              addOverlap(this.previous, mrri);
+          if (!this.previous.isNext(ri)) {
+            if (this.previous.isOverlap(ri)) {
+              addOverlap(this.previous, ri);
             } else {
-              addHole(this.previous, mrri);
+              addHole(this.previous, ri);
             }
           }
         }
       }
-      this.previous = mrri;
+      this.previous = ri;
       return ri;
     }
 
-    private void addOverlap(MetaRow a, MetaRow b) {
+    private void addOverlap(RegionInfo a, RegionInfo b) {
       this.report.overlaps.add(new Pair<>(a, b));
     }
 
-    private void addHole(MetaRow a, MetaRow b) {
+    private void addHole(RegionInfo a, RegionInfo b) {
       this.report.holes.add(new Pair<>(a, b));
     }
 
@@ -723,8 +693,7 @@ public class CatalogJanitor extends ScheduledChore {
             isServerKnownAndOnline(sn);
         switch (state) {
           case UNKNOWN:
-            this.report.unknownServers.add(
-                new Pair(new MetaRow(metaTableRow, location.getRegion()), sn));
+            this.report.unknownServers.add(new Pair(location.getRegion(), sn));
             break;
 
           default:
@@ -738,11 +707,16 @@ public class CatalogJanitor extends ScheduledChore {
      */
     private boolean isTableTransition(RegionInfo ri) {
       return this.previous == null ||
-          !this.previous.regionInfo.getTable().equals(ri.getTable());
+          !this.previous.getTable().equals(ri.getTable());
     }
 
     @Override
     public void close() throws IOException {
+      // This is a table transition... after the last region. Check previous.
+      // Should be last region. If not, its a hole on end of laster table.
+      if (this.previous != null && !this.previous.isLast()) {
+        addHole(this.previous, RegionInfo.UNDEFINED);
+      }
       this.closed = true;
     }
   }

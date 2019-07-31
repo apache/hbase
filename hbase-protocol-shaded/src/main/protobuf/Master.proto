@@ -1111,6 +1111,10 @@ message ScheduleServerCrashProcedureResponse {
   repeated uint64 pid = 1;
 }
 
+message FixMetaRequest {}
+
+message FixMetaResponse {}
+
 service HbckService {
   /** Update state of the table in meta only*/
   rpc SetTableStateInMeta(SetTableStateInMetaRequest)
@@ -1147,4 +1151,8 @@ service HbckService {
    */
   rpc RunHbckChore(RunHbckChoreRequest)
     returns(RunHbckChoreResponse);
+
+  /** Schedule a fix meta run. */
+  rpc FixMeta(FixMetaRequest)
+    returns(FixMetaResponse);
 }
