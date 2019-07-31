@@ -93,9 +93,9 @@ public class TestCatalogJanitorCluster {
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
     assertEquals(1, report.getHoles().size());
-    assertTrue(report.getHoles().get(0).getFirst().getRegionInfo().getTable().equals(T1));
-    assertTrue(report.getHoles().get(0).getFirst().getRegionInfo().isLast());
-    assertTrue(report.getHoles().get(0).getSecond().getRegionInfo().getTable().equals(T2));
+    assertTrue(report.getHoles().get(0).getFirst().getTable().equals(T1));
+    assertTrue(report.getHoles().get(0).getFirst().isLast());
+    assertTrue(report.getHoles().get(0).getSecond().getTable().equals(T2));
     assertEquals(0, report.getOverlaps().size());
     // Next, add overlaps to first row in t3
     List<RegionInfo> t3Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T3);

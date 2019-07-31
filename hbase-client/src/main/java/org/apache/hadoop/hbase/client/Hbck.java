@@ -114,4 +114,9 @@ public interface Hbck extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   boolean runHbckChore() throws IOException;
+
+  /**
+   * Fix Meta.
+   */
+  void fixMeta() throws IOException;
 }

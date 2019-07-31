@@ -7023,15 +7023,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         final Configuration conf, final TableDescriptor hTableDescriptor,
         final WAL wal, final boolean initialize)
   throws IOException {
-    LOG.info("creating HRegion " + info.getTable().getNameAsString()
-        + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
-        " Table name == " + info.getTable().getNameAsString());
+    LOG.info("creating " + info
+        + ", tableDescriptor=" + (hTableDescriptor == null? "null": hTableDescriptor) +
+        ", regionDir=" + rootDir);
+    createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
-    HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, null);
     if (initialize) region.initialize(null);
     return region;
+  }
+
+  /**
+   * Create the region directory in the filesystem.
+   */
+  public static HRegionFileSystem createRegionDir(Configuration configuration, RegionInfo ri,
+        Path rootDir)
+      throws IOException {
+    FileSystem fs = rootDir.getFileSystem(configuration);
+    Path tableDir = FSUtils.getTableDir(rootDir, ri.getTable());
+    // If directory already exists, will log warning and keep going. Will try to create
+    // .regioninfo. If one exists, will overwrite.
+    return HRegionFileSystem.createRegionOnFileSystem(configuration, fs, tableDir, ri);
   }
 
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
