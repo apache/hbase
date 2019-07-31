@@ -867,7 +867,8 @@ public class TestMetaTableAccessor {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
 
-      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, serverName0, 3);
+      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB,
+        serverName0, 3);
       Get get1 = new Get(splitA.getRegionName());
       Result resultA = meta.get(get1);
       Cell serverCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
@@ -898,7 +899,8 @@ public class TestMetaTableAccessor {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
+    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
+      encodedName);
     assertNotNull(result);
     assertTrue(result.advance());
     final String resultingRowKey = CellUtil.getCellKeyAsString(result.current());
@@ -909,7 +911,8 @@ public class TestMetaTableAccessor {
   @Test
   public void testScanByRegionEncodedNameNonExistingRegion() throws Exception {
     final String encodedName = "nonexistingregion";
-    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
+    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
+      encodedName);
     assertNull(result);
   }
 }
