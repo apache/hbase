@@ -1383,51 +1383,82 @@ public class AssignmentManager {
     }
   }
 
+  /* AM internal RegionStateStore.RegionStateVisitor implementation. To be used when
+   * scanning META table for region rows, using RegionStateStore utility methods. RegionStateStore
+   * methods will convert Result into proper RegionInfo instances, but those would still need to be
+   * added into AssignmentManager.regionStates in-memory cache.
+   * RegionMetaLoadingVisitor.visitRegionState method provides the logic for adding RegionInfo
+   * instances as loaded from latest META scan into AssignmentManager.regionStates.
+   */
+  private class RegionMetaLoadingVisitor implements RegionStateStore.RegionStateVisitor  {
+
+    @Override
+    public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
+      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
+      if (state == null && regionLocation == null && lastHost == null &&
+        openSeqNum == SequenceId.NO_SEQUENCE_ID) {
+        // This is a row with nothing in it.
+        LOG.warn("Skipping empty row={}", result);
+        return;
+      }
+      State localState = state;
+      if (localState == null) {
+        // No region state column data in hbase:meta table! Are I doing a rolling upgrade from
+        // hbase1 to hbase2? Am I restoring a SNAPSHOT or otherwise adding a region to hbase:meta?
+        // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
+        // cases where we need to probe more to be sure this correct; TODO informed by experience.
+        LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
+        localState = State.OFFLINE;
+      }
+      RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
+      // Do not need to lock on regionNode, as we can make sure that before we finish loading
+      // meta, all the related procedures can not be executed. The only exception is for meta
+      // region related operations, but here we do not load the informations for meta region.
+      regionNode.setState(localState);
+      regionNode.setLastHost(lastHost);
+      regionNode.setRegionLocation(regionLocation);
+      regionNode.setOpenSeqNum(openSeqNum);
+
+      // Note: keep consistent with other methods, see region(Opening|Opened|Closing)
+      //       RIT/ServerCrash handling should take care of the transiting regions.
+      if (localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING,
+        State.MERGING)) {
+        assert regionLocation != null : "found null region location for " + regionNode;
+        regionStates.addRegionToServer(regionNode);
+      } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
+        regionStates.addToOfflineRegions(regionNode);
+      }
+      if (regionNode.getProcedure() != null) {
+        regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
+      }
+    }
+  };
+
+  /**
+   * Query META if the given <code>RegionInfo</code> exists, adding to
+   * <code>AssignmentManager.regionStateStore</code> cache if the region is found in META.
+   * @param regionEncodedName encoded name for the region to be loaded from META into
+   *                          <code>AssignmentManager.regionStateStore</code> cache
+   * @return <code>RegionInfo</code> instance for the given region if it is present in META
+   *          and got successfully loaded into <code>AssignmentManager.regionStateStore</code>
+   *          cache, <b>null</b> otherwise.
+   * @throws UnknownRegionException if any errors occur while querying meta.
+   */
+  public RegionInfo loadRegionFromMeta(String regionEncodedName) throws UnknownRegionException {
+    try {
+      RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
+      regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
+      return regionStates.getRegionState(regionEncodedName) == null ? null :
+        regionStates.getRegionState(regionEncodedName).getRegion();
+    } catch(IOException e) {
+      LOG.error("Error trying to load region {} from META", regionEncodedName, e);
+      throw new UnknownRegionException("Error while trying load region from meta");
+    }
+  }
+
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
-    regionStateStore.visitMeta(new RegionStateStore.RegionStateVisitor() {
-      @Override
-      public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
-          final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
-        if (state == null && regionLocation == null && lastHost == null &&
-            openSeqNum == SequenceId.NO_SEQUENCE_ID) {
-          // This is a row with nothing in it.
-          LOG.warn("Skipping empty row={}", result);
-          return;
-        }
-        State localState = state;
-        if (localState == null) {
-          // No region state column data in hbase:meta table! Are I doing a rolling upgrade from
-          // hbase1 to hbase2? Am I restoring a SNAPSHOT or otherwise adding a region to hbase:meta?
-          // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
-          // cases where we need to probe more to be sure this correct; TODO informed by experience.
-          LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
-          localState = State.OFFLINE;
-        }
-        RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
-        // Do not need to lock on regionNode, as we can make sure that before we finish loading
-        // meta, all the related procedures can not be executed. The only exception is for meta
-        // region related operations, but here we do not load the informations for meta region.
-        regionNode.setState(localState);
-        regionNode.setLastHost(lastHost);
-        regionNode.setRegionLocation(regionLocation);
-        regionNode.setOpenSeqNum(openSeqNum);
-
-        // Note: keep consistent with other methods, see region(Opening|Opened|Closing)
-        //       RIT/ServerCrash handling should take care of the transiting regions.
-        if (localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING,
-          State.MERGING)) {
-          assert regionLocation != null : "found null region location for " + regionNode;
-          regionStates.addRegionToServer(regionNode);
-        } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
-          regionStates.addToOfflineRegions(regionNode);
-        }
-        if (regionNode.getProcedure() != null) {
-          regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
-        }
-      }
-    });
-
+    regionStateStore.visitMeta(new RegionMetaLoadingVisitor());
     // every assignment is blocked until meta is loaded.
     wakeMetaLoadedEvent();
   }
