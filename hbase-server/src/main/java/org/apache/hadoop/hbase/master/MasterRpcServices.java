@@ -2383,7 +2383,9 @@ public class MasterRpcServices extends RSRpcServices
         String encodedRegionName = Bytes.toString(rs.getValue().toByteArray());
         RegionState regionState = this.master.getAssignmentManager().getRegionStates().
             getRegionState(encodedRegionName);
-        ri = regionState == null? null: regionState.getRegion();
+        ri = regionState == null ?
+          this.master.getAssignmentManager().loadRegionFromMeta(encodedRegionName) :
+            regionState.getRegion();
         break;
       default:
         break;

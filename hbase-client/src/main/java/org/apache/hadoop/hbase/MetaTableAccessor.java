@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -370,6 +372,25 @@ public class MetaTableAccessor {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
     return get(getMetaHTable(connection), get);
+  }
+
+  /**
+   * Scans META table for a row whose key contains the specified <B>regionEncodedName</B>,
+   * returning a single related <code>Result</code> instance if any row is found, null otherwise.
+   *
+   * @param connection the connection to query META table.
+   * @param regionEncodedName the region encoded name to look for at META.
+   * @return <code>Result</code> instance with the row related info in META, null otherwise.
+   * @throws IOException if any errors occur while querying META.
+   */
+  public static Result scanByRegionEncodedName(Connection connection,
+      String regionEncodedName) throws IOException {
+    RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
+      new SubstringComparator(regionEncodedName));
+    Scan scan = getMetaScan(connection, 1);
+    scan.setFilter(rowFilter);
+    ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan);
+    return resultScanner.next();
   }
 
   /**
