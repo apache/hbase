@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
@@ -216,6 +217,20 @@ public class TestHbck {
     pids = hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
     assertTrue(pids.get(0) == -1);
     LOG.info("pid is {}", pids.get(0));
+  }
+
+  @Test
+  public void testRunHbckChore() throws Exception {
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    long endTimestamp = master.getHbckChore().getCheckingEndTimestamp();
+    Hbck hbck = getHbck();
+    boolean ran = false;
+    while (!ran) {
+      ran = hbck.runHbckChore();
+      if (ran) {
+        assertTrue(master.getHbckChore().getCheckingEndTimestamp() > endTimestamp);
+      }
+    }
   }
 
   private void waitOnPids(List<Long> pids) {

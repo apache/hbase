@@ -57,6 +57,10 @@ module Hbase
       command(:disable, @test_name)
       assert(!command(:is_enabled, @test_name))
     end
+
+    define_test 'hbck_chore_run' do
+      command(:hbck_chore_run)
+    end
   end
 
     # Simple administration methods tests
