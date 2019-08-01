@@ -339,6 +339,7 @@ Shell.load_command_group(
     flush
     major_compact
     move
+    move_table_to_servers
     split
     merge_region
     unassign

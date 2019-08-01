@@ -176,6 +176,16 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test 'move table to regionserver' do
+      command(:move_table_to_servers, @test_name)
+      server_name = admin.getServerNames([], true)[0].getServerName()
+      command(:move_table_to_servers, @test_name, server_name)
+      command(:move_table_to_servers, @test_name, [server_name])
+      puts "move_table_to_servers success!"
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "create should fail with non-string table names" do
       assert_raise(ArgumentError) do
         command(:create, 123, 'xxx')

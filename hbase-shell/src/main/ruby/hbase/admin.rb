@@ -524,6 +524,48 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Move regions of a table
+    def move_table_to_servers(table_name, host_or_servers = nil)
+      if table_name == nil
+        $stdout.puts "table_name can NOT be NULL"
+        return
+      end
+
+      table_regions = @admin.getRegions(TableName.valueOf(table_name))
+      if table_regions == nil || table_regions.size == 0
+        $stdout.puts "no regions found for table #{table_name}"
+        return
+      end
+      region_count = table_regions.size
+
+      if host_or_servers.nil? || host_or_servers.empty?
+        region_servers = getRegionServers
+        server_name_strs = []
+        for server in region_servers
+          server_name_strs << server.getServerName()
+        end
+        host_or_servers = server_name_strs
+      end
+
+      # If a string is passed, convert  it to an array
+      _host_or_servers =  host_or_servers.is_a?(Array) ?
+                              host_or_servers :
+                              java.util.Arrays.asList(host_or_servers)
+      server_names = getServerNames(_host_or_servers, true)
+
+      index = 0
+      while index < region_count
+        encoded_region_name = table_regions[index].getEncodedName
+        server_name = server_names[index % server_names.size].getServerName
+        index += 1
+        $stdout.puts "start moving #{index} / #{region_count} region #{encoded_region_name} of table : #{table_name} to server : #{server_name}"
+        # move one region to the server
+        @admin.move(Bytes.toBytes(encoded_region_name), Bytes.toBytes(server_name))
+      end
+      $stdout.puts "finish moving all #{region_count} regions"
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Merge two regions
     def merge_region(region_a_name, region_b_name, force)
       @admin.mergeRegions(region_a_name.to_java_bytes,
