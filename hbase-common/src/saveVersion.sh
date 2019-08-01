@@ -70,8 +70,10 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_STRING_CTOR",
+  justification="Intentional; to be modified in test")
 public class Version {
-  public static final String version = "$version";
+  public static final String version = new String("$version");
   public static final String revision = "$revision";
   public static final String user = "$user";
   public static final String date = "$date";

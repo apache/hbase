@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,6 +43,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -223,5 +227,55 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     rsGroupAdmin.moveServers(Sets.newHashSet(newServer.getAddress()), groupName);
     // wait and check if table regions are online
     TEST_UTIL.waitTableAvailable(tableName, 30000);
+  }
+
+  @Test
+  public void testLowerMetaGroupVersion() throws Exception{
+    // create a rsgroup and move one regionserver to it
+    String groupName = "meta_group";
+    int groupRSCount = 1;
+    addGroup(groupName, groupRSCount);
+
+    // move hbase:meta to meta_group
+    tableName = TableName.META_TABLE_NAME;
+    Set<TableName> toAddTables = new HashSet<>();
+    toAddTables.add(tableName);
+    rsGroupAdmin.moveTables(toAddTables, groupName);
+    assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(tableName));
+    TEST_UTIL.waitTableAvailable(tableName, 30000);
+
+    // restart the regionserver in meta_group, and lower its version
+    String originVersion = "";
+    Set<Address> servers = new HashSet<>();
+    for(Address addr : rsGroupAdmin.getRSGroupInfo(groupName).getServers()) {
+      servers.add(addr);
+      TEST_UTIL.getMiniHBaseCluster().stopRegionServer(getServerName(addr));
+      originVersion = master.getRegionServerVersion(getServerName(addr));
+    }
+    // better wait for a while for region reassign
+    sleep(10000);
+    assertEquals(NUM_SLAVES_BASE - groupRSCount,
+        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+    Address address = servers.iterator().next();
+    int majorVersion = VersionInfo.getMajorVersion(originVersion);
+    assertTrue(majorVersion >= 1);
+    String lowerVersion = String.valueOf(majorVersion - 1) + originVersion.split("\\.")[1];
+    setFinalStatic(Version.class.getField("version"), lowerVersion);
+    TEST_UTIL.getMiniHBaseCluster().startRegionServer(address.getHostname(),
+        address.getPort());
+    assertEquals(NUM_SLAVES_BASE,
+        TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
+    assertTrue(VersionInfo.compareVersion(originVersion,
+        master.getRegionServerVersion(getServerName(servers.iterator().next()))) > 0);
+    LOG.debug("wait for META assigned...");
+    TEST_UTIL.waitTableAvailable(tableName, 30000);
+  }
+
+  private static void setFinalStatic(Field field, Object newValue) throws Exception {
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    field.set(null, newValue);
   }
 }

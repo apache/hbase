@@ -166,6 +166,10 @@ public class VersionInfo {
     return comps;
   }
 
+  public static int getMajorVersion(String version) {
+    return Integer.parseInt(version.split("\\.")[0]);
+  }
+
   public static void main(String[] args) {
     writeTo(System.out);
   }
