@@ -71,7 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class Version {
-  public static final String version = "$version";
+  public static final String version = new String("$version");
   public static final String revision = "$revision";
   public static final String user = "$user";
   public static final String date = "$date";
