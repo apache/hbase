@@ -47,11 +47,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HbckChecker extends ScheduledChore {
-  private static final Logger LOG = LoggerFactory.getLogger(HbckChecker.class.getName());
+public class HbckChore extends ScheduledChore {
+  private static final Logger LOG = LoggerFactory.getLogger(HbckChore.class.getName());
 
-  private static final String HBCK_CHECKER_INTERVAL = "hbase.master.hbck.checker.interval";
-  private static final int DEFAULT_HBCK_CHECKER_INTERVAL = 60 * 60 * 1000;
+  private static final String HBCK_CHORE_INTERVAL = "hbase.master.hbck.chore.interval";
+  private static final int DEFAULT_HBCK_CHORE_INTERVAL = 60 * 60 * 1000;
 
   private final MasterServices master;
 
@@ -100,14 +100,14 @@ public class HbckChecker extends ScheduledChore {
   private volatile long checkingStartTimestamp = 0;
   private volatile long checkingEndTimestamp = 0;
 
-  public HbckChecker(MasterServices master) {
-    super("HbckChecker-", master,
-        master.getConfiguration().getInt(HBCK_CHECKER_INTERVAL, DEFAULT_HBCK_CHECKER_INTERVAL));
+  public HbckChore(MasterServices master) {
+    super("HbckChore-", master,
+        master.getConfiguration().getInt(HBCK_CHORE_INTERVAL, DEFAULT_HBCK_CHORE_INTERVAL));
     this.master = master;
   }
 
   @Override
-  protected void chore() {
+  protected synchronized void chore() {
     running = true;
     regionInfoMap.clear();
     orphanRegionsOnRS.clear();
@@ -277,6 +277,6 @@ public class HbckChecker extends ScheduledChore {
    * Used for web ui to show when the HBCK checking report generated.
    */
   public long getCheckingEndTimestamp() {
-    return this.checkingStartTimestamp;
+    return this.checkingEndTimestamp;
   }
 }

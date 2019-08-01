@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
@@ -236,6 +237,20 @@ public class TestHbck {
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);
+  }
+
+  @Test
+  public void testRunHbckChore() throws Exception {
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    long endTimestamp = master.getHbckChore().getCheckingEndTimestamp();
+    Hbck hbck = getHbck();
+    boolean ran = false;
+    while (!ran) {
+      ran = hbck.runHbckChore();
+      if (ran) {
+        assertTrue(master.getHbckChore().getCheckingEndTimestamp() > endTimestamp);
+      }
+    }
   }
 
   public static class FailingSplitAfterMetaUpdatedMasterObserver
