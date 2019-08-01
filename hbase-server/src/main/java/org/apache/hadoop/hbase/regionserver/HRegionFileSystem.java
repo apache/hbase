@@ -326,8 +326,8 @@ public class HRegionFileSystem {
         if(stat.isDirectory()) {
           continue;
         }
-        if(StoreFileInfo.isReference(stat.getPath())) {
-          if (LOG.isTraceEnabled()) LOG.trace("Reference " + stat.getPath());
+        if (StoreFileInfo.isReference(stat.getPath())) {
+          LOG.trace("Reference {}", stat.getPath());
           return true;
         }
       }
@@ -758,22 +758,22 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Create the region merges directory.
+   * Create the region merges directory, a temporary directory to accumulate
+   * merges in.
    * @throws IOException If merges dir already exists or we fail to create it.
    * @see HRegionFileSystem#cleanupMergesDir()
    */
   public void createMergesDir() throws IOException {
     Path mergesdir = getMergesDir();
     if (fs.exists(mergesdir)) {
-      LOG.info("The " + mergesdir
-          + " directory exists.  Hence deleting it to recreate it");
+      LOG.info("{} directory exists. Deleting it to recreate it anew", mergesdir);
       if (!fs.delete(mergesdir, true)) {
-        throw new IOException("Failed deletion of " + mergesdir
-            + " before creating them again.");
+        throw new IOException("Failed deletion of " + mergesdir + " before recreate.");
       }
     }
-    if (!mkdirs(fs, conf, mergesdir))
+    if (!mkdirs(fs, conf, mergesdir)) {
       throw new IOException("Failed create of " + mergesdir);
+    }
   }
 
   /**
@@ -813,7 +813,7 @@ public class HRegionFileSystem {
   public void commitMergedRegion(final RegionInfo mergedRegionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
     Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
-    // Move the tmp dir in the expected location
+    // Move the tmp dir to the expected location
     if (mergedRegionTmpDir != null && fs.exists(mergedRegionTmpDir)) {
 
       // Write HRI to a file in case we need to recover hbase:meta

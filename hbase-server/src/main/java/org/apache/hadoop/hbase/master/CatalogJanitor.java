@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,7 +52,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.GCMergedRegionsProcedure;
+import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -185,26 +186,15 @@ public class CatalogJanitor extends ScheduledChore {
           break;
         }
 
-        PairOfSameType<RegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
-        RegionInfo regionA = p.getFirst();
-        RegionInfo regionB = p.getSecond();
-        if (regionA == null || regionB == null) {
-          LOG.warn("Unexpected references regionA="
-              + (regionA == null ? "null" : regionA.getShortNameToLog())
-              + ",regionB="
-              + (regionB == null ? "null" : regionB.getShortNameToLog())
-              + " in merged region " + e.getKey().getShortNameToLog());
-        } else {
-          if (cleanMergeRegion(e.getKey(), regionA, regionB)) {
-            gcs++;
-          }
+        List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+        if (parents != null && cleanMergeRegion(e.getKey(), parents)) {
+          gcs++;
         }
       }
       // Clean split parents
       Map<RegionInfo, Result> splitParents = report.splitParents;
 
       // Now work on our list of found parents. See if any we can clean up.
-      // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<>();
       for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
@@ -253,10 +243,10 @@ public class CatalogJanitor extends ScheduledChore {
    * If merged region no longer holds reference to the merge regions, archive
    * merge region on hdfs and perform deleting references in hbase:meta
    * @return true if we delete references in merged region on hbase:meta and archive
-   *         the files on the file system
+   *   the files on the file system
    */
-  private boolean cleanMergeRegion(final RegionInfo mergedRegion,
-     final RegionInfo regionA, final RegionInfo regionB) throws IOException {
+  private boolean cleanMergeRegion(final RegionInfo mergedRegion, List<RegionInfo> parents)
+      throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
@@ -269,17 +259,19 @@ public class CatalogJanitor extends ScheduledChore {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
     if (regionFs == null || !regionFs.hasReferences(htd)) {
-      LOG.debug("Deleting region " + regionA.getShortNameToLog() + " and "
-          + regionB.getShortNameToLog()
-          + " from fs because merged region no longer holds references");
+      LOG.debug("Deleting parents ({}) from fs; merged child {} no longer holds references",
+           parents.stream().map(r -> RegionInfo.getShortNameToLog(r)).
+              collect(Collectors.joining(", ")),
+          mergedRegion);
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
-      pe.submitProcedure(new GCMergedRegionsProcedure(pe.getEnvironment(),
-          mergedRegion, regionA, regionB));
-      // Remove from in-memory states
-      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionA);
-      this.services.getAssignmentManager().getRegionStates().deleteRegion(regionB);
-      this.services.getServerManager().removeRegion(regionA);
-      this.services.getServerManager().removeRegion(regionB);
+      pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
+          mergedRegion,  parents));
+      for (RegionInfo ri:  parents) {
+        // The above scheduled GCMultipleMergedRegionsProcedure does the below.
+        // Do we need this?
+        this.services.getAssignmentManager().getRegionStates().deleteRegion(ri);
+        this.services.getServerManager().removeRegion(ri);
+      }
       return true;
     }
     return false;
@@ -327,11 +319,9 @@ public class CatalogJanitor extends ScheduledChore {
    */
   boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
-    // Check whether it is a merged region and not clean reference
-    // No necessary to check MERGEB_QUALIFIER because these two qualifiers will
-    // be inserted/deleted together
-    if (rowContent.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
-      // wait cleaning merge region first
+    // Check whether it is a merged region and if it is clean of references.
+    if (MetaTableAccessor.hasMergeRegions(rowContent.rawCells())) {
+      // Wait until clean of merge parent regions first
       return false;
     }
     // Run checks on each daughter split.
@@ -424,28 +414,19 @@ public class CatalogJanitor extends ScheduledChore {
   }
 
   /**
-   * Checks if the specified region has merge qualifiers, if so, try to clean
-   * them
-   * @return true if the specified region doesn't have merge qualifier now
+   * Checks if the specified region has merge qualifiers, if so, try to clean them.
+   * @return true if no info:merge* columns; i.e. the specified region doesn't have
+   *   any merge qualifiers.
    */
   public boolean cleanMergeQualifier(final RegionInfo region) throws IOException {
-    // Get merge regions if it is a merged region and already has merge
-    // qualifier
-    Pair<RegionInfo, RegionInfo> mergeRegions = MetaTableAccessor
-        .getRegionsFromMergeQualifier(this.services.getConnection(),
-          region.getRegionName());
-    if (mergeRegions == null
-        || (mergeRegions.getFirst() == null && mergeRegions.getSecond() == null)) {
+    // Get merge regions if it is a merged region and already has merge qualifier
+    List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(this.services.getConnection(),
+        region.getRegionName());
+    if (parents == null || parents.isEmpty()) {
       // It doesn't have merge qualifier, no need to clean
       return true;
     }
-    // It shouldn't happen, we must insert/delete these two qualifiers together
-    if (mergeRegions.getFirst() == null || mergeRegions.getSecond() == null) {
-      LOG.error("Merged region " + region.getRegionNameAsString()
-          + " has only one merge qualifier in META.");
-      return false;
-    }
-    return cleanMergeRegion(region, mergeRegions.getFirst(), mergeRegions.getSecond());
+    return cleanMergeRegion(region, parents);
   }
 
   /**
@@ -580,7 +561,7 @@ public class CatalogJanitor extends ScheduledChore {
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
           this.report.splitParents.put(regionInfo, r);
         }
-        if (r.getValue(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER) != null) {
+        if (MetaTableAccessor.hasMergeRegions(r.rawCells())) {
           this.report.mergedRegions.put(regionInfo, r);
         }
       }
@@ -755,7 +736,7 @@ public class CatalogJanitor extends ScheduledChore {
       try (Table t = connection.getTable(TableName.META_TABLE_NAME)) {
         Result r = t.get(g);
         byte [] row = g.getRow();
-        row[row.length - 2] <<= ((byte)row[row.length - 2]);
+        row[row.length - 2] <<= row[row.length - 2];
         Put p = new Put(g.getRow());
         p.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
             r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));

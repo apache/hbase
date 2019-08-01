@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -543,9 +543,9 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * keep it simple.
    */
   @Override
-  public void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo regionA,
-      RegionInfo regionB) throws IOException {
-    updateFavoredNodesForRegion(merged, fnm.getFavoredNodes(regionA));
+  public void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
+      throws IOException {
+    updateFavoredNodesForRegion(merged, fnm.getFavoredNodes(mergeParents[0]));
   }
 
   /*

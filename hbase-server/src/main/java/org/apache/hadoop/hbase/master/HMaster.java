@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
@@ -131,6 +130,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -1896,40 +1896,20 @@ public class HMaster extends HRegionServer implements MasterServices {
   public long mergeRegions(
       final RegionInfo[] regionsToMerge,
       final boolean forcible,
-      final long nonceGroup,
+      final long ng,
       final long nonce) throws IOException {
     checkInitialized();
 
-    assert(regionsToMerge.length == 2);
-
-    TableName tableName = regionsToMerge[0].getTable();
-    if (tableName == null || regionsToMerge[1].getTable() == null) {
-      throw new UnknownRegionException ("Can't merge regions without table associated");
-    }
-
-    if (!tableName.equals(regionsToMerge[1].getTable())) {
-      throw new IOException (
-        "Cannot merge regions from two different tables " + regionsToMerge[0].getTable()
-        + " and " + regionsToMerge[1].getTable());
-    }
-
-    if (RegionInfo.COMPARATOR.compare(regionsToMerge[0], regionsToMerge[1]) == 0) {
-      throw new MergeRegionException(
-        "Cannot merge a region to itself " + regionsToMerge[0] + ", " + regionsToMerge[1]);
-    }
-
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    final String mergeRegionsStr = Arrays.stream(regionsToMerge).
+      map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", "));
+    return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {
         getMaster().getMasterCoprocessorHost().preMergeRegions(regionsToMerge);
-
-        LOG.info(getClientIdAuditPrefix() + " Merge regions " +
-          regionsToMerge[0].getEncodedName() + " and " + regionsToMerge[1].getEncodedName());
-
+        String aid = getClientIdAuditPrefix();
+        LOG.info("{} merge regions {}", aid, mergeRegionsStr);
         submitProcedure(new MergeTableRegionsProcedure(procedureExecutor.getEnvironment(),
-          regionsToMerge, forcible));
-
+            regionsToMerge, forcible));
         getMaster().getMasterCoprocessorHost().postMergeRegions(regionsToMerge);
       }
 

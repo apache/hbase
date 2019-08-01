@@ -100,7 +100,7 @@ public class TestMergeTableRegionsWhileRSCrash {
         .getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
-        env, regionInfos.get(0), regionInfos.get(1));
+        env, new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
     executor.submitProcedure(mergeTableRegionsProcedure);
     UTIL.waitFor(30000,
       () -> executor.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)

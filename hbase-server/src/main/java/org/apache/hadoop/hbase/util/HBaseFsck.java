@@ -2790,13 +2790,14 @@ public class HBaseFsck extends Configured implements Closeable {
               throw new IOException("Two entries in hbase:meta are same " + previous);
             }
           }
-          PairOfSameType<RegionInfo> mergeRegions = MetaTableAccessor.getMergeRegions(result);
-          for (RegionInfo mergeRegion : new RegionInfo[] {
-              mergeRegions.getFirst(), mergeRegions.getSecond() }) {
-            if (mergeRegion != null) {
-              // This region is already been merged
-              HbckRegionInfo hbInfo = getOrCreateInfo(mergeRegion.getEncodedName());
-              hbInfo.setMerged(true);
+          List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(result.rawCells());
+          if (mergeParents != null) {
+            for (RegionInfo mergeRegion : mergeParents) {
+              if (mergeRegion != null) {
+                // This region is already being merged
+                HbckRegionInfo hbInfo = getOrCreateInfo(mergeRegion.getEncodedName());
+                hbInfo.setMerged(true);
+              }
             }
           }
 

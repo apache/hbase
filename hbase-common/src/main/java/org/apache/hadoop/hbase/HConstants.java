@@ -485,11 +485,31 @@ public final class HConstants {
   /** The upper-half split region column qualifier */
   public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
 
-  /** The lower-half merge region column qualifier */
-  public static final byte[] MERGEA_QUALIFIER = Bytes.toBytes("mergeA");
+  /**
+   * Merge qualifier prefix.
+   * We used to only allow two regions merge; mergeA and mergeB.
+   * Now we allow many to merge. Each region to merge will be referenced
+   * in a column whose qualifier starts with this define.
+   */
+  public static final String MERGE_QUALIFIER_PREFIX_STR = "merge";
+  public static final byte [] MERGE_QUALIFIER_PREFIX =
+      Bytes.toBytes(MERGE_QUALIFIER_PREFIX_STR);
 
-  /** The upper-half merge region column qualifier */
-  public static final byte[] MERGEB_QUALIFIER = Bytes.toBytes("mergeB");
+  /**
+   * The lower-half merge region column qualifier
+   * @deprecated Since 2.3.0 and 2.2.1. Not used anymore. Instead we look for
+   *   the {@link #MERGE_QUALIFIER_PREFIX_STR} prefix.
+   */
+  @Deprecated
+  public static final byte[] MERGEA_QUALIFIER = Bytes.toBytes(MERGE_QUALIFIER_PREFIX_STR + "A");
+
+  /**
+   * The upper-half merge region column qualifier
+   * @deprecated Since 2.3.0 and 2.2.1. Not used anymore. Instead we look for
+   *   the {@link #MERGE_QUALIFIER_PREFIX_STR} prefix.
+   */
+  @Deprecated
+  public static final byte[] MERGEB_QUALIFIER = Bytes.toBytes(MERGE_QUALIFIER_PREFIX_STR + "B");
 
   /** The catalog family as a string*/
   public static final String TABLE_FAMILY_STR = "table";

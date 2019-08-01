@@ -89,7 +89,7 @@ public class TestMasterAbortWhileMergingTable {
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
         UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-            .getEnvironment(), regionInfos.get(0), regionInfos.get(1));
+            .getEnvironment(), new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
     long procID = UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
         .submitProcedure(mergeTableRegionsProcedure);
     mergeCommitArrive.await();
