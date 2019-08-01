@@ -73,6 +73,10 @@ module Hbase
       # Some text which isn't in the simple output
       assert output.include? 'regionsInTransition'
     end
+
+    define_test 'hbck_chore_run' do
+      command(:hbck_chore_run)
+    end
   end
 
   # Simple administration methods tests

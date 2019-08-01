@@ -25,19 +25,23 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * Use {@link ClusterConnection#getHbck()} to obtain an instance of {@link Hbck} instead of
@@ -106,9 +110,8 @@ public class HBaseHbck implements Hbck {
   public List<Long> assigns(List<String> encodedRegionNames, boolean override)
       throws IOException {
     try {
-      MasterProtos.AssignsResponse response =
-          this.hbck.assigns(rpcControllerFactory.newController(),
-              RequestConverter.toAssignRegionsRequest(encodedRegionNames, override));
+      AssignsResponse response = this.hbck.assigns(rpcControllerFactory.newController(),
+          RequestConverter.toAssignRegionsRequest(encodedRegionNames, override));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -120,9 +123,8 @@ public class HBaseHbck implements Hbck {
   public List<Long> unassigns(List<String> encodedRegionNames, boolean override)
       throws IOException {
     try {
-      MasterProtos.UnassignsResponse response =
-          this.hbck.unassigns(rpcControllerFactory.newController(),
-              RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override));
+      UnassignsResponse response = this.hbck.unassigns(rpcControllerFactory.newController(),
+          RequestConverter.toUnassignRegionsRequest(encodedRegionNames, override));
       return response.getPidList();
     } catch (ServiceException se) {
       LOG.debug(toCommaDelimitedString(encodedRegionNames), se);
@@ -138,13 +140,13 @@ public class HBaseHbck implements Hbck {
   public List<Boolean> bypassProcedure(List<Long> pids, long waitTime, boolean override,
       boolean recursive)
       throws IOException {
-    MasterProtos.BypassProcedureResponse response = ProtobufUtil.call(
-        new Callable<MasterProtos.BypassProcedureResponse>() {
+    BypassProcedureResponse response = ProtobufUtil.call(
+        new Callable<BypassProcedureResponse>() {
           @Override
-          public MasterProtos.BypassProcedureResponse call() throws Exception {
+          public BypassProcedureResponse call() throws Exception {
             try {
               return hbck.bypassProcedure(rpcControllerFactory.newController(),
-                  MasterProtos.BypassProcedureRequest.newBuilder().addAllProcId(pids).
+                  BypassProcedureRequest.newBuilder().addAllProcId(pids).
                       setWaitTime(waitTime).setOverride(override).setRecursive(recursive).build());
             } catch (Throwable t) {
               LOG.error(pids.stream().map(i -> i.toString()).
@@ -160,7 +162,7 @@ public class HBaseHbck implements Hbck {
   public List<Long> scheduleServerCrashProcedures(List<ServerName> serverNames)
       throws IOException {
     try {
-      MasterProtos.ScheduleServerCrashProcedureResponse response =
+      ScheduleServerCrashProcedureResponse response =
           this.hbck.scheduleServerCrashProcedure(rpcControllerFactory.newController(),
             RequestConverter.toScheduleServerCrashProcedureRequest(serverNames));
       return response.getPidList();
@@ -169,6 +171,18 @@ public class HBaseHbck implements Hbck {
         serverNames.stream().map(serverName -> ProtobufUtil.toServerName(serverName).toString())
             .collect(Collectors.toList())),
         se);
+      throw new IOException(se);
+    }
+  }
+
+  @Override
+  public boolean runHbckChore() throws IOException {
+    try {
+      RunHbckChoreResponse response = this.hbck.runHbckChore(rpcControllerFactory.newController(),
+          RunHbckChoreRequest.newBuilder().build());
+      return response.getRan();
+    } catch (ServiceException se) {
+      LOG.debug("Failed to run HBCK chore", se);
       throw new IOException(se);
     }
   }

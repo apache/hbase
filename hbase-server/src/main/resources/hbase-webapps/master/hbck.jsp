@@ -23,25 +23,25 @@
          import="java.util.Map"
          import="java.util.stream.Collectors"
 %>
-<%@ page import="org.apache.hadoop.hbase.master.HbckChecker" %>
+<%@ page import="org.apache.hadoop.hbase.master.HbckChore" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
 <%@ page import="org.apache.hadoop.hbase.ServerName" %>
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
-  HbckChecker hbckChecker = master.getHbckChecker();
+  HbckChore hbckChore = master.getHbckChore();
   Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
   Map<String, ServerName> orphanRegionsOnRS = null;
   List<String> orphanRegionsOnFS = null;
   long startTimestamp = 0;
   long endTimestamp = 0;
-  if (hbckChecker != null) {
-    inconsistentRegions = hbckChecker.getInconsistentRegions();
-    orphanRegionsOnRS = hbckChecker.getOrphanRegionsOnRS();
-    orphanRegionsOnFS = hbckChecker.getOrphanRegionsOnFS();
-    startTimestamp = hbckChecker.getCheckingStartTimestamp();
-    endTimestamp = hbckChecker.getCheckingEndTimestamp();
+  if (hbckChore != null) {
+    inconsistentRegions = hbckChore.getInconsistentRegions();
+    orphanRegionsOnRS = hbckChore.getOrphanRegionsOnRS();
+    orphanRegionsOnFS = hbckChore.getOrphanRegionsOnFS();
+    startTimestamp = hbckChore.getCheckingStartTimestamp();
+    endTimestamp = hbckChore.getCheckingEndTimestamp();
   }
 %>
 <jsp:include page="header.jsp">
