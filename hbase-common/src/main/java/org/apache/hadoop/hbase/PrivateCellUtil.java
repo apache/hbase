@@ -757,6 +757,25 @@ public final class PrivateCellUtil {
       left.getQualifierLength(), buf, offset, length);
   }
 
+  /**
+   * Finds if the start of the qualifier part of the Cell matches <code>buf</code>
+   * @param left the cell with which we need to match the qualifier
+   * @param startsWith the serialized keyvalue format byte[]
+   * @return true if the qualifier have same staring characters, false otherwise
+   */
+  public static boolean qualifierStartsWith(final Cell left, final byte[] startsWith) {
+    if (startsWith == null || startsWith.length == 0) {
+      throw new IllegalArgumentException("Cannot pass an empty startsWith");
+    }
+    if (left instanceof ByteBufferExtendedCell) {
+      return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferExtendedCell) left).getQualifierPosition(), startsWith.length,
+          startsWith, 0, startsWith.length);
+    }
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+        startsWith.length, startsWith, 0, startsWith.length);
+  }
+
   public static boolean matchingColumn(final Cell left, final byte[] fam, final int foffset,
       final int flength, final byte[] qual, final int qoffset, final int qlength) {
     if (!matchingFamily(left, fam, foffset, flength)) {

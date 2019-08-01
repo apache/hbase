@@ -389,7 +389,7 @@ public class StoreFileInfo {
   @Override
   public String toString() {
     return this.getPath() +
-      (isReference() ? "-" + getReferredToFile(this.getPath()) + "-" + reference : "");
+      (isReference() ? "->" + getReferredToFile(this.getPath()) + "-" + reference : "");
   }
 
   /**
