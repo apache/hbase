@@ -371,7 +371,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
 
-  private HbckChecker hbckChecker;
+  private HbckChore hbckChore;
   CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
@@ -1031,8 +1031,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
-    this.hbckChecker = new HbckChecker(this);
-    getChoreService().scheduleChore(hbckChecker);
+    this.hbckChore = new HbckChore(this);
+    getChoreService().scheduleChore(hbckChore);
 
     // NAMESPACE READ!!!!
     // Here we expect hbase:namespace to be online. See inside initClusterSchemaService.
@@ -1498,7 +1498,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       choreService.cancelChore(this.logCleaner);
       choreService.cancelChore(this.hfileCleaner);
       choreService.cancelChore(this.replicationBarrierCleaner);
-      choreService.cancelChore(this.hbckChecker);
+      choreService.cancelChore(this.hbckChore);
     }
   }
 
@@ -3866,7 +3866,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return super.getWalGroupsReplicationStatus();
   }
 
-  public HbckChecker getHbckChecker() {
-    return this.hbckChecker;
+  public HbckChore getHbckChore() {
+    return this.hbckChore;
   }
 }

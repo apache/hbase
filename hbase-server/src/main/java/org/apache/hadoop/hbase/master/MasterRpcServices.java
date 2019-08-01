@@ -237,6 +237,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalog
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -2292,6 +2294,20 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   // HBCK Services
+
+  @Override
+  public RunHbckChoreResponse runHbckChore(RpcController c, RunHbckChoreRequest req)
+      throws ServiceException {
+    rpcPreCheck("runHbckChore");
+    LOG.info("{} request HBCK chore to run", master.getClientIdAuditPrefix());
+    HbckChore hbckChore = master.getHbckChore();
+    boolean ran = false;
+    if (!hbckChore.isRunning()) {
+      hbckChore.chore();
+      ran = true;
+    }
+    return RunHbckChoreResponse.newBuilder().setRan(ran).build();
+  }
 
   /**
    * Update state of the table in meta only. This is required by hbck in some situations to cleanup
