@@ -510,6 +510,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>sakthi</id>
+      <name>Sakthi Vel</name>
+      <email>sakthi@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>sershe</id>
       <name>Sergey Shelukhin</name>
       <email>sershe@apache.org</email>
