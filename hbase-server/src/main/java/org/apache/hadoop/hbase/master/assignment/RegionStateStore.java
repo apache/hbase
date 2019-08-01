@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -223,11 +224,11 @@ public class RegionStateStore {
   // ============================================================================================
   //  Update Region Merging State helpers
   // ============================================================================================
-  public void mergeRegions(final RegionInfo parent, final RegionInfo hriA, final RegionInfo hriB,
-      final ServerName serverName) throws IOException {
-    final TableDescriptor htd = getTableDescriptor(parent.getTable());
-    MetaTableAccessor.mergeRegions(master.getConnection(), parent, hriA, hriB, serverName,
-      getRegionReplication(htd));
+  public void mergeRegions(RegionInfo child, RegionInfo [] parents, ServerName serverName)
+      throws IOException {
+    TableDescriptor htd = getTableDescriptor(child.getTable());
+    MetaTableAccessor.mergeRegions(master.getConnection(), child, parents, serverName,
+        getRegionReplication(htd));
   }
 
   // ============================================================================================

@@ -92,7 +92,7 @@ public class TestModifyTableWhileMerging {
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-        .getEnvironment(), regionInfos.get(0), regionInfos.get(1));
+        .getEnvironment(), new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
     ModifyTableProcedure modifyTableProcedure = new ModifyTableProcedure(env, tableDescriptor);
     long procModify = executor.submitProcedure(modifyTableProcedure);
     UTIL.waitFor(30000, () -> executor.getProcedures().stream()

@@ -27,7 +27,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,13 +79,12 @@ public class RegionsResource extends ResourceBase {
       TableInfoModel model = new TableInfoModel(tableName.getNameAsString());
 
       Connection connection = ConnectionFactory.createConnection(servlet.getConfiguration());
-      @SuppressWarnings("deprecation")
-      Map<RegionInfo, ServerName> regions = MetaTableAccessor
-          .allTableRegions(connection, tableName);
+      List<Pair<RegionInfo, ServerName>> regions = MetaTableAccessor
+          .getTableRegionsAndLocations(connection, tableName);
       connection.close();
-      for (Map.Entry<RegionInfo,ServerName> e: regions.entrySet()) {
-        RegionInfo hri = e.getKey();
-        ServerName addr = e.getValue();
+      for (Pair<RegionInfo,ServerName> e: regions) {
+        RegionInfo hri = e.getFirst();
+        ServerName addr = e.getSecond();
         model.add(
           new TableRegionModel(tableName.getNameAsString(), hri.getRegionId(),
             hri.getStartKey(), hri.getEndKey(), addr.getHostAndPort()));
