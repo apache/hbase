@@ -836,9 +836,8 @@ public class AssignmentManager {
     return new SplitTableRegionProcedure(getProcedureEnvironment(), regionToSplit, splitKey);
   }
 
-  public MergeTableRegionsProcedure createMergeProcedure(final RegionInfo regionToMergeA,
-      final RegionInfo regionToMergeB) throws IOException {
-    return new MergeTableRegionsProcedure(getProcedureEnvironment(), regionToMergeA,regionToMergeB);
+  public MergeTableRegionsProcedure createMergeProcedure(RegionInfo ... ris) throws IOException {
+    return new MergeTableRegionsProcedure(getProcedureEnvironment(), ris, false);
   }
 
   /**
@@ -1774,23 +1773,28 @@ public class AssignmentManager {
   }
 
   /**
-   * When called here, the merge has happened. The two merged regions have been
+   * When called here, the merge has happened. The merged regions have been
    * unassigned and the above markRegionClosed has been called on each so they have been
    * disassociated from a hosting Server. The merged region will be open after this call. The
-   * merged regions are removed from hbase:meta below> Later they are deleted from the filesystem
+   * merged regions are removed from hbase:meta below. Later they are deleted from the filesystem
    * by the catalog janitor running against hbase:meta. It notices when the merged region no
-   * longer holds references to the old regions.
+   * longer holds references to the old regions (References are deleted after a compaction
+   * rewrites what the Reference points at but not until the archiver chore runs, are the
+   * References removed).
    */
   public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
-      final RegionInfo mother, final RegionInfo father) throws IOException {
+        RegionInfo [] mergeParents)
+      throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
     node.setState(State.MERGED);
-    regionStates.deleteRegion(mother);
-    regionStates.deleteRegion(father);
-    regionStateStore.mergeRegions(child, mother, father, serverName);
+    for (RegionInfo ri: mergeParents) {
+      regionStates.deleteRegion(ri);
+
+    }
+    regionStateStore.mergeRegions(child, mergeParents, serverName);
     if (shouldAssignFavoredNodes(child)) {
       ((FavoredNodesPromoter)getBalancer()).
-        generateFavoredNodesForMergedRegion(child, mother, father);
+        generateFavoredNodesForMergedRegion(child, mergeParents);
     }
   }
 

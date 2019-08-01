@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -256,17 +259,16 @@ public class RegionStateStore {
   // ============================================================================================
   //  Update Region Merging State helpers
   // ============================================================================================
-  public void mergeRegions(RegionInfo child, RegionInfo hriA, RegionInfo hriB,
-      ServerName serverName) throws IOException {
+  public void mergeRegions(RegionInfo child, RegionInfo [] parents, ServerName serverName)
+      throws IOException {
     TableDescriptor htd = getTableDescriptor(child.getTable());
-    long regionAOpenSeqNum = -1L;
-    long regionBOpenSeqNum = -1L;
-    if (htd.hasGlobalReplicationScope()) {
-      regionAOpenSeqNum = getOpenSeqNumForParentRegion(hriA);
-      regionBOpenSeqNum = getOpenSeqNumForParentRegion(hriB);
+    boolean globalScope = htd.hasGlobalReplicationScope();
+    Map<RegionInfo, Long> parentSeqNums = new HashMap<>(parents.length);
+    for (RegionInfo ri: parents) {
+      parentSeqNums.put(ri, globalScope? getOpenSeqNumForParentRegion(ri): -1);
     }
-    MetaTableAccessor.mergeRegions(master.getConnection(), child, hriA, regionAOpenSeqNum, hriB,
-      regionBOpenSeqNum, serverName, getRegionReplication(htd));
+    MetaTableAccessor.mergeRegions(master.getConnection(), child, parentSeqNums,
+        serverName, getRegionReplication(htd));
   }
 
   // ============================================================================================
