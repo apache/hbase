@@ -1959,10 +1959,22 @@ public class AssignmentManager {
       LOG.debug("Processing assignQueue; systemServersCount=" + serversForSysTables.size() +
           ", allServersCount=" + servers.size());
       processAssignmentPlans(regions, null, systemHRIs,
-          serversForSysTables.isEmpty()? servers: serversForSysTables);
+          serversForSysTables.isEmpty() && !containsBogusAssignments(regions, systemHRIs) ?
+              servers: serversForSysTables);
     }
 
     processAssignmentPlans(regions, retainMap, userHRIs, servers);
+  }
+
+  private boolean containsBogusAssignments(Map<RegionInfo, RegionStateNode> regions,
+      List<RegionInfo> hirs) {
+    for (RegionInfo ri : hirs) {
+      if (regions.get(ri).getRegionLocation() != null &&
+          regions.get(ri).getRegionLocation().equals(LoadBalancer.BOGUS_SERVER_NAME)){
+        return true;
+      }
+    }
+    return false;
   }
 
   private void processAssignmentPlans(final HashMap<RegionInfo, RegionStateNode> regions,
@@ -2020,7 +2032,16 @@ public class AssignmentManager {
       for (RegionInfo hri: entry.getValue()) {
         final RegionStateNode regionNode = regions.get(hri);
         regionNode.setRegionLocation(server);
-        events[evcount++] = regionNode.getProcedureEvent();
+        if (server.equals(LoadBalancer.BOGUS_SERVER_NAME) && regionNode.isSystemTable()) {
+          assignQueueLock.lock();
+          try {
+            pendingAssignQueue.add(regionNode);
+          } finally {
+            assignQueueLock.unlock();
+          }
+        }else {
+          events[evcount++] = regionNode.getProcedureEvent();
+        }
       }
     }
     ProcedureEvent.wakeEvents(getProcedureScheduler(), events);
