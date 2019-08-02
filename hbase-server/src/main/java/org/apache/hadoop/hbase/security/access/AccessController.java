@@ -23,6 +23,7 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -2072,7 +2073,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should store permission changes in addition to auth results
-          AUDITLOG.trace("User {} granted permission {}", caller, perm);
+          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+          AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller, remoteAddress, perm);
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
@@ -2129,7 +2131,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should record all permission changes
-          AUDITLOG.trace("User {} revoked permission {}", caller, perm);
+          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+          AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller, remoteAddress, perm);
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
