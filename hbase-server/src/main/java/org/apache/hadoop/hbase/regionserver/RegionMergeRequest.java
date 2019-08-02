@@ -129,6 +129,7 @@ class RegionMergeRequest implements Runnable {
           + mt.getMergedRegionInfo().getRegionNameAsString()
           + ". Region merge took "
           + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
+      LOG.info("Merge transaction journal:\n" + mt.toString());
     } catch (IOException ex) {
       LOG.error("Merge failed " + this,
           RemoteExceptionHandler.checkIOException(ex));

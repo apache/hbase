@@ -1068,16 +1068,15 @@ public class SplitTransactionImpl implements SplitTransaction {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < journal.size(); i++) {
       JournalEntry je = journal.get(i);
-      sb.append( je.toString());
+      sb.append(je.toString());
       if (i != 0) {
         JournalEntry jep = journal.get(i-1);
         long delta = je.getTimeStamp() - jep.getTimeStamp();
         if (delta != 0) {
-          sb.append(" (+" + delta + " ms)\n");
-        } else {
-          sb.append("\n");
+          sb.append(" (+" + delta + " ms)");
         }
       }
+      sb.append("\n");
     }
     return sb.toString();
   }

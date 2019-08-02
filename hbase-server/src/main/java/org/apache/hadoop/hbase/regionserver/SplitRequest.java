@@ -138,9 +138,8 @@ class SplitRequest implements Runnable {
             + st.getFirstDaughter().getRegionNameAsString() + ", "
             + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
             + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
+        LOG.info("Split transaction journal:\n" + st.toString());
       }
-      // Always log the split transaction journal
-      LOG.info("Split transaction journal:\n" + st.toString());
     }
   }
 
