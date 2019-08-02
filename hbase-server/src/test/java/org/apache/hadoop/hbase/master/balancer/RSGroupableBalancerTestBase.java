@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -60,17 +61,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class RSGroupableBalancerTestBase {
 
   static SecureRandom rand = new SecureRandom();
-  static String[] groups = new String[] {RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4"};
+  static String[] groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4" };
   static TableName table0 = TableName.valueOf("dt0");
-  static TableName[] tables =
-      new TableName[] { TableName.valueOf("dt1"),
-          TableName.valueOf("dt2"),
-          TableName.valueOf("dt3"),
-          TableName.valueOf("dt4")};
+  static TableName[] tables = new TableName[] { TableName.valueOf("dt1"), TableName.valueOf("dt2"),
+      TableName.valueOf("dt3"), TableName.valueOf("dt4") };
   static List<ServerName> servers;
   static Map<String, RSGroupInfo> groupMap;
-  static Map<TableName, String> tableMap = new HashMap<>();
-  static List<TableDescriptor> tableDescs;
+  static Map<TableName, TableDescriptor> tableDescs;
   int[] regionAssignment = new int[] { 2, 5, 7, 10, 4, 3, 1 };
   static int regionId = 0;
 
@@ -113,20 +110,19 @@ public class RSGroupableBalancerTestBase {
   /**
    * All regions have an assignment.
    */
-  protected void assertImmediateAssignment(List<RegionInfo> regions,
-                                         List<ServerName> servers,
-                                         Map<RegionInfo, ServerName> assignments)
-      throws IOException {
+  protected void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
+      Map<RegionInfo, ServerName> assignments) throws IOException {
     for (RegionInfo region : regions) {
       assertTrue(assignments.containsKey(region));
       ServerName server = assignments.get(region);
       TableName tableName = region.getTable();
 
-      String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
+      String groupName =
+          tableDescs.get(tableName).getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
       assertTrue(StringUtils.isNotEmpty(groupName));
       RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
       assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(server.getAddress()));
+        gInfo.containsServer(server.getAddress()));
     }
   }
 
@@ -169,16 +165,13 @@ public class RSGroupableBalancerTestBase {
         ServerName oldAssignedServer = existing.get(r);
         TableName tableName = r.getTable();
         String groupName =
-            getMockedGroupInfoManager().getRSGroupOfTable(tableName);
+            tableDescs.get(tableName).getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
         assertTrue(StringUtils.isNotEmpty(groupName));
-        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(
-            groupName);
-        assertTrue(
-            "Region is not correctly assigned to group servers.",
-            gInfo.containsServer(currentServer.getAddress()));
-        if (oldAssignedServer != null
-            && onlineHostNames.contains(oldAssignedServer
-            .getHostname())) {
+        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
+        assertTrue("Region is not correctly assigned to group servers.",
+          gInfo.containsServer(currentServer.getAddress()));
+        if (oldAssignedServer != null &&
+            onlineHostNames.contains(oldAssignedServer.getHostname())) {
           // this region was previously assigned somewhere, and that
           // host is still around, then the host must have been is a
           // different group.
@@ -358,13 +351,12 @@ public class RSGroupableBalancerTestBase {
 
   /**
    * Construct group info, with each group having at least one server.
-   *
    * @param servers the servers
    * @param groups the groups
    * @return the map
    */
-  protected static Map<String, RSGroupInfo> constructGroupInfo(
-      List<ServerName> servers, String[] groups) {
+  protected static Map<String, RSGroupInfo> constructGroupInfo(List<ServerName> servers,
+      String[] groups) {
     assertTrue(servers != null);
     assertTrue(servers.size() >= groups.length);
     int index = 0;
@@ -377,8 +369,7 @@ public class RSGroupableBalancerTestBase {
     }
     while (index < servers.size()) {
       int grpIndex = rand.nextInt(groups.length);
-      groupMap.get(groups[grpIndex]).addServer(
-          servers.get(index).getAddress());
+      groupMap.get(groups[grpIndex]).addServer(servers.get(index).getAddress());
       index++;
     }
     return groupMap;
@@ -389,29 +380,28 @@ public class RSGroupableBalancerTestBase {
    * @param hasBogusTable there is a table that does not determine the group
    * @return the list of table descriptors
    */
-  protected static List<TableDescriptor> constructTableDesc(boolean hasBogusTable) {
-    List<TableDescriptor> tds = Lists.newArrayList();
+  protected static Map<TableName, TableDescriptor> constructTableDesc(boolean hasBogusTable) {
+    Map<TableName, TableDescriptor> tds = new HashMap<>();
     int index = rand.nextInt(groups.length);
     for (int i = 0; i < tables.length; i++) {
-      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tables[i]).build();
       int grpIndex = (i + index) % groups.length;
       String groupName = groups[grpIndex];
-      tableMap.put(tables[i], groupName);
-      tds.add(htd);
+      TableDescriptor htd =
+          TableDescriptorBuilder.newBuilder(tables[i]).setRegionServerGroup(groupName).build();
+      tds.put(htd.getTableName(), htd);
     }
     if (hasBogusTable) {
-      tableMap.put(table0, "");
-      tds.add(TableDescriptorBuilder.newBuilder(table0).build());
+      tds.put(table0, TableDescriptorBuilder.newBuilder(table0).setRegionServerGroup("").build());
     }
     return tds;
   }
 
   protected static MasterServices getMockedMaster() throws IOException {
     TableDescriptors tds = Mockito.mock(TableDescriptors.class);
-    Mockito.when(tds.get(tables[0])).thenReturn(tableDescs.get(0));
-    Mockito.when(tds.get(tables[1])).thenReturn(tableDescs.get(1));
-    Mockito.when(tds.get(tables[2])).thenReturn(tableDescs.get(2));
-    Mockito.when(tds.get(tables[3])).thenReturn(tableDescs.get(3));
+    Mockito.when(tds.get(tables[0])).thenReturn(tableDescs.get(tables[0]));
+    Mockito.when(tds.get(tables[1])).thenReturn(tableDescs.get(tables[1]));
+    Mockito.when(tds.get(tables[2])).thenReturn(tableDescs.get(tables[2]));
+    Mockito.when(tds.get(tables[3])).thenReturn(tableDescs.get(tables[3]));
     MasterServices services = Mockito.mock(HMaster.class);
     Mockito.when(services.getTableDescriptors()).thenReturn(tds);
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
@@ -430,13 +420,6 @@ public class RSGroupableBalancerTestBase {
     Mockito.when(gm.listRSGroups()).thenReturn(
         Lists.newLinkedList(groupMap.values()));
     Mockito.when(gm.isOnline()).thenReturn(true);
-    Mockito.when(gm.getRSGroupOfTable(Mockito.any()))
-        .thenAnswer(new Answer<String>() {
-          @Override
-          public String answer(InvocationOnMock invocation) throws Throwable {
-            return tableMap.get(invocation.getArgument(0));
-          }
-        });
     return gm;
   }
 
@@ -444,15 +427,16 @@ public class RSGroupableBalancerTestBase {
     TableName tableName = null;
     RSGroupInfoManager gm = getMockedGroupInfoManager();
     RSGroupInfo groupOfServer = null;
-    for(RSGroupInfo gInfo : gm.listRSGroups()){
-      if(gInfo.containsServer(sn.getAddress())){
+    for (RSGroupInfo gInfo : gm.listRSGroups()) {
+      if (gInfo.containsServer(sn.getAddress())) {
         groupOfServer = gInfo;
         break;
       }
     }
 
-    for(TableDescriptor desc : tableDescs){
-      if(gm.getRSGroupOfTable(desc.getTableName()).endsWith(groupOfServer.getName())){
+    for (TableDescriptor desc : tableDescs.values()) {
+      Optional<String> optGroupName = desc.getRegionServerGroup();
+      if (optGroupName.isPresent() && optGroupName.get().endsWith(groupOfServer.getName())) {
         tableName = desc.getTableName();
       }
     }

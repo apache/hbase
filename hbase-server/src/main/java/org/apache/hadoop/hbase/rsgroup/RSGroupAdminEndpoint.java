@@ -27,13 +27,10 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
@@ -47,21 +44,16 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
 @CoreCoprocessor
 @InterfaceAudience.Private
 public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
-  static final Logger LOG = LoggerFactory.getLogger(RSGroupAdminEndpoint.class);
-
-  private MasterServices master;
   // Only instance of RSGroupInfoManager. RSGroup aware load balancers ask for this instance on
   // their setup.
+  private MasterServices master;
   private RSGroupInfoManager groupInfoManager;
   private RSGroupAdminServer groupAdminServer;
   private RSGroupAdminServiceImpl groupAdminService = new RSGroupAdminServiceImpl();
@@ -110,108 +102,9 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     return groupAdminService;
   }
 
-  private void assignTableToGroup(TableDescriptor desc) throws IOException {
-    String groupName =
-        master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
-            .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (groupName == null) {
-      groupName = RSGroupInfo.DEFAULT_GROUP;
-    }
-    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
-    if (rsGroupInfo == null) {
-      throw new ConstraintException(
-          "Default RSGroup (" + groupName + ") for this table's namespace does not exist.");
-    }
-    if (!rsGroupInfo.containsTable(desc.getTableName())) {
-      LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + groupName);
-      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
-    }
-  }
-
   /////////////////////////////////////////////////////////////////////////////
   // MasterObserver overrides
   /////////////////////////////////////////////////////////////////////////////
-
-  private boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
-    String groupName;
-    try {
-      groupName = master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
-          .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-      if (groupName == null) {
-        groupName = RSGroupInfo.DEFAULT_GROUP;
-      }
-    } catch (MasterNotRunningException | PleaseHoldException e) {
-      LOG.info("Master has not initialized yet; temporarily using default RSGroup '" +
-          RSGroupInfo.DEFAULT_GROUP + "' for deploy of system table");
-      groupName = RSGroupInfo.DEFAULT_GROUP;
-    }
-
-    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
-    if (rsGroupInfo == null) {
-      throw new ConstraintException(
-          "Default RSGroup (" + groupName + ") for this table's " + "namespace does not exist.");
-    }
-
-    for (ServerName onlineServer : master.getServerManager().createDestinationServersList()) {
-      if (rsGroupInfo.getServers().contains(onlineServer.getAddress())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public void preCreateTableAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableDescriptor desc, final RegionInfo[] regions) throws IOException {
-    if (!desc.getTableName().isSystemTable() && !rsgroupHasServersOnline(desc)) {
-      throw new HBaseIOException("No online servers in the rsgroup, which table " +
-          desc.getTableName().getNameAsString() + " belongs to");
-    }
-  }
-
-  // Assign table to default RSGroup.
-  @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableDescriptor desc, RegionInfo[] regions) throws IOException {
-    assignTableToGroup(desc);
-  }
-
-  // Remove table from its RSGroup.
-  @Override
-  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-    try {
-      RSGroupInfo group = groupAdminServer.getRSGroupInfoOfTable(tableName);
-      if (group != null) {
-        LOG.debug(String.format("Removing deleted table '%s' from rsgroup '%s'", tableName,
-          group.getName()));
-        groupAdminServer.moveTables(Sets.newHashSet(tableName), null);
-      }
-    } catch (IOException ex) {
-      LOG.debug("Failed to perform RSGroup information cleanup for table: " + tableName, ex);
-    }
-  }
-
-  @Override
-  public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-    String group = ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (group != null && groupAdminServer.getRSGroupInfo(group) == null) {
-      throw new ConstraintException("Region server group " + group + " does not exit");
-    }
-  }
-
-  @Override
-  public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor currentNsDesc, NamespaceDescriptor newNsDesc) throws IOException {
-    preCreateNamespace(ctx, newNsDesc);
-  }
-
-  @Override
-  public void preCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, TableDescriptor desc) throws IOException {
-    assignTableToGroup(desc);
-  }
 
   @Override
   public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -222,5 +115,78 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     if (!clearedServer.isEmpty()) {
       groupAdminServer.removeServers(clearedServer);
     }
+  }
+
+  private void checkGroupExists(Optional<String> optGroupName) throws IOException {
+    if (optGroupName.isPresent()) {
+      String groupName = optGroupName.get();
+      if (groupAdminServer.getRSGroupInfo(groupName) == null) {
+        throw new ConstraintException("Region server group " + groupName + " does not exit");
+      }
+    }
+  }
+
+  private boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
+    RSGroupInfo rsGroupInfo;
+    Optional<String> optGroupName = desc.getRegionServerGroup();
+    if (optGroupName.isPresent()) {
+      String groupName = optGroupName.get();
+      if (groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
+        // do not check for default group
+        return true;
+      }
+      rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+      if (rsGroupInfo == null) {
+        throw new ConstraintException(
+            "RSGroup " + groupName + " for table " + desc.getTableName() + " does not exist");
+      }
+    } else {
+      NamespaceDescriptor nd =
+          master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString());
+      String groupNameOfNs = nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+      if (groupNameOfNs == null || groupNameOfNs.equals(RSGroupInfo.DEFAULT_GROUP)) {
+        // do not check for default group
+        return true;
+      }
+      rsGroupInfo = groupAdminServer.getRSGroupInfo(groupNameOfNs);
+      if (rsGroupInfo == null) {
+        throw new ConstraintException("RSGroup " + groupNameOfNs + " for table " +
+            desc.getTableName() + "(inherit from namespace) does not exist");
+      }
+    }
+    return master.getServerManager().createDestinationServersList().stream()
+        .anyMatch(onlineServer -> rsGroupInfo.containsServer(onlineServer.getAddress()));
+  }
+
+  @Override
+  public void preCreateTableAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
+    checkGroupExists(desc.getRegionServerGroup());
+    if (!desc.getTableName().isSystemTable() && !rsgroupHasServersOnline(desc)) {
+      throw new HBaseIOException("No online servers in the rsgroup for " + desc);
+    }
+  }
+
+  @Override
+  public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
+      throws IOException {
+    checkGroupExists(newDescriptor.getRegionServerGroup());
+    return MasterObserver.super.preModifyTable(ctx, tableName, currentDescriptor, newDescriptor);
+  }
+
+  @Override
+  public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor ns) throws IOException {
+    checkGroupExists(
+      Optional.ofNullable(ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP)));
+  }
+
+  @Override
+  public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor currentNsDescriptor, NamespaceDescriptor newNsDescriptor)
+      throws IOException {
+    checkGroupExists(Optional
+        .ofNullable(newNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP)));
   }
 }
