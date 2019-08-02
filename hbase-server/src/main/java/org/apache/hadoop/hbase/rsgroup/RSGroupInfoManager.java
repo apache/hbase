@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -64,18 +63,6 @@ public interface RSGroupInfoManager {
   RSGroupInfo getRSGroup(String groupName) throws IOException;
 
   /**
-   * Get the group membership of a table
-   */
-  String getRSGroupOfTable(TableName tableName) throws IOException;
-
-  /**
-   * Set the group membership of a set of tables
-   * @param tableNames set of tables to move
-   * @param groupName name of group of tables to move to
-   */
-  void moveTables(Set<TableName> tableNames, String groupName) throws IOException;
-
-  /**
    * List the existing {@code RSGroupInfo}s.
    */
   List<RSGroupInfo> listRSGroups() throws IOException;
@@ -90,16 +77,6 @@ public interface RSGroupInfoManager {
    * @return whether the manager is in online mode
    */
   boolean isOnline();
-
-  /**
-   * Move servers and tables to a new group.
-   * @param servers list of servers, must be part of the same group
-   * @param tables set of tables to move
-   * @param srcGroup groupName being moved from
-   * @param dstGroup groupName being moved to
-   */
-  void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String srcGroup,
-      String dstGroup) throws IOException;
 
   /**
    * Remove decommissioned servers from rsgroup
