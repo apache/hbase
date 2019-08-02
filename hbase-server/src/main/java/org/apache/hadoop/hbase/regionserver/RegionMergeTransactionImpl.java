@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.RegionMergeCoordination.RegionMergeDetails;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.regionserver.SplitTransaction.JournalEntry;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.LoggingProgressable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -968,4 +969,21 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
     return rsServices;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < journal.size(); i++) {
+      JournalEntry je = journal.get(i);
+      sb.append(je.toString());
+      if (i != 0) {
+        JournalEntry jep = journal.get(i-1);
+        long delta = je.getTimeStamp() - jep.getTimeStamp();
+        if (delta != 0) {
+          sb.append(" (+" + delta + " ms)");
+        }
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
+  }
 }
