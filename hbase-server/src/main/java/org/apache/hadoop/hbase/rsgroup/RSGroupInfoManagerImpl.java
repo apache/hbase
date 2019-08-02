@@ -23,10 +23,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
@@ -146,7 +144,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // There two Maps are immutable and wholesale replaced on each modification
   // so are safe to access concurrently. See class comment.
   private volatile Map<String, RSGroupInfo> rsGroupMap = Collections.emptyMap();
-  private volatile Map<TableName, String> tableMap = Collections.emptyMap();
 
   private final MasterServices masterServices;
   private final AsyncClusterConnection conn;
@@ -268,44 +265,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   @Override
-  public String getRSGroupOfTable(TableName tableName) {
-    return tableMap.get(tableName);
-  }
-
-  @Override
-  public synchronized void moveTables(Set<TableName> tableNames, String groupName)
-      throws IOException {
-    // Check if rsGroupMap contains the destination rsgroup
-    if (groupName != null && !rsGroupMap.containsKey(groupName)) {
-      throw new DoNotRetryIOException("Group " + groupName + " does not exist");
-    }
-
-    // Make a copy of rsGroupMap to update
-    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
-
-    // Remove tables from their original rsgroups
-    // and update the copy of rsGroupMap
-    for (TableName tableName : tableNames) {
-      if (tableMap.containsKey(tableName)) {
-        RSGroupInfo src = new RSGroupInfo(newGroupMap.get(tableMap.get(tableName)));
-        src.removeTable(tableName);
-        newGroupMap.put(src.getName(), src);
-      }
-    }
-
-    // Add tables to the destination rsgroup
-    // and update the copy of rsGroupMap
-    if (groupName != null) {
-      RSGroupInfo dstGroup = new RSGroupInfo(newGroupMap.get(groupName));
-      dstGroup.addAllTables(tableNames);
-      newGroupMap.put(dstGroup.getName(), dstGroup);
-    }
-
-    // Flush according to the updated copy of rsGroupMap
-    flushConfig(newGroupMap);
-  }
-
-  @Override
   public synchronized void removeRSGroup(String groupName) throws IOException {
     if (!rsGroupMap.containsKey(groupName) || groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new DoNotRetryIOException(
@@ -318,37 +277,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   @Override
   public List<RSGroupInfo> listRSGroups() {
-    return Lists.newLinkedList(rsGroupMap.values());
+    return Lists.newArrayList(rsGroupMap.values());
   }
 
   @Override
   public boolean isOnline() {
     return rsGroupStartupWorker.isOnline();
-  }
-
-  @Override
-  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String srcGroup,
-      String dstGroup) throws IOException {
-    // get server's group
-    RSGroupInfo srcGroupInfo = getRSGroupInfo(srcGroup);
-    RSGroupInfo dstGroupInfo = getRSGroupInfo(dstGroup);
-
-    // move servers
-    for (Address el : servers) {
-      srcGroupInfo.removeServer(el);
-      dstGroupInfo.addServer(el);
-    }
-    // move tables
-    for (TableName tableName : tables) {
-      srcGroupInfo.removeTable(tableName);
-      dstGroupInfo.addTable(tableName);
-    }
-
-    // flush changed groupinfo
-    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
-    newGroupMap.put(srcGroupInfo.getName(), srcGroupInfo);
-    newGroupMap.put(dstGroupInfo.getName(), dstGroupInfo);
-    flushConfig(newGroupMap);
   }
 
   @Override
@@ -432,7 +366,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * startup of the manager.
    */
   private synchronized void refresh(boolean forceOnline) throws IOException {
-    List<RSGroupInfo> groupList = new LinkedList<>();
+    List<RSGroupInfo> groupList = new ArrayList<>();
 
     // Overwrite anything read from zk, group table is source of truth
     // if online read from GROUP table
@@ -444,37 +378,20 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       groupList.addAll(retrieveGroupListFromZookeeper());
     }
 
-    // refresh default group, prune
-    NavigableSet<TableName> orphanTables = new TreeSet<>();
-    for (String entry : masterServices.getTableDescriptors().getAll().keySet()) {
-      orphanTables.add(TableName.valueOf(entry));
-    }
-    for (RSGroupInfo group : groupList) {
-      if (!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-        orphanTables.removeAll(group.getTables());
-      }
-    }
-
     // This is added to the last of the list so it overwrites the 'default' rsgroup loaded
     // from region group table or zk
-    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers(), orphanTables));
+    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers()));
 
     // populate the data
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap();
-    HashMap<TableName, String> newTableMap = Maps.newHashMap();
     for (RSGroupInfo group : groupList) {
       newGroupMap.put(group.getName(), group);
-      for (TableName table : group.getTables()) {
-        newTableMap.put(table, group.getName());
-      }
     }
-    resetRSGroupAndTableMaps(newGroupMap, newTableMap);
+    resetRSGroupMap(newGroupMap);
     updateCacheOfRSGroups(rsGroupMap.keySet());
   }
 
-  private synchronized Map<TableName, String> flushConfigTable(Map<String, RSGroupInfo> groupMap)
-      throws IOException {
-    Map<TableName, String> newTableMap = Maps.newHashMap();
+  private void flushConfigTable(Map<String, RSGroupInfo> groupMap) throws IOException {
     List<Mutation> mutations = Lists.newArrayList();
 
     // populate deletes
@@ -491,15 +408,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
       p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
       mutations.add(p);
-      for (TableName entry : RSGroupInfo.getTables()) {
-        newTableMap.put(entry, RSGroupInfo.getName());
-      }
     }
 
     if (mutations.size() > 0) {
       multiMutate(mutations);
     }
-    return newTableMap;
   }
 
   private synchronized void flushConfig() throws IOException {
@@ -507,8 +420,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   private synchronized void flushConfig(Map<String, RSGroupInfo> newGroupMap) throws IOException {
-    Map<TableName, String> newTableMap;
-
     // For offline mode persistence is still unavailable
     // We're refreshing in-memory state but only for servers in default group
     if (!isOnline()) {
@@ -523,7 +434,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
       if (!oldGroupMap.equals(newGroupMap) /* compare both tables and servers in other groups */ ||
           !oldDefaultGroup.getTables().equals(newDefaultGroup.getTables())
-          /* compare tables in default group */) {
+      /* compare tables in default group */) {
         throw new IOException("Only servers in default group can be updated during offline mode");
       }
 
@@ -540,11 +451,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       return;
     }
 
-    /* For online mode, persist to Zookeeper */
-    newTableMap = flushConfigTable(newGroupMap);
+    /* For online mode, persist to hbase:rsgroup and Zookeeper */
+    flushConfigTable(newGroupMap);
 
     // Make changes visible after having been persisted to the source of truth
-    resetRSGroupAndTableMaps(newGroupMap, newTableMap);
+    resetRSGroupMap(newGroupMap);
 
     try {
       String groupBasePath =
@@ -582,11 +493,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   /**
    * Make changes visible. Caller must be synchronized on 'this'.
    */
-  private void resetRSGroupAndTableMaps(Map<String, RSGroupInfo> newRSGroupMap,
-      Map<TableName, String> newTableMap) {
+  private void resetRSGroupMap(Map<String, RSGroupInfo> newRSGroupMap) {
     // Make maps Immutable.
     this.rsGroupMap = Collections.unmodifiableMap(newRSGroupMap);
-    this.tableMap = Collections.unmodifiableMap(newTableMap);
   }
 
   /**
@@ -604,7 +513,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       return masterServices.getServerManager().getOnlineServersList();
     }
     LOG.debug("Reading online RS from zookeeper");
-    List<ServerName> servers = new LinkedList<>();
+    List<ServerName> servers = new ArrayList<>();
     try {
       for (String el : ZKUtil.listChildrenNoWatch(watcher, watcher.getZNodePaths().rsZNode)) {
         servers.add(ServerName.parseServerName(el));
@@ -640,7 +549,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // the rsGroupMap then writing it out.
   private synchronized void updateDefaultServers(SortedSet<Address> servers) throws IOException {
     RSGroupInfo info = rsGroupMap.get(RSGroupInfo.DEFAULT_GROUP);
-    RSGroupInfo newInfo = new RSGroupInfo(info.getName(), servers, info.getTables());
+    RSGroupInfo newInfo = new RSGroupInfo(info.getName(), servers);
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(newInfo.getName(), newInfo);
     flushConfig(newGroupMap);

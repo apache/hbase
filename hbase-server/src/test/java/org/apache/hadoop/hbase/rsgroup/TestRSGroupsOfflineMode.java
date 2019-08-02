@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -113,7 +112,7 @@ public class TestRSGroupsOfflineMode {
     final HRegionServer groupRS = ((MiniHBaseCluster) cluster).getRegionServer(1);
     final HRegionServer failoverRS = ((MiniHBaseCluster) cluster).getRegionServer(2);
     String newGroup = "my_group";
-    RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
+    RSGroupAdminClient groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     groupAdmin.addRSGroup(newGroup);
     if (master.getAssignmentManager().getRegionStates().getRegionAssignments()
       .containsValue(failoverRS.getServerName())) {
@@ -168,9 +167,6 @@ public class TestRSGroupsOfflineMode {
       .getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class).getGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
-    // Verify the group affiliation that's loaded from ZK instead of tables.
-    assertEquals(newGroup, groupMgr.getRSGroupOfTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME));
-    assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
     // Kill final regionserver to see the failover happens for all tables except GROUP table since
     // it's group does not have any online RS.
     killRS.stop("die");
