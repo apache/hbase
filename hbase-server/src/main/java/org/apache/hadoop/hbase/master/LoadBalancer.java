@@ -19,12 +19,12 @@
 package org.apache.hadoop.hbase.master;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -65,95 +65,72 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
-   * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
-   * @param st
+   * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
   void setClusterMetrics(ClusterMetrics st);
 
   /**
    * Pass RegionStates and allow balancer to set the current cluster load.
-   * @param ClusterLoad
    */
   void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
 
   /**
    * Set the master service.
-   * @param masterServices
    */
   void setMasterServices(MasterServices masterServices);
 
   /**
    * Perform the major balance operation
-   * @param tableName
-   * @param clusterState
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceCluster(TableName tableName,
+      Map<ServerName, List<RegionInfo>> clusterState) throws IOException;
 
   /**
    * Perform the major balance operation
-   * @param clusterState
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(Map<ServerName,
-      List<RegionInfo>> clusterState) throws HBaseIOException;
+  List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState)
+      throws IOException;
 
   /**
    * Perform a Round Robin assignment of regions.
-   * @param regions
-   * @param servers
    * @return Map of servername to regioninfos
    */
-  Map<ServerName, List<RegionInfo>> roundRobinAssignment(
-    List<RegionInfo> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
+      List<ServerName> servers) throws IOException;
 
   /**
    * Assign regions to the previously hosting region server
-   * @param regions
-   * @param servers
    * @return List of plans
    */
   @Nullable
-  Map<ServerName, List<RegionInfo>> retainAssignment(
-    Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers
-  ) throws HBaseIOException;
+  Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
+      List<ServerName> servers) throws IOException;
 
   /**
    * Get a random region server from the list
    * @param regionInfo Region for which this selection is being done.
-   * @param servers
-   * @return Servername
    */
-  ServerName randomAssignment(
-    RegionInfo regionInfo, List<ServerName> servers
-  ) throws HBaseIOException;
+  ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers) throws IOException;
 
   /**
    * Initialize the load balancer. Must be called after setters.
-   * @throws HBaseIOException
    */
-  void initialize() throws HBaseIOException;
+  void initialize() throws IOException;
 
   /**
    * Marks the region as online at balancer.
-   * @param regionInfo
-   * @param sn
    */
   void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
    * Marks the region as offline at balancer.
-   * @param regionInfo
    */
   void regionOffline(RegionInfo regionInfo);
 
-  /*
+  /**
    * Notification that config has changed
-   * @param conf
    */
   @Override
   void onConfigurationChange(Configuration conf);
