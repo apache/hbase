@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
@@ -269,7 +268,20 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String prettyPrintJournal() {
-    return StringUtils.join("\n\t", getStatusJournal());
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < journal.size(); i++) {
+      StatusJournalEntry je = journal.get(i);
+      sb.append(je.toString());
+      if (i != 0) {
+        StatusJournalEntry jep = journal.get(i-1);
+        long delta = je.getTimeStamp() - jep.getTimeStamp();
+        if (delta != 0) {
+          sb.append(" (+" + delta + " ms)");
+        }
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
   }
 
 }

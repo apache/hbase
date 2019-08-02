@@ -2126,7 +2126,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
       if (status != null) {
-        LOG.debug("Compaction status journal:\n\t" + status.prettyPrintJournal());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Compaction status journal:\n" + status.prettyPrintJournal());
+        }
         status.cleanup();
       }
     }
@@ -2232,7 +2234,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       lock.readLock().unlock();
-      LOG.debug("Flush status journal:\n\t" + status.prettyPrintJournal());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Flush status journal:\n" + status.prettyPrintJournal());
+      }
       status.cleanup();
     }
   }
