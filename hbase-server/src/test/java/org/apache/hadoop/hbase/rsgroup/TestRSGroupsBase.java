@@ -74,7 +74,7 @@ public abstract class TestRSGroupsBase {
   protected static HBaseTestingUtility TEST_UTIL;
   protected static Admin admin;
   protected static HBaseCluster cluster;
-  protected static RSGroupAdmin rsGroupAdmin;
+  protected static RSGroupAdminClient rsGroupAdmin;
   protected static HMaster master;
   protected boolean INIT = false;
   protected static RSGroupAdminEndpoint rsGroupAdminEndpoint;
@@ -188,8 +188,8 @@ public abstract class TestRSGroupsBase {
     RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.addRSGroup(groupName);
     Set<Address> set = new HashSet<>();
-    for(Address server: defaultInfo.getServers()) {
-      if(set.size() == serverCount) {
+    for (Address server : defaultInfo.getServers()) {
+      if (set.size() == serverCount) {
         break;
       }
       set.add(server);
@@ -222,7 +222,7 @@ public abstract class TestRSGroupsBase {
   }
 
   protected void deleteGroups() throws IOException {
-    RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
+    RSGroupAdminClient groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     for(RSGroupInfo group: groupAdmin.listRSGroups()) {
       if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
         groupAdmin.moveTables(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
