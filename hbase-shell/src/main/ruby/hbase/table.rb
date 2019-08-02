@@ -288,7 +288,7 @@ EOF
         ttl = args[TTL]
         set_op_ttl(append, ttl) if ttl
       end
-      append.add(family, qualifier, value.to_s.to_java_bytes)
+      append.addColumn(family, qualifier, value.to_s.to_java_bytes)
       result = @table.append(append)
       return nil if result.isEmpty
 
