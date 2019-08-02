@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -36,20 +34,9 @@ public interface RSGroupAdmin {
   RSGroupInfo getRSGroupInfo(String groupName) throws IOException;
 
   /**
-   * Gets {@code RSGroupInfo} for the given table's group.
-   */
-  RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException;
-
-  /**
    * Move given set of servers to the specified target RegionServer group.
    */
   void moveServers(Set<Address> servers, String targetGroup) throws IOException;
-
-  /**
-   * Move given set of tables to the specified target RegionServer group.
-   * This will unassign all of a table's region so it can be reassigned to the correct group.
-   */
-  void moveTables(Set<TableName> tables, String targetGroup) throws IOException;
 
   /**
    * Creates a new RegionServer group with the given name.
@@ -78,16 +65,6 @@ public interface RSGroupAdmin {
    * @param hostPort HostPort to get RSGroupInfo for
    */
   RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException;
-
-  /**
-   * Move given set of servers and tables to the specified target RegionServer group.
-   * @param servers set of servers to move
-   * @param tables set of tables to move
-   * @param targetGroup the target group name
-   * @throws IOException if moving the server and tables fail
-   */
-  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
-                            String targetGroup) throws IOException;
 
   /**
    * Remove decommissioned servers from rsgroup.
