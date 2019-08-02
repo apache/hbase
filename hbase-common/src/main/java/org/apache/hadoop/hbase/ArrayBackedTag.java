@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import java.nio.ByteBuffer;
+
 /**
  * This is a {@link Tag} implementation in which value is backed by an on heap byte array.
  */
