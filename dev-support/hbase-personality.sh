@@ -760,6 +760,122 @@ function hbase_javac_logfilter
   ${GREP} -E '\[(ERROR|WARNING)\] /.*\.java:' "${input}" | sort > "${output}"
 }
 
+## @description  Print out the finished details to the Github PR
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        runresult
+function hbase_github_finalreport
+{
+  declare result=$1
+  declare i
+  declare commentfile=${PATCH_DIR}/gitcommentfile.$$
+  declare comment
+
+  rm "${commentfile}" 2>/dev/null
+
+  if [[ ${ROBOT} = "false"
+    || -z ${GITHUB_ISSUE} ]] ; then
+    return 0
+  fi
+
+  big_console_header "Adding comment to Github"
+
+  if [[ ${result} == 0 ]]; then
+    echo ":confetti_ball: **+1 overall**" >> "${commentfile}"
+  else
+    echo ":broken_heart: **-1 overall**" >> "${commentfile}"
+  fi
+  printf '\n\n\n\n' >>  "${commentfile}"
+
+  i=0
+  until [[ ${i} -eq ${#TP_HEADER[@]} ]]; do
+    printf '%s\n\n' "${TP_HEADER[${i}]}" >> "${commentfile}"
+    ((i=i+1))
+  done
+
+  {
+    printf '\n\n'
+    echo "| Vote | Subsystem | Runtime | Comment |"
+    echo "|:----:|----------:|--------:|:--------|"
+  } >> "${commentfile}"
+
+  i=0
+  until [[ ${i} -eq ${#TP_VOTE_TABLE[@]} ]]; do
+    ourstring=$(echo "${TP_VOTE_TABLE[${i}]}" | tr -s ' ')
+    vote=$(echo "${ourstring}" | cut -f2 -d\| | tr -d ' ')
+    subs=$(echo "${ourstring}"  | cut -f3 -d\|)
+    ela=$(echo "${ourstring}" | cut -f4 -d\|)
+    calctime=$(clock_display "${ela}")
+    comment=$(echo "${ourstring}"  | cut -f5 -d\|)
+
+    if [[ "${vote}" = "H" ]]; then
+      echo "||| _${comment}_ |" >> "${commentfile}"
+    else
+      emoji=""
+      case ${vote} in
+        1|"+1")
+          emoji=":green_heart:"
+        ;;
+        -1)
+          emoji=":broken_heart:"
+        ;;
+        0)
+          emoji=":blue_heart:"
+        ;;
+        -0)
+          emoji=":yellow_heart:"
+        ;;
+        H)
+          # this never gets called (see above) but this is here so others know the color is taken
+          emoji=""
+        ;;
+        *)
+          # keep the old vote
+          emoji=${vote}
+        ;;
+      esac
+      printf '| %s | %s | %s | %s |\n' \
+      "${emoji}" \
+      "${subs}" \
+      "${calctime}" \
+      "${comment}" \
+      >> "${commentfile}"
+    fi
+    ((i=i+1))
+  done
+
+  if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
+    {
+      printf '\n\n'
+      echo "| Reason | Tests |"
+      echo "|-------:|:------|"
+    } >> "${commentfile}"
+    i=0
+    until [[ ${i} -eq ${#TP_TEST_TABLE[@]} ]]; do
+      echo "${TP_TEST_TABLE[${i}]}" >> "${commentfile}"
+      ((i=i+1))
+    done
+  fi
+
+  {
+    printf '\n\n'
+    echo "| Subsystem | Report/Notes |"
+    echo "|----------:|:-------------|"
+  } >> "${commentfile}"
+
+  i=0
+  until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
+    comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
+              ${SED} -e "s,@@BASE@@,${BUILD_URL}${BUILD_URL_ARTIFACTS},g")
+    printf '%s\n' "${comment}" >> "${commentfile}"
+    ((i=i+1))
+  done
+  printf '\n\nThis message was automatically generated.\n\n' >> "${commentfile}"
+
+  github_write_comment "${commentfile}"
+}
+
 ## This is named so that yetus will check us right after running tests.
 ## Essentially, we check for normal failures and then we look for zombies.
 #function hbase_unit_logfilter
