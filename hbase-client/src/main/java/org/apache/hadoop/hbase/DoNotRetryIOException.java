@@ -29,29 +29,29 @@ public class DoNotRetryIOException extends HBaseIOException {
   // TODO: This would be more useful as a marker interface than as a class.
   private static final long serialVersionUID = 1197446454511704139L;
 
-  /**
-   * default constructor
-   */
   public DoNotRetryIOException() {
     super();
   }
 
   /**
-   * @param message
+   * @param message the message for this exception
    */
   public DoNotRetryIOException(String message) {
     super(message);
   }
 
   /**
-   * @param message
-   * @param cause
+   * @param message the message for this exception
+   * @param throwable the {@link Throwable} to use for this exception
    */
-  public DoNotRetryIOException(String message, Throwable cause) {
-    super(message, cause);
+  public DoNotRetryIOException(String message, Throwable throwable) {
+    super(message, throwable);
   }
 
-  public DoNotRetryIOException(Throwable cause) {
-    super(cause);
+  /**
+   * @param throwable the {@link Throwable} to use for this exception
+   */
+  public DoNotRetryIOException(Throwable throwable) {
+    super(throwable);
   }
 }
