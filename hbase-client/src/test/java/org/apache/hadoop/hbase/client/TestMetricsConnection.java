@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 
 @Category({ClientTests.class, MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsConnection.class);
@@ -119,8 +118,8 @@ public class TestMetricsConnection {
           MetricsConnection.newCallStats());
     }
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
-        METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
-        METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
+      METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
+      METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
     }) {
       assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
       assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
