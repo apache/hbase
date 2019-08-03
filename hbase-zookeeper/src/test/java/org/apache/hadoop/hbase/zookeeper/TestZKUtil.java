@@ -53,7 +53,6 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKUtil {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestZKUtil.class);
@@ -69,7 +68,6 @@ public class TestZKUtil {
     UTIL.startMiniZKCluster().getClientPort();
     ZKW = new ZKWatcher(new Configuration(UTIL.getConfiguration()), TestZKUtil.class.getName(),
         new WarnOnlyAbortable());
-
   }
 
   @AfterClass
@@ -160,8 +158,8 @@ public class TestZKUtil {
     zk.addAuthInfo("digest", Bytes.toBytes("hbase:rox"));
 
     // Save the previous ACL
-    Stat s = null;
-    List<ACL> oldACL = null;
+    Stat s;
+    List<ACL> oldACL;
     while (true) {
       try {
         s = new Stat();
