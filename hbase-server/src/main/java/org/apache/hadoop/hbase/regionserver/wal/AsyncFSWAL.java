@@ -323,7 +323,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
     highestSyncedTxid.set(processedTxid);
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
-      if (iter.next().getTxid() <= processedTxid) {
+      FSWALEntry entry = iter.next();
+      if (entry.getTxid() <= processedTxid) {
+        entry.release();
         iter.remove();
       } else {
         break;
@@ -487,6 +489,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     while (iter.hasNext()) {
       FSWALEntry entry = iter.next();
       if (!entry.getEdit().isMetaEdit()) {
+        entry.release();
         hasNonMarkerEdits = true;
         break;
       }
@@ -497,7 +500,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         if (!iter.hasNext()) {
           break;
         }
-        iter.next();
+        iter.next().release();
+      }
+      for (FSWALEntry entry : unackedAppends) {
+        entry.release();
       }
       unackedAppends.clear();
       // fail the sync futures which are under the txid of the first remaining edit, if none, fail
