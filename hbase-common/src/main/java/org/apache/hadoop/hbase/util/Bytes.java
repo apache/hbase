@@ -40,7 +40,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -48,12 +47,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sun.misc.Unsafe;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
-import com.google.protobuf.ByteString;
-
-import sun.misc.Unsafe;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -185,16 +182,6 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Copy bytes from ByteString instance.
-   * @param byteString copy from
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public Bytes(final ByteString byteString) {
-    this(byteString.toByteArray());
-  }
-
-  /**
    * Get the data from the Bytes.
    * @return The data is only valid between offset and offset+length.
    */
@@ -226,21 +213,6 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * @return the number of valid bytes in the buffer
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getLength()} instead.
-   * @see #getLength()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11862">HBASE-11862</a>
-   */
-  @Deprecated
-  public int getSize() {
-    if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-          "called w/o accompaying readFields invocation");
-    }
-    return this.length;
-  }
-
-  /**
-   * @return the number of valid bytes in the buffer
    */
   public int getLength() {
     if (this.bytes == null) {
@@ -255,14 +227,6 @@ public class Bytes implements Comparable<Bytes> {
    */
   public int getOffset(){
     return this.offset;
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public ByteString toByteString() {
-    return ByteString.copyFrom(this.bytes, this.offset, this.length);
   }
 
   @Override
@@ -850,19 +814,6 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Put a long value out to the specified byte array position (Unsafe).
-   * @param bytes the byte array
-   * @param offset position in the array
-   * @param val long to write out
-   * @return incremented offset
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int putLongUnsafe(byte[] bytes, int offset, long val) {
-    return UnsafeAccess.putLong(bytes, offset, val);
-  }
-
-  /**
    * Presumes float encoded as IEEE 754 floating-point "single format"
    * @param bytes byte array
    * @return Float made from passed byte array.
@@ -992,42 +943,6 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Converts a byte array to an int value (Unsafe version)
-   * @param bytes byte array
-   * @param offset offset into array
-   * @return the int value
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int toIntUnsafe(byte[] bytes, int offset) {
-    return UnsafeAccess.toInt(bytes, offset);
-  }
-
-  /**
-   * Converts a byte array to an short value (Unsafe version)
-   * @param bytes byte array
-   * @param offset offset into array
-   * @return the short value
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static short toShortUnsafe(byte[] bytes, int offset) {
-    return UnsafeAccess.toShort(bytes, offset);
-  }
-
-  /**
-   * Converts a byte array to an long value (Unsafe version)
-   * @param bytes byte array
-   * @param offset offset into array
-   * @return the long value
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static long toLongUnsafe(byte[] bytes, int offset) {
-    return UnsafeAccess.toLong(bytes, offset);
-  }
-
-  /**
    * Converts a byte array to an int value
    * @param bytes byte array
    * @param offset offset into array
@@ -1064,19 +979,6 @@ public class Bytes implements Comparable<Bytes> {
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
     return ConverterHolder.BEST_CONVERTER.putInt(bytes, offset, val);
-  }
-
-  /**
-   * Put an int value out to the specified byte array position (Unsafe).
-   * @param bytes the byte array
-   * @param offset position in the array
-   * @param val int to write out
-   * @return incremented offset
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int putIntUnsafe(byte[] bytes, int offset, int val) {
-    return UnsafeAccess.putInt(bytes, offset, val);
   }
 
   /**
@@ -1155,19 +1057,6 @@ public class Bytes implements Comparable<Bytes> {
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
     return ConverterHolder.BEST_CONVERTER.putShort(bytes, offset, val);
-  }
-
-  /**
-   * Put a short value out to the specified byte array position (Unsafe).
-   * @param bytes the byte array
-   * @param offset position in the array
-   * @param val short to write out
-   * @return incremented offset
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   */
-  @Deprecated
-  public static int putShortUnsafe(byte[] bytes, int offset, short val) {
-    return UnsafeAccess.putShort(bytes, offset, val);
   }
 
   /**
@@ -1313,22 +1202,6 @@ public class Bytes implements Comparable<Bytes> {
       i = i | (b & 0xFF);
     }
     return (WritableUtils.isNegativeVInt(firstByte) ? ~i : i);
-  }
-
-  /**
-   * Reads a zero-compressed encoded long from input buffer and returns it.
-   * @param buffer Binary array
-   * @param offset Offset into array at which vint begins.
-   * @throws java.io.IOException e
-   * @return deserialized long from buffer.
-   * @deprecated since 0.98.12. Use {@link #readAsVLong(byte[],int)} instead.
-   * @see #readAsVLong(byte[], int)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-6919">HBASE-6919</a>
-   */
-  @Deprecated
-  public static long readVLong(final byte [] buffer, final int offset)
-  throws IOException {
-    return readAsVLong(buffer, offset);
   }
 
   /**
@@ -2093,31 +1966,6 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Binary search for keys in indexes.
-   *
-   * @param arr array of byte arrays to search for
-   * @param key the key you want to find
-   * @param offset the offset in the key you want to find
-   * @param length the length of the key
-   * @param comparator a comparator to compare.
-   * @return zero-based index of the key, if the key is present in the array.
-   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
-   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
-   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
-   *         means that this function can return 2N + 1 different values
-   *         ranging from -(N + 1) to N - 1.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #binarySearch(byte[][], byte[], int, int)} instead.
-   * @see #binarySearch(byte[][], byte[], int, int)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
-   */
-  @Deprecated
-  public static int binarySearch(byte [][]arr, byte []key, int offset,
-      int length, RawComparator<?> comparator) {
-    return binarySearch(arr, key, offset, length);
-  }
-
-  /**
    * Binary search for keys in indexes using Bytes.BYTES_RAWCOMPARATOR.
    *
    * @param arr array of byte arrays to search for
@@ -2152,48 +2000,6 @@ public class Bytes implements Comparable<Bytes> {
         return mid;
     }
     return -(low + 1);
-  }
-
-  /**
-   * Binary search for keys in indexes.
-   *
-   * @param arr array of byte arrays to search for
-   * @param key the key you want to find
-   * @param comparator a comparator to compare.
-   * @return zero-based index of the key, if the key is present in the array.
-   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
-   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
-   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
-   *         means that this function can return 2N + 1 different values
-   *         ranging from -(N + 1) to N - 1.
-   * @return the index of the block
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #binarySearch(Cell[], Cell, CellComparator)} instead.
-   * @see #binarySearch(Cell[], Cell, CellComparator)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13450">HBASE-13450</a>
-   */
-  @Deprecated
-  public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
-    int low = 0;
-    int high = arr.length - 1;
-    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
-    while (low <= high) {
-      int mid = low + ((high - low) >> 1);
-      // we have to compare in this order, because the comparator order
-      // has special logic when the 'left side' is a special key.
-      r.setKey(arr[mid], 0, arr[mid].length);
-      int cmp = comparator.compare(key, r);
-      // key lives above the midpoint
-      if (cmp > 0)
-        low = mid + 1;
-      // key lives below the midpoint
-      else if (cmp < 0)
-        high = mid - 1;
-      // BAM. how often does this really happen?
-      else
-        return mid;
-    }
-    return - (low+1);
   }
 
   /**
