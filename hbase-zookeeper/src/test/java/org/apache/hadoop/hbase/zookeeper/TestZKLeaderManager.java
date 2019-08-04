@@ -77,7 +77,7 @@ public class TestZKLeaderManager {
     private AtomicBoolean master = new AtomicBoolean(false);
     private int index;
 
-    public MockLeader(ZKWatcher watcher, int index) {
+    MockLeader(ZKWatcher watcher, int index) {
       setDaemon(true);
       setName("TestZKLeaderManager-leader-" + index);
       this.index = index;
@@ -113,7 +113,7 @@ public class TestZKLeaderManager {
       }
     }
 
-    public void abdicate() {
+    void abdicate() {
       zkLeader.stepDownAsLeader();
       master.set(false);
     }
@@ -214,9 +214,9 @@ public class TestZKLeaderManager {
     assertNotNull("New leader should exist", currentLeader);
   }
 
-  private MockLeader getCurrentLeader() throws Exception {
+  private MockLeader getCurrentLeader() {
     MockLeader currentLeader = null;
-    outer:
+
     // Wait up to 10 secs for initial leader
     for (int i = 0; i < 1000; i++) {
       for (int j = 0; j < CANDIDATES.length; j++) {
@@ -229,18 +229,16 @@ public class TestZKLeaderManager {
         }
       }
       if (currentLeader != null) {
-        break outer;
+        break;
       }
       Threads.sleep(100);
     }
     return currentLeader;
   }
 
-  private static ZKWatcher newZK(Configuration conf, String name,
-                                 Abortable abort) throws Exception {
+  private static ZKWatcher newZK(Configuration conf, String name, Abortable abort)
+      throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
-    ZKWatcher zk = new ZKWatcher(copy, name, abort);
-    return zk;
+    return new ZKWatcher(copy, name, abort);
   }
-
 }

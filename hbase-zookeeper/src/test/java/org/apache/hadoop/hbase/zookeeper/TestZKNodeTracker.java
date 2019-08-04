@@ -48,7 +48,6 @@ import org.slf4j.LoggerFactory;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKNodeTracker {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestZKNodeTracker.class);
@@ -75,16 +74,13 @@ public class TestZKNodeTracker {
     ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(), "testInterruptible", abortable);
     final TestTracker tracker = new TestTracker(zk, "/xyz", abortable);
     tracker.start();
-    Thread t = new Thread() {
-      @Override
-      public void run() {
-        try {
-          tracker.blockUntilAvailable();
-        } catch (InterruptedException e) {
-          throw new RuntimeException("Interrupted", e);
-        }
+    Thread t = new Thread(() -> {
+      try {
+        tracker.blockUntilAvailable();
+      } catch (InterruptedException e) {
+        throw new RuntimeException("Interrupted", e);
       }
-    };
+    });
     t.start();
     while (!t.isAlive()) {
       Threads.sleep(1);
@@ -165,7 +161,7 @@ public class TestZKNodeTracker {
 
     // Create a new thread but with the existing thread's tracker to wait
     TestTracker threadTracker = thread.tracker;
-    thread = new WaitToGetDataThread(zk, node, threadTracker);
+    thread = new WaitToGetDataThread(threadTracker);
     thread.start();
 
     // Verify other guys don't have data
@@ -211,19 +207,17 @@ public class TestZKNodeTracker {
   }
 
   public static class WaitToGetDataThread extends Thread {
-
     TestTracker tracker;
     boolean hasData;
 
-    public WaitToGetDataThread(ZKWatcher zk, String node) {
+    WaitToGetDataThread(ZKWatcher zk, String node) {
       tracker = new TestTracker(zk, node, null);
       tracker.start();
       zk.registerListener(tracker);
       hasData = false;
     }
 
-    public WaitToGetDataThread(ZKWatcher zk, String node,
-                               TestTracker tracker) {
+    WaitToGetDataThread(TestTracker tracker) {
       this.tracker = tracker;
       hasData = false;
     }
@@ -242,8 +236,7 @@ public class TestZKNodeTracker {
   }
 
   public static class TestTracker extends ZKNodeTracker {
-    public TestTracker(ZKWatcher watcher, String node,
-                       Abortable abortable) {
+    TestTracker(ZKWatcher watcher, String node, Abortable abortable) {
       super(watcher, node, abortable);
     }
   }
@@ -256,7 +249,7 @@ public class TestZKNodeTracker {
     private Semaphore changedLock;
     private String node;
 
-    public TestingZKListener(ZKWatcher watcher, String node) {
+    TestingZKListener(ZKWatcher watcher, String node) {
       super(watcher);
       deletedLock = new Semaphore(0);
       createdLock = new Semaphore(0);
@@ -288,15 +281,15 @@ public class TestZKNodeTracker {
       }
     }
 
-    public void waitForDeletion() throws InterruptedException {
+    void waitForDeletion() throws InterruptedException {
       deletedLock.acquire();
     }
 
-    public void waitForCreation() throws InterruptedException {
+    void waitForCreation() throws InterruptedException {
       createdLock.acquire();
     }
 
-    public void waitForDataChange() throws InterruptedException {
+    void waitForDataChange() throws InterruptedException {
       changedLock.acquire();
     }
   }
@@ -342,5 +335,4 @@ public class TestZKNodeTracker {
     // Check that we support the case when the znode does not exist
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString()); // must not throw an exception
   }
-
 }

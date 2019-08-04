@@ -70,8 +70,6 @@ public class TestReadOnlyZKClient {
 
   private static HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
-  private static int PORT;
-
   private static String PATH = "/test";
 
   private static byte[] DATA;
@@ -82,9 +80,9 @@ public class TestReadOnlyZKClient {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    PORT = UTIL.startMiniZKCluster().getClientPort();
+    final int port = UTIL.startMiniZKCluster().getClientPort();
 
-    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper("localhost:" + PORT, 10000);
+    ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper("localhost:" + port, 10000);
     DATA = new byte[10];
     ThreadLocalRandom.current().nextBytes(DATA);
     zk.create(PATH, DATA, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -93,7 +91,7 @@ public class TestReadOnlyZKClient {
     }
     zk.close();
     Configuration conf = UTIL.getConfiguration();
-    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + PORT);
+    conf.set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY, 3);
     conf.setInt(ReadOnlyZKClient.RECOVERY_RETRY_INTERVAL_MILLIS, 100);
     conf.setInt(ReadOnlyZKClient.KEEPALIVE_MILLIS, 3000);
@@ -114,12 +112,12 @@ public class TestReadOnlyZKClient {
     UTIL.waitFor(10000, new ExplainingPredicate<Exception>() {
 
       @Override
-      public boolean evaluate() throws Exception {
+      public boolean evaluate() {
         return RO_ZK.zookeeper == null;
       }
 
       @Override
-      public String explainFailure() throws Exception {
+      public String explainFailure() {
         return "Connection to zookeeper is still alive";
       }
     });
