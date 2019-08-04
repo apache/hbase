@@ -78,20 +78,23 @@ public class ByteBuffAllocator {
   public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
 
   /**
-   * @deprecated use {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
+   *   {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
    */
   @Deprecated
   public static final String DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY =
       "hbase.ipc.server.reservoir.enabled";
 
   /**
-   * @deprecated use {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
+   *   {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.reservoir.initial.max";
 
   /**
-   * @deprecated use {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
+   * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
+   *   {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
