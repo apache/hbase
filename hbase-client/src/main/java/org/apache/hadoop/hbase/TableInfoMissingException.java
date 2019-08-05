@@ -21,29 +21,38 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * 
- * Failed to find .tableinfo file under table dir
- *
+ * Failed to find {@code .tableinfo} file under the table directory.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class TableInfoMissingException extends HBaseIOException {
-
+  /**
+   * Failed to find {@code .tableinfo} file under the table directory.
+   */
   public TableInfoMissingException() {
     super();
   }
 
-  public TableInfoMissingException( String message ) {
+  /**
+   * @param message the message for this exception
+   */
+  public TableInfoMissingException(String message) {
     super(message);
   }
 
-  public TableInfoMissingException( String message, Throwable t ) {
-    super(message, t);
+  /**
+   * @param message the message for this exception
+   * @param throwable the {@link Throwable} to use for this exception
+   */
+  public TableInfoMissingException(String message, Throwable throwable) {
+    super(message, throwable);
   }
 
-  public TableInfoMissingException( Throwable t ) {
-    super(t);
+  /**
+   * @param throwable the {@link Throwable} to use for this exception
+   */
+  public TableInfoMissingException(Throwable throwable) {
+    super(throwable);
   }
-
 }
