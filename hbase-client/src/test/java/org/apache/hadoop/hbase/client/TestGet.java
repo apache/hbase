@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
@@ -115,19 +113,22 @@ public class TestGet {
     get.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
+        get.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     get.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
+        get.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     get.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttribute("attribute2")));
     Assert.assertEquals(2, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
+        get.getAttributesMap().get("attribute2")));
 
     // removing attribute
     get.setAttribute("attribute2", null);

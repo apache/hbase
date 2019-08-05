@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
@@ -44,19 +42,22 @@ public class TestAttributes {
     put.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttribute("attribute1")));
     Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), put.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
+        put.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     put.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), put.getAttribute("attribute1")));
     Assert.assertEquals(1, put.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), put.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
+        put.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     put.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttribute("attribute2")));
     Assert.assertEquals(2, put.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), put.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
+        put.getAttributesMap().get("attribute2")));
 
     // removing attribute
     put.setAttribute("attribute2", null);
@@ -77,7 +78,6 @@ public class TestAttributes {
     Assert.assertNull(put.getAttributesMap().get("attribute1"));
   }
 
-
   @Test
   public void testDeleteAttributes() {
     Delete del = new Delete(new byte [] {'r'});
@@ -92,19 +92,22 @@ public class TestAttributes {
     del.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttribute("attribute1")));
     Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), del.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
+        del.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     del.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), del.getAttribute("attribute1")));
     Assert.assertEquals(1, del.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), del.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
+        del.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     del.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttribute("attribute2")));
     Assert.assertEquals(2, del.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), del.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
+        del.getAttributesMap().get("attribute2")));
 
     // removing attribute
     del.setAttribute("attribute2", null);

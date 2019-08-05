@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.protobuf.ServiceException;
 import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.*;
-
 @SuppressWarnings("ThrowableInstanceNeverThrown")
 public class TestClientExceptionsUtil {
-
   @Test
-  public void testFindException() throws Exception {
+  public void testFindException() {
     IOException ioe = new IOException("Tesst");
     ServiceException se = new ServiceException(ioe);
     assertEquals(ioe, ClientExceptionsUtil.findException(se));

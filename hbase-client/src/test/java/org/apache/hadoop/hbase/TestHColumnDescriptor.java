@@ -32,7 +32,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/** Tests the HColumnDescriptor with appropriate arguments */
+/**
+ * Tests the HColumnDescriptor with appropriate arguments
+ */
 @Category(SmallTests.class)
 public class TestHColumnDescriptor {
   @Test
