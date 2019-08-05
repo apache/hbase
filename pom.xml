@@ -540,6 +540,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>taklwu</id>
+      <name>Tak-Lon (Stephen) Wu</name>
+      <email>taklwu@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>	  
+    <developer>
       <id>tedyu</id>
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
