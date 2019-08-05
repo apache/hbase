@@ -81,7 +81,7 @@ EOF
 
         admin_instance = admin.instance_variable_get('@admin')
         conn_instance = admin_instance.getConnection
-        cluster_status = org.apache.hadoop.hbase.ClusterStatus.new(admin_instance.getClusterMetrics)
+        cluster_metrics = admin_instance.getClusterMetrics
         hregion_locator_instance = conn_instance.getRegionLocator(TableName.valueOf(table_name))
         hregion_locator_list = hregion_locator_instance.getAllRegionLocations.to_a
         results = []
@@ -104,22 +104,23 @@ EOF
           regions.each do |hregion|
             hregion_info = hregion.getRegion
             server_name = hregion.getServerName
-            server_load = cluster_status.getLoad(server_name)
-            if server_load.nil?
-              region_load_map = java.util.HashMap.new
+            server_metrics_map = cluster_metrics.getLiveServerMetrics
+            server_metrics = server_metrics_map.get(server_name)
+            if server_metrics.nil?
+              region_metrics_map = java.util.HashMap.new
             else
-              region_load_map = server_load.getRegionsLoad
+              region_metrics_map = server_metrics.getRegionMetrics
             end
             region_name = hregion_info.getRegionNameAsString
-            region_load = region_load_map.get(hregion_info.getRegionName)
+            region_metrics = region_metrics_map.get(hregion_info.getRegionName)
 
-            if region_load.nil?
+            if region_metrics.nil?
               puts "Can not find all details for region: " \
                    "#{region_name.strip} ," \
                    " it may be disabled or in transition\n"
             else
               # Ignore regions which exceed our locality threshold
-              next unless accept_region_for_locality? region_load.getDataLocality,
+              next unless accept_region_for_locality? region_metrics.getDataLocality,
                                                       locality_threshold
             end
             result_hash = {}
@@ -147,30 +148,30 @@ EOF
             end
 
             if size_hash.key?('SIZE')
-              if region_load.nil?
+              if region_metrics.nil?
                 region_store_file_size = ''
               else
-                region_store_file_size = region_load.getStorefileSizeMB.to_s.strip
+                region_store_file_size = region_metrics.getStoreFileSize.to_s.strip
               end
               result_hash.store('SIZE', region_store_file_size)
               size_hash['SIZE'] = [size_hash['SIZE'], region_store_file_size.length].max
             end
 
             if size_hash.key?('REQ')
-              if region_load.nil?
+              if region_metrics.nil?
                 region_requests = ''
               else
-                region_requests = region_load.getRequestsCount.to_s.strip
+                region_requests = region_metrics.getRequestCount.to_s.strip
               end
               result_hash.store('REQ', region_requests)
               size_hash['REQ'] = [size_hash['REQ'], region_requests.length].max
             end
 
             if size_hash.key?('LOCALITY')
-              if region_load.nil?
+              if region_metrics.nil?
                 locality = ''
               else
-                locality = region_load.getDataLocality.to_s.strip
+                locality = region_metrics.getDataLocality.to_s.strip
               end
               result_hash.store('LOCALITY', locality)
               size_hash['LOCALITY'] = [size_hash['LOCALITY'], locality.length].max
