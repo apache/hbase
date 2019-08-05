@@ -112,7 +112,7 @@ public class TestZKMulti {
     LinkedList<ZKUtilOp> singleDelete = new LinkedList<>();
     singleDelete.add(ZKUtilOp.deleteNodeFailSilent(path));
     ZKUtil.multiOrSequential(zkw, singleDelete, false);
-    assertEquals(ZKUtil.checkExists(zkw, path), -1);
+    assertEquals(-1, ZKUtil.checkExists(zkw, path));
   }
 
   @Test
@@ -151,8 +151,8 @@ public class TestZKMulti {
       Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1))));
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path2),
       Bytes.add(Bytes.toBytes(path2), Bytes.toBytes(path2))));
-    assertEquals(ZKUtil.checkExists(zkw, path3), -1);
-    assertEquals(ZKUtil.checkExists(zkw, path4), -1);
+    assertEquals(-1, ZKUtil.checkExists(zkw, path3));
+    assertEquals(-1, ZKUtil.checkExists(zkw, path4));
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path5), Bytes.toBytes(path5)));
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path6), Bytes.toBytes(path6)));
   }
@@ -213,9 +213,9 @@ public class TestZKMulti {
     }
     assertTrue(caughtNoNode);
     // assert that none of the operations succeeded
-    assertEquals(ZKUtil.checkExists(zkw, pathA), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathB), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathC), -1);
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathA));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathB));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathC));
   }
 
   @Test
@@ -246,11 +246,11 @@ public class TestZKMulti {
     }
     assertTrue(caughtNodeExists);
     // check that no modifications were made
-    assertNotEquals(ZKUtil.checkExists(zkw, pathX), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathY), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathZ), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathW), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathV), -1);
+    assertNotEquals(-1, ZKUtil.checkExists(zkw, pathX));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathY));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathZ));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathW));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathV));
 
     // test that with multiple failures, throws an exception corresponding to first failure in list
     ops = new LinkedList<>();
@@ -265,11 +265,11 @@ public class TestZKMulti {
     }
     assertTrue(caughtNoNode);
     // check that no modifications were made
-    assertNotEquals(ZKUtil.checkExists(zkw, pathX), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathY), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathZ), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathW), -1);
-    assertEquals(ZKUtil.checkExists(zkw, pathV), -1);
+    assertNotEquals(-1, ZKUtil.checkExists(zkw, pathX));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathY));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathZ));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathW));
+    assertEquals(-1, ZKUtil.checkExists(zkw, pathV));
   }
 
   @Test
@@ -296,9 +296,9 @@ public class TestZKMulti {
     ZKUtil.multiOrSequential(zkw, ops, true);
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path1),
       Bytes.add(Bytes.toBytes(path1), Bytes.toBytes(path1))));
-    assertEquals(ZKUtil.checkExists(zkw, path2), -1);
-    assertEquals(ZKUtil.checkExists(zkw, path3), -1);
-    assertNotEquals(ZKUtil.checkExists(zkw, path4), -1);
+    assertEquals(-1, ZKUtil.checkExists(zkw, path2));
+    assertEquals(-1, ZKUtil.checkExists(zkw, path3));
+    assertNotEquals(-1, ZKUtil.checkExists(zkw, path4));
   }
 
   /**
@@ -329,7 +329,7 @@ public class TestZKMulti {
     createZNodeTree(parentZNode);
 
     ZKUtil.deleteNodeRecursively(zkw, parentZNode);
-    assertEquals("Parent znode should be deleted.", ZKUtil.checkExists(zkw, parentZNode), -1);
+    assertEquals("Parent znode should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode));
   }
 
   @Test
@@ -343,9 +343,9 @@ public class TestZKMulti {
 
     ZKUtil.deleteNodeRecursivelyMultiOrSequential(zkw, false, parentZNode1, parentZNode2,
       parentZNode3);
-    assertEquals("Parent znode 1 should be deleted.", ZKUtil.checkExists(zkw, parentZNode1), -1);
-    assertEquals("Parent znode 2 should be deleted.", ZKUtil.checkExists(zkw, parentZNode2), -1);
-    assertEquals("Parent znode 3 should be deleted.", ZKUtil.checkExists(zkw, parentZNode3), -1);
+    assertEquals("Parent znode 1 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode1));
+    assertEquals("Parent znode 2 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode2));
+    assertEquals("Parent znode 3 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode3));
   }
 
   @Test
