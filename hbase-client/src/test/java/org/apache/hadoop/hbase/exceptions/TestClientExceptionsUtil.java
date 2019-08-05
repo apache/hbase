@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,13 +32,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 @SuppressWarnings("ThrowableInstanceNeverThrown")
 @Category({ SmallTests.class, ClientTests.class })
 public class TestClientExceptionsUtil {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClientExceptionsUtil.class);
 
   @Test
-  public void testFindException() throws Exception {
+  public void testFindException() {
     IOException ioe = new IOException("Tesst");
     ServiceException se = new ServiceException(ioe);
     assertEquals(ioe, ClientExceptionsUtil.findException(se));
