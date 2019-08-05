@@ -30,6 +30,9 @@ import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 public class UnknownRegionException extends DoNotRetryRegionException {
   private static final long serialVersionUID = 1968858760475205392L;
 
+  /**
+   * @param regionName the name of the region which is unknown
+   */
   public UnknownRegionException(String regionName) {
     super(regionName);
   }

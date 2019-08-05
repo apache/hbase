@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import java.io.IOException;
 
-
 /**
  * Thrown during flush if the possibility snapshot content was not properly
  * persisted into store files.  Response should include replay of wal content.
@@ -31,20 +30,16 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class DroppedSnapshotException extends IOException {
-
   private static final long serialVersionUID = -5463156580831677374L;
 
-  /**
-   * @param msg
-   */
-  public DroppedSnapshotException(String msg) {
-    super(msg);
+  public DroppedSnapshotException() {
+    super();
   }
 
   /**
-   * default constructor
+   * @param message the message for this exception
    */
-  public DroppedSnapshotException() {
-    super();
+  public DroppedSnapshotException(String message) {
+    super(message);
   }
 }
