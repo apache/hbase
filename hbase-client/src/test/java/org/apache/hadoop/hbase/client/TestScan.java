@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 // TODO: cover more test cases
 @Category({ClientTests.class, SmallTests.class})
 public class TestScan {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScan.class);
@@ -94,7 +93,8 @@ public class TestScan {
     assertEquals(get.getFilter(), scan.getFilter());
     assertEquals(get.getId(), scan.getId());
     assertEquals(get.getIsolationLevel(), scan.getIsolationLevel());
-    assertEquals(get.getLoadColumnFamiliesOnDemandValue(), scan.getLoadColumnFamiliesOnDemandValue());
+    assertEquals(get.getLoadColumnFamiliesOnDemandValue(),
+        scan.getLoadColumnFamiliesOnDemandValue());
     assertEquals(get.getMaxResultsPerColumnFamily(), scan.getMaxResultsPerColumnFamily());
     assertEquals(get.getMaxVersions(), scan.getMaxVersions());
     assertEquals(get.getRowOffsetPerColumnFamily(), scan.getRowOffsetPerColumnFamily());
@@ -125,19 +125,22 @@ public class TestScan {
     scan.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttribute("attribute1")));
     Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
+        scan.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     scan.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttribute("attribute1")));
     Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
+        scan.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     scan.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttribute("attribute2")));
     Assert.assertEquals(2, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
+        scan.getAttributesMap().get("attribute2")));
 
     // removing attribute
     scan.setAttribute("attribute2", null);
@@ -290,4 +293,3 @@ public class TestScan {
       EqualsBuilder.reflectionEquals(scan, scanCopy));
   }
 }
-

@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @Category(SmallTests.class)
 public class TestProtobufUtil {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProtobufUtil.class);
@@ -86,7 +85,7 @@ public class TestProtobufUtil {
   /**
    * Test basic Get conversions.
    *
-   * @throws IOException
+   * @throws IOException if the conversion to a {@link Get} fails
    */
   @Test
   public void testGet() throws IOException {
@@ -119,7 +118,8 @@ public class TestProtobufUtil {
   /**
    * Test Delete Mutate conversions.
    *
-   * @throws IOException
+   * @throws IOException if the conversion to a {@link Delete} or a
+   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testDelete() throws IOException {
@@ -166,7 +166,8 @@ public class TestProtobufUtil {
   /**
    * Test Put Mutate conversions.
    *
-   * @throws IOException
+   * @throws IOException if the conversion to a {@link Put} or a
+   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testPut() throws IOException {
@@ -216,7 +217,7 @@ public class TestProtobufUtil {
   /**
    * Test basic Scan conversions.
    *
-   * @throws IOException
+   * @throws IOException if the conversion to a {@link org.apache.hadoop.hbase.client.Scan} fails
    */
   @Test
   public void testScan() throws IOException {
@@ -255,7 +256,7 @@ public class TestProtobufUtil {
   }
 
   @Test
-  public void testToCell() throws Exception {
+  public void testToCell() {
     KeyValue kv1 =
         new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"), new byte[30]);
     KeyValue kv2 =
@@ -271,14 +272,16 @@ public class TestProtobufUtil {
     dbb.put(arr);
     ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
     CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV);
-    Cell newOffheapKV = ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell);
+    Cell newOffheapKV =
+        ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 
   /**
    * Test Increment Mutate conversions.
    *
-   * @throws IOException
+   * @throws IOException if converting to an {@link Increment} or
+   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testIncrement() throws IOException {
@@ -315,7 +318,7 @@ public class TestProtobufUtil {
   /**
    * Test Append Mutate conversions.
    *
-   * @throws IOException
+   * @throws IOException if converting to an {@link Append} fails
    */
   @Test
   public void testAppend() throws IOException {

@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestClientExponentialBackoff {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestClientExponentialBackoff.class);
@@ -149,7 +148,7 @@ public class TestClientExponentialBackoff {
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Compaction pressure has no effect", backoffTime == 0);
 
-        long previous = backoffTime;
+    long previous = backoffTime;
     update(stats, 0, 0, 50);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Compaction pressure should be bigger",
@@ -163,8 +162,7 @@ public class TestClientExponentialBackoff {
 
   private void update(ServerStatistics stats, int load) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemStoreLoad
-            (load).build();
+        .setMemStoreLoad(load).build();
     stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
 

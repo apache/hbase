@@ -41,11 +41,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test setting values in the descriptor
+ * Test setting values in the descriptor.
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestTableDescriptorBuilder {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableDescriptorBuilder.class);
@@ -86,8 +85,9 @@ public class TestTableDescriptorBuilder {
   }
 
   /**
-   * Test cps in the table description
-   * @throws Exception
+   * Test cps in the table description.
+   *
+   * @throws Exception if setting a coprocessor fails
    */
   @Test
   public void testGetSetRemoveCP() throws Exception {
@@ -105,8 +105,9 @@ public class TestTableDescriptorBuilder {
   }
 
   /**
-   * Test cps in the table description
-   * @throws Exception
+   * Test cps in the table description.
+   *
+   * @throws Exception if setting a coprocessor fails
    */
   @Test
   public void testSetListRemoveCP() throws Exception {
@@ -157,10 +158,9 @@ public class TestTableDescriptorBuilder {
 
   /**
    * Test that we add and remove strings from settings properly.
-   * @throws Exception
    */
   @Test
-  public void testRemoveString() throws Exception {
+  public void testRemoveString() {
     byte[] key = Bytes.toBytes("Some");
     byte[] value = Bytes.toBytes("value");
     TableDescriptor desc
@@ -174,13 +174,13 @@ public class TestTableDescriptorBuilder {
     assertTrue(desc.getValue(key) == null);
   }
 
-  String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",
-      "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02"
-      , "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
-      "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
-  String illegalTableNames[] = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
-      "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
-      "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
+  String[] legalTableNames = { "foo", "with-dash_under.dot", "_under_start_ok",
+    "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02",
+    "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
+    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
+  String[] illegalTableNames = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
+    "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
+    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
 
   @Test
   public void testLegalTableNames() {
