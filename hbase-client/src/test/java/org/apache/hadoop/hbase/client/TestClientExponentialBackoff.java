@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -29,12 +32,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 @Category(SmallTests.class)
 public class TestClientExponentialBackoff {
-
   ServerName server = Mockito.mock(ServerName.class);
   byte[] regionname = Bytes.toBytes("region");
 
@@ -141,7 +140,7 @@ public class TestClientExponentialBackoff {
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Compaction pressure has no effect", backoffTime == 0);
 
-        long previous = backoffTime;
+    long previous = backoffTime;
     update(stats, 0, 0, 50);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
     assertTrue("Compaction pressure should be bigger",
@@ -155,8 +154,7 @@ public class TestClientExponentialBackoff {
 
   private void update(ServerStatistics stats, int load) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemstoreLoad
-            (load).build();
+        .setMemstoreLoad(load).build();
     stats.update(regionname, stat);
   }
 

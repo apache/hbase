@@ -18,16 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.ByteString;
+import java.io.IOException;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,11 +30,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
-
   private static MetricsConnection METRICS;
 
   @BeforeClass
@@ -109,8 +108,8 @@ public class TestMetricsConnection {
           MetricsConnection.newCallStats());
     }
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
-        METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
-        METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
+      METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
+      METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
     }) {
       Assert.assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.count());
       Assert.assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.count());
