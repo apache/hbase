@@ -112,7 +112,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
       failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
       @Override
-      void atHeadOfRingBufferEventHandlerAppend() {
+      protected void atHeadOfRingBufferEventHandlerAppend() {
         action.run();
         super.atHeadOfRingBufferEventHandlerAppend();
       }
