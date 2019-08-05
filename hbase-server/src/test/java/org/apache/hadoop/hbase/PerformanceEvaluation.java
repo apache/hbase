@@ -2222,6 +2222,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String blockSize = "--blockSize=";
       if(cmd.startsWith(blockSize) ) {
         opts.blockSize = Integer.parseInt(cmd.substring(blockSize.length()));
+        continue;
       }
 
       final String valueSize = "--valueSize=";
