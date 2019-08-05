@@ -21,11 +21,10 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-
 /**
- * Thrown if a region server is passed an unknown scanner id.
- * Usually means the client has take too long between checkins and so the
- * scanner lease on the serverside has expired OR the serverside is closing
+ * Thrown if a region server is passed an unknown scanner ID.
+ * This usually means that the client has taken too long between checkins and so the
+ * scanner lease on the server-side has expired OR the server-side is closing
  * down and has cancelled all leases.
  */
 @InterfaceAudience.Public
@@ -33,20 +32,22 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 public class UnknownScannerException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;
 
-  /** constructor */
   public UnknownScannerException() {
     super();
   }
 
   /**
-   * Constructor
-   * @param s message
+   * @param message the message for this exception
    */
-  public UnknownScannerException(String s) {
-    super(s);
+  public UnknownScannerException(String message) {
+    super(message);
   }
 
-  public UnknownScannerException(String s, Exception e) {
-    super(s, e);
+  /**
+   * @param message the message for this exception
+   * @param exception the exception to grab data from
+   */
+  public UnknownScannerException(String message, Exception exception) {
+    super(message, exception);
   }
 }

@@ -32,6 +32,9 @@ import java.io.IOException;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class YouAreDeadException extends IOException {
+  /**
+   * @param message the message for this exception
+   */
   public YouAreDeadException(String message) {
     super(message);
   }
