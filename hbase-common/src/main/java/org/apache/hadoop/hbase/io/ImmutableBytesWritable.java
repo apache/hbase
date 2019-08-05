@@ -117,21 +117,6 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /**
    * @return the number of valid bytes in the buffer
-   * @deprecated since 0.98.5. Use {@link #getLength()} instead
-   * @see #getLength()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11561">HBASE-11561</a>
-   */
-  @Deprecated
-  public int getSize() {
-    if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-        "called w/o accompaying readFields invocation");
-    }
-    return this.length;
-  }
-
-  /**
-   * @return the number of valid bytes in the buffer
    */
   public int getLength() {
     if (this.bytes == null) {
