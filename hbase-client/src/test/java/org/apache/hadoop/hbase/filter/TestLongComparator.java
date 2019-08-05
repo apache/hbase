@@ -29,13 +29,12 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestLongComparator {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLongComparator.class);
 
-  private long values[] = { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L,
-      Long.MAX_VALUE };
+  private long[] values = { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L,
+    Long.MAX_VALUE };
 
   @Test
   public void testSimple() {

@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 // TODO: cover more test cases
 @Category({ClientTests.class, SmallTests.class})
 public class TestGet {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestGet.class);
@@ -122,19 +121,22 @@ public class TestGet {
     get.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
+        get.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     get.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
+        get.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     get.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttribute("attribute2")));
     Assert.assertEquals(2, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
+        get.getAttributesMap().get("attribute2")));
 
     // removing attribute
     get.setAttribute("attribute2", null);

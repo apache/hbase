@@ -38,7 +38,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 
-/** Tests the HColumnDescriptor with appropriate arguments */
+/**
+ * Tests the HColumnDescriptor with appropriate arguments.
+ *
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
+ *            {@link HColumnDescriptor}.
+ */
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
 public class TestHColumnDescriptor {
