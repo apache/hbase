@@ -21,26 +21,27 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when a table exists but should not
+ * Thrown when a table exists but should not.
  */
 @InterfaceAudience.Public
 public class TableExistsException extends DoNotRetryIOException {
   private static final long serialVersionUID = (1L << 7) - 1L;
-  /** default constructor */
+
   public TableExistsException() {
     super();
   }
 
   /**
-   * Constructor
-   *
-   * @param s message
+   * @param tableName the name of the table that should not exist
    */
-  public TableExistsException(String s) {
-    super(s);
+  public TableExistsException(String tableName) {
+    super(tableName);
   }
 
-  public TableExistsException(TableName t) {
-    this(t.getNameAsString());
+  /**
+   * @param tableName the name of the table that should not exist
+   */
+  public TableExistsException(TableName tableName) {
+    this(tableName.getNameAsString());
   }
 }

@@ -18,12 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown if a table should be enabled but is not
+ * Thrown if a table should be enabled but is not.
  */
 @InterfaceAudience.Public
 public class TableNotEnabledException extends DoNotRetryIOException {
@@ -34,22 +33,21 @@ public class TableNotEnabledException extends DoNotRetryIOException {
   }
 
   /**
-   * Constructor
-   * @param s message
+   * @param tableName the name of table that is not enabled
    */
-  public TableNotEnabledException(String s) {
-    super(s);
+  public TableNotEnabledException(String tableName) {
+    super(tableName);
   }
 
   /**
-   * @param tableName Name of table that is not enabled
+   * @param tableName the name of table that is not enabled
    */
   public TableNotEnabledException(TableName tableName) {
     this(tableName.getNameAsString());
   }
 
   /**
-   * @param tableName Name of table that is not enabled
+   * @param tableName the name of table that is not enabled
    */
   public TableNotEnabledException(byte[] tableName) {
     this(Bytes.toString(tableName));
