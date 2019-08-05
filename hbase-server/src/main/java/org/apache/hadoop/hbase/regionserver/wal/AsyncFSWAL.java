@@ -321,7 +321,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
     highestSyncedTxid.set(processedTxid);
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
-      if (iter.next().getTxid() <= processedTxid) {
+      FSWALEntry entry = iter.next();
+      if (entry.getTxid() <= processedTxid) {
+        entry.release();
         iter.remove();
       } else {
         break;
