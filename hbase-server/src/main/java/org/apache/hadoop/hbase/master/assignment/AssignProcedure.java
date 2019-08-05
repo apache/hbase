@@ -362,10 +362,10 @@ public class AssignProcedure extends RegionTransitionProcedure {
     }
     this.forceNewPlan = true;
     this.targetServer = null;
-    regionNode.offline();
     // We were moved to OPENING state before dispatch. Undo. It is safe to call
     // this method because it checks for OPENING first.
     env.getAssignmentManager().undoRegionAsOpening(regionNode);
+    regionNode.offline();
     setTransitionState(RegionTransitionState.REGION_TRANSITION_QUEUE);
   }
 
