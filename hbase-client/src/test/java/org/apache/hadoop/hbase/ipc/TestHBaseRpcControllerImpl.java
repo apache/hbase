@@ -36,7 +36,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestHBaseRpcControllerImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHBaseRpcControllerImpl.class);
@@ -62,7 +61,7 @@ public class TestHBaseRpcControllerImpl {
   }
 
   /**
-   * @param index
+   * @param index the index of the cell to use as its value
    * @return A faked out 'Cell' that does nothing but return index as its value
    */
   static CellScannable createCell(final int index) {
@@ -84,73 +83,61 @@ public class TestHBaseRpcControllerImpl {
 
               @Override
               public byte[] getRowArray() {
-                // unused
                 return null;
               }
 
               @Override
               public int getRowOffset() {
-                // unused
                 return 0;
               }
 
               @Override
               public short getRowLength() {
-                // unused
                 return 0;
               }
 
               @Override
               public byte[] getFamilyArray() {
-                // unused
                 return null;
               }
 
               @Override
               public int getFamilyOffset() {
-                // unused
                 return 0;
               }
 
               @Override
               public byte getFamilyLength() {
-                // unused
                 return 0;
               }
 
               @Override
               public byte[] getQualifierArray() {
-                // unused
                 return null;
               }
 
               @Override
               public int getQualifierOffset() {
-                // unused
                 return 0;
               }
 
               @Override
               public int getQualifierLength() {
-                // unused
                 return 0;
               }
 
               @Override
               public long getTimestamp() {
-                // unused
                 return 0;
               }
 
               @Override
               public byte getTypeByte() {
-                // unused
                 return 0;
               }
 
               @Override
               public long getSequenceId() {
-                // unused
                 return 0;
               }
 
@@ -176,25 +163,21 @@ public class TestHBaseRpcControllerImpl {
 
               @Override
               public int getTagsOffset() {
-                // unused
                 return 0;
               }
 
               @Override
               public int getTagsLength() {
-                // unused
                 return 0;
               }
 
               @Override
               public byte[] getTagsArray() {
-                // unused
                 return null;
               }
 
               @Override
               public Type getType() {
-                // unused
                 return null;
               }
             };
@@ -205,7 +188,10 @@ public class TestHBaseRpcControllerImpl {
           @Override
           public boolean advance() {
             // We have one Cell only so return true first time then false ever after.
-            if (!hasCell) return hasCell;
+            if (!hasCell) {
+              return hasCell;
+            }
+
             hasCell = false;
             return true;
           }

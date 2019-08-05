@@ -44,7 +44,6 @@ import org.junit.rules.ExpectedException;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestColumnFamilyDescriptorBuilder {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
@@ -85,7 +84,8 @@ public class TestColumnFamilyDescriptorBuilder {
     assertTrue(hcd.equals(deserializedHcd));
     assertEquals(v, hcd.getBlocksize());
     assertEquals(v, hcd.getTimeToLive());
-    assertTrue(Bytes.equals(hcd.getValue(Bytes.toBytes("a")), deserializedHcd.getValue(Bytes.toBytes("a"))));
+    assertTrue(Bytes.equals(hcd.getValue(Bytes.toBytes("a")),
+        deserializedHcd.getValue(Bytes.toBytes("a"))));
     assertEquals(hcd.getMaxVersions(), deserializedHcd.getMaxVersions());
     assertEquals(hcd.getMinVersions(), deserializedHcd.getMinVersions());
     assertEquals(hcd.getKeepDeletedCells(), deserializedHcd.getKeepDeletedCells());
