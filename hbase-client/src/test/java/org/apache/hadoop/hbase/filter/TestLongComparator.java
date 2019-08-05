@@ -26,7 +26,7 @@ import static org.junit.Assert.assertEquals;
 
 @Category(SmallTests.class)
 public class TestLongComparator {
-  private long values[] = { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L,
+  private long[] values = { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L,
       Long.MAX_VALUE };
 
   @Test

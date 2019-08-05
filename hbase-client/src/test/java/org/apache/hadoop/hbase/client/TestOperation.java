@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -274,11 +273,11 @@ public class TestOperation {
   /**
    * Test the client Operations' JSON encoding to ensure that produced JSON is
    * parseable and that the details are present and not corrupted.
-   * @throws IOException
+   *
+   * @throws IOException if the JSON conversion fails
    */
   @Test
-  public void testOperationJSON()
-      throws IOException {
+  public void testOperationJSON() throws IOException {
     // produce a Scan Operation
     Scan scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
@@ -416,18 +415,17 @@ public class TestOperation {
 
     // TODO: We should ensure all subclasses of Operation is checked.
     Class[] classes = new Class[] {
-        Operation.class,
-        OperationWithAttributes.class,
-        Mutation.class,
-        Query.class,
-        Delete.class,
-        Increment.class,
-        Append.class,
-        Put.class,
-        Get.class,
-        Scan.class};
+      Operation.class,
+      OperationWithAttributes.class,
+      Mutation.class,
+      Query.class,
+      Delete.class,
+      Increment.class,
+      Append.class,
+      Put.class,
+      Get.class,
+      Scan.class};
 
     BuilderStyleTest.assertClassesAreBuilderStyle(classes);
   }
-
 }
