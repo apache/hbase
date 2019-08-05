@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -51,7 +51,7 @@ import org.apache.hadoop.util.StringUtils;
  * the result.
  */
 @InterfaceAudience.Private
-abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, RpcResponse {
+public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, RpcResponse {
 
   protected final int id;                             // the client's call id
   protected final BlockingService service;
@@ -91,8 +91,14 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
-      justification="Can't figure why this complaint is happening... see below")
+  // This is a dirty hack to address HBASE-22539. The lowest bit is for normal rpc cleanup, and the
+  // second bit is for WAL reference. We can only call release if both of them are zero. The reason
+  // why we can not use a general reference counting is that, we may call cleanup multiple times in
+  // the current implementation. We should fix this in the future.
+  private final AtomicInteger reference = new AtomicInteger(0b01);
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
+      justification = "Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
       Message param, CellScanner cellScanner, T connection, long size,
       InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
@@ -141,12 +147,41 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     cleanup();
   }
 
+  private void release(int mask) {
+    for (;;) {
+      int ref = reference.get();
+      if ((ref & mask) == 0) {
+        return;
+      }
+      int nextRef = ref & (~mask);
+      if (reference.compareAndSet(ref, nextRef)) {
+        if (nextRef == 0) {
+          if (this.reqCleanup != null) {
+            this.reqCleanup.run();
+          }
+        }
+        return;
+      }
+    }
+  }
+
   @Override
   public void cleanup() {
-    if (this.reqCleanup != null) {
-      this.reqCleanup.run();
-      this.reqCleanup = null;
+    release(0b01);
+  }
+
+  public void retainByWAL() {
+    for (;;) {
+      int ref = reference.get();
+      int nextRef = ref | 0b10;
+      if (reference.compareAndSet(ref, nextRef)) {
+        return;
+      }
     }
+  }
+
+  public void releaseByWAL() {
+    release(0b10);
   }
 
   @Override

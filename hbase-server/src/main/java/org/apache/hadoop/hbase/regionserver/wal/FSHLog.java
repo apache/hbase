@@ -24,7 +24,6 @@ import com.lmax.disruptor.LifecycleAware;
 import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -34,7 +33,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,6 +56,7 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -951,7 +950,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           //TODO handle htrace API change, see HBASE-18895
           //TraceScope scope = Trace.continueSpan(entry.detachSpan());
           try {
-
             if (this.exception != null) {
               // Return to keep processing events coming off the ringbuffer
               return;
@@ -968,6 +966,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
                     : new DamagedWALException("On sync", this.exception));
             // Return to keep processing events coming off the ringbuffer
             return;
+          } finally {
+            entry.release();
           }
         } else {
           // What is this if not an append or sync. Fail all up to this!!!
