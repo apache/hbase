@@ -606,8 +606,7 @@ possible configurations would overwhelm and obscure the important.
       Then the cluster's availability is at least 99% when balancing.</description>
   </property>
   <property>
-    <name>hbase.balancer.period
-    </name>
+    <name>hbase.balancer.period</name>
     <value>300000</value>
     <description>Period at which the region balancer runs in the Master.</description>
   </property>
@@ -631,8 +630,27 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
-    <description>Time to sleep in between searches for work (in milliseconds).
-    Used as sleep interval by service threads such as log roller.</description>
+    <description>In master side, this config is the period used for FS related behaviors:
+      checking if hdfs is out of safe mode, setting or checking hbase.version file,
+      setting or checking hbase.id file. Using default value should be fine.
+      In regionserver side, this config is used in several places: flushing check interval,
+      compaction check interval, wal rolling check interval. Specially, admin can tune
+      flushing and compaction check interval by hbase.regionserver.flush.check.period
+      and hbase.regionserver.compaction.check.period. (in milliseconds)</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.flush.check.period</name>
+    <value>${hbase.server.thread.wakefrequency}</value>
+    <description>It determines the flushing check period of PeriodicFlusher in regionserver.
+      If unset, it uses hbase.server.thread.wakefrequency as default value.
+      (in milliseconds)</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.compaction.check.period</name>
+    <value>${hbase.server.thread.wakefrequency}</value>
+    <description>It determines the compaction check period of CompactionChecker in regionserver.
+      If unset, it uses hbase.server.thread.wakefrequency as default value.
+      (in milliseconds)</description>
   </property>
   <property>
     <name>hbase.server.versionfile.writeattempts</name>
