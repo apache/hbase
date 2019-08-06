@@ -2589,7 +2589,8 @@ public class MasterRpcServices extends RSRpcServices
       User caller = RpcServer.getRequestUser().orElse(null);
       if (AUDITLOG.isTraceEnabled()) {
         // audit log should store permission changes in addition to auth results
-        AUDITLOG.trace("User {} granted permission {}", caller, perm);
+        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+        AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller, remoteAddress, perm);
       }
       return GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
@@ -2615,7 +2616,8 @@ public class MasterRpcServices extends RSRpcServices
       User caller = RpcServer.getRequestUser().orElse(null);
       if (AUDITLOG.isTraceEnabled()) {
         // audit log should record all permission changes
-        AUDITLOG.trace("User {} revoked permission {}", caller, userPermission);
+        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+        AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller, remoteAddress, userPermission);
       }
       return RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
