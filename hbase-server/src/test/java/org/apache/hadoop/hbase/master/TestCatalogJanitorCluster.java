@@ -129,7 +129,6 @@ public class TestCatalogJanitorCluster {
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
-    assertEquals(1, report.getUnknownServers().size());
     // Finally, make an empty regioninfo in t1.
     RegionInfo t1Ri2 = t1Ris.get(2);
     Put pEmptyRI = new Put(t1Ri2.getRegionName());
