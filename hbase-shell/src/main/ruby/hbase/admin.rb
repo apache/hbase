@@ -802,18 +802,19 @@ module Hbase
     end
 
     def status(format, type)
-      status = org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
+      cluster_metrics = @admin.getClusterMetrics
       if format == 'detailed'
-        puts(format('version %s', status.getHBaseVersion))
+        puts(format('version %s', cluster_metrics.getHBaseVersion))
         # Put regions in transition first because usually empty
-        puts(format('%d regionsInTransition', status.getRegionStatesInTransition.size))
-        for v in status.getRegionStatesInTransition
+        puts(format('%d regionsInTransition', cluster_metrics.getRegionStatesInTransition.size))
+        for v in cluster_metrics.getRegionStatesInTransition
           puts(format('    %s', v))
         end
-        master = status.getMaster
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
-        puts(format('%d backup masters', status.getBackupMastersSize))
-        for server in status.getBackupMasters
+        master = cluster_metrics.getMasterName
+        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort,
+                    master.getStartcode))
+        puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
+        for server in cluster_metrics.getBackupMasterNames
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
 
@@ -821,24 +822,25 @@ module Hbase
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
         end
-        puts(format('%d live servers', status.getServersSize))
-        for server in status.getServers
+        puts(format('%d live servers', cluster_metrics.getLiveServerMetrics.size))
+        for server in cluster_metrics.getLiveServerMetrics.keySet
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
-          puts(format('        %s', status.getLoad(server).toString))
-          for name, region in status.getLoad(server).getRegionsLoad
+          puts(format('        %s', cluster_metrics.getLiveServerMetrics.get(server).toString))
+          for name, region in cluster_metrics.getLiveServerMetrics.get(server).getRegionMetrics
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
           end
         end
-        puts(format('%d dead servers', status.getDeadServersSize))
-        for server in status.getDeadServerNames
+        puts(format('%d dead servers', cluster_metrics.getDeadServerNames.size))
+        for server in cluster_metrics.getDeadServerNames
           puts(format('    %s', server))
         end
       elsif format == 'replication'
-        puts(format('version %<version>s', version: status.getHBaseVersion))
-        puts(format('%<servers>d live servers', servers: status.getServersSize))
-        status.getServers.each do |server_status|
-          sl = status.getLoad(server_status)
+        puts(format('version %<version>s', version: cluster_metrics.getHBaseVersion))
+        puts(format('%<servers>d live servers',
+                    servers: cluster_metrics.getLiveServerMetrics.size))
+        cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
+          sl = cluster_metrics.getLiveServerMetrics.get(server_name)
           r_sink_string   = '      SINK:'
           r_source_string = '       SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
@@ -851,7 +853,7 @@ module Hbase
                              .getTimestampsOfLastAppliedOp).toString
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
-          puts(format('    %<host>s:', host: server_status.getHostname))
+          puts(format('    %<host>s:', host: server_name.getHostname))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
           elsif type.casecmp('SINK').zero?
@@ -864,26 +866,30 @@ module Hbase
       elsif format == 'simple'
         load = 0
         regions = 0
-        master = status.getMaster
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
-        puts(format('%d backup masters', status.getBackupMastersSize))
-        for server in status.getBackupMasters
+        master = cluster_metrics.getMasterName
+        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort,
+                    master.getStartcode))
+        puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
+        for server in cluster_metrics.getBackupMasterNames
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-        puts(format('%d live servers', status.getServersSize))
-        for server in status.getServers
+        puts(format('%d live servers', cluster_metrics.getLiveServerMetrics.size))
+        for server in cluster_metrics.getLiveServerMetrics.keySet
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
-          puts(format('        %s', status.getLoad(server).toString))
-          load += status.getLoad(server).getNumberOfRequests
-          regions += status.getLoad(server).getNumberOfRegions
+          puts(format('        %s', cluster_metrics.getLiveServerMetrics.get(server).toString))
+          load += cluster_metrics.getLiveServerMetrics.get(server).getRequestCountPerSecond
+          regions += cluster_metrics.getLiveServerMetrics.get(server).getRegionMetrics.size
         end
-        puts(format('%d dead servers', status.getDeadServers))
-        for server in status.getDeadServerNames
+        puts(format('%d dead servers', cluster_metrics.getDeadServerNames.size))
+        for server in cluster_metrics.getDeadServerNames
           puts(format('    %s', server))
         end
         puts(format('Aggregate load: %d, regions: %d', load, regions))
       else
-        puts "1 active master, #{status.getBackupMastersSize} backup masters, #{status.getServersSize} servers, #{status.getDeadServers} dead, #{format('%.4f', status.getAverageLoad)} average load"
+        puts "1 active master, #{cluster_metrics.getBackupMasterNames.size} backup masters,
+              #{cluster_metrics.getLiveServerMetrics.size} servers,
+              #{cluster_metrics.getDeadServerNames.size} dead,
+              #{format('%.4f', cluster_metrics.getAverageLoad)} average load"
       end
     end
 
@@ -1176,15 +1182,23 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Returns the ClusterStatus of the cluster
-    def getClusterStatus
-      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics)
+    # Returns the whole ClusterMetrics containing details:
+    #
+    # hbase version
+    # cluster id
+    # primary/backup master(s)
+    # master's coprocessors
+    # live/dead regionservers
+    # balancer
+    # regions in transition
+    def getClusterMetrics
+      @admin.getClusterMetrics
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers
-      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.map { |serverName| serverName }
+      @admin.getClusterMetrics.getLiveServerMetrics.keySet.map { |server_name| server_name }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1447,7 +1461,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # List live region servers
     def list_liveservers
-      org.apache.hadoop.hbase.ClusterStatus.new(@admin.getClusterMetrics).getServers.to_a
+      @admin.getClusterMetrics.getLiveServerMetrics.keySet.to_a
     end
 
     #---------------------------------------------------------------------------

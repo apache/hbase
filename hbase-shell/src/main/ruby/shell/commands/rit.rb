@@ -29,7 +29,7 @@ Examples:
       end
 
       def command
-        rit = admin.getClusterStatus.getRegionStatesInTransition
+        rit = admin.getClusterMetrics.getRegionStatesInTransition
         rit.each do |v|
           formatter.row([v.toDescriptiveString])
         end

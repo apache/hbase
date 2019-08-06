@@ -132,7 +132,7 @@ meta_count += 1 if $tablename.nil?
 $TableName = TableName.valueOf($tablename.to_java_bytes) unless $tablename.nil?
 loop do
   if $tablename.nil?
-    server_count = admin.getClusterStatus.getRegionsCount
+    server_count = admin.getClusterMetrics.getRegionCount
   else
     connection = ConnectionFactory.createConnection(config)
     server_count = MetaTableAccessor.allTableRegions(connection, $TableName).size
