@@ -1198,7 +1198,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of regionservers
     def getRegionServers
-      @admin.getClusterMetrics.getLiveServerMetrics.keySet.map {|serverName| serverName}
+      @admin.getClusterMetrics.getLiveServerMetrics.keySet.map { |server_name| server_name }
     end
 
     #----------------------------------------------------------------------------------------------
