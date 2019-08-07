@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -133,6 +134,10 @@ public final class Canary implements Tool {
     long incWriteFailureCount();
     Map<String,String> getWriteFailures();
     void updateWriteFailures(String regionName, String serverName);
+    long getReadSuccessCount();
+    long incReadSuccessCount();
+    long getWriteSuccessCount();
+    long incWriteSuccessCount();
   }
 
   /**
@@ -140,7 +145,9 @@ public final class Canary implements Tool {
    */
   public static class StdOutSink implements Sink {
     private AtomicLong readFailureCount = new AtomicLong(0),
-        writeFailureCount = new AtomicLong(0);
+        writeFailureCount = new AtomicLong(0),
+        readSuccessCount = new AtomicLong(0),
+        writeSuccessCount = new AtomicLong(0);
     private Map<String, String> readFailures = new ConcurrentHashMap<>();
     private Map<String, String> writeFailures = new ConcurrentHashMap<>();
 
@@ -183,6 +190,26 @@ public final class Canary implements Tool {
     public void updateWriteFailures(String regionName, String serverName) {
       writeFailures.put(regionName, serverName);
     }
+
+    @Override
+    public long getReadSuccessCount() {
+      return readSuccessCount.get();
+    }
+
+    @Override
+    public long incReadSuccessCount() {
+      return readSuccessCount.incrementAndGet();
+    }
+
+    @Override
+    public long getWriteSuccessCount() {
+      return writeSuccessCount.get();
+    }
+
+    @Override
+    public long incWriteSuccessCount() {
+      return writeSuccessCount.incrementAndGet();
+    }
   }
 
   /**
@@ -219,6 +246,7 @@ public final class Canary implements Tool {
   public static class RegionStdOutSink extends StdOutSink {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
+    private final Map<String, RegionTaskResult> regionMap = new ConcurrentHashMap<>();
 
     public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
       incReadFailureCount();
@@ -234,6 +262,10 @@ public final class Canary implements Tool {
 
     public void publishReadTiming(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, long msTime) {
+      incReadSuccessCount();
+      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
+      res.setReadSuccess();
+      res.setReadLatency(msTime);
       LOG.info("Read from {} on {} {} in {}ms", region.getRegionNameAsString(), serverName,
           column.getNameAsString(), msTime);
     }
@@ -252,6 +284,10 @@ public final class Canary implements Tool {
 
     public void publishWriteTiming(ServerName serverName, RegionInfo region,
         ColumnFamilyDescriptor column, long msTime) {
+      incWriteSuccessCount();
+      RegionTaskResult res = this.regionMap.get(region.getRegionNameAsString());
+      res.setWriteSuccess();
+      res.setWriteLatency(msTime);
       LOG.info("Write to {} on {} {} in {}ms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime);
     }
@@ -272,6 +308,14 @@ public final class Canary implements Tool {
 
     public LongAdder getWriteLatency() {
       return this.writeLatency;
+    }
+
+    public Map<String, RegionTaskResult> getRegionMap() {
+      return this.regionMap;
+    }
+
+    public int getTotalExpectedRegions() {
+      return this.regionMap.size();
     }
   }
 
@@ -931,6 +975,96 @@ public final class Canary implements Tool {
   }
 
   /**
+   * Canary region mode-specific data structure which stores information about each region
+   * to be scanned
+   */
+  public static class RegionTaskResult {
+    private RegionInfo region;
+    private TableName tableName;
+    private ServerName serverName;
+    private AtomicLong readLatency = null;
+    private AtomicLong writeLatency = null;
+    private boolean readSuccess = false;
+    private boolean writeSuccess = false;
+
+    public RegionTaskResult(RegionInfo region, TableName tableName, ServerName serverName) {
+      this.region = region;
+      this.tableName = tableName;
+      this.serverName = serverName;
+    }
+
+    public RegionInfo getRegionInfo() {
+      return this.region;
+    }
+
+    public String getRegionNameAsString() {
+      return this.region.getRegionNameAsString();
+    }
+
+    public TableName getTableName() {
+      return this.tableName;
+    }
+
+    public String getTableNameAsString() {
+      return this.tableName.getNameAsString();
+    }
+
+    public ServerName getServerName() {
+      return this.serverName;
+    }
+
+    public String getServerNameAsString() {
+      return this.serverName.getServerName();
+    }
+
+    public long getReadLatency() {
+      if (this.readLatency == null) {
+        return -1;
+      }
+      return this.readLatency.get();
+    }
+
+    public void setReadLatency(long readLatency) {
+      if (this.readLatency != null) {
+        this.readLatency.set(readLatency);
+      } else {
+        this.readLatency = new AtomicLong(readLatency);
+      }
+    }
+
+    public long getWriteLatency() {
+      if (this.writeLatency == null) {
+        return -1;
+      }
+      return this.writeLatency.get();
+    }
+
+    public void setWriteLatency(long writeLatency) {
+      if (this.writeLatency != null) {
+        this.writeLatency.set(writeLatency);
+      } else {
+        this.writeLatency = new AtomicLong(writeLatency);
+      }
+    }
+
+    public boolean isReadSuccess() {
+      return this.readSuccess;
+    }
+
+    public void setReadSuccess() {
+      this.readSuccess = true;
+    }
+
+    public boolean isWriteSuccess() {
+      return this.writeSuccess;
+    }
+
+    public void setWriteSuccess() {
+      this.writeSuccess = true;
+    }
+  }
+
+  /**
    * A Factory method for {@link Monitor}.
    * Makes a RegionServerMonitor, or a ZooKeeperMonitor, or a RegionMonitor.
    * @param index a start index for monitor target
@@ -1347,6 +1481,9 @@ public final class Canary implements Tool {
           RegionInfo region = location.getRegion();
           tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink)sink,
               taskType, rawScanEnabled, rwLatency));
+          Map<String, RegionTaskResult> regionMap = ((RegionStdOutSink) sink).getRegionMap();
+          regionMap.put(region.getRegionNameAsString(), new RegionTaskResult(region,
+              region.getTable(), rs));
         }
         return executor.invokeAll(tasks);
       }
