@@ -330,9 +330,8 @@ public class HbckRegionInfo implements KeyRange {
     HdfsEntry() {
     }
 
-    public HdfsEntry(Path regionDir, long regionDirModTime) {
+    public HdfsEntry(Path regionDir) {
       this.regionDir = regionDir;
-      this.regionDirModTime = regionDirModTime;
     }
   }
 
