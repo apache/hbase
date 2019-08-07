@@ -431,9 +431,10 @@ class SimpleRequestController implements RequestController {
      * regions. 3) check the total concurrent tasks. 4) check the concurrent
      * tasks for server.
      *
-     * @param loc
-     * @param heapSizeOfRow
-     * @return either Include {@link ReturnCode} or Skip {@link ReturnCode}
+     * @param loc the destination of data
+     * @param heapSizeOfRow the data size
+     * @return either Include {@link RequestController.ReturnCode} or Skip
+     *         {@link RequestController.ReturnCode}
      */
     @Override
     public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
