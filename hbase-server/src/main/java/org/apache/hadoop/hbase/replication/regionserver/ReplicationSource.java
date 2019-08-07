@@ -207,6 +207,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
     queue.put(log);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{} Added log file {} to queue of source {}.", logPeerId(), logPrefix,
+        this.replicationQueueInfo.getQueueId());
+    }
     this.metrics.incrSizeOfLogQueue();
     // This will log a warning for each new log that gets created above the warn threshold
     int queueSize = queue.size();
@@ -227,8 +231,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
         this.queueStorage.addHFileRefs(peerId, pairs);
         metrics.incrSizeOfHFileRefsQueue(pairs.size());
       } else {
-        LOG.debug("HFiles will not be replicated belonging to the table " + tableName + " family "
-            + Bytes.toString(family) + " to peer id " + peerId);
+        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+          tableName, Bytes.toString(family), peerId);
       }
     } else {
       // user has explicitly not defined any table cfs for replication, means replicate all the
@@ -300,9 +304,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
     ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
     ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
     if (extant != null) {
-      LOG.debug("Someone has beat us to start a worker thread for wal group {}", walGroupId);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("{} Someone has beat us to start a worker thread for wal group {}", logPeerId(),
+          walGroupId);
+      }
     } else {
-      LOG.debug("Starting up worker for wal group {}", walGroupId);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("{} Starting up worker for wal group {}", logPeerId(), walGroupId);
+      }
       ReplicationSourceWALReader walReader =
         createNewWALReader(walGroupId, queue, worker.getStartPosition());
       Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName() +
@@ -334,7 +343,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       } else {
         currentPath = new Path("NO_LOGS_IN_QUEUE");
-        LOG.warn("No replication ongoing, waiting for new log");
+        LOG.warn("{} No replication ongoing, waiting for new log", logPeerId());
       }
       ReplicationStatus.ReplicationStatusBuilder statusBuilder = ReplicationStatus.newBuilder();
       statusBuilder.withPeerId(this.getPeerId())
@@ -375,7 +384,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   protected final void uncaughtException(Thread t, Throwable e) {
     RSRpcServices.exitIfOOME(e);
-    LOG.error("Unexpected exception in " + t.getName() + " currentPath=" + getCurrentPath(), e);
+    LOG.error("Unexpected exception in {} currentPath={}",
+      t.getName(), getCurrentPath(), e);
     server.abort("Unexpected exception in " + t.getName(), e);
   }
 
@@ -396,7 +406,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       long sleepTicks = throttler.getNextSleepInterval(batchSize);
       if (sleepTicks > 0) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("To sleep " + sleepTicks + "ms for throttling control");
+          LOG.trace("{} To sleep {}ms for throttling control", logPeerId(), sleepTicks);
         }
         Thread.sleep(sleepTicks);
         // reset throttler's cycle start tick when sleep for throttling occurs
@@ -430,11 +440,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
-        LOG.trace(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
+        LOG.trace("{} {}, sleeping {} times {}",
+          logPeerId(), msg, sleepForRetries, sleepMultiplier);
       }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
-      LOG.debug("Interrupted while sleeping between retries");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("{} Interrupted while sleeping between retries", logPeerId());
+      }
       Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
@@ -456,7 +469,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       try {
         replicationEndpoint = createReplicationEndpoint();
       } catch (Exception e) {
-        LOG.warn("error creating ReplicationEndpoint, retry", e);
+        LOG.warn("{} error creating ReplicationEndpoint, retry", logPeerId(), e);
         if (sleepForRetries("Error creating ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -468,7 +481,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         this.replicationEndpoint = replicationEndpoint;
         break;
       } catch (Exception e) {
-        LOG.warn("Error starting ReplicationEndpoint, retry", e);
+        LOG.warn("{} Error starting ReplicationEndpoint, retry", logPeerId(), e);
         replicationEndpoint.stop();
         if (sleepForRetries("Error starting ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
@@ -486,6 +499,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     for (;;) {
       peerClusterId = replicationEndpoint.getPeerUUID();
       if (this.isSourceActive() && peerClusterId == null) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("{} Could not connect to Peer ZK. Sleeping for {} millis", logPeerId(),
+            (this.sleepForRetries * sleepMultiplier));
+        }
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -503,7 +520,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
       this.manager.removeSource(this);
       return;
     }
-    LOG.info("Replicating " + clusterId + " -> " + peerClusterId);
+    LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
+      logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
 
     initializeWALEntryFilter(peerClusterId);
     // start workers
@@ -536,10 +554,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   public void terminate(String reason, Exception cause, boolean join) {
     if (cause == null) {
-      LOG.info("Closing source " + this.queueId + " because: " + reason);
+      LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
-      LOG.error("Closing source " + this.queueId + " because an error occurred: " + reason,
-        cause);
+      LOG.error("{} Closing source {} because an error occurred: {}",
+        logPeerId(), this.queueId, reason, cause);
     }
     this.sourceRunning = false;
     if (initThread != null && Thread.currentThread() != initThread) {
@@ -561,7 +579,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
           // Wait worker to stop
           Thread.sleep(this.sleepForRetries);
         } catch (InterruptedException e) {
-          LOG.info("Interrupted while waiting " + worker.getName() + " to stop");
+          LOG.info("{} Interrupted while waiting {} to stop", logPeerId(), worker.getName());
           Thread.currentThread().interrupt();
         }
         // If worker still is alive after waiting, interrupt it
@@ -581,15 +599,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
-        LOG.info("ReplicationSourceWorker " + worker.getName() + " terminated");
+        LOG.info("{} ReplicationSourceWorker {} terminated", logPeerId(), worker.getName());
       }
       if (this.replicationEndpoint != null) {
         try {
           this.replicationEndpoint.awaitTerminated(sleepForRetries * maxRetriesMultiplier,
             TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
-          LOG.warn("Got exception while waiting for endpoint to shutdown for replication source :" +
-            this.queueId, te);
+          LOG.warn("{} Got exception while waiting for endpoint to shutdown "
+            + "for replication source : {}", logPeerId(), this.queueId, te);
         }
       }
     }
@@ -696,5 +714,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   ReplicationQueueStorage getQueueStorage() {
     return queueStorage;
+  }
+
+  private String logPeerId(){
+    return "[Source for peer " + this.getPeerId() + "]:";
   }
 }
