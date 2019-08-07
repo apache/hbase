@@ -340,6 +340,8 @@ public class MasterRpcServices extends RSRpcServices
       implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
         LockService.BlockingInterface, HbckService.BlockingInterface {
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
+  private static final Logger AUDITLOG =
+      LoggerFactory.getLogger("SecurityLogger."+MasterRpcServices.class.getName());
 
   private final HMaster master;
 
@@ -2574,6 +2576,13 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.postGrant(perm, mergeExistingPermissions);
       }
+      User caller = RpcServer.getRequestUser().orElse(null);
+      if (AUDITLOG.isTraceEnabled()) {
+        // audit log should store permission changes in addition to auth results
+        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+        AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller, remoteAddress,
+                perm);
+      }
       return GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -2594,6 +2603,13 @@ public class MasterRpcServices extends RSRpcServices
       }
       if (master.cpHost != null) {
         master.cpHost.postRevoke(userPermission);
+      }
+      User caller = RpcServer.getRequestUser().orElse(null);
+      if (AUDITLOG.isTraceEnabled()) {
+        // audit log should record all permission changes
+        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+        AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller, remoteAddress,
+                userPermission);
       }
       return RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
