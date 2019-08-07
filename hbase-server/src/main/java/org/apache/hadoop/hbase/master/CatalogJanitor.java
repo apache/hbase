@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,7 +78,7 @@ import org.slf4j.LoggerFactory;
 // TODO: Only works with single hbase:meta region currently.  Fix.
 // TODO: Should it start over every time? Could it continue if runs into problem? Only if
 // problem does not mess up 'results'.
-@org.apache.yetus.audience.InterfaceAudience.Private
+@InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
