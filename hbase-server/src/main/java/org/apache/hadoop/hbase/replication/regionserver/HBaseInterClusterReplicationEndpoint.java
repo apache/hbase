@@ -199,11 +199,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   protected boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
-        LOG.trace(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
+        LOG.trace("{} {}, sleeping {} times {}",
+          logPeerId(), msg, sleepForRetries, sleepMultiplier);
       }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
-      LOG.debug("Interrupted while sleeping between retries");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("{} Interrupted while sleeping between retries", logPeerId());
+      }
     }
     return sleepMultiplier < maxRetriesMultiplier;
   }
@@ -288,7 +291,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     try {
       connection = (ClusterConnection) ConnectionFactory.createConnection(this.conf);
     } catch (IOException ioe) {
-      LOG.warn("Failed to create connection for peer cluster", ioe);
+      LOG.warn("{} Failed to create connection for peer cluster", logPeerId(), ioe);
     }
     if (connection != null) {
       this.conn = connection;
@@ -301,8 +304,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     for (int i = 0; i < batches.size(); i++) {
       List<Entry> entries = batches.get(i);
       if (!entries.isEmpty()) {
-        LOG.trace("Submitting {} entries of total size {}", entries.size(),
-          replicateContext.getSize());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("{} Submitting {} entries of total size {}", logPeerId(), entries.size(),
+            replicateContext.getSize());
+        }
         // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
         pool.submit(createReplicator(entries, i));
         futures++;
@@ -353,8 +358,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
     int numSinks = replicationSinkMgr.getNumSinks();
     if (numSinks == 0) {
-      LOG.warn("No replication sinks found, returning without replicating. The source should " +
-          "retry with the same set of edits.");
+      LOG.warn("{} No replication sinks found, returning without replicating. "
+        + "The source should retry with the same set of edits.", logPeerId());
       return false;
     }
 
@@ -376,7 +381,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       } catch (IOException ioe) {
         if (ioe instanceof RemoteException) {
           ioe = ((RemoteException) ioe).unwrapRemoteException();
-          LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);
+          LOG.warn("{} Can't replicate because of an error on the remote cluster: ", logPeerId(),
+            ioe);
           if (ioe instanceof TableNotFoundException) {
             if (dropOnDeletedTables) {
               // this is a bit fragile, but cannot change how TNFE is serialized
@@ -389,19 +395,20 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                     // Would potentially be better to retry in one of the outer loops
                     // and add a table filter there; but that would break the encapsulation,
                     // so we're doing the filtering here.
-                    LOG.info("Missing table detected at sink, local table also does not exist, " +
-                        "filtering edits for '" + table + "'");
+                    LOG.info("{} Missing table detected at sink, local table also does not "
+                      + "exist, filtering edits for '{}'", logPeerId(), table);
                     batches = filterBatches(batches, table);
                     continue;
                   }
                 } catch (IOException iox) {
-                  LOG.warn("Exception checking for local table: ", iox);
+                  LOG.warn("{} Exception checking for local table: ", logPeerId(), iox);
                 }
               }
             }
             // fall through and sleep below
           } else {
-            LOG.warn("Peer encountered RemoteException, rechecking all sinks: ", ioe);
+            LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
+              ioe);
             replicationSinkMgr.chooseSinks();
           }
         } else {
@@ -414,10 +421,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                   "caused by a machine failure or a massive slowdown",
               this.socketTimeoutMultiplier);
           } else if (ioe instanceof ConnectException || ioe instanceof UnknownHostException) {
-            LOG.warn("Peer is unavailable, rechecking all sinks: ", ioe);
+            LOG.warn("{} Peer is unavailable, rechecking all sinks: ", logPeerId(), ioe);
             replicationSinkMgr.chooseSinks();
           } else {
-            LOG.warn("Can't replicate because of a local or network error: ", ioe);
+            LOG.warn("{} Can't replicate because of a local or network error: ", logPeerId(), ioe);
           }
         }
         if (sleepForRetries("Since we are unable to replicate", sleepMultiplier)) {
@@ -440,7 +447,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         this.conn.close();
         this.conn = null;
       } catch (IOException e) {
-        LOG.warn("Failed to close the connection");
+        LOG.warn("{} Failed to close the connection", logPeerId());
       }
     }
     // Allow currently running replication tasks to finish
@@ -466,17 +473,21 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       int entriesHashCode = System.identityHashCode(entries);
       if (LOG.isTraceEnabled()) {
         long size = entries.stream().mapToLong(this::getEstimatedEntrySize).sum();
-        LOG.trace("Replicating batch {} of {} entries with total size {} bytes to {}",
-          entriesHashCode, entries.size(), size, replicationClusterId);
+        LOG.trace("{} Replicating batch {} of {} entries with total size {} bytes to {}",
+          logPeerId(), entriesHashCode, entries.size(), size, replicationClusterId);
       }
       sinkPeer = replicationSinkMgr.getReplicationSink();
       BlockingInterface rrs = sinkPeer.getRegionServer();
       try {
         ReplicationProtbufUtil.replicateWALEntry(rrs, entries.toArray(new Entry[entries.size()]),
           replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-        LOG.trace("Completed replicating batch {}", entriesHashCode);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("{} Completed replicating batch {}", logPeerId(), entriesHashCode);
+        }
       } catch (IOException e) {
-        LOG.trace("Failed replicating batch {}", entriesHashCode, e);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("{} Failed replicating batch {}", logPeerId(), entriesHashCode, e);
+        }
         throw e;
       }
       replicationSinkMgr.reportSinkSuccess(sinkPeer);
@@ -514,4 +525,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex)
         : () -> replicateEntries(entries, batchIndex);
   }
+
+  private String logPeerId(){
+    return "[Source for peer " + this.ctx.getPeerId() + "]:";
+  }
+
 }
