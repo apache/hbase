@@ -104,23 +104,18 @@ public class DeleteTableProcedure
           // Call coprocessors
           preDelete(env);
 
-          setNextState(DeleteTableState.DELETE_TABLE_REMOVE_FROM_META);
-          break;
-        case DELETE_TABLE_REMOVE_FROM_META:
-          LOG.debug("Deleting regions from META for {}", this);
-          DeleteTableProcedure.deleteFromMeta(env, getTableName(), regions);
           setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
           LOG.debug("Deleting regions from filesystem for {}", this);
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
-          setNextState(DeleteTableState.DELETE_TABLE_UPDATE_DESC_CACHE);
-          regions = null;
+          setNextState(DeleteTableState.DELETE_TABLE_REMOVE_FROM_META);
           break;
-        case DELETE_TABLE_UPDATE_DESC_CACHE:
-          LOG.debug("Deleting descriptor for {}", this);
-          DeleteTableProcedure.deleteTableDescriptorCache(env, getTableName());
+        case DELETE_TABLE_REMOVE_FROM_META:
+          LOG.debug("Deleting regions from META for {}", this);
+          DeleteTableProcedure.deleteFromMeta(env, getTableName(), regions);
           setNextState(DeleteTableState.DELETE_TABLE_UNASSIGN_REGIONS);
+          regions = null;
           break;
         case DELETE_TABLE_UNASSIGN_REGIONS:
           LOG.debug("Deleting assignment state for {}", this);
@@ -389,6 +384,8 @@ public class DeleteTableProcedure
     if (fnm != null) {
       fnm.deleteFavoredNodesForRegions(regions);
     }
+
+    deleteTableDescriptorCache(env, tableName);
   }
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,

@@ -98,13 +98,10 @@ public class TruncateTableProcedure
           // Call coprocessors
           preTruncate(env);
 
-          setNextState(TruncateTableState.TRUNCATE_TABLE_REMOVE_FROM_META);
-          break;
-        case TRUNCATE_TABLE_REMOVE_FROM_META:
-          tableDescriptor = env.getMasterServices().getTableDescriptors()
-              .get(tableName);
-          DeleteTableProcedure.deleteFromMeta(env, getTableName(), regions);
-          DeleteTableProcedure.deleteAssignmentState(env, getTableName());
+          //We need to cache table descriptor in the initial stage, so that it's saved within
+          //the procedure stage and can get recovered if the procedure crashes between
+          //TRUNCATE_TABLE_REMOVE_FROM_META and TRUNCATE_TABLE_CREATE_FS_LAYOUT
+          tableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
           setNextState(TruncateTableState.TRUNCATE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CLEAR_FS_LAYOUT:
@@ -121,6 +118,13 @@ public class TruncateTableProcedure
           } else {
             regions = recreateRegionInfo(regions);
           }
+          setNextState(TruncateTableState.TRUNCATE_TABLE_REMOVE_FROM_META);
+          break;
+        case TRUNCATE_TABLE_REMOVE_FROM_META:
+          List<RegionInfo> originalRegions = env.getAssignmentManager()
+            .getRegionStates().getRegionsOfTable(getTableName());
+          DeleteTableProcedure.deleteFromMeta(env, getTableName(), originalRegions);
+          DeleteTableProcedure.deleteAssignmentState(env, getTableName());
           setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
           break;
         case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
