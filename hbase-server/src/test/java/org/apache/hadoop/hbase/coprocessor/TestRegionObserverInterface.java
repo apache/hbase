@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -56,6 +57,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -106,6 +109,7 @@ public class TestRegionObserverInterface {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionObserverInterface.class);
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
+  public static final byte[] FAMILY = Bytes.toBytes("f");
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
@@ -730,6 +734,37 @@ public class TestRegionObserverInterface {
     Assert.assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
 
   }
+
+  @Test
+  public void testPreWALAppendNotCalledOnMetaEdit() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        "." + name.getMethodName());
+    TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    tdBuilder.setColumnFamily(cfBuilder.build());
+    tdBuilder.setCoprocessor(SimpleRegionObserver.class.getName());
+    TableDescriptor td = tdBuilder.build();
+    Table table = util.createTable(td, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+
+    region.getWAL().registerWALActionsListener(listener);
+    //flushing should write to the WAL
+    region.flush(true);
+    //so should compaction
+    region.compact(false);
+    //and so should closing the region
+    region.close();
+
+    //but we still shouldn't have triggered preWALAppend because no user data was written
+    String[] methods = new String[] {"getCtPreWALAppend"};
+    Object[] expectedResult = new Integer[]{0};
+    verifyMethodResult(SimpleRegionObserver.class, methods, tableName, expectedResult);
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class<?> coprocessor, String methodName[], TableName tableName,
       Object value[]) throws IOException {
