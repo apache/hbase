@@ -19,9 +19,12 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -131,6 +134,21 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
     testSimpleDelete(tableName, splitKeys);
+  }
+
+  @Test
+  public void testDeleteFromMeta() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+      getMasterProcedureExecutor(), tableName, null, "f1", "f2");
+    List<RegionInfo> regionsList = new ArrayList<>();
+    UTIL.getAdmin().disableTable(tableName);
+    MasterProcedureEnv procedureEnv = getMasterProcedureExecutor().getEnvironment();
+    assertNotNull("Table should be on TableDescriptors cache.",
+      procedureEnv.getMasterServices().getTableDescriptors().get(tableName));
+    DeleteTableProcedure.deleteFromMeta(procedureEnv, tableName, regionsList);
+    assertNull("Table shouldn't be on TableDescriptors anymore.",
+      procedureEnv.getMasterServices().getTableDescriptors().get(tableName));
   }
 
   private void testSimpleDelete(final TableName tableName, byte[][] splitKeys) throws Exception {
