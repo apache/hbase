@@ -28,6 +28,7 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -71,23 +73,23 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class SnapshotScannerHDFSAclHelper implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotScannerHDFSAclHelper.class);
 
-  public static final String USER_SCAN_SNAPSHOT_ENABLE = "hbase.user.scan.snapshot.enable";
-  public static final String USER_SCAN_SNAPSHOT_THREAD_NUMBER =
-      "hbase.user.scan.snapshot.thread.number";
+  public static final String ACL_SYNC_TO_HDFS_ENABLE = "hbase.acl.sync.to.hdfs.enable";
+  public static final String ACL_SYNC_TO_HDFS_THREAD_NUMBER =
+      "hbase.acl.sync.to.hdfs.thread.number";
   // The tmp directory to restore snapshot, it can not be a sub directory of HBase root dir
   public static final String SNAPSHOT_RESTORE_TMP_DIR = "hbase.snapshot.restore.tmp.dir";
   public static final String SNAPSHOT_RESTORE_TMP_DIR_DEFAULT =
       "/hbase/.tmpdir-to-restore-snapshot";
   // The default permission of the common directories if the feature is enabled.
   public static final String COMMON_DIRECTORY_PERMISSION =
-      "hbase.user.scan.snapshot.common.directory.permission";
+      "hbase.acl.sync.to.hdfs.common.directory.permission";
   // The secure HBase permission is 700, 751 means all others have execute access and the mask is
   // set to read-execute to make the extended access ACL entries can work. Be cautious to set
   // this value.
   public static final String COMMON_DIRECTORY_PERMISSION_DEFAULT = "751";
   // The default permission of the snapshot restore directories if the feature is enabled.
   public static final String SNAPSHOT_RESTORE_DIRECTORY_PERMISSION =
-      "hbase.user.scan.snapshot.restore.directory.permission";
+      "hbase.acl.sync.to.hdfs.restore.directory.permission";
   // 753 means all others have write-execute access.
   public static final String SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT = "753";
 
@@ -102,7 +104,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     this.conf = configuration;
     this.pathHelper = new PathHelper(conf);
     this.fs = pathHelper.getFileSystem();
-    this.pool = Executors.newFixedThreadPool(conf.getInt(USER_SCAN_SNAPSHOT_THREAD_NUMBER, 10),
+    this.pool = Executors.newFixedThreadPool(conf.getInt(ACL_SYNC_TO_HDFS_THREAD_NUMBER, 10),
       new ThreadFactoryBuilder().setNameFormat("hdfs-acl-thread-%d").setDaemon(true).build());
     this.admin = connection.getAdmin();
   }
@@ -235,6 +237,50 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   }
 
   /**
+   * Remove default acl from namespace archive dir when delete namespace
+   * @param namespace the namespace
+   * @param removeUsers the users whose default acl will be removed
+   * @return false if an error occurred, otherwise true
+   */
+  public boolean removeNamespaceDefaultAcl(String namespace, Set<String> removeUsers) {
+    try {
+      long start = System.currentTimeMillis();
+      Path archiveNsDir = pathHelper.getArchiveNsDir(namespace);
+      HDFSAclOperation operation = new HDFSAclOperation(fs, archiveNsDir, removeUsers,
+          HDFSAclOperation.OperationType.REMOVE, false, HDFSAclOperation.AclType.DEFAULT);
+      operation.handleAcl();
+      LOG.info("Remove HDFS acl when delete namespace {}, cost {} ms", namespace,
+        System.currentTimeMillis() - start);
+      return true;
+    } catch (Exception e) {
+      LOG.error("Remove HDFS acl error when delete namespace {}", namespace, e);
+      return false;
+    }
+  }
+
+  /**
+   * Remove default acl from table archive dir when delete table
+   * @param tableName the table name
+   * @param removeUsers the users whose default acl will be removed
+   * @return false if an error occurred, otherwise true
+   */
+  public boolean removeTableDefaultAcl(TableName tableName, Set<String> removeUsers) {
+    try {
+      long start = System.currentTimeMillis();
+      Path archiveTableDir = pathHelper.getArchiveTableDir(tableName);
+      HDFSAclOperation operation = new HDFSAclOperation(fs, archiveTableDir, removeUsers,
+          HDFSAclOperation.OperationType.REMOVE, false, HDFSAclOperation.AclType.DEFAULT);
+      operation.handleAcl();
+      LOG.info("Remove HDFS acl when delete table {}, cost {} ms", tableName,
+        System.currentTimeMillis() - start);
+      return true;
+    } catch (Exception e) {
+      LOG.error("Remove HDFS acl error when delete table {}", tableName, e);
+      return false;
+    }
+  }
+
+  /**
    * Add table user acls
    * @param tableName the table
    * @param users the table users with READ permission
@@ -353,7 +399,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     Set<TableName> tables = new HashSet<>();
     for (String namespace : namespaces) {
       tables.addAll(admin.listTableDescriptorsByNamespace(Bytes.toBytes(namespace)).stream()
-          .filter(this::isTableUserScanSnapshotEnabled).map(TableDescriptor::getTableName)
+          .filter(this::isAclSyncToHdfsEnabled).map(TableDescriptor::getTableName)
           .collect(Collectors.toSet()));
     }
     handleTableAcl(tables, users, skipNamespaces, skipTables, operationType);
@@ -407,7 +453,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    * return paths that user will global permission will visit
    * @return the path list
    */
-  private List<Path> getGlobalRootPaths() {
+  List<Path> getGlobalRootPaths() {
     return Lists.newArrayList(pathHelper.getTmpDataDir(), pathHelper.getDataDir(),
       pathHelper.getMobDataDir(), pathHelper.getArchiveDataDir(), pathHelper.getSnapshotRootDir());
   }
@@ -515,9 +561,20 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     return !tablePermission.hasFamily() && !tablePermission.hasQualifier();
   }
 
-  boolean isTableUserScanSnapshotEnabled(TableDescriptor tableDescriptor) {
+  public static boolean isAclSyncToHdfsEnabled(Configuration conf) {
+    String[] masterCoprocessors = conf.getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    Set<String> masterCoprocessorSet = new HashSet<>();
+    if (masterCoprocessors != null) {
+      Collections.addAll(masterCoprocessorSet, masterCoprocessors);
+    }
+    return conf.getBoolean(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, false)
+        && masterCoprocessorSet.contains(SnapshotScannerHDFSAclController.class.getName())
+        && masterCoprocessorSet.contains(AccessController.class.getName());
+  }
+
+  boolean isAclSyncToHdfsEnabled(TableDescriptor tableDescriptor) {
     return tableDescriptor == null ? false
-        : Boolean.valueOf(tableDescriptor.getValue(USER_SCAN_SNAPSHOT_ENABLE));
+        : Boolean.valueOf(tableDescriptor.getValue(ACL_SYNC_TO_HDFS_ENABLE));
   }
 
   PathHelper getPathHelper() {

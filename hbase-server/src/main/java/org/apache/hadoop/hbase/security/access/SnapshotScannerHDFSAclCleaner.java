@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,7 +58,7 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
-    userScanSnapshotEnabled = isUserScanSnapshotEnabled(conf);
+    userScanSnapshotEnabled = SnapshotScannerHDFSAclHelper.isAclSyncToHdfsEnabled(conf);
   }
 
   @Override
@@ -80,13 +79,6 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
       return isEmptyArchiveDirDeletable(dir);
     }
     return true;
-  }
-
-  private boolean isUserScanSnapshotEnabled(Configuration conf) {
-    String masterCoprocessors = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    return conf.getBoolean(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, false)
-        && masterCoprocessors.contains(SnapshotScannerHDFSAclController.class.getName())
-        && masterCoprocessors.contains(AccessController.class.getName());
   }
 
   private boolean isEmptyArchiveDirDeletable(Path dir) {
