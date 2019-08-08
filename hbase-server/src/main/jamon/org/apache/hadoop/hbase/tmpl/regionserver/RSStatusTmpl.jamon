@@ -270,11 +270,47 @@ $(document).ready(function()
             },
             type: 'numeric'
         });
+        $.tablesorter.addParser(
+        {
+            id: "separator",
+            is: function (s) {
+                return /^[0-9]?[0-9,]*$/.test(s);
+            },
+            format: function (s) {
+                return $.tablesorter.formatFloat( s.replace(/,/g,'') );
+            },
+            type: "numeric"
+        });
+
         $("#baseStatsTable").tablesorter();
-        $("#requestStatsTable").tablesorter();
-        $("#storeStatsTable").tablesorter();
-        $("#compactionStatsTable").tablesorter();
-        $("#memstoreStatsTable").tablesorter();
+        $("#requestStatsTable").tablesorter({
+            headers: {
+                1: {sorter: 'separator'},
+                2: {sorter: 'separator'},
+                3: {sorter: 'separator'}
+            }
+        });
+        $("#storeStatsTable").tablesorter({
+            headers: {
+                1: {sorter: 'separator'},
+                2: {sorter: 'separator'},
+                3: {sorter: 'filesize'},
+                4: {sorter: 'filesize'},
+                5: {sorter: 'filesize'},
+                6: {sorter: 'filesize'}
+            }
+        });
+        $("#compactionStatsTable").tablesorter({
+            headers: {
+                1: {sorter: 'separator'},
+                2: {sorter: 'separator'}
+            }
+        });
+        $("#memstoreStatsTable").tablesorter({
+            headers: {
+                1: {sorter: 'filesize'}
+            }
+        });
     }
 );
 </script>
