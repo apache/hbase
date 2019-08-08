@@ -119,7 +119,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   public void preMasterInitialization(ObserverContext<MasterCoprocessorEnvironment> c)
       throws IOException {
     if (c.getEnvironment().getConfiguration()
-        .getBoolean(SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE, false)) {
+        .getBoolean(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, false)) {
       MasterCoprocessorEnvironment mEnv = c.getEnvironment();
       if (!(mEnv instanceof HasMasterServices)) {
         throw new IOException("Does not implement HMasterServices");
@@ -133,7 +133,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       userProvider = UserProvider.instantiate(c.getEnvironment().getConfiguration());
     } else {
       LOG.warn("Try to initialize the coprocessor SnapshotScannerHDFSAclController but failure "
-          + "because the config " + SnapshotScannerHDFSAclHelper.USER_SCAN_SNAPSHOT_ENABLE
+          + "because the config " + SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE
           + " is false.");
     }
   }
@@ -213,7 +213,9 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   public void postCompletedTruncateTableAction(ObserverContext<MasterCoprocessorEnvironment> c,
       TableName tableName) throws IOException {
     if (needHandleTableHdfsAcl(tableName, "truncateTable " + tableName)) {
-      // Since the table directories is recreated, so add HDFS acls again
+      // 1. create tmp table directories
+      hdfsAclHelper.createTableDirectories(tableName);
+      // 2. Since the table directories is recreated, so add HDFS acls again
       Set<String> users = hdfsAclHelper.getUsersWithTableReadAction(tableName, false, false);
       hdfsAclHelper.addTableAcl(tableName, users, "truncate");
     }
@@ -233,9 +235,11 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       try (Table aclTable =
           ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
         Set<String> users = SnapshotScannerHDFSAclStorage.getTableUsers(aclTable, tableName);
-        // 1. Delete table owner permission is synced to HDFS in acl table
+        // 1. Remove table archive directory default ACLs
+        hdfsAclHelper.removeTableDefaultAcl(tableName, users);
+        // 2. Delete table owner permission is synced to HDFS in acl table
         SnapshotScannerHDFSAclStorage.deleteTableHdfsAcl(aclTable, tableName);
-        // 2. Remove namespace access acls
+        // 3. Remove namespace access acls
         Set<String> removeUsers = filterUsersToRemoveNsAccessAcl(aclTable, tableName, users);
         if (removeUsers.size() > 0) {
           hdfsAclHelper.removeNamespaceAccessAcl(tableName, removeUsers, "delete");
@@ -251,7 +255,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
     try (Table aclTable =
         ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
       if (needHandleTableHdfsAcl(currentDescriptor, "modifyTable " + tableName)
-          && !hdfsAclHelper.isTableUserScanSnapshotEnabled(oldDescriptor)) {
+          && !hdfsAclHelper.isAclSyncToHdfsEnabled(oldDescriptor)) {
         // 1. Create table directories used for acl inherited
         hdfsAclHelper.createTableDirectories(tableName);
         // 2. Add table users HDFS acls
@@ -264,7 +268,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
         SnapshotScannerHDFSAclStorage.addUserTableHdfsAcl(ctx.getEnvironment().getConnection(),
           tableUsers, tableName);
       } else if (needHandleTableHdfsAcl(oldDescriptor, "modifyTable " + tableName)
-          && !hdfsAclHelper.isTableUserScanSnapshotEnabled(currentDescriptor)) {
+          && !hdfsAclHelper.isAclSyncToHdfsEnabled(currentDescriptor)) {
         // 1. Remove empty table directories
         List<Path> tableRootPaths = hdfsAclHelper.getTableRootPaths(tableName, false);
         for (Path path : tableRootPaths) {
@@ -290,17 +294,24 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String namespace) throws IOException {
     if (checkInitialized("deleteNamespace " + namespace)) {
-      // 1. Record namespace user acl is not synced to HDFS
-      SnapshotScannerHDFSAclStorage.deleteNamespaceHdfsAcl(ctx.getEnvironment().getConnection(),
-        namespace);
-      // 2. Delete tmp namespace directory
-      /**
-       * Delete namespace tmp directory because it's created by this coprocessor when namespace is
-       * created to make namespace default acl can be inherited by tables. The namespace data
-       * directory is deleted by DeleteNamespaceProcedure, the namespace archive directory is
-       * deleted by HFileCleaner.
-       */
-      hdfsAclHelper.deleteEmptyDir(pathHelper.getTmpNsDir(namespace));
+      try (Table aclTable =
+          ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        // 1. Delete namespace archive dir default ACLs
+        Set<String> users = SnapshotScannerHDFSAclStorage.getEntryUsers(aclTable,
+          PermissionStorage.toNamespaceEntry(Bytes.toBytes(namespace)));
+        hdfsAclHelper.removeNamespaceDefaultAcl(namespace, users);
+        // 2. Record namespace user acl is not synced to HDFS
+        SnapshotScannerHDFSAclStorage.deleteNamespaceHdfsAcl(ctx.getEnvironment().getConnection(),
+          namespace);
+        // 3. Delete tmp namespace directory
+        /**
+         * Delete namespace tmp directory because it's created by this coprocessor when namespace is
+         * created to make namespace default acl can be inherited by tables. The namespace data
+         * directory is deleted by DeleteNamespaceProcedure, the namespace archive directory is
+         * deleted by HFileCleaner.
+         */
+        hdfsAclHelper.deleteEmptyDir(pathHelper.getTmpNsDir(namespace));
+      }
     }
   }
 
@@ -364,7 +375,9 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
             UserPermission tPerm = getUserTablePermission(conf, userName, tableName);
             if (tPerm != null && hdfsAclHelper.containReadAction(tPerm)) {
               if (!isHdfsAclSet(aclTable, userName, tableName)) {
-                // 1. Add HDFS acl
+                // 1. create table dirs
+                hdfsAclHelper.createTableDirectories(tableName);
+                // 2. Add HDFS acl
                 hdfsAclHelper.grantAcl(userPermission, new HashSet<>(0), new HashSet<>(0));
               }
               // 2. Record table acl is synced to HDFS
@@ -547,13 +560,13 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
 
   private boolean needHandleTableHdfsAcl(TableName tableName, String operation) throws IOException {
     return !tableName.isSystemTable() && checkInitialized(operation) && hdfsAclHelper
-        .isTableUserScanSnapshotEnabled(masterServices.getTableDescriptors().get(tableName));
+        .isAclSyncToHdfsEnabled(masterServices.getTableDescriptors().get(tableName));
   }
 
   private boolean needHandleTableHdfsAcl(TableDescriptor tableDescriptor, String operation) {
     TableName tableName = tableDescriptor.getTableName();
     return !tableName.isSystemTable() && checkInitialized(operation)
-        && hdfsAclHelper.isTableUserScanSnapshotEnabled(tableDescriptor);
+        && hdfsAclHelper.isAclSyncToHdfsEnabled(tableDescriptor);
   }
 
   private User getActiveUser(ObserverContext<?> ctx) throws IOException {
