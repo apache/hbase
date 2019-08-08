@@ -1673,6 +1673,29 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (interrupted) Thread.currentThread().interrupt();
   }
 
+  /**
+   * Turn the balancer on/off
+   *
+   * @param on boolean value indicates whether to turn the balancer on
+   */
+  void turnBalancer(boolean on) {
+    if (on) {
+      scheduleBalancerChore();
+    } else {
+      cancelBalancerChore();
+    }
+  }
+
+  private synchronized void scheduleBalancerChore() {
+    if (!getChoreService().isChoreScheduled(this.balancerChore)) {
+      getChoreService().scheduleChore(this.balancerChore);
+    }
+  }
+
+  private void cancelBalancerChore() {
+    getChoreService().cancelChore(this.balancerChore);
+  }
+
   public boolean balance() throws IOException {
     return balance(false);
   }

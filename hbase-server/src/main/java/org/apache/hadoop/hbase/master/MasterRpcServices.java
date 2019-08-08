@@ -447,9 +447,11 @@ public class MasterRpcServices extends RSRpcServices
         if (mode == BalanceSwitchMode.SYNC) {
           synchronized (master.getLoadBalancer()) {
             master.loadBalancerTracker.setBalancerOn(newValue);
+            master.turnBalancer(newValue);
           }
         } else {
           master.loadBalancerTracker.setBalancerOn(newValue);
+          master.turnBalancer(newValue);
         }
       } catch (KeeperException ke) {
         throw new IOException(ke);
