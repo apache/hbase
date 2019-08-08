@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy
  */
 @InterfaceAudience.Private
 public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
-  private String providerId;
 
   @Override
   public String group(byte[] identifier, byte[] namespace) {
@@ -41,12 +40,10 @@ public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
     } else {
       namespaceString = Bytes.toString(namespace);
     }
-    return providerId + GROUP_NAME_DELIMITER + namespaceString;
+    return namespaceString;
   }
 
   @Override
-  public void init(Configuration config, String providerId) {
-    this.providerId = providerId;
-  }
+  public void init(Configuration config, String providerId) {}
 
 }

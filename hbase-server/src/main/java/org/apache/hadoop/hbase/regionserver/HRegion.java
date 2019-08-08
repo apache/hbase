@@ -7177,8 +7177,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     fs.commitDaughterRegion(hri);
 
     // Create the daughter HRegion instance
-    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
-        this.getBaseConf(), hri, this.getTableDesc(), rsServices);
+    HRegion r = HRegion.newHRegion(this.fs.getTableDir(),
+      rsServices == null ? getWAL() :rsServices.getWAL(hri), // rsServices can be null in UT
+      fs.getFileSystem(), this.getBaseConf(), hri, this.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
     return r;

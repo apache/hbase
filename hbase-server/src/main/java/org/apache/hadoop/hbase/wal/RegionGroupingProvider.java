@@ -252,7 +252,7 @@ public class RegionGroupingProvider implements WALProvider {
     public void init(Configuration config, String providerId) {}
     @Override
     public String group(final byte[] identifier, final byte[] namespace) {
-      return Bytes.toString(identifier);
+      return "identity-" + Bytes.toString(identifier);
     }
   }
 
