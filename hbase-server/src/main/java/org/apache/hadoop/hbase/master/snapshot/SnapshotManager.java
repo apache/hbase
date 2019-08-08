@@ -71,6 +71,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclCleaner;
+import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -1123,6 +1125,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       // Inject snapshot cleaners, if snapshot.enable is true
       hfileCleaners.add(SnapshotHFileCleaner.class.getName());
       hfileCleaners.add(HFileLinkCleaner.class.getName());
+      // If sync acl to HDFS feature is enabled, then inject the cleaner
+      if (SnapshotScannerHDFSAclHelper.isAclSyncToHdfsEnabled(conf)) {
+        hfileCleaners.add(SnapshotScannerHDFSAclCleaner.class.getName());
+      }
 
       // Set cleaners conf
       conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
