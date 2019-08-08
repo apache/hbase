@@ -24,6 +24,7 @@ import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -1082,6 +1083,48 @@ public class MultiByteBuff extends ByteBuff {
         this.curItemIndex++;
         this.curItem = this.items[this.curItemIndex];
       }
+    }
+    return total;
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while (true) {
+      int len = fileRead(channel, this.curItem, offset);
+      if (len > 0) {
+        total += len;
+        offset += len;
+      }
+      if (this.curItem.hasRemaining()) {
+        break;
+      } else {
+        if (this.curItemIndex >= this.limitedItemIndex) {
+          break;
+        }
+        this.curItemIndex++;
+        this.curItem = this.items[this.curItemIndex];
+      }
+    }
+    return total;
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while (true) {
+      int len = channel.write(curItem, offset);
+      if (len > 0) {
+        total += len;
+        offset += len;
+      }
+      if (this.curItemIndex >= this.limitedItemIndex) {
+        break;
+      }
+      this.curItemIndex++;
+      this.curItem = this.items[this.curItemIndex];
     }
     return total;
   }

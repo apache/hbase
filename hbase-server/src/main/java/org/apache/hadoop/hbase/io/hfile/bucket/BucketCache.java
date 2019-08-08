@@ -429,7 +429,9 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!cacheEnabled) {
       return;
     }
-    LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
+    }
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
         new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory,
@@ -502,8 +504,10 @@ public class BucketCache implements BlockCache, HeapSize {
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
           Cacheable cachedBlock = ioEngine.read(bucketEntry);
-          // RPC start to reference, so retain here.
-          cachedBlock.retain();
+          if (ioEngine.usesSharedMemory()) {
+            // RPC start to reference, so retain here.
+            cachedBlock.retain();
+          }
           // Update the cache statistics.
           if (updateCacheMetrics) {
             cacheStats.hit(caching, key.isPrimary(), key.getBlockType());

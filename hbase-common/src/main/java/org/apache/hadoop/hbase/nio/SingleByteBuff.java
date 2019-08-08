@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.io.ByteBuffAllocator.NONE;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -372,6 +373,18 @@ public class SingleByteBuff extends ByteBuff {
   public int read(ReadableByteChannel channel) throws IOException {
     checkRefCount();
     return channelRead(channel, buf);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    return fileRead(channel, buf, offset);
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    return channel.write(buf, offset);
   }
 
   @Override

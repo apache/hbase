@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.nio;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 
@@ -450,6 +451,16 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract int read(ReadableByteChannel channel) throws IOException;
 
+  /**
+   * Reads bytes from FileChannel into this ByteBuff
+   */
+  public abstract int read(FileChannel channel, long offset) throws IOException;
+
+  /**
+   * Write this ByteBuff's data into target file
+   */
+  public abstract int write(FileChannel channel, long offset) throws IOException;
+
   // static helper methods
   public static int channelRead(ReadableByteChannel channel, ByteBuffer buf) throws IOException {
     if (buf.remaining() <= NIO_BUFFER_LIMIT) {
@@ -464,6 +475,32 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
         int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
         buf.limit(buf.position() + ioSize);
         ret = channel.read(buf);
+        if (ret < ioSize) {
+          break;
+        }
+      } finally {
+        buf.limit(originalLimit);
+      }
+    }
+    int nBytes = initialRemaining - buf.remaining();
+    return (nBytes > 0) ? nBytes : ret;
+  }
+
+  public static int fileRead(FileChannel channel, ByteBuffer buf, long offset)
+      throws IOException {
+    if (buf.remaining() <= NIO_BUFFER_LIMIT) {
+      return channel.read(buf, offset);
+    }
+    int originalLimit = buf.limit();
+    int initialRemaining = buf.remaining();
+    int ret = 0;
+
+    while (buf.remaining() > 0) {
+      try {
+        int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
+        buf.limit(buf.position() + ioSize);
+        offset += ret;
+        ret = channel.read(buf, offset);
         if (ret < ioSize) {
           break;
         }

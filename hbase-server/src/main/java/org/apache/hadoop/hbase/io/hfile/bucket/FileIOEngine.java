@@ -129,7 +129,7 @@ public class FileIOEngine implements IOEngine {
     long offset = be.offset();
     int length = be.getLength();
     Preconditions.checkArgument(length >= 0, "Length of read can not be less than 0.");
-    ByteBuffer dstBuffer = ByteBuffer.allocate(length);
+    ByteBuff dstBuffer = be.allocator.allocate(length);
     if (length != 0) {
       accessFile(readAccessor, dstBuffer, offset);
       // The buffer created out of the fileChannel is formed by copying the data from the file
@@ -142,7 +142,7 @@ public class FileIOEngine implements IOEngine {
       }
     }
     dstBuffer.rewind();
-    return be.wrapAsCacheable(new ByteBuffer[] { dstBuffer });
+    return be.wrapAsCacheable(dstBuffer);
   }
 
   @VisibleForTesting
@@ -164,10 +164,7 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
-    if (!srcBuffer.hasRemaining()) {
-      return;
-    }
-    accessFile(writeAccessor, srcBuffer, offset);
+    write(ByteBuff.wrap(srcBuffer), offset);
   }
 
   /**
@@ -209,11 +206,13 @@ public class FileIOEngine implements IOEngine {
 
   @Override
   public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    ByteBuffer dup = srcBuffer.asSubByteBuffer(srcBuffer.remaining()).duplicate();
-    write(dup, offset);
+    if (!srcBuffer.hasRemaining()) {
+      return;
+    }
+    accessFile(writeAccessor, srcBuffer, offset);
   }
 
-  private void accessFile(FileAccessor accessor, ByteBuffer buffer,
+  private void accessFile(FileAccessor accessor, ByteBuff buffer,
       long globalOffset) throws IOException {
     int startFileNum = getFileNum(globalOffset);
     int remainingAccessDataLen = buffer.remaining();
@@ -304,23 +303,23 @@ public class FileIOEngine implements IOEngine {
   }
 
   private interface FileAccessor {
-    int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
+    int access(FileChannel fileChannel, ByteBuff byteBuffer, long accessOffset)
         throws IOException;
   }
 
   private static class FileReadAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuffer byteBuffer,
+    public int access(FileChannel fileChannel, ByteBuff byteBuffer,
         long accessOffset) throws IOException {
-      return fileChannel.read(byteBuffer, accessOffset);
+      return byteBuffer.read(fileChannel, accessOffset);
     }
   }
 
   private static class FileWriteAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuffer byteBuffer,
+    public int access(FileChannel fileChannel, ByteBuff byteBuffer,
         long accessOffset) throws IOException {
-      return fileChannel.write(byteBuffer, accessOffset);
+      return byteBuffer.write(fileChannel, accessOffset);
     }
   }
 }
