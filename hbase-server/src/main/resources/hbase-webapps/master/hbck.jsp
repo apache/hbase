@@ -23,6 +23,7 @@
          import="java.util.Date"
          import="java.util.List"
          import="java.util.Map"
+         import="java.util.Set"
          import="java.util.stream.Collectors"
          import="java.time.ZonedDateTime"
          import="java.time.format.DateTimeFormatter"
@@ -41,7 +42,7 @@
   HbckChore hbckChore = master.getHbckChore();
   Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
   Map<String, ServerName> orphanRegionsOnRS = null;
-  List<String> orphanRegionsOnFS = null;
+  Set<String> orphanRegionsOnFS = null;
   long startTimestamp = 0;
   long endTimestamp = 0;
   if (hbckChore != null) {
