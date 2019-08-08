@@ -25,6 +25,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -72,6 +77,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -369,6 +375,40 @@ public class TestWALEntryStream {
     entryBatch = batcher.take();
     assertEquals(1, entryBatch.getNbEntries());
     assertEquals(getRow(entryBatch.getWalEntries().get(0)), "foo");
+  }
+
+  @Test
+  public void testReplicationSourceUpdatesLogPositionOnFilteredEntries() throws Exception {
+    appendEntriesToLog(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(walQueue, fs, conf, new MetricsSource("1"))) {
+      entryStream.next();
+      entryStream.next();
+      entryStream.next();
+      position = entryStream.getPosition();
+    }
+    // start up a readerThread with a WALEntryFilter that always filter the entries
+    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    ReplicationSourceWALReaderThread readerThread = new ReplicationSourceWALReaderThread(
+      mockSourceManager, getQueueInfo(), walQueue, 0, fs, conf, new WALEntryFilter() {
+        @Override
+        public Entry filter(Entry entry) {
+          return null;
+        }
+      }, new MetricsSource("1"));
+    readerThread.start();
+    Thread.sleep(100);
+    ArgumentCaptor<Long> positionCaptor = ArgumentCaptor.forClass(Long.class);
+    verify(mockSourceManager, times(3))
+      .logPositionAndCleanOldLogs(any(Path.class),
+        anyString(),
+        positionCaptor.capture(),
+        anyBoolean(),
+        anyBoolean());
+    assertEquals(position, positionCaptor.getValue().longValue());
   }
 
   @Test

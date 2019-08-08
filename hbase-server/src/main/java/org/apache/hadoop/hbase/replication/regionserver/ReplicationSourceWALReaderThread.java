@@ -81,6 +81,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private AtomicLong totalBufferUsed;
   private long totalBufferQuota;
 
+  private ReplicationSourceManager replicationSourceManager;
+
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
    * entries, and puts them on a batch queue.
@@ -109,6 +111,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
+    this.replicationSourceManager = manager;
     this.totalBufferUsed = manager.getTotalBufferUsed();
     this.totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
       HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
@@ -148,6 +151,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
                 long entrySize = getEntrySizeIncludeBulkLoad(entry);
                 long entrySizeExlucdeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
                 batch.addEntry(entry);
+                replicationSourceManager.setPendingShipment(true);
                 updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
                 boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExlucdeBulkLoad);
                 // Stop if too many entries or too big
@@ -156,6 +160,11 @@ public class ReplicationSourceWALReaderThread extends Thread {
                   break;
                 }
               }
+            } else {
+              replicationSourceManager.logPositionAndCleanOldLogs(entryStream.getCurrentPath(),
+                this.replicationQueueInfo.getPeerClusterZnode(),
+                entryStream.getPosition(),
+                this.replicationQueueInfo.isQueueRecovered(), false);
             }
           }
           if (batch != null && (!batch.getLastSeqIds().isEmpty() || batch.getNbEntries() > 0)) {
