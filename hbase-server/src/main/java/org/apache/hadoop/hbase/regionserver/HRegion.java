@@ -7086,6 +7086,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return region;
   }
 
+  /**
+   * Create the region directory in the filesystem.
+   */
+  public static HRegionFileSystem createRegionDir(Configuration configuration, RegionInfo ri,
+      Path rootDir) throws IOException {
+    FileSystem fs = rootDir.getFileSystem(configuration);
+    Path tableDir = FSUtils.getTableDir(rootDir, ri.getTable());
+    // If directory already exists, will log warning and keep going. Will try to create
+    // .regioninfo. If one exists, will overwrite.
+    return HRegionFileSystem.createRegionOnFileSystem(configuration, fs, tableDir, ri);
+  }
+
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
                                       final Configuration conf,
                                       final TableDescriptor hTableDescriptor,
