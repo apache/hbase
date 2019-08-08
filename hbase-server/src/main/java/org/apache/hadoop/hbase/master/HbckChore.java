@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HbckRegionInfo;
@@ -146,6 +147,12 @@ public class HbckChore extends ScheduledChore {
         master.getAssignmentManager().getRegionStates().getRegionStates();
     for (RegionState regionState : regionStates) {
       RegionInfo regionInfo = regionState.getRegion();
+      // Because the inconsistent regions are not absolutely right, only skip the offline regions
+      // which belong to disabled table.
+      if (master.getTableStateManager()
+          .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
+        continue;
+      }
       HbckRegionInfo.MetaEntry metaEntry =
           new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
               regionState.getStamp());
