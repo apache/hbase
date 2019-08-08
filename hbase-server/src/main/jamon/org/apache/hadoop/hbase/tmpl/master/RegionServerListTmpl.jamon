@@ -125,8 +125,8 @@ Arrays.sort(serverNames);
     <td><% new Date(startcode) %></td>
     <td><% TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
     <td><% version %></td>
-    <td><% String.format("%.0f", requestsPerSecond) %></td>
-    <td><% numRegionsOnline %></td>
+    <td><% String.format("%,.0f", requestsPerSecond) %></td>
+    <td><% String.format("%,d", numRegionsOnline) %></td>
 </tr>
 <%java>
 }
@@ -225,10 +225,10 @@ if (sl != null) {
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; &></td>
-<td><% sl.getRequestCountPerSecond() %></td>
-<td><% readRequestCount %></td>
-<td><% filteredReadRequestCount %></td>
-<td><% writeRequestCount %></td>
+<td><% String.format("%,d", sl.getRequestCountPerSecond()) %></td>
+<td><% String.format("%,d", readRequestCount) %></td>
+<td><% String.format("%,d", filteredReadRequestCount) %></td>
+<td><% String.format("%,d", writeRequestCount) %></td>
 </tr>
 <%java>
         }  else {
@@ -282,8 +282,8 @@ if (sl != null) {
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; &></td>
-<td><% storeCount %></td>
-<td><% storeFileCount %></td>
+<td><% String.format("%,d", storeCount) %></td>
+<td><% String.format("%,d", storeFileCount) %></td>
 <td><% TraditionalBinaryPrefix.long2String(
   storeUncompressedSizeMB * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 <td><% TraditionalBinaryPrefix.long2String(storeFileSizeMB
@@ -339,9 +339,9 @@ if  (totalCompactingCells > 0) {
 </%java>
 <tr>
 <td><& serverNameLink; serverName=serverName; &></td>
-<td><% totalCompactingCells %></td>
-<td><% totalCompactedCells %></td>
-<td><% totalCompactingCells - totalCompactedCells %></td>
+<td><% String.format("%,d", totalCompactingCells) %></td>
+<td><% String.format("%,d", totalCompactedCells) %></td>
+<td><% String.format("%,d", totalCompactingCells - totalCompactedCells) %></td>
 <td><% percentDone %></td>
 </tr>
 <%java>
