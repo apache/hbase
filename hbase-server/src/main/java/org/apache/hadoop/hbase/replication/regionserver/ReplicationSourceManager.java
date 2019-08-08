@@ -120,6 +120,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Random rand;
   private final boolean replicationForBulkLoadDataEnabled;
 
+  private boolean pendingShipment;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -186,14 +187,20 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param queueRecovered indicates if this queue comes from another region server
    * @param holdLogInZK if true then the log is retained in ZK
    */
-  public void logPositionAndCleanOldLogs(Path log, String id, long position,
+  public synchronized void logPositionAndCleanOldLogs(Path log, String id, long position,
       boolean queueRecovered, boolean holdLogInZK) {
-    String fileName = log.getName();
-    this.replicationQueues.setLogPosition(id, fileName, position);
-    if (holdLogInZK) {
-     return;
+    if (!this.pendingShipment) {
+      String fileName = log.getName();
+      this.replicationQueues.setLogPosition(id, fileName, position);
+      if (holdLogInZK) {
+        return;
+      }
+      cleanOldLogs(fileName, id, queueRecovered);
     }
-    cleanOldLogs(fileName, id, queueRecovered);
+  }
+
+  public synchronized void setPendingShipment(boolean pendingShipment) {
+    this.pendingShipment = pendingShipment;
   }
 
   /**
@@ -206,9 +213,12 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void cleanOldLogs(String key, String id, boolean queueRecovered) {
     String logPrefix = DefaultWALProvider.getWALPrefixFromWALName(key);
     if (queueRecovered) {
-      SortedSet<String> wals = walsByIdRecoveredQueues.get(id).get(logPrefix);
-      if (wals != null && !wals.first().equals(key)) {
-        cleanOldLogs(wals, key, id);
+      Map<String, SortedSet<String>> walsForPeer = walsByIdRecoveredQueues.get(id);
+      if(walsForPeer != null) {
+        SortedSet<String> wals = walsForPeer.get(logPrefix);
+        if (wals != null && !wals.first().equals(key)) {
+          cleanOldLogs(wals, key, id);
+        }
       }
     } else {
       synchronized (this.walsById) {

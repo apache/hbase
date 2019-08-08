@@ -73,6 +73,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private ReplicationQueueInfo replicationQueueInfo;
   private int maxRetriesMultiplier;
   private MetricsSource metrics;
+  private ReplicationSourceManager replicationSourceManager;
 
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
@@ -102,6 +103,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
+    this.replicationSourceManager = manager;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
@@ -134,6 +136,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
               if (edit != null && !edit.isEmpty()) {
                 long entrySize = getEntrySize(entry);
                 batch.addEntry(entry);
+                replicationSourceManager.setPendingShipment(true);
                 updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
                 // Stop if too many entries or too big
                 if (batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -141,6 +144,11 @@ public class ReplicationSourceWALReaderThread extends Thread {
                   break;
                 }
               }
+            } else {
+              replicationSourceManager.logPositionAndCleanOldLogs(entryStream.getCurrentPath(),
+                this.replicationQueueInfo.getPeerClusterZnode(),
+                entryStream.getPosition(),
+                this.replicationQueueInfo.isQueueRecovered(), false);
             }
           }
           if (batch != null && (!batch.getLastSeqIds().isEmpty() || batch.getNbEntries() > 0)) {

@@ -723,6 +723,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     }
 
     private void updateLogPosition(long lastReadPosition) {
+      manager.setPendingShipment(false);
       manager.logPositionAndCleanOldLogs(currentPath, peerClusterZnode, lastReadPosition,
         this.replicationQueueInfo.isQueueRecovered(), false);
       lastLoggedPosition = lastReadPosition;
