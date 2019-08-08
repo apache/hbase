@@ -404,11 +404,77 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <script>
     $(document).ready(function()
         {
-            $("#baseStatsTable").tablesorter();
-            $("#memoryStatsTable").tablesorter();
-            $("#requestStatsTable").tablesorter();
-            $("#storeStatsTable").tablesorter();
-            $("#compactionStatsTable").tablesorter();
+            $.tablesorter.addParser(
+            {
+                id: 'filesize',
+                is: function(s) {
+                    return s.match(new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ));
+                },
+                format: function(s) {
+                    var suf = s.match(new RegExp( /(KB|B|GB|MB|TB)$/ ))[1];
+                    var num = parseFloat(s.match( new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ))[0]);
+                    switch(suf) {
+                        case 'B':
+                            return num;
+                        case 'KB':
+                           return num * 1024;
+                        case 'MB':
+                            return num * 1024 * 1024;
+                        case 'GB':
+                            return num * 1024 * 1024 * 1024;
+                        case 'TB':
+                            return num * 1024 * 1024 * 1024 * 1024;
+                    }
+                },
+                type: 'numeric'
+            });
+            $.tablesorter.addParser(
+            {
+                id: "separator",
+                is: function (s) {
+                    return /^[0-9]?[0-9,]*$/.test(s);
+                }, format: function (s) {
+                    return $.tablesorter.formatFloat( s.replace(/,/g,'') );
+                }, type: "numeric"
+            });
+            $("#baseStatsTable").tablesorter({
+                headers: {
+                    4: {sorter: 'separator'},
+                    5: {sorter: 'separator'}
+                }
+            });
+            $("#memoryStatsTable").tablesorter({
+                headers: {
+                    1: {sorter: 'filesize'},
+                    2: {sorter: 'filesize'},
+                    3: {sorter: 'filesize'}
+                }
+            });
+            $("#requestStatsTable").tablesorter({
+                headers: {
+                    1: {sorter: 'separator'},
+                    2: {sorter: 'separator'},
+                    3: {sorter: 'separator'},
+                    4: {sorter: 'separator'}
+                }
+            });
+            $("#storeStatsTable").tablesorter({
+                headers: {
+                    1: {sorter: 'separator'},
+                    2: {sorter: 'separator'},
+                    3: {sorter: 'filesize'},
+                    4: {sorter: 'filesize'},
+                    5: {sorter: 'filesize'},
+                    6: {sorter: 'filesize'}
+                }
+            });
+            $("#compactionStatsTable").tablesorter({
+                headers: {
+                    1: {sorter: 'separator'},
+                    2: {sorter: 'separator'},
+                    3: {sorter: 'separator'}
+                }
+            });
 
             $("#userTables").tablesorter();
         }

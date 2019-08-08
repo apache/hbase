@@ -726,9 +726,62 @@ Actions:
 <script>
 $(document).ready(function()
     {
-        $("#regionServerTable").tablesorter();
-        $("#regionServerDetailsTable").tablesorter();
-        $("#tableRegionTable").tablesorter();
+        $.tablesorter.addParser(
+        {
+            id: 'filesize',
+            is: function(s) {
+                return s.match(new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ));
+            },
+            format: function(s) {
+                var suf = s.match(new RegExp( /(B|KB|MB|GB|TB)$/ ))[1];
+                var num = parseFloat(s.match( new RegExp( /([\.0-9]+)\ (B|KB|MB|GB|TB)/ ))[0]);
+                switch(suf) {
+                    case 'B':
+                        return num;
+                    case 'KB':
+                        return num * 1024;
+                    case 'MB':
+                        return num * 1024 * 1024;
+                    case 'GB':
+                        return num * 1024 * 1024 * 1024;
+                    case 'TB':
+                        return num * 1024 * 1024 * 1024 * 1024;
+                }
+            },
+            type: 'numeric'
+        });
+        $.tablesorter.addParser(
+        {
+            id: "separator",
+            is: function (s) {
+                return /^[0-9]?[0-9,]*$/.test(s);
+            }, format: function (s) {
+                return $.tablesorter.formatFloat( s.replace(/,/g,'') );
+            }, type: "numeric"
+        });
+        $("#regionServerTable").tablesorter({
+            headers: {
+                1: {sorter: 'separator'}
+            }
+        });
+        $("#regionServerDetailsTable").tablesorter({
+            headers: {
+                2: {sorter: 'separator'},
+                3: {sorter: 'separator'},
+                4: {sorter: 'filesize'},
+                5: {sorter: 'separator'},
+                6: {sorter: 'filesize'}
+            }
+        });
+        $("#tableRegionTable").tablesorter({
+            headers: {
+                2: {sorter: 'separator'},
+                3: {sorter: 'separator'},
+                4: {sorter: 'filesize'},
+                5: {sorter: 'separator'},
+                6: {sorter: 'filesize'}
+            }
+        });
     }
 );
 </script>

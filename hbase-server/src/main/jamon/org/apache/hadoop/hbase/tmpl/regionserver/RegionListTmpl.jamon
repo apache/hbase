@@ -142,9 +142,9 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getReadRequestsCount() %></td>
-            <td><% load.getFilteredReadRequestsCount() %></td>
-            <td><% load.getWriteRequestsCount() %></td>
+            <td><% String.format("%,1d", load.getReadRequestsCount()) %></td>
+            <td><% String.format("%,1d", load.getFilteredReadRequestsCount()) %></td>
+            <td><% String.format("%,1d", load.getWriteRequestsCount()) %></td>
             </%if>
         </tr>
         </%for>
@@ -182,8 +182,8 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getStores() %></td>
-            <td><% load.getStorefiles() %></td>
+            <td><% String.format("%,1d", load.getStores()) %></td>
+            <td><% String.format("%,1d", load.getStorefiles()) %></td>
             <td><% TraditionalBinaryPrefix.long2String(load.getStoreUncompressedSizeMB()
                 * TraditionalBinaryPrefix.MEGA.value, "B", 1)%></td>
             <td><% TraditionalBinaryPrefix.long2String(load.getStorefileSizeMB()
@@ -239,8 +239,8 @@
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
-            <td><% load.getTotalCompactingKVs() %></td>
-            <td><% load.getCurrentCompactedKVs() %></td>
+            <td><% String.format("%,1d", load.getTotalCompactingKVs()) %></td>
+            <td><% String.format("%,1d", load.getCurrentCompactedKVs()) %></td>
             <td><% percentDone %></td>
             <td><% compactTime %></td>
             </%if>
