@@ -26,14 +26,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.HbckChore;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -140,5 +144,24 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
+  }
+
+  @Test
+  public void testOrphanRegionsOnFS() throws Exception {
+    TableName tableName = TableName.valueOf("testOrphanRegionsOnFS");
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    Configuration conf = UTIL.getConfiguration();
+
+    hbckChore.choreForTesting();
+    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+
+    HRegion.createRegionDir(conf, regionInfo, FSUtils.getRootDir(conf));
+    hbckChore.choreForTesting();
+    assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
+    assertTrue(hbckChore.getOrphanRegionsOnFS().contains(regionInfo.getEncodedName()));
+
+    FSUtils.deleteRegionDir(conf, new HRegionInfo(regionInfo));
+    hbckChore.choreForTesting();
+    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
   }
 }

@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -39,8 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Used to do the hbck checking job at master side.
@@ -69,7 +67,7 @@ public class HbckChore extends ScheduledChore {
   /**
    * The regions have directory on FileSystem, but no region info in meta.
    */
-  private final List<String> orphanRegionsOnFS = new LinkedList<>();
+  private final Set<String> orphanRegionsOnFS = new HashSet<>();
   /**
    * The inconsistent regions. There are three case:
    * case 1. Master thought this region opened, but no regionserver reported it.
@@ -83,7 +81,7 @@ public class HbckChore extends ScheduledChore {
    * The "snapshot" is used to save the last round's HBCK checking report.
    */
   private final Map<String, ServerName> orphanRegionsOnRSSnapshot = new HashMap<>();
-  private final List<String> orphanRegionsOnFSSnapshot = new LinkedList<>();
+  private final Set<String> orphanRegionsOnFSSnapshot = new HashSet<>();
   private final Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegionsSnapshot =
       new HashMap<>();
 
@@ -153,9 +151,11 @@ public class HbckChore extends ScheduledChore {
               regionState.getStamp());
       regionInfoMap.put(regionInfo.getEncodedName(), new HbckRegionInfo(metaEntry));
     }
+    LOG.info("Loaded {} regions from in-memory state of AssignmentManager", regionStates.size());
   }
 
   private void loadRegionsFromRSReport() {
+    int numRegions = 0;
     Map<ServerName, Set<byte[]>> rsReports = master.getAssignmentManager().getRSReports();
     for (Map.Entry<ServerName, Set<byte[]>> entry : rsReports.entrySet()) {
       ServerName serverName = entry.getKey();
@@ -168,7 +168,10 @@ public class HbckChore extends ScheduledChore {
         }
         hri.addServer(hri.getMetaEntry(), serverName);
       }
+      numRegions += entry.getValue().size();
     }
+    LOG.info("Loaded {} regions from {} regionservers' reports and found {} orphan regions",
+        numRegions, rsReports.size(), orphanRegionsOnFS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       String encodedRegionName = entry.getKey();
@@ -191,27 +194,24 @@ public class HbckChore extends ScheduledChore {
     Path rootDir = master.getMasterFileSystem().getRootDir();
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
-    // list all tables from HDFS
-    List<FileStatus> tableDirs = Lists.newArrayList();
-    List<Path> paths = FSUtils.getTableDirs(fs, rootDir);
-    for (Path path : paths) {
-      tableDirs.add(fs.getFileStatus(path));
-    }
-
-    for (FileStatus tableDir : tableDirs) {
-      FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
-      for (FileStatus regionDir : regionDirs) {
-        String encodedRegionName = regionDir.getPath().getName();
+    int numRegions = 0;
+    List<Path> tableDirs = FSUtils.getTableDirs(fs, rootDir);
+    for (Path tableDir : tableDirs) {
+      List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
+      for (Path regionDir : regionDirs) {
+        String encodedRegionName = regionDir.getName();
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
         if (hri == null) {
           orphanRegionsOnFS.add(encodedRegionName);
           continue;
         }
-        HbckRegionInfo.HdfsEntry hdfsEntry =
-            new HbckRegionInfo.HdfsEntry(regionDir.getPath(), regionDir.getModificationTime());
+        HbckRegionInfo.HdfsEntry hdfsEntry = new HbckRegionInfo.HdfsEntry(regionDir);
         hri.setHdfsEntry(hdfsEntry);
       }
+      numRegions += regionDirs.size();
     }
+    LOG.info("Loaded {} tables {} regions from filesyetem and found {} orphan regions",
+        tableDirs.size(), numRegions, orphanRegionsOnFS.size());
   }
 
   /**
@@ -237,7 +237,7 @@ public class HbckChore extends ScheduledChore {
   /**
    * @return the regions have directory on FileSystem, but no region info in meta.
    */
-  public List<String> getOrphanRegionsOnFS() {
+  public Set<String> getOrphanRegionsOnFS() {
     // Need synchronized here, as this "snapshot" may be changed after checking.
     rwLock.readLock().lock();
     try {
