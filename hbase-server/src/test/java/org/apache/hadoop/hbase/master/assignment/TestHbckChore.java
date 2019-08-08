@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.HbckChore;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -43,6 +45,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,8 +142,39 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     assertTrue(reportedRegionServers.contains(locationInMeta));
     assertTrue(reportedRegionServers.contains(anotherServer));
 
-    // Reported right region location. Then not in problematic regions.
+    // Reported right region location, then not in inconsistent regions.
     am.reportOnlineRegions(anotherServer, Collections.EMPTY_SET);
+    hbckChore.choreForTesting();
+    inconsistentRegions = hbckChore.getInconsistentRegions();
+    assertFalse(inconsistentRegions.containsKey(regionName));
+  }
+
+  @Test
+  public void testForDisabledTable() throws Exception {
+    TableName tableName = TableName.valueOf("testForDisabledTable");
+    RegionInfo hri = createRegionInfo(tableName, 1);
+    String regionName = hri.getEncodedName();
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
+    waitOnFuture(future);
+
+    List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
+    assertEquals(NSERVERS, serverNames.size());
+
+    hbckChore.choreForTesting();
+    Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
+        hbckChore.getInconsistentRegions();
+    assertTrue(inconsistentRegions.containsKey(regionName));
+    Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
+    ServerName locationInMeta = pair.getFirst();
+    List<ServerName> reportedRegionServers = pair.getSecond();
+    assertTrue(serverNames.contains(locationInMeta));
+    assertEquals(0, reportedRegionServers.size());
+
+    // Set table state to disabled, then not in inconsistent regions.
+    TableStateManager tableStateManager = master.getTableStateManager();
+    Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED)).
+        thenReturn(true);
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));

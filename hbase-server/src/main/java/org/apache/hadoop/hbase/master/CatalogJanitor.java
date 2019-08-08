@@ -672,6 +672,10 @@ public class CatalogJanitor extends ScheduledChore {
         if (sn == null) {
           continue;
         }
+        // skip the offline regions which belong to disabled table.
+        if (isTableDisabled(location.getRegion())) {
+          continue;
+        }
         ServerManager.ServerLiveState state = this.services.getServerManager().
             isServerKnownAndOnline(sn);
         switch (state) {
