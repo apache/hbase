@@ -196,6 +196,37 @@ public class WALKeyImpl implements WALKey {
   }
 
   /**
+   * Copy constructor that takes in an existing WALKeyImpl plus some extended attributes.
+   * Intended for coprocessors to add annotations to a system-generated WALKey
+   * for persistence to the WAL.
+   * @param key Key to be copied into this new key
+   * @param extendedAttributes Extra attributes to copy into the new key
+   */
+  public WALKeyImpl(WALKeyImpl key,
+                    Map<String, byte[]> extendedAttributes){
+    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(),
+        key.getWriteTime(), key.getClusterIds(), key.getNonceGroup(), key.getNonce(),
+        key.getMvcc(), key.getReplicationScopes(), extendedAttributes);
+
+  }
+
+  /**
+   * Copy constructor that takes in an existing WALKey, the extra WALKeyImpl fields that the
+   * parent interface is missing, plus some extended attributes. Intended
+   * for coprocessors to add annotations to a system-generated WALKey for
+   * persistence to the WAL.
+   */
+  public WALKeyImpl(WALKey key,
+                    List<UUID> clusterIds,
+                    MultiVersionConcurrencyControl mvcc,
+                    final NavigableMap<byte[], Integer> replicationScopes,
+                    Map<String, byte[]> extendedAttributes){
+    init(key.getEncodedRegionName(), key.getTableName(), key.getSequenceId(),
+        key.getWriteTime(), clusterIds, key.getNonceGroup(), key.getNonce(),
+        mvcc, replicationScopes, extendedAttributes);
+
+  }
+  /**
    * Create the log key for writing to somewhere.
    * We maintain the tablename mainly for debugging purposes.
    * A regionName is always a sub-table object.
@@ -462,6 +493,14 @@ public class WALKeyImpl implements WALKey {
   @Override
   public UUID getOriginatingClusterId(){
     return clusterIds.isEmpty()? HConstants.DEFAULT_CLUSTER_ID: clusterIds.get(0);
+  }
+
+  @Override
+  public void addExtendedAttribute(String attributeKey, byte[] attributeValue){
+    if (extendedAttributes == null){
+      extendedAttributes = new HashMap<String, byte[]>();
+    }
+    extendedAttributes.put(attributeKey, attributeValue);
   }
 
   @Override

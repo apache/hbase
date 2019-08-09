@@ -34,7 +34,6 @@ import java.util.UUID;
 
 /**
  * Key for WAL Entry.
- * Read-only. No Setters. For limited audience such as Coprocessors.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.REPLICATION,
     HBaseInterfaceAudience.COPROC})
@@ -85,6 +84,13 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
    * @return original sequence number of the WALEdit
    */
   long getOrigLogSeqNum();
+
+  /**
+   * Add a named String value to this WALKey to be persisted into the WAL
+   * @param attributeKey Name of the attribute
+   * @param attributeValue Value of the attribute
+   */
+  void addExtendedAttribute(String attributeKey, byte[] attributeValue);
 
     /**
      * Return a named String value injected into the WALKey during processing, such as by a
