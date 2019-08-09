@@ -61,6 +61,8 @@ public class HbckChore extends ScheduledChore {
    */
   private final Map<String, HbckRegionInfo> regionInfoMap = new HashMap<>();
 
+  private final Set<String> disabledTableRegions = new HashSet<>();
+
   /**
    * The regions only opened on RegionServers, but no region info in meta.
    */
@@ -68,7 +70,7 @@ public class HbckChore extends ScheduledChore {
   /**
    * The regions have directory on FileSystem, but no region info in meta.
    */
-  private final Set<String> orphanRegionsOnFS = new HashSet<>();
+  private final Map<String, Path> orphanRegionsOnFS = new HashMap<>();
   /**
    * The inconsistent regions. There are three case:
    * case 1. Master thought this region opened, but no regionserver reported it.
@@ -82,7 +84,7 @@ public class HbckChore extends ScheduledChore {
    * The "snapshot" is used to save the last round's HBCK checking report.
    */
   private final Map<String, ServerName> orphanRegionsOnRSSnapshot = new HashMap<>();
-  private final Set<String> orphanRegionsOnFSSnapshot = new HashSet<>();
+  private final Map<String, Path> orphanRegionsOnFSSnapshot = new HashMap<>();
   private final Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegionsSnapshot =
       new HashMap<>();
 
@@ -109,6 +111,7 @@ public class HbckChore extends ScheduledChore {
   protected synchronized void chore() {
     running = true;
     regionInfoMap.clear();
+    disabledTableRegions.clear();
     orphanRegionsOnRS.clear();
     orphanRegionsOnFS.clear();
     inconsistentRegions.clear();
@@ -132,7 +135,8 @@ public class HbckChore extends ScheduledChore {
       orphanRegionsOnRS.entrySet()
           .forEach(e -> orphanRegionsOnRSSnapshot.put(e.getKey(), e.getValue()));
       orphanRegionsOnFSSnapshot.clear();
-      orphanRegionsOnFSSnapshot.addAll(orphanRegionsOnFS);
+      orphanRegionsOnFS.entrySet()
+          .forEach(e -> orphanRegionsOnFSSnapshot.put(e.getKey(), e.getValue()));
       inconsistentRegionsSnapshot.clear();
       inconsistentRegions.entrySet()
           .forEach(e -> inconsistentRegionsSnapshot.put(e.getKey(), e.getValue()));
@@ -147,11 +151,9 @@ public class HbckChore extends ScheduledChore {
         master.getAssignmentManager().getRegionStates().getRegionStates();
     for (RegionState regionState : regionStates) {
       RegionInfo regionInfo = regionState.getRegion();
-      // Because the inconsistent regions are not absolutely right, only skip the offline regions
-      // which belong to disabled table.
       if (master.getTableStateManager()
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
-        continue;
+        disabledTableRegions.add(regionInfo.getEncodedName());
       }
       HbckRegionInfo.MetaEntry metaEntry =
           new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
@@ -185,6 +187,11 @@ public class HbckChore extends ScheduledChore {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
       if (hri.getDeployedOn().size() == 0) {
+        // Because the inconsistent regions are not absolutely right, only skip the offline regions
+        // which belong to disabled table.
+        if (disabledTableRegions.contains(encodedRegionName)) {
+          continue;
+        }
         // Master thought this region opened, but no regionserver reported it.
         inconsistentRegions.put(encodedRegionName, new Pair<>(locationInMeta, new LinkedList<>()));
       } else if (hri.getDeployedOn().size() > 1) {
@@ -209,7 +216,7 @@ public class HbckChore extends ScheduledChore {
         String encodedRegionName = regionDir.getName();
         HbckRegionInfo hri = regionInfoMap.get(encodedRegionName);
         if (hri == null) {
-          orphanRegionsOnFS.add(encodedRegionName);
+          orphanRegionsOnFS.put(encodedRegionName, regionDir);
           continue;
         }
         HbckRegionInfo.HdfsEntry hdfsEntry = new HbckRegionInfo.HdfsEntry(regionDir);
@@ -244,7 +251,7 @@ public class HbckChore extends ScheduledChore {
   /**
    * @return the regions have directory on FileSystem, but no region info in meta.
    */
-  public Set<String> getOrphanRegionsOnFS() {
+  public Map<String, Path> getOrphanRegionsOnFS() {
     // Need synchronized here, as this "snapshot" may be changed after checking.
     rwLock.readLock().lock();
     try {
