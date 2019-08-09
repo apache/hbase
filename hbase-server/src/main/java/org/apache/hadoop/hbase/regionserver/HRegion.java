@@ -7910,6 +7910,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (walEdit.isReplay()) {
       walKey.setOrigLogSeqNum(origLogSeqNum);
     }
+    //don't call the coproc hook for writes to the WAL caused by
+    //system lifecycle events like flushes or compactions
+    if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {
+      this.coprocessorHost.preWALAppend(walKey, walEdit);
+    }
     WriteEntry writeEntry = null;
     try {
       long txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);

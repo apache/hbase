@@ -1720,6 +1720,18 @@ public class RegionCoprocessorHost
         });
   }
 
+  public void preWALAppend(WALKey key, WALEdit edit) throws IOException {
+    if (this.coprocEnvironments.isEmpty()){
+      return;
+    }
+    execOperation(new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preWALAppend(this, key, edit);
+      }
+    });
+  }
+
   public Message preEndpointInvocation(final Service service, final String methodName,
       Message request) throws IOException {
     if (coprocEnvironments.isEmpty()) {

@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -55,6 +57,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -70,6 +74,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
@@ -77,13 +82,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,6 +109,7 @@ public class TestRegionObserverInterface {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionObserverInterface.class);
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
+  public static final byte[] FAMILY = Bytes.toBytes("f");
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
@@ -663,6 +674,97 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
+  //called from testPreWALAppendIsWrittenToWAL
+  private void testPreWALAppendHook(Table table, TableName tableName) throws IOException {
+    int expectedCalls = 0;
+    String [] methodArray = new String[1];
+    methodArray[0] = "getCtPreWALAppend";
+    Object[] resultArray = new Object[1];
+
+    Put p = new Put(ROW);
+    p.addColumn(A, A, A);
+    table.put(p);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Append a = new Append(ROW);
+    a.addColumn(B, B, B);
+    table.append(a);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Increment i = new Increment(ROW);
+    i.addColumn(C, C, 1);
+    table.increment(i);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Delete d = new Delete(ROW);
+    table.delete(d);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+  }
+
+  @Test
+  public void testPreWALAppend() throws Exception {
+    SimpleRegionObserver sro = new SimpleRegionObserver();
+    ObserverContext ctx = Mockito.mock(ObserverContext.class);
+    WALKey key = new WALKeyImpl(Bytes.toBytes("region"), TEST_TABLE,
+        EnvironmentEdgeManager.currentTime());
+    WALEdit edit = new WALEdit();
+    sro.preWALAppend(ctx, key, edit);
+    Assert.assertEquals(1, key.getExtendedAttributes().size());
+    Assert.assertArrayEquals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+        key.getExtendedAttribute(Integer.toString(sro.getCtPreWALAppend())));
+  }
+
+  @Test
+  public void testPreWALAppendIsWrittenToWAL() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        "." + name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+    region.getWAL().registerWALActionsListener(listener);
+    testPreWALAppendHook(table, tableName);
+    boolean[] expectedResults = {true, true, true, true};
+    Assert.assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
+
+  }
+
+  @Test
+  public void testPreWALAppendNotCalledOnMetaEdit() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        "." + name.getMethodName());
+    TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    tdBuilder.setColumnFamily(cfBuilder.build());
+    tdBuilder.setCoprocessor(SimpleRegionObserver.class.getName());
+    TableDescriptor td = tdBuilder.build();
+    Table table = util.createTable(td, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+
+    region.getWAL().registerWALActionsListener(listener);
+    //flushing should write to the WAL
+    region.flush(true);
+    //so should compaction
+    region.compact(false);
+    //and so should closing the region
+    region.close();
+
+    //but we still shouldn't have triggered preWALAppend because no user data was written
+    String[] methods = new String[] {"getCtPreWALAppend"};
+    Object[] expectedResult = new Integer[]{0};
+    verifyMethodResult(SimpleRegionObserver.class, methods, tableName, expectedResult);
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class<?> coprocessor, String methodName[], TableName tableName,
       Object value[]) throws IOException {
@@ -709,6 +811,25 @@ public class TestRegionObserverInterface {
       }
     } finally {
       writer.close();
+    }
+  }
+
+  private static class PreWALAppendWALActionsListener implements WALActionsListener {
+    boolean[] walKeysCorrect = {false, false, false, false};
+
+    @Override
+    public void postAppend(long entryLen, long elapsedTimeMillis,
+                           WALKey logKey, WALEdit logEdit) throws IOException {
+      for (int k = 0; k < 4; k++) {
+        if (!walKeysCorrect[k]) {
+          walKeysCorrect[k] = Arrays.equals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+              logKey.getExtendedAttribute(Integer.toString(k + 1)));
+        }
+      }
+    }
+
+    boolean[] getWalKeysCorrectArray() {
+      return walKeysCorrect;
     }
   }
 }
