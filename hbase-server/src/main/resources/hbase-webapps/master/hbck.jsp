@@ -80,7 +80,11 @@
     <div class="page-header">
       <h1>HBCK Chore Report</h1>
       <p>
+        <% if (hbckChore.isDisabled()) { %>
+        <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
+        <% } else { %>
         <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute 'hbck_chore_run' in hbase shell to generate a new sub-report.</span>
+        <% } %>
       </p>
     </div>
   </div>
