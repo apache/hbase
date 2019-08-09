@@ -101,14 +101,26 @@ public class HbckChore extends ScheduledChore {
   private volatile long checkingStartTimestamp = 0;
   private volatile long checkingEndTimestamp = 0;
 
+  private boolean disabled = false;
+
   public HbckChore(MasterServices master) {
     super("HbckChore-", master,
         master.getConfiguration().getInt(HBCK_CHORE_INTERVAL, DEFAULT_HBCK_CHORE_INTERVAL));
     this.master = master;
+    int interval =
+        master.getConfiguration().getInt(HBCK_CHORE_INTERVAL, DEFAULT_HBCK_CHORE_INTERVAL);
+    if (interval <= 0) {
+      LOG.warn(HBCK_CHORE_INTERVAL + " is <=0 hence disabling hbck chore");
+      disableChore();
+    }
   }
 
   @Override
   protected synchronized void chore() {
+    if (isDisabled() || isRunning()) {
+      LOG.warn("hbckChore is either disabled or is already running. Can't run the chore");
+      return;
+    }
     running = true;
     regionInfoMap.clear();
     disabledTableRegions.clear();
@@ -125,6 +137,29 @@ public class HbckChore extends ScheduledChore {
     }
     saveCheckResultToSnapshot();
     running = false;
+  }
+
+  // This function does the sanity checks of making sure the chore is not run when it is
+  // disabled or when it's already running. It returns whether the chore was actually run or not.
+  protected boolean runChore() {
+    if (isDisabled() || isRunning()) {
+      if (isDisabled()) {
+        LOG.warn("hbck chore is disabled! Set " + HBCK_CHORE_INTERVAL + " > 0 to enable it.");
+      } else {
+        LOG.warn("hbck chore already running. Can't run till it finishes.");
+      }
+      return false;
+    }
+    chore();
+    return true;
+  }
+
+  private void disableChore() {
+    this.disabled = true;
+  }
+
+  public boolean isDisabled() {
+    return this.disabled;
   }
 
   private void saveCheckResultToSnapshot() {

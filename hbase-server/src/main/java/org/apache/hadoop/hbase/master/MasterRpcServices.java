@@ -2324,11 +2324,7 @@ public class MasterRpcServices extends RSRpcServices
     rpcPreCheck("runHbckChore");
     LOG.info("{} request HBCK chore to run", master.getClientIdAuditPrefix());
     HbckChore hbckChore = master.getHbckChore();
-    boolean ran = false;
-    if (!hbckChore.isRunning()) {
-      hbckChore.chore();
-      ran = true;
-    }
+    boolean ran = hbckChore.runChore();
     return RunHbckChoreResponse.newBuilder().setRan(ran).build();
   }
 
