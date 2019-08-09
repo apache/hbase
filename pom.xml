@@ -581,6 +581,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>water</id>
+      <name>Xiang Li</name>
+      <email>xiangli@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>wchevreuil</id>
       <name>Wellington Chevreuil</name>
       <email>wchevreuil@apache.org</email>
