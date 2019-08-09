@@ -173,7 +173,6 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
       Thread.sleep(100);
     }
-    admin.balancerSwitch(true).join();
   }
 
   @Test
