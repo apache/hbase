@@ -1691,6 +1691,19 @@ public class RegionCoprocessorHost
     });
   }
 
+  public void preWALAppend(final WALKey key, final WALEdit edit) throws IOException {
+    if (coprocessors.isEmpty()){
+      return;
+    }
+    execOperation(new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preWALAppend(ctx, key, edit);
+      }
+    });
+  }
+
   private static abstract class CoprocessorOperation
       extends ObserverContext<RegionCoprocessorEnvironment> {
     public CoprocessorOperation() {

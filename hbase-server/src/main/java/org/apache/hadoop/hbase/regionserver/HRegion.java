@@ -3527,6 +3527,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
               this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
               mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc);
+          preWALAppend(walKey, walEdit);
           txid = this.wal
               .append(this.htableDescriptor, this.getRegionInfo(), walKey,
                   walEdit, true);
@@ -7593,6 +7594,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
               this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
               processor.getClusterIds(), nonceGroup, nonce, mvcc);
+            preWALAppend(walKey, walEdit);
             txid = this.wal.append(this.htableDescriptor, this.getRegionInfo(),
                 walKey, walEdit, true);
           }
@@ -7884,6 +7886,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   nonceGroup,
                   nonce,
                   mvcc);
+              preWALAppend(walKey, walEdits);
               txid =
                 this.wal.append(this.htableDescriptor, getRegionInfo(), walKey, walEdits, true);
             } else {
@@ -7971,6 +7974,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     if (isFlushSize(this.addAndGetGlobalMemstoreSize(size))) requestFlush();
     return mutate.isReturnResults() ? Result.create(allKVs) : null;
+  }
+
+  private void preWALAppend(WALKey walKey, WALEdit walEdits) throws IOException {
+    if (this.coprocessorHost != null && !walEdits.isMetaEdit()) {
+      this.coprocessorHost.preWALAppend(walKey, walEdits);
+    }
   }
 
   private static Cell getNewCell(final byte [] row, final long ts, final Cell cell,
@@ -8124,6 +8133,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
               this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, nonceGroup, nonce,
               getMVCC());
+            preWALAppend(walKey, walEdits);
             txid =
               this.wal.append(this.htableDescriptor, this.getRegionInfo(), walKey, walEdits, true);
           } else {

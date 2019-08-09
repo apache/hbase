@@ -465,6 +465,18 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   }
 
   /**
+   * Add a named String value to this WALKey to be persisted into the WAL
+   * @param attributeKey Name of the attribute
+   * @param attributeValue Value of the attribute
+   */
+  public void addExtendedAttribute(String attributeKey, byte[] attributeValue){
+    if (extendedAttributes == null){
+      extendedAttributes = new HashMap<String, byte[]>();
+    }
+    extendedAttributes.put(attributeKey, attributeValue);
+  }
+
+  /**
    * Return a named String value injected into the WALKey during processing, such as by a
    * coprocessor
    * @param attributeKey The key of a key / value pair
