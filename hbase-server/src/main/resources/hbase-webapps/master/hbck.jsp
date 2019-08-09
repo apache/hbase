@@ -23,11 +23,11 @@
          import="java.util.Date"
          import="java.util.List"
          import="java.util.Map"
-         import="java.util.Set"
          import="java.util.stream.Collectors"
          import="java.time.ZonedDateTime"
          import="java.time.format.DateTimeFormatter"
 %>
+<%@ page import="org.apache.hadoop.fs.Path" %>
 <%@ page import="org.apache.hadoop.hbase.client.RegionInfo" %>
 <%@ page import="org.apache.hadoop.hbase.master.HbckChore" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
@@ -42,7 +42,7 @@
   HbckChore hbckChore = master.getHbckChore();
   Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
   Map<String, ServerName> orphanRegionsOnRS = null;
-  Set<String> orphanRegionsOnFS = null;
+  Map<String, Path> orphanRegionsOnFS = null;
   long startTimestamp = 0;
   long endTimestamp = 0;
   if (hbckChore != null) {
@@ -110,7 +110,7 @@
 
   <table class="table table-striped">
     <tr>
-      <th>Region</th>
+      <th>Region Encoded Name</th>
       <th>Location in META</th>
       <th>Reported Online RegionServers</th>
     </tr>
@@ -136,7 +136,7 @@
   <% if (orphanRegionsOnRS != null && orphanRegionsOnRS.size() > 0) { %>
   <table class="table table-striped">
     <tr>
-      <th>Region</th>
+      <th>Region Encoded Name</th>
       <th>Reported Online RegionServer</th>
     </tr>
     <% for (Map.Entry<String, ServerName> entry : orphanRegionsOnRS.entrySet()) { %>
@@ -159,11 +159,13 @@
   <% if (orphanRegionsOnFS != null && orphanRegionsOnFS.size() > 0) { %>
   <table class="table table-striped">
     <tr>
-      <th>Region</th>
+      <th>Region Encoded Name</th>
+      <th>FileSystem Path</th>
     </tr>
-    <% for (String region : orphanRegionsOnFS) { %>
+    <% for (Map.Entry<String, Path> entry : orphanRegionsOnFS.entrySet()) { %>
     <tr>
-      <td><%= region %></td>
+      <td><%= entry.getKey() %></td>
+      <td><%= entry.getValue() %></td>
     </tr>
     <% } %>
 

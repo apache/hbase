@@ -192,7 +192,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     HRegion.createRegionDir(conf, regionInfo, FSUtils.getRootDir(conf));
     hbckChore.choreForTesting();
     assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
-    assertTrue(hbckChore.getOrphanRegionsOnFS().contains(regionInfo.getEncodedName()));
+    assertTrue(hbckChore.getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));
 
     FSUtils.deleteRegionDir(conf, new HRegionInfo(regionInfo));
     hbckChore.choreForTesting();
