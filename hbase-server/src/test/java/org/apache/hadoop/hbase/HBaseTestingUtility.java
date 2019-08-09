@@ -2038,23 +2038,22 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
   }
 
-  @SuppressWarnings("checkstyle:linelength")
   /**
    * @param tableName the name of the table
    * @param startKey the start key of the region
-   * @param stopKey the start key of the region
+   * @param stopKey the stop key of the region
    * @param callingMethod the name of the calling method probably a test method
    * @param conf the configuration to use
-   * @param isReadOnly true if the table is read only, false otherwise
+   * @param isReadOnly {@code true} if the table is read only, {@code false} otherwise
    * @param families the column families to use
    * @throws IOException if an IO problem is encountered
    * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    *         when done.
-   *         @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *         {@link HBaseTestingUtility#createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
-   *         instead.
-   *         @see HBaseTestingUtility#createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
-   *         @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
+   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
+   *   instead.
+   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
    */
   @Deprecated
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,

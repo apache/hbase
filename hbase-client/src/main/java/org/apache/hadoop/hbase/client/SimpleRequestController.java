@@ -433,7 +433,7 @@ class SimpleRequestController implements RequestController {
      *
      * @param loc the destination of data
      * @param heapSizeOfRow the data size
-     * @return either Include {@link RequestController.ReturnCode} or Skip
+     * @return either Include {@link RequestController.ReturnCode} or skip
      *         {@link RequestController.ReturnCode}
      */
     @Override
