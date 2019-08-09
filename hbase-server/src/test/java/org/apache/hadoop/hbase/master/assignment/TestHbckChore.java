@@ -198,4 +198,22 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
   }
+
+  @Test
+  public void testChoreDisable() {
+    // The way to disable to chore is to set hbase.master.hbck.chore.interval <= 0
+    // When the interval is > 0, the chore should run.
+    long lastRunTime = hbckChore.getCheckingEndTimestamp();
+    hbckChore.choreForTesting();
+    boolean ran = lastRunTime != hbckChore.getCheckingEndTimestamp();
+    assertTrue(ran);
+
+    // When the interval <= 0, the chore shouldn't run
+    master.getConfiguration().setInt("hbase.master.hbck.chore.interval", 0);
+    HbckChore hbckChoreWithChangedConf = new HbckChore(master);
+    lastRunTime = hbckChoreWithChangedConf.getCheckingEndTimestamp();
+    hbckChoreWithChangedConf.choreForTesting();
+    ran = lastRunTime != hbckChoreWithChangedConf.getCheckingEndTimestamp();
+    assertFalse(ran);
+  }
 }
