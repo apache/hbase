@@ -152,12 +152,14 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     String nsName = tablePrefix + "_foo";
     String groupName = tablePrefix + "_foo";
     LOG.info("testNamespaceConstraint");
-    rsGroupAdmin.addRSGroup(groupName);
+    addGroup(groupName, 1);
     assertTrue(observer.preAddRSGroupCalled);
     assertTrue(observer.postAddRSGroupCalled);
 
     admin.createNamespace(NamespaceDescriptor.create(nsName)
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
+    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
+    rsGroupAdmin.moveServers(rsGroupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     // test removing a referenced group
     try {
       rsGroupAdmin.removeRSGroup(groupName);
