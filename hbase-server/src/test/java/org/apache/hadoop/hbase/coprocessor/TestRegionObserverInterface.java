@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -42,6 +43,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -78,11 +81,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category(MediumTests.class)
 public class TestRegionObserverInterface {
@@ -93,6 +99,7 @@ public class TestRegionObserverInterface {
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
   public final static byte[] ROW = Bytes.toBytes("testrow");
+  public final static byte[] FAMILY = Bytes.toBytes("f");
 
   private static HBaseTestingUtility util = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster = null;
@@ -750,6 +757,100 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
+  //called from testPreWALAppendIsWrittenToWAL
+  private void testPreWALAppendHook(Table table, TableName tableName) throws IOException {
+    int expectedCalls = 0;
+    String [] methodArray = new String[1];
+    methodArray[0] = "getCtPreWALAppend";
+    Object[] resultArray = new Object[1];
+
+    Put p = new Put(ROW);
+    p.addColumn(A, A, A);
+    table.put(p);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Append a = new Append(ROW);
+    a.add(B, B, B);
+    table.append(a);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Increment i = new Increment(ROW);
+    i.addColumn(C, C, 1);
+    table.increment(i);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+
+    Delete d = new Delete(ROW);
+    table.delete(d);
+    resultArray[0] = ++expectedCalls;
+    verifyMethodResult(SimpleRegionObserver.class, methodArray, tableName, resultArray);
+  }
+
+  @Test
+  public void testPreWALAppend() throws Exception {
+    SimpleRegionObserver sro = new SimpleRegionObserver();
+    ObserverContext ctx = Mockito.mock(ObserverContext.class);
+    WALKey key = new WALKey(Bytes.toBytes("region"), TEST_TABLE,
+        EnvironmentEdgeManager.currentTime());
+    WALEdit edit = new WALEdit();
+    sro.preWALAppend(ctx, key, edit);
+    Assert.assertEquals(1, key.getExtendedAttributes().size());
+    Assert.assertArrayEquals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+        key.getExtendedAttribute(Integer.toString(sro.getCtPreWALAppend())));
+  }
+
+  @Test
+  public void testPreWALAppendIsWrittenToWAL() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        ".testPreWALAppendIsWrittenToWAL");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(A));
+    htd.addFamily(new HColumnDescriptor(B));
+    htd.addFamily(new HColumnDescriptor(C));
+    htd.addCoprocessor(SimpleRegionObserver.class.getName());
+    Table table = util.createTable(htd, null);
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+    region.getWAL().registerWALActionsListener(listener);
+    testPreWALAppendHook(table, tableName);
+    boolean[] expectedResults = {true, true, true, true};
+    Assert.assertArrayEquals(expectedResults, listener.getWalKeysCorrectArray());
+
+  }
+
+  @Test
+  public void testPreWALAppendNotCalledOnMetaEdit() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() +
+        ".testPreWALAppendNotCalledOnMetaEdt");
+
+    HTableDescriptor td = new HTableDescriptor(tableName);
+    td.addCoprocessor(SimpleRegionObserver.class.getName());
+    td.addFamily(new HColumnDescriptor(FAMILY));
+    Table table = util.createTable(td, new byte[][] { A, B, C });
+
+    PreWALAppendWALActionsListener listener = new PreWALAppendWALActionsListener();
+    List<HRegion> regions = util.getHBaseCluster().getRegions(tableName);
+    //should be only one region
+    HRegion region = regions.get(0);
+
+    region.getWAL().registerWALActionsListener(listener);
+    //flushing should write to the WAL
+    region.flush(true);
+    //so should compaction
+    region.compact(false);
+    //and so should closing the region
+    region.close();
+
+    //but we still shouldn't have triggered preWALAppend because no user data was written
+    String[] methods = new String[] {"getCtPreWALAppend"};
+    Object[] expectedResult = new Integer[]{0};
+    verifyMethodResult(SimpleRegionObserver.class, methods, tableName, expectedResult);
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class<?> c, String methodName[], TableName tableName,
                                   Object value[]) throws IOException {
@@ -798,6 +899,71 @@ public class TestRegionObserverInterface {
       }
     } finally {
       writer.close();
+    }
+  }
+
+  private static class PreWALAppendWALActionsListener implements WALActionsListener {
+    boolean[] walKeysCorrect = {false, false, false, false};
+
+    @Override
+    public void postAppend(long entryLen, long elapsedTimeMillis,
+                           WALKey logKey, WALEdit logEdit) throws IOException {
+      for (int k = 0; k < 4; k++) {
+        if (!walKeysCorrect[k]) {
+          walKeysCorrect[k] = Arrays.equals(SimpleRegionObserver.WAL_EXTENDED_ATTRIBUTE_BYTES,
+              logKey.getExtendedAttribute(Integer.toString(k + 1)));
+        }
+      }
+    }
+
+    @Override
+    public void postSync(long timeInNanos, int handlerSyncs) {
+
+    }
+
+    boolean[] getWalKeysCorrectArray() {
+      return walKeysCorrect;
+    }
+    @Override
+    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+
+    }
+
+    @Override
+    public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+
+    }
+
+    @Override
+    public void preLogArchive(Path oldPath, Path newPath) throws IOException {
+
+    }
+
+    @Override
+    public void postLogArchive(Path oldPath, Path newPath) throws IOException {
+
+    }
+
+    @Override
+    public void logRollRequested(RollRequestReason reason) {
+
+    }
+
+    @Override
+    public void logCloseRequested() {
+
+    }
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey,
+                                         WALEdit logEdit) {
+
+    }
+
+    @Override
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey,
+                                         WALEdit logEdit) throws IOException {
+
     }
   }
 }

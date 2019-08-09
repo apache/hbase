@@ -1341,4 +1341,16 @@ public interface RegionObserver extends Coprocessor {
   DeleteTracker postInstantiateDeleteTracker(
       final ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
       throws IOException;
+
+  /**
+   * Called just before the WAL Entry is appended to the WAL. Implementing this hook allows
+   * coprocessors to add extended attributes to the WALKey that then get persisted to the
+   * WAL, and are available to replication endpoints to use in processing WAL Entries.
+   * @param ctx the environment provided by the region server
+   * @param key the WALKey associated with a particular append to a WAL
+   * @param edit the WALEdit associated with a particular append to a WAL
+   */
+  void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx, WALKey key,
+                            WALEdit edit)
+      throws IOException;
 }

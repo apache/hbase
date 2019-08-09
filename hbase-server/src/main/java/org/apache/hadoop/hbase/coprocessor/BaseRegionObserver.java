@@ -548,4 +548,10 @@ public class BaseRegionObserver implements RegionObserver {
       throws IOException {
     return delTracker;
   }
+
+  @Override
+  public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx, WALKey key,
+                           WALEdit edit) throws IOException {
+
+  }
 }

@@ -139,8 +139,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostBatchMutateIndispensably = new AtomicInteger(0);
   final AtomicInteger ctPostStartRegionOperation = new AtomicInteger(0);
   final AtomicInteger ctPostCloseRegionOperation = new AtomicInteger(0);
+  final AtomicInteger ctPreWALAppend = new AtomicInteger(0);
   final AtomicBoolean throwOnPostFlush = new AtomicBoolean(false);
   static final String TABLE_SKIPPED = "SKIPPED_BY_PREWALRESTORE";
+  static final byte[] WAL_EXTENDED_ATTRIBUTE_BYTES = Bytes.toBytes("foo");
 
   public void setThrowOnPostFlush(Boolean val){
     throwOnPostFlush.set(val);
@@ -718,6 +720,15 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return reader;
   }
 
+  @Override
+  public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx,
+                           WALKey key, WALEdit edit) throws IOException {
+    ctPreWALAppend.incrementAndGet();
+
+    key.addExtendedAttribute(Integer.toString(ctPreWALAppend.get()),
+        Bytes.toBytes("foo"));
+  }
+
   public boolean hadPreGet() {
     return ctPreGet.get() > 0;
   }
@@ -973,6 +984,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   public int getCtPostWALRestoreDeprecated() {
     return ctPostWALRestoreDeprecated.get();
+  }
+
+  public int getCtPreWALAppend() {
+    return ctPreWALAppend.get();
   }
 
   public boolean wasStoreFileReaderOpenCalled() {
