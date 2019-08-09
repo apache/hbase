@@ -224,7 +224,6 @@ public class TestSplitTransactionOnCluster {
       }
       assertTrue(cluster.getMaster().getAssignmentManager().getRegionStates().isRegionOnline(hri));
     } finally {
-      admin.balancerSwitch(true, false);
       master.setCatalogJanitorEnabled(true);
       abortAndWaitForMaster();
       TESTING_UTIL.deleteTable(tableName);
@@ -346,7 +345,6 @@ public class TestSplitTransactionOnCluster {
       checkAndGetDaughters(tableName);
       // OK, so split happened after we cleared the blocking node.
     } finally {
-      admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
     }
@@ -423,7 +421,6 @@ public class TestSplitTransactionOnCluster {
       }
     } finally {
       LOG.info("EXITING");
-      admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
     }
@@ -549,7 +546,6 @@ public class TestSplitTransactionOnCluster {
       ServerName regionServerOfRegion = regionStates.getRegionServerOfRegion(hri);
       assertEquals(null, regionServerOfRegion);
     } finally {
-      TESTING_UTIL.getAdmin().balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -621,7 +617,6 @@ public class TestSplitTransactionOnCluster {
       SlowMeCopro.getPrimaryCdl().get().countDown();
     } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
-      admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
     }
@@ -730,7 +725,6 @@ public class TestSplitTransactionOnCluster {
       assertFalse("Split region can't be unassigned", regionStates.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
     } finally {
-      admin.balancerSwitch(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }

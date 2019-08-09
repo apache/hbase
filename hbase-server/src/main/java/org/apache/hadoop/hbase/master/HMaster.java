@@ -1104,7 +1104,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    getChoreService().scheduleChore(balancerChore);
+    if (this.loadBalancerTracker.isBalancerOn()) {
+      getChoreService().scheduleChore(balancerChore);
+    }
     this.normalizerChore = new RegionNormalizerChore(this);
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this);
