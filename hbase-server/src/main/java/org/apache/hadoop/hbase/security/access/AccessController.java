@@ -1089,7 +1089,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       throws IOException {
     User user = getActiveUser(ctx);
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)
-        && hTableDescriptor.getTableName().getNameAsString().equals(snapshot.getTable())) {
+        && hTableDescriptor.getTableName().getNameAsString()
+        .equals(snapshot.getTableNameAsString())) {
       // Snapshot owner is allowed to create a table with the same name as the snapshot he took
       AuthResult result = AuthResult.allow("cloneSnapshot " + snapshot.getName(),
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
