@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -115,19 +114,6 @@ public class HFileOutputFormat2
     public TableInfo(TableDescriptor tableDesctiptor, RegionLocator regionLocator) {
       this.tableDesctiptor = tableDesctiptor;
       this.regionLocator = regionLocator;
-    }
-
-    /**
-     * The modification for the returned HTD doesn't affect the inner TD.
-     * @return A clone of inner table descriptor
-     * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getTableDescriptor()}
-     *   instead.
-     * @see #getTableDescriptor()
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-18241">HBASE-18241</a>
-     */
-    @Deprecated
-    public HTableDescriptor getHTableDescriptor() {
-      return new HTableDescriptor(tableDesctiptor);
     }
 
     public TableDescriptor getTableDescriptor() {
