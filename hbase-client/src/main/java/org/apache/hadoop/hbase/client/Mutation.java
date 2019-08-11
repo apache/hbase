@@ -302,19 +302,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * Method for setting the mutation's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Mutation#Mutation(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  public Mutation setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
-    // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
-    // this internal data member.
-    this.familyMap = map;
-    return this;
-  }
-
-  /**
    * Method to check if the familyMap is empty
    * @return true if empty, false otherwise
    */
@@ -339,17 +326,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   @Override
   public int compareTo(final Row d) {
     return Bytes.compareTo(this.getRow(), d.getRow());
-  }
-
-  /**
-   * Method for retrieving the timestamp
-   * @return timestamp
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getTimestamp()} instead
-   */
-  @Deprecated
-  public long getTimeStamp() {
-    return this.getTimestamp();
   }
 
   /**
