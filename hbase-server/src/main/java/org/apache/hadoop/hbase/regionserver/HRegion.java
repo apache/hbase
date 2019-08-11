@@ -3131,7 +3131,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param batchOp contains the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
-   * @throws IOException
+   * @throws IOException if an IO problem is encountered
    */
   OperationStatus[] batchMutate(BatchOperationInProgress<?> batchOp) throws IOException {
     boolean initialized = false;
