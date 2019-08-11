@@ -1680,7 +1680,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *
    * @param on boolean value indicates whether to turn the balancer on
    */
-  void turnBalancer(boolean on) {
+  void switchBalancer(boolean on) {
     if (on) {
       scheduleBalancerChore();
     } else {
