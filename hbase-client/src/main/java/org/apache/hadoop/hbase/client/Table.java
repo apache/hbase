@@ -206,9 +206,9 @@ public interface Table extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    * @since 0.90.0
    * @apiNote {@link #put(List)} runs pre-flight validations on the input list on client.
-   *   Currently {@link #get(List)} doesn't run any validations on the client-side, currently there
-   *   is no need, but this may change in the future. An
-   * {@link IllegalArgumentException} will be thrown in this case.
+   *          Currently {@link #get(List)} doesn't run any validations on the client-side,
+   *          currently there is no need, but this may change in the future. An
+   *          {@link IllegalArgumentException} will be thrown in this case.
    */
   default Result[] get(List<Get> gets) throws IOException {
     throw new NotImplementedException("Add an implementation!");
@@ -392,10 +392,10 @@ public interface Table extends Closeable {
    * that have not be successfully applied.
    * @since 0.20.1
    * @apiNote In 3.0.0 version, the input list {@code deletes} will no longer be modified. Also,
-   * {@link #put(List)} runs pre-flight validations on the input list on client. Currently
-   * {@link #delete(List)} doesn't run validations on the client, there is no need currently,
-   * but this may change in the future. An * {@link IllegalArgumentException} will be thrown
-   * in this case.
+   *          {@link #put(List)} runs pre-flight validations on the input list on client. Currently
+   *          {@link #delete(List)} doesn't run validations on the client, there is no need
+   *          currently, but this may change in the future. An * {@link IllegalArgumentException}
+   *          will be thrown in this case.
    */
   default void delete(List<Delete> deletes) throws IOException {
     throw new NotImplementedException("Add an implementation!");
