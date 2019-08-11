@@ -95,7 +95,7 @@ public class TestAtomicOperation {
   @Rule public TestName name = new TestName();
 
   HRegion region = null;
-  private HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   // Test names
   static  byte[] tableName;

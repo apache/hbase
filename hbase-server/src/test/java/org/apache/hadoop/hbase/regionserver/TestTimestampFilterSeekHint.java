@@ -44,7 +44,7 @@ public class TestTimestampFilterSeekHint {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String RK = "myRK";
   private final static byte[] RK_BYTES = Bytes.toBytes(RK);
 

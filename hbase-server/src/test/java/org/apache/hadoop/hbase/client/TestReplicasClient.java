@@ -195,7 +195,8 @@ public class TestReplicasClient {
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(TestReplicasClient.class.getSimpleName());
+    HTableDescriptor hdt =
+        HTU.createTableDescriptor(TableName.valueOf(TestReplicasClient.class.getSimpleName()));
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     HTU.createTable(hdt, new byte[][]{f}, null);
     TABLE_NAME = hdt.getTableName();

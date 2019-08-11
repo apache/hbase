@@ -89,7 +89,7 @@ public class TestCacheOnWrite {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;

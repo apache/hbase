@@ -278,7 +278,7 @@ public class TestReplicaWithCluster {
   @Test
   public void testCreateDeleteTable() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"));
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][]{f}, null);
@@ -370,7 +370,8 @@ public class TestReplicaWithCluster {
   @SuppressWarnings("deprecation")
   @Test
   public void testReplicaAndReplication() throws Exception {
-    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaAndReplication");
+    HTableDescriptor hdt =
+        HTU.createTableDescriptor(TableName.valueOf("testReplicaAndReplication"));
     hdt.setRegionReplication(NB_SERVERS);
 
     HColumnDescriptor fam = new HColumnDescriptor(row);
@@ -456,7 +457,7 @@ public class TestReplicaWithCluster {
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");
-    HTableDescriptor hdt = HTU.createTableDescriptor("testBulkLoad");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testBulkLoad"));
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][]{f}, null);
@@ -512,7 +513,7 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaGetWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"));
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
     try {
@@ -546,7 +547,7 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaScanWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    HTableDescriptor hdt = HTU.createTableDescriptor(TableName.valueOf("testCreateDeleteTable"));
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
 
@@ -592,7 +593,8 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().setBoolean("hbase.ipc.client.specificThreadForWriting", true);
     HTU.getConfiguration().set("hbase.rpc.client.impl", "org.apache.hadoop.hbase.ipc.RpcClientImpl");
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaGetWithRpcClientImpl");
+    HTableDescriptor hdt =
+        HTU.createTableDescriptor(TableName.valueOf("testReplicaGetWithRpcClientImpl"));
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
 

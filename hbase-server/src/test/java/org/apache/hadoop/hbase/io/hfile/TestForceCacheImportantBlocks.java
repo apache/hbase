@@ -61,7 +61,7 @@ public class TestForceCacheImportantBlocks {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
 
-  private final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final String TABLE = "myTable";
   private static final String CF = "myCF";

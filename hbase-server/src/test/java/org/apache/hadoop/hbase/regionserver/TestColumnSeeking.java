@@ -58,7 +58,7 @@ public class TestColumnSeeking {
       HBaseClassTestRule.forClass(TestColumnSeeking.class);
 
   @Rule public TestName name = new TestName();
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
 

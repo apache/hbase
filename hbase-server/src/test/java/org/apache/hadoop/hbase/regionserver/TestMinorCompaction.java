@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -59,7 +60,7 @@ public class TestMinorCompaction {
 
   @Rule public TestName name = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestMinorCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
@@ -90,7 +91,7 @@ public class TestMinorCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    this.htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 

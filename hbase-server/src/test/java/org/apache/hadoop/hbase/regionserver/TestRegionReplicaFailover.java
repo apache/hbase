@@ -93,7 +93,7 @@ public class TestRegionReplicaFailover {
 
     HTU.startMiniCluster(NB_SERVERS);
     htd = HTU.createTableDescriptor(
-      name.getMethodName().substring(0, name.getMethodName().length()-3));
+        TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().length() - 3)));
     htd.setRegionReplication(3);
     HTU.getAdmin().createTable(htd);
   }
@@ -327,7 +327,7 @@ public class TestRegionReplicaFailover {
     int numRegions = NB_SERVERS * 20;
     int regionReplication = 10;
     String tableName = htd.getTableName().getNameAsString() + "2";
-    htd = HTU.createTableDescriptor(tableName);
+    htd = HTU.createTableDescriptor(TableName.valueOf(tableName));
     htd.setRegionReplication(regionReplication);
 
     // dont care about splits themselves too much

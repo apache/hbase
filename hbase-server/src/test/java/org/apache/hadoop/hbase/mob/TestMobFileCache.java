@@ -85,10 +85,10 @@ public class TestMobFileCache {
 
   @Before
   public void setUp() throws Exception {
-    UTIL = HBaseTestingUtility.createLocalHTU();
+    UTIL = new HBaseTestingUtility();
     conf = UTIL.getConfiguration();
     conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
-    HTableDescriptor htd = UTIL.createTableDescriptor("testMobFileCache");
+    HTableDescriptor htd = UTIL.createTableDescriptor(TableName.valueOf("testMobFileCache"));
     HColumnDescriptor hcd1 = new HColumnDescriptor(FAMILY1);
     hcd1.setMobEnabled(true);
     hcd1.setMobThreshold(0);

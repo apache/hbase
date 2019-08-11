@@ -557,7 +557,8 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(name.getMethodName());
+    HTableDescriptor htd =
+        TESTING_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.setRegionReplication(2);
     htd.addCoprocessor(SlowMeCopro.class.getName());
     // Create table then get the single region for our new table.

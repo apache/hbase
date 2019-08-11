@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -92,7 +93,7 @@ public class TestCompaction {
       HBaseClassTestRule.forClass(TestCompaction.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
@@ -126,7 +127,7 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    this.htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     if (name.getMethodName().equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
       UTIL.getConfiguration().set(

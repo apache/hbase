@@ -177,17 +177,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @InterfaceAudience.Public
 @SuppressWarnings("deprecation")
 public class HBaseTestingUtility extends HBaseZKTestingUtility {
-
-  /**
-   * System property key to get test directory value. Name is as it is because mini dfs has
-   * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
-   * used in mini dfs.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Can be used only with mini dfs.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19410">HBASE-19410</a>
-   */
-  @Deprecated
-  private static final String TEST_DIRECTORY_KEY = "test.build.data";
-
   public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
   /**
    * The default number of regions per regionserver when creating a pre-split
@@ -306,9 +295,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
    *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
+   * <p>All HBaseTestingUtility objects will behave as local until a DFS cluster is started,
    * at which point they will switch to using mini DFS for storage.
    */
   public HBaseTestingUtility() {
@@ -322,9 +309,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Once {@link #startMiniDFSCluster} is called, either directly or via
    * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
    *
-   * <p>Previously, there was a distinction between the type of utility returned by
-   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
-   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
+   * <p>All HBaseTestingUtility objects will behave as local until a DFS cluster is started,
    * at which point they will switch to using mini DFS for storage.
    *
    * @param conf The configuration to use for further operations
@@ -353,30 +338,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     // tests opt-out for random port assignment
     this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
         this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #HBaseTestingUtility()}
-   *   instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU() {
-    return new HBaseTestingUtility();
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #HBaseTestingUtility(Configuration)} instead.
-   * @return a normal HBaseTestingUtility
-   * @see #HBaseTestingUtility(Configuration)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-19841">HBASE-19841</a>
-   */
-  @Deprecated
-  public static HBaseTestingUtility createLocalHTU(Configuration c) {
-    return new HBaseTestingUtility(c);
   }
 
   /**
@@ -419,9 +380,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Home our data in a dir under {@link #DEFAULT_BASE_TEST_DIRECTORY}.
    * Give it a random name so can have many concurrent tests running if
-   * we need to.  It needs to amend the {@link #TEST_DIRECTORY_KEY}
-   * System property, as it's what minidfscluster bases
-   * it data dir on.  Moding a System property is not the way to do concurrent
+   * we need to. Moding a System property is not the way to do concurrent
    * instances -- another instance could grab the temporary
    * value unintentionally -- but not anything can do about it at moment;
    * single instance only is how the minidfscluster works.
@@ -686,8 +645,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /** This is used before starting HDFS and map-reduce mini-clusters */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
-    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     createDirAndSetProperty("cache_data", "test.cache.data");
     createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
     hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
@@ -1077,7 +1034,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     miniClusterRunning = true;
 
     setupClusterTestDir();
-    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -1927,34 +1883,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
-    return this.createTableDescriptor(TableName.valueOf(name), minVersions, versions, ttl,
-        keepDeleted);
-  }
-
-  /**
-   * Create a table of name <code>name</code>.
-   * @param name Name to give table.
-   * @return Column descriptor.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)} instead.
-   * @see #createTableDescriptor(TableName, int, int, int, KeepDeletedCells)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HTableDescriptor createTableDescriptor(final String name) {
-    return createTableDescriptor(TableName.valueOf(name),  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
-  }
-
   public HTableDescriptor createTableDescriptor(final TableName name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(name);
@@ -2036,32 +1964,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public HRegion createLocalHRegion(RegionInfo info, TableDescriptor desc, WAL wal)
       throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
-  }
-
-  /**
-   * @param tableName the name of the table
-   * @param startKey the start key of the region
-   * @param stopKey the stop key of the region
-   * @param callingMethod the name of the calling method probably a test method
-   * @param conf the configuration to use
-   * @param isReadOnly {@code true} if the table is read only, {@code false} otherwise
-   * @param families the column families to use
-   * @throws IOException if an IO problem is encountered
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
-   *   instead.
-   * @see #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-13893">HBASE-13893</a>
-   */
-  @Deprecated
-  public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, isReadOnly, durability,
-            wal, families);
   }
 
   /**

@@ -117,7 +117,8 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.getNameAsString());
+    HTableDescriptor htd =
+        HTU.createTableDescriptor(TableName.valueOf(tableName.getNameAsString()));
     table = HTU.createTable(htd, new byte[][]{f}, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {

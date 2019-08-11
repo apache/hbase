@@ -49,7 +49,7 @@ public class TestRowTooBig {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRowTooBig.class);
 
-  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static Path rootRegionDir;
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));

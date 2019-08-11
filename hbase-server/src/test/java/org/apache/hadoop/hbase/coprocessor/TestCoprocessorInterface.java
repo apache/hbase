@@ -82,7 +82,7 @@ public class TestCoprocessorInterface {
 
   @Rule public TestName name = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorInterface.class);
-  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {

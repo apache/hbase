@@ -248,7 +248,7 @@ public class TestHRegion {
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
     NettyAsyncFSWALConfigHelper.setEventLoopConfig(CONF, GROUP, NioSocketChannel.class);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();

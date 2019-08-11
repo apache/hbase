@@ -1121,7 +1121,7 @@ public class TestHRegionReplayEvents {
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Bytes.toBytes("family");
 
-    HRegion region = initHRegion(tableName, method, family);
+    HRegion region = initHRegion(tableName, family);
     try {
       // replay an entry that is bigger than current read point
       long readPoint = region.getMVCC().getReadPoint();
@@ -1699,16 +1699,14 @@ public class TestHRegionReplayEvents {
     }
   }
 
-  private static HRegion initHRegion(byte[] tableName,
-      String callingMethod, byte[]... families) throws IOException {
+  private static HRegion initHRegion(byte[] tableName, byte[]... families) throws IOException {
     return initHRegion(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      callingMethod, TEST_UTIL.getConfiguration(), false, Durability.SYNC_WAL, null, families);
+      false, Durability.SYNC_WAL, null, families);
   }
 
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, callingMethod, conf,
+      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
+    return TEST_UTIL.createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey,
       isReadOnly, durability, wal, families);
   }
 }

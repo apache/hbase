@@ -83,7 +83,7 @@ public class TestFailedAppendAndSync {
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);

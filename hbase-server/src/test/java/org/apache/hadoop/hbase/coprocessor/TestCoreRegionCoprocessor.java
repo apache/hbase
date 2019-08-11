@@ -58,7 +58,7 @@ public class TestCoreRegionCoprocessor {
       HBaseClassTestRule.forClass(TestCoreRegionCoprocessor.class);
 
   @Rule public TestName name = new TestName();
-  HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  HBaseTestingUtility HTU = new HBaseTestingUtility();
   private HRegion region = null;
   private RegionServerServices rss;
 

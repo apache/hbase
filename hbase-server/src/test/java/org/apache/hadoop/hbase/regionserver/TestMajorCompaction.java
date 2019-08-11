@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -88,7 +89,7 @@ public class TestMajorCompaction {
   }
   @Rule public TestName name;
   private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
@@ -120,7 +121,8 @@ public class TestMajorCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName().replace('[','i').replace(']','i'));
+    this.htd = UTIL.createTableDescriptor(
+        TableName.valueOf(name.getMethodName().replace('[','i').replace(']','i')));
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 

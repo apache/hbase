@@ -916,7 +916,7 @@ public class TestDefaultMemStore {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
-      HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+      HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
       String cf = "foo";
       HRegion region =
           hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
@@ -942,7 +942,7 @@ public class TestDefaultMemStore {
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
     Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
     Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);

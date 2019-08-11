@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -109,7 +110,7 @@ public class TestMobStoreCompaction {
     HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    htd = UTIL.createTableDescriptor(name.getMethodName());
+    htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hcd = new HColumnDescriptor(COLUMN_FAMILY);
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(mobThreshold);
