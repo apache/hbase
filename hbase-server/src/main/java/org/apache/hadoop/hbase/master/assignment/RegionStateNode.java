@@ -99,7 +99,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
 
   /**
    * Updated whenever a call to {@link #setRegionLocation(ServerName)} or
-   * {@link #setState(State, State...)}.
+   * {@link #setState(RegionState.State, RegionState.State...)}.
    */
   private volatile long lastUpdate = 0;
 

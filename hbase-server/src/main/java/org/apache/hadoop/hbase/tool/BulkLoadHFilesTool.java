@@ -453,7 +453,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
-   * @param table the table to load into
+   * @param conn the HBase cluster connection
+   * @param tableName the table name of the table to load into
    * @param pool the ExecutorService
    * @param queue the queue for LoadQueueItem
    * @param startEndKeys start and end keys

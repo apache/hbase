@@ -284,7 +284,7 @@ public class TestFlushSnapshotFromClient {
    * complete on the server by repeatedly checking the master.
    * @param master the master running the snapshot
    * @param snapshot the snapshot to check
-   * @param sleep amount to sleep between checks to see if the snapshot is done
+   * @param timeoutNanos the timeout in nano between checks to see if the snapshot is done
    */
   private static void waitForSnapshotToComplete(HMaster master,
       SnapshotProtos.SnapshotDescription snapshot, long timeoutNanos) throws Exception {
