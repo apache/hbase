@@ -40,9 +40,10 @@ public abstract class Batch {
    * the implementations {@link Batch.Call#call(Object)} method will be invoked
    * with a proxy to each region's coprocessor {@link com.google.protobuf.Service} implementation.
    * </p>
-   * @see org.apache.hadoop.hbase.client.coprocessor
+   * @see org.apache.hadoop.hbase.client.coprocessor.Batch
    * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])
-   * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
+   * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[],
+   * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
    * @param <T> the instance type to be passed to
    * {@link Batch.Call#call(Object)}
    * @param <R> the return type from {@link Batch.Call#call(Object)}

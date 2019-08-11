@@ -219,7 +219,7 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table.
-   * 
+   *
    * @param put The data to put.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
