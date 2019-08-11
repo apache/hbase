@@ -39,7 +39,7 @@ public abstract class Batch {
    * the implementations {@link Batch.Call#call(Object)} method will be invoked
    * with a proxy to each region's coprocessor {@link com.google.protobuf.Service} implementation.
    * </p>
-   * @see org.apache.hadoop.hbase.client.coprocessor
+   * @see org.apache.hadoop.hbase.client.coprocessor.Batch
    * @see org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])
    * @see org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[],
    * org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
