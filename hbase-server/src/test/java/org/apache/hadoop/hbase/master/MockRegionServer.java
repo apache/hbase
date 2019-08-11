@@ -143,8 +143,8 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final Random random = new Random();
 
   /**
-   * Map of regions to map of rows and {@link Result}.  Used as data source when
-   * {@link #get(RpcController, GetRequest)} is called. Because we have a byte
+   * Map of regions to map of rows and {@link Result}. Used as data source when
+   * {@link #get(RpcController, ClientProtos.GetRequest)} is called. Because we have a byte
    * key, need to use TreeMap and provide a Comparator.  Use
    * {@link #setGetResult(byte[], byte[], Result)} filling this map.
    */
@@ -195,10 +195,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   /**
-   * Use this method filling the backing data source used by {@link #get(RpcController, GetRequest)}
-   * @param regionName
-   * @param row
-   * @param r
+   * Use this method filling the backing data source used by
+   * {@link #get(RpcController, ClientProtos.GetRequest)}
+   * @param regionName the region name to assign
+   * @param row the row key
+   * @param r the single row result
    */
   void setGetResult(final byte [] regionName, final byte [] row, final Result r) {
     Map<byte [], Result> value = this.gets.get(regionName);

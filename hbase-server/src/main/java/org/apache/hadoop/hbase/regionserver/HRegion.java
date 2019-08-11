@@ -3959,7 +3959,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * a batch are stored with highest durability specified of for all operations in a batch,
    * except for {@link Durability#SKIP_WAL}.
    *
-   * <p>This function is called from {@link #batchReplay(MutationReplay[], long)} with
+   * <p>This function is called from {@link #batchReplay(WALSplitUtil.MutationReplay[], long)} with
    * {@link ReplayBatchOperation} instance and {@link #batchMutate(Mutation[], long, long)} with
    * {@link MutationBatchOperation} instance as an argument. As the processing of replay batch
    * and mutation batch is very similar, lot of code is shared by providing generic methods in
@@ -3970,7 +3970,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param batchOp contains the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
-   * @throws IOException
+   * @throws IOException if an IO problem is encountered
    */
   OperationStatus[] batchMutate(BatchOperation<?> batchOp) throws IOException {
     boolean initialized = false;

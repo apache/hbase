@@ -267,9 +267,10 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       return new Path(outputArchive, path);
     }
 
+    @SuppressWarnings("checkstyle:linelength")
     /**
      * Used by TestExportSnapshot to test for retries when failures happen.
-     * Failure is injected in {@link #copyFile(Context, SnapshotFileInfo, Path)}.
+     * Failure is injected in {@link #copyFile(Mapper.Context, org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo, Path)}.
      */
     private void injectTestFailure(final Context context, final SnapshotFileInfo inputInfo)
         throws IOException {
