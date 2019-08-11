@@ -787,7 +787,7 @@ public class TestHFileOutputFormat2  {
     }
     else {
       RegionLocator regionLocator = tableInfo.get(0).getRegionLocator();
-      HFileOutputFormat2.configureIncrementalLoad(job, tableInfo.get(0).getHTableDescriptor(),
+      HFileOutputFormat2.configureIncrementalLoad(job, tableInfo.get(0).getTableDescriptor(),
               regionLocator);
       assertEquals(regionLocator.getAllRegionLocations().size(), job.getNumReduceTasks());
     }
