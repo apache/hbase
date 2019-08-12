@@ -41,61 +41,16 @@ public class SnapshotDescription {
     this(name, (TableName)null);
   }
 
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
-   *   instance instead.
-   * @see #SnapshotDescription(String, TableName)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
-   */
-  @Deprecated
-  public SnapshotDescription(String name, String table) {
-    this(name, TableName.valueOf(table));
-  }
-
   public SnapshotDescription(String name, TableName table) {
     this(name, table, SnapshotType.DISABLED, null, -1, -1, null);
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
-   *   instance instead.
-   * @see #SnapshotDescription(String, TableName, SnapshotType)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
-   */
-  @Deprecated
-  public SnapshotDescription(String name, String table, SnapshotType type) {
-    this(name, TableName.valueOf(table), type);
   }
 
   public SnapshotDescription(String name, TableName table, SnapshotType type) {
     this(name, table, type, null, -1, -1, null);
   }
 
-  /**
-   * @see #SnapshotDescription(String, TableName, SnapshotType, String)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
-   *   instance instead.
-   */
-  @Deprecated
-  public SnapshotDescription(String name, String table, SnapshotType type, String owner) {
-    this(name, TableName.valueOf(table), type, owner);
-  }
-
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner) {
     this(name, table, type, owner, -1, -1, null);
-  }
-
-  /**
-   * @see #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use the version with the TableName
-   *   instance instead.
-   */
-  @Deprecated
-  public SnapshotDescription(String name, String table, SnapshotType type, String owner,
-      long creationTime, int version) {
-    this(name, TableName.valueOf(table), type, owner, creationTime, version, null);
   }
 
   /**
@@ -139,18 +94,6 @@ public class SnapshotDescription {
 
   public String getName() {
     return this.name;
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getTableName()} or
-   *   {@link #getTableNameAsString()} instead.
-   * @see #getTableName()
-   * @see #getTableNameAsString()
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-16892">HBASE-16892</a>
-   */
-  @Deprecated
-  public String getTable() {
-    return getTableNameAsString();
   }
 
   public String getTableNameAsString() {
