@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.nio;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.io.netty.util.AbstractReferenceCounted;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
 
@@ -49,6 +48,10 @@ public class RefCnt extends AbstractReferenceCounted {
 
   public RefCnt(Recycler recycler) {
     this.recycler = recycler;
+  }
+
+  public Recycler getRecycler() {
+    return this.recycler;
   }
 
   @Override

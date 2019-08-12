@@ -24,7 +24,10 @@ import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -52,6 +55,23 @@ public class MultiByteBuff extends ByteBuff {
   private int limitedItemIndex;
   private int markedItemIndex = -1;
   private final int[] itemBeginPos;
+
+  private Iterator<ByteBuffer> buffsIterator = new Iterator<ByteBuffer>() {
+    @Override
+    public boolean hasNext() {
+      return curItemIndex < limitedItemIndex ||
+          (curItemIndex == limitedItemIndex && items[curItemIndex].hasRemaining());
+    }
+
+    @Override
+    public ByteBuffer next() {
+      if (curItemIndex >= items.length) {
+        throw new NoSuchElementException("items overflow");
+      }
+      curItem = items[curItemIndex++];
+      return curItem;
+    }
+  };
 
   public MultiByteBuff(ByteBuffer... items) {
     this(NONE, items);
@@ -1064,23 +1084,44 @@ public class MultiByteBuff extends ByteBuff {
     return output;
   }
 
-  @Override
-  public int read(ReadableByteChannel channel) throws IOException {
+  private int internalRead(ReadableByteChannel channel, long offset,
+      ChannelReader reader) throws IOException {
     checkRefCount();
     int total = 0;
-    while (true) {
-      // Read max possible into the current BB
-      int len = channelRead(channel, this.curItem);
-      if (len > 0)
+    while (buffsIterator.hasNext()) {
+      ByteBuffer buffer = buffsIterator.next();
+      int len = read(channel, buffer, offset, reader);
+      if (len > 0) {
         total += len;
-      if (this.curItem.hasRemaining()) {
-        // We were not able to read enough to fill the current BB itself. Means there is no point in
-        // doing more reads from Channel. Only this much there for now.
+        offset += len;
+      }
+      if (buffer.hasRemaining()) {
         break;
-      } else {
-        if (this.curItemIndex >= this.limitedItemIndex) break;
-        this.curItemIndex++;
-        this.curItem = this.items[this.curItemIndex];
+      }
+    }
+    return total;
+  }
+
+  @Override
+  public int read(ReadableByteChannel channel) throws IOException {
+    return internalRead(channel, 0, CHANNEL_READER);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    return internalRead(channel, offset, FILE_READER);
+  }
+
+  @Override
+  public int write(FileChannel channel, long offset) throws IOException {
+    checkRefCount();
+    int total = 0;
+    while (buffsIterator.hasNext()) {
+      ByteBuffer buffer = buffsIterator.next();
+      while (buffer.hasRemaining()) {
+        int len = channel.write(curItem, offset);
+        total += len;
+        offset += len;
       }
     }
     return total;

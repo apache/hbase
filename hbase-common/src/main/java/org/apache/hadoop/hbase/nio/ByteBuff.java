@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.nio;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 
@@ -76,6 +77,23 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   @Override
   public boolean release() {
     return refCnt.release();
+  }
+
+  public RefCnt getRefCnt() {
+    return this.refCnt;
+  }
+
+  /**
+   * BucketEntry use this to share refCnt with ByteBuff, so make the method public here,
+   * the upstream should not use this public method in other place, or the previous recycler
+   * will be lost.
+   */
+  public void shareRefCnt(RefCnt refCnt, boolean replace) {
+    if (replace) {
+      this.refCnt = refCnt;
+    } else {
+      this.refCnt = new CompositeRefCnt(getRefCnt(), refCnt);
+    }
   }
 
   /******************************* Methods for ByteBuff **************************************/
@@ -450,10 +468,37 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract int read(ReadableByteChannel channel) throws IOException;
 
+  /**
+   * Reads bytes from FileChannel into this ByteBuff
+   */
+  public abstract int read(FileChannel channel, long offset) throws IOException;
+
+  /**
+   * Write this ByteBuff's data into target file
+   */
+  public abstract int write(FileChannel channel, long offset) throws IOException;
+
+  /**
+   * function interface for Channel read
+   */
+  @FunctionalInterface
+  interface ChannelReader {
+    int read(ReadableByteChannel channel, ByteBuffer buf, long offset) throws IOException;
+  }
+
+  static final ChannelReader CHANNEL_READER = (channel, buf, offset) -> {
+    return channel.read(buf);
+  };
+
+  static final ChannelReader FILE_READER = (channel, buf, offset) -> {
+    return ((FileChannel)channel).read(buf, offset);
+  };
+
   // static helper methods
-  public static int channelRead(ReadableByteChannel channel, ByteBuffer buf) throws IOException {
+  public static int read(ReadableByteChannel channel, ByteBuffer buf, long offset,
+      ChannelReader reader) throws IOException {
     if (buf.remaining() <= NIO_BUFFER_LIMIT) {
-      return channel.read(buf);
+      return reader.read(channel, buf, offset);
     }
     int originalLimit = buf.limit();
     int initialRemaining = buf.remaining();
@@ -463,7 +508,8 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
       try {
         int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
         buf.limit(buf.position() + ioSize);
-        ret = channel.read(buf);
+        offset += ret;
+        ret = reader.read(channel, buf, offset);
         if (ret < ioSize) {
           break;
         }
@@ -540,15 +586,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   }
 
   /********************************* ByteBuff wrapper methods ***********************************/
-
-  /**
-   * In theory, the upstream should never construct an ByteBuff by passing an given refCnt, so
-   * please don't use this public method in other place. Make the method public here because the
-   * BucketEntry#wrapAsCacheable in hbase-server module will use its own refCnt and ByteBuffers from
-   * IOEngine to composite an HFileBlock's ByteBuff, we didn't find a better way so keep the public
-   * way here.
-   */
-  public static ByteBuff wrap(ByteBuffer[] buffers, RefCnt refCnt) {
+  private static ByteBuff wrap(ByteBuffer[] buffers, RefCnt refCnt) {
     if (buffers == null || buffers.length == 0) {
       throw new IllegalArgumentException("buffers shouldn't be null or empty");
     }

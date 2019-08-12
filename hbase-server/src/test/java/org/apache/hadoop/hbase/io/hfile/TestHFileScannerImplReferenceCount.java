@@ -29,6 +29,8 @@ import static org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.MIN_INDEX_NUM_ENT
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl.HFileScannerImpl;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
+import org.apache.hadoop.hbase.nio.CompositeRefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,9 +61,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@RunWith(Parameterized.class)
 @Category({ IOTests.class, SmallTests.class })
 public class TestHFileScannerImplReferenceCount {
 
@@ -70,6 +78,15 @@ public class TestHFileScannerImplReferenceCount {
 
   @Rule
   public TestName CASE = new TestName();
+
+  @Parameters(name = "{index}: ioengine={0}")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[] { "file" }, new Object[] { "offheap" },
+      new Object[] { "mmap" }, new Object[] { "pmem" });
+  }
+
+  @Parameter
+  public String ioengine;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
@@ -113,12 +130,16 @@ public class TestHFileScannerImplReferenceCount {
 
   @Before
   public void setUp() throws IOException {
+    String caseName = CASE.getMethodName().replaceAll("[^a-zA-Z0-9]", "_");
+    this.workDir = UTIL.getDataTestDir(caseName);
+    if (!"offheap".equals(ioengine)) {
+      ioengine = ioengine + ":" + workDir.toString() + "/cachedata";
+    }
+    UTIL.getConfiguration().set(BUCKET_CACHE_IOENGINE_KEY, ioengine);
     this.firstCell = null;
     this.secondCell = null;
     this.allocator = ByteBuffAllocator.create(UTIL.getConfiguration(), true);
     this.conf = new Configuration(UTIL.getConfiguration());
-    String caseName = CASE.getMethodName();
-    this.workDir = UTIL.getDataTestDir(caseName);
     this.fs = this.workDir.getFileSystem(conf);
     this.hfilePath = new Path(this.workDir, caseName + System.currentTimeMillis());
     LOG.info("Start to write {} cells into hfile: {}, case:{}", CELL_COUNT, hfilePath, caseName);
@@ -202,34 +223,34 @@ public class TestHFileScannerImplReferenceCount {
 
     scanner.seekTo(firstCell);
     curBlock = scanner.curBlock;
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(curBlock, 2);
 
     // Seek to the block again, the curBlock won't change and won't read from BlockCache. so
     // refCnt should be unchanged.
     scanner.seekTo(firstCell);
     Assert.assertTrue(curBlock == scanner.curBlock);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(curBlock, 2);
     prevBlock = curBlock;
 
     scanner.seekTo(secondCell);
     curBlock = scanner.curBlock;
-    Assert.assertEquals(prevBlock.refCnt(), 2);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 2);
+    this.assertRefCnt(curBlock, 2);
 
     // After shipped, the prevBlock will be release, but curBlock is still referenced by the
     // curBlock.
     scanner.shipped();
-    Assert.assertEquals(prevBlock.refCnt(), 1);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 1);
+    this.assertRefCnt(curBlock, 2);
 
     // Try to ship again, though with nothing to client.
     scanner.shipped();
-    Assert.assertEquals(prevBlock.refCnt(), 1);
-    Assert.assertEquals(curBlock.refCnt(), 2);
+    this.assertRefCnt(prevBlock, 1);
+    this.assertRefCnt(curBlock, 2);
 
     // The curBlock will also be released.
     scanner.close();
-    Assert.assertEquals(curBlock.refCnt(), 1);
+    this.assertRefCnt(curBlock, 1);
 
     // Finish the block & block2 RPC path
     Assert.assertTrue(block1.release());
@@ -287,7 +308,7 @@ public class TestHFileScannerImplReferenceCount {
     curBlock = scanner.curBlock;
     Assert.assertFalse(curBlock == block2);
     Assert.assertEquals(1, block2.refCnt());
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     prevBlock = scanner.curBlock;
 
     // Release the block1, no other reference.
@@ -305,22 +326,22 @@ public class TestHFileScannerImplReferenceCount {
     // the curBlock is read from IOEngine, so a different block.
     Assert.assertFalse(curBlock == block1);
     // Two reference for curBlock: 1. scanner; 2. blockCache.
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     // Reference count of prevBlock must be unchanged because we haven't shipped.
-    Assert.assertEquals(2, prevBlock.refCnt());
+    this.assertRefCnt(prevBlock, 2);
 
     // Do the shipped
     scanner.shipped();
     Assert.assertEquals(scanner.prevBlocks.size(), 0);
     Assert.assertNotNull(scanner.curBlock);
-    Assert.assertEquals(2, curBlock.refCnt());
-    Assert.assertEquals(1, prevBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
+    this.assertRefCnt(prevBlock, 1);
 
     // Do the close
     scanner.close();
     Assert.assertNull(scanner.curBlock);
-    Assert.assertEquals(1, curBlock.refCnt());
-    Assert.assertEquals(1, prevBlock.refCnt());
+    this.assertRefCnt(curBlock, 1);
+    this.assertRefCnt(prevBlock, 1);
 
     Assert.assertTrue(defaultBC.evictBlocksByHfileName(hfilePath.getName()) >= 2);
     Assert.assertEquals(0, curBlock.refCnt());
@@ -340,16 +361,27 @@ public class TestHFileScannerImplReferenceCount {
     Assert.assertTrue(scanner.seekTo());
     curBlock = scanner.curBlock;
     Assert.assertFalse(curBlock == block1);
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
     // Return false because firstCell <= c[0]
     Assert.assertFalse(scanner.seekBefore(firstCell));
     // The block1 shouldn't be released because we still don't do the shipped or close.
-    Assert.assertEquals(2, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 2);
 
     scanner.close();
-    Assert.assertEquals(1, curBlock.refCnt());
+    this.assertRefCnt(curBlock, 1);
     Assert.assertTrue(defaultBC.evictBlocksByHfileName(hfilePath.getName()) >= 1);
     Assert.assertEquals(0, curBlock.refCnt());
+  }
+
+  private void assertRefCnt(HFileBlock block, int value) {
+    if (ioengine.startsWith("offheap") || ioengine.startsWith("pmem")) {
+      Assert.assertEquals(value, block.refCnt());
+    } else {
+      Assert.assertEquals(value - 1, block.refCnt());
+      Assert.assertTrue(block.getRefCnt() instanceof CompositeRefCnt);
+      Assert.assertEquals(value, ((CompositeRefCnt)block.getRefCnt())
+        .getInnerRefCnt().get().refCnt());
+    }
   }
 
   @Test

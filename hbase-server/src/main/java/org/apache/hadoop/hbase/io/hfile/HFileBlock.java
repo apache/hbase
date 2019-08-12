@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -416,6 +417,11 @@ public class HFileBlock implements Cacheable {
   @Override
   public BlockType getBlockType() {
     return blockType;
+  }
+
+  @VisibleForTesting
+  public RefCnt getRefCnt() {
+    return buf.getRefCnt();
   }
 
   @Override
