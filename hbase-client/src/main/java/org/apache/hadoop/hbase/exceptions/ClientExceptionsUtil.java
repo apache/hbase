@@ -32,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
@@ -58,23 +59,18 @@ public final class ClientExceptionsUtil {
     if (cur == null) {
       return true;
     }
-    return !regionDefinitelyOnTheRegionServerException(cur);
+    return !isSpecialException(cur) || (cur instanceof RegionMovedException)
+        || cur instanceof NotServingRegionException;
   }
 
-  private static boolean regionDefinitelyOnTheRegionServerException(Throwable t) {
-    return (t instanceof RegionTooBusyException || t instanceof RpcThrottlingException
-        || t instanceof RetryImmediatelyException || t instanceof CallQueueTooBigException
-        || t instanceof CallDroppedException || t instanceof NotServingRegionException
-        || t instanceof RequestTooBigException);
+  public static boolean isSpecialException(Throwable cur) {
+    return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
+        || cur instanceof RegionTooBusyException || cur instanceof RpcThrottlingException
+        || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
+        || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
+        || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
   }
 
-  /**
-   * This function is the alias of regionDefinitelyOnTheRegionServerException,
-   * whose name is confusing in the function findException().
-   */
-  private static boolean matchExceptionWeCare(Throwable t) {
-    return regionDefinitelyOnTheRegionServerException(t);
-  }
 
   /**
    * Look for an exception we know in the remote exception:
@@ -91,7 +87,7 @@ public final class ClientExceptionsUtil {
     }
     Throwable cur = (Throwable) exception;
     while (cur != null) {
-      if (matchExceptionWeCare(cur)) {
+      if (isSpecialException(cur)) {
         return cur;
       }
       if (cur instanceof RemoteException) {
@@ -99,7 +95,7 @@ public final class ClientExceptionsUtil {
         cur = re.unwrapRemoteException();
 
         // unwrapRemoteException can return the exception given as a parameter when it cannot
-        // unwrap it. In this case, there is no need to look further
+        //  unwrap it. In this case, there is no need to look further
         // noinspection ObjectEquality
         if (cur == re) {
           return cur;
