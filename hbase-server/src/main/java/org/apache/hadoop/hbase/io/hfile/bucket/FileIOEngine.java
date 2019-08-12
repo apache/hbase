@@ -129,20 +129,25 @@ public class FileIOEngine implements IOEngine {
     long offset = be.offset();
     int length = be.getLength();
     Preconditions.checkArgument(length >= 0, "Length of read can not be less than 0.");
-    ByteBuffer dstBuffer = ByteBuffer.allocate(length);
+    ByteBuff dstBuff = be.allocator.allocate(length);
     if (length != 0) {
-      accessFile(readAccessor, dstBuffer, offset);
-      // The buffer created out of the fileChannel is formed by copying the data from the file
-      // Hence in this case there is no shared memory that we point to. Even if the BucketCache
-      // evicts this buffer from the file the data is already copied and there is no need to
-      // ensure that the results are not corrupted before consuming them.
-      if (dstBuffer.limit() != length) {
-        throw new IllegalArgumentIOException(
-            "Only " + dstBuffer.limit() + " bytes read, " + length + " expected");
+      try {
+        accessFile(readAccessor, dstBuff, offset);
+        // The buffer created out of the fileChannel is formed by copying the data from the file
+        // Hence in this case there is no shared memory that we point to. Even if the BucketCache
+        // evicts this buffer from the file the data is already copied and there is no need to
+        // ensure that the results are not corrupted before consuming them.
+        if (dstBuff.limit() != length) {
+          throw new IllegalArgumentIOException(
+              "Only " + dstBuff.limit() + " bytes read, " + length + " expected");
+        }
+      } catch (IOException ioe) {
+        dstBuff.release();
+        throw ioe;
       }
     }
-    dstBuffer.rewind();
-    return be.wrapAsCacheable(new ByteBuffer[] { dstBuffer });
+    dstBuff.rewind();
+    return be.wrapAsCacheable(dstBuff);
   }
 
   @VisibleForTesting
@@ -164,10 +169,7 @@ public class FileIOEngine implements IOEngine {
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
-    if (!srcBuffer.hasRemaining()) {
-      return;
-    }
-    accessFile(writeAccessor, srcBuffer, offset);
+    write(ByteBuff.wrap(srcBuffer), offset);
   }
 
   /**
@@ -208,28 +210,30 @@ public class FileIOEngine implements IOEngine {
   }
 
   @Override
-  public void write(ByteBuff srcBuffer, long offset) throws IOException {
-    ByteBuffer dup = srcBuffer.asSubByteBuffer(srcBuffer.remaining()).duplicate();
-    write(dup, offset);
+  public void write(ByteBuff srcBuff, long offset) throws IOException {
+    if (!srcBuff.hasRemaining()) {
+      return;
+    }
+    accessFile(writeAccessor, srcBuff, offset);
   }
 
-  private void accessFile(FileAccessor accessor, ByteBuffer buffer,
+  private void accessFile(FileAccessor accessor, ByteBuff buff,
       long globalOffset) throws IOException {
     int startFileNum = getFileNum(globalOffset);
-    int remainingAccessDataLen = buffer.remaining();
+    int remainingAccessDataLen = buff.remaining();
     int endFileNum = getFileNum(globalOffset + remainingAccessDataLen - 1);
     int accessFileNum = startFileNum;
     long accessOffset = getAbsoluteOffsetInFile(accessFileNum, globalOffset);
-    int bufLimit = buffer.limit();
+    int bufLimit = buff.limit();
     while (true) {
       FileChannel fileChannel = fileChannels[accessFileNum];
       int accessLen = 0;
       if (endFileNum > accessFileNum) {
         // short the limit;
-        buffer.limit((int) (buffer.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
+        buff.limit((int) (buff.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
       }
       try {
-        accessLen = accessor.access(fileChannel, buffer, accessOffset);
+        accessLen = accessor.access(fileChannel, buff, accessOffset);
       } catch (ClosedByInterruptException e) {
         throw e;
       } catch (ClosedChannelException e) {
@@ -237,7 +241,7 @@ public class FileIOEngine implements IOEngine {
         continue;
       }
       // recover the limit
-      buffer.limit(bufLimit);
+      buff.limit(bufLimit);
       if (accessLen < remainingAccessDataLen) {
         remainingAccessDataLen -= accessLen;
         accessFileNum++;
@@ -246,7 +250,7 @@ public class FileIOEngine implements IOEngine {
         break;
       }
       if (accessFileNum >= fileChannels.length) {
-        throw new IOException("Required data len " + StringUtils.byteDesc(buffer.remaining())
+        throw new IOException("Required data len " + StringUtils.byteDesc(buff.remaining())
             + " exceed the engine's capacity " + StringUtils.byteDesc(capacity) + " where offset="
             + globalOffset);
       }
@@ -304,23 +308,23 @@ public class FileIOEngine implements IOEngine {
   }
 
   private interface FileAccessor {
-    int access(FileChannel fileChannel, ByteBuffer byteBuffer, long accessOffset)
+    int access(FileChannel fileChannel, ByteBuff buff, long accessOffset)
         throws IOException;
   }
 
   private static class FileReadAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuffer byteBuffer,
+    public int access(FileChannel fileChannel, ByteBuff buff,
         long accessOffset) throws IOException {
-      return fileChannel.read(byteBuffer, accessOffset);
+      return buff.read(fileChannel, accessOffset);
     }
   }
 
   private static class FileWriteAccessor implements FileAccessor {
     @Override
-    public int access(FileChannel fileChannel, ByteBuffer byteBuffer,
+    public int access(FileChannel fileChannel, ByteBuff buff,
         long accessOffset) throws IOException {
-      return fileChannel.write(byteBuffer, accessOffset);
+      return buff.write(fileChannel, accessOffset);
     }
   }
 }
