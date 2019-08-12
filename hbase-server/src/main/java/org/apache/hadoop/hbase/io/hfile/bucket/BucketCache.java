@@ -429,9 +429,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!cacheEnabled) {
       return;
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
-    }
+    LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
         new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory,
@@ -693,7 +691,7 @@ public class BucketCache implements BlockCache, HeapSize {
       // this set is small around O(Handler Count) unless something else is wrong
       Set<Integer> inUseBuckets = new HashSet<>();
       backingMap.forEach((k, be) -> {
-        if (be.isRpcRef()) {
+        if (ioEngine.usesSharedMemory() && be.isRpcRef()) {
           inUseBuckets.add(bucketAllocator.getBucketIndex(be.offset()));
         }
       });

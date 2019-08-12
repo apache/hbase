@@ -376,7 +376,7 @@ public class TestHFileScannerImplReferenceCount {
     if (ioengine.startsWith("offheap") || ioengine.startsWith("pmem")) {
       Assert.assertEquals(value, block.refCnt());
     } else {
-      // there is no RPC ref count if ioengine uses shared memory (See HBASE-22802)
+      // there is no RPC ref count if ioengine don't uses shared memory (See HBASE-22802)
       Assert.assertEquals(value - 1, block.refCnt());
     }
   }

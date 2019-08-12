@@ -461,35 +461,29 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract int write(FileChannel channel, long offset) throws IOException;
 
-  // static helper methods
-  public static int channelRead(ReadableByteChannel channel, ByteBuffer buf) throws IOException {
-    if (buf.remaining() <= NIO_BUFFER_LIMIT) {
-      return channel.read(buf);
-    }
-    int originalLimit = buf.limit();
-    int initialRemaining = buf.remaining();
-    int ret = 0;
-
-    while (buf.remaining() > 0) {
-      try {
-        int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
-        buf.limit(buf.position() + ioSize);
-        ret = channel.read(buf);
-        if (ret < ioSize) {
-          break;
-        }
-      } finally {
-        buf.limit(originalLimit);
-      }
-    }
-    int nBytes = initialRemaining - buf.remaining();
-    return (nBytes > 0) ? nBytes : ret;
+  /**
+   * function interface for Channel read
+   */
+  @FunctionalInterface
+  interface ChannelReader {
+    int read(ReadableByteChannel channel, ByteBuffer buf, long offset) throws IOException;
   }
 
-  public static int fileRead(FileChannel channel, ByteBuffer buf, long offset)
-      throws IOException {
+  static final ChannelReader CHANNEL_READER = (channel, buf, offset) -> {
+    return channel.read(buf);
+  };
+
+  static final ChannelReader FILE_READER = (channel, buf, offset) -> {
+    return ((FileChannel)channel).read(buf, offset);
+  };
+
+  // static helper methods
+  public static int read(ReadableByteChannel channel, ByteBuffer buf, long offset,
+      ChannelReader reader) throws IOException {
     if (buf.remaining() <= NIO_BUFFER_LIMIT) {
-      return channel.read(buf, offset);
+      int res = reader.read(channel, buf, offset);
+      buf.rewind();
+      return res;
     }
     int originalLimit = buf.limit();
     int initialRemaining = buf.remaining();
@@ -500,12 +494,13 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
         int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
         buf.limit(buf.position() + ioSize);
         offset += ret;
-        ret = channel.read(buf, offset);
+        ret = reader.read(channel, buf, offset);
         if (ret < ioSize) {
           break;
         }
       } finally {
         buf.limit(originalLimit);
+        buf.rewind();
       }
     }
     int nBytes = initialRemaining - buf.remaining();

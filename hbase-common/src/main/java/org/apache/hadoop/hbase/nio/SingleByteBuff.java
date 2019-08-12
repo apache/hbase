@@ -372,19 +372,25 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public int read(ReadableByteChannel channel) throws IOException {
     checkRefCount();
-    return channelRead(channel, buf);
+    return read(channel, buf, 0, CHANNEL_READER);
   }
 
   @Override
   public int read(FileChannel channel, long offset) throws IOException {
     checkRefCount();
-    return fileRead(channel, buf, offset);
+    return read(channel, buf, offset, FILE_READER);
   }
 
   @Override
   public int write(FileChannel channel, long offset) throws IOException {
     checkRefCount();
-    return channel.write(buf, offset);
+    int total = 0;
+    while(buf.hasRemaining()) {
+      int len = channel.write(buf, offset);
+      total += len;
+      offset += len;
+    }
+    return total;
   }
 
   @Override

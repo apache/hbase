@@ -1065,34 +1065,12 @@ public class MultiByteBuff extends ByteBuff {
     return output;
   }
 
-  @Override
-  public int read(ReadableByteChannel channel) throws IOException {
+  private int internalRead(ReadableByteChannel channel, long offset,
+      ChannelReader reader) throws IOException {
     checkRefCount();
     int total = 0;
     while (true) {
-      // Read max possible into the current BB
-      int len = channelRead(channel, this.curItem);
-      if (len > 0)
-        total += len;
-      if (this.curItem.hasRemaining()) {
-        // We were not able to read enough to fill the current BB itself. Means there is no point in
-        // doing more reads from Channel. Only this much there for now.
-        break;
-      } else {
-        if (this.curItemIndex >= this.limitedItemIndex) break;
-        this.curItemIndex++;
-        this.curItem = this.items[this.curItemIndex];
-      }
-    }
-    return total;
-  }
-
-  @Override
-  public int read(FileChannel channel, long offset) throws IOException {
-    checkRefCount();
-    int total = 0;
-    while (true) {
-      int len = fileRead(channel, this.curItem, offset);
+      int len = read(channel, this.curItem, offset, reader);
       if (len > 0) {
         total += len;
         offset += len;
@@ -1111,12 +1089,22 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
+  public int read(ReadableByteChannel channel) throws IOException {
+    return internalRead(channel, 0, CHANNEL_READER);
+  }
+
+  @Override
+  public int read(FileChannel channel, long offset) throws IOException {
+    return internalRead(channel, offset, FILE_READER);
+  }
+
+  @Override
   public int write(FileChannel channel, long offset) throws IOException {
     checkRefCount();
     int total = 0;
     while (true) {
-      int len = channel.write(curItem, offset);
-      if (len > 0) {
+      while (curItem.hasRemaining()) {
+        int len = channel.write(curItem, offset);
         total += len;
         offset += len;
       }
