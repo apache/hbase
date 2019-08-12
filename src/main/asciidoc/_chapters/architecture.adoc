@@ -1266,6 +1266,26 @@ It is possible to set _durability_ on each Mutation or on a Table basis. Options
 Do not confuse the _ASYNC_WAL_ option on a Mutation or Table with the _AsyncFSWAL_ writer; they are distinct
 options unfortunately closely named
 
+[[arch.custom.wal.dir]]
+==== Custom WAL Directory
+HBASE-17437 added support for specifying a WAL directory outside the HBase root directory or even in a different FileSystem since 1.3.3/2.0+. Some FileSystems (such as Amazon S3) don’t support append or consistent writes, in such scenario WAL directory needs to be configured in a different FileSystem to avoid loss of writes.
+
+Following configurations are added to accomplish this:
+
+. `hbase.wal.dir`
++
+This defines where the root WAL directory is located, could be on a different FileSystem than the root directory. WAL directory can not be set to a subdirectory of the root directory. The default value of this is the root directory if unset.
+
+. `hbase.rootdir.perms`
++
+Configures FileSystem permissions to set on the root directory. This is '700' by default.
+
+. `hbase.wal.dir.perms`
++
+Configures FileSystem permissions to set on the WAL directory FileSystem. This is '700' by default.
+
+NOTE: While migrating to custom WAL dir (outside the HBase root directory or a different FileSystem) existing WAL files must be copied manually to new WAL dir, otherwise it may lead to data loss/inconsistency as HMaster has no information about previous WAL directory.
+
 [[wal.disable]]
 ==== Disabling the WAL
 
@@ -2490,26 +2510,6 @@ This configuration is required in the cluster where replication for bulk loaded 
 For example: If source cluster FS client configurations are copied to the destination cluster under directory `/home/user/dc1/`, then `hbase.replication.cluster.id` should be configured as `dc1` and `hbase.replication.conf.dir` as `/home/user`.
 
 NOTE: `DefaultSourceFSConfigurationProvider` supports only `xml` type files. It loads source cluster FS client configuration only once, so if source cluster FS client configuration files are updated, every peer(s) cluster RS must be restarted to reload the configuration.
-
-[[arch.custom.wal.dir]]
-=== Custom WAL Directory
-HBASE-17437 added support for specifying a WAL directory outside the HBase root directory or even in a different FileSystem since 1.3.3/2.0+. Some FileSystems (such as Amazon S3) don’t support append or consistent writes, in such scenario WAL directory needs to be configured in a different FileSystem to avoid loss of writes.
-
-Following configurations are added to accomplish this:
-
-. `hbase.wal.dir`
-+
-This defines where the root WAL directory is located, could be on a different FileSystem than the root directory. WAL directory can not be set to a subdirectory of the root directory. The default value of this is the root directory if unset.
-
-. `hbase.rootdir.perms`
-+
-Configures FileSystem permissions to set on the root directory. This is '700' by default.
-
-. `hbase.wal.dir.perms`
-+
-Configures FileSystem permissions to set on the WAL directory FileSystem. This is '700' by default.
-
-NOTE: While migrating to custom WAL dir (outside the HBase root directory or a different FileSystem) existing WAL files must be copied manually to new WAL dir, otherwise it may lead to data loss/inconsistency as HMaster has no information about previous WAL directory.
 
 [[arch.hdfs]]
 == HDFS
