@@ -1298,7 +1298,7 @@
     <spy.version>2.11.6</spy.version>
     <bouncycastle.version>1.46</bouncycastle.version>
     <!-- Plugin Dependencies -->
-    <maven.assembly.version>2.4</maven.assembly.version>
+    <maven.assembly.version>2.5</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.4.1</jamon.plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
