@@ -3687,6 +3687,11 @@ public class HRegionServer extends HasThread implements
    * Force to terminate region server when abort timeout.
    */
   private static class SystemExitWhenAbortTimeout extends TimerTask {
+
+    public SystemExitWhenAbortTimeout() {
+
+    }
+
     @Override
     public void run() {
       LOG.warn("Aborting region server timed out, terminating forcibly" +
