@@ -4930,7 +4930,43 @@ public class TestFromClientSide {
       assertFalse(ok);
 
       ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.from(ts + 10000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.between(ts + 10000, ts + 20000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.until(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
               .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.from(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.between(ts, ts + 20000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.until(ts + 10000))
               .ifEquals(VALUE)
               .thenPut(put);
       assertTrue(ok);
