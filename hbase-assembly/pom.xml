@@ -76,7 +76,7 @@
           <finalName>hbase-${project.version}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
-          <tarLongFileMode>gnu</tarLongFileMode>
+          <tarLongFileMode>posix</tarLongFileMode>
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
             <descriptor>src/main/assembly/client.xml</descriptor>
