@@ -19,38 +19,30 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.ReentrantLock;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.util.CollectionUtils;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream
@@ -552,8 +544,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       prevCell = cell;
       topChanged = false;
       ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
-      qcode = optimize(qcode, cell);
-      switch(qcode) {
+      switch (qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
         case INCLUDE_AND_SEEK_NEXT_COL:
@@ -606,9 +597,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
             // another compareRow to say the current row is DONE
             matcher.row = null;
-            seekToNextRow(cell);
+            seekOrSkipToNextRow(cell);
           } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            seekAsDirection(matcher.getKeyForNextColumn(cell));
+            seekOrSkipToNextColumn(cell);
           } else {
             this.heap.next();
           }
@@ -648,7 +639,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // the heap.peek() will any way be in the next row. So the SQM.match(cell) need do
           // another compareRow to say the current row is DONE
           matcher.row = null;
-          seekToNextRow(cell);
+          seekOrSkipToNextRow(cell);
           NextState stateAfterSeekNextRow = needToReturn(outResult);
           if (stateAfterSeekNextRow != null) {
             return scannerContext.setScannerState(stateAfterSeekNextRow).hasMoreValues();
@@ -656,7 +647,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           break;
 
         case SEEK_NEXT_COL:
-          seekAsDirection(matcher.getKeyForNextColumn(cell));
+          seekOrSkipToNextColumn(cell);
           NextState stateAfterSeekNextColumn = needToReturn(outResult);
           if (stateAfterSeekNextColumn != null) {
             return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
@@ -713,93 +704,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return null;
   }
 
-  /**
-   * See if we should actually SEEK or rather just SKIP to the next Cell (see HBASE-13109).
-   * This method works together with ColumnTrackers and Filters. ColumnTrackers may issue SEEK
-   * hints, such as seek to next column, next row, or seek to an arbitrary seek key.
-   * This method intercepts these qcodes and decides whether a seek is the most efficient _actual_
-   * way to get us to the requested cell (SEEKs are more expensive than SKIP, SKIP, SKIP inside the
-   * current, loaded block).
-   * It does this by looking at the next indexed key of the current HFile. This key
-   * is then compared with the _SEEK_ key, where a SEEK key is an artificial 'last possible key
-   * on the row' (only in here, we avoid actually creating a SEEK key; in the compare we work with
-   * the current Cell but compare as though it were a seek key; see down in
-   * matcher.compareKeyForNextRow, etc). If the compare gets us onto the
-   * next block we *_SEEK, otherwise we just INCLUDE or SKIP, and let the ColumnTrackers or Filters
-   * go through the next Cell, and so on)
-   *
-   * <p>The ColumnTrackers and Filters must behave correctly in all cases, i.e. if they are past the
-   * Cells they care about they must issues a SKIP or SEEK.
-   *
-   * <p>Other notes:
-   * <ul>
-   * <li>Rows can straddle block boundaries</li>
-   * <li>Versions of columns can straddle block boundaries (i.e. column C1 at T1 might be in a
-   * different block than column C1 at T2)</li>
-   * <li>We want to SKIP and INCLUDE if the chance is high that we'll find the desired Cell after a
-   * few SKIPs...</li>
-   * <li>We want to INCLUDE_AND_SEEK and SEEK when the chance is high that we'll be able to seek
-   * past many Cells, especially if we know we need to go to the next block.</li>
-   * </ul>
-   * <p>A good proxy (best effort) to determine whether INCLUDE/SKIP is better than SEEK is whether
-   * we'll likely end up seeking to the next block (or past the next block) to get our next column.
-   * Example:
-   * <pre>
-   * |    BLOCK 1              |     BLOCK 2                   |
-   * |  r1/c1, r1/c2, r1/c3    |    r1/c4, r1/c5, r2/c1        |
-   *                                   ^         ^
-   *                                   |         |
-   *                           Next Index Key   SEEK_NEXT_ROW (before r2/c1)
-   *
-   *
-   * |    BLOCK 1                       |     BLOCK 2                      |
-   * |  r1/c1/t5, r1/c1/t4, r1/c1/t3    |    r1/c1/t2, r1/c1/T1, r1/c2/T3  |
-   *                                            ^              ^
-   *                                            |              |
-   *                                    Next Index Key        SEEK_NEXT_COL
-   * </pre>
-   * Now imagine we want columns c1 and c3 (see first diagram above), the 'Next Index Key' of r1/c4
-   * is > r1/c3 so we should seek to get to the c1 on the next row, r2. In second case, say we only
-   * want one version of c1, after we have it, a SEEK_COL will be issued to get to c2. Looking at
-   * the 'Next Index Key', it would land us in the next block, so we should SEEK. In other scenarios
-   * where the SEEK will not land us in the next block, it is very likely better to issues a series
-   * of SKIPs.
-   */
-  @VisibleForTesting
-  protected ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
-    switch(qcode) {
-    case INCLUDE_AND_SEEK_NEXT_COL:
-    case SEEK_NEXT_COL:
-    {
-      Cell nextIndexedKey = getNextIndexedKey();
-      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-          && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
-        return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
-      }
-      break;
-    }
-    case INCLUDE_AND_SEEK_NEXT_ROW:
-    case SEEK_NEXT_ROW:
-    {
-      // If it is a Get Scan, then we know that we are done with this row; there are no more
-      // rows beyond the current one: don't try to optimize. We are DONE. Return the *_NEXT_ROW
-      // qcode as is. When the caller gets these flags on a Get Scan, it knows it can shut down the
-      // Scan.
-      if (!this.scan.isGetScan()) {
-        Cell nextIndexedKey = getNextIndexedKey();
-        if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
-            && matcher.compareKeyForNextRow(nextIndexedKey, cell) > 0) {
-          return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
-        }
-      }
-      break;
-    }
-    default:
-      break;
-    }
-    return qcode;
-  }
-
   @Override
   public long getReadPoint() {
     return readPt;
@@ -836,7 +740,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // these scanners are properly closed() whether or not the scan is completed successfully
       // Eagerly creating scanners so that we have the ref counting ticking on the newly created
       // store files. In case of stream scanners this eager creation does not induce performance
-      // penalty because in scans (that uses stream scanners) the next() call is bound to happen.   
+      // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
       List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
         isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
       flushedstoreFileScanners.addAll(scanners);
@@ -870,6 +774,128 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.heap = null; // the re-seeks could be slow (access HDFS) free up memory ASAP
 
     // Let the next() call handle re-creating and seeking
+  }
+
+  private void seekOrSkipToNextRow(Cell cell) throws IOException {
+    // If it is a Get Scan, then we know that we are done with this row; there are no more
+    // rows beyond the current one: don't try to optimize.
+    if (!get) {
+      if (trySkipToNextRow(cell)) {
+        return;
+      }
+    }
+    seekToNextRow(cell);
+  }
+
+  private void seekOrSkipToNextColumn(Cell cell) throws IOException {
+    if (!trySkipToNextColumn(cell)) {
+      seekAsDirection(matcher.getKeyForNextColumn(cell));
+    }
+  }
+
+  /**
+   * See if we should actually SEEK or rather just SKIP to the next Cell (see HBASE-13109).
+   * ScanQueryMatcher may issue SEEK hints, such as seek to next column, next row, or seek to an
+   * arbitrary seek key. This method decides whether a seek is the most efficient _actual_ way to
+   * get us to the requested cell (SEEKs are more expensive than SKIP, SKIP, SKIP inside the
+   * current, loaded block). It does this by looking at the next indexed key of the current HFile.
+   * This key is then compared with the _SEEK_ key, where a SEEK key is an artificial 'last possible
+   * key on the row' (only in here, we avoid actually creating a SEEK key; in the compare we work
+   * with the current Cell but compare as though it were a seek key; see down in
+   * matcher.compareKeyForNextRow, etc). If the compare gets us onto the next block we *_SEEK,
+   * otherwise we just SKIP to the next requested cell.
+   * <p>
+   * Other notes:
+   * <ul>
+   * <li>Rows can straddle block boundaries</li>
+   * <li>Versions of columns can straddle block boundaries (i.e. column C1 at T1 might be in a
+   * different block than column C1 at T2)</li>
+   * <li>We want to SKIP if the chance is high that we'll find the desired Cell after a few
+   * SKIPs...</li>
+   * <li>We want to SEEK when the chance is high that we'll be able to seek past many Cells,
+   * especially if we know we need to go to the next block.</li>
+   * </ul>
+   * <p>
+   * A good proxy (best effort) to determine whether SKIP is better than SEEK is whether we'll
+   * likely end up seeking to the next block (or past the next block) to get our next column.
+   * Example:
+   *
+   * <pre>
+   * |    BLOCK 1              |     BLOCK 2                   |
+   * |  r1/c1, r1/c2, r1/c3    |    r1/c4, r1/c5, r2/c1        |
+   *                                   ^         ^
+   *                                   |         |
+   *                           Next Index Key   SEEK_NEXT_ROW (before r2/c1)
+   *
+   *
+   * |    BLOCK 1                       |     BLOCK 2                      |
+   * |  r1/c1/t5, r1/c1/t4, r1/c1/t3    |    r1/c1/t2, r1/c1/T1, r1/c2/T3  |
+   *                                            ^              ^
+   *                                            |              |
+   *                                    Next Index Key        SEEK_NEXT_COL
+   * </pre>
+   *
+   * Now imagine we want columns c1 and c3 (see first diagram above), the 'Next Index Key' of r1/c4
+   * is > r1/c3 so we should seek to get to the c1 on the next row, r2. In second case, say we only
+   * want one version of c1, after we have it, a SEEK_COL will be issued to get to c2. Looking at
+   * the 'Next Index Key', it would land us in the next block, so we should SEEK. In other scenarios
+   * where the SEEK will not land us in the next block, it is very likely better to issues a series
+   * of SKIPs.
+   * @param cell current cell
+   * @return true means skip to next row, false means not
+   */
+  @VisibleForTesting
+  protected boolean trySkipToNextRow(Cell cell) throws IOException {
+    Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
+    do {
+      Cell nextIndexedKey = getNextIndexedKey();
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
+          && (nextIndexedKey == previousIndexedKey
+              || matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0)) {
+        this.heap.next();
+        ++kvsScanned;
+        previousIndexedKey = nextIndexedKey;
+      } else {
+        return false;
+      }
+    } while ((nextCell = this.heap.peek()) != null && CellUtil.matchingRow(cell, nextCell));
+    return true;
+  }
+
+  /**
+   * See {@link org.apache.hadoop.hbase.regionserver.StoreScanner#trySkipToNextRow(Cell)}
+   * @param cell current cell
+   * @return true means skip to next column, false means not
+   */
+  @VisibleForTesting
+  protected boolean trySkipToNextColumn(Cell cell) throws IOException {
+    Cell nextCell = null;
+    // used to guard against a changed next indexed key by doing a identity comparison
+    // when the identity changes we need to compare the bytes again
+    Cell previousIndexedKey = null;
+    do {
+      Cell nextIndexedKey = getNextIndexedKey();
+      if (nextIndexedKey != null && nextIndexedKey != KeyValueScanner.NO_NEXT_INDEXED_KEY
+          && (nextIndexedKey == previousIndexedKey
+              || matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0)) {
+        this.heap.next();
+        ++kvsScanned;
+        previousIndexedKey = nextIndexedKey;
+      } else {
+        return false;
+      }
+    } while ((nextCell = this.heap.peek()) != null && CellUtil.matchingRow(cell, nextCell)
+        && CellUtil.matchingColumn(cell, nextCell));
+    // We need this check because it may happen that the new scanner that we get
+    // during heap.next() is requiring reseek due of fake KV previously generated for
+    // ROWCOL bloom filter optimization. See HBASE-19863 for more details
+    if (nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -1087,4 +1113,3 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return this.heap.getNextIndexedKey();
   }
 }
-
