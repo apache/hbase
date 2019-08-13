@@ -1655,7 +1655,7 @@ public class MetaTableAccessor {
    * Construct PUT for given state
    * @param state new state
    */
-  private static Put makePutFromTableState(TableState state, long ts) {
+  public static Put makePutFromTableState(TableState state, long ts) {
     Put put = new Put(state.getTableName().getName(), ts);
     put.addColumn(getTableFamily(), getTableStateColumn(), state.convert().toByteArray());
     return put;
