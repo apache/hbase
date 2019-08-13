@@ -1476,13 +1476,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this +
         (abort ? " due to abort" : ""));
-
+    status.enableStatusJournal(false);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
         return doClose(abort, status);
       }
     } finally {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region close journal:\n" + status.prettyPrintJournal());
+      }
       status.cleanup();
     }
   }
