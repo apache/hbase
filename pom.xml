@@ -1307,7 +1307,7 @@
     <kerby.version>1.0.1</kerby.version>
     <!-- Plugin Dependencies -->
     <error-prone.version>2.1.1</error-prone.version>
-    <maven.assembly.version>2.4</maven.assembly.version>
+    <maven.assembly.version>2.5</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <maven.compiler.version>3.6.1</maven.compiler.version>
     <jamon.plugin.version>2.4.1</jamon.plugin.version>
