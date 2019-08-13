@@ -4835,56 +4835,93 @@ public class TestFromClientSide {
 
   @Test
   public void testCheckAndMutateWithTimeRange() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
-    final long ts = System.currentTimeMillis() / 2;
-    Put put = new Put(ROW);
-    put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
+    try (Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY)) {
+      final long ts = System.currentTimeMillis() / 2;
+      Put put = new Put(ROW);
+      put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
-    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .ifNotExists()
-      .thenPut(put);
-    assertTrue(ok);
+      boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .ifNotExists()
+              .thenPut(put);
+      assertTrue(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenPut(put);
-    assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenPut(put);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.from(ts + 10000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
 
-    RowMutations rm = new RowMutations(ROW)
-      .add((Mutation) put);
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenMutate(rm);
-    assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.between(ts + 10000, ts + 20000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenMutate(rm);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.until(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertFalse(ok);
 
-    Delete delete = new Delete(ROW)
-      .addColumn(FAMILY, QUALIFIER);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts + 10000))
-      .ifEquals(VALUE)
-      .thenDelete(delete);
-    assertFalse(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.from(ts))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
 
-    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
-      .timeRange(TimeRange.at(ts))
-      .ifEquals(VALUE)
-      .thenDelete(delete);
-    assertTrue(ok);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.between(ts, ts + 20000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.until(ts + 10000))
+              .ifEquals(VALUE)
+              .thenPut(put);
+      assertTrue(ok);
+
+      RowMutations rm = new RowMutations(ROW)
+              .add((Mutation) put);
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenMutate(rm);
+      assertFalse(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenMutate(rm);
+      assertTrue(ok);
+
+      Delete delete = new Delete(ROW)
+              .addColumn(FAMILY, QUALIFIER);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts + 10000))
+              .ifEquals(VALUE)
+              .thenDelete(delete);
+      assertFalse(ok);
+
+      ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+              .timeRange(TimeRange.at(ts))
+              .ifEquals(VALUE)
+              .thenDelete(delete);
+      assertTrue(ok);
+    }
   }
 
   @Test
