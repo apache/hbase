@@ -30,6 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -69,6 +70,22 @@ public class MultiRowRangeFilter extends FilterBase {
     // memory to avoid touching the serialization logic.
     this.rangeList = Collections.unmodifiableList(sortAndMerge(list));
     this.ranges = new RangeIteration(rangeList);
+  }
+
+  /**
+   * @param rowKeyPrefixes the array of byte array
+   */
+  public MultiRowRangeFilter(byte[][] rowKeyPrefixes) {
+    this(createRangeListFromRowKeyPrefixes(rowKeyPrefixes));
+  }
+
+  private static List<RowRange> createRangeListFromRowKeyPrefixes(byte[][] rowKeyPrefixes) {
+    List<RowRange> list = new ArrayList<>();
+    for (byte[] rowKeyPrefix: rowKeyPrefixes) {
+      byte[] stopRow = ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix);
+      list.add(new RowRange(rowKeyPrefix, true, stopRow, false));
+    }
+    return list;
   }
 
   public List<RowRange> getRowRanges() {
