@@ -127,6 +127,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private final AtomicInteger numRetries = new AtomicInteger(0);
   private String bulkToken;
 
+  private List<String> clusterIds = new ArrayList<>();
+
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
     super(new Configuration(conf));
@@ -373,7 +375,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
           .collect(Collectors.toList());
       CompletableFuture<Collection<LoadQueueItem>> future = new CompletableFuture<>();
       FutureUtils.addListener(conn.bulkLoad(tableName, familyPaths, first, assignSeqIds,
-        fsDelegationToken.getUserToken(), bulkToken, copyFiles), (loaded, error) -> {
+        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds), (loaded, error) -> {
           if (error != null) {
             LOG.error("Encountered unrecoverable error from region server", error);
             if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false) &&
@@ -998,6 +1000,10 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   public void setBulkToken(String bulkToken) {
     this.bulkToken = bulkToken;
+  }
+
+  public void setClusterIds(List<String> clusterIds) {
+    this.clusterIds = clusterIds;
   }
 
   private void usage() {

@@ -378,6 +378,7 @@ message BulkLoadHFileRequest {
   optional DelegationToken fs_token = 4;
   optional string bulk_token = 5;
   optional bool copy_file = 6 [default = false];
+  repeated string cluster_ids = 7;
 
   message FamilyPath {
     required bytes family = 1;
