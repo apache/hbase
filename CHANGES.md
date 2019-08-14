@@ -155,6 +155,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-22848](https://issues.apache.org/jira/browse/HBASE-22848) | Set version as 2.1.6 in branch-2.1 in prep for first RC of 2.1.6 |  Major | build |
+| [HBASE-22799](https://issues.apache.org/jira/browse/HBASE-22799) | Generate CHANGES.md and RELEASENOTES.md for 2.1.6 |  Major | documentation |
 | [HBASE-22845](https://issues.apache.org/jira/browse/HBASE-22845) | Revert MetaTableAccessor#makePutFromTableState access to public |  Blocker | . |
 | [HBASE-22777](https://issues.apache.org/jira/browse/HBASE-22777) | Add a multi-region merge (for fixing overlaps, etc.) |  Major | hbck2, proc-v2 |
 | [HBASE-22803](https://issues.apache.org/jira/browse/HBASE-22803) | Modify config value range to enable turning off of the hbck chore |  Major | . |
