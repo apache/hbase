@@ -62,7 +62,6 @@ public class RegionGroupingProvider implements WALProvider {
    * Map identifiers to a group number.
    */
   public static interface RegionGroupingStrategy {
-    String GROUP_NAME_DELIMITER = ".";
 
     /**
      * Given an identifier and a namespace, pick a group.
@@ -252,7 +251,7 @@ public class RegionGroupingProvider implements WALProvider {
     public void init(Configuration config, String providerId) {}
     @Override
     public String group(final byte[] identifier, final byte[] namespace) {
-      return Bytes.toString(identifier);
+      return "identity-" + Bytes.toString(identifier);
     }
   }
 
