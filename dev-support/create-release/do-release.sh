@@ -19,7 +19,6 @@
 
 # Called by do-release-docker.sh. Can be run standalone but needs some love
 # for it to work smooth.
-set -x
 SELF=$(cd $(dirname $0) && pwd)
 . "$SELF/release-util.sh"
 

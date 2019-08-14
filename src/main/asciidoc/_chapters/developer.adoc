@@ -548,40 +548,33 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 === Making a Release Candidate
 Only committers can make releases of hbase artifacts.
 
-Making a Release Candidate (RC) is comprised of many involved steps.
-The steps are described in detail below in the section
-<<rc_procedure>> but a script that automates the process is
-described first in <<do-release-docker.sh>>.
-
 .Before You Begin
 Check to be sure recent builds have been passing for the branch from where you
 are going to take your release. You should also have tried recent branch tips
 out on a cluster under load, perhaps by running the `hbase-it` integration test
 suite for a few hours to 'burn in' the near-candidate bits.
 
-Make sure your environment is properly set up.
-
-You will need to have a published signing key added to the hbase
+You will need a published signing key added to the hbase
 link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
-Browse the Hadoop link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
-wiki page on how to release. It is a model for the instructions below. It often has more
-detail on particular steps. For example, _Step 1._ describes how to add
-your code signing key to the
-link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file up in Apache
-(as well as outlinks on what a signing key is).
+(For how to add a KEY, see _Step 1._ in link:https://cwiki.apache.org/confluence/display/HADOOP2/HowToRelease[How To Release],
+the Hadoop version of this document).
 
 Next make sure JIRA is properly primed, that all issues targeted against
 the prospective release have been resolved and are present in git on the
-particular branch. If any outstanding, move them out of the release by
+particular branch. If any outstanding issues, move them out of the release by
 adjusting the fix version to remove this pending release as a target.
 Any JIRA with a fix version that matches the release candidate
 target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
-that ship with the release so make sure JIRA is correct before you begin.
-(_Step 2._ in link:http://wiki.apache.org/hadoop/HowToRelease[How To Release]
-talks of how it is done in Hadoop).
+files that ship with the release so make sure JIRA is correct before you begin.
+
+After doing the above, you can move to the manufacture of an RC.
+Building an RC is involved. We've tried to script it. In the next section
+we describe the script. It is followed by a description of the steps
+involved which the script automates.
 
 [[do-release-docker.sh]]
 ==== Release Candidate Generating Script
+
 The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
 Generating script is maintained in the master branch but can generate RCs
 for any 2.x+ branch (The script does not work against branch-1). Check out
@@ -612,6 +605,7 @@ The script will:
  * Pushes to repository.apache.org staging. 
  * Creates vote email template.
 
+The RC building script is _dev-support/create-release/do-release-docker.sh_.
 Pass _-h_ to _dev-support/create-release/do-release-docker.sh_ to
 see available options:
 

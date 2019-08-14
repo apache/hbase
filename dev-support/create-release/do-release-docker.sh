@@ -46,7 +46,6 @@
 #
 # 1. https://github.com/apache/spark/tree/master/dev/create-release
 #
-set -x
 set -e
 SELF=$(cd $(dirname $0) && pwd)
 . "$SELF/release-util.sh"

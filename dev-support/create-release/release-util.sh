@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set -x
 DRY_RUN=${DRY_RUN:-0}
 GPG="gpg --pinentry-mode loopback --no-tty --batch"
 ASF_REPO="https://gitbox.apache.org/repos/asf/hbase.git"
