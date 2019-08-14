@@ -115,8 +115,8 @@ public class SecureBulkLoadClient {
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum,
       final Token<?> userToken, final String bulkToken) throws IOException {
-    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken, bulkToken,
-        false);
+    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken,
+      bulkToken, false, null);
   }
 
   /**
@@ -133,12 +133,22 @@ public class SecureBulkLoadClient {
    * @throws IOException
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
+    final List<Pair<byte[], String>> familyPaths,
+    final byte[] regionName, boolean assignSeqNum,
+    final Token<?> userToken, final String bulkToken,
+    boolean copyFiles) throws IOException {
+    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken,
+      bulkToken, false, null);
+  }
+
+  public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum,
-      final Token<?> userToken, final String bulkToken, boolean copyFiles) throws IOException {
+      final Token<?> userToken, final String bulkToken,
+      boolean copyFiles, String clusterId) throws IOException {
     BulkLoadHFileRequest request =
         RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum,
-          userToken, bulkToken, copyFiles);
+          userToken, bulkToken, copyFiles, clusterId);
 
     try {
       BulkLoadHFileResponse response = client.bulkLoadHFile(null, request);

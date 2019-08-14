@@ -87,17 +87,19 @@ public class HFileReplicator {
   private ThreadPoolExecutor exec;
   private int maxCopyThreads;
   private int copiesPerThread;
+  private String sourceClusterId;
 
   public HFileReplicator(Configuration sourceClusterConf,
       String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath,
       Map<String, List<Pair<byte[], List<String>>>> tableQueueMap, Configuration conf,
-      Connection connection) throws IOException {
+      Connection connection, String sourceClusterId) throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
     this.bulkLoadHFileMap = tableQueueMap;
     this.conf = conf;
     this.connection = connection;
+    this.sourceClusterId = sourceClusterId;
 
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
@@ -131,6 +133,7 @@ public class HFileReplicator {
       LoadIncrementalHFiles loadHFiles = null;
       try {
         loadHFiles = new LoadIncrementalHFiles(conf);
+        loadHFiles.setClusterId(sourceClusterId);
       } catch (Exception e) {
         LOG.error("Failed to initialize LoadIncrementalHFiles for replicating bulk loaded"
             + " data.", e);
