@@ -96,7 +96,6 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testRowKeyPrefixWithLastIncrementablePrefix() throws IOException {
-    // prefix1
     byte[] prefix = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFE};
     byte[][] rowKeyPrefixes = new byte[1][];
     rowKeyPrefixes[0] = prefix;
@@ -110,7 +109,6 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testRowKeyPrefixWithoutLastIncrementablePrefix() throws IOException {
-    // prefix1
     byte[] prefix = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF};
     byte[][] rowKeyPrefixes = new byte[1][];
     rowKeyPrefixes[0] = prefix;
