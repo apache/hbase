@@ -7180,9 +7180,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Move the files from the temporary .splits to the final /table/region directory
     fs.commitDaughterRegion(hri);
 
+    // rsServices can be null in UT
+    WAL daughterWAL = rsServices == null ? getWAL() :rsServices.getWAL(hri);
     // Create the daughter HRegion instance
-    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
-        this.getBaseConf(), hri, this.getTableDesc(), rsServices);
+    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), daughterWAL,
+      fs.getFileSystem(), this.getBaseConf(), hri, this.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
     return r;

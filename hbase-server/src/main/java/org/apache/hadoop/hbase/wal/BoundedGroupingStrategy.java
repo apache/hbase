@@ -72,7 +72,7 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
     int regionGroupNumber = config.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
     groupNames = new String[regionGroupNumber];
     for (int i = 0; i < regionGroupNumber; i++) {
-      groupNames[i] = providerId + GROUP_NAME_DELIMITER + "regiongroup-" + i;
+      groupNames[i] = "regiongroup-" + i;
     }
   }
 
