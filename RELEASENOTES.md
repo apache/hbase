@@ -55,6 +55,15 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-22771](https://issues.apache.org/jira/browse/HBASE-22771) | *Major* | **[HBCK2] fixMeta method and server-side support**
+
+Adds a fixMeta method to hbck Service. Fixes holes in hbase:meta. Follow-up to fix overlaps.
+
+Follow-on is adding a client-side to hbase-operator-tools that can exploit this new addition (HBASE-22825)
+
+
+---
+
 * [HBASE-22777](https://issues.apache.org/jira/browse/HBASE-22777) | *Major* | **Add a multi-region merge (for fixing overlaps, etc.)**
 
 Changes merge so you can merge more than two regions at a time.  Currently only available inside HBase. HBASE-22827, a follow-on, is about exposing the facility in the Admin API (and then via the shell).
@@ -85,15 +94,6 @@ And may even cause segmentation fault and crash the JVM directly. You will see a
 The problem has been reported several times in the past and this time Wellington Ramos Chevreuil provided the full logs and deeply analyzed the logs so we can find the root cause. And Lijin Bin figured out that the problem may only happen when Durability.ASYNC\_WAL is used. Thanks to them.
 
 The problem only effects the 2.x releases, all users are highly recommand to upgrade to a release which has this fix in, especially that if you use Durability.ASYNC\_WAL.
-
-
----
-
-* [HBASE-22771](https://issues.apache.org/jira/browse/HBASE-22771) | *Major* | **[HBCK2] fixMeta method and server-side support**
-
-Adds a fixMeta method to hbck Service. Fixes holes in hbase:meta. Follow-up to fix overlaps.
-
-Follow-on is adding a client-side to hbase-operator-tools that can exploit this new addition (HBASE-22825)
 
 
 ---
