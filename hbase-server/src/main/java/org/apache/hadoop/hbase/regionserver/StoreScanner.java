@@ -867,7 +867,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       } else {
         return false;
       }
-    } while ((nextCell = this.heap.peek()) != null && CellUtil.matchingRow(cell, nextCell));
+      nextCell = this.heap.peek();
+    } while (nextCell != null && CellUtil.matchingRow(cell, nextCell));
     return true;
   }
 
