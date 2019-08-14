@@ -109,7 +109,7 @@ import org.apache.zookeeper.data.Stat;
  * 3. zookeeper mode - for each zookeeper instance, selects a zNode and
  * outputs some information about failure or latency.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
