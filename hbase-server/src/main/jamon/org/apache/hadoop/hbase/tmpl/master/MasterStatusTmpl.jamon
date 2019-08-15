@@ -192,8 +192,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </%if>
         <%if master.isInMaintenanceMode() %>
           <div class="alert alert-warning">
-          Your Master is in maintenance mode. This may be because of HBCK aborting while
-          running in repair mode. Please re-run HBCK in repair mode.
+          Your Master is in maintenance mode. This is because hbase.master.maintenance_mode is
+          set to true. Under the maintenance mode, no quota or no Master coprocessor is loaded.
           </div>
         </%if>
         <%if !master.isBalancerOn() %>
@@ -220,11 +220,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <%if master.getAssignmentManager() != null %>
           <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
-        <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
-          <section>
-            <h2><a name="rsgroup">RSGroup</a></h2>
-            <& RSGroupListTmpl; master= master; serverManager= serverManager&>
-          </section>
+        <%if !master.isInMaintenanceMode() %>
+          <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
+            <section>
+              <h2><a name="rsgroup">RSGroup</a></h2>
+              <& RSGroupListTmpl; master= master; serverManager= serverManager&>
+            </section>
+          </%if>
         </%if>
         <section>
             <h2><a name="regionservers">Region Servers</a></h2>
