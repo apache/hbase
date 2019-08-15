@@ -200,13 +200,13 @@ public enum EventType {
    * C_M_SNAPSHOT_TABLE<br>
    * Client asking Master to snapshot an offline table.
    */
-  C_M_SNAPSHOT_TABLE        (48, ExecutorType.MASTER_TABLE_OPERATIONS),
+  C_M_SNAPSHOT_TABLE        (48, ExecutorType.MASTER_SNAPSHOT_OPERATIONS),
   /**
    * Messages originating from Client to Master.<br>
    * C_M_RESTORE_SNAPSHOT<br>
    * Client asking Master to restore a snapshot.
    */
-  C_M_RESTORE_SNAPSHOT      (49, ExecutorType.MASTER_TABLE_OPERATIONS),
+  C_M_RESTORE_SNAPSHOT      (49, ExecutorType.MASTER_SNAPSHOT_OPERATIONS),
 
   // Updates from master to ZK. This is done by the master and there is
   // nothing to process by either Master or RS
@@ -306,11 +306,6 @@ public enum EventType {
       }
     }
     throw new IllegalArgumentException("Unknown code " + code);
-  }
-
-  public boolean isOnlineSchemaChangeSupported() {
-    return this.equals(EventType.C_M_ADD_FAMILY) || this.equals(EventType.C_M_DELETE_FAMILY) ||
-      this.equals(EventType.C_M_MODIFY_FAMILY) || this.equals(EventType.C_M_MODIFY_TABLE);
   }
 
   ExecutorType getExecutorServiceType() {

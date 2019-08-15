@@ -1439,6 +1439,33 @@ public final class HConstants {
       "hbase.util.default.lossycounting.errorrate";
   public static final String NOT_IMPLEMENTED = "Not implemented";
 
+  /**
+   * Configurations for master executor services.
+   */
+  public static final String MASTER_OPEN_REGION_THREADS =
+      "hbase.master.executor.openregion.threads";
+  public static final int MASTER_OPEN_REGION_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_CLOSE_REGION_THREADS =
+      "hbase.master.executor.closeregion.threads";
+  public static final int MASTER_CLOSE_REGION_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_SERVER_OPERATIONS_THREADS =
+      "hbase.master.executor.serverops.threads";
+  public static final int MASTER_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_META_SERVER_OPERATIONS_THREADS =
+      "hbase.master.executor.meta.serverops.threads";
+  public static final int MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_LOG_REPLAY_OPS_THREADS =
+      "hbase.master.executor.logreplayops.threads";
+  public static final int MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT = 10;
+
+  public static final String MASTER_SNAPSHOT_OPERATIONS_THREADS =
+      "hbase.master.executor.snapshot.threads";
+  public static final int MASTER_SNAPSHOT_OPERATIONS_THREADS_DEFAULT = 3;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
