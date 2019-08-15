@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -883,8 +884,23 @@ public class TestSnapshotScannerHDFSAclController {
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
     String namespace = name.getMethodName();
     TableName table = TableName.valueOf(namespace, "t1");
+    TableName table2 = TableName.valueOf(namespace, "t2");
     String snapshot = namespace + "t1";
     admin.createNamespace(NamespaceDescriptor.create(namespace).build());
+
+    // create table2
+    TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table2);
+    // make some region files in tmp dir and check if master archive these region correctly
+    Path tmpTableDir = helper.getPathHelper().getTmpTableDir(table2);
+    // make a empty region dir, this is an error region
+    fs.mkdirs(new Path(tmpTableDir, "1"));
+    // copy regions from data dir, this is a valid region
+    for (Path regionDir : FSUtils.getRegionDirs(fs,
+      helper.getPathHelper().getDataTableDir(table2))) {
+      FSUtils.copyFilesParallel(fs, regionDir, fs,
+        new Path(tmpTableDir, regionDir.getName() + "abc"), conf, 1);
+    }
+    assertEquals(4, fs.listStatus(tmpTableDir).length);
 
     // grant N(R)
     SecureTestUtil.grantOnNamespace(TEST_UTIL, grantUserName, namespace, READ);
@@ -894,15 +910,16 @@ public class TestSnapshotScannerHDFSAclController {
     TEST_UTIL.waitUntilNoRegionsInTransition();
 
     Path tmpNsDir = helper.getPathHelper().getTmpNsDir(namespace);
-    assertFalse(fs.exists(tmpNsDir));
+    assertTrue(fs.exists(tmpNsDir));
+    // check all regions in tmp table2 dir are archived
+    assertEquals(0, fs.listStatus(tmpTableDir).length);
 
-    // create table2 and snapshot
+    // create table1 and snapshot
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     admin = TEST_UTIL.getAdmin();
     aclTable = TEST_UTIL.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
     admin.snapshot(snapshot, table);
-    // TODO fix it in another patch
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, -1);
+    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
   }
 
   private void checkUserAclEntry(List<Path> paths, String user, boolean requireAccessAcl,
