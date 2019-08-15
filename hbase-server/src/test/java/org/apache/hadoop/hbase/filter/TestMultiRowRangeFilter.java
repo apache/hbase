@@ -90,7 +90,9 @@ public class TestMultiRowRangeFilter {
     MultiRowRangeFilter filter = new MultiRowRangeFilter(rowKeyPrefixes);
     List<RowRange> actualRanges = filter.getRowRanges();
     List<RowRange> expectedRanges = new ArrayList<>();
-    expectedRanges.add(new RowRange(HConstants.EMPTY_START_ROW, true, HConstants.EMPTY_END_ROW, false));
+    expectedRanges.add(
+      new RowRange(HConstants.EMPTY_START_ROW, true, HConstants.EMPTY_END_ROW, false)
+    );
     assertRangesEqual(expectedRanges, actualRanges);
   }
 

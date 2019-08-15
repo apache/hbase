@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ClientUtil {
