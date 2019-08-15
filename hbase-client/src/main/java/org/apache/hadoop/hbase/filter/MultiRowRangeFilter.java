@@ -73,6 +73,13 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   /**
+   * Constructor for creating a <code>MultiRowRangeFilter</code> from multiple rowkey prefixes.
+   *
+   * As <code>MultiRowRangeFilter</code> javadoc says (See the solution 1 of the first statement),
+   * if you try to create a filter list that scans row keys corresponding to given prefixes (e.g.,
+   * <code>FilterList</code> composed of multiple <code>PrefixFilter</code>s), this constructor
+   * provides a way to avoid creating an inefficient one.
+   *
    * @param rowKeyPrefixes the array of byte array
    */
   public MultiRowRangeFilter(byte[][] rowKeyPrefixes) {
