@@ -510,6 +510,15 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
+    if (peerClusterId == null) {
+      // In some cases, it is possible that peerClusterId is null because it couldn't read
+      // peer cluster id from zookeeper. One case this might happen is because 2 clusters don't
+      // have kerberos trust setup.
+      this.terminate("Peer ClusterId returned is null", null, false);
+      this.manager.removeSource(this);
+      return;
+    }
+
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
     // peerClusterId value, which is the same as the source clusterId
     if (clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
