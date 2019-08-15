@@ -1320,6 +1320,42 @@ public final class HConstants {
       + System.getProperty("user.name") + "/hbase-staging";
   public static final String DEFAULT_LOSSY_COUNTING_ERROR_RATE =
       "hbase.util.default.lossycounting.errorrate";
+
+  // Default TTL - FOREVER
+  public static final long DEFAULT_SNAPSHOT_TTL = 0;
+
+  // User defined Default TTL config key
+  public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
+
+  public static final String SNAPSHOT_CLEANER_DISABLE = "hbase.master.cleaner.snapshot.disable";
+
+  /**
+   * Configurations for master executor services.
+   */
+  public static final String MASTER_OPEN_REGION_THREADS =
+      "hbase.master.executor.openregion.threads";
+  public static final int MASTER_OPEN_REGION_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_CLOSE_REGION_THREADS =
+      "hbase.master.executor.closeregion.threads";
+  public static final int MASTER_CLOSE_REGION_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_SERVER_OPERATIONS_THREADS =
+      "hbase.master.executor.serverops.threads";
+  public static final int MASTER_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_META_SERVER_OPERATIONS_THREADS =
+      "hbase.master.executor.meta.serverops.threads";
+  public static final int MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT = 5;
+
+  public static final String MASTER_LOG_REPLAY_OPS_THREADS =
+      "hbase.master.executor.logreplayops.threads";
+  public static final int MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT = 10;
+
+  public static final String MASTER_SNAPSHOT_OPERATIONS_THREADS =
+      "hbase.master.executor.snapshot.threads";
+  public static final int MASTER_SNAPSHOT_OPERATIONS_THREADS_DEFAULT = 3;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
