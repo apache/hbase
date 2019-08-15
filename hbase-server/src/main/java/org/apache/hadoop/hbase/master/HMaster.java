@@ -1419,18 +1419,23 @@ public class HMaster extends HRegionServer implements MasterServices {
    *  as OOMEs; it should be lightly loaded. See what HRegionServer does if
    *  need to install an unexpected exception handler.
    */
-  private void startServiceThreads() throws IOException{
-   // Start the executor service pools
-   this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
-      conf.getInt("hbase.master.executor.openregion.threads", 5));
-   this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
-      conf.getInt("hbase.master.executor.closeregion.threads", 5));
-   this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
-      conf.getInt("hbase.master.executor.serverops.threads", 5));
-   this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
-      conf.getInt("hbase.master.executor.meta.serverops.threads", 5));
-   this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
-      conf.getInt("hbase.master.executor.logreplayops.threads", 10));
+  private void startServiceThreads() throws IOException {
+    // Start the executor service pools
+    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION, conf.getInt(
+      HConstants.MASTER_OPEN_REGION_THREADS, HConstants.MASTER_OPEN_REGION_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION, conf.getInt(
+      HConstants.MASTER_CLOSE_REGION_THREADS, HConstants.MASTER_CLOSE_REGION_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
+      conf.getInt(HConstants.MASTER_SERVER_OPERATIONS_THREADS,
+        HConstants.MASTER_SERVER_OPERATIONS_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
+      conf.getInt(HConstants.MASTER_META_SERVER_OPERATIONS_THREADS,
+        HConstants.MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS, conf.getInt(
+      HConstants.MASTER_LOG_REPLAY_OPS_THREADS, HConstants.MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS,
+      conf.getInt(HConstants.MASTER_SNAPSHOT_OPERATIONS_THREADS,
+        HConstants.MASTER_SNAPSHOT_OPERATIONS_THREADS_DEFAULT));
 
    // We depend on there being only one instance of this executor running
    // at a time.  To do concurrency, would need fencing of enable/disable of
