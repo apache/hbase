@@ -20,7 +20,7 @@
 #
 # Specifically, it's used for the flaky test reporting job defined in
 # dev-support/flaky-tests/flaky-reporting.Jenkinsfile
-FROM ubuntu:14.04
+FROM ubuntu:18.04
 
 ADD . /hbase/dev-support
 
