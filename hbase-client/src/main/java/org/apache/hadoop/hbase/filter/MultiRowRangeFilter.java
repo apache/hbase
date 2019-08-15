@@ -87,6 +87,10 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   private static List<RowRange> createRangeListFromRowKeyPrefixes(byte[][] rowKeyPrefixes) {
+    if (rowKeyPrefixes == null) {
+      throw new IllegalArgumentException("Invalid rowkey prefixes");
+    }
+
     List<RowRange> list = new ArrayList<>();
     for (byte[] rowKeyPrefix: rowKeyPrefixes) {
       byte[] stopRow = ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix);
