@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -219,5 +221,36 @@ public class TestExecutorService {
     executorService.shutdown();
   }
 
+  @Test
+  public void testSnapshotHandlers() throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    final Server server = mock(Server.class);
+    when(server.getConfiguration()).thenReturn(conf);
+
+    ExecutorService executorService = new ExecutorService("testSnapshotHandlers");
+    executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, 1);
+
+    CountDownLatch latch = new CountDownLatch(1);
+    executorService.submit(new EventHandler(server, EventType.C_M_SNAPSHOT_TABLE) {
+      @Override
+      public void process() throws IOException {
+        try {
+          latch.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    });
+
+    int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
+        .getThreadPoolExecutor().getActiveCount();
+    Assert.assertEquals(activeCount, 1);
+    latch.countDown();
+    Waiter.waitFor(conf, 3000, () -> {
+      int count = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
+          .getThreadPoolExecutor().getActiveCount();
+      return count == 0;
+    });
+  }
 }
 
