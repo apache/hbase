@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -67,6 +68,61 @@ public class TestMultiRowRangeFilter {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testRowKeyPrefixWithEmptyPrefix() throws IOException {
+    byte[] prefix = {};
+    byte[][] rowKeyPrefixes = new byte[1][];
+    rowKeyPrefixes[0] = prefix;
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(rowKeyPrefixes);
+    List<RowRange> actualRanges = filter.getRowRanges();
+    List<RowRange> expectedRanges = new ArrayList<>();
+    expectedRanges.add(
+      new RowRange(HConstants.EMPTY_START_ROW, true, HConstants.EMPTY_END_ROW, false)
+    );
+    assertRangesEqual(expectedRanges, actualRanges);
+  }
+
+  @Test
+  public void testRowKeyPrefixWithLastIncrementablePrefix() throws IOException {
+    byte[] prefix = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFE};
+    byte[][] rowKeyPrefixes = new byte[1][];
+    rowKeyPrefixes[0] = prefix;
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(rowKeyPrefixes);
+    List<RowRange> actualRanges = filter.getRowRanges();
+    List<RowRange> expectedRanges = new ArrayList<>();
+    final byte[] expectedStop = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF};
+    expectedRanges.add(new RowRange(prefix, true, expectedStop , false));
+    assertRangesEqual(expectedRanges, actualRanges);
+  }
+
+  @Test
+  public void testRowKeyPrefixWithoutLastIncrementablePrefix() throws IOException {
+    byte[] prefix = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF};
+    byte[][] rowKeyPrefixes = new byte[1][];
+    rowKeyPrefixes[0] = prefix;
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(rowKeyPrefixes);
+    List<RowRange> actualRanges = filter.getRowRanges();
+    List<RowRange> expectedRanges = new ArrayList<>();
+    final byte[] expectedStop = {(byte) 0x12, (byte) 0x24};
+    expectedRanges.add(new RowRange(prefix, true, expectedStop , false));
+    assertRangesEqual(expectedRanges, actualRanges);
+  }
+
+  @Test
+  public void testRowKeyPrefixWithMergablePrefix() throws IOException {
+    byte[] prefix1 = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFE};
+    byte[] prefix2 = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF};
+    byte[][] rowKeyPrefixes = new byte[2][];
+    rowKeyPrefixes[0] = prefix1;
+    rowKeyPrefixes[1] = prefix2;
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(rowKeyPrefixes);
+    List<RowRange> actualRanges = filter.getRowRanges();
+    List<RowRange> expectedRanges = new ArrayList<>();
+    final byte[] expectedStop = {(byte) 0x12, (byte) 0x24};
+    expectedRanges.add(new RowRange(prefix1, true, expectedStop , false));
+    assertRangesEqual(expectedRanges, actualRanges);
   }
 
   @Test

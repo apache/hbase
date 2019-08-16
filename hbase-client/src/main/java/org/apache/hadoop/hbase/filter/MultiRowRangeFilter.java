@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -75,6 +76,33 @@ public class MultiRowRangeFilter extends FilterBase {
     // memory to avoid touching the serialization logic.
     this.rangeList = Collections.unmodifiableList(sortAndMerge(list));
     this.ranges = new RangeIteration(rangeList);
+  }
+
+  /**
+   * Constructor for creating a <code>MultiRowRangeFilter</code> from multiple rowkey prefixes.
+   *
+   * As <code>MultiRowRangeFilter</code> javadoc says (See the solution 1 of the first statement),
+   * if you try to create a filter list that scans row keys corresponding to given prefixes (e.g.,
+   * <code>FilterList</code> composed of multiple <code>PrefixFilter</code>s), this constructor
+   * provides a way to avoid creating an inefficient one.
+   *
+   * @param rowKeyPrefixes the array of byte array
+   */
+  public MultiRowRangeFilter(byte[][] rowKeyPrefixes) throws IOException {
+    this(createRangeListFromRowKeyPrefixes(rowKeyPrefixes));
+  }
+
+  private static List<RowRange> createRangeListFromRowKeyPrefixes(byte[][] rowKeyPrefixes) {
+    if (rowKeyPrefixes == null) {
+      throw new IllegalArgumentException("Invalid rowkey prefixes");
+    }
+
+    List<RowRange> list = new ArrayList<>();
+    for (byte[] rowKeyPrefix: rowKeyPrefixes) {
+      byte[] stopRow = ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix);
+      list.add(new RowRange(rowKeyPrefix, true, stopRow, false));
+    }
+    return list;
   }
 
   public List<RowRange> getRowRanges() {
