@@ -26,12 +26,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Filter to support scan multiple row key ranges. It can construct the row key ranges from the
@@ -69,6 +70,33 @@ public class MultiRowRangeFilter extends FilterBase {
     // memory to avoid touching the serialization logic.
     this.rangeList = Collections.unmodifiableList(sortAndMerge(list));
     this.ranges = new RangeIteration(rangeList);
+  }
+
+  /**
+   * Constructor for creating a <code>MultiRowRangeFilter</code> from multiple rowkey prefixes.
+   *
+   * As <code>MultiRowRangeFilter</code> javadoc says (See the solution 1 of the first statement),
+   * if you try to create a filter list that scans row keys corresponding to given prefixes (e.g.,
+   * <code>FilterList</code> composed of multiple <code>PrefixFilter</code>s), this constructor
+   * provides a way to avoid creating an inefficient one.
+   *
+   * @param rowKeyPrefixes the array of byte array
+   */
+  public MultiRowRangeFilter(byte[][] rowKeyPrefixes) {
+    this(createRangeListFromRowKeyPrefixes(rowKeyPrefixes));
+  }
+
+  private static List<RowRange> createRangeListFromRowKeyPrefixes(byte[][] rowKeyPrefixes) {
+    if (rowKeyPrefixes == null) {
+      throw new IllegalArgumentException("Invalid rowkey prefixes");
+    }
+
+    List<RowRange> list = new ArrayList<>();
+    for (byte[] rowKeyPrefix: rowKeyPrefixes) {
+      byte[] stopRow = ClientUtil.calculateTheClosestNextRowKeyForPrefix(rowKeyPrefix);
+      list.add(new RowRange(rowKeyPrefix, true, stopRow, false));
+    }
+    return list;
   }
 
   public List<RowRange> getRowRanges() {
