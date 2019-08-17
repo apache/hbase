@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.DummyAsyncRegistry;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
-import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -90,6 +90,7 @@ public class TestZooKeeperTableArchiveClient {
   private final List<Path> toCleanup = new ArrayList<>();
   private static Connection CONNECTION;
   private static RegionServerServices rss;
+  private static DirScanPool POOL;
 
   public static final class MockRegistry extends DummyAsyncRegistry {
 
@@ -118,6 +119,7 @@ public class TestZooKeeperTableArchiveClient {
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
     ZKUtil.createWithParents(watcher, archivingZNode);
     rss = mock(RegionServerServices.class);
+    POOL = new DirScanPool(UTIL.getConfiguration());
   }
 
   private static void setupConf(Configuration conf) {
@@ -145,12 +147,9 @@ public class TestZooKeeperTableArchiveClient {
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    try {
-      CONNECTION.close();
-      UTIL.shutdownMiniZKCluster();
-    } catch (Exception e) {
-      LOG.warn("problem shutting down cluster", e);
-    }
+    CONNECTION.close();
+    UTIL.shutdownMiniZKCluster();
+    POOL.shutdownNow();
   }
 
   /**
@@ -191,7 +190,6 @@ public class TestZooKeeperTableArchiveClient {
     Configuration conf = UTIL.getConfiguration();
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
-    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
@@ -246,7 +244,6 @@ public class TestZooKeeperTableArchiveClient {
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
     final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
-    CleanerChore.initChorePool(conf);
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
@@ -345,7 +342,7 @@ public class TestZooKeeperTableArchiveClient {
       Stoppable stop) {
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       LongTermArchivingHFileCleaner.class.getCanonicalName());
-    return new HFileCleaner(1000, stop, conf, fs, archiveDir);
+    return new HFileCleaner(1000, stop, conf, fs, archiveDir, POOL);
   }
 
   /**
