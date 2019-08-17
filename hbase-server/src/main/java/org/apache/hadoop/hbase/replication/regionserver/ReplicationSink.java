@@ -207,7 +207,8 @@ public class ReplicationSink {
             if(bulkLoadsPerClusters == null) {
               bulkLoadsPerClusters = new HashMap<>();
             }
-            // Map of table name Vs list of pair of family and list of hfile paths from its namespace
+            // Map of table name Vs list of pair of family and list of
+            // hfile paths from its namespace
             Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
               bulkLoadsPerClusters.get(bld.getClusterId());
             if (bulkLoadHFileMap == null) {

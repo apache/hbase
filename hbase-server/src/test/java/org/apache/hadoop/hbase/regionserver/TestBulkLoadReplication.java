@@ -21,6 +21,12 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CONF_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -60,13 +66,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Integration test for bulk load replication. Defines two clusters, with two way replication.
@@ -118,7 +117,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   private void setupCoprocessor(HBaseTestingUtility cluster){
-    cluster.getHBaseCluster().getRegions(tableName).forEach( r -> {
+    cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
         r.getCoprocessorHost()
           .load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
