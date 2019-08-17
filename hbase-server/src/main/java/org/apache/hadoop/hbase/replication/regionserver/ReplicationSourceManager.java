@@ -484,8 +484,10 @@ public class ReplicationSourceManager implements ReplicationListener {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
         toRemove.terminate(terminateMessage);
       }
-      for (NavigableSet<String> walsByGroup : walsById.get(peerId).values()) {
-        walsByGroup.forEach(wal -> src.enqueueLog(new Path(this.logDir, wal)));
+      if (walsById.get(peerId) != null) {
+        for (NavigableSet<String> walsByGroup : walsById.get(peerId).values()) {
+          walsByGroup.forEach(wal -> src.enqueueLog(new Path(this.logDir, wal)));
+        }
       }
     }
     LOG.info("Startup replication source for " + src.getPeerId());
