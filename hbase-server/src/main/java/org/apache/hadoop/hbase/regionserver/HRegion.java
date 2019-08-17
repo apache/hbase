@@ -7198,7 +7198,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   HRegion createMergedRegionFromMerges(final HRegionInfo mergedRegionInfo,
       final HRegion region_b) throws IOException {
-    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(),
+    WAL mergedRegionWAL = rsServices == null ? getWAL() : rsServices.getWAL(mergedRegionInfo);
+    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), mergedRegionWAL,
         fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
         this.getTableDesc(), this.rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount()

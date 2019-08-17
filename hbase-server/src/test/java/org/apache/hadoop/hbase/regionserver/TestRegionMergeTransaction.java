@@ -38,7 +38,9 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MockRegionServerServicesWithWALs;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -77,6 +79,8 @@ public class TestRegionMergeTransaction {
   private static final byte[] ENDROW = new byte[] { '{', '{', '{' };
   private static final byte[] CF = HConstants.CATALOG_FAMILY;
 
+  private MockRegionServerServicesWithWALs rsw;
+
   @Before
   public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
@@ -84,6 +88,9 @@ public class TestRegionMergeTransaction {
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, this.testdir);
     this.wals = new WALFactory(walConf, null, TestRegionMergeTransaction.class.getName());
+    ServerName sn = ServerName.valueOf("testRegionMergeTransaction", 10, 66);
+    final RegionServerServices rss = TEST_UTIL.createMockRegionServerService(sn);
+    this.rsw = new MockRegionServerServicesWithWALs(rss, wals.getWALProvider());
     this.region_a = createRegion(this.testdir, this.wals, STARTROW_A, STARTROW_B);
     this.region_b = createRegion(this.testdir, this.wals, STARTROW_B, STARTROW_C);
     this.region_c = createRegion(this.testdir, this.wals, STARTROW_C, ENDROW);
@@ -444,7 +451,7 @@ public class TestRegionMergeTransaction {
     HRegion.closeHRegion(a);
     return HRegion.openHRegion(testdir, hri, htd,
       wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
-      TEST_UTIL.getConfiguration());
+      TEST_UTIL.getConfiguration(), rsw, null);
   }
 
   private int countRows(final HRegion r) throws IOException {
