@@ -382,14 +382,15 @@ public class ReplicationSourceManager implements ReplicationListener {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
         toRemove.terminate(terminateMessage);
       }
-      for (SortedSet<String> walsByGroup : walsById.get(peerId).values()) {
-        walsByGroup.forEach(wal -> {
-          Path walPath = new Path(this.logDir, wal);
-          src.enqueueLog(walPath);
-          LOG.trace("Enqueued {} to source {} during source creation.",
-            walPath, src.getQueueId());
-        });
-
+      if (walsById.get(peerId) != null) {
+        for (SortedSet<String> walsByGroup : walsById.get(peerId).values()) {
+          walsByGroup.forEach(wal -> {
+            Path walPath = new Path(this.logDir, wal);
+            src.enqueueLog(walPath);
+            LOG.trace("Enqueued {} to source {} during source creation.",
+                    walPath, src.getQueueId());
+          });
+        }
       }
     }
     LOG.info("Startup replication source for " + src.getPeerId());
