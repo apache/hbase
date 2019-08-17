@@ -107,6 +107,23 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       LOG.debug("Normalization of system table " + table + " isn't allowed");
       return null;
     }
+    boolean splitEnabled = true, mergeEnabled = true;
+    try {
+      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether split is enabled", se);
+    }
+    try {
+      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
+    } catch (ServiceException se) {
+      LOG.debug("Unable to determine whether split is enabled", se);
+    }
+    if (!splitEnabled && !mergeEnabled) {
+      LOG.debug("Both split and merge are disabled for table: " + table);
+      return null;
+    }
 
     List<NormalizationPlan> plans = new ArrayList<NormalizationPlan>();
     List<HRegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
@@ -137,19 +154,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
 
     int candidateIdx = 0;
-    boolean splitEnabled = true, mergeEnabled = true;
-    try {
-      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
-    } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether split is enabled", se);
-    }
-    try {
-      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
-    } catch (ServiceException se) {
-      LOG.debug("Unable to determine whether split is enabled", se);
-    }
     while (candidateIdx < tableRegions.size()) {
       HRegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
