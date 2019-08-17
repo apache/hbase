@@ -174,8 +174,6 @@ public class ReplicationSink {
       // invocation of this method per table and cluster id.
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
-      // Map of table name Vs list of pair of family and list of hfile paths from its namespace
-//      Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
       Map<String, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
 
       for (WALEntry entry : entries) {
@@ -209,6 +207,7 @@ public class ReplicationSink {
             if(bulkLoadsPerClusters == null) {
               bulkLoadsPerClusters = new HashMap<>();
             }
+            // Map of table name Vs list of pair of family and list of hfile paths from its namespace
             Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
               bulkLoadsPerClusters.get(bld.getClusterId());
             if (bulkLoadHFileMap == null) {
@@ -253,7 +252,8 @@ public class ReplicationSink {
 
       if(bulkLoadsPerClusters != null) {
         for (String clusterId : bulkLoadsPerClusters.keySet()) {
-          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = bulkLoadsPerClusters.get(clusterId);
+          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
+            bulkLoadsPerClusters.get(clusterId);
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             LOG.debug("Started replicating bulk loaded data from cluster id: {}.", clusterId);
             HFileReplicator hFileReplicator =

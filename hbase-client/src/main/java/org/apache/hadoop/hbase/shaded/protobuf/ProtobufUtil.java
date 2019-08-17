@@ -2590,8 +2590,10 @@ public final class ProtobufUtil {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
         .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId)
-        .setClusterId(clusterId);
+        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+    if(clusterId != null) {
+      desc.setClusterId(clusterId);
+    }
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
       WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
