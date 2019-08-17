@@ -75,17 +75,20 @@ public class TestLogsCleaner {
   private static final Logger LOG = LoggerFactory.getLogger(TestLogsCleaner.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  private static DirScanPool POOL;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
-    CleanerChore.initChorePool(TEST_UTIL.getConfiguration());
+    POOL = new DirScanPool(TEST_UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
     TEST_UTIL.shutdownMiniDFSCluster();
+    POOL.shutdownNow();
   }
 
   /**
@@ -176,7 +179,7 @@ public class TestLogsCleaner {
     // 10 procedure WALs
     assertEquals(10, fs.listStatus(oldProcedureWALDir).length);
 
-    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, oldLogDir);
+    LogCleaner cleaner = new LogCleaner(1000, server, conf, fs, oldLogDir, POOL);
     cleaner.chore();
 
     // In oldWALs we end up with the current WAL, a newer WAL, the 3 old WALs which
@@ -247,7 +250,7 @@ public class TestLogsCleaner {
         new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
         new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
     );
-    
+
     ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);
     try {
       cleaner.setConf(conf, zkw);
@@ -278,7 +281,7 @@ public class TestLogsCleaner {
     Path oldWALsDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir);
+    LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir, POOL);
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE, cleaner.getSizeOfCleaners());
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
         cleaner.getCleanerThreadTimeoutMsec());

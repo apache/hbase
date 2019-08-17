@@ -53,21 +53,22 @@ public class TestCleanerChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCleanerChore.class);
+    HBaseClassTestRule.forClass(TestCleanerChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static DirScanPool POOL;
 
   @BeforeClass
   public static void setup() {
-    CleanerChore.initChorePool(UTIL.getConfiguration());
+    POOL = new DirScanPool(UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void cleanup() throws Exception {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     UTIL.cleanupTestDir();
-    CleanerChore.shutDownChorePool();
+    POOL.shutdownNow();
   }
 
   @Test
@@ -79,7 +80,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, NeverDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // create the directory layout in the directory to clean
     Path parent = new Path(testDir, "parent");
@@ -121,7 +123,8 @@ public class TestCleanerChore {
       }
     };
 
-    AllValidPaths chore = new AllValidPaths("test-retry-ioe", stop, conf, filtered, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-retry-ioe", stop, conf, filtered, testDir, confKey, POOL);
 
     // trouble talking to the filesystem
     Boolean result = chore.runCleaner();
@@ -152,7 +155,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // create the directory layout in the directory to clean
     Path parent = new Path(testDir, "parent");
@@ -193,7 +197,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -224,7 +229,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // also create a file in the top level directory
     Path topFile = new Path(testDir, "topFile");
@@ -255,7 +261,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -314,7 +321,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -358,7 +366,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // Enable cleaner
     chore.setEnabled(true);
@@ -391,7 +400,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
 
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // Disable cleaner
     chore.setEnabled(false);
@@ -423,7 +433,7 @@ public class TestCleanerChore {
     }
 
     // have at least 2 available processors/cores
-    int    initPoolSize = availableProcessorNum / 2;
+    int initPoolSize = availableProcessorNum / 2;
     int changedPoolSize = availableProcessorNum;
 
     Stoppable stop = new StoppableImplementation();
@@ -433,7 +443,8 @@ public class TestCleanerChore {
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
     conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(initPoolSize));
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     chore.setEnabled(true);
     // Create subdirs under testDir
     int dirNums = 6;
@@ -452,7 +463,7 @@ public class TestCleanerChore {
     t.start();
     // Change size of chore's pool
     conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(changedPoolSize));
-    chore.onConfigurationChange(conf);
+    POOL.onConfigurationChange(conf);
     assertEquals(changedPoolSize, chore.getChorePoolSize());
     // Stop chore
     t.join();
@@ -460,21 +471,17 @@ public class TestCleanerChore {
 
   @Test
   public void testMinimumNumberOfThreads() throws Exception {
-    Stoppable stop = new StoppableImplementation();
     Configuration conf = UTIL.getConfiguration();
-    Path testDir = UTIL.getDataTestDir();
-    FileSystem fs = UTIL.getTestFileSystem();
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
     conf.set(CleanerChore.CHORE_POOL_SIZE, "2");
-    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
     int numProcs = Runtime.getRuntime().availableProcessors();
     // Sanity
-    assertEquals(numProcs, chore.calculatePoolSize(Integer.toString(numProcs)));
+    assertEquals(numProcs, CleanerChore.calculatePoolSize(Integer.toString(numProcs)));
     // The implementation does not allow us to set more threads than we have processors
-    assertEquals(numProcs, chore.calculatePoolSize(Integer.toString(numProcs + 2)));
+    assertEquals(numProcs, CleanerChore.calculatePoolSize(Integer.toString(numProcs + 2)));
     // Force us into the branch that is multiplying 0.0 against the number of processors
-    assertEquals(1, chore.calculatePoolSize("0.0"));
+    assertEquals(1, CleanerChore.calculatePoolSize("0.0"));
   }
 
   private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
@@ -494,8 +501,8 @@ public class TestCleanerChore {
   private static class AllValidPaths extends CleanerChore<BaseHFileCleanerDelegate> {
 
     public AllValidPaths(String name, Stoppable s, Configuration conf, FileSystem fs,
-        Path oldFileDir, String confkey) {
-      super(name, Integer.MAX_VALUE, s, conf, fs, oldFileDir, confkey);
+      Path oldFileDir, String confkey, DirScanPool pool) {
+      super(name, Integer.MAX_VALUE, s, conf, fs, oldFileDir, confkey, pool);
     }
 
     // all paths are valid

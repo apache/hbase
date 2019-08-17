@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -43,6 +44,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,20 +53,31 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test the HFileLink Cleaner.
- * HFiles with links cannot be deleted until a link is present.
+ * Test the HFileLink Cleaner. HFiles with links cannot be deleted until a link is present.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestHFileLinkCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileLinkCleaner.class);
+    HBaseClassTestRule.forClass(TestHFileLinkCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  private static DirScanPool POOL;
+
   @Rule
   public TestName name = new TestName();
+
+  @BeforeClass
+  public static void setUp() {
+    POOL = new DirScanPool(TEST_UTIL.getConfiguration());
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    POOL.shutdownNow();
+  }
 
   @Test
   public void testHFileLinkCleaning() throws Exception {
@@ -78,14 +92,12 @@ public class TestHFileLinkCleaner {
     final String hfileName = "1234567890";
     final String familyName = "cf";
 
-    HRegionInfo hri = new HRegionInfo(tableName);
-    HRegionInfo hriLink = new HRegionInfo(tableLinkName);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
+    RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
           tableName, hri.getEncodedName(), familyName);
-    Path archiveLinkStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableLinkName, hriLink.getEncodedName(), familyName);
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
     Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
@@ -94,8 +106,8 @@ public class TestHFileLinkCleaner {
     fs.createNewFile(hfilePath);
 
     // Create link to hfile
-    Path familyLinkPath = getFamilyDirPath(rootDir, tableLinkName,
-                                        hriLink.getEncodedName(), familyName);
+    Path familyLinkPath =
+      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     fs.mkdirs(familyLinkPath);
     HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
     Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
@@ -108,8 +120,7 @@ public class TestHFileLinkCleaner {
     final long ttl = 1000;
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
-    CleanerChore.initChorePool(conf);
-    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir);
+    HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archiveDir, POOL);
 
     // Link backref cannot be removed
     cleaner.chore();

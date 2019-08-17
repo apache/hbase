@@ -25,17 +25,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -44,7 +45,9 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * @see BaseLogCleanerDelegate
  */
 @InterfaceAudience.Private
-public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
+public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
+  implements ConfigurationObserver {
+
   private static final Logger LOG = LoggerFactory.getLogger(LogCleaner.class.getName());
 
   public static final String OLD_WALS_CLEANER_THREAD_SIZE = "hbase.oldwals.cleaner.thread.size";
@@ -72,17 +75,19 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
    * @param conf configuration to use
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
+   * @param pool the thread pool used to scan directories
    */
   public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
-      Path oldLogDir) {
-    super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
+    Path oldLogDir, DirScanPool pool) {
+    super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS,
+      pool);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);
     this.cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
-        DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+      DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
     this.cleanerThreadCheckIntervalMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC,
-        DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC);
+      DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC);
   }
 
   @Override
@@ -93,8 +98,6 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    super.onConfigurationChange(conf);
-
     int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     if (newSize == oldWALsCleaner.size()) {
       if (LOG.isDebugEnabled()) {
