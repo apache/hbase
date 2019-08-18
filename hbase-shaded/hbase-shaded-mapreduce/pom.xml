@@ -266,6 +266,18 @@
               </exclusions>
             </dependency>
             <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-jaxrs</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-xc</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+            </dependency>
+            <dependency>
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-auth</artifactId>
               <scope>provided</scope>
@@ -314,6 +326,18 @@
                   <artifactId>guava</artifactId>
                 </exclusion>
               </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-jaxrs</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-xc</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
             </dependency>
           </dependencies>
         </profile>
