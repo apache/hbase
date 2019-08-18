@@ -39,7 +39,7 @@ EOF
         list = admin.list_snapshot(regex)
         list.each do |snapshot|
           creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTable + ' (' + creation_time + ')'])
+          formatter.row([snapshot.getName, snapshot.getTableNameAsString + ' (' + creation_time + ')'])
         end
 
         formatter.footer(list.size)
