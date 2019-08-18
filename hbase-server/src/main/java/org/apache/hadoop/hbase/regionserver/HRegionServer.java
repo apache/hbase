@@ -1065,9 +1065,11 @@ public class HRegionServer extends HasThread implements
       Timer abortMonitor = new Timer("Abort regionserver monitor", true);
       TimerTask abortTimeoutTask = null;
       try {
-        abortTimeoutTask =
-            Class.forName(conf.get(ABORT_TIMEOUT_TASK, SystemExitWhenAbortTimeout.class.getName()))
-                .asSubclass(TimerTask.class).getDeclaredConstructor().newInstance();
+        Constructor<? extends TimerTask> timerTaskCtor =
+          Class.forName(conf.get(ABORT_TIMEOUT_TASK, SystemExitWhenAbortTimeout.class.getName()))
+            .asSubclass(TimerTask.class).getDeclaredConstructor();
+        timerTaskCtor.setAccessible(true);
+        abortTimeoutTask = timerTaskCtor.newInstance();
       } catch (Exception e) {
         LOG.warn("Initialize abort timeout task failed", e);
       }
