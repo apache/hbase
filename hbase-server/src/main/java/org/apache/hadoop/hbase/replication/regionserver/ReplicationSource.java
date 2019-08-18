@@ -309,12 +309,7 @@ public class ReplicationSource extends Thread
       }
     }
 
-    if (peerClusterId == null) {
-      // In some cases, it is possible that peerClusterId is null because it couldn't read
-      // peer cluster id from zookeeper. One case this might happen is because 2 clusters don't
-      // have kerberos trust setup.
-      this.terminate("Peer ClusterId returned is null", null, false);
-      this.manager.closeQueue(this);
+    if (!this.isSourceActive()) {
       return;
     }
 
