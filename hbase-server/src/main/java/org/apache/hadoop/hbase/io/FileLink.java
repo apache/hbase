@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -302,6 +303,8 @@ public class FileLink {
       for (Path path: fileLink.getLocations()) {
         if (path.equals(currentPath)) continue;
         try {
+          if(fs instanceof WebHdfsFileSystem && !fs.exists(path))
+            throw new FileNotFoundException("File not exists for path " + path.toString());
           in = fs.open(path, bufferSize);
           if (pos != 0) in.seek(pos);
           assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
