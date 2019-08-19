@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,15 +46,19 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.RegionGroupingProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
@@ -62,6 +67,7 @@ import com.google.common.collect.ImmutableList;
  * Test the {@link RegionMergeTransactionImpl} class against two HRegions (as
  * opposed to running cluster).
  */
+@RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestRegionMergeTransaction {
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -81,10 +87,32 @@ public class TestRegionMergeTransaction {
 
   private MockRegionServerServicesWithWALs rsw;
 
+  private String walProvider;
+  private String strategy;
+
+  @Parameterized.Parameters
+  public static final Collection<Object[]> parameters() {
+    List<Object[]> params = new ArrayList<>(4);
+    params.add(new Object[] { "filesystem", "" });
+    params.add(new Object[] { "multiwal", "identity" });
+    params.add(new Object[] { "multiwal", "bounded" });
+    params.add(new Object[] { "multiwal", "namespace" });
+    return params;
+  }
+
+  public TestRegionMergeTransaction(String walProvider, String strategy) {
+    this.walProvider = walProvider;
+    this.strategy = strategy;
+  }
+
   @Before
   public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     this.fs.delete(this.testdir, true);
+    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
+    if (!strategy.isEmpty()) {
+      TEST_UTIL.getConfiguration().set(RegionGroupingProvider.REGION_GROUPING_STRATEGY, strategy);
+    }
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, this.testdir);
     this.wals = new WALFactory(walConf, null, TestRegionMergeTransaction.class.getName());
@@ -282,7 +310,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      mergedRegion.close();
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
@@ -342,7 +370,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      mergedRegion.close();
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());

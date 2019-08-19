@@ -94,7 +94,7 @@ public class TestSplitTransaction {
   private String strategy;
 
   @Parameterized.Parameters
-  public static final Collection<Object[]> parameters() throws IOException {
+  public static final Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>(4);
     params.add(new Object[] { "filesystem", "" });
     params.add(new Object[] { "multiwal", "identity" });
