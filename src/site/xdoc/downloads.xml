@@ -91,25 +91,25 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.0.5
+        2.0.6
       </td>
       <td style="test-align: left">
-        2019/03/25
+        2019/08/19
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.5/api_compare_2.0.4_to_2.0.5RC1.html">2.0.4 vs 2.0.5</a>
+        <a href="https://apache.org/dist/hbase/2.0.6/api_compare_2.0.5_to_2.0.6RC1.html">2.0.5 vs 2.0.6</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.5/CHANGES.md">Changes</a>
+        <a href="https://apache.org/dist/hbase/2.0.6/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/2.0.5/RELEASENOTES.md">Release Notes</a>
+        <a href="https://apache.org/dist/hbase/2.0.6/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.5/hbase-2.0.5-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.0.5/hbase-2.0.5-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.5/hbase-2.0.5-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.5/hbase-2.0.5-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.5/hbase-2.0.5-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.6/hbase-2.0.6-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/2.0.6/hbase-2.0.6-src.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.6/hbase-2.0.6-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.0.6/hbase-2.0.6-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/2.0.6/hbase-2.0.6-bin.tar.gz.sha512">sha512</a> <a href="https://apache.org/dist/hbase/2.0.6/hbase-2.0.6-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td>Branch-2.0 has been EOL'd. 2.0.6 is the last release off the 2.0.x hbase line. Please move to a later version.</td>
     </tr>
     <tr>
       <td style="test-align: left">
