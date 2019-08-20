@@ -53,7 +53,6 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -120,8 +119,8 @@ public class TestCanaryTool {
       table.put(p);
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-writeSniffing", "-t", "10000", tableName.getNameAsString() };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
@@ -142,8 +141,8 @@ public class TestCanaryTool {
       table.put(p);
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-writeSniffing", "-t", "10000", "testCanaryRegionTaskResult" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
 
@@ -156,11 +155,11 @@ public class TestCanaryTool {
 
     assertTrue("canary should expect to scan at least 1 region",
         sink.getTotalExpectedRegions() > 0);
-    Map<String, Canary.RegionTaskResult> regionMap = sink.getRegionMap();
+    Map<String, CanaryTool.RegionTaskResult> regionMap = sink.getRegionMap();
     assertFalse("verify region map has size > 0", regionMap.isEmpty());
 
     for (String regionName : regionMap.keySet()) {
-      Canary.RegionTaskResult res = regionMap.get(regionName);
+      CanaryTool.RegionTaskResult res = regionMap.get(regionName);
       assertNotNull("verify each expected region has a RegionTaskResult object in the map", res);
       assertNotNull("verify getRegionNameAsString()", regionName);
       assertNotNull("verify getRegionInfo()", res.getRegionInfo());
@@ -169,7 +168,7 @@ public class TestCanaryTool {
       assertNotNull("verify getServerName()", res.getServerName());
       assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
 
-      if (regionName.contains(Canary.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
+      if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
         assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
         assertTrue("write took some time", res.getWriteLatency() > -1);
       } else {
@@ -180,7 +179,6 @@ public class TestCanaryTool {
   }
 
   @Test
-  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testReadTableTimeouts() throws Exception {
     final TableName [] tableNames = new TableName[2];
     tableNames[0] = TableName.valueOf(name.getMethodName() + "1");
@@ -197,8 +195,8 @@ public class TestCanaryTool {
       }
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
       tableNames[1].getNameAsString() + "=0";
     String[] args = {"-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1",
@@ -219,17 +217,16 @@ public class TestCanaryTool {
     verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
       public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("The configured read timeout was");
+        return argument.getRenderedMessage().contains("Configured read timeout");
       }
     }));
   }
 
   @Test
-  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testWriteTableTimeout() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-writeSniffing", "-writeTableTimeout", String.valueOf(Long.MAX_VALUE)};
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
@@ -238,7 +235,7 @@ public class TestCanaryTool {
         new ArgumentMatcher<LoggingEvent>() {
           @Override
           public boolean matches(LoggingEvent argument) {
-            return argument.getRenderedMessage().contains("The configured write timeout was");
+            return argument.getRenderedMessage().contains("Configured write timeout");
           }
         }));
   }
@@ -281,8 +278,8 @@ public class TestCanaryTool {
       table.put(p);
     }
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-t", "10000", name.getMethodName() };
     org.apache.hadoop.conf.Configuration conf =
       new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
@@ -296,7 +293,7 @@ public class TestCanaryTool {
 
   private void runRegionserverCanary() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
-    Canary canary = new Canary(executor, new Canary.RegionServerStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, new CanaryTool.RegionServerStdOutSink());
     String[] args = { "-t", "10000", "-regionserver"};
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
@@ -307,8 +304,8 @@ public class TestCanaryTool {
       Iterables.getOnlyElement(testingUtility.getZkCluster().getClientPortList(), null);
     testingUtility.getConfiguration().set(HConstants.ZOOKEEPER_QUORUM, "localhost:" + port);
     ExecutorService executor = new ScheduledThreadPoolExecutor(2);
-    Canary.ZookeeperStdOutSink sink = spy(new Canary.ZookeeperStdOutSink());
-    Canary canary = new Canary(executor, sink);
+    CanaryTool.ZookeeperStdOutSink sink = spy(new CanaryTool.ZookeeperStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
 
     String baseZnode = testingUtility.getConfiguration()

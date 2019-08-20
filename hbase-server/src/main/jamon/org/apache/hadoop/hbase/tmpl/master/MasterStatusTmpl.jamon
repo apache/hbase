@@ -55,7 +55,7 @@ org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.security.access.PermissionStorage;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-org.apache.hadoop.hbase.tool.Canary;
+org.apache.hadoop.hbase.tool.CanaryTool;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.FSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
@@ -513,7 +513,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <%java>String description = null;
         if (tableName.equals(TableName.META_TABLE_NAME)){
             description = "The hbase:meta table holds references to all User Table regions.";
-        } else if (tableName.equals(Canary.DEFAULT_WRITE_TABLE_NAME)){
+        } else if (tableName.equals(CanaryTool.DEFAULT_WRITE_TABLE_NAME)){
             description = "The hbase:canary table is used to sniff the write availbility of"
               + " each regionserver.";
         } else if (tableName.equals(PermissionStorage.ACL_TABLE_NAME)){
