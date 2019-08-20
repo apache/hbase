@@ -235,14 +235,7 @@ public abstract class ModifyRegionUtils {
         "hbase.hregion.open.and.init.threads.max", 16));
     ThreadPoolExecutor regionOpenAndInitThreadPool = Threads
     .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactory() {
-          private int count = 1;
-
-          @Override
-          public Thread newThread(Runnable r) {
-            return new Thread(r, threadNamePrefix + "-" + count++);
-          }
-        });
+        Threads.newDaemonThreadFactory(threadNamePrefix));
     return regionOpenAndInitThreadPool;
   }
 }
