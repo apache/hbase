@@ -1263,6 +1263,7 @@
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <avro.version>1.7.7</avro.version>
+    <caffeine.version>2.7.0</caffeine.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.9</commons-codec.version>
     <!-- pretty outdated -->
@@ -1601,6 +1602,11 @@
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>${metrics-core.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>${caffeine.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
@@ -2010,6 +2016,9 @@
       <activation>
         <jdk>1.8</jdk>
       </activation>
+      <modules>
+        <module>hbase-tinylfu-blockcache</module>
+      </modules>
       <build>
         <pluginManagement>
           <plugins>

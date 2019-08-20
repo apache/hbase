@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -253,7 +252,8 @@ public class TestCacheConfig {
     BlockCache [] bcs = cbc.getBlockCaches();
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache)bcs[0];
-    assertEquals(HeapMemorySizeUtil.getLruCacheSize(this.conf), lbc.getMaxSize());
+    assertEquals(HeapMemorySizeUtil.getFirstLevelCacheSize(this.conf,
+      ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()), lbc.getMaxSize());
     assertTrue(bcs[1] instanceof BucketCache);
     BucketCache bc = (BucketCache)bcs[1];
     // getMaxSize comes back in bytes but we specified size in MB
@@ -270,7 +270,8 @@ public class TestCacheConfig {
     // Make lru size is smaller than bcSize for sure.  Need this to be true so when eviction
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
-    long lruExpectedSize = HeapMemorySizeUtil.getLruCacheSize(this.conf);
+    long lruExpectedSize = HeapMemorySizeUtil.getFirstLevelCacheSize(this.conf,
+      ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax());
     final int bcSize = 100;
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);
