@@ -50,7 +50,6 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RestTests.class, SmallTests.class})
 public class TestRemoteHTableRetries {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRemoteHTableRetries.class);
@@ -131,8 +130,7 @@ public class TestRemoteHTableRetries {
     testTimedOutCall(new CallExecutor() {
       @Override
       public void run() throws Exception {
-        Put[] puts = { new Put(Bytes.toBytes("Row1")),
-            new Put(Bytes.toBytes("Row2")) };
+        Put[] puts = { new Put(Bytes.toBytes("Row1")), new Put(Bytes.toBytes("Row2")) };
         remoteTable.put(Arrays.asList(puts));
       }
     });
@@ -172,7 +170,6 @@ public class TestRemoteHTableRetries {
         Put put = new Put(ROW_1);
         put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
         Delete delete= new Delete(ROW_1);
-        //remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1,  VALUE_1, delete );
         remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
             .ifEquals(VALUE_1).thenDelete(delete);
       }
@@ -195,8 +192,7 @@ public class TestRemoteHTableRetries {
     assertTrue((System.currentTimeMillis() - start) > MAX_TIME);
   }
 
-  private static interface CallExecutor {
+  private interface CallExecutor {
     void run() throws Exception;
   }
-
 }

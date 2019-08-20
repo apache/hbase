@@ -71,7 +71,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestScannersWithLabels {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannersWithLabels.class);
@@ -96,7 +95,8 @@ public class TestScannersWithLabels {
   private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
-  private static int insertData(TableName tableName, String column, double prob) throws IOException {
+  private static int insertData(TableName tableName, String column, double prob)
+      throws IOException {
     byte[] k = new byte[3];
     byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
 
@@ -168,20 +168,18 @@ public class TestScannersWithLabels {
   }
 
   private static void createLabels() throws IOException, InterruptedException {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
-        }
-        return null;
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action = () -> {
+      String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        VisibilityClient.addLabels(conn, labels);
+      } catch (Throwable t) {
+        throw new IOException(t);
       }
+      return null;
     };
     SUPERUSER.runAs(action);
   }
+
   private static void setAuths() throws Exception {
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -190,6 +188,7 @@ public class TestScannersWithLabels {
       throw new IOException(t);
     }
   }
+
   @Test
   public void testSimpleScannerXMLWithLabelsThatReceivesNoData() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
@@ -242,5 +241,4 @@ public class TestScannersWithLabels {
         .getBody()));
     assertEquals(5, countCellSet(cellSet));
   }
-
 }
