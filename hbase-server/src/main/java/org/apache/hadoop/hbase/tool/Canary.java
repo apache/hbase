@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -108,7 +109,7 @@ import org.apache.zookeeper.data.Stat;
  * 3. zookeeper mode - for each zookeeper instance, selects a zNode and
  * outputs some information about failure or latency.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
