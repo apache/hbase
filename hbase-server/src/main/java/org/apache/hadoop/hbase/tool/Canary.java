@@ -119,7 +119,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * </li>
  * </ol>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public final class Canary implements Tool {
   /**
    * Sink interface used by the canary to output information
