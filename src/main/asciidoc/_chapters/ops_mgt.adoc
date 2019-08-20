@@ -81,7 +81,7 @@ To see the usage, use the `--help` parameter.
 ----
 $ ${HBASE_HOME}/bin/hbase canary -help
 
-Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+Usage: hbase canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
