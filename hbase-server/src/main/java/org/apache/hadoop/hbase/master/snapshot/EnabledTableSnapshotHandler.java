@@ -65,12 +65,11 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   // enforce a snapshot time constraints, but lets us be potentially a bit more robust.
 
   /**
-   * This method kicks off a snapshot procedure.  Other than that it hangs around for various
-   * phases to complete.
+   * This method kicks off a snapshot procedure. Other than that it hangs around for various phases
+   * to complete.
    */
   @Override
-  protected void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions)
-      throws HBaseSnapshotException, IOException {
+  protected void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions) throws IOException {
     Set<String> regionServers = new HashSet<String>(regions.size());
     for (Pair<HRegionInfo, ServerName> region : regions) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
