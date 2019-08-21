@@ -27,17 +27,16 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceStability.Stable
 @SuppressWarnings("serial")
 public class ExportSnapshotException extends HBaseSnapshotException {
-
   /**
-   * @param msg message describing the exception
+   * @param message message describing the exception
    */
-  public ExportSnapshotException(String msg) {
-    super(msg);
+  public ExportSnapshotException(String message) {
+    super(message);
   }
 
   /**
    * @param message message describing the exception
-   * @param e cause
+   * @param e the actual cause of the exception
    */
   public ExportSnapshotException(String message, Exception e) {
     super(message, e);

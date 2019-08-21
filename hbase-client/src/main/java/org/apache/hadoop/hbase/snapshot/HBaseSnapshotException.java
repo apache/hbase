@@ -17,62 +17,72 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
- * General exception base class for when a snapshot fails
+ * General exception base class for when a snapshot fails.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HBaseSnapshotException extends DoNotRetryIOException {
-
   private SnapshotDescription description;
 
   /**
-   * Some exception happened for a snapshot and don't even know the snapshot that it was about
-   * @param msg Full description of the failure
+   * Some exception happened for a snapshot and don't even know the snapshot that it was about.
+   *
+   * @param message the full description of the failure
    */
-  public HBaseSnapshotException(String msg) {
-    super(msg);
+  public HBaseSnapshotException(String message) {
+    super(message);
   }
 
   /**
-   * Exception for the given snapshot that has no previous root cause
-   * @param msg reason why the snapshot failed
-   * @param desc description of the snapshot that is being failed
+   * Exception for the given snapshot that has no previous root cause.
+   *
+   * @param message the reason why the snapshot failed
+   * @param snapshotDescription the description of the snapshot that is failing
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public HBaseSnapshotException(String msg, SnapshotDescription desc) {
-    super(msg);
-    this.description = desc;
+  public HBaseSnapshotException(String message, SnapshotDescription snapshotDescription) {
+    super(message);
+    this.description = snapshotDescription;
   }
 
   /**
-   * Exception for the given snapshot due to another exception
-   * @param msg reason why the snapshot failed
-   * @param cause root cause of the failure
-   * @param desc description of the snapshot that is being failed
+   * Exception for the given snapshot due to another exception.
+   *
+   * @param message the reason why the snapshot failed
+   * @param cause the root cause of the failure
+   * @param snapshotDescription the description of the snapshot that is being failed
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public HBaseSnapshotException(String msg, Throwable cause, SnapshotDescription desc) {
-    super(msg, cause);
-    this.description = desc;
+  public HBaseSnapshotException(String message, Throwable cause,
+      SnapshotDescription snapshotDescription) {
+    super(message, cause);
+    this.description = snapshotDescription;
   }
 
   /**
    * Exception when the description of the snapshot cannot be determined, due to some root other
-   * root cause
+   * root cause.
+   *
    * @param message description of what caused the failure
-   * @param e root cause
+   * @param e the root cause
    */
   public HBaseSnapshotException(String message, Exception e) {
     super(message, e);
   }
 
+  /**
+   * @return the description of the snapshot that is being failed
+   * @deprecated since 1.3.0, will be removed in 3.0.0
+   */
   @Deprecated
   public SnapshotDescription getSnapshotDescription() {
     return this.description;
