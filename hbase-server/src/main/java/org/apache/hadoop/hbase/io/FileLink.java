@@ -303,8 +303,9 @@ public class FileLink {
       for (Path path: fileLink.getLocations()) {
         if (path.equals(currentPath)) continue;
         try {
-          if(fs instanceof WebHdfsFileSystem && !fs.exists(path))
+          if(fs instanceof WebHdfsFileSystem && !fs.exists(path)) {
             throw new FileNotFoundException("File not exists for path " + path.toString());
+          }
           in = fs.open(path, bufferSize);
           if (pos != 0) in.seek(pos);
           assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
