@@ -19,36 +19,42 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 
 /**
- * Exception thrown when the found snapshot info from the filesystem is not valid
+ * Exception thrown when the found snapshot info from the filesystem is not valid.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CorruptedSnapshotException extends HBaseSnapshotException {
-
   /**
+   * Snapshot was corrupt for some reason.
+   *
    * @param message message describing the exception
-   * @param e cause
+   * @param e the actual cause of the exception
    */
   public CorruptedSnapshotException(String message, Exception e) {
     super(message, e);
   }
 
   /**
-   * Snapshot was corrupt for some reason
+   * Snapshot was corrupt for some reason.
+   *
    * @param message full description of the failure
-   * @param snapshot snapshot that was expected
+   * @param snapshotDescription snapshot that was expected
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public CorruptedSnapshotException(String message, SnapshotDescription snapshot) {
-    super(message, snapshot);
+  public CorruptedSnapshotException(String message, SnapshotDescription snapshotDescription) {
+    super(message, snapshotDescription);
   }
 
   /**
+   * Snapshot was corrupt for some reason.
+   *
    * @param message message describing the exception
    */
   public CorruptedSnapshotException(String message) {

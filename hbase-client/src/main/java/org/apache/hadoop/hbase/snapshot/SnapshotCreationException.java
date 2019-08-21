@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
@@ -29,32 +30,36 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotCreationException extends HBaseSnapshotException {
-
   /**
    * Used internally by the RPC engine to pass the exception back to the client.
-   * @param msg error message to pass back
+   *
+   * @param message error message to pass back
    */
-  public SnapshotCreationException(String msg) {
-    super(msg);
+  public SnapshotCreationException(String message) {
+    super(message);
   }
 
   /**
-   * Failure to create the specified snapshot
-   * @param msg reason why the snapshot couldn't be completed
-   * @param desc description of the snapshot attempted
+   * Failure to create the specified snapshot.
+   *
+   * @param message reason why the snapshot couldn't be completed
+   * @param snapshotDescription description of the snapshot attempted
    */
-  public SnapshotCreationException(String msg, SnapshotDescription desc) {
-    super(msg, desc);
+  public SnapshotCreationException(String message, SnapshotDescription snapshotDescription) {
+    super(message, snapshotDescription);
   }
 
   /**
-   * Failure to create the specified snapshot due to an external cause
-   * @param msg reason why the snapshot couldn't be completed
-   * @param cause root cause of the failure
-   * @param desc description of the snapshot attempted
+   * Failure to create the specified snapshot due to an external cause.
+   *
+   * @param message reason why the snapshot couldn't be completed
+   * @param cause the root cause of the failure
+   * @param snapshotDescription description of the snapshot attempted
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public SnapshotCreationException(String msg, Throwable cause, SnapshotDescription desc) {
-    super(msg, cause, desc);
+  public SnapshotCreationException(String message, Throwable cause,
+      SnapshotDescription snapshotDescription) {
+    super(message, cause, snapshotDescription);
   }
 }

@@ -19,26 +19,34 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
- * Thrown when a snapshot exists but should not
+ * Thrown when a snapshot exists, but should not.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotExistsException extends HBaseSnapshotException {
-  public SnapshotExistsException(String msg) {
-    super(msg);
+  /**
+   * Failure due to the snapshot already existing.
+   *
+   * @param message the full description of the failure
+   */
+  public SnapshotExistsException(String message) {
+    super(message);
   }
 
   /**
-   * Failure due to the snapshot already existing
-   * @param msg full description of the failure
-   * @param desc snapshot that was attempted
+   * Failure due to the snapshot already existing.
+   *
+   * @param message the full description of the failure
+   * @param snapshotDescription snapshot that was attempted
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public SnapshotExistsException(String msg, SnapshotDescription desc) {
-    super(msg, desc);
+  public SnapshotExistsException(String message, SnapshotDescription snapshotDescription) {
+    super(message, snapshotDescription);
   }
 }
