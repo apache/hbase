@@ -150,7 +150,7 @@ module Hbase
         if !table_regex.nil? && isNamespace?(table_regex)
           nsPerm = permission.to_java(org.apache.hadoop.hbase.security.access.NamespacePermission)
           namespace = nsPerm.getNamespace
-        else
+        elsif !table_regex.nil?
           tblPerm = permission.to_java(org.apache.hadoop.hbase.security.access.TablePermission)
           namespace = tblPerm.getNamespace
           table = !tblPerm.getTableName.nil? ? tblPerm.getTableName.getNameAsString : ''
