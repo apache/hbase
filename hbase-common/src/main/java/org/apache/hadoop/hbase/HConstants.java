@@ -1352,10 +1352,6 @@ public final class HConstants {
       "hbase.master.executor.logreplayops.threads";
   public static final int MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT = 10;
 
-  public static final String MASTER_SNAPSHOT_OPERATIONS_THREADS =
-      "hbase.master.executor.snapshot.threads";
-  public static final int MASTER_SNAPSHOT_OPERATIONS_THREADS_DEFAULT = 3;
-
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
