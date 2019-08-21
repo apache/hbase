@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.protobuf.Service;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -49,8 +50,6 @@ import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.Service;
 
 /**
  * Mock region server services with WALProvider, it can be used for testing wal related tests,
