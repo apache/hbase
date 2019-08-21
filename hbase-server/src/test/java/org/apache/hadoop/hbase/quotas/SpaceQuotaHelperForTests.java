@@ -306,15 +306,16 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName createTableWithRegions(Admin admin, int numRegions) throws Exception {
-    return createTableWithRegions(
-        testUtil.getAdmin(), NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions);
+    return createTableWithRegions(admin, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, numRegions,
+        0);
   }
 
   TableName createTableWithRegions(String namespace, int numRegions) throws Exception {
-    return createTableWithRegions(testUtil.getAdmin(), namespace, numRegions);
+    return createTableWithRegions(testUtil.getAdmin(), namespace, numRegions, 0);
   }
 
-  TableName createTableWithRegions(Admin admin, String namespace, int numRegions) throws Exception {
+  TableName createTableWithRegions(Admin admin, String namespace, int numRegions,
+      int numberOfReplicas) throws Exception {
     final TableName tn = getNextTableName(namespace);
 
     // Delete the old table
@@ -324,8 +325,14 @@ public class SpaceQuotaHelperForTests {
     }
 
     // Create the table
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tn)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    TableDescriptor tableDesc;
+    if (numberOfReplicas > 0) {
+      tableDesc = TableDescriptorBuilder.newBuilder(tn).setRegionReplication(numberOfReplicas)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    } else {
+      tableDesc = TableDescriptorBuilder.newBuilder(tn)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F1)).build();
+    }
     if (numRegions == 1) {
       admin.createTable(tableDesc);
     } else {
