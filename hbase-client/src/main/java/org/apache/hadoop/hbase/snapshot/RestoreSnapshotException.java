@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thrown when a snapshot could not be restored due to a server-side error when restoring it.
@@ -27,19 +26,36 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 public class RestoreSnapshotException extends HBaseSnapshotException {
-  public RestoreSnapshotException(String msg, SnapshotDescription desc) {
-    super(msg, desc);
+  /**
+   * @param message reason why restoring the snapshot fails
+   * @param snapshotDescription description of the snapshot attempted
+   */
+  public RestoreSnapshotException(String message, SnapshotDescription snapshotDescription) {
+    super(message, snapshotDescription);
   }
 
-  public RestoreSnapshotException(String msg, Throwable cause, SnapshotDescription desc) {
-    super(msg, cause, desc);
+  /**
+   * @param message reason why restoring the snapshot fails
+   * @param cause the root cause of the failure
+   * @param snapshotDescription description of the snapshot attempted
+   */
+  public RestoreSnapshotException(String message, Throwable cause,
+      SnapshotDescription snapshotDescription) {
+    super(message, cause, snapshotDescription);
   }
 
-  public RestoreSnapshotException(String msg) {
-    super(msg);
+  /**
+   * @param message reason why restoring the snapshot fails
+   */
+  public RestoreSnapshotException(String message) {
+    super(message);
   }
 
-  public RestoreSnapshotException(String message, Throwable e) {
-    super(message, e);
+  /**
+   * @param message reason why restoring the snapshot fails
+   * @param cause the root cause of the failure
+   */
+  public RestoreSnapshotException(String message, Throwable cause) {
+    super(message, cause);
   }
 }
