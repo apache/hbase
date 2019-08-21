@@ -23,24 +23,26 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 
 
 /**
- * Thrown when the server is looking for a snapshot but can't find the snapshot on the filesystem
+ * Thrown when the server is looking for a snapshot, but can't find the snapshot on the filesystem.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotDoesNotExistException extends HBaseSnapshotException {
   /**
-   * @param msg full description of the failure
+   * @param message the full description of the failure
    */
-  public SnapshotDoesNotExistException(String msg) {
-    super(msg);
+  public SnapshotDoesNotExistException(String message) {
+    super(message);
   }
 
   /**
-   * @param desc expected snapshot to find
+   * @param snapshotDescription expected snapshot to find
+   * @deprecated since 1.3.0, will be removed in 3.0.0
    */
   @Deprecated
-  public SnapshotDoesNotExistException(SnapshotDescription desc) {
-    super("Snapshot '" + desc.getName() +"' doesn't exist on the filesystem", desc);
+  public SnapshotDoesNotExistException(SnapshotDescription snapshotDescription) {
+    super("Snapshot '" + snapshotDescription.getName() + "' doesn't exist on the filesystem",
+        snapshotDescription);
   }
 }
