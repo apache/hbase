@@ -78,5 +78,25 @@ module Hbase
       end
       assert(found_permission, "Permission for user test_grant_revoke was not found.")
     end
+
+    define_test 'Grant and revoke global permission should set access rights appropriately' do
+      global_user_name = 'test_grant_revoke_global'
+      security_admin.grant(global_user_name, 'W')
+      found_permission = false
+      security_admin.user_permission do |user, permission|
+        if user == global_user_name
+          assert_match(/WRITE/, permission.to_s)
+          found_permission = true
+        end
+      end
+      assert(found_permission, 'Permission for user ' + global_user_name + ' was not found.')
+
+      found_permission = false
+      security_admin.revoke(global_user_name)
+      security_admin.user_permission do |user, _|
+        found_permission = true if user == global_user_name
+      end
+      assert(!found_permission, 'Permission for user ' + global_user_name + ' was found.')
+    end
   end
 end
