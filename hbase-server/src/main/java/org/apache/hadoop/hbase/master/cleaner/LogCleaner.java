@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 
 /**
@@ -44,7 +45,8 @@ import org.apache.hadoop.hbase.wal.DefaultWALProvider;
  * @see BaseLogCleanerDelegate
  */
 @InterfaceAudience.Private
-public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
+public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
+        implements ConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
 
   public static final String OLD_WALS_CLEANER_THREAD_SIZE = "hbase.oldwals.cleaner.thread.size";
@@ -74,8 +76,8 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
    * @param oldLogDir the path to the archived logs
    */
   public LogCleaner(final int p, final Stoppable s, Configuration conf, FileSystem fs,
-      Path oldLogDir) {
-    super("LogsCleaner", p, s, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
+      Path oldLogDir, DirScanPool pool) {
+    super("LogsCleaner", p, s, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS, pool);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);
@@ -92,8 +94,6 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    super.onConfigurationChange(conf);
-
     int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     if (newSize == oldWALsCleaner.size()) {
       if (LOG.isDebugEnabled()) {
