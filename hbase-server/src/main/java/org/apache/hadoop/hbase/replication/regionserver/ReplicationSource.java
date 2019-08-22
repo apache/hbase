@@ -310,6 +310,10 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       }
     }
 
+    if (!this.isSourceActive()) {
+      return;
+    }
+
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
     // peerClusterId value, which is the same as the source clusterId
     if (clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
