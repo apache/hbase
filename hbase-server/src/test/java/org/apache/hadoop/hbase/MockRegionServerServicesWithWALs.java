@@ -199,11 +199,6 @@ public class MockRegionServerServicesWithWALs implements RegionServerServices {
   }
 
   @Override
-  public void unassign(byte[] regionName) throws IOException {
-    rss.unassign(regionName);
-  }
-
-  @Override
   public void addToOnlineRegions(Region r) {
     rss.addToOnlineRegions(r);
   }
