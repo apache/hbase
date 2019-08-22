@@ -266,6 +266,38 @@
               </exclusions>
             </dependency>
             <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-jaxrs</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-core-asl</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-xc</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-core-asl</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-auth</artifactId>
               <scope>provided</scope>
@@ -312,6 +344,38 @@
                 <exclusion>
                   <groupId>com.google.guava</groupId>
                   <artifactId>guava</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-jaxrs</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-core-asl</artifactId>
+                </exclusion>
+              </exclusions>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-xc</artifactId>
+              <version>1.9.13</version>
+              <scope>provided</scope>
+              <exclusions>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                  <groupId>org.codehaus.jackson</groupId>
+                  <artifactId>jackson-core-asl</artifactId>
                 </exclusion>
               </exclusions>
             </dependency>
