@@ -123,6 +123,12 @@ if [ -n "${keys}" ]; then
   echo "signature good."
 fi
 
+if [ -n "${keys}" ]; then
+  echo "Stopping gpg agent daemon"
+  gpgconf --homedir "${working_dir}/.gpg" --kill gpg-agent
+  echo "Stopped gpg agent daemon"
+fi
+
 echo "moving artifact into place at '${target}'"
 # ensure we're on the same filesystem
 mv "${working_dir}/artifact" "${target}.copying"
