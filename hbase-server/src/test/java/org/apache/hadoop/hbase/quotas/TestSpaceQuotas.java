@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -484,52 +483,6 @@ public class TestSpaceQuotas {
   @Test
   public void testSetQuotaOnNonExistingTableWithDisable() throws Exception {
     setQuotaLimit(NON_EXISTENT_TABLE, SpaceViolationPolicy.DISABLE, 2L);
-  }
-
-  @Test
-  public void testSetQuotaWithRegionReplicaSingleRegion() throws Exception {
-    setQuotaAndVerfiyForRegionReplication(1, 2, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerfiyForRegionReplication(1, 2, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerfiyForRegionReplication(1, 2, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerfiyForRegionReplication(1, 2, SpaceViolationPolicy.DISABLE);
-  }
-
-  @Test
-  public void testSetQuotaWithRegionReplicaMultipleRegion() throws Exception {
-    setQuotaAndVerfiyForRegionReplication(5, 3, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerfiyForRegionReplication(6, 3, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerfiyForRegionReplication(6, 3, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerfiyForRegionReplication(6, 3, SpaceViolationPolicy.DISABLE);
-  }
-
-  @Test
-  public void testSetQuotaWithSingleRegionZeroRegionReplica() throws Exception {
-    setQuotaAndVerfiyForRegionReplication(1, 0, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerfiyForRegionReplication(1, 0, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerfiyForRegionReplication(1, 0, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerfiyForRegionReplication(1, 0, SpaceViolationPolicy.DISABLE);
-  }
-
-  @Test
-  public void testSetQuotaWithMultipleRegionZeroRegionReplicas() throws Exception {
-    setQuotaAndVerfiyForRegionReplication(5, 0, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerfiyForRegionReplication(6, 0, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerfiyForRegionReplication(6, 0, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerfiyForRegionReplication(6, 0, SpaceViolationPolicy.DISABLE);
-  }
-
-  private void setQuotaAndVerfiyForRegionReplication(int region, int replicatedRegion,
-      SpaceViolationPolicy policy) throws Exception {
-    TableName tn = helper.createTableWithRegions(TEST_UTIL.getAdmin(),
-        NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, region, replicatedRegion);
-    setQuotaLimit(tn, policy, 5L);
-    helper.writeData(tn, 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
-    Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
-    // Adding a sleep for 5 sec, so all the chores run and to void flakiness of the test.
-    Thread.sleep(5000);
-    verifyViolation(policy, tn, p);
   }
 
   public void setQuotaAndViolateNextSwitchPoliciesAndValidate(SpaceViolationPolicy policy1,
