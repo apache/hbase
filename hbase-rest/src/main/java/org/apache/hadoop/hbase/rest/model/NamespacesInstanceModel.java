@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import com.google.gson.Gson;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -165,5 +166,18 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
       addProperty(property.getKey(), property.getValue());
     }
     return this;
+  }
+
+  public static void main(String[] args) {
+    NamespacesInstanceModel model = new NamespacesInstanceModel();
+    model.addProperty("test", "test value");
+    model.addProperty("test1", "test value 1");
+    model.namespaceName = "name";
+
+    Gson gson = new Gson();
+    String json = gson.toJson(model);
+    System.out.println(json);
+
+
   }
 }
