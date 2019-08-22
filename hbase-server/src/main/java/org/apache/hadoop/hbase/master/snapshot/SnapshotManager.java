@@ -143,10 +143,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public static final String ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION = "online-snapshot";
 
   /** Conf key for # of threads used by the SnapshotManager thread pool */
-  private static final String SNAPSHOT_POOL_THREADS_KEY = "hbase.snapshot.master.threads";
+  public static final String SNAPSHOT_POOL_THREADS_KEY = "hbase.snapshot.master.threads";
 
   /** number of current operations running on the master */
-  private static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
+  public static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
 
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers

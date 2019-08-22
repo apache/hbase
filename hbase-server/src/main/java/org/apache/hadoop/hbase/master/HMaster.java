@@ -1351,9 +1351,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         HConstants.MASTER_META_SERVER_OPERATIONS_THREADS_DEFAULT));
     this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS, conf.getInt(
       HConstants.MASTER_LOG_REPLAY_OPS_THREADS, HConstants.MASTER_LOG_REPLAY_OPS_THREADS_DEFAULT));
-    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS,
-      conf.getInt(HConstants.MASTER_SNAPSHOT_OPERATIONS_THREADS,
-        HConstants.MASTER_SNAPSHOT_OPERATIONS_THREADS_DEFAULT));
+    this.executorService.startExecutorService(ExecutorType.MASTER_SNAPSHOT_OPERATIONS, conf.getInt(
+      SnapshotManager.SNAPSHOT_POOL_THREADS_KEY, SnapshotManager.SNAPSHOT_POOL_THREADS_DEFAULT));
 
    // We depend on there being only one instance of this executor running
    // at a time.  To do concurrency, would need fencing of enable/disable of
