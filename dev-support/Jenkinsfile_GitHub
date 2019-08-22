@@ -63,7 +63,7 @@ pipeline {
                     [usernamePassword(credentialsId: 'apache-hbase-at-github.com',
                                   passwordVariable: 'GITHUB_PASSWORD',
                                   usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                    usernamePassword(credentialsId: 'hbaseqa-at-asf-jira',
                                         passwordVariable: 'JIRA_PASSWORD',
                                         usernameVariable: 'JIRA_USER')]) {
                         sh '''#!/usr/bin/env bash
