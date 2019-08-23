@@ -249,17 +249,6 @@ public class Put extends Mutation implements HeapSize {
     return (Put) super.setDurability(d);
   }
 
-  /**
-   * Method for setting the put's familyMap
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Put#Put(byte[], long, NavigableMap)} instead
-   */
-  @Deprecated
-  @Override
-  public Put setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
-    return (Put) super.setFamilyCellMap(map);
-  }
-
   @Override
   public Put setClusterIds(List<UUID> clusterIds) {
     return (Put) super.setClusterIds(clusterIds);

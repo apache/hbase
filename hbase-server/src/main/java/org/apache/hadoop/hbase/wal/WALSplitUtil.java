@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -453,7 +454,7 @@ public final class WALSplitUtil {
 
     @Override
     public int compareTo(final MutationReplay d) {
-      return this.mutation.compareTo(d.mutation);
+      return Row.COMPARATOR.compare(mutation, d.mutation);
     }
 
     @Override
