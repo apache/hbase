@@ -1637,7 +1637,8 @@ public abstract class FSUtils extends CommonFSUtils {
     // run in multiple threads
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(threadPoolSize,
         threadPoolSize, 60, TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(statusList.length));
+        new ArrayBlockingQueue<>(statusList.length),
+        Threads.newDaemonThreadFactory("FSRegionQuery"));
     try {
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {
