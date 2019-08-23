@@ -68,7 +68,6 @@ public class TestHFileLinkCleaner {
     POOL.shutdownNow();
   }
 
-
   @Test
   public void testHFileLinkCleaning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
