@@ -29,21 +29,26 @@
 :toc: left
 :source-language: java
 
-In HBase, scan a table costs many CPU, memory... resources. Luckily, HBase provides a TableSnapshotScanner and TableSnapshotInputFormat (introduced by link:https://issues.apache.org/jira/browse/HBASE-8369[HBASE-8369]), which performs a scan over snapshot files.
-By this way, we can bypasse HBase servers, and access the underlying files directly to provide maximum performance. And can also be used with offline HBase with in-place or exported snapshot files.
+In HBase, a scan of a table costs server-side HBase resources reading, formating, and returning data back to the client.
+Luckily, HBase provides a TableSnapshotScanner and TableSnapshotInputFormat (introduced by link:https://issues.apache.org/jira/browse/HBASE-8369[HBASE-8369]),
+which scan snapshot the HBase-written HFiles directly in the HDFS filesystem completely by-passing hbase. This access mode
+performs better than going via HBase and can be used with an offline HBase with in-place or exported
+snapshot HFiles.
 
-To read from snapshot files directly from the file system, the user must have sufficient permissions to access snapshot and reference data files.
+To read HFiles directly, the user must have sufficient permissions to access snapshots or in-place hbase HFiles.
 
 === TableSnapshotScanner
 
-TableSnapshotScanner provide a way to do single client side scan over snapshot files.
-When use TableSnapshotScanner, we must specify a temporary directory to copy the snapshot files into. Current user should have write permissions to this directory, and this should not be a subdirectory of rootdir. The scanner deletes the contents of the directory once the scanner is closed.
+TableSnapshotScanner provides a means for running a single client-side scan over snapshot files.
+When using TableSnapshotScanner, we must specify a temporary directory to copy the snapshot files into.
+The client user should have write permissions to this directory, and it should not be a subdirectory of
+the hbase.rootdir. The scanner deletes the contents of the directory once the scanner is closed.
 
 .Use TableSnapshotScanner
 ====
 [source,java]
 ----
-Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase rootdir
+Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase hbase.rootdir
 Scan scan = new Scan();
 try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan)) {
     Result result = scanner.next();
@@ -70,14 +75,15 @@ TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan, MyTableMapper.
 ====
 
 === Permission to access snapshot and data files
-Generally, only the HBase owner or the HDFS admin have the permission to access hfiles.
+Generally, only the HBase owner or the HDFS admin have the permission to access HFiles.
 
 link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] use HDFS ACLs to make HBase granted user have the permission to access the snapshot files.
 
-==== HDFS ACLs
+==== link:https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#ACLs_Access_Control_Lists[HDFS ACLs]
 
-HDFS ACLs supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL", which defines the ACL entries that new child files or sub-directories receive automatically during creation.
-By HDFS ACLs, HBase sync granted users with read permission to files.
+HDFS ACLs supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL",
+which defines the ACL entries that new child files or sub-directories receive automatically during creation.
+By HDFS ACLs, HBase sync granted users with read permission to HFiles.
 
 ==== Basic idea
 
@@ -88,7 +94,8 @@ The HBase files are orginazed as the following ways:
  * {hbase-rootdir}/archive/data/{namespace}/{table}
  * {hbase-rootdir}/.hbase-snapshot/{snapshotName}
 
-So the basic idea is to add or remove HDFS ACLs to files of global/namespace/table directory when grant or revoke permission to global/namespace/table.
+So the basic idea is to add or remove HDFS ACLs to files of
+global/namespace/table directory when grant or revoke permission to global/namespace/table.
 
 See the design doc in link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] for more details.
 
@@ -111,7 +118,8 @@ hbase.coprocessor.master.classes = "org.apache.hadoop.hbase.security.access.Acce
 hbase.acl.sync.to.hdfs.enable=true
 ----
 
- * Modify table scheme to enable this feature for a specified table, this config is false by default for every table, this means the HBase granted acls will not synced to HDFS
+ * Modify table scheme to enable this feature for a specified table, this config is
+ false by default for every table, this means the HBase granted acls will not be synced to HDFS
 ----
 alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
 ----
@@ -120,7 +128,8 @@ alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
 There are some limitations for this feature:
 
 =====
-If we enable this feature, some master operations such as grant, revoke, snapshot... (See the design doc for more details) will be slower as we need to sync HDFS ACLs to related hfiles.
+If we enable this feature, some master operations such as grant, revoke, snapshot...
+(See the design doc for more details) will be slower as we need to sync HDFS ACLs to related hfiles.
 =====
 
 =====
