@@ -1,0 +1,138 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[snapshot_scanner]]
+== Scan over snapshot
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:toc: left
+:source-language: java
+
+In HBase, scan a table costs many CPU, memory... resources. Luckily, HBase provides a TableSnapshotScanner and TableSnapshotInputFormat (introduced by link:https://issues.apache.org/jira/browse/HBASE-8369[HBASE-8369]), which performs a scan over snapshot files.
+By this way, we can bypasse HBase servers, and access the underlying files directly to provide maximum performance. And can also be used with offline HBase with in-place or exported snapshot files.
+
+To read from snapshot files directly from the file system, the user must have sufficient permissions to access snapshot and reference data files.
+
+=== TableSnapshotScanner
+
+TableSnapshotScanner provide a way to do single client side scan over snapshot files.
+When use TableSnapshotScanner, we must specify a temporary directory to copy the snapshot files into. Current user should have write permissions to this directory, and this should not be a subdirectory of rootdir. The scanner deletes the contents of the directory once the scanner is closed.
+
+.Use TableSnapshotScanner
+====
+[source,java]
+----
+Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase rootdir
+Scan scan = new Scan();
+try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan)) {
+    Result result = scanner.next();
+    while (result != null) {
+        ...
+        result = scanner.next();
+    }
+}
+----
+====
+
+=== TableSnapshotInputFormat
+TableSnapshotInputFormat provide a way to scan over snapshot files in a MapReduce job.
+
+.Use TableSnapshotInputFormat
+====
+[source,java]
+----
+Job job = new Job(conf);
+Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase rootdir
+Scan scan = new Scan();
+TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan, MyTableMapper.class, MyMapKeyOutput.class, MyMapOutputValueWritable.class, job, true, restoreDir);
+----
+====
+
+=== Permission to access snapshot and data files
+Generally, only the HBase owner or the HDFS admin have the permission to access hfiles.
+
+link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] use HDFS ACLs to make HBase granted user have the permission to access the snapshot files.
+
+==== HDFS ACLs
+
+HDFS ACLs supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL", which defines the ACL entries that new child files or sub-directories receive automatically during creation.
+By HDFS ACLs, HBase sync granted users with read permission to files.
+
+==== Basic idea
+
+The HBase files are orginazed as the following ways:
+
+ * {hbase-rootdir}/.tmp/data/{namespace}/{table}
+ * {hbase-rootdir}/data/{namespace}/{table}
+ * {hbase-rootdir}/archive/data/{namespace}/{table}
+ * {hbase-rootdir}/.hbase-snapshot/{snapshotName}
+
+So the basic idea is to add or remove HDFS ACLs to files of global/namespace/table directory when grant or revoke permission to global/namespace/table.
+
+See the design doc in link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] for more details.
+
+==== Configuration to use this feature
+
+ * Firstly, make sure that HDFS ACLs is enabled and umask is set to 027
+----
+dfs.namenode.acls.enabled = true
+fs.permissions.umask-mode = 027
+----
+
+ * Add master coprocessor, please make sure the SnapshotScannerHDFSAclController is configured after AccessController
+----
+hbase.coprocessor.master.classes = "org.apache.hadoop.hbase.security.access.AccessController
+,org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController"
+----
+
+ * Enable this feature
+----
+hbase.acl.sync.to.hdfs.enable=true
+----
+
+ * Modify table scheme to enable this feature for a specified table, this config is false by default for every table, this means the HBase granted acls will not synced to HDFS
+----
+alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
+----
+
+==== Limitation
+There are some limitations for this feature:
+
+=====
+If we enable this feature, some master operations such as grant, revoke, snapshot... (See the design doc for more details) will be slower as we need to sync HDFS ACLs to related hfiles.
+=====
+
+=====
+HDFS has a config which limits the max ACL entries num for one directory or file:
+----
+dfs.namenode.acls.max.entries = 32(default value)
+----
+The 32 entries include four fixed users for each directory or file: owner, group, other and mask. For a directory, the four users contain 8 ACL entries(access and default) and for a file, the four users contain 4 ACL entries(access). This means there are 24 ACL entries left for named users or groups.
+
+Based on this limitation, we can only sync up to 12 HBase granted users' ACLs. This means, if a table enable this feature, then the total users with table, namespace of this table, global READ permission should not be greater than 12.
+=====
+
+=====
+There are some cases that this coprocessor has not handled or could not handle, so the user HDFS ACLs are not syned normally. Such as a reference link to another hfile of other tables.
+=====
