@@ -20,17 +20,18 @@ package org.apache.hadoop.hbase.master.cleaner;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The thread pool used for scan directories
  */
-@InterfaceAudience.Private public class DirScanPool implements ConfigurationObserver {
-  private static final Logger LOG = LoggerFactory.getLogger(DirScanPool.class);
+@InterfaceAudience.Private
+public class DirScanPool implements ConfigurationObserver {
+  private static final Log LOG = LogFactory.getLog(DirScanPool.class);
   private volatile int size;
   private ForkJoinPool pool;
   private int cleanerLatch;
@@ -43,7 +44,7 @@ import org.slf4j.LoggerFactory;
     // double check to make sure.
     size = size == 0 ? CleanerChore.calculatePoolSize(CleanerChore.DEFAULT_CHORE_POOL_SIZE) : size;
     pool = new ForkJoinPool(size);
-    LOG.info("Cleaner pool size is {}", size);
+    LOG.info("Cleaner pool size is " + size);
     cleanerLatch = 0;
   }
 
@@ -51,11 +52,12 @@ import org.slf4j.LoggerFactory;
    * Checks if pool can be updated. If so, mark for update later.
    * @param conf configuration
    */
-  @Override public synchronized void onConfigurationChange(Configuration conf) {
+  @Override
+  public synchronized void onConfigurationChange(Configuration conf) {
     int newSize = CleanerChore.calculatePoolSize(
       conf.get(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE));
     if (newSize == size) {
-      LOG.trace("Size from configuration is same as previous={}, no need to update.", newSize);
+      LOG.trace("Size from configuration is same as previous=" + newSize + ", no need to update.");
       return;
     }
     size = newSize;
@@ -99,7 +101,7 @@ import org.slf4j.LoggerFactory;
       }
     }
     shutdownNow();
-    LOG.info("Update chore's pool size from {} to {}", pool.getParallelism(), size);
+    LOG.info("Update chore's pool size from " + pool.getParallelism() + " to " + size);
     pool = new ForkJoinPool(size);
   }
 
