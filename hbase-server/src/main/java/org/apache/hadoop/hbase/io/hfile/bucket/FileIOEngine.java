@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -32,15 +34,19 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * IO engine that stores data to a file on the local file system.
  */
 @InterfaceAudience.Private
-public class FileIOEngine implements IOEngine {
+public class FileIOEngine implements PersistentIOEngine {
   private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
   public static final String FILE_DELIMITER = ",";
+  private static final DuFileCommand DU = new DuFileCommand(new String[] {"du", ""});
+
   private final String[] filePaths;
   private final FileChannel[] fileChannels;
   private final RandomAccessFile[] rafs;
@@ -68,21 +74,38 @@ public class FileIOEngine implements IOEngine {
           // The next setting length will throw exception,logging this message
           // is just used for the detail reason of exception，
           String msg = "Only " + StringUtils.byteDesc(totalSpace)
-              + " total space under " + filePath + ", not enough for requested "
-              + StringUtils.byteDesc(sizePerFile);
+            + " total space under " + filePath + ", not enough for requested "
+            + StringUtils.byteDesc(sizePerFile);
           LOG.warn(msg);
         }
-        rafs[i].setLength(sizePerFile);
+        File file = new File(filePath);
+        // setLength() method will change file's last modified time. So if don't do
+        // this check, wrong time will be used when calculating checksum.
+        if (file.length() != sizePerFile) {
+          rafs[i].setLength(sizePerFile);
+        }
         fileChannels[i] = rafs[i].getChannel();
         channelLocks[i] = new ReentrantLock();
         LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
-            + ", on the path:" + filePath);
+          + ", on the path: " + filePath);
       } catch (IOException fex) {
         LOG.error("Failed allocating cache on " + filePath, fex);
         shutdown();
         throw fex;
       }
     }
+  }
+
+  @Override
+  public boolean verifyFileIntegrity(byte[] persistentChecksum, String algorithm) {
+    byte[] calculateChecksum = calculateChecksum(algorithm);
+    if (!Bytes.equals(persistentChecksum, calculateChecksum)) {
+      LOG.error("Mismatch of checksum! The persistent checksum is " +
+        Bytes.toString(persistentChecksum) + ", but the calculate checksum is " +
+        Bytes.toString(calculateChecksum));
+      return false;
+    }
+    return true;
   }
 
   @Override
@@ -264,6 +287,61 @@ public class FileIOEngine implements IOEngine {
       fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
     } finally{
       channelLock.unlock();
+    }
+  }
+
+  @Override
+  public byte[] calculateChecksum(String algorithm) {
+    if (filePaths == null) {
+      return null;
+    }
+    try {
+      StringBuilder sb = new StringBuilder();
+      for (String filePath : filePaths){
+        File file = new File(filePath);
+        sb.append(filePath);
+        sb.append(getFileSize(filePath));
+        sb.append(file.lastModified());
+      }
+      MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
+      messageDigest.update(Bytes.toBytes(sb.toString()));
+      return messageDigest.digest();
+    } catch (IOException ioex) {
+      LOG.error("Calculating checksum failed.", ioex);
+      return null;
+    } catch (NoSuchAlgorithmException e) {
+      LOG.error("No such algorithm : " + algorithm + "!");
+      return null;
+    }
+  }
+
+  /**
+   * Using Linux command du to get file's real size
+   * @param filePath the file
+   * @return file's real size
+   * @throws IOException something happened like file not exists
+   */
+  private static long getFileSize(String filePath) throws IOException {
+    DU.setExecCommand(filePath);
+    DU.execute();
+    return Long.parseLong(DU.getOutput().split("\t")[0]);
+  }
+
+  private static class DuFileCommand extends Shell.ShellCommandExecutor {
+    private String[] execCommand;
+
+    DuFileCommand(String[] execString) {
+      super(execString);
+      execCommand = execString;
+    }
+
+    void setExecCommand(String filePath) {
+      this.execCommand[1] = filePath;
+    }
+
+    @Override
+    public String[] getExecString() {
+      return this.execCommand;
     }
   }
 
