@@ -130,18 +130,11 @@ public class SpaceQuotaHelperForTests {
     }
   }
 
-  void removeAllQuotas() throws Exception {
-    final Connection conn = testUtil.getConnection();
-    // Wait for the quota table to be created
-    if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
-      waitForQuotaTable(conn);
-    } else {
-      // Or, clean up any quotas from previous test runs.
-      removeAllQuotas(conn);
-      assertEquals(0, listNumDefinedQuotas(conn));
-    }
-  }
-
+  /**
+   * Writes the given mutation into a table until it violates the given policy.
+   * Verifies that the policy has been violated & then returns the name of
+   * the table created & written into.
+   */
   TableName writeUntilViolationAndVerifyViolation(
       SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
     final TableName tn = writeUntilViolation(policyToViolate);
@@ -149,6 +142,10 @@ public class SpaceQuotaHelperForTests {
     return tn;
   }
 
+  /**
+   * Writes the given mutation into a table until it violates the given policy.
+   * Returns the name of the table created & written into.
+   */
   TableName writeUntilViolation(SpaceViolationPolicy policyToViolate) throws Exception {
     TableName tn = createTableWithRegions(10);
     setQuotaLimit(tn, policyToViolate, 2L);
@@ -161,6 +158,9 @@ public class SpaceQuotaHelperForTests {
     return tn;
   }
 
+  /**
+   * Verifies that the given policy on the given table has been violated
+   */
   void verifyViolation(SpaceViolationPolicy policyToViolate, TableName tn, Mutation m)
       throws Exception {
     // But let's try a few times to get the exception before failing
@@ -220,6 +220,9 @@ public class SpaceQuotaHelperForTests {
         "Expected to see an exception writing data to a table exceeding its quota", sawError);
   }
 
+  /**
+   * Verifies that no policy has been violated on the given table
+   */
   void verifyNoViolation(TableName tn, Mutation m) throws Exception {
     // But let's try a few times to write data before failing
     boolean sawSuccess = false;
@@ -257,6 +260,9 @@ public class SpaceQuotaHelperForTests {
     assertTrue("Expected to succeed in writing data to a table not having quota ", sawSuccess);
   }
 
+  /**
+   * Sets the given quota (policy & limit) on the passed table.
+   */
   void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
       throws Exception {
     final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
@@ -265,10 +271,22 @@ public class SpaceQuotaHelperForTests {
     LOG.debug("Quota limit set for table = {}, limit = {}", tn, sizeLimit);
   }
 
+  /**
+   * Removes the space quota from the given table
+   */
   void removeQuotaFromtable(final TableName tn) throws Exception {
     QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     testUtil.getAdmin().setQuota(removeQuota);
     LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  /**
+   * Removes all quotas defined in the HBase quota table.
+   */
+  void removeAllQuotas() throws Exception {
+    final Connection conn = testUtil.getConnection();
+    removeAllQuotas(conn);
+    assertEquals(0, listNumDefinedQuotas(conn));
   }
 
   /**
