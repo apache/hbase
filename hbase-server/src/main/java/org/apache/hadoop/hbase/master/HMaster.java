@@ -1244,13 +1244,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Start log cleaner thread
     int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 600 * 1000);
     this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
-            getMasterFileSystem().getOldLogDir().getFileSystem(conf), getMasterFileSystem().getOldLogDir(), cleanerPool);
+      getMasterFileSystem().getOldLogDir().getFileSystem(conf), getMasterFileSystem().getOldLogDir(), cleanerPool);
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Map<String, Object> params = new HashMap<String, Object>();
     params.put(MASTER, this);
-    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
-        .getFileSystem(), archiveDir, cleanerPool, params);
+    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf,
+      getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
     final boolean isSnapshotChoreDisabled = conf.getBoolean(HConstants.SNAPSHOT_CLEANER_DISABLE,

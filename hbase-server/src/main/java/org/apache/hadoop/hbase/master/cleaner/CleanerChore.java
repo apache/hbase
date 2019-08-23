@@ -74,8 +74,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private AtomicBoolean enabled = new AtomicBoolean(true);
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-                      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
-    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey,pool, null);
+      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null);
   }
 
   /**
