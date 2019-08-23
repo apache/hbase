@@ -2227,10 +2227,12 @@ public class MasterRpcServices extends RSRpcServices
         return RegionSpaceUseReportResponse.newBuilder().build();
       }
       MasterQuotaManager quotaManager = this.master.getMasterQuotaManager();
-      final long now = EnvironmentEdgeManager.currentTime();
-      for (RegionSpaceUse report : request.getSpaceUseList()) {
-        quotaManager.addRegionSize(ProtobufUtil.toRegionInfo(
-            report.getRegionInfo()), report.getRegionSize(), now);
+      if (quotaManager != null) {
+        final long now = EnvironmentEdgeManager.currentTime();
+        for (RegionSpaceUse report : request.getSpaceUseList()) {
+          quotaManager.addRegionSize(ProtobufUtil.toRegionInfo(report.getRegionInfo()),
+            report.getRegionSize(), now);
+        }
       }
       return RegionSpaceUseReportResponse.newBuilder().build();
     } catch (Exception e) {
