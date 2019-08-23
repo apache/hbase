@@ -78,6 +78,12 @@ else
 fi
 
 function cleanup {
+  if [ -n "${keys}" ]; then
+    echo "Stopping gpg agent daemon"
+    gpgconf --homedir "${working_dir}/.gpg" --kill gpg-agent
+    echo "Stopped gpg agent daemon"
+  fi
+
   if [ "true" = "${cleanup}" ]; then
     echo "cleaning up temp space."
     rm -rf "${working_dir}"
@@ -121,12 +127,6 @@ if [ -n "${keys}" ]; then
   echo "verifying artifact signature"
   gpg --homedir "${working_dir}/.gpg" --verify "${working_dir}/artifact.asc"
   echo "signature good."
-fi
-
-if [ -n "${keys}" ]; then
-  echo "Stopping gpg agent daemon"
-  gpgconf --homedir "${working_dir}/.gpg" --kill gpg-agent
-  echo "Stopped gpg agent daemon"
 fi
 
 echo "moving artifact into place at '${target}'"
