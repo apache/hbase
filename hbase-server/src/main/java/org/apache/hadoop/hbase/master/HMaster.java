@@ -98,7 +98,7 @@ import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
-import org.apache.hadoop.hbase.master.cleaner.CleanerChore;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
@@ -333,6 +333,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private SnapshotCleanerChore snapshotCleanerChore = null;
 
   CatalogJanitor catalogJanitorChore;
+  private DirScanPool cleanerPool;
   private ReplicationZKLockCleanerChore replicationZKLockCleanerChore;
   private ReplicationZKNodeCleanerChore replicationZKNodeCleanerChore;
   private LogCleaner logCleaner;
@@ -898,6 +899,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = System.currentTimeMillis();
     configurationManager.registerObserver(this.balancer);
+    configurationManager.registerObserver(this.cleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
 
@@ -1237,22 +1239,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
    startProcedureExecutor();
 
-    // Initial cleaner chore
-    CleanerChore.initChorePool(conf);
-   // Start log cleaner thread
-   int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
-   this.logCleaner =
-      new LogCleaner(cleanerInterval,
-         this, conf, getMasterFileSystem().getOldLogDir().getFileSystem(conf),
-         getMasterFileSystem().getOldLogDir());
-    getChoreService().scheduleChore(logCleaner);
-
+    // Create cleaner thread pool
+    cleanerPool = new DirScanPool(conf);
+    // Start log cleaner thread
+    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 600 * 1000);
+    this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
+            getMasterFileSystem().getOldLogDir().getFileSystem(conf), getMasterFileSystem().getOldLogDir(), cleanerPool);
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Map<String, Object> params = new HashMap<String, Object>();
     params.put(MASTER, this);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
-        .getFileSystem(), archiveDir, params);
+        .getFileSystem(), archiveDir, cleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
     final boolean isSnapshotChoreDisabled = conf.getBoolean(HConstants.SNAPSHOT_CLEANER_DISABLE,
@@ -1306,8 +1304,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     stopChores();
     super.stopServiceThreads();
-    CleanerChore.shutDownChorePool();
-
+    if (cleanerPool != null) {
+      cleanerPool.shutdownNow();
+      cleanerPool = null;
+    }
     // Wait for all the remaining region servers to report in IFF we were
     // running a cluster shutdown AND we were NOT aborting.
     if (!isAborted() && this.serverManager != null &&
