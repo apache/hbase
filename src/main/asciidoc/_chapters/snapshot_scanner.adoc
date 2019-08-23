@@ -31,7 +31,7 @@
 
 In HBase, a scan of a table costs server-side HBase resources reading, formating, and returning data back to the client.
 Luckily, HBase provides a TableSnapshotScanner and TableSnapshotInputFormat (introduced by link:https://issues.apache.org/jira/browse/HBASE-8369[HBASE-8369]),
-which scan snapshot the HBase-written HFiles directly in the HDFS filesystem completely by-passing hbase. This access mode
+which can scan HBase-written HFiles directly in the HDFS filesystem completely by-passing hbase. This access mode
 performs better than going via HBase and can be used with an offline HBase with in-place or exported
 snapshot HFiles.
 
@@ -41,14 +41,14 @@ To read HFiles directly, the user must have sufficient permissions to access sna
 
 TableSnapshotScanner provides a means for running a single client-side scan over snapshot files.
 When using TableSnapshotScanner, we must specify a temporary directory to copy the snapshot files into.
-The client user should have write permissions to this directory, and it should not be a subdirectory of
+The client user should have write permissions to this directory, and the dir should not be a subdirectory of
 the hbase.rootdir. The scanner deletes the contents of the directory once the scanner is closed.
 
 .Use TableSnapshotScanner
 ====
 [source,java]
 ----
-Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase hbase.rootdir
+Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory of hbase.rootdir
 Scan scan = new Scan();
 try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan)) {
     Result result = scanner.next();
@@ -61,14 +61,14 @@ try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, s
 ====
 
 === TableSnapshotInputFormat
-TableSnapshotInputFormat provide a way to scan over snapshot files in a MapReduce job.
+TableSnapshotInputFormat provides a way to scan over snapshot HFiles in a MapReduce job.
 
 .Use TableSnapshotInputFormat
 ====
 [source,java]
 ----
 Job job = new Job(conf);
-Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory HBase rootdir
+Path restoreDir = new Path("XX"); // restore dir should not be a subdirectory of hbase.rootdir
 Scan scan = new Scan();
 TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan, MyTableMapper.class, MyMapKeyOutput.class, MyMapOutputValueWritable.class, job, true, restoreDir);
 ----
@@ -77,31 +77,31 @@ TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan, MyTableMapper.
 === Permission to access snapshot and data files
 Generally, only the HBase owner or the HDFS admin have the permission to access HFiles.
 
-link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] use HDFS ACLs to make HBase granted user have the permission to access the snapshot files.
+link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] uses HDFS ACLs to make HBase granted user have permission to access snapshot files.
 
 ==== link:https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html#ACLs_Access_Control_Lists[HDFS ACLs]
 
 HDFS ACLs supports an "access ACL", which defines the rules to enforce during permission checks, and a "default ACL",
 which defines the ACL entries that new child files or sub-directories receive automatically during creation.
-By HDFS ACLs, HBase sync granted users with read permission to HFiles.
+Via HDFS ACLs, HBase syncs granted users with read permission to HFiles.
 
 ==== Basic idea
 
-The HBase files are orginazed as the following ways:
+The HBase files are organized in the following ways:
 
  * {hbase-rootdir}/.tmp/data/{namespace}/{table}
  * {hbase-rootdir}/data/{namespace}/{table}
  * {hbase-rootdir}/archive/data/{namespace}/{table}
  * {hbase-rootdir}/.hbase-snapshot/{snapshotName}
 
-So the basic idea is to add or remove HDFS ACLs to files of
-global/namespace/table directory when grant or revoke permission to global/namespace/table.
+So the basic idea is to add or remove HDFS ACLs to files of the global/namespace/table directory
+when grant or revoke permission to global/namespace/table.
 
 See the design doc in link:https://issues.apache.org/jira/browse/HBASE-18659[HBASE-18659] for more details.
 
 ==== Configuration to use this feature
 
- * Firstly, make sure that HDFS ACLs is enabled and umask is set to 027
+ * Firstly, make sure that HDFS ACLs are enabled and umask is set to 027
 ----
 dfs.namenode.acls.enabled = true
 fs.permissions.umask-mode = 027
@@ -119,7 +119,7 @@ hbase.acl.sync.to.hdfs.enable=true
 ----
 
  * Modify table scheme to enable this feature for a specified table, this config is
- false by default for every table, this means the HBase granted acls will not be synced to HDFS
+ false by default for every table, this means the HBase granted ACLs will not be synced to HDFS
 ----
 alter 't1', CONFIGURATION => {'hbase.acl.sync.to.hdfs.enable' => 'true'}
 ----
@@ -137,11 +137,16 @@ HDFS has a config which limits the max ACL entries num for one directory or file
 ----
 dfs.namenode.acls.max.entries = 32(default value)
 ----
-The 32 entries include four fixed users for each directory or file: owner, group, other and mask. For a directory, the four users contain 8 ACL entries(access and default) and for a file, the four users contain 4 ACL entries(access). This means there are 24 ACL entries left for named users or groups.
+The 32 entries include four fixed users for each directory or file: owner, group, other, and mask.
+For a directory, the four users contain 8 ACL entries(access and default) and for a file, the four
+users contain 4 ACL entries(access). This means there are 24 ACL entries left for named users or groups.
 
-Based on this limitation, we can only sync up to 12 HBase granted users' ACLs. This means, if a table enable this feature, then the total users with table, namespace of this table, global READ permission should not be greater than 12.
+Based on this limitation, we can only sync up to 12 HBase granted users' ACLs. This means, if a table
+enables this feature, then the total users with table, namespace of this table, global READ permission
+should not be greater than 12.
 =====
 
 =====
-There are some cases that this coprocessor has not handled or could not handle, so the user HDFS ACLs are not syned normally. Such as a reference link to another hfile of other tables.
+There are some cases that this coprocessor has not handled or could not handle, so the user HDFS ACLs
+are not synced normally. It will not make a reference link to another hfile of other tables.
 =====
