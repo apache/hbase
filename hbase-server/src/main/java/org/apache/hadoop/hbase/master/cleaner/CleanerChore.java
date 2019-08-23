@@ -74,7 +74,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private AtomicBoolean enabled = new AtomicBoolean(true);
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
+    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
     this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null);
   }
 
@@ -90,7 +90,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param params members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-      FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params) {
+    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params) {
     super(name, s, sleepPeriod);
 
     Preconditions.checkNotNull(pool, "Chore's pool can not be null");

@@ -76,7 +76,7 @@ public class TestCleanerChore {
     conf.set(confKey, NeverDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // create the directory layout in the directory to clean
     Path parent = new Path(testDir, "parent");
@@ -151,7 +151,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // create the directory layout in the directory to clean
     Path parent = new Path(testDir, "parent");
@@ -193,7 +193,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -225,7 +225,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // also create a file in the top level directory
     Path topFile = new Path(testDir, "topFile");
@@ -257,7 +257,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -317,7 +317,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     // spy on the delegate to ensure that we don't check for directories
     AlwaysDelete delegate = (AlwaysDelete) chore.cleanersChain.get(0);
     AlwaysDelete spy = Mockito.spy(delegate);
@@ -362,7 +362,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // Enable cleaner
     chore.setEnabled(true);
@@ -396,7 +396,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
 
     AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
 
     // Disable cleaner
     chore.setEnabled(false);
@@ -440,7 +440,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
     conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(initPoolSize));
     final AllValidPaths chore =
-            new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
     chore.setEnabled(true);
     // Create subdirs under testDir
     int dirNums = 6;

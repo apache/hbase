@@ -412,7 +412,7 @@ public class TestHFileArchiving {
 
   // Avoid passing a null master to CleanerChore, see HBASE-21175
   private HFileCleaner getHFileCleaner(Stoppable stoppable, Configuration conf, FileSystem fs,
-                                       Path archiveDir) throws IOException {
+    Path archiveDir) throws IOException {
     Map<String, Object> params = new HashMap<>();
     params.put(HMaster.MASTER, UTIL.getMiniHBaseCluster().getMaster());
     HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir, POOL);

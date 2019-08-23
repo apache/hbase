@@ -111,7 +111,7 @@ public class TestHFileCleaner {
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
     Path archivedHfileDir =
-            new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
     FileSystem fs = FileSystem.get(conf);
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
@@ -177,7 +177,7 @@ public class TestHFileCleaner {
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
     Server server = new DummyServer();
     Path archivedHfileDir =
-            new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
 
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
