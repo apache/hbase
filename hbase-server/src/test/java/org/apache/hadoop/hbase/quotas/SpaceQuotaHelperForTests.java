@@ -234,8 +234,8 @@ public class SpaceQuotaHelperForTests {
         } else if (m instanceof Increment) {
           table.increment((Increment) m);
         } else {
-          fail(
-              "Failed to apply " + m.getClass().getSimpleName() + " to the table. Programming error");
+          fail("Failed to apply " + m.getClass().getSimpleName() + " to the table."
+              + " Programming error");
         }
         sawSuccess = true;
       } catch (Exception e) {
