@@ -227,7 +227,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
     this.disruptor = new Disruptor<>(RingBufferTruck::new,
-        getPreallocatedEventCount(), Threads.getNamedThreadFactory(hostingThreadName + ".append"),
+        getPreallocatedEventCount(),
+        Threads.newDaemonThreadFactory(hostingThreadName + ".append"),
         ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
