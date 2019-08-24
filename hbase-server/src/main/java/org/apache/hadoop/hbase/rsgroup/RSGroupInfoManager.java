@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -68,11 +69,6 @@ public interface RSGroupInfoManager {
   List<RSGroupInfo> listRSGroups() throws IOException;
 
   /**
-   * Refresh/reload the group information from the persistent store
-   */
-  void refresh() throws IOException;
-
-  /**
    * Whether the manager is able to fully return group metadata
    * @return whether the manager is in online mode
    */
@@ -83,4 +79,12 @@ public interface RSGroupInfoManager {
    * @param servers set of servers to remove
    */
   void removeServers(Set<Address> servers) throws IOException;
+
+  /**
+   * Get {@code RSGroupInfo} for the given table.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Only for compatibility, where we upgrade
+   *             from a version that stores table names for a rs group in the {@code RSGroupInfo}.
+   */
+  @Deprecated
+  RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException;
 }
