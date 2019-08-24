@@ -71,6 +71,7 @@ import org.mockito.stubbing.Answer;
 public class TestLogsCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static DirScanPool POOL;
 
   /**
    * @throws java.lang.Exception
@@ -79,7 +80,7 @@ public class TestLogsCleaner {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
-    CleanerChore.initChorePool(TEST_UTIL.getConfiguration());
+    POOL = new DirScanPool(TEST_UTIL.getConfiguration());
   }
 
   /**
@@ -89,6 +90,7 @@ public class TestLogsCleaner {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
     TEST_UTIL.shutdownMiniDFSCluster();
+    POOL.shutdownNow();
   }
 
   @Test
@@ -149,7 +151,7 @@ public class TestLogsCleaner {
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
-    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
+    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir, POOL);
 
     cleaner.chore();
 
@@ -272,7 +274,7 @@ public class TestLogsCleaner {
     Path oldWALsDir = new Path(TEST_UTIL.getDefaultRootDirPath(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    final LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir);
+    final LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, oldWALsDir, POOL);
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE, cleaner.getSizeOfCleaners());
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
         cleaner.getCleanerThreadTimeoutMsec());
