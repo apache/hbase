@@ -669,6 +669,18 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(serverMap, rm, false, true);
   }
 
+  @Test
+  public void testAdditionalCostFunction() {
+    conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
+            DummyCostFunction.class.getName());
+
+    loadBalancer.setConf(conf);
+    System.out.println(Arrays.toString(loadBalancer.getCostFunctionNames()));
+    assertTrue(Arrays.
+            asList(loadBalancer.getCostFunctionNames()).
+            contains(DummyCostFunction.class.getSimpleName()));
+  }
+
   // This mock allows us to test the LocalityCostFunction
   private class MockCluster extends BaseLoadBalancer.Cluster {
 
