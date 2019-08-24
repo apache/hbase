@@ -18,10 +18,12 @@
 pipeline {
 
     agent {
-        label 'Hadoop || ubuntu'
+        label 'Hadoop'
     }
 
     options {
+        // N.B. this is per-branch, which means per PR
+        disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '15'))
         timeout (time: 7, unit: 'HOURS')
         timestamps()
