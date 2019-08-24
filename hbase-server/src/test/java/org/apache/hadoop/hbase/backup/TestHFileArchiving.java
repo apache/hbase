@@ -24,7 +24,10 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +42,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -68,6 +73,8 @@ public class TestHFileArchiving {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
 
+  private static DirScanPool POOL;
+
   /**
    * Setup the config for the cluster
    */
@@ -78,6 +85,8 @@ public class TestHFileArchiving {
 
     // We don't want the cleaner to remove files. The tests do that.
     UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cancel(true);
+
+    POOL = new DirScanPool(UTIL.getConfiguration());
   }
 
   private static void setupConf(Configuration conf) {
@@ -96,20 +105,13 @@ public class TestHFileArchiving {
   @After
   public void tearDown() throws Exception {
     // cleanup the archive directory
-    try {
-      clearArchiveDirectory();
-    } catch (IOException e) {
-      Assert.fail("Failure to delete archive directory:" + e.getMessage());
-    }
+    clearArchiveDirectory();
   }
 
   @AfterClass
   public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      // NOOP;
-    }
+    UTIL.shutdownMiniCluster();
+    POOL.shutdownNow();
   }
 
   @Test
@@ -370,7 +372,7 @@ public class TestHFileArchiving {
     Stoppable stoppable = new StoppableImplementation();
 
     // The cleaner should be looping without long pauses to reproduce the race condition.
-    HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
+    HFileCleaner cleaner = getHFileCleaner(stoppable, conf, fs, archiveDir);
     try {
       choreService.scheduleChore(cleaner);
 
@@ -411,6 +413,15 @@ public class TestHFileArchiving {
       choreService.shutdown();
       fs.delete(rootDir, true);
     }
+  }
+
+  // Avoid passing a null master to CleanerChore, see HBASE-21175
+  private HFileCleaner getHFileCleaner(Stoppable stoppable, Configuration conf, FileSystem fs,
+    Path archiveDir) throws IOException {
+    Map<String, Object> params = new HashMap<>();
+    params.put(HMaster.MASTER, UTIL.getMiniHBaseCluster().getMaster());
+    HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir, POOL);
+    return Objects.requireNonNull(cleaner);
   }
 
   private void clearArchiveDirectory() throws IOException {
