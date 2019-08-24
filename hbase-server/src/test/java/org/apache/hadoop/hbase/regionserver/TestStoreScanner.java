@@ -525,7 +525,7 @@ public class TestStoreScanner {
 
     Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
-    try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
+    try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scan.next(results));
       assertEquals(1, results.size());
