@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'ubuntu'
+      label 'Hadoop'
     }
   }
   triggers {
