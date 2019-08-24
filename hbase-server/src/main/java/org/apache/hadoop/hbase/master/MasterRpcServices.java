@@ -2233,6 +2233,9 @@ public class MasterRpcServices extends RSRpcServices
           quotaManager.addRegionSize(ProtobufUtil.toRegionInfo(report.getRegionInfo()),
             report.getRegionSize(), now);
         }
+      } else {
+        LOG.debug(
+          "Received region space usage report but HMaster is not ready to process it, skipping");
       }
       return RegionSpaceUseReportResponse.newBuilder().build();
     } catch (Exception e) {
@@ -2267,6 +2270,9 @@ public class MasterRpcServices extends RSRpcServices
               .setSize(tableSize.getValue()).build());
         }
         return builder.build();
+      } else {
+        LOG.debug(
+          "Received space quota region size report but HMaster is not ready to process it, skipping");
       }
       return builder.build();
     } catch (Exception e) {
