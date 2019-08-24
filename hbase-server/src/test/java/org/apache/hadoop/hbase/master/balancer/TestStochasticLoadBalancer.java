@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -368,6 +369,17 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     plans = loadBalancer.balanceCluster(serverMap);
     assertNull(plans);
+  }
+
+  @Test
+  public void testAdditionalCostFunction() {
+    conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
+            DummyCostFunction.class.getName());
+
+    loadBalancer.setConf(conf);
+    assertTrue(Arrays.
+            asList(loadBalancer.getCostFunctionNames()).
+            contains(DummyCostFunction.class.getSimpleName()));
   }
 
   // This mock allows us to test the LocalityCostFunction
