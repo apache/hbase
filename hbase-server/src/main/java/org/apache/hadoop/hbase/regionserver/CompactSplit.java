@@ -31,7 +31,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,8 +55,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Compact region on request and then run split if appropriate
@@ -118,14 +119,9 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private void createSplitExcecutors() {
     final String n = Thread.currentThread().getName();
     int splitThreads = conf.getInt(SPLIT_THREADS, SPLIT_THREADS_DEFAULT);
-    this.splits =
-        (ThreadPoolExecutor) Executors.newFixedThreadPool(splitThreads, new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable r) {
-            String name = n + "-splits-" + System.currentTimeMillis();
-            return new Thread(r, name);
-          }
-        });
+    this.splits = (ThreadPoolExecutor) Executors.newFixedThreadPool(splitThreads,
+            new ThreadFactoryBuilder().setNameFormat(n + "-splits-" + System.currentTimeMillis())
+                .setDaemon(true).build());
   }
 
   private void createCompactionExecutors() {
@@ -144,24 +140,16 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<Runnable>(COMPARATOR);
     this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60,
         TimeUnit.SECONDS, stealJobQueue,
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable r) {
-            String name = n + "-longCompactions-" + System.currentTimeMillis();
-            return new Thread(r, name);
-          }
-        });
+        new ThreadFactoryBuilder()
+            .setNameFormat(n + "-longCompactions-" + System.currentTimeMillis())
+            .setDaemon(true).build());
     this.longCompactions.setRejectedExecutionHandler(new Rejection());
     this.longCompactions.prestartAllCoreThreads();
     this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60,
         TimeUnit.SECONDS, stealJobQueue.getStealFromQueue(),
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable r) {
-            String name = n + "-shortCompactions-" + System.currentTimeMillis();
-            return new Thread(r, name);
-          }
-        });
+        new ThreadFactoryBuilder()
+            .setNameFormat(n + "-shortCompactions-" + System.currentTimeMillis())
+            .setDaemon(true).build());
     this.shortCompactions.setRejectedExecutionHandler(new Rejection());
   }
 

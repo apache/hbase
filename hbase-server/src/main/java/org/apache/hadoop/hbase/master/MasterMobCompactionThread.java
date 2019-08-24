@@ -23,21 +23,21 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The mob compaction thread used in {@link MasterRpcServices}
@@ -55,14 +55,11 @@ public class MasterMobCompactionThread {
     this.conf = master.getConfiguration();
     final String n = Thread.currentThread().getName();
     // this pool is used to run the mob compaction
-    this.masterMobPool = new ThreadPoolExecutor(1, 2, 60, TimeUnit.SECONDS,
-      new SynchronousQueue<>(), new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-          String name = n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime();
-          return new Thread(r, name);
-        }
-      });
+    this.masterMobPool = new ThreadPoolExecutor(1, 2, 60,
+        TimeUnit.SECONDS, new SynchronousQueue<>(),
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat(n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime())
+            .build());
     ((ThreadPoolExecutor) this.masterMobPool).allowCoreThreadTimeOut(true);
     // this pool is used in the mob compaction to compact the mob files by partitions
     // in parallel
