@@ -43,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -100,6 +101,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.NonRepeatedEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
@@ -6900,5 +6902,60 @@ public class TestFromClientSide {
         .build();
 
     TEST_UTIL.getAdmin().modifyTable(newDesc);
+  }
+
+  @Test(timeout = 60000)
+  public void testModifyTableWithMemstoreData() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    createTableAndValidateTableSchemaModification(tableName, true);
+  }
+
+  @Test(timeout = 60000)
+  public void testDeleteCFWithMemstoreData() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    createTableAndValidateTableSchemaModification(tableName, false);
+  }
+
+  /**
+   * Create table and validate online schema modification
+   * @param tableName Table name
+   * @param modifyTable Modify table if true otherwise delete column family
+   * @throws IOException in case of failures
+   */
+  private void createTableAndValidateTableSchemaModification(TableName tableName,
+      boolean modifyTable) throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    // Create table with two Cfs
+    byte[] cf1 = Bytes.toBytes("cf1");
+    byte[] cf2 = Bytes.toBytes("cf2");
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf2)).build();
+    admin.createTable(tableDesc);
+
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
+    // Insert few records and flush the table
+    t.put(new Put(ROW).addColumn(cf1, QUALIFIER, Bytes.toBytes("val1")));
+    t.put(new Put(ROW).addColumn(cf2, QUALIFIER, Bytes.toBytes("val2")));
+    admin.flush(tableName);
+    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), tableName);
+    List<Path> regionDirs = FSUtils.getRegionDirs(TEST_UTIL.getTestFileSystem(), tableDir);
+    assertTrue(regionDirs.size() == 1);
+    List<Path> familyDirs = FSUtils.getFamilyDirs(TEST_UTIL.getTestFileSystem(), regionDirs.get(0));
+    assertTrue(familyDirs.size() == 2);
+
+    // Insert record but dont flush the table
+    t.put(new Put(ROW).addColumn(cf1, QUALIFIER, Bytes.toBytes("val2")));
+    t.put(new Put(ROW).addColumn(cf2, QUALIFIER, Bytes.toBytes("val2")));
+
+    if (modifyTable) {
+      tableDesc = TableDescriptorBuilder.newBuilder(tableDesc).removeColumnFamily(cf2).build();
+      admin.modifyTable(tableDesc);
+    } else {
+      admin.deleteColumnFamily(tableName, cf2);
+    }
+    // After table modification or delete family there should be only one CF in FS
+    familyDirs = FSUtils.getFamilyDirs(TEST_UTIL.getTestFileSystem(), regionDirs.get(0));
+    assertTrue("CF dir count should be 1, but was " + familyDirs.size(), familyDirs.size() == 1);
   }
 }
