@@ -16,6 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# test github vote
 set -e -o pipefail
 
 usage() {
