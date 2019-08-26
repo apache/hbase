@@ -120,7 +120,23 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       LOG.debug("Normalization of system table " + table + " isn't allowed");
       return null;
     }
-
+    boolean splitEnabled = true, mergeEnabled = true;
+    try {
+      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+      LOG.debug("Unable to determine whether split is enabled", e);
+    }
+    try {
+      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
+        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+      LOG.debug("Unable to determine whether split is enabled", e);
+    }
+    if (!mergeEnabled && !splitEnabled) {
+      LOG.debug("Both split and merge are disabled for table: " + table);
+      return null;
+    }
     List<NormalizationPlan> plans = new ArrayList<>();
     List<RegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(table);
@@ -178,19 +194,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);
 
     int candidateIdx = 0;
-    boolean splitEnabled = true, mergeEnabled = true;
-    try {
-      splitEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
-    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
-      LOG.debug("Unable to determine whether split is enabled", e);
-    }
-    try {
-      mergeEnabled = masterRpcServices.isSplitOrMergeEnabled(null,
-        RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
-    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
-      LOG.debug("Unable to determine whether split is enabled", e);
-    }
     while (candidateIdx < tableRegions.size()) {
       RegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
