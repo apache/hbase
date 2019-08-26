@@ -403,7 +403,7 @@ public class MergeTableRegionsProcedure
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
     RegionInfo[] lockRegions = Arrays.copyOf(regionsToMerge, regionsToMerge.length + 1);
-    lockRegions[lockRegions.length] = mergedRegion;
+    lockRegions[lockRegions.length - 1] = mergedRegion;
 
     if (env.getProcedureScheduler().waitRegions(this, getTableName(), lockRegions)) {
       try {
@@ -419,7 +419,7 @@ public class MergeTableRegionsProcedure
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     RegionInfo[] lockRegions = Arrays.copyOf(regionsToMerge, regionsToMerge.length + 1);
-    lockRegions[lockRegions.length] = mergedRegion;
+    lockRegions[lockRegions.length - 1] = mergedRegion;
 
     env.getProcedureScheduler().wakeRegions(this, getTableName(), lockRegions);
   }
