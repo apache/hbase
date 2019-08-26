@@ -402,8 +402,10 @@ public class MergeTableRegionsProcedure
 
   @Override
   protected LockState acquireLock(final MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitRegions(this, getTableName(),
-        mergedRegion, regionsToMerge[0], regionsToMerge[1])) {
+    RegionInfo[] lockRegions = Arrays.copyOf(regionsToMerge, regionsToMerge.length + 1);
+    lockRegions[lockRegions.length] = mergedRegion;
+
+    if (env.getProcedureScheduler().waitRegions(this, getTableName(), lockRegions)) {
       try {
         LOG.debug(LockState.LOCK_EVENT_WAIT + " " + env.getProcedureScheduler().dumpLocks());
       } catch (IOException e) {
@@ -416,8 +418,10 @@ public class MergeTableRegionsProcedure
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureScheduler().wakeRegions(this, getTableName(),
-      mergedRegion, regionsToMerge[0], regionsToMerge[1]);
+    RegionInfo[] lockRegions = Arrays.copyOf(regionsToMerge, regionsToMerge.length + 1);
+    lockRegions[lockRegions.length] = mergedRegion;
+
+    env.getProcedureScheduler().wakeRegions(this, getTableName(), lockRegions);
   }
 
   @Override
