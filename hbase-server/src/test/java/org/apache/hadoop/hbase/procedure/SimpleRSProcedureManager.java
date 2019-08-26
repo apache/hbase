@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -127,7 +127,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
       this.name = name;
       executor = new ThreadPoolExecutor(1, 1, 500,
           TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-          new DaemonThreadFactory("rs(" + name + ")-procedure-pool-"));
+          Threads.newDaemonThreadFactory("rs(" + name + ")-procedure"));
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

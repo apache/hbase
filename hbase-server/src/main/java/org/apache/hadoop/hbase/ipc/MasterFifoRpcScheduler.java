@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -72,11 +72,11 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
       rsRsreportMaxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
         new ArrayBlockingQueue<Runnable>(maxQueueLength),
-        new DaemonThreadFactory("MasterFifoRpcScheduler.call.handler"),
+        Threads.newDaemonThreadFactory("MasterFifoRpcScheduler.call.handler"),
         new ThreadPoolExecutor.CallerRunsPolicy());
     this.rsReportExecutor = new ThreadPoolExecutor(rsReportHandlerCount, rsReportHandlerCount, 60,
         TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(rsRsreportMaxQueueLength),
-        new DaemonThreadFactory("MasterFifoRpcScheduler.RSReport.handler"),
+        Threads.newDaemonThreadFactory("MasterFifoRpcScheduler.RSReport.handler"),
         new ThreadPoolExecutor.CallerRunsPolicy());
   }
 

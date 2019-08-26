@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
@@ -215,7 +214,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       int threads = conf.getInt(CONCURENT_FLUSH_TASKS_KEY, DEFAULT_CONCURRENT_FLUSH_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
-          new DaemonThreadFactory("rs(" + name + ")-flush-proc-pool-"));
+          "rs(" + name + ")-flush-proc");
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

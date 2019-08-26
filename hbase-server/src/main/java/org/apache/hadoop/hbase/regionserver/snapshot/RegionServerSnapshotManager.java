@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
@@ -284,7 +283,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
       int threads = conf.getInt(CONCURENT_SNAPSHOT_TASKS_KEY, DEFAULT_CONCURRENT_SNAPSHOT_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
-          new DaemonThreadFactory("rs(" + name + ")-snapshot-pool-"));
+          "rs(" + name + ")-snapshot");
       taskPool = new ExecutorCompletionService<>(executor);
     }
 
