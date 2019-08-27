@@ -525,7 +525,7 @@ public class RestoreSnapshotHelper {
         for (String hfileName: familyFiles) {
           Path hfile = new Path(familyDir, hfileName);
           LOG.trace("Removing HFile=" + hfileName + " not present in snapshot=" + snapshotName+
-            " from region= " + regionInfo.getEncodedName() + " table= " + tableName);
+            " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
           HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
         }
 
