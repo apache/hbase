@@ -182,6 +182,20 @@ module Hbase
       end
     end
 
+    #-------------------------------------------------------------------------------
+
+    define_test 'snapshot auto cleanup should work' do
+      command(:snapshot_cleanup_switch, true)
+      output = capture_stdout { command(:snapshot_cleanup_enabled) }
+      assert(output.include?('true'))
+
+      command(:snapshot_cleanup_switch, false)
+      output = capture_stdout { command(:snapshot_cleanup_enabled) }
+      assert(output.include?('false'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "create should fail with non-string/non-hash column args" do
       assert_raise(ArgumentError) do
         command(:create, @create_test_name, 123)

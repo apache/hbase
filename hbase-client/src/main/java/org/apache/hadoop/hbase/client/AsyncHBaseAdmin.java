@@ -826,4 +826,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
       List<Permission> permissions) {
     return wrap(rawAdmin.hasUserPermissions(userName, permissions));
   }
+
+  @Override
+  public CompletableFuture<Boolean> snapshotCleanupSwitch(final boolean on,
+      final boolean sync) {
+    return wrap(rawAdmin.snapshotCleanupSwitch(on, sync));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isSnapshotCleanupEnabled() {
+    return wrap(rawAdmin.isSnapshotCleanupEnabled());
+  }
+
 }
