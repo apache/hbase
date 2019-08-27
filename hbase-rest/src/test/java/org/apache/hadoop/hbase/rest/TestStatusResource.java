@@ -100,7 +100,7 @@ public class TestStatusResource {
     TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        return TEST_UTIL.getMiniHBaseCluster().getClusterStatus().getAverageLoad() > 0;
+        return TEST_UTIL.getMiniHBaseCluster().getClusterMetrics().getAverageLoad() > 0;
       }
     });
   }
