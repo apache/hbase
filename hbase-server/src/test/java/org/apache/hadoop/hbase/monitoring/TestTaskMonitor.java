@@ -140,16 +140,22 @@ public class TestTaskMonitor {
 
   @Test
   public void testWarnStuckTasks() throws Exception {
-    final int INTERVAL = 1000;
+    final int RPC_WARN_TIME = 1500;
+    final int MONITOR_INTERVAL = 500;
     Configuration conf = new Configuration();
-    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, INTERVAL);
-    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, INTERVAL);
+    conf.setLong(TaskMonitor.RPC_WARN_TIME_KEY, RPC_WARN_TIME);
+    conf.setLong(TaskMonitor.MONITOR_INTERVAL_KEY, MONITOR_INTERVAL);
     final TaskMonitor tm = new TaskMonitor(conf);
     MonitoredRPCHandler t = tm.createRPCStatus("test task");
-    long then = EnvironmentEdgeManager.currentTime();
-    t.setRPC("testMethod", new Object[0], then);
-    Thread.sleep(INTERVAL * 2);
-    assertTrue("We did not warn", t.getWarnTime() > then);
+    long beforeSetRPC = EnvironmentEdgeManager.currentTime();
+    assertTrue("Validating initialization assumption", t.getWarnTime() <= beforeSetRPC);
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    t.setRPC("testMethod", new Object[0], beforeSetRPC);
+    long afterSetRPC = EnvironmentEdgeManager.currentTime();
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    assertTrue("Validating no warn after starting RPC", t.getWarnTime() <= afterSetRPC);
+    Thread.sleep(MONITOR_INTERVAL * 2);
+    assertTrue("Validating warn after RPC_WARN_TIME", t.getWarnTime() > afterSetRPC);
     tm.shutdown();
   }
 
