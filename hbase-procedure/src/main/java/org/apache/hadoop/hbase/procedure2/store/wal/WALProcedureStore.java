@@ -423,7 +423,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         // Create new state-log
         if (!rollWriter(flushLogId + 1)) {
           // someone else has already created this log
-          LOG.debug("Someone else has already created log {}. Retrying.", flushLogId);
+          LOG.debug("Someone else has already created log {}. Retrying.", flushLogId + 1);
           continue;
         }
 
@@ -1043,7 +1043,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
     // Create new state-log
     if (!rollWriter(flushLogId + 1)) {
-      LOG.warn("someone else has already created log {}", flushLogId);
+      LOG.warn("someone else has already created log {}", flushLogId + 1);
       return false;
     }
 
@@ -1100,7 +1100,25 @@ public class WALProcedureStore extends ProcedureStoreBase {
       startPos = newStream.getPos();
     } catch (IOException ioe) {
       LOG.warn("Encountered exception writing header", ioe);
-      newStream.close();
+      try {
+        newStream.close();
+      } catch (IOException e) {
+        LOG.error("Exception occured while closing the file {}", newLogFile, e);
+      }
+      try {
+        // Delete the incomplete file
+        if (!fs.delete(newLogFile, false)) {
+          LOG.warn(
+            "Failed to delete the log file {}, increasing the log id by 1 for the next roll attempt",
+            newLogFile);
+          flushLogId++;
+        }
+      } catch (IOException e) {
+        LOG.warn("Exception occured while deleting the file {}", newLogFile, e);
+        flushLogId++;
+        LOG.info("Increased the log id to {}", flushLogId);
+      }
+
       return false;
     }
 
