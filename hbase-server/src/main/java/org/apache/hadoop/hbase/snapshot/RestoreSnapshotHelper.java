@@ -501,7 +501,7 @@ public class RestoreSnapshotHelper {
                 getRegionHFileReferences(regionManifest);
 
     String tableName = tableDesc.getTableName().getNameAsString();
-    String snapshotName = snapshotDesc.getName();
+    final String snapshotName = snapshotDesc.getName();
 
     // Restore families present in the table
     for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
@@ -524,22 +524,22 @@ public class RestoreSnapshotHelper {
         // Remove hfiles not present in the snapshot
         for (String hfileName: familyFiles) {
           Path hfile = new Path(familyDir, hfileName);
-          LOG.trace("Removing hfile= " + hfileName + " not present in snapshot= " + snapshotName+
+          LOG.trace("Removing HFile=" + hfileName + " not present in snapshot=" + snapshotName+
             " from region= " + regionInfo.getEncodedName() + " table= " + tableName);
           HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
         }
 
         // Restore Missing files
         for (SnapshotRegionManifest.StoreFile storeFile: hfilesToAdd) {
-          LOG.debug("Restore missing hfilelink " + storeFile.getName() +
-                  " of snapshot= " + snapshotName+
+          LOG.debug("Restore missing HFileLink " + storeFile.getName() +
+                  " of snapshot=" + snapshotName+
             " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
           restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
         }
       } else {
         // Family doesn't exists in the snapshot
         LOG.trace("Removing family=" + Bytes.toString(family) + " of snapshot=" + snapshotName +
-          " from region= " + regionInfo.getEncodedName() + " table=" + tableName);
+          " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
         HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
@@ -555,7 +555,7 @@ public class RestoreSnapshotHelper {
 
       for (SnapshotRegionManifest.StoreFile storeFile: familyEntry.getValue()) {
         LOG.trace("Adding HFileLink (Not present in the table) " + storeFile.getName() + " of snapshot "
-                + snapshotName + " to table= " + tableName);
+                + snapshotName + " to table=" + tableName);
         restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
       }
     }
@@ -587,7 +587,7 @@ public class RestoreSnapshotHelper {
     if (regions == null || regions.isEmpty()) return null;
 
     final Map<String, RegionInfo> snapshotRegions = new HashMap<>(regions.size());
-    String snapshotName = snapshotDesc.getName();
+    final String snapshotName = snapshotDesc.getName();
 
     // clone region info (change embedded tableName with the new one)
     RegionInfo[] clonedRegionsInfo = new RegionInfo[regions.size()];
@@ -600,7 +600,7 @@ public class RestoreSnapshotHelper {
       String snapshotRegionName = snapshotRegionInfo.getEncodedName();
       String clonedRegionName = clonedRegionsInfo[i].getEncodedName();
       regionsMap.put(Bytes.toBytes(snapshotRegionName), Bytes.toBytes(clonedRegionName));
-      LOG.info("clone region= " + snapshotRegionName + " as " + clonedRegionName +
+      LOG.info("clone region=" + snapshotRegionName + " as " + clonedRegionName +
               " of snapshot " + snapshotName);
 
       // Add mapping between cloned region name and snapshot region info
@@ -645,7 +645,7 @@ public class RestoreSnapshotHelper {
   private void cloneRegion(final Path regionDir, final RegionInfo snapshotRegionInfo,
       final SnapshotRegionManifest manifest) throws IOException {
     final String tableName = tableDesc.getTableName().getNameAsString();
-    String snapshotName = snapshotDesc.getName();
+    final String snapshotName = snapshotDesc.getName();
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {

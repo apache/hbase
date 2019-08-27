@@ -185,8 +185,8 @@ public final class SnapshotManifest {
   @VisibleForTesting
   protected void addMobRegion(RegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
-    String snapshotName = desc.getName();
-    LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot= " + snapshotName);
+    final String snapshotName = desc.getName();
+    LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot=" + snapshotName);
     Object regionData = visitor.regionOpen(regionInfo);
     monitor.rethrowException();
 
@@ -233,7 +233,7 @@ public final class SnapshotManifest {
   @VisibleForTesting
   protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
-    String snapshotName = desc.getName();
+    final String snapshotName = desc.getName();
     LOG.debug("Storing '" + region + "' region-info for snapshot=" + snapshotName);
     Object regionData = visitor.regionOpen(region.getRegionInfo());
     monitor.rethrowException();
