@@ -145,10 +145,10 @@ public class SecureBulkLoadClient {
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum,
       final Token<?> userToken, final String bulkToken,
-      boolean copyFiles, String clusterId) throws IOException {
+      boolean copyFiles, List<String> clusterIds) throws IOException {
     BulkLoadHFileRequest request =
         RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum,
-          userToken, bulkToken, copyFiles, clusterId);
+          userToken, bulkToken, copyFiles, clusterIds);
 
     try {
       BulkLoadHFileResponse response = client.bulkLoadHFile(null, request);

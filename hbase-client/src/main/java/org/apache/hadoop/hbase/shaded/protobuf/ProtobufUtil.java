@@ -2586,13 +2586,13 @@ public final class ProtobufUtil {
 
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId, String clusterId) {
+      Map<String, Long> storeFilesSize, long bulkloadSeqId, List<String> clusterIds) {
     BulkLoadDescriptor.Builder desc =
         BulkLoadDescriptor.newBuilder()
         .setTableName(ProtobufUtil.toProtoTableName(tableName))
         .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
-    if(clusterId != null) {
-      desc.setClusterId(clusterId);
+    if(clusterIds != null) {
+      desc.addAllClusterIds(clusterIds);
     }
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {

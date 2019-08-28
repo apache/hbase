@@ -217,7 +217,7 @@ public class SecureBulkLoadManager {
   }
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
-      final BulkLoadHFileRequest request, String clusterId) throws IOException {
+      final BulkLoadHFileRequest request, List<String> clusterIds) throws IOException {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair<>(el.getFamily().toByteArray(), el.getPath()));
@@ -294,7 +294,7 @@ public class SecureBulkLoadManager {
             //To enable access prior to staging
             return region.bulkLoadHFiles(familyPaths, true,
                 new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(),
-              clusterId);
+              clusterIds);
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }

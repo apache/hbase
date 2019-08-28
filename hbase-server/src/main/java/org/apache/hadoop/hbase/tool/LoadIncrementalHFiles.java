@@ -155,7 +155,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private String bulkToken;
 
-  private String clusterId;
+  private List<String> clusterIds = new ArrayList<>();
 
   /**
    * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
@@ -544,7 +544,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
             success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-              assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile, clusterId);
+              assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile, clusterIds);
           }
           return success ? regionName : null;
         } finally {
@@ -1259,8 +1259,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     this.bulkToken = stagingDir;
   }
 
-  public void setClusterId(String clusterId) {
-    this.clusterId = clusterId;
+  public void setClusterIds(List<String> clusterIds) {
+    this.clusterIds = clusterIds;
   }
 
   /**

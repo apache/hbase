@@ -210,7 +210,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Thread.sleep(400);
     assertTableHasValue(destTestTable, row, value);
     Thread.sleep(400);
-    assertEquals(2, BULK_LOADS_COUNT.get());
+    assertEquals(3, BULK_LOADS_COUNT.get());
     BULK_LOADS_COUNT.set(0);
     row = Bytes.toBytes("002");
     value = Bytes.toBytes("v2");
@@ -220,7 +220,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Thread.sleep(400);
     assertTableHasValue(srcTestTable, row, value);
     Thread.sleep(400);
-    assertEquals(2, BULK_LOADS_COUNT.get());
+    assertEquals(3, BULK_LOADS_COUNT.get());
   }
 
   private void bulkLoadOnCluster(byte[] row, byte[] value,

@@ -174,8 +174,7 @@ public class ReplicationSink {
       // invocation of this method per table and cluster id.
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
-      Map<String, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
-
+      Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
@@ -210,10 +209,10 @@ public class ReplicationSink {
             // Map of table name Vs list of pair of family and list of
             // hfile paths from its namespace
             Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-              bulkLoadsPerClusters.get(bld.getClusterId());
+              bulkLoadsPerClusters.get(bld.getClusterIdsList());
             if (bulkLoadHFileMap == null) {
               bulkLoadHFileMap = new HashMap<>();
-              bulkLoadsPerClusters.put(bld.getClusterId(), bulkLoadHFileMap);
+              bulkLoadsPerClusters.put(bld.getClusterIdsList(), bulkLoadHFileMap);
             }
             buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
           } else {
@@ -252,17 +251,23 @@ public class ReplicationSink {
       }
 
       if(bulkLoadsPerClusters != null) {
-        for (String clusterId : bulkLoadsPerClusters.keySet()) {
+        for (List<String> clusterIds : bulkLoadsPerClusters.keySet()) {
           Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-            bulkLoadsPerClusters.get(clusterId);
+            bulkLoadsPerClusters.get(clusterIds);
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            LOG.debug("Started replicating bulk loaded data from cluster id: {}.", clusterId);
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
+                clusterIds.stream().reduce("", (idsList, id) -> idsList + ", " + id));
+            }
             HFileReplicator hFileReplicator =
               new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), clusterId);
+                getConnection(), clusterIds);
             hFileReplicator.replicate();
-            LOG.debug("Finished replicating bulk loaded data from cluster id: {}", clusterId);
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Finished replicating bulk loaded data from cluster id: {}",
+                clusterIds.stream().reduce("", (idsList, id) -> idsList + ", " + id));
+            }
           }
         }
       }

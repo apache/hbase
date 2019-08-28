@@ -579,7 +579,7 @@ public final class RequestConverter {
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum,
-      final Token<?> userToken, final String bulkToken, boolean copyFiles, String clusterId) {
+      final Token<?> userToken, final String bulkToken, boolean copyFiles, List<String> clusterIds) {
     RegionSpecifier region = RequestConverter.buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
 
@@ -617,8 +617,8 @@ public final class RequestConverter {
       request.setBulkToken(bulkToken);
     }
     request.setCopyFile(copyFiles);
-    if (clusterId != null) {
-      request.setClusterId(clusterId);
+    if (clusterIds != null) {
+      request.addAllClusterIds(clusterIds);
     }
     return request.build();
   }
