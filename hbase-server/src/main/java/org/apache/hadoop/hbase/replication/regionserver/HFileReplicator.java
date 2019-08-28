@@ -10,8 +10,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -27,7 +25,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -39,9 +36,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -53,6 +47,12 @@ import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * It is used for replicating HFile entries. It will first copy parallely all the hfiles to a local
@@ -105,12 +105,9 @@ public class HFileReplicator {
     this.maxCopyThreads =
         this.conf.getInt(REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY,
           REPLICATION_BULKLOAD_COPY_MAXTHREADS_DEFAULT);
-    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-    builder.setNameFormat("HFileReplicationCallable-%1$d");
-    this.exec =
-        new ThreadPoolExecutor(maxCopyThreads, maxCopyThreads, 60, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(), builder.build());
-    this.exec.allowCoreThreadTimeOut(true);
+    this.exec = Threads.getBoundedCachedThreadPool(maxCopyThreads, 60, TimeUnit.SECONDS,
+        new ThreadFactoryBuilder().setDaemon(true)
+            .setNameFormat("HFileReplicationCallable-%1$d").build());
     this.copiesPerThread =
         conf.getInt(REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY,
           REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT);
