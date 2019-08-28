@@ -78,8 +78,6 @@ public class CloneSnapshotProcedure
   // Monitor
   private MonitoredTask monitorStatus = null;
 
-  private Boolean traceEnabled = null;
-
   /**
    * Constructor (for failover)
    */
@@ -130,9 +128,7 @@ public class CloneSnapshotProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final CloneSnapshotState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
         case CLONE_SNAPSHOT_PRE_OPERATION:
@@ -519,15 +515,4 @@ public class CloneSnapshotProcedure
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
   }
 
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
-  }
 }

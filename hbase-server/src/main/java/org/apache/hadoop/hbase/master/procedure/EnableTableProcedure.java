@@ -52,8 +52,6 @@ public class EnableTableProcedure
 
   private TableName tableName;
 
-  private Boolean traceEnabled = null;
-
   public EnableTableProcedure() {
   }
 
@@ -80,9 +78,7 @@ public class EnableTableProcedure
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final EnableTableState state)
       throws InterruptedException {
-    if (isTraceEnabled()) {
-      LOG.trace(this + " execute state=" + state);
-    }
+    LOG.trace("{} execute state={}", this, state);
 
     try {
       switch (state) {
@@ -387,18 +383,6 @@ public class EnableTableProcedure
   private void postEnable(final MasterProcedureEnv env, final EnableTableState state)
       throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
-  }
-
-  /**
-   * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it.
-   * @return traceEnabled
-   */
-  private Boolean isTraceEnabled() {
-    if (traceEnabled == null) {
-      traceEnabled = LOG.isTraceEnabled();
-    }
-    return traceEnabled;
   }
 
   /**
