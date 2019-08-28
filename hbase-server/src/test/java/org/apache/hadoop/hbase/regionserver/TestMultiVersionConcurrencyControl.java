@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -80,6 +81,7 @@ public class TestMultiVersionConcurrencyControl {
     }
   }
 
+  @Test
   public void testParallelism() throws Exception {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 

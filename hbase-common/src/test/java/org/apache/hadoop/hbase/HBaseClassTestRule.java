@@ -61,7 +61,7 @@ public final class HBaseClassTestRule implements TestRule {
     Category[] categories = clazz.getAnnotationsByType(Category.class);
     for (Class<?> c : categories[0].value()) {
       if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
-        // All tests have a 10minute timeout.
+        // All tests have a 13 minutes timeout.
         return TimeUnit.MINUTES.toSeconds(13);
       }
       if (c == IntegrationTests.class) {

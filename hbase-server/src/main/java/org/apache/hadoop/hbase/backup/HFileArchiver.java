@@ -226,7 +226,9 @@ public class HFileArchiver {
       @Override
       public Thread newThread(Runnable r) {
         final String name = "HFileArchiver-" + threadNumber.getAndIncrement();
-        return new Thread(r, name);
+        Thread t = new Thread(r, name);
+        t.setDaemon(true);
+        return t;
       }
     };
   }

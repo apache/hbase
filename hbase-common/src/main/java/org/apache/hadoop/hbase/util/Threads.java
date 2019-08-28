@@ -197,6 +197,11 @@ public class Threads {
     return boundedCachedThreadPool;
   }
 
+  public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
+      TimeUnit unit, String prefix) {
+    return getBoundedCachedThreadPool(maxCachedThread, timeout, unit,
+        newDaemonThreadFactory(prefix));
+  }
 
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
@@ -204,7 +209,7 @@ public class Threads {
    * @param prefix The prefix of every created Thread's name
    * @return a {@link java.util.concurrent.ThreadFactory} that names threads
    */
-  public static ThreadFactory getNamedThreadFactory(final String prefix) {
+  private static ThreadFactory getNamedThreadFactory(final String prefix) {
     SecurityManager s = System.getSecurityManager();
     final ThreadGroup threadGroup = (s != null) ? s.getThreadGroup() : Thread.currentThread()
         .getThreadGroup();

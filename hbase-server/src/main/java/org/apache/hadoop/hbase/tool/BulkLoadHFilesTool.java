@@ -144,7 +144,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private ExecutorService createExecutorService() {
     ThreadPoolExecutor pool = new ThreadPoolExecutor(nrThreads, nrThreads, 60, TimeUnit.SECONDS,
       new LinkedBlockingQueue<>(),
-      new ThreadFactoryBuilder().setNameFormat("BulkLoadHFilesTool-%1$d").build());
+      new ThreadFactoryBuilder().setNameFormat("BulkLoadHFilesTool-%1$d").setDaemon(true).build());
     pool.allowCoreThreadTimeOut(true);
     return pool;
   }

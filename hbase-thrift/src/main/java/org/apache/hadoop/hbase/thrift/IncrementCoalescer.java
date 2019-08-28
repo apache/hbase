@@ -146,33 +146,6 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   }
 
-  static class DaemonThreadFactory implements ThreadFactory {
-    static final AtomicInteger poolNumber = new AtomicInteger(1);
-    final ThreadGroup group;
-    final AtomicInteger threadNumber = new AtomicInteger(1);
-    final String namePrefix;
-
-    DaemonThreadFactory() {
-      SecurityManager s = System.getSecurityManager();
-      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-      namePrefix = "ICV-" + poolNumber.getAndIncrement() + "-thread-";
-    }
-
-    @Override
-    public Thread newThread(Runnable r) {
-      Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
-
-      if (!t.isDaemon()) {
-        t.setDaemon(true);
-      }
-      if (t.getPriority() != Thread.NORM_PRIORITY) {
-        t.setPriority(Thread.NORM_PRIORITY);
-      }
-
-      return t;
-    }
-  }
-
   private final LongAdder failedIncrements = new LongAdder();
   private final LongAdder successfulCoalescings = new LongAdder();
   private final LongAdder totalIncrements = new LongAdder();
@@ -190,10 +163,9 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   public IncrementCoalescer(ThriftHBaseServiceHandler hand) {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
-    pool =
-        new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
-            Threads.newDaemonThreadFactory("IncrementCoalescer"));
-
+    pool = new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50,
+        TimeUnit.MILLISECONDS, queue,
+        Threads.newDaemonThreadFactory("IncrementCoalescer"));
     MBeans.register("thrift", "Thrift", this);
   }
 

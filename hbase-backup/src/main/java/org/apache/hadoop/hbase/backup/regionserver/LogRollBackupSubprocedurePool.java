@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,8 +64,8 @@ public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
     this.name = name;
     executor =
         new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(), new DaemonThreadFactory("rs(" + name
-                + ")-backup-pool"));
+            new LinkedBlockingQueue<>(),
+            Threads.newDaemonThreadFactory("rs(" + name + ")-backup"));
     taskPool = new ExecutorCompletionService<>(executor);
   }
 
