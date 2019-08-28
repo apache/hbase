@@ -1225,7 +1225,14 @@ public class TestHRegion {
     region.close(true);
     wal.close();
 
+    // 2. Test case where START_FLUSH succeeds but COMMIT_FLUSH will throw exception
+    wal.flushActions = new FlushAction [] {FlushAction.COMMIT_FLUSH};
+    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
+          method, walConf);
     wal.init();
+    this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
+    region.put(put);
 
     // 3. Test case where ABORT_FLUSH will throw exception.
     // Even if ABORT_FLUSH throws exception, we should not fail with IOE, but continue with
