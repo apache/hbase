@@ -25,7 +25,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -104,6 +107,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   private static final String PEER_ID3 = "3";
 
   private static final AtomicInteger BULK_LOADS_COUNT = new AtomicInteger(0);
+  private static CountDownLatch BULK_LOAD_LATCH;
 
   private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
   private static final Configuration CONF3 = UTIL3.getConfiguration();
@@ -200,27 +204,34 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   @Test
   public void testBulkLoadReplicationActiveActive() throws Exception {
-    Table srcTestTable = UTIL1.getConnection().getTable(TestReplicationBase.tableName);
-    Table destTestTable = UTIL2.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer1TestTable = UTIL1.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer2TestTable = UTIL2.getConnection().getTable(TestReplicationBase.tableName);
+    Table peer3TestTable = UTIL3.getConnection().getTable(TestReplicationBase.tableName);
     byte[] row = Bytes.toBytes("001");
     byte[] value = Bytes.toBytes("v1");
-    bulkLoadOnCluster(row, value, UTIL1);
-    Thread.sleep(400);
-    assertTableHasValue(srcTestTable, row, value);
-    Thread.sleep(400);
-    assertTableHasValue(destTestTable, row, value);
-    Thread.sleep(400);
-    assertEquals(3, BULK_LOADS_COUNT.get());
-    BULK_LOADS_COUNT.set(0);
+    assertBulkLoadConditions(row, value, UTIL1, peer1TestTable, peer2TestTable, peer3TestTable);
     row = Bytes.toBytes("002");
     value = Bytes.toBytes("v2");
-    bulkLoadOnCluster(row, value, UTIL2);
+    assertBulkLoadConditions(row, value, UTIL2, peer1TestTable, peer2TestTable, peer3TestTable);
+    row = Bytes.toBytes("003");
+    value = Bytes.toBytes("v3");
+    assertBulkLoadConditions(row, value, UTIL3, peer1TestTable, peer2TestTable, peer3TestTable);
+    //Additional wait to make sure no extra bulk load happens
     Thread.sleep(400);
-    assertTableHasValue(destTestTable, row, value);
-    Thread.sleep(400);
-    assertTableHasValue(srcTestTable, row, value);
-    Thread.sleep(400);
-    assertEquals(3, BULK_LOADS_COUNT.get());
+    //We have 3 bulk load events (1 initiated on each cluster).
+    //Each event gets 3 counts (the originator cluster, plus the two peers),
+    //so BULK_LOADS_COUNT expected value is 3 * 3 = 9.
+    assertEquals(9, BULK_LOADS_COUNT.get());
+  }
+
+  private void assertBulkLoadConditions(byte[] row, byte[] value,
+      HBaseTestingUtility utility, Table...tables) throws Exception {
+    BULK_LOAD_LATCH = new CountDownLatch(3);
+    bulkLoadOnCluster(row, value, utility);
+    assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
+    assertTableHasValue(tables[0], row, value);
+    assertTableHasValue(tables[1], row, value);
+    assertTableHasValue(tables[2], row, value);
   }
 
   private void bulkLoadOnCluster(byte[] row, byte[] value,
@@ -282,6 +293,13 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> familyPaths) throws IOException {
             BULK_LOADS_COUNT.incrementAndGet();
+        }
+
+        @Override
+        public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+          List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
+            throws IOException {
+          BULK_LOAD_LATCH.countDown();
         }
       });
     }
