@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
@@ -263,7 +263,7 @@ public class RegionStateStore {
       throws IOException {
     TableDescriptor htd = getDescriptor(child.getTable());
     boolean globalScope = htd.hasGlobalReplicationScope();
-    Map<RegionInfo, Long> parentSeqNums = new TreeMap<>();
+    SortedMap<RegionInfo, Long> parentSeqNums = new TreeMap<>();
     for (RegionInfo ri: parents) {
       parentSeqNums.put(ri, globalScope? getOpenSeqNumForParentRegion(ri): -1);
     }
