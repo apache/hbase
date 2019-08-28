@@ -2364,11 +2364,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
     long start = EnvironmentEdgeManager.currentTime();
-    if(request.getClusterId() != null &&
-        request.getClusterId().equals(this.regionServer.clusterId)){
+    String clusterId = request.getClusterId();
+    if(clusterId != null && clusterId.equals(this.regionServer.clusterId)){
       return BulkLoadHFileResponse.newBuilder().setLoaded(true).build();
     }
-    String clusterId = request.getClusterId();
     if(clusterId == null || clusterId.isEmpty()){
       clusterId = this.regionServer.clusterId;
     }
