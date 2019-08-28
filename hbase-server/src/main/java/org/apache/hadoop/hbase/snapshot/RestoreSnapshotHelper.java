@@ -531,14 +531,14 @@ public class RestoreSnapshotHelper {
 
         // Restore Missing files
         for (SnapshotRegionManifest.StoreFile storeFile: hfilesToAdd) {
-          LOG.debug("Restore missing HFileLink " + storeFile.getName() +
+          LOG.debug("Restoring missing HFileLink " + storeFile.getName() +
                   " of snapshot=" + snapshotName+
-            " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
+                  " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
           restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
         }
       } else {
         // Family doesn't exists in the snapshot
-        LOG.trace("Removing family=" + Bytes.toString(family) + " of snapshot=" + snapshotName +
+        LOG.trace("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName +
           " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
         HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
@@ -554,8 +554,8 @@ public class RestoreSnapshotHelper {
       }
 
       for (SnapshotRegionManifest.StoreFile storeFile: familyEntry.getValue()) {
-        LOG.trace("Adding HFileLink (Not present in the table) " + storeFile.getName() + " of snapshot "
-                + snapshotName + " to table=" + tableName);
+        LOG.trace("Adding HFileLink (Not present in the table) " + storeFile.getName()
+                + " of snapshot " + snapshotName + " to table=" + tableName);
         restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
       }
     }
@@ -601,7 +601,7 @@ public class RestoreSnapshotHelper {
       String clonedRegionName = clonedRegionsInfo[i].getEncodedName();
       regionsMap.put(Bytes.toBytes(snapshotRegionName), Bytes.toBytes(clonedRegionName));
       LOG.info("clone region=" + snapshotRegionName + " as " + clonedRegionName +
-              " of snapshot " + snapshotName);
+              " in snapshot " + snapshotName);
 
       // Add mapping between cloned region name and snapshot region info
       snapshotRegions.put(clonedRegionName, snapshotRegionInfo);
@@ -649,8 +649,8 @@ public class RestoreSnapshotHelper {
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
-        LOG.info("Adding HFileLink " + storeFile.getName() +" from clone region " + "of snapshot " +
-                snapshotName + " to table=" + tableName);
+        LOG.info("Adding HFileLink " + storeFile.getName() +" from cloned region "
+                + "in snapshot " + snapshotName + " to table=" + tableName);
         restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
       }
     }
