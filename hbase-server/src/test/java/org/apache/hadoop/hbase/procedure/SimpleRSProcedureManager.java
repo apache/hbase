@@ -124,9 +124,9 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
-      executor = new ThreadPoolExecutor(1, 1, 500, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<>(),
-          new DaemonThreadFactory("rs(" + name + ")-procedure-pool"));
+      executor = new ThreadPoolExecutor(1, 1, 500,
+          TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+          new DaemonThreadFactory("rs(" + name + ")-procedure-pool-"));
       taskPool = new ExecutorCompletionService<>(executor);
     }
 
