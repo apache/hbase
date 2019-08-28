@@ -35,12 +35,20 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -54,6 +62,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Before;
@@ -87,10 +96,18 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   protected static final Logger LOG =
     LoggerFactory.getLogger(TestBulkLoadReplication.class);
 
-  private static final String SRC_REP_CLUSTER_ID = "src";
-  private static final String DEST_REP_CLUSTER_ID = "dest";
-  private static final String PEER_ID = "1";
+  private static final String PEER1_CLUSTER_ID = "peer1";
+  private static final String PEER2_CLUSTER_ID = "peer2";
+  private static final String PEER3_CLUSTER_ID = "peer3";
+
+  private static final String PEER_ID1 = "1";
+  private static final String PEER_ID3 = "3";
+
   private static final AtomicInteger BULK_LOADS_COUNT = new AtomicInteger(0);
+
+  private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
+  private static final Configuration CONF3 = UTIL3.getConfiguration();
+  private static Table htable3;
 
   @Rule
   public TestName name = new TestName();
@@ -100,20 +117,53 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    setupBulkLoadConfigsForCluster(TestReplicationBase.CONF1, SRC_REP_CLUSTER_ID);
-    setupBulkLoadConfigsForCluster(TestReplicationBase.CONF2, DEST_REP_CLUSTER_ID);
+    setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
+    setupBulkLoadConfigsForCluster(CONF2, PEER2_CLUSTER_ID);
+    setupBulkLoadConfigsForCluster(CONF3, PEER3_CLUSTER_ID);
+    setupConfig(UTIL3, "/3");
     TestReplicationBase.setUpBeforeClass();
+    startThirdCluster();
+  }
+
+  private static void startThirdCluster() throws Exception {
+    LOG.info("Setup Zk to same one from UTIL1 and UTIL2");
+    UTIL3.setZkCluster(UTIL1.getZkCluster());
+    UTIL3.startMiniCluster(NUM_SLAVES1);
+
+    TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+
+    Connection connection3 = ConnectionFactory.createConnection(CONF3);
+    try (Admin admin3 = connection3.getAdmin()) {
+      admin3.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    }
+    UTIL3.waitUntilAllRegionsAssigned(tableName);
+    htable3 = connection3.getTable(tableName);
   }
 
   @Before
   @Override
   public void setUpBase() throws Exception {
     super.setUpBase();
-    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(UTIL1.getClusterKey()).setSerial(isSerialPeer()).build();
-    UTIL2.getAdmin().addReplicationPeer(PEER_ID, peerConfig);
+    ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
+    ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
+    ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
+    //adds cluster1 as a remote peer on cluster2
+    UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
+    //adds cluster3 as a remote peer on cluster2
+    UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
+    //adds cluster2 as a remote peer on cluster3
+    UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
     setupCoprocessor(UTIL1);
     setupCoprocessor(UTIL2);
+    setupCoprocessor(UTIL3);
+  }
+
+  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtility util) {
+    return ReplicationPeerConfig.newBuilder()
+      .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
   }
 
   private void setupCoprocessor(HBaseTestingUtility cluster){
@@ -132,7 +182,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Override
   public void tearDownBase() throws Exception {
     super.tearDownBase();
-    UTIL2.getAdmin().removeReplicationPeer(PEER_ID);
+    UTIL2.getAdmin().removeReplicationPeer(PEER_ID1);
+    UTIL2.getAdmin().removeReplicationPeer(PEER_ID3);
+    UTIL3.getAdmin().removeReplicationPeer(PEER_ID2);
   }
 
   private static void setupBulkLoadConfigsForCluster(Configuration config,
