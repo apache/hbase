@@ -21,20 +21,21 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * statistics update about a server/region
+ * Statistics update about a server/region
  */
 @InterfaceAudience.Private
 public final class ResultStatsUtil {
-
   private ResultStatsUtil() {
     //private ctor for util class
   }
 
   /**
+   * Update the statistics for the specified region.
+   *
    * @param tracker tracker to update
    * @param server server from which the result was obtained
-   * @param regionName full region name for the stats
-   * @param stats stats to update for the specified region
+   * @param regionName full region name for the statistics
+   * @param stats statistics to update for the specified region
    */
   public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
     RegionLoadStats stats) {

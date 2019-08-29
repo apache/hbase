@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,12 +51,12 @@ public class TestResultStatsUtil {
     // Check that the tracker was updated as expected
     ServerStatistics stats = serverStatisticTracker.getStats(server);
 
-    Assert.assertEquals(stats.getStatsForRegion(regionName).getMemStoreLoadPercent(),
-            regionLoadStats.memstoreLoad);
-    Assert.assertEquals(stats.getStatsForRegion(regionName).getCompactionPressure(),
-            regionLoadStats.compactionPressure);
-    Assert.assertEquals(stats.getStatsForRegion(regionName).getHeapOccupancyPercent(),
-            regionLoadStats.heapOccupancy);
+    assertEquals(regionLoadStats.memstoreLoad, stats.getStatsForRegion(regionName)
+            .getMemStoreLoadPercent());
+    assertEquals(regionLoadStats.compactionPressure, stats.getStatsForRegion(regionName)
+            .getCompactionPressure());
+    assertEquals(regionLoadStats.heapOccupancy, stats.getStatsForRegion(regionName)
+            .getHeapOccupancyPercent());
   }
 
   @Test
@@ -64,7 +66,7 @@ public class TestResultStatsUtil {
     ResultStatsUtil.updateStats(serverStatisticTracker, server, null, regionLoadStats);
 
     ServerStatistics stats = serverStatisticTracker.getStats(server);
-    Assert.assertEquals(stats,null);
+    assertNull(stats);
   }
 
   @Test
@@ -74,7 +76,7 @@ public class TestResultStatsUtil {
     ResultStatsUtil.updateStats(serverStatisticTracker, server, regionName, null);
 
     ServerStatistics stats = serverStatisticTracker.getStats(server);
-    Assert.assertEquals(stats,null);
+    assertNull(stats);
   }
 
   @Test
@@ -84,6 +86,6 @@ public class TestResultStatsUtil {
     ResultStatsUtil.updateStats(null, server, regionName, regionLoadStats);
 
     ServerStatistics stats = serverStatisticTracker.getStats(server);
-    Assert.assertEquals(stats,null);
+    assertNull(stats);
   }
 }
