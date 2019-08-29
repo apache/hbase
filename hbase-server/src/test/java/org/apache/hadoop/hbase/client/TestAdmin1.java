@@ -588,15 +588,6 @@ public class TestAdmin1 extends TestAdminBase {
       } catch (IllegalArgumentException e) {
         // expected
       }
-      // 3
-      try {
-        FutureUtils.get(ADMIN.mergeRegionsAsync(
-          tableRegions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new),
-          false));
-        fail();
-      } catch (DoNotRetryIOException e) {
-        // expected
-      }
     } finally {
       ADMIN.disableTable(tableName);
       ADMIN.deleteTable(tableName);
