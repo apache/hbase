@@ -558,7 +558,7 @@ public final class SnapshotManifest {
   public static ThreadPoolExecutor createExecutor(final Configuration conf, final String name) {
     int maxThreads = conf.getInt("hbase.snapshot.thread.pool.max", 8);
     return Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-              Threads.getNamedThreadFactory(name));
+              Threads.newDaemonThreadFactory(name));
   }
 
   /**
