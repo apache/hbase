@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -579,15 +578,6 @@ public class TestAdmin1 extends TestAdminBase {
           .get();
         fail();
       } catch (IllegalArgumentException e) {
-        // expected
-      }
-      // 3
-      try {
-        ADMIN.mergeRegionsAsync(
-          tableRegions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new),
-          false).get();
-        fail();
-      } catch (DoNotRetryIOException e) {
         // expected
       }
     } finally {

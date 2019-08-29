@@ -32,7 +32,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -204,16 +203,6 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     } catch (ExecutionException e) {
       // expected
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
-    }
-    // 3
-    try {
-      admin.mergeRegions(
-        regions.stream().map(RegionInfo::getEncodedNameAsBytes).collect(Collectors.toList()), false)
-        .get();
-      fail();
-    } catch (ExecutionException e) {
-      // expected
-      assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
     }
   }
 
