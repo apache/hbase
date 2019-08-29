@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1465,15 +1464,6 @@ public class TestAdmin1 {
           .get();
         fail();
       } catch (IllegalArgumentException e) {
-        // expected
-      }
-      // 3
-      try {
-        admin.mergeRegionsAsync(
-          tableRegions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new),
-          false).get();
-        fail();
-      } catch (DoNotRetryIOException e) {
         // expected
       }
     } finally {
