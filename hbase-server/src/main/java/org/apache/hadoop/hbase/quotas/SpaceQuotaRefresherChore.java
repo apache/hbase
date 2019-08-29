@@ -76,7 +76,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   protected void chore() {
     try {
       // check whether Quota table is present or not.
-      if (!MetaTableAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME)) {
+      if (!checkQuotaTableExists()) {
         LOG.warn("Quota table not found, skipping quota manager cache refresh.");
         return;
       }
@@ -148,6 +148,16 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
       LOG.warn(
           "Caught exception while refreshing enforced quota violation policies, will retry.", e);
     }
+  }
+
+  /**
+   * Checks if hbase:quota exists in hbase:meta
+   *
+   * @return true if hbase:quota table is in meta, else returns false.
+   * @throws IOException throws IOException
+   */
+  boolean checkQuotaTableExists() throws IOException {
+    return MetaTableAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME);
   }
 
   /**
