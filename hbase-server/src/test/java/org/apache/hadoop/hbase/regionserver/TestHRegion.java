@@ -1232,7 +1232,6 @@ public class TestHRegion {
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
     region.put(put);
-    
     // 3. Test case where ABORT_FLUSH will throw exception.
     // Even if ABORT_FLUSH throws exception, we should not fail with IOE, but continue with
     // DroppedSnapshotException. Below COMMIT_FLUSH will cause flush to abort
