@@ -128,7 +128,7 @@ public class TestSplitMerge {
 
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
 
-    byte[][] regionNames = new byte[20][];
+    byte[][] regionNames = new byte[regionCount][];
     for (int c = 0; c < regionCount; c++) {
       regionNames[c] = regions.get(c).getRegionName();
     }
@@ -145,11 +145,12 @@ public class TestSplitMerge {
     List<RegionInfo> mergeParentRegions = MetaTableAccessor.getMergeRegions(UTIL.getConnection(),
       mergedRegion.getEncodedNameAsBytes());
 
-    assertEquals(mergeParentRegions.size(), 20);
+    assertEquals(mergeParentRegions.size(), regionCount);
 
-    for (int c = 0; c < 19; c++) {
-      assertTrue(Bytes.compareTo(mergeParentRegions.get(c).getStartKey(), mergeParentRegions.get(c+1).getStartKey())<0);
+    for (int c = 0; c < regionCount-1; c++) {
+      assertTrue(Bytes.compareTo(
+        mergeParentRegions.get(c).getStartKey(),
+        mergeParentRegions.get(c+1).getStartKey()) < 0);
     }
-    
   }
 }
