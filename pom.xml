@@ -1266,6 +1266,8 @@
     <!-- Do not use versions earlier than 3.2.2 due to a security vulnerability -->
     <collections.version>3.2.2</collections.version>
     <httpclient.version>3.1</httpclient.version>
+    <http-components-client.version>4.4.1</http-components-client.version>
+    <http-components-core.version>4.4.1</http-components-core.version>
     <metrics-core.version>2.2.0</metrics-core.version>
     <guava.version>12.0.1</guava.version>
     <jackson.version>1.9.13</jackson.version>
@@ -1567,6 +1569,16 @@
         <groupId>commons-httpclient</groupId>
         <artifactId>commons-httpclient</artifactId>
         <version>${httpclient.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>${http-components-client.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpcore</artifactId>
+        <version>${http-components-core.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
