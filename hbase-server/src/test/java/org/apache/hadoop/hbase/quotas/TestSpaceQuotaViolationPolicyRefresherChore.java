@@ -82,6 +82,7 @@ public class TestSpaceQuotaViolationPolicyRefresherChore {
     chore = mock(SpaceQuotaRefresherChore.class);
     when(chore.getConnection()).thenReturn(conn);
     when(chore.getManager()).thenReturn(manager);
+    when(chore.checkQuotaTableExists()).thenReturn(true);
     doCallRealMethod().when(chore).chore();
     when(chore.isInViolation(any())).thenCallRealMethod();
     doCallRealMethod().when(chore).extractQuotaSnapshot(any(), any());
