@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -74,6 +75,11 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
+      // check whether Quota table is present or not.
+      if (!MetaTableAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME)) {
+        LOG.warn("Quota table not found, skipping quota manager cache refresh.");
+        return;
+      }
       if (LOG.isTraceEnabled()) {
         LOG.trace("Reading current quota snapshots from hbase:quota.");
       }
