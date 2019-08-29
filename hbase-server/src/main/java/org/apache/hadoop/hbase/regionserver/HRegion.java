@@ -3160,6 +3160,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName(), batchOp.operations.length);
+      }
       closeRegionOperation(op);
     }
     return batchOp.retCodeDetails;
@@ -5849,7 +5853,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isSuccessful = false;
     try {
       this.writeRequestsCount.increment();
-
+      
       // There possibly was a split that happened between when the split keys
       // were gathered and before the HRegion's write lock was taken.  We need
       // to validate the HFile region before attempting to bulk load all of them
@@ -6257,6 +6261,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
+      }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
       }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
@@ -7644,6 +7651,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (txid != 0) {
             syncOrDefer(txid, getEffectiveDurability(processor.useDurability()));
           }
+
+          if (rsServices != null && rsServices.getMetrics() != null) {
+            rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+              getTableName(), mutations.size());
+          }
           walSyncSuccessful = true;
           // 12. call postBatchMutate hook
           processor.postBatchMutate(this);
@@ -7949,6 +7961,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if(txid != 0){
         syncOrDefer(txid, durability);
       }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName());
+      }
       doRollBackMemstore = false;
     } finally {
       if (rowLock != null) {
@@ -8078,6 +8094,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // will yield indeterminate results.
       return doIncrement(mutation, nonceGroup, nonce);
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName());
+      }
       if (this.metricsRegion != null) this.metricsRegion.updateIncrement();
       closeRegionOperation(op);
     }
