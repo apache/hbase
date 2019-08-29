@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
@@ -49,6 +50,8 @@ public class MetricsRegionServer {
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
+  private Meter serverReadQPS;
+  private Meter serverWriteQPS;
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf) {
     this(regionServerWrapper,
@@ -62,6 +65,8 @@ public class MetricsRegionServer {
 
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");
+    serverReadQPS = metricRegistry.meter("ServerReadQPS");
+    serverWriteQPS = metricRegistry.meter("ServerWriteQPS");
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -210,5 +215,33 @@ public class MetricsRegionServer {
 
   public void updateBulkLoad(long millis) {
     this.bulkLoadTimer.updateMillis(millis);
+  }
+
+  public void updateServerReadQPS(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQPS(tn, count);
+    }
+    this.serverReadQPS.mark(count);
+  }
+
+  public void updateServerReadQPS(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQPS(tn);
+    }
+    this.serverReadQPS.mark();
+  }
+
+  public void updateServerWriteQPS(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQPS(tn, count);
+    }
+    this.serverWriteQPS.mark(count);
+  }
+
+  public void updateServerWriteQPS(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQPS(tn);
+    }
+    this.serverWriteQPS.mark();
   }
 }

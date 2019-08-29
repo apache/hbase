@@ -16,10 +16,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.metrics.BaseSource;
+
 /**
  * Latency metrics for a specific table in a RegionServer.
  */
-public interface MetricsTableLatencies {
+public interface MetricsTableLatencies extends BaseSource {
 
   /**
    * The name of the metrics

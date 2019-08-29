@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.MetricRegistries;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 
 /**
  * Captures operation metrics by table. Separates metrics collection for table metrics away from
@@ -28,9 +30,13 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class RegionServerTableMetrics {
 
   private final MetricsTableLatencies latencies;
+  private MetricRegistry metricRegistry;
+  MetricsTableQPS qps;
 
   public RegionServerTableMetrics() {
     latencies = CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
+    metricRegistry = MetricRegistries.global().get(latencies.getMetricRegistryInfo()).get();
+    qps = new MetricsTableQPSImpl(metricRegistry);
   }
 
   public void updatePut(TableName table, long time) {
@@ -67,5 +73,21 @@ public class RegionServerTableMetrics {
 
   public void updateScanSize(TableName table, long size) {
     latencies.updateScanSize(table.getNameAsString(), size);
+  }
+
+  public void updateTableReadQPS(TableName table, long count) {
+    qps.updateTableReadQPS(table.getNameAsString(), count);
+  }
+
+  public void updateTableReadQPS(TableName table) {
+    qps.updateTableReadQPS(table.getNameAsString());
+  }
+
+  public void updateTableWriteQPS(TableName table, long count) {
+    qps.updateTableWriteQPS(table.getNameAsString(), count);
+  }
+
+  public void updateTableWriteQPS(TableName table) {
+    qps.updateTableWriteQPS(table.getNameAsString());
   }
 }

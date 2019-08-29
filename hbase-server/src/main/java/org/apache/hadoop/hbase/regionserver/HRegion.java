@@ -3149,6 +3149,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         if (!initialized) {
           this.writeRequestsCount.add(batchOp.operations.length);
+          if (rsServices instanceof HRegionServer) {
+            ((HRegionServer) rsServices).getRegionServerMetrics().
+              updateServerWriteQPS(this.htableDescriptor.getTableName(), batchOp.operations.length);
+          }
           if (!batchOp.isInReplay()) {
             doPreMutationHook(batchOp);
           }
@@ -5851,7 +5855,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isSuccessful = false;
     try {
       this.writeRequestsCount.increment();
-
+      if (rsServices instanceof HRegionServer) {
+        ((HRegionServer) rsServices).getRegionServerMetrics().
+          updateServerWriteQPS(this.htableDescriptor.getTableName());
+      }
       // There possibly was a split that happened between when the split keys
       // were gathered and before the HRegion's write lock was taken.  We need
       // to validate the HFile region before attempting to bulk load all of them
@@ -6245,6 +6252,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (storeHeap == null) {
         // scanner is closed
         throw new UnknownScannerException("Scanner was closed");
+      }
+      if (rsServices instanceof HRegionServer) {
+        ((HRegionServer) rsServices).getRegionServerMetrics().
+          updateServerReadQPS(getRegionInfo().getTable());
       }
       boolean moreValues = false;
       if (outResults.isEmpty()) {
@@ -7590,6 +7601,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         if (!mutations.isEmpty()) {
           writeRequestsCount.add(mutations.size());
+          if (rsServices instanceof HRegionServer) {
+            ((HRegionServer) rsServices).getRegionServerMetrics().
+              updateServerWriteQPS(this.htableDescriptor.getTableName(), mutations.size());
+          }
           // 5. Call the preBatchMutate hook
           processor.preBatchMutate(this, walEdit);
 
@@ -7792,6 +7807,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Lock row
     startRegionOperation(op);
     this.writeRequestsCount.increment();
+    if (rsServices instanceof HRegionServer) {
+      ((HRegionServer) rsServices).getRegionServerMetrics().
+        updateServerWriteQPS(this.htableDescriptor.getTableName());
+    }
     RowLock rowLock = null;
     WALKey walKey = null;
     boolean doRollBackMemstore = false;
@@ -8061,6 +8080,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkFamilies(mutation.getFamilyCellMap().keySet());
     startRegionOperation(op);
     this.writeRequestsCount.increment();
+    if (rsServices instanceof HRegionServer) {
+      ((HRegionServer) rsServices).getRegionServerMetrics().
+        updateServerWriteQPS(this.htableDescriptor.getTableName());
+    }
     try {
       // Which Increment is it? Narrow increment-only consistency or slow (default) and general
       // row-wide consistency.
