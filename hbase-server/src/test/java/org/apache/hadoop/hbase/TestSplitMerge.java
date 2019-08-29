@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -102,6 +104,51 @@ public class TestSplitMerge {
       ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
       assertEquals(expected, asyncConn.getRegionLocator(tableName)
         .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
+    }
+  }
+
+  @Test
+  public void testMergeRegionOrder() throws Exception {
+    int regionCount= 2;
+
+    TableName tableName = TableName.valueOf("MergeRegionOrder");
+    byte[] family = Bytes.toBytes("CF");
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+
+    byte[][] splitKeys = new byte[regionCount-1][];
+
+    for (int c = 0; c < regionCount-1; c++) {
+      splitKeys[c] = Bytes.toBytes(c+1 * 1000);
+    }
+
+    UTIL.getAdmin().createTable(td, splitKeys);
+    UTIL.waitTableAvailable(tableName);
+
+    List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
+
+    byte[][] regionNames = new byte[regionCount][];
+    for (int c = 0; c < regionCount; c++) {
+      regionNames[c] = regions.get(c).getRegionName();
+    }
+
+    UTIL.getAdmin().mergeRegionsAsync(regionNames, false).get(60, TimeUnit.SECONDS);
+
+    List<RegionInfo> mergedRegions =
+        MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+
+    assertEquals(1, mergedRegions.size());
+
+    RegionInfo mergedRegion = mergedRegions.get(0);
+
+    List<RegionInfo> mergeParentRegions = MetaTableAccessor.getMergeRegions(UTIL.getConnection(),
+      mergedRegion.getRegionName());
+
+    assertEquals(mergeParentRegions.size(), regionCount);
+
+    for (int c = 0; c < regionCount - 1; c++) {
+      assertTrue(Bytes.compareTo(mergeParentRegions.get(c).getStartKey(),
+        mergeParentRegions.get(c + 1).getStartKey()) < 0);
     }
   }
 }
