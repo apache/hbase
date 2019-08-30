@@ -996,6 +996,21 @@ Copyright 2010 FasterXML.com
   </supplement>
 
   <supplement>
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.3.0 -->
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>5.2.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
     <project>
       <groupId>org.jruby.jcodings</groupId>
       <artifactId>jcodings</artifactId>
