@@ -121,21 +121,31 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class Canary implements Tool, CanaryInterface {
+
   @Override
-  public void runRegionCanary(String[] targets) throws Exception {
-    runMonitor(targets);
+  public int runRegionCanary(String[] targets) throws Exception {
+    String configuredReadTableTimeoutsStr = conf.get(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT);
+    try {
+      if (configuredReadTableTimeoutsStr != null) {
+        populateReadTableTimeoutsMap(configuredReadTableTimeoutsStr);
+      }
+    } catch (IllegalArgumentException e) {
+      LOG.error("Constructing read table timeouts map failed ", e);
+      return USAGE_EXIT_CODE;
+    }
+    return runMonitor(targets);
   }
 
   @Override
-  public void runRegionServerCanary(String[] targets) throws Exception {
+  public int runRegionServerCanary(String[] targets) throws Exception {
     regionServerMode = true;
-    runMonitor(targets);
+    return runMonitor(targets);
   }
 
   @Override
-  public void runZookeeperCanary() throws Exception {
+  public int runZookeeperCanary() throws Exception {
     zookeeperMode = true;
-    runMonitor(null);
+    return runMonitor(null);
   }
 
   /**
@@ -619,17 +629,24 @@ public class Canary implements Tool, CanaryInterface {
    */
   private HashMap<String, Long> configuredReadTableTimeouts = new HashMap<>();
 
-  public static final String HBASE_CANARY_REGIONSERVER_ALL_REGIONS = "hbase.canary.regionserver_all_regions";
+  public static final String HBASE_CANARY_REGIONSERVER_ALL_REGIONS
+          = "hbase.canary.regionserver_all_regions";
 
-  public static final String HBASE_CANARY_REGION_WRITE_SNIFFING = "hbase.canary.region.write.sniffing";
-  public static final String HBASE_CANARY_REGION_WRITE_TABLE_TIMEOUT = "hbase.canary.region.write.table.timeout";
-  public static final String HBASE_CANARY_REGION_WRITE_TABLE_NAME = "hbase.canary.region.write.table.name";
-  public static final String HBASE_CANARY_REGION_READ_TABLE_TIMEOUT = "hbase.canary.region.read.table.timeout";
+  public static final String HBASE_CANARY_REGION_WRITE_SNIFFING
+          = "hbase.canary.region.write.sniffing";
+  public static final String HBASE_CANARY_REGION_WRITE_TABLE_TIMEOUT
+          = "hbase.canary.region.write.table.timeout";
+  public static final String HBASE_CANARY_REGION_WRITE_TABLE_NAME
+          = "hbase.canary.region.write.table.name";
+  public static final String HBASE_CANARY_REGION_READ_TABLE_TIMEOUT
+          = "hbase.canary.region.read.table.timeout";
 
-  public static final String HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES= "hbase.canary.zookeeper.permitted.failures";
+  public static final String HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES
+          = "hbase.canary.zookeeper.permitted.failures";
 
   public static final String HBASE_CANARY_INTERVAL = "hbase.canary.interval";
-  public static final String HBASE_CANARY_TREAT_FAILURE_AS_ERROR = "hbase.canary.treat.failure.as.error";
+  public static final String HBASE_CANARY_TREAT_FAILURE_AS_ERROR
+          = "hbase.canary.treat.failure.as.error";
   public static final String HBASE_CANARY_USE_REGEX = "hbase.canary.use.regex";
   public static final String HBASE_CANARY_TIMEOUT = "hbase.canary.timeout";
   public static final String HBASE_CANARY_FAIL_ON_ERROR = "hbase.canary.fail.on.error";
@@ -651,7 +668,8 @@ public class Canary implements Tool, CanaryInterface {
     this.sink = sink;
   }
 
-  Canary(Configuration conf) {
+  Canary(Configuration conf, ExecutorService executor) {
+    this(executor);
     setConf(conf);
   }
 
@@ -662,6 +680,9 @@ public class Canary implements Tool, CanaryInterface {
 
   @Override
   public void setConf(Configuration conf) {
+    if (conf == null) {
+      conf = HBaseConfiguration.create();
+    }
     this.conf = conf;
   }
 
@@ -669,6 +690,7 @@ public class Canary implements Tool, CanaryInterface {
     int index = -1;
     long interval = 0, permittedFailures = 0;
     boolean regionServerAllRegions = false, writeSniffing = false;
+    String readTableTimeoutsStr = null;
 
     // Process command line args
     for (int i = 0; i < args.length; i++) {
@@ -774,7 +796,8 @@ public class Canary implements Tool, CanaryInterface {
                 "millisecond timeouts per table (without spaces).");
             printUsageAndExit();
           }
-          conf.set(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT, args[i]);
+          readTableTimeoutsStr = args[i];
+          conf.set(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT, readTableTimeoutsStr);
         } else if (cmd.equals("-permittedZookeeperFailures")) {
           i++;
 
@@ -814,7 +837,7 @@ public class Canary implements Tool, CanaryInterface {
       System.err.println("-permittedZookeeperFailures requires -zookeeper mode.");
       printUsageAndExit();
     }
-    if (!this.configuredReadTableTimeouts.isEmpty() && (this.regionServerMode || this.zookeeperMode)) {
+    if (readTableTimeoutsStr != null && (this.regionServerMode || this.zookeeperMode)) {
       System.err.println("-readTableTimeouts can only be configured in region mode.");
       printUsageAndExit();
     }
@@ -831,7 +854,14 @@ public class Canary implements Tool, CanaryInterface {
       monitorTargets = new String[length];
       System.arraycopy(args, index, monitorTargets, 0, length);
     }
-    return runMonitor(monitorTargets);
+
+    if (zookeeperMode) {
+      return runZookeeperCanary();
+    } else if (regionServerMode) {
+      return runRegionServerCanary(monitorTargets);
+    } else {
+      return runRegionCanary(monitorTargets);
+    }
   }
 
   private int runMonitor(String[] monitorTargets) throws Exception {
@@ -848,7 +878,7 @@ public class Canary implements Tool, CanaryInterface {
 
     // Start to prepare the stuffs
     Monitor monitor = null;
-    Thread monitorThread = null;
+    Thread monitorThread;
     long startTime = 0;
     long currentTimeLength = 0;
     boolean failOnError = conf.getBoolean(HBASE_CANARY_FAIL_ON_ERROR, true);
@@ -972,16 +1002,18 @@ public class Canary implements Tool, CanaryInterface {
   private Monitor newMonitor(final Connection connection, String[] monitorTargets) {
     Monitor monitor;
     boolean useRegExp = conf.getBoolean(HBASE_CANARY_USE_REGEX, false);
-    boolean regionServerAllRegions = conf.getBoolean(HBASE_CANARY_REGIONSERVER_ALL_REGIONS, false);
-    boolean treatFailureAsError = conf.getBoolean(HBASE_CANARY_TREAT_FAILURE_AS_ERROR, false);
-    int permittedFailures = conf.getInt(HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES, 0);
-    boolean writeSniffing = conf.getBoolean(HBASE_CANARY_REGION_WRITE_SNIFFING, false);
-    String writeTableName = conf.get(HBASE_CANARY_REGION_WRITE_TABLE_NAME, DEFAULT_WRITE_TABLE_NAME.getNameAsString());
-    long configuredWriteTableTimeout = conf.getLong(HBASE_CANARY_REGION_WRITE_TABLE_TIMEOUT, DEFAULT_TIMEOUT);
-    String configuredReadTableTimeoutsStr = conf.get(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT);
-    if (configuredReadTableTimeoutsStr != null) {
-      populateReadTableTimoutsMap(configuredReadTableTimeoutsStr);
-    }
+    boolean regionServerAllRegions
+            = conf.getBoolean(HBASE_CANARY_REGIONSERVER_ALL_REGIONS, false);
+    boolean treatFailureAsError
+            = conf.getBoolean(HBASE_CANARY_TREAT_FAILURE_AS_ERROR, false);
+    int permittedFailures
+            = conf.getInt(HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES, 0);
+    boolean writeSniffing
+            = conf.getBoolean(HBASE_CANARY_REGION_WRITE_SNIFFING, false);
+    String writeTableName = conf.get(HBASE_CANARY_REGION_WRITE_TABLE_NAME,
+            DEFAULT_WRITE_TABLE_NAME.getNameAsString());
+    long configuredWriteTableTimeout
+            = conf.getLong(HBASE_CANARY_REGION_WRITE_TABLE_TIMEOUT, DEFAULT_TIMEOUT);
 
     if (this.regionServerMode) {
       monitor =
@@ -1006,21 +1038,20 @@ public class Canary implements Tool, CanaryInterface {
     return monitor;
   }
 
-  public void populateReadTableTimoutsMap(String configuredReadTableTimeoutsStr) {
+  private void populateReadTableTimeoutsMap(String configuredReadTableTimeoutsStr) {
     String[] tableTimeouts = configuredReadTableTimeoutsStr.split(",");
     for (String tT : tableTimeouts) {
       String[] nameTimeout = tT.split("=");
       if (nameTimeout.length < 2) {
-        System.err.println("Each -readTableTimeouts argument must be of the form " +
-                "<tableName>=<read timeout> (without spaces).");
-        printUsageAndExit();
+        throw new IllegalArgumentException("Each -readTableTimeouts argument must be of the form " +
+            "<tableName>=<read timeout> (without spaces).");
       }
-      long timeoutVal = 0L;
+      long timeoutVal;
       try {
         timeoutVal = Long.parseLong(nameTimeout[1]);
       } catch (NumberFormatException e) {
-        System.err.println("-readTableTimeouts read timeout for each table must be a numeric value argument.");
-        printUsageAndExit();
+        throw new IllegalArgumentException("-readTableTimeouts read timeout for each table" +
+            " must be a numeric value argument.");
       }
       configuredReadTableTimeouts.put(nameTimeout[0], timeoutVal);
     }
@@ -1683,13 +1714,10 @@ public class Canary implements Tool, CanaryInterface {
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
 
-    // Loading the generic options to conf
-    //new GenericOptionsParser(conf, args);
-
     int numThreads = conf.getInt("hbase.canary.threads.num", MAX_THREADS_NUM);
     LOG.info("Execution thread count={}", numThreads);
 
-    int exitCode = 0;
+    int exitCode;
     ExecutorService executor = new ScheduledThreadPoolExecutor(numThreads);
     try {
       exitCode = ToolRunner.run(conf, new Canary(executor), args);

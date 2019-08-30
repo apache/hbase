@@ -29,12 +29,29 @@ import java.util.concurrent.ExecutorService;
 public interface CanaryInterface {
 
   static CanaryInterface create(Configuration conf, ExecutorService executor) {
-    return new Canary(conf);
+    return new Canary(conf, executor);
   }
 
-  public void runRegionCanary(String[] targets) throws Exception;
+  /**
+   * Run Canary in Region mode.
+   * @param targets -- list of monitor tables.
+   * @return the exit code of the Canary tool.
+   * @throws Exception
+   */
+  public int runRegionCanary(String[] targets) throws Exception;
 
-  public void runRegionServerCanary(String[] targets) throws Exception;
+  /**
+   * Runs Canary in Region server mode.
+   * @param targets -- list of monitor tables.
+   * @return the exit code of the Canary tool.
+   * @throws Exception
+   */
+  public int runRegionServerCanary(String[] targets) throws Exception;
 
-  public void runZookeeperCanary() throws Exception;
+  /**
+   * Runs Canary in Zookeeper mode.
+   * @return the exit code of the Canary tool.
+   * @throws Exception
+   */
+  public int runZookeeperCanary() throws Exception;
 }
