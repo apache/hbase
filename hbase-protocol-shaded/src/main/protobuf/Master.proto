@@ -318,6 +318,22 @@ enum MasterSwitchType {
   MERGE = 1;
 }
 
+message SetSnapshotCleanupRequest {
+  required bool enabled = 1;
+  optional bool synchronous = 2;
+}
+
+message SetSnapshotCleanupResponse {
+  required bool prev_snapshot_cleanup = 1;
+}
+
+message IsSnapshotCleanupEnabledRequest {
+}
+
+message IsSnapshotCleanupEnabledResponse {
+  required bool enabled = 1;
+}
+
 message SetSplitOrMergeEnabledRequest {
   required bool enabled = 1;
   optional bool synchronous = 2;
@@ -895,6 +911,18 @@ service MasterService {
    * Restore a snapshot
    */
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
+
+  /**
+   * Turn on/off snapshot auto-cleanup based on TTL expiration
+   */
+  rpc SwitchSnapshotCleanup (SetSnapshotCleanupRequest)
+    returns (SetSnapshotCleanupResponse);
+
+  /**
+   * Determine if snapshot auto-cleanup based on TTL expiration is turned on
+   */
+  rpc IsSnapshotCleanupEnabled (IsSnapshotCleanupEnabledRequest)
+    returns (IsSnapshotCleanupEnabledResponse);
 
   /**
    * Execute a distributed procedure.

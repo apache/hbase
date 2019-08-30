@@ -1383,6 +1383,16 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean snapshotCleanupSwitch(boolean on, boolean synchronous) {
+    throw new NotImplementedException("snapshotCleanupSwitch not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isSnapshotCleanupEnabled() {
+    throw new NotImplementedException("isSnapshotCleanupEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
   }
