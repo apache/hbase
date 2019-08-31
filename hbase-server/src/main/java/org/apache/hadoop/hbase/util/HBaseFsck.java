@@ -153,7 +153,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
  * table integrity problems in a corrupted HBase. This tool was written for hbase-1.x. It does not
  * work with hbase-2.x; it can read state but is not allowed to change state; i.e. effect 'repair'.
- * See hbck2 (HBASE-19121) for a hbck tool for hbase2.
+ * Even though it can 'read' state, given how so much has changed in how hbase1 and hbase2 operate,
+ * it will often misread. See hbck2 (HBASE-19121) for a hbck tool for hbase2. This class is
+ * deprecated.
  *
  * <p>
  * Region consistency checks verify that hbase:meta, region deployment on region
@@ -196,7 +198,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
  * If hbck is run from the command line, there are a handful of arguments that
  * can be used to limit the kinds of repairs hbck will do.  See the code in
  * {@link #printUsageAndExit()} for more details.
+ * @deprecated For removal in hbase-4.0.0. Use HBCK2 instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class HBaseFsck extends Configured implements Closeable {
