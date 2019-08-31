@@ -1166,6 +1166,17 @@ public abstract class FSUtils extends CommonFSUtils {
   }
 
   /**
+   * Called every so-often by storefile map builder getTableStoreFilePathMap to
+   * report progress.
+   */
+  interface ProgressReporter {
+    /**
+     * @param status File or directory we are about to process.
+     */
+    void progress(FileStatus status);
+  }
+
+  /**
    * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
    * table StoreFile names to the full Path.
    * <br>
@@ -1184,7 +1195,8 @@ public abstract class FSUtils extends CommonFSUtils {
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
   final FileSystem fs, final Path hbaseRootDir, TableName tableName)
   throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null, null, null);
+    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null, null,
+        (ProgressReporter)null);
   }
 
   /**
@@ -1204,15 +1216,55 @@ public abstract class FSUtils extends CommonFSUtils {
    * @param tableName name of the table to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
-   * @param errors ErrorReporter instance or null
+   * @param progressReporter Instance or null; gets called every time we move to new region of
+   *   family dir and for each store file.
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   * @deprecated Since 2.3.0. For removal in hbase4. Use ProgressReporter override instead.
+   */
+  @Deprecated
+  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
+      final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
+      ExecutorService executor, final HbckErrorReporter progressReporter)
+      throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(resultMap, fs, hbaseRootDir, tableName, sfFilter, executor,
+        new ProgressReporter() {
+          @Override
+          public void progress(FileStatus status) {
+            // status is not used in this implementation.
+            progressReporter.progress();
+          }
+        });
+  }
+
+  /*
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
+   * table StoreFile names to the full Path.  Note that because this method can be called
+   * on a 'live' HBase system that we will skip files that no longer exist by the time
+   * we traverse them and similarly the user of the result needs to consider that some
+   * entries in this map may not exist by the time this call completes.
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param resultMap map to add values.  If null, this method will create and populate one
+   *   to return
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @param tableName name of the table to scan.
+   * @param sfFilter optional path filter to apply to store files
+   * @param executor optional executor service to parallelize this operation
+   * @param progressReporter Instance or null; gets called every time we move to new region of
+   *   family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
       final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
-      ExecutorService executor, final HbckErrorReporter errors)
-      throws IOException, InterruptedException {
+      ExecutorService executor, final ProgressReporter progressReporter)
+    throws IOException, InterruptedException {
 
     final Map<String, Path> finalResultMap =
         resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
@@ -1233,8 +1285,8 @@ public abstract class FSUtils extends CommonFSUtils {
       final List<Future<?>> futures = new ArrayList<>(regionDirs.size());
 
       for (FileStatus regionDir : regionDirs) {
-        if (null != errors) {
-          errors.progress();
+        if (null != progressReporter) {
+          progressReporter.progress(regionDir);
         }
         final Path dd = regionDir.getPath();
 
@@ -1257,8 +1309,8 @@ public abstract class FSUtils extends CommonFSUtils {
                 return;
               }
               for (FileStatus familyDir : familyDirs) {
-                if (null != errors) {
-                  errors.progress();
+                if (null != progressReporter) {
+                  progressReporter.progress(familyDir);
                 }
                 Path family = familyDir.getPath();
                 if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
@@ -1268,8 +1320,8 @@ public abstract class FSUtils extends CommonFSUtils {
                 // put in map
                 FileStatus[] familyStatus = fs.listStatus(family);
                 for (FileStatus sfStatus : familyStatus) {
-                  if (null != errors) {
-                    errors.progress();
+                  if (null != progressReporter) {
+                    progressReporter.progress(sfStatus);
                   }
                   Path sf = sfStatus.getPath();
                   if (sfFilter == null || sfFilter.accept(sf)) {
@@ -1348,12 +1400,11 @@ public abstract class FSUtils extends CommonFSUtils {
    * @param hbaseRootDir  The root directory to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
    */
-  public static Map<String, Path> getTableStoreFilePathMap(
-    final FileSystem fs, final Path hbaseRootDir)
+  public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
+      final Path hbaseRootDir)
   throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, null);
+    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, (ProgressReporter)null);
   }
 
   /**
@@ -1368,14 +1419,49 @@ public abstract class FSUtils extends CommonFSUtils {
    * @param hbaseRootDir  The root directory to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
-   * @param errors ErrorReporter instance or null
+   * @param progressReporter Instance or null; gets called every time we move to new region of
+   *   family dir and for each store file.
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   * @deprecated Since 2.3.0. Will be removed in hbase4. Used {@link
+   *   #getTableStoreFilePathMap(FileSystem, Path, PathFilter, ExecutorService, ProgressReporter)}
+   */
+  @Deprecated
+  public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
+      final Path hbaseRootDir, PathFilter sfFilter, ExecutorService executor,
+      HbckErrorReporter progressReporter)
+    throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(fs, hbaseRootDir, sfFilter, executor,
+        new ProgressReporter() {
+          @Override
+          public void progress(FileStatus status) {
+            // status is not used in this implementation.
+            progressReporter.progress();
+          }
+        });
+  }
+
+  /**
+   * Runs through the HBase rootdir and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @param sfFilter optional path filter to apply to store files
+   * @param executor optional executor service to parallelize this operation
+   * @param progressReporter Instance or null; gets called every time we move to new region of
+   *   family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(
     final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
-    ExecutorService executor, HbckErrorReporter errors)
+        ExecutorService executor, ProgressReporter progressReporter)
   throws IOException, InterruptedException {
     ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<>(1024, 0.75f, 32);
 
@@ -1385,7 +1471,7 @@ public abstract class FSUtils extends CommonFSUtils {
     // only include the directory paths to tables
     for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
       getTableStoreFilePathMap(map, fs, hbaseRootDir,
-          FSUtils.getTableName(tableDir), sfFilter, executor, errors);
+          FSUtils.getTableName(tableDir), sfFilter, executor, progressReporter);
     }
     return map;
   }

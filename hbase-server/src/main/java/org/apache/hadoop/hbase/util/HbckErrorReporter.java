@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +20,15 @@ package org.apache.hadoop.hbase.util;
 import java.util.ArrayList;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Used by {@link HBaseFsck} reporting system.
+ * @deprecated Since 2.3.0. To be removed in hbase4. Use HBCK2 instead. Remove when
+ *   {@link HBaseFsck} is removed.
+ */
+@Deprecated
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public interface HbckErrorReporter {
-
   enum ERROR_CODE {
     UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
     NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META,
