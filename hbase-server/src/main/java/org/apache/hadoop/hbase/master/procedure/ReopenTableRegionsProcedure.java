@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
@@ -29,10 +31,13 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ReopenTableRegionsState;
@@ -50,15 +55,27 @@ public class ReopenTableRegionsProcedure
 
   private TableName tableName;
 
+  // Specify specific regions of a table to reopen.
+  // if specified null, all regions of the table will be reopened.
+  private final List<byte[]> regionNames;
+
   private List<HRegionLocation> regions = Collections.emptyList();
 
   private RetryCounter retryCounter;
 
   public ReopenTableRegionsProcedure() {
+    regionNames = null;
   }
 
   public ReopenTableRegionsProcedure(TableName tableName) {
     this.tableName = tableName;
+    this.regionNames = null;
+  }
+
+  public ReopenTableRegionsProcedure(final TableName tableName,
+      final List<byte[]> regionNames) {
+    this.tableName = tableName;
+    this.regionNames = regionNames;
   }
 
   @Override
@@ -92,8 +109,9 @@ public class ReopenTableRegionsProcedure
           LOG.info("Table {} is disabled, give up reopening its regions", tableName);
           return Flow.NO_MORE_STATE;
         }
-        regions =
-          env.getAssignmentManager().getRegionStates().getRegionsOfTableForReopen(tableName);
+        List<HRegionLocation> tableRegions = env.getAssignmentManager()
+          .getRegionStates().getRegionsOfTableForReopen(tableName);
+        regions = getRegionLocationsForReopen(tableRegions);
         setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
@@ -147,6 +165,26 @@ public class ReopenTableRegionsProcedure
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
     }
+  }
+
+  private List<HRegionLocation> getRegionLocationsForReopen(
+      List<HRegionLocation> tableRegionsForReopen) {
+
+    List<HRegionLocation> regionsToReopen = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(regionNames) &&
+      CollectionUtils.isNotEmpty(tableRegionsForReopen)) {
+      for (byte[] regionName : regionNames) {
+        for (HRegionLocation hRegionLocation : tableRegionsForReopen) {
+          if (Bytes.equals(regionName, hRegionLocation.getRegion().getRegionName())) {
+            regionsToReopen.add(hRegionLocation);
+            break;
+          }
+        }
+      }
+    } else {
+      regionsToReopen = tableRegionsForReopen;
+    }
+    return regionsToReopen;
   }
 
   /**

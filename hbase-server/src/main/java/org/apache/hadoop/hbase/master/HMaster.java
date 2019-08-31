@@ -135,6 +135,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
@@ -420,6 +421,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // monitor for distributed procedures
   private MasterProcedureManagerHost mpmHost;
 
+  private RegionsRecoveryChore regionsRecoveryChore = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
@@ -1459,6 +1461,20 @@ public class HMaster extends HRegionServer implements MasterServices {
       getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
+    // Regions Reopen based on very high storeFileRefCount is considered enabled
+    // only if hbase.regions.recovery.store.file.ref.count has value > 0
+    final int maxStoreFileRefCount = conf.getInt(
+      HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
+      HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
+    if (maxStoreFileRefCount > 0) {
+      this.regionsRecoveryChore = new RegionsRecoveryChore(this, conf, this);
+      getChoreService().scheduleChore(this.regionsRecoveryChore);
+    } else {
+      LOG.info("Reopening regions with very high storeFileRefCount is disabled. " +
+          "Provide threshold value > 0 for {} to enable it.",
+        HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
+    }
+
     replicationBarrierCleaner = new ReplicationBarrierCleaner(conf, this, getConnection(),
       replicationPeerManager);
     getChoreService().scheduleChore(replicationBarrierCleaner);
@@ -1626,6 +1642,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       choreService.cancelChore(this.replicationBarrierCleaner);
       choreService.cancelChore(this.snapshotCleanerChore);
       choreService.cancelChore(this.hbckChore);
+      choreService.cancelChore(this.regionsRecoveryChore);
     }
   }
 
@@ -3725,6 +3742,38 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (procedure != null) {
       procedure.remoteOperationFailed(procedureExecutor.getEnvironment(), error);
     }
+  }
+
+  /**
+   * Reopen regions provided in the argument
+   *
+   * @param tableName The current table name
+   * @param regionNames The region names of the regions to reopen
+   * @param nonceGroup Identifier for the source of the request, a client or process
+   * @param nonce A unique identifier for this operation from the client or process identified by
+   *   <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @return procedure Id
+   * @throws IOException if reopening region fails while running procedure
+   */
+  long reopenRegions(final TableName tableName, final List<byte[]> regionNames,
+      final long nonceGroup, final long nonce)
+      throws IOException {
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          submitProcedure(new ReopenTableRegionsProcedure(tableName, regionNames));
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ReopenTableRegionsProcedure";
+        }
+
+      });
+
   }
 
   @Override
