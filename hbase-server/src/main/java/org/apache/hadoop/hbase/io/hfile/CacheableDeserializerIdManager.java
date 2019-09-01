@@ -38,7 +38,7 @@ public class CacheableDeserializerIdManager {
 
   /**
    * Register the given {@link Cacheable} -- usually an hfileblock instance, these implement
-   * the Cacheable Interface -- deserializer and generate an unique identifier id for it and return
+   * the Cacheable Interface -- deserializer and generate a unique identifier id for it and return
    * this as our result.
    * @return the identifier of given cacheable deserializer
    * @see #getDeserializer(int)
