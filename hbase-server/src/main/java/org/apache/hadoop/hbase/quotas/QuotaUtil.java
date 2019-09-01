@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -117,6 +118,19 @@ public class QuotaUtil extends QuotaTableUtil {
 
   public static void deleteNamespaceQuota(final Connection connection, final String namespace)
       throws IOException {
+    // Before removing namespace quota , remove quota from the tables inside the namespace
+    // which does not have explicit space quotas defined on them.
+    TableName[] tableNames = QuotaUtil.listTableNamesByNamepsace(connection, namespace);
+    if (tableNames != null) {
+      for (int i = 0; i < tableNames.length; i++) {
+        QuotaSettings quotaSettings = getTableSpaceQuota(connection, tableNames[i]);
+        // if quotasettings is null, no space quota explicitly set on it.
+        // Remove entry from 'hbase:quota'
+        if (quotaSettings == null) {
+          deleteQuotas(connection, getTableRowKey(tableNames[i]));
+        }
+      }
+    }
     deleteQuotas(connection, getNamespaceRowKey(namespace));
   }
 
@@ -454,6 +468,46 @@ public class QuotaUtil extends QuotaTableUtil {
   private static interface KeyFromRow<T> {
     T getKeyFromRow(final byte[] row);
     double getFactor(T t);
+  }
+
+  /**
+   * Method to return the space quotas defined on a given table.
+   *
+   * @param conn connection
+   * @param tn   tablename
+   * @return returns space quota settings defined on the table tn otherwise null.
+   * @throws IOException throws IOException
+   */
+  public static QuotaSettings getTableSpaceQuota(Connection conn, TableName tn) throws IOException {
+    try (QuotaRetriever scanner = QuotaRetriever
+        .open(conn.getConfiguration(), new QuotaFilter().setTableFilter(tn.getNameAsString()))) {
+      for (QuotaSettings setting : scanner) {
+        if (setting.getTableName().equals(tn) && setting.getQuotaType() == QuotaType.SPACE) {
+          return setting;
+        }
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Retrieve list of tables for the given namespace.
+   *
+   * @param connection Connection
+   * @param namespace  name of the namespace
+   * @return list of tables present inside the namespace otherwise returns null.
+   * @throws IOException throws IOException
+   */
+  public static TableName[] listTableNamesByNamepsace(final Connection connection, String namespace)
+      throws IOException {
+    try {
+      TableName[] tableNames = connection.getAdmin().listTableNamesByNamespace(namespace);
+      return tableNames;
+    } catch (NamespaceNotFoundException ns) {
+      LOG.warn(
+          " Namespace " + namespace + "does not exist. Can't return tables inside the namespace");
+      return null;
+    }
   }
 
   /* =========================================================================

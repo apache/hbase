@@ -65,6 +65,7 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
     }
     final Connection conn = ctx.getEnvironment().getConnection();
     Quotas quotas = QuotaUtil.getTableQuota(conn, tableName);
+    Quotas quotasAtNamespace = QuotaUtil.getNamespaceQuota(conn, tableName.getNamespaceAsString());
     if (quotas != null){
       if (quotas.hasSpace()){
         QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
@@ -73,6 +74,20 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
         }
       }
       if (quotas.hasThrottle()){
+        QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
+      }
+    } else if (quotasAtNamespace != null) {
+      // If quota present at namespace level remove the table entry from 'hbase:quota'
+      if (quotasAtNamespace.hasSpace()) {
+        QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
+        try (Admin admin = conn.getAdmin()) {
+          admin.setQuota(settings);
+        }
+      }
+      if (quotasAtNamespace.hasThrottle()) {
         QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
         try (Admin admin = conn.getAdmin()) {
           admin.setQuota(settings);

@@ -272,12 +272,32 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Sets the given quota (policy & limit) on the passed namespace.
+   */
+  void setQuotaLimitNamespace(final String namespace, SpaceViolationPolicy policy, long sizeInMBs)
+      throws Exception {
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(namespace, sizeLimit, policy);
+    testUtil.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit set for namespace = {}, limit = {}", namespace, sizeLimit);
+  }
+
+  /**
    * Removes the space quota from the given table
    */
   void removeQuotaFromtable(final TableName tn) throws Exception {
     QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     testUtil.getAdmin().setQuota(removeQuota);
     LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  /**
+   * Removes the space quota from the given namespace
+   */
+  void removeQuotaFromNamespace(final String namespace) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeNamespaceSpaceLimit(namespace);
+    testUtil.getAdmin().setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the namespace ", namespace);
   }
 
   /**
