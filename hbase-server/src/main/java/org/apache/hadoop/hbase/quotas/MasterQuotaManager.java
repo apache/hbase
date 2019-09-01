@@ -396,7 +396,7 @@ public class MasterQuotaManager implements RegionStateListener {
       throws IOException {
     if (initialized) {
       masterServices.getMasterCoprocessorHost().preIsRpcThrottleEnabled();
-      boolean enabled = rpcThrottleStorage.isRpcThrottleEnabled();
+      boolean enabled = isRpcThrottleEnabled();
       IsRpcThrottleEnabledResponse response =
           IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(enabled).build();
       masterServices.getMasterCoprocessorHost().postIsRpcThrottleEnabled(enabled);
@@ -405,6 +405,10 @@ public class MasterQuotaManager implements RegionStateListener {
       LOG.warn("Skip get rpc throttle because rpc quota is disabled");
       return IsRpcThrottleEnabledResponse.newBuilder().setRpcThrottleEnabled(false).build();
     }
+  }
+
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return initialized ? rpcThrottleStorage.isRpcThrottleEnabled() : false;
   }
 
   public SwitchExceedThrottleQuotaResponse
@@ -432,6 +436,11 @@ public class MasterQuotaManager implements RegionStateListener {
       return SwitchExceedThrottleQuotaResponse.newBuilder()
           .setPreviousExceedThrottleQuotaEnabled(false).build();
     }
+  }
+
+  public boolean isExceedThrottleQuotaEnabled() throws IOException {
+    return initialized ? QuotaUtil.isExceedThrottleQuotaEnabled(masterServices.getConnection())
+        : false;
   }
 
   private void setQuota(final SetQuotaRequest req, final SetQuotaOperations quotaOps)
