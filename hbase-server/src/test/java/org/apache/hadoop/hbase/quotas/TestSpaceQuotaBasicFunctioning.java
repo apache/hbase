@@ -19,6 +19,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,12 +32,15 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -220,5 +224,31 @@ public class TestSpaceQuotaBasicFunctioning {
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
         Bytes.toBytes("reject"));
     helper.verifyViolation(policy, tn, p);
+  }
+
+  @Test
+  public void testDisablePolicyQuotaAndViolate() throws Exception {
+    TableName tableName = helper.createTable();
+    helper.setQuotaLimit(tableName, SpaceViolationPolicy.DISABLE, 2L);
+    helper.writeData(tableName, SpaceQuotaHelperForTests.ONE_MEGABYTE * 3L);
+
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    MasterQuotaManager quotaManager = master.getMasterQuotaManager();
+
+    // Sufficient time for all the chores to run.
+    Thread.sleep(5000);
+
+    long timeToPrune = System.currentTimeMillis() + 11 * 60 * 1000;
+    quotaManager.pruneEntriesOlderThan(timeToPrune);
+
+    // Check if disabled table region report present in the map after retention period expired.
+    // It should be present after retention period expired.
+    for (Map.Entry<RegionInfo, Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
+      if (entry.getKey().getTable().equals(tableName)) {
+        assertTrue(true);
+        return;
+      }
+    }
+    Assert.fail("Testcase failed, disable entry removed");
   }
 }

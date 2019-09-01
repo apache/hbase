@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -702,13 +703,51 @@ public class MasterQuotaManager implements RegionStateListener {
     Iterator<Entry<RegionInfo,SizeSnapshotWithTimestamp>> iterator =
         regionSizes.entrySet().iterator();
     while (iterator.hasNext()) {
-      long currentEntryTime = iterator.next().getValue().getTime();
-      if (currentEntryTime < timeToPruneBefore) {
+      RegionInfo regionInfo = iterator.next().getKey();
+      long currentEntryTime = regionSizes.get(regionInfo).getTime();
+      boolean isInViolationAndPolicyDisable = isInViolationAndPolicyDisable(regionInfo.getTable());
+      // do not prune the entries if table is in violation and
+      // violation policy is disable.prune entries older than time.
+      if (currentEntryTime < timeToPruneBefore && !isInViolationAndPolicyDisable) {
         iterator.remove();
         numEntriesRemoved++;
       }
     }
     return numEntriesRemoved;
+  }
+
+  /**
+   * Method to check if a table is in violation and policy set on table is DISABLE.
+   *
+   * @param tableName tableName to check.
+   * @return returns true if table is in violation and policy is disable else false.
+   */
+  private boolean isInViolationAndPolicyDisable(TableName tableName) {
+    boolean isInViolationAtTable = false;
+    boolean isInViolationAndPolicyDisable = false;
+    SpaceViolationPolicy policy = null;
+    try {
+      if (QuotaUtil.isQuotaEnabled(masterServices.getConfiguration())) {
+        // Get Current Snapshot for the given table
+        SpaceQuotaSnapshot spaceQuotaSnapshot =
+            QuotaUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), tableName);
+        if (spaceQuotaSnapshot != null) {
+          // check if table in violation
+          isInViolationAtTable = spaceQuotaSnapshot.getQuotaStatus().isInViolation();
+          Optional<SpaceViolationPolicy> policyAtNamespace =
+              spaceQuotaSnapshot.getQuotaStatus().getPolicy();
+          if (policyAtNamespace.isPresent()) {
+            policy = policyAtNamespace.get();
+          }
+        }
+      }
+      isInViolationAndPolicyDisable =
+          (policy == SpaceViolationPolicy.DISABLE) && isInViolationAtTable;
+
+    } catch (IOException e) {
+      LOG.info("Problem in getting connection to quota table: ", e);
+    }
+    return isInViolationAndPolicyDisable;
   }
 
   public void processFileArchivals(FileArchiveNotificationRequest request, Connection conn,

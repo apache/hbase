@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.apache.hadoop.hbase.quotas.QuotaUtil.QUOTA_CONF_KEY;
 import static org.apache.hadoop.hbase.util.Bytes.toBytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -51,6 +55,10 @@ public class TestMasterQuotaManager {
     MasterServices masterServices = mock(MasterServices.class);
     MasterQuotaManager manager = new MasterQuotaManager(masterServices);
     manager.initializeRegionSizes();
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.set(QUOTA_CONF_KEY, "false");
+    when(masterServices.getConfiguration()).thenReturn(conf);
     // Mock out some regions
     TableName tableName = TableName.valueOf("foo");
     HRegionInfo region1 = new HRegionInfo(tableName, null, toBytes("a"));
