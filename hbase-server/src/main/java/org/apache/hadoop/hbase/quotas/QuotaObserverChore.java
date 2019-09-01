@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -765,6 +766,8 @@ public class QuotaObserverChore extends ScheduledChore {
       if (regions == null) {
         return 0;
       }
+      // Filter the region replicas if any and return the original number of regions for a table.
+      RegionReplicaUtil.removeNonDefaultRegions(regions);
       return regions.size();
     }
 
