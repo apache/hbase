@@ -457,7 +457,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         redirectHost = request.getServerName();
         if(!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
           LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
-              MASTER_HOSTNAME_KEY + "' is not set; client will get a HTTP 400 response. If " +
+              MASTER_HOSTNAME_KEY + "' is not set; client will get an HTTP 400 response. If " +
               "your HBase deployment relies on client accessible names that the region server process " +
               "can't resolve locally, then you should set the previously mentioned configuration variable " +
               "to an appropriate hostname.");

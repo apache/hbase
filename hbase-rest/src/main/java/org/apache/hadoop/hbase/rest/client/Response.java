@@ -29,7 +29,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 
 /**
- * The HTTP result code, response headers, and body of a HTTP response.
+ * The HTTP result code, response headers, and body of an HTTP response.
  */
 @InterfaceAudience.Public
 public class Response {

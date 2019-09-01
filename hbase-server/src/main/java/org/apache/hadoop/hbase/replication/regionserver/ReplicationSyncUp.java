@@ -105,7 +105,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     ZKWatcher zkw;
 
     DummyServer(ZKWatcher zkw) {
-      // an unique name in case the first run fails
+      // a unique name in case the first run fails
       hostname = System.currentTimeMillis() + ".SyncUpTool.replication.org";
       this.zkw = zkw;
     }

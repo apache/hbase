@@ -115,7 +115,7 @@ public class TestPathFilter extends HttpServerFunctionalTest {
   public void testPathSpecFilters() throws Exception {
     Configuration conf = new Configuration();
 
-    //start a http server with CountingFilter
+    //start an http server with CountingFilter
     conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
         RecordingFilter.Initializer.class.getName());
     String[] pathSpecs = { "/path", "/path/*" };

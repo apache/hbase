@@ -34,9 +34,9 @@ public class CacheableDeserializerIdManager {
   private static final AtomicInteger identifier = new AtomicInteger(0);
 
   /**
-   * Register the given cacheable deserializer and generate an unique identifier
-   * id for it
-   * @param cd
+   * Register the given {@link Cacheable} -- usually an hfileblock instance, these implement
+   * the Cacheable Interface -- deserializer and generate a unique identifier id for it and return
+   * this as our result.
    * @return the identifier of given cacheable deserializer
    */
   public static int registerDeserializer(CacheableDeserializer<Cacheable> cd) {

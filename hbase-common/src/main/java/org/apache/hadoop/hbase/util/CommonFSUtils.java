@@ -337,7 +337,7 @@ public abstract class CommonFSUtils {
   }
 
   /**
-   * Return the 'path' component of a Path.  In Hadoop, Path is an URI.  This
+   * Return the 'path' component of a Path.  In Hadoop, Path is a URI.  This
    * method returns the 'path' component of a Path's URI: e.g. If a Path is
    * <code>hdfs://example.org:9000/hbase_trunk/TestTable/compaction.dir</code>,
    * this method returns <code>/hbase_trunk/TestTable/compaction.dir</code>.

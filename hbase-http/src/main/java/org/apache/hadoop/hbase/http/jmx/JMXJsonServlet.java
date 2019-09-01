@@ -119,7 +119,7 @@ public class JMXJsonServlet extends HttpServlet {
   /**
    * If query string includes 'description', then we will emit bean and attribute descriptions to
    * output IFF they are not null and IFF the description is not the same as the attribute name:
-   * i.e. specify an URL like so: /jmx?description=true
+   * i.e. specify a URL like so: /jmx?description=true
    */
   private static final String INCLUDE_DESCRIPTION = "description";
 
