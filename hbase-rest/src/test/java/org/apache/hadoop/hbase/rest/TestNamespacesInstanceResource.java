@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.rest.model.TestNamespacesInstanceModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.Header;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -399,9 +400,14 @@ public class TestNamespacesInstanceResource {
     assertNull(nd4);
     conf.set("hbase.rest.readonly", "false");
 
-    // Create namespace via no body and protobuf.
+    // Create namespace with no body and binary content type.
     response = client.post(namespacePath3, Constants.MIMETYPE_BINARY, new byte[]{});
     assertEquals(201, response.getCode());
+    // Create namespace with no body and no content type.
+    Header[] nullHeaders = null;
+    response = client.post(namespacePath3, nullHeaders, new byte[]{});
+    assertEquals(201, response.getCode());
+    // Create namespace with protobuf.
     response = client.post(namespacePath4, Constants.MIMETYPE_PROTOBUF,
       model4.createProtobufOutput());
     assertEquals(201, response.getCode());

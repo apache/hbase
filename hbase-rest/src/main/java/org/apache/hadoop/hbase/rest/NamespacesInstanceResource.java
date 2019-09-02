@@ -132,7 +132,7 @@ public class NamespacesInstanceResource extends ResourceBase {
    * @return response code.
    */
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+  @Consumes({MIMETYPE_BINARY, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
   public Response put(final NamespacesInstanceModel model, final @Context UriInfo uriInfo) {
     return processUpdate(model, true, uriInfo);
@@ -146,7 +146,7 @@ public class NamespacesInstanceResource extends ResourceBase {
    */
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+    MIMETYPE_PROTOBUF_IETF, MIMETYPE_BINARY})
   public Response post(final NamespacesInstanceModel model,
       final @Context UriInfo uriInfo) {
     return processUpdate(model, false, uriInfo);
