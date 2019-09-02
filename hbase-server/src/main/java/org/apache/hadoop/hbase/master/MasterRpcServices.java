@@ -2567,27 +2567,29 @@ public class MasterRpcServices extends RSRpcServices
   public GrantResponse grant(RpcController controller, GrantRequest request)
       throws ServiceException {
     try {
-      final UserPermission perm =
-          ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
-      boolean mergeExistingPermissions = request.getMergeExistingPermissions();
-      if (master.cpHost != null) {
+      master.checkInitialized();
+      if (master.cpHost != null && hasAccessControlServiceCoprocessor(master.cpHost)) {
+        final UserPermission perm =
+            ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
+        boolean mergeExistingPermissions = request.getMergeExistingPermissions();
         master.cpHost.preGrant(perm, mergeExistingPermissions);
-      }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.addUserPermission(getConfiguration(), perm, table,
-          mergeExistingPermissions);
-      }
-      if (master.cpHost != null) {
+        try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.addUserPermission(getConfiguration(), perm, table,
+            mergeExistingPermissions);
+        }
         master.cpHost.postGrant(perm, mergeExistingPermissions);
+        User caller = RpcServer.getRequestUser().orElse(null);
+        if (AUDITLOG.isTraceEnabled()) {
+          // audit log should store permission changes in addition to auth results
+          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+          AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller,
+            remoteAddress, perm);
+        }
+        return GrantResponse.getDefaultInstance();
+      } else {
+        throw new DoNotRetryIOException(
+            new UnsupportedOperationException(AccessController.class.getName() + " is not loaded"));
       }
-      User caller = RpcServer.getRequestUser().orElse(null);
-      if (AUDITLOG.isTraceEnabled()) {
-        // audit log should store permission changes in addition to auth results
-        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
-        AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller, remoteAddress,
-                perm);
-      }
-      return GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2597,25 +2599,27 @@ public class MasterRpcServices extends RSRpcServices
   public RevokeResponse revoke(RpcController controller, RevokeRequest request)
       throws ServiceException {
     try {
-      final UserPermission userPermission =
-          ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
-      if (master.cpHost != null) {
+      master.checkInitialized();
+      if (master.cpHost != null && hasAccessControlServiceCoprocessor(master.cpHost)) {
+        final UserPermission userPermission =
+            ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         master.cpHost.preRevoke(userPermission);
-      }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
-      }
-      if (master.cpHost != null) {
+        try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
+        }
         master.cpHost.postRevoke(userPermission);
+        User caller = RpcServer.getRequestUser().orElse(null);
+        if (AUDITLOG.isTraceEnabled()) {
+          // audit log should record all permission changes
+          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
+          AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller,
+            remoteAddress, userPermission);
+        }
+        return RevokeResponse.getDefaultInstance();
+      } else {
+        throw new DoNotRetryIOException(
+            new UnsupportedOperationException(AccessController.class.getName() + " is not loaded"));
       }
-      User caller = RpcServer.getRequestUser().orElse(null);
-      if (AUDITLOG.isTraceEnabled()) {
-        // audit log should record all permission changes
-        String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
-        AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller, remoteAddress,
-                userPermission);
-      }
-      return RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2625,48 +2629,51 @@ public class MasterRpcServices extends RSRpcServices
   public GetUserPermissionsResponse getUserPermissions(RpcController controller,
       GetUserPermissionsRequest request) throws ServiceException {
     try {
-      final String userName = request.hasUserName() ? request.getUserName().toStringUtf8() : null;
-      String namespace =
-          request.hasNamespaceName() ? request.getNamespaceName().toStringUtf8() : null;
-      TableName table =
-          request.hasTableName() ? ProtobufUtil.toTableName(request.getTableName()) : null;
-      byte[] cf = request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
-      byte[] cq = request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
-      Type permissionType = request.hasType() ? request.getType() : null;
-      if (master.cpHost != null) {
+      master.checkInitialized();
+      if (master.cpHost != null && hasAccessControlServiceCoprocessor(master.cpHost)) {
+        final String userName = request.hasUserName() ? request.getUserName().toStringUtf8() : null;
+        String namespace =
+            request.hasNamespaceName() ? request.getNamespaceName().toStringUtf8() : null;
+        TableName table =
+            request.hasTableName() ? ProtobufUtil.toTableName(request.getTableName()) : null;
+        byte[] cf = request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
+        byte[] cq =
+            request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
+        Type permissionType = request.hasType() ? request.getType() : null;
         master.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq);
-      }
 
-      List<UserPermission> perms = null;
-      if (permissionType == Type.Table) {
-        boolean filter = (cf != null || userName != null) ? true : false;
-        perms = PermissionStorage.getUserTablePermissions(master.getConfiguration(), table, cf, cq,
-          userName, filter);
-      } else if (permissionType == Type.Namespace) {
-        perms = PermissionStorage.getUserNamespacePermissions(master.getConfiguration(), namespace,
-          userName, userName != null ? true : false);
-      } else {
-        perms = PermissionStorage.getUserPermissions(master.getConfiguration(), null, null, null,
-          userName, userName != null ? true : false);
-        // Skip super users when filter user is specified
-        if (userName == null) {
-          // Adding superusers explicitly to the result set as PermissionStorage do not store
-          // them. Also using acl as table name to be inline with the results of global admin and
-          // will help in avoiding any leakage of information about being superusers.
-          for (String user : Superusers.getSuperUsers()) {
-            perms.add(new UserPermission(user,
-                Permission.newBuilder().withActions(Action.values()).build()));
+        List<UserPermission> perms = null;
+        if (permissionType == Type.Table) {
+          boolean filter = (cf != null || userName != null) ? true : false;
+          perms = PermissionStorage.getUserTablePermissions(master.getConfiguration(), table, cf,
+            cq, userName, filter);
+        } else if (permissionType == Type.Namespace) {
+          perms = PermissionStorage.getUserNamespacePermissions(master.getConfiguration(),
+            namespace, userName, userName != null ? true : false);
+        } else {
+          perms = PermissionStorage.getUserPermissions(master.getConfiguration(), null, null, null,
+            userName, userName != null ? true : false);
+          // Skip super users when filter user is specified
+          if (userName == null) {
+            // Adding superusers explicitly to the result set as PermissionStorage do not store
+            // them. Also using acl as table name to be inline with the results of global admin and
+            // will help in avoiding any leakage of information about being superusers.
+            for (String user : Superusers.getSuperUsers()) {
+              perms.add(new UserPermission(user,
+                  Permission.newBuilder().withActions(Action.values()).build()));
+            }
           }
         }
-      }
 
-      if (master.cpHost != null) {
         master.getMasterCoprocessorHost().postGetUserPermissions(userName, namespace, table, cf,
           cq);
+        AccessControlProtos.GetUserPermissionsResponse response =
+            ShadedAccessControlUtil.buildGetUserPermissionsResponse(perms);
+        return response;
+      } else {
+        throw new DoNotRetryIOException(
+            new UnsupportedOperationException(AccessController.class.getName() + " is not loaded"));
       }
-      AccessControlProtos.GetUserPermissionsResponse response =
-          ShadedAccessControlUtil.buildGetUserPermissionsResponse(perms);
-      return response;
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2676,38 +2683,40 @@ public class MasterRpcServices extends RSRpcServices
   public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
       HasUserPermissionsRequest request) throws ServiceException {
     try {
-      User caller = RpcServer.getRequestUser().orElse(null);
-      String userName =
-          request.hasUserName() ? request.getUserName().toStringUtf8() : caller.getShortName();
-      List<Permission> permissions = new ArrayList<>();
-      for (int i = 0; i < request.getPermissionCount(); i++) {
-        permissions.add(ShadedAccessControlUtil.toPermission(request.getPermission(i)));
-      }
-      if (master.cpHost != null) {
+      master.checkInitialized();
+      if (master.cpHost != null && hasAccessControlServiceCoprocessor(master.cpHost)) {
+        User caller = RpcServer.getRequestUser().orElse(null);
+        String userName =
+            request.hasUserName() ? request.getUserName().toStringUtf8() : caller.getShortName();
+        List<Permission> permissions = new ArrayList<>();
+        for (int i = 0; i < request.getPermissionCount(); i++) {
+          permissions.add(ShadedAccessControlUtil.toPermission(request.getPermission(i)));
+        }
         master.getMasterCoprocessorHost().preHasUserPermissions(userName, permissions);
-      }
-      if (!caller.getShortName().equals(userName)) {
-        List<String> groups = AccessChecker.getUserGroups(userName);
-        caller = new InputUser(userName, groups.toArray(new String[groups.size()]));
-      }
-      List<Boolean> hasUserPermissions = new ArrayList<>();
-      if (getAccessChecker() != null) {
-        for (Permission permission : permissions) {
-          boolean hasUserPermission =
-              getAccessChecker().hasUserPermission(caller, "hasUserPermissions", permission);
-          hasUserPermissions.add(hasUserPermission);
+        if (!caller.getShortName().equals(userName)) {
+          List<String> groups = AccessChecker.getUserGroups(userName);
+          caller = new InputUser(userName, groups.toArray(new String[groups.size()]));
         }
-      } else {
-        for (int i = 0; i < permissions.size(); i++) {
-          hasUserPermissions.add(true);
+        List<Boolean> hasUserPermissions = new ArrayList<>();
+        if (getAccessChecker() != null) {
+          for (Permission permission : permissions) {
+            boolean hasUserPermission =
+                getAccessChecker().hasUserPermission(caller, "hasUserPermissions", permission);
+            hasUserPermissions.add(hasUserPermission);
+          }
+        } else {
+          for (int i = 0; i < permissions.size(); i++) {
+            hasUserPermissions.add(true);
+          }
         }
-      }
-      if (master.cpHost != null) {
         master.getMasterCoprocessorHost().postHasUserPermissions(userName, permissions);
+        HasUserPermissionsResponse.Builder builder =
+            HasUserPermissionsResponse.newBuilder().addAllHasUserPermission(hasUserPermissions);
+        return builder.build();
+      } else {
+        throw new DoNotRetryIOException(
+            new UnsupportedOperationException(AccessController.class.getName() + " is not loaded"));
       }
-      HasUserPermissionsResponse.Builder builder =
-          HasUserPermissionsResponse.newBuilder().addAllHasUserPermission(hasUserPermissions);
-      return builder.build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
