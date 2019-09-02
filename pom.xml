@@ -1276,6 +1276,7 @@
     <collections.version>3.2.2</collections.version>
     <httpclient.version>3.1</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
+    <http-components-client.version>4.5.2</http-components-client.version>
     <metrics-core.version>2.2.0</metrics-core.version>
     <guava.version>12.0.1</guava.version>
     <jackson1.version>1.9.13</jackson1.version>
@@ -1637,6 +1638,11 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
         <version>${httpcore.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>${http-components-client.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
