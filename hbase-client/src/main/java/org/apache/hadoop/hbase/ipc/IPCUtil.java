@@ -23,7 +23,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -41,7 +40,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -62,19 +61,19 @@ class IPCUtil {
    * @throws IOException if write action fails
    */
   public static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuffer cellBlock) throws IOException {
+      final ByteBuf cellBlock) throws IOException {
     // Must calculate total size and write that first so other side can read it all in in one
     // swoop. This is dictated by how the server is currently written. Server needs to change
     // if we are to be able to write without the length prefixing.
     int totalSize = IPCUtil.getTotalSizeWhenWrittenDelimited(header, param);
     if (cellBlock != null) {
-      totalSize += cellBlock.remaining();
+      totalSize += cellBlock.readableBytes();
     }
     return write(dos, header, param, cellBlock, totalSize);
   }
 
   private static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuffer cellBlock, final int totalSize) throws IOException {
+      final ByteBuf cellBlock, final int totalSize) throws IOException {
     // I confirmed toBytes does same as DataOutputStream#writeInt.
     dos.write(Bytes.toBytes(totalSize));
     // This allocates a buffer that is the size of the message internally.
@@ -83,7 +82,7 @@ class IPCUtil {
       param.writeDelimitedTo(dos);
     }
     if (cellBlock != null) {
-      dos.write(cellBlock.array(), 0, cellBlock.remaining());
+      cellBlock.readBytes(dos, cellBlock.readableBytes());
     }
     dos.flush();
     return totalSize;
