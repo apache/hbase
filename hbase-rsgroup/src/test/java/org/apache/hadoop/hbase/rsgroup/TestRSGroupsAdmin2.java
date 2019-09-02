@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,6 +30,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -54,6 +56,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ LargeTests.class })
@@ -338,17 +341,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
 
-    // test fail server move
-    try {
-      rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
-        Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
-      fail("servers shouldn't have been successfully moved.");
-    } catch (IOException ex) {
-      String exp = "Target RSGroup " + RSGroupInfo.DEFAULT_GROUP + " is same as source " +
-        RSGroupInfo.DEFAULT_GROUP + " RSGroup.";
-      String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
-    }
+    // test move when src = dst
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(targetServer.getAddress()),
+      Sets.newHashSet(tableName), RSGroupInfo.DEFAULT_GROUP);
 
     // verify default group info
     Assert.assertEquals(oldDefaultGroupServerSize,
@@ -655,5 +650,4 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       }
     });
   }
-
 }
