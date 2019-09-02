@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -50,26 +49,24 @@ public class TestConnectionId {
 
   @Test
   public void testGetServiceName() {
-    assertSame("test", connectionId1.getServiceName());
-    assertNotSame("test1", connectionId1.getServiceName());
+    assertEquals("test", connectionId1.getServiceName());
   }
 
   @Test
   public void testGetAddress() {
-    assertSame(address, connectionId1.getAddress());
-    assertSame(address, connectionId2.getAddress());
-    assertEquals(connectionId1.getAddress(), connectionId2.getAddress());
+    assertEquals(address, connectionId1.getAddress());
+    assertEquals(address, connectionId2.getAddress());
   }
 
   @Test
   public void testGetTicket() {
-    assertSame(testUser1, connectionId1.getTicket());
-    assertNotSame(testUser2, connectionId1.getTicket());
+    assertEquals(testUser1, connectionId1.getTicket());
+    assertNotEquals(testUser2, connectionId1.getTicket());
   }
 
   @Test
   public void testToString() {
-    String expectedString = address.toString() + "/" + serviceName + "/" + testUser1;
+    String expectedString = "0.0.0.0/0.0.0.0:999/test/test (auth:SIMPLE)";
     assertEquals(expectedString, connectionId1.toString());
   }
 
@@ -112,7 +109,7 @@ public class TestConnectionId {
     assertEquals(expectedHashCode, testHashCode);
 
     // Make sure two objects are not same and test for hashcode
-    assertNotSame(connectionId1, connectionId2);
+    assertNotEquals(connectionId1, connectionId2);
     assertNotEquals(connectionId1.hashCode(), connectionId2.hashCode());
   }
 }
