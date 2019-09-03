@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -87,4 +88,8 @@ public interface RSGroupInfoManager {
    */
   @Deprecated
   RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException;
+
+  static RSGroupInfoManager create(MasterServices master) throws IOException {
+    return RSGroupInfoManagerImpl.getInstance(master);
+  }
 }
