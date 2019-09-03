@@ -35,7 +35,6 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Locale;
@@ -70,6 +69,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -599,37 +600,44 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * @see #readResponse()
    */
   private void writeRequest(Call call) throws IOException {
-    ByteBuffer cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec,
-      this.compressor, call.cells);
-    CellBlockMeta cellBlockMeta;
-    if (cellBlock != null) {
-      cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.limit()).build();
-    } else {
-      cellBlockMeta = null;
-    }
-    RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
-
-    setupIOstreams();
-
-    // Now we're going to write the call. We take the lock, then check that the connection
-    // is still valid, and, if so we do the write to the socket. If the write fails, we don't
-    // know where we stand, we have to close the connection.
-    if (Thread.interrupted()) {
-      throw new InterruptedIOException();
-    }
-
-    calls.put(call.id, call); // We put first as we don't want the connection to become idle.
-    // from here, we do not throw any exception to upper layer as the call has been tracked in the
-    // pending calls map.
+    ByteBuf cellBlock = null;
     try {
-      call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
-    } catch (Throwable t) {
-      if(LOG.isTraceEnabled()) {
-        LOG.trace("Error while writing call, call_id:" + call.id, t);
+      cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec, this.compressor,
+          call.cells, PooledByteBufAllocator.DEFAULT);
+      CellBlockMeta cellBlockMeta;
+      if (cellBlock != null) {
+        cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.readableBytes()).build();
+      } else {
+        cellBlockMeta = null;
       }
-      IOException e = IPCUtil.toIOE(t);
-      closeConn(e);
-      return;
+      RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
+
+      setupIOstreams();
+
+      // Now we're going to write the call. We take the lock, then check that the connection
+      // is still valid, and, if so we do the write to the socket. If the write fails, we don't
+      // know where we stand, we have to close the connection.
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException();
+      }
+
+      calls.put(call.id, call); // We put first as we don't want the connection to become idle.
+      // from here, we do not throw any exception to upper layer as the call has been tracked in
+      // the pending calls map.
+      try {
+        call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
+      } catch (Throwable t) {
+        if(LOG.isTraceEnabled()) {
+          LOG.trace("Error while writing call, call_id:" + call.id, t);
+        }
+        IOException e = IPCUtil.toIOE(t);
+        closeConn(e);
+        return;
+      }
+    } finally {
+      if (cellBlock != null) {
+        cellBlock.release();
+      }
     }
     notifyAll();
   }

@@ -1267,7 +1267,7 @@ Medium Tests (((MediumTests)))::
 Large Tests (((LargeTests)))::
   _Large_ test cases are everything else. They are typically large-scale tests, regression tests
   for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
-  ten minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+  thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
   to run longer.
 
 Integration Tests (((IntegrationTests)))::

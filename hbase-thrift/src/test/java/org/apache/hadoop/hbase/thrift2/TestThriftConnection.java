@@ -168,7 +168,7 @@ public class TestThriftConnection {
     httpPort = HBaseTestingUtility.randomFreePort();
     // Start a thrift server
     thriftServer = startThriftServer(thriftPort, false);
-    // Start a HTTP thrift server
+    // Start an HTTP thrift server
     thriftHttpServer = startThriftServer(httpPort, true);
     thriftConnection = createConnection(thriftPort, false);
     thriftHttpConnection = createConnection(httpPort, true);

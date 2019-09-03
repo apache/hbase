@@ -22,12 +22,10 @@
   import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
   import="java.util.ArrayList"
   import="java.util.Collection"
-  import="java.util.Collections"
   import="java.util.HashMap"
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
-  import="java.util.Objects"
   import="java.util.TreeMap"
   import=" java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
@@ -51,8 +49,10 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.assignment.RegionStates"
   import="org.apache.hadoop.hbase.master.RegionState"
+  import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
   import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
   import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
+  import="org.apache.hadoop.hbase.quotas.ThrottleSettings"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
@@ -358,6 +358,40 @@ if (fqtn != null && master.isInitialized()) {
   </tr>
 <%
     }
+
+  if (quota.hasThrottle()) {
+    List<ThrottleSettings> throttles = QuotaSettingsFactory.fromTableThrottles(table.getName(), quota.getThrottle());
+    if (throttles.size() > 0) {
+%>
+  <tr>
+    <td>Throttle Quota</td>
+    <td>
+      <table>
+        <tr>
+          <th>Limit</th>
+          <th>Type</th>
+          <th>TimeUnit</th>
+          <th>Scope</th>
+        </tr>
+<%
+    for (ThrottleSettings throttle : throttles) {
+%>
+        <tr>
+          <td><%= throttle.getSoftLimit() %></td>
+          <td><%= throttle.getThrottleType() %></td>
+          <td><%= throttle.getTimeUnit() %></td>
+          <td><%= throttle.getQuotaScope() %></td>
+        </tr>
+<%
+    }
+%>
+      </table>
+    </td>
+    <td>Information about a Throttle Quota on this table, if set.</td>
+  </tr>
+<%
+    }
+  }
   }
 %>
 </table>
