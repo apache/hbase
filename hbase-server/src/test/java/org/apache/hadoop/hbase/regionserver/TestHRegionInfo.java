@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -124,6 +125,12 @@ public class TestHRegionInfo {
     assertTrue(abri.isOverlap(adri));
     assertFalse(dri.isOverlap(ari));
     assertTrue(abri.isOverlap(adri));
+    assertTrue(adri.isOverlap(abri));
+    // Check that splitParent is not reported as an overlap.
+    RegionInfo splitParent = RegionInfoBuilder.newBuilder(adri.getTable()).
+        setStartKey(adri.getStartKey()).setEndKey(adri.getEndKey()).setOffline(true).
+        setSplit(true).build();
+    assertFalse(splitParent.isOverlap(abri));
   }
 
   @Test

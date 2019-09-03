@@ -78,25 +78,30 @@
 
   <div class="row">
     <div class="page-header">
+  <p><span>This page displays two reports. Only the report titles show if reports are empty.</span></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="page-header">
       <h1>HBCK Chore Report</h1>
       <p>
         <% if (hbckChore.isDisabled()) { %>
         <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
         <% } else { %>
-        <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute 'hbck_chore_run' in hbase shell to generate a new sub-report.</span>
+        <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
         <% } %>
       </p>
     </div>
   </div>
 
 
+
+  <% if (inconsistentRegions != null && inconsistentRegions.size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Inconsistent Regions</h2>
     </div>
   </div>
-
-  <% if (inconsistentRegions != null && inconsistentRegions.size() > 0) { %>
       <p>
         <span>
         There are three cases: 1. Master thought this region opened, but no regionserver reported it (Fix: use assigns
@@ -127,13 +132,13 @@
   </table>
   <% } %>
 
+  <% if (orphanRegionsOnRS != null && orphanRegionsOnRS.size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Orphan Regions on RegionServer</h2>
     </div>
   </div>
 
-  <% if (orphanRegionsOnRS != null && orphanRegionsOnRS.size() > 0) { %>
   <table class="table table-striped">
     <tr>
       <th>Region Encoded Name</th>
@@ -150,13 +155,13 @@
   </table>
   <% } %>
 
+  <% if (orphanRegionsOnFS != null && orphanRegionsOnFS.size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Orphan Regions on FileSystem</h2>
     </div>
   </div>
 
-  <% if (orphanRegionsOnFS != null && orphanRegionsOnFS.size() > 0) { %>
   <table class="table table-striped">
     <tr>
       <th>Region Encoded Name</th>
@@ -173,20 +178,24 @@
   </table>
   <% } %>
 
-  <div class="row inner_header">
-    <div class="page-header">
-      <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
-    </div>
-  </div>
-  <% if (report != null && !report.isEmpty()) {
-    zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(report.getCreateTime()),
-      ZoneId.systemDefault());
-    String iso8601reportTime = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+  <%
     zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
       ZoneId.systemDefault());
     String iso8601Now = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    String iso8601reportTime = "-1";
+    if (report != null) {
+      zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(report.getCreateTime()),
+        ZoneId.systemDefault());
+      iso8601reportTime = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
   %>
-  <p>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</p>
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
+      <p><span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span></p>
+    </div>
+  </div>
+  <% if (report != null && !report.isEmpty()) { %>
       <% if (!report.getHoles().isEmpty()) { %>
           <div class="row inner_header">
             <div class="page-header">

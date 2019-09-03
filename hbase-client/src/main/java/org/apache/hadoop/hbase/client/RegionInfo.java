@@ -799,11 +799,11 @@ public interface RegionInfo {
     }
     int startKeyCompare = Bytes.compareTo(getStartKey(), other.getStartKey());
     if (startKeyCompare == 0) {
-      return true;
+      return !this.isSplitParent();
     }
     if (startKeyCompare < 0) {
       if (isLast()) {
-        return true;
+        return !this.isSplitParent();
       }
       return Bytes.compareTo(getEndKey(), other.getStartKey()) > 0;
     }
