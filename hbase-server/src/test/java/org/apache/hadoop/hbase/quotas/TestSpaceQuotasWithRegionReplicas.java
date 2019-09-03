@@ -29,7 +29,8 @@ public class TestSpaceQuotasWithRegionReplicas {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSpaceQuotasWithRegionReplicas.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithRegionReplicas.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSpaceQuotasWithRegionReplicas.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int NUM_RETRIES = 10;
 
