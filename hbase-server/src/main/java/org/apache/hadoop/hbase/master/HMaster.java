@@ -187,6 +187,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationPeerConfigUpgrader;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -353,6 +354,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
+
+  private RSGroupInfoManager rsGroupInfoManager;
 
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
@@ -775,6 +778,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
     this.splitOrMergeTracker.start();
+
+    this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
     this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf);
 
@@ -3801,5 +3806,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public HbckChore getHbckChore() {
     return this.hbckChore;
+  }
+
+  @Override
+  public RSGroupInfoManager getRSRSGroupInfoManager() {
+    return rsGroupInfoManager;
   }
 }
