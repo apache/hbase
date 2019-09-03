@@ -1254,7 +1254,6 @@ public class TestHRegion {
       } catch (IOException unexpected) {
         throw unexpected;
       }
-
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -2490,8 +2489,7 @@ public class TestHRegion {
     hLog.init();
     // This chunk creation is done throughout the code base. Do we want to move it into core?
     // It is missing from this test. W/o it we NPE.
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
+    region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
 
     Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
@@ -5104,7 +5102,6 @@ public class TestHRegion {
       String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
       throws IOException {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
     final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
     return initHRegion(tableName, startKey, stopKey, isReadOnly,
@@ -5117,6 +5114,7 @@ public class TestHRegion {
    */
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey,
         isReadOnly, durability, wal, families);
   }
