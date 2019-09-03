@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.master;
 
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -51,6 +49,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -537,4 +536,8 @@ public interface MasterServices extends Server {
    */
   List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans);
 
+  /**
+   * @return the {@link RSGroupInfoManager}
+   */
+  RSGroupInfoManager getRSRSGroupInfoManager();
 }
