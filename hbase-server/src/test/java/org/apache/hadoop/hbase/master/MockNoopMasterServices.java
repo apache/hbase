@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -488,6 +489,11 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
+    return null;
+  }
+
+  @Override
+  public RSGroupInfoManager getRSRSGroupInfoManager() {
     return null;
   }
 }
