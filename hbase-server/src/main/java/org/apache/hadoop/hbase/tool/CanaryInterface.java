@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.tool;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 @InterfaceAudience.Public
@@ -32,26 +34,35 @@ public interface CanaryInterface {
     return new Canary(conf, executor);
   }
 
+  @VisibleForTesting
+  static CanaryInterface create(Configuration conf, ExecutorService executor, Canary.Sink sink) {
+    return new Canary(conf, executor, sink);
+  }
+
   /**
    * Run Canary in Region mode.
+   *
    * @param targets -- list of monitor tables.
    * @return the exit code of the Canary tool.
-   * @throws Exception
    */
-  public int runRegionCanary(String[] targets) throws Exception;
+  public int checkRegions(String[] targets) throws Exception;
 
   /**
    * Runs Canary in Region server mode.
+   *
    * @param targets -- list of monitor tables.
    * @return the exit code of the Canary tool.
-   * @throws Exception
    */
-  public int runRegionServerCanary(String[] targets) throws Exception;
+  public int checkRegionServers(String[] targets) throws Exception;
 
   /**
    * Runs Canary in Zookeeper mode.
+   *
    * @return the exit code of the Canary tool.
-   * @throws Exception
    */
-  public int runZookeeperCanary() throws Exception;
+  public int checkZooKeeper() throws Exception;
+
+  public Map<String, String> getReadFailures();
+
+  public Map<String, String> getWriteFailures();
 }

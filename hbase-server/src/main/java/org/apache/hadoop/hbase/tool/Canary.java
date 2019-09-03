@@ -123,7 +123,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class Canary implements Tool, CanaryInterface {
 
   @Override
-  public int runRegionCanary(String[] targets) throws Exception {
+  public int checkRegions(String[] targets) throws Exception {
     String configuredReadTableTimeoutsStr = conf.get(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT);
     try {
       if (configuredReadTableTimeoutsStr != null) {
@@ -137,13 +137,13 @@ public class Canary implements Tool, CanaryInterface {
   }
 
   @Override
-  public int runRegionServerCanary(String[] targets) throws Exception {
+  public int checkRegionServers(String[] targets) throws Exception {
     regionServerMode = true;
     return runMonitor(targets);
   }
 
   @Override
-  public int runZookeeperCanary() throws Exception {
+  public int checkZooKeeper() throws Exception {
     zookeeperMode = true;
     return runMonitor(null);
   }
@@ -669,7 +669,11 @@ public class Canary implements Tool, CanaryInterface {
   }
 
   Canary(Configuration conf, ExecutorService executor) {
-    this(executor);
+    this(conf, executor, null);
+  }
+
+  Canary(Configuration conf, ExecutorService executor, Sink sink) {
+    this(executor, sink);
     setConf(conf);
   }
 
@@ -856,11 +860,11 @@ public class Canary implements Tool, CanaryInterface {
     }
 
     if (zookeeperMode) {
-      return runZookeeperCanary();
+      return checkZooKeeper();
     } else if (regionServerMode) {
-      return runRegionServerCanary(monitorTargets);
+      return checkRegionServers(monitorTargets);
     } else {
-      return runRegionCanary(monitorTargets);
+      return checkRegions(monitorTargets);
     }
   }
 
@@ -936,11 +940,12 @@ public class Canary implements Tool, CanaryInterface {
     return monitor.errorCode;
   }
 
-
+  @Override
   public Map<String, String> getReadFailures()  {
     return sink.getReadFailures();
   }
 
+  @Override
   public Map<String, String> getWriteFailures()  {
     return sink.getWriteFailures();
   }
@@ -1249,8 +1254,8 @@ public class Canary implements Tool, CanaryInterface {
               Long actual = actualReadTableLatency.get(tableName).longValue();
               Long configured = entry.getValue();
               if (actual > configured) {
-                LOG.error("Read operation for {} took {}ms (Configured read timeout {}ms.",
-                    tableName, actual, configured);
+                LOG.error("Read operation for {} took {}ms exceeded the configured read timeout." +
+                    "(Configured read timeout {}ms.", tableName, actual, configured);
               } else {
                 LOG.info("Read operation for {} took {}ms (Configured read timeout {}ms.",
                     tableName, actual, configured);

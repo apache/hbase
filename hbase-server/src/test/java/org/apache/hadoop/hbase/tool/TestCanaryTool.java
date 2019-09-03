@@ -49,7 +49,6 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -127,7 +126,6 @@ public class TestCanaryTool {
   }
 
   @Test
-  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testReadTableTimeouts() throws Exception {
     final TableName [] tableNames = new TableName[2];
     tableNames[0] = TableName.valueOf(name.getMethodName() + "1");
@@ -166,13 +164,12 @@ public class TestCanaryTool {
     verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
       public boolean matches(LoggingEvent argument) {
-        return argument.getRenderedMessage().contains("The configured read timeout was");
+        return argument.getRenderedMessage().contains("Configured read timeout");
       }
     }));
   }
 
   @Test
-  @Ignore("Intermittent argument matching failures, see HBASE-18813")
   public void testWriteTableTimeout() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
@@ -185,7 +182,7 @@ public class TestCanaryTool {
         new ArgumentMatcher<LoggingEvent>() {
           @Override
           public boolean matches(LoggingEvent argument) {
-            return argument.getRenderedMessage().contains("The configured write timeout was");
+            return argument.getRenderedMessage().contains("Configured write timeout");
           }
         }));
   }
