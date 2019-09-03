@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 
@@ -32,8 +38,9 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 @InterfaceAudience.Private
 public class DirScanPool implements ConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(DirScanPool.class);
+
+  private final ThreadPoolExecutor pool;
   private volatile int size;
-  private ForkJoinPool pool;
   private int cleanerLatch;
   private boolean reconfigNotification;
 
@@ -43,9 +50,16 @@ public class DirScanPool implements ConfigurationObserver {
     // poolSize may be 0 or 0.0 from a careless configuration,
     // double check to make sure.
     size = size == 0 ? CleanerChore.calculatePoolSize(CleanerChore.DEFAULT_CHORE_POOL_SIZE) : size;
-    pool = new ForkJoinPool(size);
+    pool = initializePool(size);
     LOG.info("Cleaner pool size is " + size);
     cleanerLatch = 0;
+  }
+
+  private static ThreadPoolExecutor initializePool(int size) {
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 1L, TimeUnit.MINUTES,
+      new LinkedBlockingQueue<Runnable>(), new DaemonThreadFactory("dir-scan-pool"));
+    executor.allowCoreThreadTimeOut(true);
+    return executor;
   }
 
   /**
@@ -74,8 +88,12 @@ public class DirScanPool implements ConfigurationObserver {
     notifyAll();
   }
 
-  synchronized void execute(ForkJoinTask<?> task) {
-    pool.execute(task);
+  synchronized void execute(Runnable task) {
+    pool.submit(task);
+  }
+
+  synchronized Future execute(Callable task) {
+    return pool.submit(task);
   }
 
   public synchronized void shutdownNow() {
@@ -100,9 +118,8 @@ public class DirScanPool implements ConfigurationObserver {
         break;
       }
     }
-    shutdownNow();
-    LOG.info("Update chore's pool size from " + pool.getParallelism() + " to " + size);
-    pool = new ForkJoinPool(size);
+    LOG.info("Update chore's pool size from " + pool.getPoolSize() + " to " + size);
+    pool.setCorePoolSize(size);
   }
 
   public int getSize() {
