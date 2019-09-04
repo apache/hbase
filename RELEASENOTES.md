@@ -27,9 +27,58 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-22867](https://issues.apache.org/jira/browse/HBASE-22867) | *Critical* | **The ForkJoinPool in CleanerChore will spawn thousands of threads in our cluster with thousands table**
+
+Replace the ForkJoinPool in CleanerChore by ThreadPoolExecutor which can limit the spawn thread size and avoid  the master GC frequently.  The replacement is an internal implementation in CleanerChore,  so no config key change, the upstream users can just upgrade the hbase master without any other change.
+
+
+---
+
+* [HBASE-22810](https://issues.apache.org/jira/browse/HBASE-22810) | *Major* | **Initialize an separate ThreadPoolExecutor for taking/restoring snapshot**
+
+Introduced a new config key for the snapshot taking/restoring operations at master side:  hbase.master.executor.snapshot.threads, its default value is 3.  means we can have 3 snapshot operations running at the same time.
+
+
+---
+
+* [HBASE-22863](https://issues.apache.org/jira/browse/HBASE-22863) | *Major* | **Avoid Jackson versions and dependencies with known CVEs**
+
+1. Stopped exposing vulnerable Jackson1 dependencies so that downstreamers would not pull it in from HBase.
+2. However, since Hadoop requires some Jackson1 dependencies, put vulnerable Jackson mapper at test scope in some HBase modules and hence, HBase tarball created by hbase-assembly contains Jackson1 mapper jar in lib. Still, downsteam applications can't pull in Jackson1 from HBase.
+
+
+---
+
+* [HBASE-22841](https://issues.apache.org/jira/browse/HBASE-22841) | *Major* | **TimeRange's factory functions do not support ranges, only \`allTime\` and \`at\`**
+
+Add serveral API in TimeRange class for avoiding using the deprecated TimeRange constructor: 
+\* TimeRange#from: Represents the time interval [minStamp, Long.MAX\_VALUE)
+\* TimeRange#until: Represents the time interval [0, maxStamp)
+\* TimeRange#between: Represents the time interval [minStamp, maxStamp)
+
+
+---
+
+* [HBASE-22833](https://issues.apache.org/jira/browse/HBASE-22833) | *Minor* | **MultiRowRangeFilter should provide a method for creating a filter which is functionally equivalent to multiple prefix filters**
+
+Provide a public method in MultiRowRangeFilter class to speed the requirement of filtering with multiple row prefixes, it will expand the row prefixes as multiple rowkey ranges by MultiRowRangeFilter, it's more efficient.
+{code}
+public MultiRowRangeFilter(byte[][] rowKeyPrefixes);
+{code}
+
+
+---
+
+* [HBASE-22856](https://issues.apache.org/jira/browse/HBASE-22856) | *Major* | **HBASE-Find-Flaky-Tests fails with pip error**
+
+Update the base docker image to ubuntu 18.04 for the find flaky tests jenkins job.
+
+
+---
+
 * [HBASE-22771](https://issues.apache.org/jira/browse/HBASE-22771) | *Major* | **[HBCK2] fixMeta method and server-side support**
 
-Adds a fixMeta method to hbck Service. Fixes holes in hbase:meta. Follow-up to fix overlaps.
+Adds a fixMeta method to hbck Service. Fixes holes in hbase:meta. Follow-up to fix overlaps. See HBASE-22567 also.
 
 Follow-on is adding a client-side to hbase-operator-tools that can exploit this new addition (HBASE-22825)
 
