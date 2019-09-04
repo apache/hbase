@@ -1143,6 +1143,51 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public org.apache.hadoop.hbase.rsgroup.RSGroupInfo getRSGroupInfo(String groupName)
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public void moveServers(java.util.Set<org.apache.hadoop.hbase.net.Address> servers,
+      String targetGroup) throws java.io.IOException {
+
+  }
+
+  @Override
+  public void addRSGroup(String groupName) throws java.io.IOException {
+
+  }
+
+  @Override
+  public void removeRSGroup(String groupName) throws java.io.IOException {
+
+  }
+
+  @Override
+  public boolean balanceRSGroup(String groupName) throws java.io.IOException {
+    return false;
+  }
+
+  @Override
+  public java.util.List<org.apache.hadoop.hbase.rsgroup.RSGroupInfo> listRSGroups()
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public org.apache.hadoop.hbase.rsgroup.RSGroupInfo getRSGroupOfServer(
+      org.apache.hadoop.hbase.net.Address hostPort) throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public void removeServers(java.util.Set<org.apache.hadoop.hbase.net.Address> servers)
+      throws java.io.IOException {
+
+  }
+
+  @Override
   public Future<Void> splitRegionAsync(byte[] regionName) throws IOException {
     return splitRegionAsync(regionName, null);
   }

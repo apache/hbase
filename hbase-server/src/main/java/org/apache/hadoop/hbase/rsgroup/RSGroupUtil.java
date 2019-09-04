@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * Helper class for RSGroup implementation
  */
 @InterfaceAudience.Private
-final class RSGroupUtil {
+public final class RSGroupUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupUtil.class);
 
@@ -79,7 +79,7 @@ final class RSGroupUtil {
    * Fill the tables field for {@link RSGroupInfo}, for backward compatibility.
    */
   @SuppressWarnings("deprecation")
-  static RSGroupInfo fillTables(RSGroupInfo rsGroupInfo, Collection<TableDescriptor> tds) {
+  public static RSGroupInfo fillTables(RSGroupInfo rsGroupInfo, Collection<TableDescriptor> tds) {
     RSGroupInfo newRsGroupInfo = new RSGroupInfo(rsGroupInfo);
     Predicate<TableDescriptor> filter;
     if (rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {

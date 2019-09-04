@@ -826,4 +826,53 @@ class AsyncHBaseAdmin implements AsyncAdmin {
       List<Permission> permissions) {
     return wrap(rawAdmin.hasUserPermissions(userName, permissions));
   }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<? extends org.apache.hadoop.hbase.rsgroup.RSGroupInfo> getRSGroupInfo(
+      String groupName) throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<Void> moveServers(
+      java.util.Set<org.apache.hadoop.hbase.net.Address> servers, String targetGroup)
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<Void> addRSGroup(String groupName)
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<Void> removeRSGroup(String groupName)
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<Boolean> balanceRSGroup(String groupName)
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<java.util.List<org.apache.hadoop.hbase.rsgroup.RSGroupInfo>> listRSGroups()
+      throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<? extends org.apache.hadoop.hbase.rsgroup.RSGroupInfo> getRSGroupOfServer(
+      org.apache.hadoop.hbase.net.Address hostPort) throws java.io.IOException {
+    return null;
+  }
+
+  @Override
+  public java.util.concurrent.CompletableFuture<Void> removeServers(
+      java.util.Set<org.apache.hadoop.hbase.net.Address> servers) throws java.io.IOException {
+    return null;
+  }
 }
