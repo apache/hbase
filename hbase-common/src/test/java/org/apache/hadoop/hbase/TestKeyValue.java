@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -721,5 +722,17 @@ public class TestKeyValue extends TestCase {
         assertEquals("Case#" + i + " failed," + c, c.getExpectedMessage(), e.getMessage());
       }
     }
+  }
+
+  @Test
+  public void testRawBytesComparator() {
+    long ts = System.currentTimeMillis();
+    byte[] key = Bytes.toBytes("key");
+    byte[] cf = Bytes.toBytes("cf");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] value = Bytes.toBytes("value");
+    KeyValue kvA1 = new KeyValue(key, cf, qualifier, ts, Type.Put, value);
+    KeyValue kvA2 = new KeyValue(key, cf, qualifier, ts, Type.DeleteFamily, value);
+    assertTrue(KeyValue.RAW_COMPARATOR.compare(kvA1, kvA2) > 0);
   }
 }
