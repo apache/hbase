@@ -23,7 +23,6 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -188,10 +187,8 @@ public class TestHFileSeek extends TestCase {
   public void seekTFile() throws IOException {
     int miss = 0;
     long totalBytes = 0;
-    FSDataInputStream fsdis = fs.open(path);
-    Reader reader = HFile.createReaderFromStream(path, fsdis,
-        fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
-    reader.loadFileInfo();
+    ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, path).build();
+    Reader reader = TestHFile.createReaderFromStream(context, new CacheConfig(conf), conf);
     KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
         ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
     HFileScanner scanner = reader.getScanner(false, USE_PREAD);

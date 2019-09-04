@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -178,7 +178,7 @@ public abstract class Compactor<T extends CellSink> {
           fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
         }
       }
-      tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
+      tmp = fileInfo.get(HFileInfo.MAX_TAGS_LEN);
       if (tmp != null) {
         fd.maxTagsLength = Math.max(fd.maxTagsLength, Bytes.toInt(tmp));
       }

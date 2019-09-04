@@ -32,7 +32,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -1450,31 +1449,22 @@ public class HFileBlock implements Cacheable {
 
     private final Lock streamLock = new ReentrantLock();
 
-    FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
-        HFileContext fileContext, ByteBuffAllocator allocator) throws IOException {
-      this.fileSize = fileSize;
-      this.hfs = hfs;
-      if (path != null) {
-        this.pathName = path.toString();
+    FSReaderImpl(ReaderContext readerContext, HFileContext fileContext,
+        ByteBuffAllocator allocator) throws IOException {
+      this.fileSize = readerContext.getFileSize();
+      this.hfs = readerContext.getFileSystem();
+      if (readerContext.getFilePath() != null) {
+        this.pathName = readerContext.getFilePath().toString();
       }
       this.fileContext = fileContext;
       this.hdrSize = headerSize(fileContext.isUseHBaseChecksum());
       this.allocator = allocator;
 
-      this.streamWrapper = stream;
+      this.streamWrapper = readerContext.getInputStreamWrapper();
       // Older versions of HBase didn't support checksum.
       this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
       defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
-    }
-
-    /**
-     * A constructor that reads files with the latest minor version. This is used by unit tests
-     * only.
-     */
-    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext,
-        ByteBuffAllocator allocator) throws IOException {
-      this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext, allocator);
     }
 
     @Override
