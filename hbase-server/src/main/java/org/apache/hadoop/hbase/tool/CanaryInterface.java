@@ -20,12 +20,11 @@
 package org.apache.hadoop.hbase.tool;
 
 
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 @InterfaceAudience.Public
 public interface CanaryInterface {
