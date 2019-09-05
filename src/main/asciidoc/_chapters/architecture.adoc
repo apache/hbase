@@ -2430,8 +2430,8 @@ To control these for stripe compactions, use `hbase.store.stripe.compaction.minF
 HBase includes several methods of loading data into tables.
 The most straightforward method is to either use the `TableOutputFormat` class from a MapReduce job, or use the normal client APIs; however, these are not always the most efficient methods.
 
-The bulk load feature uses a MapReduce job to output table data in HBase's internal data format, and then directly loads the generated StoreFiles into a running cluster.
-Using bulk load will use less CPU and network resources than simply using the HBase API.
+The bulk load feature uses a MapReduce job to output table data in HBase's internal data format, and then directly load the generated StoreFiles into a running cluster.
+Using bulk load will use less CPU and network resources than loading via the HBase API.
 
 [[arch.bulk.load.arch]]
 === Bulk Load Architecture
@@ -2442,7 +2442,7 @@ The HBase bulk load process consists of two main steps.
 ==== Preparing data via a MapReduce job
 
 The first step of a bulk load is to generate HBase data files (StoreFiles) from a MapReduce job using `HFileOutputFormat2`.
-This output format writes out data in HBase's internal storage format so that they can be later loaded very efficiently into the cluster.
+This output format writes out data in HBase's internal storage format so that they can be later loaded efficiently into the cluster.
 
 In order to function efficiently, `HFileOutputFormat2` must be configured such that each output HFile fits within a single region.
 In order to do this, jobs whose output will be bulk loaded into HBase use Hadoop's `TotalOrderPartitioner` class to partition the map output into disjoint ranges of the key space, corresponding to the key ranges of the regions in the table.
@@ -2459,6 +2459,7 @@ It then contacts the appropriate RegionServer which adopts the HFile, moving it 
 If the region boundaries have changed during the course of bulk load preparation, or between the preparation and completion steps, the `completebulkload` utility will automatically split the data files into pieces corresponding to the new boundaries.
 This process is not optimally efficient, so users should take care to minimize the delay between preparing a bulk load and importing it into the cluster, especially if other clients are simultaneously loading data through other means.
 
+[[arch.bulk.load.complete.help]]
 [source,bash]
 ----
 $ hadoop jar hbase-server-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable
@@ -2466,15 +2467,12 @@ $ hadoop jar hbase-server-VERSION.jar completebulkload [-c /path/to/hbase/config
 
 The `-c config-file` option can be used to specify a file containing the appropriate hbase parameters (e.g., hbase-site.xml) if not supplied already on the CLASSPATH (In addition, the CLASSPATH must contain the directory that has the zookeeper configuration file if zookeeper is NOT managed by HBase).
 
-NOTE: If the target table does not already exist in HBase, this tool will create the table automatically.
-
-
 [[arch.bulk.load.also]]
 === See Also
 
 For more information about the referenced utilities, see <<importtsv>> and  <<completebulkload>>.
 
-See link:http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/[How-to: Use HBase Bulk Loading, and Why] for a recent blog on current state of bulk loading.
+See link:http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/[How-to: Use HBase Bulk Loading, and Why] for an old blog post on loading.
 
 [[arch.bulk.load.adv]]
 === Advanced Usage
@@ -2484,6 +2482,53 @@ To get started doing so, dig into `ImportTsv.java` and check the JavaDoc for HFi
 
 The import step of the bulk load can also be done programmatically.
 See the `LoadIncrementalHFiles` class for more information.
+
+[[arch.bulk.load.complete.strays]]
+==== 'Adopting' Stray Data
+Should an HBase cluster lose account of regions or files during an outage or error, you can use
+the `completebulkload` tool to add back the dropped data. HBase operator tooling such as
+link:https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2[HBCK2] or
+the reporting added to the Master's UI under the `HBCK Report` (Since HBase 2.0.6/2.1.6/2.2.1)
+can identify such 'orphan' directories.
+
+Before you begin the 'adoption', ensure the `hbase:meta` table is in a healthy state.
+Run the `CatalogJanitor` by executing the `catalogjanitor_run` command on the HBase shell.
+When finished, check the `HBCK Report` page on the Master UI. Work on fixing any
+inconsistencies, holes, or overlaps found before proceeding. The `hbase:meta` table
+is the authority on where all data is to be found and must be consistent for
+the `completebulkload` tool to work properly.
+
+The `completebulkload` tool takes a directory and a `tablename`.
+The directory has subdirectories named for column families of the targeted `tablename`.
+In these subdirectories are `hfiles` to load. Given this structure, you can pass
+errant region directories (and the table name to which the region directory belongs)
+and the tool will bring the data files back into the fold by moving them under the
+approprate serving directory. If stray files, then you will need to mock up this
+structure before invoking the `completebulkload` tool; you may have to look at the
+file content using the <<hfile.tool>> to see what the column family to use is.
+When the tool completes its run, you will notice that the
+source errant directory has had its storefiles moved/removed. It is now desiccated
+since its data has been drained, and the pointed-to directory can be safely
+removed. It may still have `.regioninfo` files and other
+subdirectories but they are of no relevance now (There may be content still
+under the _recovered_edits_ directory; a TODO is tooling to replay the
+content of _recovered_edits_ if needed; see
+link:https://issues.apache.org/jira/browse/HBASE-22976[Add RecoveredEditsPlayer]).
+If you pass `completebulkload` a directory without store files, it will run and
+note the directory is storefile-free. Just remove such 'empty' directories.
+
+For example, presuming a directory at the top level in HDFS named
+`eb3352fb5c9c9a05feeb2caba101e1cc` has data we need to re-add to the
+HBase `TestTable`:
+
+[source,bash]
+----
+$ ${HBASE_HOME}/bin/hbase --config ~/hbase-conf completebulkload hdfs://server.example.org:9000/eb3352fb5c9c9a05feeb2caba101e1cc TestTable
+----
+
+After it successfully completes, any files that were in  `eb3352fb5c9c9a05feeb2caba101e1cc` have been moved
+under hbase and the  `eb3352fb5c9c9a05feeb2caba101e1cc` directory can be deleted (Check content
+before and after by running `ls -r` on the HDFS directory).
 
 [[arch.bulk.load.replication]]
 === Bulk Loading Replication
