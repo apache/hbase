@@ -1,8 +1,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Meter;
@@ -11,21 +10,21 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 @InterfaceAudience.Private
 public class MetricsTableQPSImpl implements MetricsTableQPS {
 
-  private final ConcurrentHashMap<TableName,TableMeters> metersByTable = new ConcurrentHashMap<>();
+  private final HashMap<TableName,TableMeters> metersByTable = new HashMap<>();
   private final MetricRegistry metricRegistry;
 
   public MetricsTableQPSImpl(MetricRegistry metricRegistry) {
     this.metricRegistry = metricRegistry;
   }
 
-  @VisibleForTesting
   public static class TableMeters {
     final Meter tableReadQPSMeter;
     final Meter tableWriteQPSMeter;
 
-    public TableMeters(MetricRegistry metricRegistry, TableName tableName) {
+    TableMeters(MetricRegistry metricRegistry, TableName tableName) {
       this.tableReadQPSMeter = metricRegistry.meter(qualifyMetricsName(tableName, TABLE_READ_QPS));
-      this.tableWriteQPSMeter = metricRegistry.meter(qualifyMetricsName(tableName, TABLE_WRITE_QPS));
+      this.tableWriteQPSMeter =
+        metricRegistry.meter(qualifyMetricsName(tableName, TABLE_WRITE_QPS));
     }
 
     public void updateTableReadQPS(long count) {
@@ -42,8 +41,7 @@ public class MetricsTableQPSImpl implements MetricsTableQPS {
     }
   }
 
-  @VisibleForTesting
-  public static String qualifyMetricsName(TableName tableName, String metric) {
+  private static String qualifyMetricsName(TableName tableName, String metric) {
     StringBuilder sb = new StringBuilder();
     sb.append("Namespace_").append(tableName.getNamespaceAsString());
     sb.append("_table_").append(tableName.getQualifierAsString());
@@ -51,8 +49,7 @@ public class MetricsTableQPSImpl implements MetricsTableQPS {
     return sb.toString();
   }
 
-  @VisibleForTesting
-  public TableMeters getOrCreateTableMeter(String tableName) {
+  private TableMeters getOrCreateTableMeter(String tableName) {
     final TableName tn = TableName.valueOf(tableName);
     TableMeters meter = metersByTable.get(tn);
     if (meter == null) {
