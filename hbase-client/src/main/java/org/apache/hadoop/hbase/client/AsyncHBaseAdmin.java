@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -36,12 +37,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -828,51 +831,53 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<? extends org.apache.hadoop.hbase.rsgroup.RSGroupInfo> getRSGroupInfo(
-      String groupName) throws java.io.IOException {
-    return null;
+  public CompletableFuture<? extends RSGroupInfo> getRSGroupInfo(String groupName) {
+    return wrap(rawAdmin.getRSGroupInfo(groupName));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<Void> moveServers(
-      java.util.Set<org.apache.hadoop.hbase.net.Address> servers, String targetGroup)
-      throws java.io.IOException {
-    return null;
+  public CompletableFuture<Void> moveServers(Set<Address> servers, String targetGroup) {
+    return wrap(rawAdmin.moveServers(servers, targetGroup));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<Void> addRSGroup(String groupName)
-      throws java.io.IOException {
-    return null;
+  public CompletableFuture<Void> addRSGroup(String groupName) {
+    return wrap(rawAdmin.addRSGroup(groupName));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<Void> removeRSGroup(String groupName)
-      throws java.io.IOException {
-    return null;
+  public CompletableFuture<Void> removeRSGroup(String groupName) {
+    return wrap(rawAdmin.removeRSGroup(groupName));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<Boolean> balanceRSGroup(String groupName)
-      throws java.io.IOException {
-    return null;
+  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
+    return wrap(rawAdmin.balanceRSGroup(groupName));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<java.util.List<org.apache.hadoop.hbase.rsgroup.RSGroupInfo>> listRSGroups()
-      throws java.io.IOException {
-    return null;
+  public CompletableFuture<List<RSGroupInfo>> listRSGroups() {
+    return wrap(rawAdmin.listRSGroups());
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<? extends org.apache.hadoop.hbase.rsgroup.RSGroupInfo> getRSGroupOfServer(
-      org.apache.hadoop.hbase.net.Address hostPort) throws java.io.IOException {
-    return null;
+  public CompletableFuture<? extends RSGroupInfo> getRSGroupOfServer(Address hostPort) {
+    return wrap(rawAdmin.getRSGroupOfServer(hostPort));
   }
 
   @Override
-  public java.util.concurrent.CompletableFuture<Void> removeServers(
-      java.util.Set<org.apache.hadoop.hbase.net.Address> servers) throws java.io.IOException {
-    return null;
+  public CompletableFuture<Void> removeServers(Set<Address> servers) {
+    return wrap(rawAdmin.removeServers(servers));
   }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroupInfoOfTable(TableName tableName) {
+    return wrap(rawAdmin.getRSGroupInfoOfTable(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> setRSGroupForTables(Set<TableName> tables, String groupName) {
+    return wrap(rawAdmin.setRSGroupForTables(tables, groupName));
+  }
+
 }

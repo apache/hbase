@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import com.google.protobuf.Service;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -51,6 +52,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   // Only instance of RSGroupInfoManager. RSGroup aware load balancers ask for this instance on
   // their setup.
   private MasterServices master;
+  private RSGroupAdminServiceImpl groupAdminService = new RSGroupAdminServiceImpl();
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
@@ -64,6 +66,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     if (!RSGroupableBalancer.class.isAssignableFrom(clazz)) {
       throw new IOException("Configured balancer does not support RegionServer groups.");
     }
+    groupAdminService.initialize(master);
   }
 
   @Override

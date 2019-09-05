@@ -122,6 +122,14 @@ message RemoveServersRequest {
 message RemoveServersResponse {
 }
 
+message SetRSGroupForTablesRequest {
+  repeated TableName table_name = 1;
+  required string target_group = 2;
+}
+
+message SetRSGroupForTablesResponse {
+}
+
 service RSGroupAdminService {
   rpc GetRSGroupInfo(GetRSGroupInfoRequest)
     returns (GetRSGroupInfoResponse);
@@ -155,4 +163,8 @@ service RSGroupAdminService {
 
   rpc RemoveServers(RemoveServersRequest)
     returns (RemoveServersResponse);
+
+  rpc SetRSGroupForTables(SetRSGroupForTablesRequest)
+    returns (SetRSGroupForTablesResponse);
+
 }

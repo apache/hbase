@@ -2296,4 +2296,9 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void removeServers(Set<Address> servers) throws IOException;
+
+  RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException;
+
+  void setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException;
+
 }

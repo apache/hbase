@@ -1548,4 +1548,9 @@ public interface AsyncAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> removeServers(Set<Address> servers) throws IOException;
+
+  CompletableFuture<RSGroupInfo> getRSGroupInfoOfTable(TableName tableName) throws IOException;
+
+  CompletableFuture<Void> setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException;
+
 }

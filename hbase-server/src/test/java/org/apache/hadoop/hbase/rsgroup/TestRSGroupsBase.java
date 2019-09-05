@@ -326,6 +326,8 @@ public abstract class TestRSGroupsBase {
     boolean postListRSGroupsCalled = false;
     boolean preGetRSGroupInfoOfServerCalled = false;
     boolean postGetRSGroupInfoOfServerCalled = false;
+    boolean preSetRSGroupForTablesCalled = false;
+    boolean postSetRSGroupForTablesCalled = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -350,6 +352,8 @@ public abstract class TestRSGroupsBase {
       postListRSGroupsCalled = false;
       preGetRSGroupInfoOfServerCalled = false;
       postGetRSGroupInfoOfServerCalled = false;
+      preSetRSGroupForTablesCalled = false;
+      postSetRSGroupForTablesCalled = false;
     }
 
     @Override
@@ -489,6 +493,18 @@ public abstract class TestRSGroupsBase {
     public void postGetRSGroupInfoOfServer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final Address server) throws IOException {
       postGetRSGroupInfoOfServerCalled = true;
+    }
+
+    @Override
+    public void preSetRSGroupForTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final Set<TableName> tables, final String groupName) throws IOException {
+      preSetRSGroupForTablesCalled = true;
+    }
+
+    @Override
+    public void postSetRSGroupForTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final Set<TableName> tables, final String groupName) throws IOException {
+      postSetRSGroupForTablesCalled = true;
     }
   }
 

@@ -947,43 +947,52 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public RSGroupInfo getRSGroupInfo(String groupName) throws IOException {
-//    return get(admin.getRSGroupInfo());
-    return null;
+    return get(admin.getRSGroupInfo(groupName));
   }
 
   @Override
   public void moveServers(Set<Address> servers, String targetGroup) throws IOException {
-
+    get(admin.moveServers(servers, targetGroup));
   }
 
   @Override
   public void addRSGroup(String groupName) throws IOException {
-
+    get(admin.addRSGroup(groupName));
   }
 
   @Override
   public void removeRSGroup(String groupName) throws IOException {
-
+    get(admin.removeRSGroup(groupName));
   }
 
   @Override
   public boolean balanceRSGroup(String groupName) throws IOException {
-    return false;
+    return get(admin.balanceRSGroup(groupName));
   }
 
   @Override
   public List<RSGroupInfo> listRSGroups() throws IOException {
-    return null;
+    return get(admin.listRSGroups());
   }
 
   @Override
   public RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException {
-    return null;
+    return get(admin.getRSGroupOfServer(hostPort));
   }
 
   @Override
   public void removeServers(Set<Address> servers) throws IOException {
+    get(admin.removeServers(servers));
+  }
 
+  @Override
+  public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
+    return get(admin.getRSGroupInfoOfTable(tableName));
+  }
+
+  @Override
+  public void setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException {
+    get(admin.setRSGroupForTables(tables, groupName));
   }
 
 }

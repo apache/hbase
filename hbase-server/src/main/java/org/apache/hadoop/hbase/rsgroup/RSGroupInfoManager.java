@@ -81,10 +81,7 @@ public interface RSGroupInfoManager {
 
   /**
    * Get {@code RSGroupInfo} for the given table.
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Only for compatibility, where we upgrade
-   *             from a version that stores table names for a rs group in the {@code RSGroupInfo}.
    */
-  @Deprecated
   RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException;
 
   static RSGroupInfoManager create(MasterServices master) throws IOException {
@@ -98,4 +95,12 @@ public interface RSGroupInfoManager {
    * @throws IOException
    */
   boolean balanceRSGroup(String groupName) throws IOException;
+
+  /**
+   * Set group for tables
+   * @param tables
+   * @param groupName
+   * @throws IOException
+   */
+  void setRSGroup(Set<TableName> tables, String groupName) throws IOException;
 }

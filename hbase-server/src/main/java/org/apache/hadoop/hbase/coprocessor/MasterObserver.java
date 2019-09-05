@@ -1341,6 +1341,24 @@ public interface MasterObserver {
       final Address server) throws IOException {}
 
   /**
+   * Called before setting rsgroup for tables
+   * @param ctx the environment to interact with the framework and master
+   * @param tables tables to set group
+   * @param groupName group name
+   */
+  default void preSetRSGroupForTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Set<TableName> tables, final String groupName) throws IOException {}
+
+  /**
+   * Called after setting rsgroup for tables
+   * @param ctx the environment to interact with the framework and master
+   * @param tables tables to set group
+   * @param groupName group name
+   */
+  default void postSetRSGroupForTables(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final Set<TableName> tables, final String groupName) throws IOException {}
+
+  /**
    * Called before add a replication peer
    * @param ctx the environment to interact with the framework and master
    * @param peerId a short name that identifies the peer

@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -359,6 +360,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesResponse;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
@@ -2830,13 +2833,6 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     return builder.build();
   }
 
-  @Deprecated
-  @Override
-  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller,
-      GetRSGroupInfoOfTableRequest request) throws ServiceException {
-    return null;
-  }
-
   @Override
   public GetRSGroupInfoOfServerResponse getRSGroupInfoOfServer(RpcController controller,
       GetRSGroupInfoOfServerRequest request) throws ServiceException {
@@ -3022,5 +3018,59 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     return builder.build();
   }
 
+  @Override
+  public SetRSGroupForTablesResponse setRSGroupForTables(RpcController controller, SetRSGroupForTablesRequest request)
+      throws ServiceException {
+    SetRSGroupForTablesResponse.Builder builder = SetRSGroupForTablesResponse.newBuilder();
+    Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
+    for (HBaseProtos.TableName tableName : request.getTableNameList()) {
+      tables.add(ProtobufUtil.toTableName(tableName));
+    }
+    LOG.info(master.getClientIdAuditPrefix() + " set tables " + tables + " rsgroup as " +
+        request.getTargetGroup());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preSetRSGroupForTables(tables, request.getTargetGroup());
+      }
+      master.getRSRSGroupInfoManager().setRSGroup(tables, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postSetRSGroupForTables(tables, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
 
+  @Override
+  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller, 
+      GetRSGroupInfoOfTableRequest request) throws ServiceException{
+    GetRSGroupInfoOfTableResponse.Builder builder = GetRSGroupInfoOfTableResponse.newBuilder();
+    TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+    LOG.info(
+        master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, table=" + tableName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
+      }
+      Optional<RSGroupInfo> optGroup =
+          RSGroupUtil.getRSGroupInfo(master, master.getRSRSGroupInfoManager(), tableName);
+      if (optGroup.isPresent()) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(optGroup.get())));
+      } else {
+        if (master.getTableStateManager().isTablePresent(tableName)) {
+          RSGroupInfo rsGroupInfo = 
+              master.getRSRSGroupInfoManager().getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+          builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
+        }
+      }
+
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfTable(tableName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
 }

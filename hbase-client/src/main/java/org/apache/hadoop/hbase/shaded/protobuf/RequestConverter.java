@@ -159,6 +159,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
 
 /**
  * Helper utility to build protocol buffer requests,
@@ -1949,5 +1950,14 @@ public final class RequestConverter {
         .build();
   }
 
+  public static SetRSGroupForTablesRequest buildSetRSGroupForTablesRequest(
+      Set<TableName> tables, String groupName){
+    SetRSGroupForTablesRequest.Builder builder =
+        SetRSGroupForTablesRequest.newBuilder().setTargetGroup(groupName);
+    for(TableName tableName: tables) {
+      builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+    }
+    return builder.build();
+  }
 
 }

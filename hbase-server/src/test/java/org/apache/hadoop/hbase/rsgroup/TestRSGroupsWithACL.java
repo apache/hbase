@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,7 +33,12 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
+import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -92,6 +99,9 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static RSGroupAdminEndpoint rsGroupAdminEndpoint;
+  private static HMaster master;
+  private static AccessChecker accessChecker;
+  private static UserProvider userProvider;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -131,6 +141,22 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
 
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
+    master = TEST_UTIL.getHBaseCluster().getMaster();
+    accessChecker = master.getAccessChecker();
+    userProvider = UserProvider.instantiate(TEST_UTIL.getConfiguration());
+  }
+
+  private void checkPermission(String request) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), request, null, Permission.Action.ADMIN);
+  }
+
+  private User getActiveUser() throws IOException {
+    // for non-rpc handling, fallback to system user
+    Optional<User> optionalUser = RpcServer.getRequestUser();
+    if (optionalUser.isPresent()) {
+      return optionalUser.get();
+    }
+    return userProvider.getCurrent();
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
@@ -204,7 +230,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testGetRSGroupInfo() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("getRSGroupInfo");
+      checkPermission("getRSGroupInfo");
       return null;
     };
 
@@ -214,7 +240,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testGetRSGroupInfoOfTable() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("getRSGroupInfoOfTable");
+      checkPermission("getRSGroupInfoOfTable");
       return null;
     };
 
@@ -224,7 +250,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testMoveServers() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("moveServers");
+      checkPermission("moveServers");
       return null;
     };
 
@@ -234,7 +260,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testMoveTables() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("moveTables");
+      checkPermission("moveTables");
       return null;
     };
 
@@ -244,7 +270,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testAddRSGroup() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("addRSGroup");
+      checkPermission("addRSGroup");
       return null;
     };
 
@@ -254,7 +280,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testRemoveRSGroup() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("removeRSGroup");
+      checkPermission("removeRSGroup");
       return null;
     };
 
@@ -264,7 +290,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testBalanceRSGroup() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("balanceRSGroup");
+      checkPermission("balanceRSGroup");
       return null;
     };
 
@@ -274,7 +300,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testListRSGroup() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("listRSGroup");
+      checkPermission("listRSGroup");
       return null;
     };
 
@@ -284,7 +310,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testGetRSGroupInfoOfServer() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("getRSGroupInfoOfServer");
+      checkPermission("getRSGroupInfoOfServer");
       return null;
     };
 
@@ -294,7 +320,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testMoveServersAndTables() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("moveServersAndTables");
+      checkPermission("moveServersAndTables");
       return null;
     };
 
@@ -304,7 +330,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   @Test
   public void testRemoveServers() throws Exception {
     AccessTestAction action = () -> {
-      rsGroupAdminEndpoint.getGroupAdminService().checkPermission("removeServers");
+      checkPermission("removeServers");
       return null;
     };
 

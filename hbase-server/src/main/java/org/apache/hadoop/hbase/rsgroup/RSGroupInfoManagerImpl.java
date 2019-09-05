@@ -37,6 +37,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
@@ -230,17 +232,17 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
     if (rsGroupMap.get(rsGroupInfo.getName()) != null ||
       rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-      throw new DoNotRetryIOException("Group already exists: " + rsGroupInfo.getName());
+      throw new ConstraintException("Group already exists: " + rsGroupInfo.getName());
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(rsGroupInfo.getName(), rsGroupInfo);
     flushConfig(newGroupMap);
   }
 
-  private RSGroupInfo getRSGroupInfo(final String groupName) throws DoNotRetryIOException {
-    RSGroupInfo rsGroupInfo = getRSGroup(groupName);
+  private RSGroupInfo getRSGroupInfo(final String groupName) throws ConstraintException {
+    RSGroupInfo rsGroupInfo = holder.groupName2Group.get(groupName);
     if (rsGroupInfo == null) {
-      throw new DoNotRetryIOException("RSGroup " + groupName + " does not exist");
+      throw new ConstraintException("RSGroup " + groupName + " does not exist");
     }
     return rsGroupInfo;
   }
@@ -301,7 +303,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   @Override
-  public RSGroupInfo getRSGroup(String groupName) {
+  public RSGroupInfo getRSGroup(String groupName) throws IOException {
     return holder.groupName2Group.get(groupName);
   }
 
@@ -310,13 +312,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     int serverCount = rsGroupInfo.getServers().size();
     if (serverCount > 0) {
-      throw new DoNotRetryIOException("RSGroup " + groupName + " has " + serverCount +
+      throw new ConstraintException("RSGroup " + groupName + " has " + serverCount +
           " servers; you must remove these servers from the RSGroup before" +
           " the RSGroup can be removed.");
     }
     for (TableDescriptor td : masterServices.getTableDescriptors().getAll().values()) {
       if (td.getRegionServerGroup().map(groupName::equals).orElse(false)) {
-        throw new DoNotRetryIOException("RSGroup " + groupName + " is already referenced by " +
+        throw new ConstraintException("RSGroup " + groupName + " is already referenced by " +
             td.getTableName() + "; you must remove all the tables from the rsgroup before " +
             "the rsgroup can be removed.");
       }
@@ -324,13 +326,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     for (NamespaceDescriptor ns : masterServices.getClusterSchema().getNamespaces()) {
       String nsGroup = ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
       if (nsGroup != null && nsGroup.equals(groupName)) {
-        throw new DoNotRetryIOException(
+        throw new ConstraintException(
             "RSGroup " + groupName + " is referenced by namespace: " + ns.getName());
       }
     }
     Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
     if (!rsGroupMap.containsKey(groupName) || groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
-      throw new DoNotRetryIOException(
+      throw new ConstraintException(
         "Group " + groupName + " does not exist or is a reserved " + "group");
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
@@ -351,7 +353,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public synchronized void removeServers(Set<Address> servers) throws IOException {
     if (servers == null || servers.isEmpty()) {
-      throw new DoNotRetryIOException("The set of servers to remove cannot be null or empty.");
+      throw new ConstraintException("The set of servers to remove cannot be null or empty.");
     }
 
     // check the set of servers
@@ -1043,8 +1045,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         LOG.warn("Sleep interrupted", e);
         Thread.currentThread().interrupt();
       }
-    } while (hasRegionsToMove && retry <= masterServices.getConfiguration().getInt(
-        "hbase.rsgroup.move.max.retry", 50));
+    } while (hasRegionsToMove && retry <=
+        masterServices.getConfiguration().getInt(FAILED_MOVE_MAX_RETRY, DEFAULT_MAX_RETRY_VALUE));
 
     //has up to max retry time or there are no more regions to move
     if (hasRegionsToMove) {
@@ -1160,9 +1162,36 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
+  private void moveTablesAndWait(Set<TableName> tables, String targetGroup) throws IOException {
+    List<Long> procIds = new ArrayList<Long>();
+    for (TableName tableName : tables) {
+      TableDescriptor oldTd = masterServices.getTableDescriptors().get(tableName);
+      if (oldTd == null) {
+        continue;
+      }
+      TableDescriptor newTd =
+          TableDescriptorBuilder.newBuilder(oldTd).setRegionServerGroup(targetGroup).build();
+      procIds.add(masterServices.modifyTable(tableName, newTd, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    }
+    for (long procId : procIds) {
+      Procedure<?> proc = masterServices.getMasterProcedureExecutor().getProcedure(procId);
+      if (proc == null) {
+        continue;
+      }
+      ProcedureSyncWait.waitForProcedureToCompleteIOE(masterServices.getMasterProcedureExecutor(), proc,
+          Long.MAX_VALUE);
+    }
+  }
+
+  @Override
+  public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    getRSGroupInfo(groupName);
+    moveTablesAndWait(tables, groupName);
+  }
+
   public void moveServers(Set<Address> servers, String targetGroupName) throws IOException {
     if (servers == null) {
-      throw new DoNotRetryIOException("The list of servers to move cannot be null.");
+      throw new ConstraintException("The list of servers to move cannot be null.");
     }
     if (servers.isEmpty()) {
       // For some reason this difference between null servers and isEmpty is important distinction.
@@ -1170,7 +1199,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       return;
     }
     if (StringUtils.isEmpty(targetGroupName)) {
-      throw new DoNotRetryIOException("RSGroup cannot be null.");
+      throw new ConstraintException("RSGroup cannot be null.");
     }
     getRSGroupInfo(targetGroupName);
 
@@ -1182,7 +1211,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       RSGroupInfo srcGrp = getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
         // Be careful. This exception message is tested for in TestRSGroupsBase...
-        throw new DoNotRetryIOException("Source RSGroup for server " + firstServer
+        throw new ConstraintException("Source RSGroup for server " + firstServer
             + " does not exist.");
       }
 
@@ -1190,8 +1219,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       // groups. This prevents bogus servers from entering groups
       if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName())) {
         if (srcGrp.getServers().size() <= servers.size()) {
-          throw new DoNotRetryIOException("should keep at least " +
-              "one server in 'default' RSGroup.");
+          throw new ConstraintException(KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
         }
         checkOnlineServersOnly(servers);
       }
@@ -1199,7 +1227,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       for (Address server: servers) {
         String tmpGroup = getRSGroupOfServer(server).getName();
         if (!tmpGroup.equals(srcGrp.getName())) {
-          throw new DoNotRetryIOException("Move server request should only come from one source " +
+          throw new ConstraintException("Move server request should only come from one source " +
               "RSGroup. Expecting only " + srcGrp.getName() + " but contains " + tmpGroup);
         }
       }
@@ -1208,7 +1236,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         for (TableDescriptor td : masterServices.getTableDescriptors().getAll().values()) {
           Optional<String> optGroupName = td.getRegionServerGroup();
           if (optGroupName.isPresent() && optGroupName.get().equals(srcGrp.getName())) {
-            throw new DoNotRetryIOException(
+            throw new ConstraintException(
                 "Cannot leave a RSGroup " + srcGrp.getName() + " that contains tables('" +
                     td.getTableName() + "' at least) without servers to host them.");
           }

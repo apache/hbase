@@ -1078,6 +1078,12 @@ service MasterService {
 
   rpc RemoveServers(RemoveServersRequest)
     returns (RemoveServersResponse);
+
+  rpc GetRSGroupInfoOfTable(GetRSGroupInfoOfTableRequest)
+    returns (GetRSGroupInfoOfTableResponse);
+
+  rpc SetRSGroupForTables(SetRSGroupForTablesRequest)
+    returns (SetRSGroupForTablesResponse);
 }
 
 // HBCK Service definitions.

@@ -50,12 +50,14 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -1143,48 +1145,53 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public org.apache.hadoop.hbase.rsgroup.RSGroupInfo getRSGroupInfo(String groupName)
-      throws java.io.IOException {
-    return null;
+  public RSGroupInfo getRSGroupInfo(String groupName) {
+    throw new NotImplementedException("getRSGroupInfo not supported in ThriftAdmin");
   }
 
   @Override
-  public void moveServers(java.util.Set<org.apache.hadoop.hbase.net.Address> servers,
-      String targetGroup) throws java.io.IOException {
-
+  public void moveServers(Set<Address> servers, String targetGroup) {
+    throw new NotImplementedException("moveServers not supported in ThriftAdmin");
   }
 
   @Override
-  public void addRSGroup(String groupName) throws java.io.IOException {
-
+  public void addRSGroup(String groupName) {
+    throw new NotImplementedException("addRSGroup not supported in ThriftAdmin");
   }
 
   @Override
-  public void removeRSGroup(String groupName) throws java.io.IOException {
-
+  public void removeRSGroup(String groupName) {
+    throw new NotImplementedException("removeRSGroup not supported in ThriftAdmin");
   }
 
   @Override
-  public boolean balanceRSGroup(String groupName) throws java.io.IOException {
-    return false;
+  public boolean balanceRSGroup(String groupName) {
+    throw new NotImplementedException("balanceRSGroup not supported in ThriftAdmin");
   }
 
   @Override
-  public java.util.List<org.apache.hadoop.hbase.rsgroup.RSGroupInfo> listRSGroups()
-      throws java.io.IOException {
-    return null;
+  public List<RSGroupInfo> listRSGroups() {
+    throw new NotImplementedException("listRSGroups not supported in ThriftAdmin");
   }
 
   @Override
-  public org.apache.hadoop.hbase.rsgroup.RSGroupInfo getRSGroupOfServer(
-      org.apache.hadoop.hbase.net.Address hostPort) throws java.io.IOException {
-    return null;
+  public RSGroupInfo getRSGroupOfServer(Address hostPort) {
+    throw new NotImplementedException("getRSGroupOfServer not supported in ThriftAdmin");
   }
 
   @Override
-  public void removeServers(java.util.Set<org.apache.hadoop.hbase.net.Address> servers)
-      throws java.io.IOException {
+  public void removeServers(Set<Address> servers) {
+    throw new NotImplementedException("removeServers not supported in ThriftAdmin");
+  }
 
+  @Override
+  public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) {
+    throw new NotImplementedException("getRSGroupInfoOfTable not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void setRSGroupForTables(Set<TableName> tables, String groupName) {
+    throw new NotImplementedException("setRSGroupForTables not supported in ThriftAdmin");
   }
 
   @Override

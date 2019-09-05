@@ -112,6 +112,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
   @Test
   public void testBogusArgs() throws Exception {
+    LOG.info("start testBogusArgs");
     assertNull(rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf("nonexistent")));
     assertNull(rsGroupAdmin.getRSGroupOfServer(Address.fromParts("bogus", 123)));
     assertNull(rsGroupAdmin.getRSGroupInfo("bogus"));
