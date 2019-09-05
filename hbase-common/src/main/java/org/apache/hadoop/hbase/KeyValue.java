@@ -2620,9 +2620,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    */
   public static class RawBytesComparator extends KVComparator {
     /**
-     * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
-     * instantiate the appropriate comparator.
-     * TODO: With V3 consider removing this.
+     * The HFileV2 file format's trailer contains this class name. We reinterpret this and
+     * instantiate the appropriate comparator. TODO: With V3 consider removing this.
      * @return legacy class name for FileFileTrailer#comparatorClassName
      */
     @Override
@@ -2635,9 +2634,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      */
     @Override
     @Deprecated
-    public int compareFlatKey(byte[] left, int loffset, int llength, byte[] right,
-        int roffset, int rlength) {
-      return Bytes.BYTES_RAWCOMPARATOR.compare(left,  loffset, llength, right, roffset, rlength);
+    public int compareFlatKey(byte[] left, int loffset, int llength, byte[] right, int roffset,
+        int rlength) {
+      return Bytes.BYTES_RAWCOMPARATOR.compare(left, loffset, llength, right, roffset, rlength);
     }
 
     @Override
@@ -2649,19 +2648,19 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     @VisibleForTesting
     public int compareOnlyKeyPortion(Cell left, Cell right) {
       int c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getRowArray(), left.getRowOffset(),
-          left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
+        left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
       if (c != 0) {
         return c;
       }
       c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getFamilyArray(), left.getFamilyOffset(),
-          left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
-          right.getFamilyLength());
+        left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
+        right.getFamilyLength());
       if (c != 0) {
         return c;
       }
       c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getQualifierArray(), left.getQualifierOffset(),
-          left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
-          right.getQualifierLength());
+        left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+        right.getQualifierLength());
       if (c != 0) {
         return c;
       }
@@ -2669,14 +2668,13 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
       if (c != 0) {
         return c;
       }
-      return (0xff & left.getTypeByte()) - (0xff & right.getTypeByte());
+      return (0xff & right.getTypeByte()) - (0xff & left.getTypeByte());
     }
 
     @Override
     public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
       return firstKeyInBlock;
     }
-
   }
 
   /**
