@@ -47,12 +47,10 @@ public interface RSGroupInfoManager {
   /**
    * Move servers to a new group.
    * @param servers list of servers, must be part of the same group
-   * @param srcGroup groupName being moved from
-   * @param dstGroup groupName being moved to
+   * @param targetGroupName groupName being moved to
    * @return Set of servers moved (May be a subset of {@code servers}).
    */
-  Set<Address> moveServers(Set<Address> servers, String srcGroup, String dstGroup)
-      throws IOException;
+  void moveServers(Set<Address> servers, String targetGroupName) throws IOException;
 
   /**
    * Gets the group info of server.
@@ -83,13 +81,26 @@ public interface RSGroupInfoManager {
 
   /**
    * Get {@code RSGroupInfo} for the given table.
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Only for compatibility, where we upgrade
-   *             from a version that stores table names for a rs group in the {@code RSGroupInfo}.
    */
-  @Deprecated
   RSGroupInfo getRSGroupForTable(TableName tableName) throws IOException;
 
   static RSGroupInfoManager create(MasterServices master) throws IOException {
     return RSGroupInfoManagerImpl.getInstance(master);
   }
+
+  /**
+   * Balance a rs group
+   * @param groupName name of the group
+   * @return true if balancer run
+   * @throws IOException
+   */
+  boolean balanceRSGroup(String groupName) throws IOException;
+
+  /**
+   * Set group for tables
+   * @param tables
+   * @param groupName
+   * @throws IOException
+   */
+  void setRSGroup(Set<TableName> tables, String groupName) throws IOException;
 }

@@ -117,7 +117,7 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
 
   @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
-          throws IOException {
+      throws IOException {
     wrapped.moveServersAndTables(servers, tables, targetGroup);
     verify();
   }
@@ -151,7 +151,7 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
           break;
         }
         RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo.parseFrom(result.getValue(
-          RSGroupInfoManagerImpl.META_FAMILY_BYTES, RSGroupInfoManagerImpl.META_QUALIFIER_BYTES));
+            RSGroupInfoManagerImpl.META_FAMILY_BYTES, RSGroupInfoManagerImpl.META_QUALIFIER_BYTES));
         RSGroupInfo rsGroupInfo = ProtobufUtil.toGroupInfo(proto);
         groupMap.put(proto.getName(), RSGroupUtil.fillTables(rsGroupInfo, tds));
         for(Address address : rsGroupInfo.getServers()){

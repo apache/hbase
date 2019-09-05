@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.apache.hadoop.hbase.rsgroup.RSGroupAdminServer.DEFAULT_MAX_RETRY_VALUE;
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -427,10 +426,10 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // test remove all servers from default
     try {
       rsGroupAdmin.moveServers(defaultGroup.getServers(), fooGroup.getName());
-      fail(RSGroupAdminServer.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
+      fail(RSGroupInfoManagerImpl.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE);
     } catch (ConstraintException ex) {
       assertTrue(
-        ex.getMessage().contains(RSGroupAdminServer.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE));
+        ex.getMessage().contains(RSGroupInfoManagerImpl.KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE));
     }
 
     // test success case, remove one server from default ,keep at least one server
@@ -512,7 +511,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       // wait until there is only left the region we changed state and recover its state.
       // wait time is set according to the number of max retries, all except failed regions will be
       // moved in one retry, and will sleep 1s until next retry.
-      while (System.currentTimeMillis() - current <= DEFAULT_MAX_RETRY_VALUE * 1000) {
+      while (System.currentTimeMillis() - current <=
+          RSGroupInfoManagerImpl.DEFAULT_MAX_RETRY_VALUE * 1000) {
         List<RegionInfo> regions = getRegions.apply(owner);
         LOG.debug("server table region size is:{}", regions.size());
         assert regions.size() >= 1;

@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
@@ -92,6 +94,7 @@ import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -116,6 +119,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -333,6 +337,32 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveTablesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveTablesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesResponse;
+import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -340,9 +370,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class MasterRpcServices extends RSRpcServices
-      implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
-        LockService.BlockingInterface, HbckService.BlockingInterface {
+public class MasterRpcServices extends RSRpcServices implements MasterService.BlockingInterface,
+    RegionServerStatusService.BlockingInterface,
+    LockService.BlockingInterface, HbckService.BlockingInterface,
+    RSGroupAdminService.BlockingInterface{
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger."+MasterRpcServices.class.getName());
@@ -2775,5 +2806,271 @@ public class MasterRpcServices extends RSRpcServices
       }
     }
     return true;
+  }
+
+
+  @Override
+  public GetRSGroupInfoResponse getRSGroupInfo(RpcController controller,
+      GetRSGroupInfoRequest request) throws ServiceException {
+    GetRSGroupInfoResponse.Builder builder = GetRSGroupInfoResponse.newBuilder();
+    String groupName = request.getRSGroupName();
+    LOG.info(
+        master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, group=" + groupName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
+      }
+      RSGroupInfo rsGroupInfo = master.getRSRSGroupInfoManager().getRSGroup(groupName);
+      if (rsGroupInfo != null) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public GetRSGroupInfoOfServerResponse getRSGroupInfoOfServer(RpcController controller,
+      GetRSGroupInfoOfServerRequest request) throws ServiceException {
+    GetRSGroupInfoOfServerResponse.Builder builder = GetRSGroupInfoOfServerResponse.newBuilder();
+    Address hp = Address.fromParts(request.getServer().getHostName(),
+        request.getServer().getPort());
+    LOG.info(master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, server=" + hp);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
+      }
+      RSGroupInfo info = master.getRSRSGroupInfoManager().getRSGroupOfServer(hp);
+      if (info != null) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(info)));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  private RSGroupInfo fillTables(RSGroupInfo rsGroupInfo) throws IOException {
+    return RSGroupUtil.fillTables(rsGroupInfo, master.getTableDescriptors().getAll().values());
+  }
+
+  @Override
+  public MoveServersResponse moveServers(RpcController controller, MoveServersRequest request)
+      throws ServiceException {
+    Set<Address> hostPorts = Sets.newHashSet();
+    MoveServersResponse.Builder builder = MoveServersResponse.newBuilder();
+    for (HBaseProtos.ServerName el : request.getServersList()) {
+      hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup " +
+        request.getTargetGroup());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
+      }
+      master.getRSRSGroupInfoManager().moveServers(hostPorts, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Deprecated
+  @Override
+  public MoveTablesResponse moveTables(RpcController controller, MoveTablesRequest request)
+      throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public AddRSGroupResponse addRSGroup(RpcController controller, AddRSGroupRequest request)
+      throws ServiceException {
+    AddRSGroupResponse.Builder builder = AddRSGroupResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " add rsgroup " + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
+      }
+      master.getRSRSGroupInfoManager().addRSGroup(new RSGroupInfo(request.getRSGroupName()));
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public RemoveRSGroupResponse removeRSGroup(RpcController controller, RemoveRSGroupRequest request)
+      throws ServiceException {
+    RemoveRSGroupResponse.Builder builder = RemoveRSGroupResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " remove rsgroup " + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
+      }
+      master.getRSRSGroupInfoManager().removeRSGroup(request.getRSGroupName());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public BalanceRSGroupResponse balanceRSGroup(RpcController controller,
+      BalanceRSGroupRequest request) throws ServiceException {
+    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
+    LOG.info(
+        master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+      }
+      boolean balancerRan =
+          master.getRSRSGroupInfoManager().balanceRSGroup(request.getRSGroupName());
+      builder.setBalanceRan(balancerRan);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public ListRSGroupInfosResponse listRSGroupInfos(RpcController controller,
+      ListRSGroupInfosRequest request) throws ServiceException {
+    ListRSGroupInfosResponse.Builder builder = ListRSGroupInfosResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " list rsgroup");
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preListRSGroups();
+      }
+      List<RSGroupInfo> rsGroupInfos = master.getRSRSGroupInfoManager().listRSGroups().stream()
+          .map(RSGroupInfo::new).collect(Collectors.toList());
+      Map<String, RSGroupInfo> name2Info = new HashMap<>();
+      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
+        name2Info.put(rsGroupInfo.getName(), rsGroupInfo);
+      }
+      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
+        String groupName = td.getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
+        RSGroupInfo rsGroupInfo = name2Info.get(groupName);
+        if (rsGroupInfo != null) {
+          rsGroupInfo.addTable(td.getTableName());
+        }
+      }
+      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
+        // TODO: this can be done at once outside this loop, do not need to scan all every time.
+        builder.addRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postListRSGroups();
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Deprecated
+  @Override
+  public MoveServersAndTablesResponse moveServersAndTables(RpcController controller,
+      MoveServersAndTablesRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public RemoveServersResponse removeServers(RpcController controller, RemoveServersRequest request)
+      throws ServiceException {
+    RemoveServersResponse.Builder builder = RemoveServersResponse.newBuilder();
+    Set<Address> servers = Sets.newHashSet();
+    for (HBaseProtos.ServerName el : request.getServersList()) {
+      servers.add(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    LOG.info(master.getClientIdAuditPrefix() +
+        " remove decommissioned servers from rsgroup: " + servers);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveServers(servers);
+      }
+      master.getRSRSGroupInfoManager().removeServers(servers);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public SetRSGroupForTablesResponse setRSGroupForTables(RpcController controller, SetRSGroupForTablesRequest request)
+      throws ServiceException {
+    SetRSGroupForTablesResponse.Builder builder = SetRSGroupForTablesResponse.newBuilder();
+    Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
+    for (HBaseProtos.TableName tableName : request.getTableNameList()) {
+      tables.add(ProtobufUtil.toTableName(tableName));
+    }
+    LOG.info(master.getClientIdAuditPrefix() + " set tables " + tables + " rsgroup as " +
+        request.getTargetGroup());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preSetRSGroupForTables(tables, request.getTargetGroup());
+      }
+      master.getRSRSGroupInfoManager().setRSGroup(tables, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postSetRSGroupForTables(tables, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller, 
+      GetRSGroupInfoOfTableRequest request) throws ServiceException{
+    GetRSGroupInfoOfTableResponse.Builder builder = GetRSGroupInfoOfTableResponse.newBuilder();
+    TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+    LOG.info(
+        master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, table=" + tableName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
+      }
+      Optional<RSGroupInfo> optGroup =
+          RSGroupUtil.getRSGroupInfo(master, master.getRSRSGroupInfoManager(), tableName);
+      if (optGroup.isPresent()) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(optGroup.get())));
+      } else {
+        if (master.getTableStateManager().isTablePresent(tableName)) {
+          RSGroupInfo rsGroupInfo = 
+              master.getRSRSGroupInfoManager().getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+          builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
+        }
+      }
+
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfTable(tableName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
   }
 }
