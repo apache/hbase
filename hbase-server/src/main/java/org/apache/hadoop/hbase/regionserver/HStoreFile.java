@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -256,6 +259,15 @@ public class HStoreFile implements StoreFile, StoreFileReader.Listener {
   @Override
   public Path getPath() {
     return this.fileInfo.getPath();
+  }
+
+  @Override
+  public Path getEncodedPath() {
+    try {
+      return new Path(URLEncoder.encode(fileInfo.getPath().toString(), HConstants.UTF8_ENCODING));
+    } catch (UnsupportedEncodingException ex) {
+      throw new RuntimeException("URLEncoder doesn't support UTF-8", ex);
+    }
   }
 
   @Override
