@@ -1,12 +1,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 @InterfaceAudience.Private
 public class MetricsTableQPSImpl implements MetricsTableQPS {

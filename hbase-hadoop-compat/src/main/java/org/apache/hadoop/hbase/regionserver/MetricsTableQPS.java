@@ -6,28 +6,28 @@ public interface MetricsTableQPS {
   String TABLE_WRITE_QPS = "tableWriteQPS";
 
   /**
-   *
-   * @param tableName
-   * @param count
+   * Update table read QPS
+   * @param tableName The table the metric is for
+   * @param count Number of occurrences to record
    */
   void updateTableReadQPS(String tableName, long count);
 
   /**
-   *
-   * @param tableName
+   * Update table read QPS
+   * @param tableName The table the metric is for
    */
   void updateTableReadQPS(String tableName);
 
   /**
-   *
-   * @param tableName
-   * @param count
+   * Update table write QPS
+   * @param tableName The table the metric is for
+   * @param count Number of occurrences to record
    */
   void updateTableWriteQPS(String tableName, long count);
 
   /**
-   *
-   * @param tableName
+   * Update table write QPS
+   * @param tableName The table the metric is for
    */
   void updateTableWriteQPS(String tableName);
 }
