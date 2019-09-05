@@ -37,11 +37,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertNotEquals;
 
+@Category(SmallTests.class)
 public class TestKeyValue extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
 
