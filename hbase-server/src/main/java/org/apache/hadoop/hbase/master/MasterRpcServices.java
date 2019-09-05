@@ -453,222 +453,6 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     }
   }
 
-  @Override
-  public GetRSGroupInfoResponse getRSGroupInfo(RpcController controller,
-      GetRSGroupInfoRequest request) throws ServiceException {
-    GetRSGroupInfoResponse.Builder builder = GetRSGroupInfoResponse.newBuilder();
-    String groupName = request.getRSGroupName();
-    LOG.info(
-        master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, group=" + groupName);
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
-      }
-      RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
-      if (rsGroupInfo != null) {
-        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
-      }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  @Deprecated
-  @Override
-  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller,
-      GetRSGroupInfoOfTableRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public GetRSGroupInfoOfServerResponse getRSGroupInfoOfServer(RpcController controller,
-      GetRSGroupInfoOfServerRequest request) throws ServiceException {
-    GetRSGroupInfoOfServerResponse.Builder builder = GetRSGroupInfoOfServerResponse.newBuilder();
-    Address hp = Address.fromParts(request.getServer().getHostName(),
-        request.getServer().getPort());
-    LOG.info(master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, server=" + hp);
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
-      }
-      RSGroupInfo info = groupAdminServer.getRSGroupOfServer(hp);
-      if (info != null) {
-        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(info)));
-      }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  private RSGroupInfo fillTables(RSGroupInfo rsGroupInfo) throws IOException {
-    return RSGroupUtil.fillTables(rsGroupInfo, master.getTableDescriptors().getAll().values());
-  }
-
-  @Override
-  public MoveServersResponse moveServers(RpcController controller, MoveServersRequest request)
-      throws ServiceException {
-    Set<Address> hostPorts = Sets.newHashSet();
-    MoveServersResponse.Builder builder = MoveServersResponse.newBuilder();
-    for (HBaseProtos.ServerName el : request.getServersList()) {
-      hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
-    }
-    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup " +
-        request.getTargetGroup());
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
-      }
-      groupAdminServer.moveServers(hostPorts, request.getTargetGroup());
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  @Deprecated
-  @Override
-  public MoveTablesResponse moveTables(RpcController controller, MoveTablesRequest request)
-      throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public AddRSGroupResponse addRSGroup(RpcController controller, AddRSGroupRequest request)
-      throws ServiceException {
-    AddRSGroupResponse.Builder builder = AddRSGroupResponse.newBuilder();
-    LOG.info(master.getClientIdAuditPrefix() + " add rsgroup " + request.getRSGroupName());
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
-      }
-      groupAdminServer.addRSGroup(request.getRSGroupName());
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  @Override
-  public RemoveRSGroupResponse removeRSGroup(RpcController controller, RemoveRSGroupRequest request)
-      throws ServiceException {
-    RemoveRSGroupResponse.Builder builder = RemoveRSGroupResponse.newBuilder();
-    LOG.info(master.getClientIdAuditPrefix() + " remove rsgroup " + request.getRSGroupName());
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
-      }
-      groupAdminServer.removeRSGroup(request.getRSGroupName());
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  @Override
-  public BalanceRSGroupResponse balanceRSGroup(RpcController controller,
-      BalanceRSGroupRequest request) throws ServiceException {
-    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
-    LOG.info(
-        master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
-      }
-      boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName());
-      builder.setBalanceRan(balancerRan);
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-      builder.setBalanceRan(false);
-    }
-    return builder.build();
-  }
-
-  @Override
-  public ListRSGroupInfosResponse listRSGroupInfos(RpcController controller,
-      ListRSGroupInfosRequest request) throws ServiceException {
-    ListRSGroupInfosResponse.Builder builder = ListRSGroupInfosResponse.newBuilder();
-    LOG.info(master.getClientIdAuditPrefix() + " list rsgroup");
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preListRSGroups();
-      }
-      List<RSGroupInfo> rsGroupInfos = groupAdminServer.listRSGroups().stream()
-          .map(RSGroupInfo::new).collect(Collectors.toList());
-      Map<String, RSGroupInfo> name2Info = new HashMap<>();
-      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
-        name2Info.put(rsGroupInfo.getName(), rsGroupInfo);
-      }
-      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
-        String groupName = td.getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
-        RSGroupInfo rsGroupInfo = name2Info.get(groupName);
-        if (rsGroupInfo != null) {
-          rsGroupInfo.addTable(td.getTableName());
-        }
-      }
-      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
-        // TODO: this can be done at once outside this loop, do not need to scan all every time.
-        builder.addRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo));
-      }
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postListRSGroups();
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
-  @Deprecated
-  @Override
-  public MoveServersAndTablesResponse moveServersAndTables(RpcController controller,
-      MoveServersAndTablesRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public RemoveServersResponse removeServers(RpcController controller, RemoveServersRequest request)
-      throws ServiceException {
-    RemoveServersResponse.Builder builder = RemoveServersResponse.newBuilder();
-    Set<Address> servers = Sets.newHashSet();
-    for (HBaseProtos.ServerName el : request.getServersList()) {
-      servers.add(Address.fromParts(el.getHostName(), el.getPort()));
-    }
-    LOG.info(master.getClientIdAuditPrefix() +
-        " remove decommissioned servers from rsgroup: " + servers);
-    try {
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preRemoveServers(servers);
-      }
-      groupAdminServer.removeServers(servers);
-      if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postRemoveServers(servers);
-      }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return builder.build();
-  }
-
   enum BalanceSwitchMode {
     SYNC,
     ASYNC
@@ -3020,4 +2804,223 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     }
     return true;
   }
+
+
+  @Override
+  public GetRSGroupInfoResponse getRSGroupInfo(RpcController controller,
+      GetRSGroupInfoRequest request) throws ServiceException {
+    GetRSGroupInfoResponse.Builder builder = GetRSGroupInfoResponse.newBuilder();
+    String groupName = request.getRSGroupName();
+    LOG.info(
+        master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, group=" + groupName);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
+      }
+      RSGroupInfo rsGroupInfo = master.getRSRSGroupInfoManager().getRSGroup(groupName);
+      if (rsGroupInfo != null) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Deprecated
+  @Override
+  public GetRSGroupInfoOfTableResponse getRSGroupInfoOfTable(RpcController controller,
+      GetRSGroupInfoOfTableRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public GetRSGroupInfoOfServerResponse getRSGroupInfoOfServer(RpcController controller,
+      GetRSGroupInfoOfServerRequest request) throws ServiceException {
+    GetRSGroupInfoOfServerResponse.Builder builder = GetRSGroupInfoOfServerResponse.newBuilder();
+    Address hp = Address.fromParts(request.getServer().getHostName(),
+        request.getServer().getPort());
+    LOG.info(master.getClientIdAuditPrefix() + " initiates rsgroup info retrieval, server=" + hp);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
+      }
+      RSGroupInfo info = master.getRSRSGroupInfoManager().getRSGroupOfServer(hp);
+      if (info != null) {
+        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(info)));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  private RSGroupInfo fillTables(RSGroupInfo rsGroupInfo) throws IOException {
+    return RSGroupUtil.fillTables(rsGroupInfo, master.getTableDescriptors().getAll().values());
+  }
+
+  @Override
+  public MoveServersResponse moveServers(RpcController controller, MoveServersRequest request)
+      throws ServiceException {
+    Set<Address> hostPorts = Sets.newHashSet();
+    MoveServersResponse.Builder builder = MoveServersResponse.newBuilder();
+    for (HBaseProtos.ServerName el : request.getServersList()) {
+      hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup " +
+        request.getTargetGroup());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
+      }
+      master.getRSRSGroupInfoManager().moveServers(hostPorts, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Deprecated
+  @Override
+  public MoveTablesResponse moveTables(RpcController controller, MoveTablesRequest request)
+      throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public AddRSGroupResponse addRSGroup(RpcController controller, AddRSGroupRequest request)
+      throws ServiceException {
+    AddRSGroupResponse.Builder builder = AddRSGroupResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " add rsgroup " + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
+      }
+      master.getRSRSGroupInfoManager().addRSGroup(new RSGroupInfo(request.getRSGroupName()));
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public RemoveRSGroupResponse removeRSGroup(RpcController controller, RemoveRSGroupRequest request)
+      throws ServiceException {
+    RemoveRSGroupResponse.Builder builder = RemoveRSGroupResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " remove rsgroup " + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
+      }
+      master.getRSRSGroupInfoManager().removeRSGroup(request.getRSGroupName());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public BalanceRSGroupResponse balanceRSGroup(RpcController controller,
+      BalanceRSGroupRequest request) throws ServiceException {
+    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
+    LOG.info(
+        master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+      }
+      boolean balancerRan =
+          master.getRSRSGroupInfoManager().balanceRSGroup(request.getRSGroupName());
+      builder.setBalanceRan(balancerRan);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public ListRSGroupInfosResponse listRSGroupInfos(RpcController controller,
+      ListRSGroupInfosRequest request) throws ServiceException {
+    ListRSGroupInfosResponse.Builder builder = ListRSGroupInfosResponse.newBuilder();
+    LOG.info(master.getClientIdAuditPrefix() + " list rsgroup");
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preListRSGroups();
+      }
+      List<RSGroupInfo> rsGroupInfos = master.getRSRSGroupInfoManager().listRSGroups().stream()
+          .map(RSGroupInfo::new).collect(Collectors.toList());
+      Map<String, RSGroupInfo> name2Info = new HashMap<>();
+      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
+        name2Info.put(rsGroupInfo.getName(), rsGroupInfo);
+      }
+      for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
+        String groupName = td.getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
+        RSGroupInfo rsGroupInfo = name2Info.get(groupName);
+        if (rsGroupInfo != null) {
+          rsGroupInfo.addTable(td.getTableName());
+        }
+      }
+      for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
+        // TODO: this can be done at once outside this loop, do not need to scan all every time.
+        builder.addRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postListRSGroups();
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Deprecated
+  @Override
+  public MoveServersAndTablesResponse moveServersAndTables(RpcController controller,
+      MoveServersAndTablesRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public RemoveServersResponse removeServers(RpcController controller, RemoveServersRequest request)
+      throws ServiceException {
+    RemoveServersResponse.Builder builder = RemoveServersResponse.newBuilder();
+    Set<Address> servers = Sets.newHashSet();
+    for (HBaseProtos.ServerName el : request.getServersList()) {
+      servers.add(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    LOG.info(master.getClientIdAuditPrefix() +
+        " remove decommissioned servers from rsgroup: " + servers);
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preRemoveServers(servers);
+      }
+      master.getRSRSGroupInfoManager().removeServers(servers);
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+
 }

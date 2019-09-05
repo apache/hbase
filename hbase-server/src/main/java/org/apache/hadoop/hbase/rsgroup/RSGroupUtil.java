@@ -38,7 +38,7 @@ public final class RSGroupUtil {
    * Will try to get the rsgroup from {@link TableDescriptor} first, and then try to get the rsgroup
    * from the {@link NamespaceDescriptor}. If still not present, return empty.
    */
-  static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, RSGroupInfoManager manager,
+  public static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, RSGroupInfoManager manager,
       TableName tableName) throws IOException {
     TableDescriptor td = master.getTableDescriptors().get(tableName);
     if (td == null) {

@@ -3409,12 +3409,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     mobCompactThread.requestMobCompaction(conf, fs, tableName, columns, allFiles);
   }
 
-  /**
-   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
-   * false is returned.
-   *
-   * @return The state of the load balancer, or false if the load balancer isn't defined.
-   */
   public boolean isBalancerOn() {
     return !isInMaintenanceMode()
         && loadBalancerTracker != null
