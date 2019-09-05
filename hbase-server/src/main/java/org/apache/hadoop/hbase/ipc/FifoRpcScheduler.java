@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +66,7 @@ public class FifoRpcScheduler extends RpcScheduler {
         60,
         TimeUnit.SECONDS,
         new ArrayBlockingQueue<>(maxQueueLength),
-        new DaemonThreadFactory("FifoRpcScheduler.handler"),
+        Threads.newDaemonThreadFactory("FifoRpcScheduler.handler"),
         new ThreadPoolExecutor.CallerRunsPolicy());
   }
 

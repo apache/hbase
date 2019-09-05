@@ -197,6 +197,11 @@ public class Threads {
     return boundedCachedThreadPool;
   }
 
+  public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
+      TimeUnit unit, String prefix) {
+    return getBoundedCachedThreadPool(maxCachedThread, timeout, unit,
+        newDaemonThreadFactory(prefix));
+  }
 
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,

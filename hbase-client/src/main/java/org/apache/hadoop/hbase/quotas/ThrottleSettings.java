@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class ThrottleSettings extends QuotaSettings {
+public class ThrottleSettings extends QuotaSettings {
   final QuotaProtos.ThrottleRequest proto;
 
   ThrottleSettings(final String userName, final TableName tableName, final String namespace,
@@ -60,6 +60,11 @@ class ThrottleSettings extends QuotaSettings {
   public TimeUnit getTimeUnit() {
     return proto.hasTimedQuota() ?
       ProtobufUtil.toTimeUnit(proto.getTimedQuota().getTimeUnit()) : null;
+  }
+
+  public QuotaScope getQuotaScope() {
+    return proto.hasTimedQuota() ? ProtobufUtil.toQuotaScope(proto.getTimedQuota().getScope())
+        : null;
   }
 
   @Override

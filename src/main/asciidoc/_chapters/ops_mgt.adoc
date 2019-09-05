@@ -2789,7 +2789,7 @@ Since the cluster is up, there is a risk that edits could be missed in the copy 
 The <<export,export>> approach dumps the content of a table to HDFS on the same cluster.
 To restore the data, the <<import,import>> utility would be used.
 
-Since the cluster is up, there is a risk that edits could be missed in the export process.
+Since the cluster is up, there is a risk that edits could be missed in the export process. If you want to know more about HBase back-up and restore see the page on link:http://hbase.apache.org/book.html#backuprestore[Backup and Restore].
 
 [[ops.snapshots]]
 == HBase Snapshots

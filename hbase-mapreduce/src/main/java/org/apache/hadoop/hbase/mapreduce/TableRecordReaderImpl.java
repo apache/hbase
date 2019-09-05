@@ -77,6 +77,10 @@ public class TableRecordReaderImpl {
    * @throws IOException When restarting fails.
    */
   public void restart(byte[] firstRow) throws IOException {
+    // Update counter metrics based on current scan before reinitializing it
+    if (currentScan != null) {
+      updateCounters();
+    }
     currentScan = new Scan(scan);
     currentScan.withStartRow(firstRow);
     currentScan.setScanMetricsEnabled(true);
@@ -219,6 +223,7 @@ public class TableRecordReaderImpl {
       } catch (IOException e) {
         // do not retry if the exception tells us not to do so
         if (e instanceof DoNotRetryIOException) {
+          updateCounters();
           throw e;
         }
         // try to handle all other IOExceptions by restarting
@@ -257,6 +262,7 @@ public class TableRecordReaderImpl {
       updateCounters();
       return false;
     } catch (IOException ioe) {
+      updateCounters();
       if (logScannerActivity) {
         long now = System.currentTimeMillis();
         LOG.info("Mapper took " + (now-timestamp)

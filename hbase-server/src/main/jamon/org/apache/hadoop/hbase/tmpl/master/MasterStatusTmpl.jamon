@@ -151,6 +151,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <%if master.isActiveMaster() %>
                     <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
                     <li><a href="/hbck.jsp">HBCK Report</a></li>
+                    <%if master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false) %>
+                        <li><a href="/quotas.jsp">Quotas</a></li>
+                    </%if>
                 </%if>
                 <li><a href="/processMaster.jsp">Process Metrics</a></li>
                 <li><a href="/logs/">Local Logs</a></li>

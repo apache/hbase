@@ -107,7 +107,7 @@ public class TestLogLevel {
     setupSSL(BASEDIR);
 
     kdc = setupMiniKdc();
-    // Create two principles: a client and a HTTP principal
+    // Create two principles: a client and an HTTP principal
     kdc.createPrincipal(KEYTAB_FILE, clientPrincipal, HTTP_PRINCIPAL);
   }
 
@@ -407,7 +407,7 @@ public class TestLogLevel {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
           false);
-      fail("A HTTPS Client should not have succeeded in connecting to a " +
+      fail("An HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
       exceptionShouldContains("Unrecognized SSL message", e);
@@ -426,7 +426,7 @@ public class TestLogLevel {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
           true);
-      fail("A HTTPS Client should not have succeeded in connecting to a " +
+      fail("An HTTPS Client should not have succeeded in connecting to a " +
           "HTTP server");
     } catch (SSLException e) {
       exceptionShouldContains("Unrecognized SSL message", e);
@@ -446,7 +446,7 @@ public class TestLogLevel {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
           false);
-      fail("A HTTP Client should not have succeeded in connecting to a " +
+      fail("An HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     } catch (SocketException e) {
       exceptionShouldContains("Unexpected end of file from server", e);
@@ -466,7 +466,7 @@ public class TestLogLevel {
     try {
       testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
           true);
-      fail("A HTTP Client should not have succeeded in connecting to a " +
+      fail("An HTTP Client should not have succeeded in connecting to a " +
           "HTTPS server");
     }  catch (SocketException e) {
       exceptionShouldContains("Unexpected end of file from server", e);

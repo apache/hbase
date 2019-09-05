@@ -257,10 +257,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         throw new ConstraintException("Source RSGroup for server " + firstServer
             + " does not exist.");
       }
-      if (srcGrp.getName().equals(targetGroupName)) {
-        throw new ConstraintException("Target RSGroup " + targetGroupName +
-            " is same as source " + srcGrp.getName() + " RSGroup.");
-      }
+
       // Only move online servers (when moving from 'default') or servers from other
       // groups. This prevents bogus servers from entering groups
       if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName())) {

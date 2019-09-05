@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hbase.chaos.policies;
 
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 
 import java.util.concurrent.ExecutionException;
@@ -42,7 +42,7 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
     this.actionsOne = actionsOne;
     this.actionsTwo = actionsTwo;
     executor = Executors.newFixedThreadPool(2,
-        new DaemonThreadFactory("TwoConcurrentAction-"));
+        Threads.newDaemonThreadFactory("TwoConcurrentAction"));
   }
 
   @Override

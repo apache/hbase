@@ -86,15 +86,19 @@ function personality_parse_args
   for i in "$@"; do
     case ${i} in
       --exclude-tests-url=*)
+        delete_parameter "${i}"
         EXCLUDE_TESTS_URL=${i#*=}
       ;;
       --include-tests-url=*)
+        delete_parameter "${i}"
         INCLUDE_TESTS_URL=${i#*=}
       ;;
       --hadoop-profile=*)
+        delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
       --skip-errorprone)
+        delete_parameter "${i}"
         SKIP_ERRORPRONE=true
       ;;
     esac
@@ -462,6 +466,7 @@ function hadoopcheck_parse_args
   for i in "$@"; do
     case ${i} in
       --quick-hadoopcheck)
+        delete_parameter "${i}"
         QUICK_HADOOPCHECK=true
       ;;
     esac
