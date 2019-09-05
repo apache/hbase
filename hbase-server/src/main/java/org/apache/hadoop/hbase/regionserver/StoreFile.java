@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -288,6 +290,17 @@ public class StoreFile {
   }
 
   /**
+   * @return Encoded Path if this StoreFile was made with a Stream.
+   */
+  public Path getEncodedPath() {
+    try {
+      return new Path(URLEncoder.encode(fileInfo.getPath().toString(), HConstants.UTF8_ENCODING));
+    } catch (UnsupportedEncodingException ex) {
+      throw new RuntimeException("URLEncoder doesn't support UTF-8", ex);
+    }
+  }
+
+  /**
    * @return Returns the qualified path of this StoreFile
    */
   public Path getQualifiedPath() {
@@ -382,7 +395,7 @@ public class StoreFile {
   /**
    * Check if this storefile was created by bulk load.
    * When a hfile is bulk loaded into HBase, we append
-   * '_SeqId_<id-when-loaded>' to the hfile name, unless
+   * '_SeqId_&lt;id-when-loaded&gt;' to the hfile name, unless
    * "hbase.mapreduce.bulkload.assign.sequenceNumbers" is
    * explicitly turned off.
    * If "hbase.mapreduce.bulkload.assign.sequenceNumbers"
