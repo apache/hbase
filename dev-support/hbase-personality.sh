@@ -31,7 +31,7 @@
 # test-patch  --plugins=all,-hadoopcheck --personality=dev-support/hbase-personality.sh HBASE-15074
 # ````
 #
-# pass the `--jenkins` flag if you want to allow test-patch to destructively alter local working
+# pass the `--sentinel` flag if you want to allow test-patch to destructively alter local working
 # directory / branch in order to have things match what the issue patch requests.
 
 personality_plugins "all"
