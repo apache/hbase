@@ -290,7 +290,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     RegionInfo ri = getRegionInfo();
     State s = state;
     if (s != State.OPEN) {
-      throw new DoNotRetryRegionException(ri.getEncodedName() + " is no OPEN; state=" + s);
+      throw new DoNotRetryRegionException(ri.getEncodedName() + " is not OPEN; state=" + s);
     }
     if (ri.isSplitParent()) {
       throw new DoNotRetryRegionException(
