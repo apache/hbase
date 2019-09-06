@@ -18,8 +18,12 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -36,20 +41,32 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+
 /**
  * Server-side fixing of bad or inconsistent state in hbase:meta.
  * Distinct from MetaTableAccessor because {@link MetaTableAccessor} is about low-level
  * manipulations driven by the Master. This class MetaFixer is
- * employed by the Master and it 'knows' about holes and orphan
+ * employed by the Master and it 'knows' about holes and orphans
  * and encapsulates their fixing on behalf of the Master.
  */
 @InterfaceAudience.Private
 class MetaFixer {
   private static final Logger LOG = LoggerFactory.getLogger(MetaFixer.class);
+  private static final String MAX_MERGE_COUNT_KEY = "hbase.master.metafixer.max.merge.count";
+  private static final int MAX_MERGE_COUNT_DEFAULT = 10;
   private final MasterServices masterServices;
+  /**
+   * Maximum for many regions to merge at a time.
+   */
+  private final int maxMergeCount;
 
   MetaFixer(MasterServices masterServices) {
     this.masterServices = masterServices;
+    this.maxMergeCount = this.masterServices.getConfiguration().
+        getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
   }
 
   void fix() throws IOException {
@@ -66,14 +83,12 @@ class MetaFixer {
   /**
    * If hole, it papers it over by adding a region in the filesystem and to hbase:meta.
    * Does not assign.
-   * @return True if we fixed any 'holes'.
    */
-  boolean fixHoles(CatalogJanitor.Report report) throws IOException {
-    boolean result = false;
+  void fixHoles(CatalogJanitor.Report report) throws IOException {
     List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
     if (holes.isEmpty()) {
       LOG.debug("No holes.");
-      return result;
+      return;
     }
     for (Pair<RegionInfo, RegionInfo> p: holes) {
       RegionInfo ri = getHoleCover(p);
@@ -86,11 +101,10 @@ class MetaFixer {
       // in hbase:meta (if the below fails). Should be able to rerun the fix.
       // The second call to createRegionDir will just go through. Idempotent.
       Put put = MetaTableAccessor.makePutFromRegionInfo(ri, HConstants.LATEST_TIMESTAMP);
-      MetaTableAccessor.putsToMetaTable(this.masterServices.getConnection(), Arrays.asList(put));
+      MetaTableAccessor.putsToMetaTable(this.masterServices.getConnection(),
+          Collections.singletonList(put));
       LOG.info("Fixed hole by adding {}; region is NOT assigned (assign to online).", ri);
-      result = true;
     }
-    return result;
   }
 
   /**
@@ -136,28 +150,94 @@ class MetaFixer {
     return RegionInfoBuilder.newBuilder(tn).setStartKey(start).setEndKey(end).build();
   }
 
-  boolean fixOverlaps(CatalogJanitor.Report report) throws IOException {
-    boolean result = false;
-    List<Pair<RegionInfo, RegionInfo>> overlaps = report.getOverlaps();
+  /**
+   * Fix overlaps noted in CJ consistency report.
+   */
+  void fixOverlaps(CatalogJanitor.Report report) throws IOException {
+    for (Set<RegionInfo> regions: calculateMerges(maxMergeCount, report.getOverlaps())) {
+      RegionInfo [] regionsArray = regions.toArray(new RegionInfo [] {});
+      try {
+        this.masterServices.mergeRegions(regionsArray,
+            false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      } catch (MergeRegionException mre) {
+        LOG.warn("Failed overlap fix of {}", regionsArray, mre);
+      }
+    }
+  }
+
+  /**
+   * Run through <code>overlaps</code> and return a list of merges to run.
+   * Presumes overlaps are ordered (which they are coming out of the CatalogJanitor
+   * consistency report).
+   * @param maxMergeCount Maximum regions to merge at a time (avoid merging
+   *   100k regions in one go!)
+   */
+  @VisibleForTesting
+  static List<SortedSet<RegionInfo>> calculateMerges(int maxMergeCount,
+      List<Pair<RegionInfo, RegionInfo>> overlaps) {
     if (overlaps.isEmpty()) {
       LOG.debug("No overlaps.");
-      return result;
+      return Collections.emptyList();
     }
-    for (Pair<RegionInfo, RegionInfo> p: overlaps) {
-      RegionInfo ri = getHoleCover(p);
-      if (ri == null) {
-        continue;
+    List<SortedSet<RegionInfo>> merges = new ArrayList<>();
+    SortedSet<RegionInfo> currentMergeSet = new TreeSet<>();
+    RegionInfo regionInfoWithlargestEndKey =  null;
+    for (Pair<RegionInfo, RegionInfo> pair: overlaps) {
+      if (regionInfoWithlargestEndKey != null) {
+        if (!isOverlap(regionInfoWithlargestEndKey, pair) ||
+            currentMergeSet.size() >= maxMergeCount) {
+          merges.add(currentMergeSet);
+          currentMergeSet = new TreeSet<>();
+        }
       }
-      Configuration configuration = this.masterServices.getConfiguration();
-      HRegion.createRegionDir(configuration, ri, FSUtils.getRootDir(configuration));
-      // If an error here, then we'll have a region in the filesystem but not
-      // in hbase:meta (if the below fails). Should be able to rerun the fix.
-      // The second call to createRegionDir will just go through. Idempotent.
-      Put put = MetaTableAccessor.makePutFromRegionInfo(ri, HConstants.LATEST_TIMESTAMP);
-      MetaTableAccessor.putsToMetaTable(this.masterServices.getConnection(), Arrays.asList(put));
-      LOG.info("Fixed hole by adding {}; region is NOT assigned (assign to online).", ri);
-      result = true;
+      currentMergeSet.add(pair.getFirst());
+      currentMergeSet.add(pair.getSecond());
+      regionInfoWithlargestEndKey = getRegionInfoWithLargestEndKey(
+        getRegionInfoWithLargestEndKey(pair.getFirst(), pair.getSecond()),
+          regionInfoWithlargestEndKey);
     }
-    return result;
+    merges.add(currentMergeSet);
+    return merges;
+  }
+
+  /**
+   * @return Either <code>a</code> or <code>b</code>, whichever has the
+   *   endkey that is furthest along in the Table.
+   */
+  @VisibleForTesting
+  static RegionInfo getRegionInfoWithLargestEndKey(RegionInfo a, RegionInfo b) {
+    if (a == null) {
+      // b may be null.
+      return b;
+    }
+    if (b == null) {
+      // Both are null. The return is not-defined.
+      return a;
+    }
+    if (!a.getTable().equals(b.getTable())) {
+      // This is an odd one. This should be the right answer.
+      return b;
+    }
+    if (a.isLast()) {
+      return a;
+    }
+    if (b.isLast()) {
+      return b;
+    }
+    int compare = Bytes.compareTo(a.getEndKey(), b.getEndKey());
+    return compare == 0 || compare > 0? a: b;
+  }
+
+  /**
+   * @return True if an overlap found between passed in <code>ri</code> and
+   *   the <code>pair</code>. Does NOT check the pairs themselves overlap.
+   */
+  @VisibleForTesting
+  static boolean isOverlap(RegionInfo ri, Pair<RegionInfo, RegionInfo> pair) {
+    if (ri == null || pair == null) {
+      // Can't be an overlap in either of these cases.
+      return false;
+    }
+    return ri.isOverlap(pair.getFirst()) || ri.isOverlap(pair.getSecond());
   }
 }
