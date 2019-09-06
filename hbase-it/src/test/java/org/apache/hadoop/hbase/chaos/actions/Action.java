@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -163,6 +164,34 @@ public class Action {
     LOG.info("Started master " + server.getHostname());
   }
 
+  protected void stopRs(ServerName server) throws IOException {
+    LOG.info("Stopping regionserver " + server);
+    cluster.stopRegionServer(server);
+    cluster.waitForRegionServerToStop(server, killRsTimeout);
+    LOG.info("Stoppiong regionserver " + server + ". Reported num of rs:"
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+  }
+
+  protected void suspendRs(ServerName server) throws IOException {
+    LOG.info("Suspending regionserver " + server);
+    cluster.suspendRegionServer(server);
+    if(!(cluster instanceof MiniHBaseCluster)){
+      cluster.waitForRegionServerToStop(server, killRsTimeout);
+    }
+    LOG.info("Suspending regionserver " + server + ". Reported num of rs:"
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+  }
+
+  protected void resumeRs(ServerName server) throws IOException {
+    LOG.info("Resuming regionserver " + server);
+    cluster.resumeRegionServer(server);
+    if(!(cluster instanceof MiniHBaseCluster)){
+      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
+    }
+    LOG.info("Resuming regionserver " + server + ". Reported num of rs:"
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+  }
+
   protected void killRs(ServerName server) throws IOException {
     LOG.info("Killing regionserver " + server);
     cluster.killRegionServer(server);
@@ -266,6 +295,19 @@ public class Action {
     }
     if (!result) {
       LOG.error("Balancer didn't succeed");
+    }
+  }
+
+  protected void setBalancer(boolean onOrOff, boolean synchronous) throws Exception {
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
+    boolean result = false;
+    try {
+      result = admin.balancerSwitch(onOrOff, synchronous);
+    } catch (Exception e) {
+      LOG.warn("Got exception while switching balancee ", e);
+    }
+    if (!result) {
+      LOG.error("Balancer switch didn't succeed");
     }
   }
 

@@ -50,6 +50,23 @@ public class RestartActionBaseAction extends Action {
     startMaster(server);
   }
 
+  /**
+   * Stop and then restart the region server instaedof killing it.
+   * @param server
+   * @param sleepTime
+   * @throws IOException
+   */
+  void gracefulRestartRs(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the stop if we're stopping already
+    if (context.isStopping()) {
+      return;
+    }
+    stopRs(server);
+    sleep(sleepTime);
+    startRs(server);
+  }
+
   void restartRs(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);
     // Don't try the kill if we're stopping

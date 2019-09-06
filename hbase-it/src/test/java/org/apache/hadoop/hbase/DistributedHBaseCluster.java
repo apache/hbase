@@ -127,6 +127,20 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void suspendRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Suspend RS: " + serverName.getServerName());
+    clusterManager.suspend(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void resumeRegionServer(ServerName serverName) throws IOException {
+    LOG.info("Resume RS: " + serverName.getServerName());
+    clusterManager.resume(ServiceType.HBASE_REGIONSERVER,
+        serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
   public void startZkNode(String hostname, int port) throws IOException {
     LOG.info("Starting ZooKeeper node on: " + hostname);
     clusterManager.start(ServiceType.ZOOKEEPER_SERVER, hostname, port);
