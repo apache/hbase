@@ -123,6 +123,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest;
@@ -168,6 +170,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunn
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -1355,6 +1359,55 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
   }
+
+  @Override
+  public SetSnapshotCleanupResponse switchSnapshotCleanup(
+      RpcController controller, SetSnapshotCleanupRequest request)
+      throws ServiceException {
+    try {
+      master.checkInitialized();
+      final boolean enabled = request.getEnabled();
+      final boolean isSynchronous = request.hasSynchronous() && request.getSynchronous();
+      final boolean prevSnapshotCleanupRunning = this.switchSnapshotCleanup(enabled, isSynchronous);
+      return SetSnapshotCleanupResponse.newBuilder()
+          .setPrevSnapshotCleanup(prevSnapshotCleanupRunning).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
+      RpcController controller, IsSnapshotCleanupEnabledRequest request)
+      throws ServiceException {
+    try {
+      master.checkInitialized();
+      final boolean isSnapshotCleanupEnabled = master.snapshotCleanupTracker
+          .isSnapshotCleanupEnabled();
+      return IsSnapshotCleanupEnabledResponse.newBuilder()
+          .setEnabled(isSnapshotCleanupEnabled).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Turn on/off snapshot auto-cleanup based on TTL
+   *
+   * @param enabledNewVal Set to <code>true</code> to enable, <code>false</code> to disable
+   * @param synchronous If <code>true</code>, it waits until current snapshot cleanup is completed,
+   *   if outstanding
+   * @return previous snapshot auto-cleanup mode
+   */
+  private synchronized boolean switchSnapshotCleanup(final boolean enabledNewVal,
+      final boolean synchronous) {
+    final boolean oldValue = master.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+    master.switchSnapshotCleanup(enabledNewVal, synchronous);
+    LOG.info(master.getClientIdAuditPrefix() + " Successfully set snapshot cleanup to {}" +
+      enabledNewVal);
+    return oldValue;
+  }
+
 
   @Override
   public RunCatalogScanResponse runCatalogScan(RpcController c,

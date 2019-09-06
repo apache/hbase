@@ -2133,6 +2133,20 @@ class ConnectionManager {
         }
 
         @Override
+        public MasterProtos.SetSnapshotCleanupResponse switchSnapshotCleanup(
+            RpcController controller, MasterProtos.SetSnapshotCleanupRequest request)
+            throws ServiceException {
+          return stub.switchSnapshotCleanup(controller, request);
+        }
+
+        @Override
+        public MasterProtos.IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
+            RpcController controller, MasterProtos.IsSnapshotCleanupEnabledRequest request)
+            throws ServiceException {
+          return stub.isSnapshotCleanupEnabled(controller, request);
+        }
+
+        @Override
         public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController controller,
             ListNamespaceDescriptorsRequest request) throws ServiceException {
           return stub.listNamespaceDescriptors(controller, request);

@@ -571,6 +571,23 @@ message ClearDeadServersResponse {
   repeated ServerName server_name = 1;
 }
 
+message SetSnapshotCleanupRequest {
+  required bool enabled = 1;
+  optional bool synchronous = 2;
+}
+
+message SetSnapshotCleanupResponse {
+  required bool prev_snapshot_cleanup = 1;
+}
+
+message IsSnapshotCleanupEnabledRequest {
+}
+
+message IsSnapshotCleanupEnabledResponse {
+  required bool enabled = 1;
+}
+
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -871,4 +888,18 @@ service MasterService {
   /** returns a list of namespace names */
   rpc ListNamespaces(ListNamespacesRequest)
     returns(ListNamespacesResponse);
+
+  /**
+   * Turn on/off snapshot auto-cleanup based on TTL expiration
+   */
+  rpc SwitchSnapshotCleanup (SetSnapshotCleanupRequest)
+    returns (SetSnapshotCleanupResponse);
+
+  /**
+   * Determine if snapshot auto-cleanup based on TTL expiration is turned on
+   */
+  rpc IsSnapshotCleanupEnabled (IsSnapshotCleanupEnabledRequest)
+    returns (IsSnapshotCleanupEnabledResponse);
+
+
 }

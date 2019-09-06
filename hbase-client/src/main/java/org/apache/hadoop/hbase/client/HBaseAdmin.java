@@ -136,6 +136,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
@@ -154,6 +155,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
@@ -5053,4 +5055,38 @@ public class HBaseAdmin implements Admin {
   private RpcControllerFactory getRpcControllerFactory() {
     return rpcControllerFactory;
   }
+
+  @Override
+  public boolean snapshotCleanupSwitch(final boolean on, final boolean synchronous)
+      throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+
+      @Override
+      public Boolean call(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        controller.setCallTimeout(callTimeout);
+        SetSnapshotCleanupRequest req =
+          RequestConverter.buildSetSnapshotCleanupRequest(on, synchronous);
+        return master.switchSnapshotCleanup(controller, req).getPrevSnapshotCleanup();
+      }
+    });
+
+  }
+
+  @Override
+  public boolean isSnapshotCleanupEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+
+      @Override
+      public Boolean call(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        controller.setCallTimeout(callTimeout);
+        IsSnapshotCleanupEnabledRequest req =
+          RequestConverter.buildIsSnapshotCleanupEnabledRequest();
+        return master.isSnapshotCleanupEnabled(controller, req).getEnabled();
+      }
+    });
+
+  }
+
 }

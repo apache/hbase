@@ -122,6 +122,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private String switchZNode;
   // znode containing the lock for the tables
   public String tableLockZNode;
+  // znode containing the state of the snapshot auto-cleanup
+  String snapshotCleanupZNode;
   // znode containing the state of recovering regions
   public String recoveringRegionsZNode;
   // znode containing namespace descriptors
@@ -137,6 +139,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     }};
 
   public final static String META_ZNODE_PREFIX = "meta-region-server";
+  private static final String DEFAULT_SNAPSHOT_CLEANUP_ZNODE = "snapshot-cleanup";
 
   private final Configuration conf;
 
@@ -456,6 +459,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     switchZNode = ZKUtil.joinZNode(baseZNode, conf.get("zookeeper.znode.switch", "switch"));
     tableLockZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableLock", "table-lock"));
+    snapshotCleanupZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
     recoveringRegionsZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.recovering.regions", "recovering-regions"));
     namespaceZNode = ZKUtil.joinZNode(baseZNode,

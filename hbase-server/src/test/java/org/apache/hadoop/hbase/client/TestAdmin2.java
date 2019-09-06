@@ -864,4 +864,31 @@ public class TestAdmin2 {
       Assert.assertEquals(expectedStoreFilesSize, store.getSize());
     }
   }
+
+  @Test
+  public void testSnapshotCleanupAsync() throws Exception {
+    testSnapshotCleanup(false);
+  }
+
+  @Test
+  public void testSnapshotCleanupSync() throws Exception {
+    testSnapshotCleanup(true);
+  }
+
+  private void testSnapshotCleanup(final boolean synchronous) throws IOException {
+    final boolean initialState = admin.isSnapshotCleanupEnabled();
+    // Switch the snapshot auto cleanup state to opposite to initial state
+    boolean prevState = admin.snapshotCleanupSwitch(!initialState, synchronous);
+    // The previous state should be the original state we observed
+    assertEquals(initialState, prevState);
+    // Current state should be opposite of the initial state
+    assertEquals(!initialState, admin.isSnapshotCleanupEnabled());
+    // Reset the state back to what it was initially
+    prevState = admin.snapshotCleanupSwitch(initialState, synchronous);
+    // The previous state should be the opposite of the initial state
+    assertEquals(!initialState, prevState);
+    // Current state should be the original state again
+    assertEquals(initialState, admin.isSnapshotCleanupEnabled());
+  }
+
 }

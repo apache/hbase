@@ -1338,8 +1338,6 @@ public final class HConstants {
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
 
-  public static final String SNAPSHOT_CLEANER_DISABLE = "hbase.master.cleaner.snapshot.disable";
-
   /**
    * Configurations for master executor services.
    */
