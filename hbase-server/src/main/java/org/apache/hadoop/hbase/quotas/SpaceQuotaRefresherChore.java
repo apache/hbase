@@ -61,6 +61,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   private final RegionServerSpaceQuotaManager manager;
   private final Connection conn;
+  private boolean quotaTablePresent = false;
 
   public SpaceQuotaRefresherChore(RegionServerSpaceQuotaManager manager, Connection conn) {
     super(SpaceQuotaRefresherChore.class.getSimpleName(),
@@ -76,8 +77,9 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   protected void chore() {
     try {
       // check whether Quota table is present or not.
-      if (!checkQuotaTableExists()) {
-        LOG.warn("Quota table not found, skipping quota manager cache refresh.");
+      if (!quotaTablePresent && !checkQuotaTableExists()) {
+        LOG.info("Quota table not found, skipping quota manager cache refresh.");
+        quotaTablePresent = true;
         return;
       }
       if (LOG.isTraceEnabled()) {
