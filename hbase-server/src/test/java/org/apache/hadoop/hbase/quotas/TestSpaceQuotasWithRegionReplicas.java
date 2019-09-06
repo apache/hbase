@@ -47,7 +47,6 @@ public class TestSpaceQuotasWithRegionReplicas {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSpaceQuotasWithRegionReplicas.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final int NUM_RETRIES = 10;
 
   @Rule
   public TestName testName = new TestName();
@@ -73,34 +72,30 @@ public class TestSpaceQuotasWithRegionReplicas {
 
   @Test
   public void testSetQuotaWithRegionReplicaSingleRegion() throws Exception {
-    setQuotaAndVerifyForRegionReplication(1, 2, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerifyForRegionReplication(1, 2, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerifyForRegionReplication(1, 2, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerifyForRegionReplication(1, 2, SpaceViolationPolicy.DISABLE);
+    for (SpaceViolationPolicy policy : SpaceViolationPolicy.values()) {
+      setQuotaAndVerifyForRegionReplication(1, 2, policy);
+    }
   }
 
   @Test
   public void testSetQuotaWithRegionReplicaMultipleRegion() throws Exception {
-    setQuotaAndVerifyForRegionReplication(5, 3, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerifyForRegionReplication(6, 3, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerifyForRegionReplication(6, 3, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerifyForRegionReplication(6, 3, SpaceViolationPolicy.DISABLE);
+    for (SpaceViolationPolicy policy : SpaceViolationPolicy.values()) {
+      setQuotaAndVerifyForRegionReplication(6, 3, policy);
+    }
   }
 
   @Test
   public void testSetQuotaWithSingleRegionZeroRegionReplica() throws Exception {
-    setQuotaAndVerifyForRegionReplication(1, 0, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerifyForRegionReplication(1, 0, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerifyForRegionReplication(1, 0, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerifyForRegionReplication(1, 0, SpaceViolationPolicy.DISABLE);
+    for (SpaceViolationPolicy policy : SpaceViolationPolicy.values()) {
+      setQuotaAndVerifyForRegionReplication(1, 0, policy);
+    }
   }
 
   @Test
   public void testSetQuotaWithMultipleRegionZeroRegionReplicas() throws Exception {
-    setQuotaAndVerifyForRegionReplication(5, 0, SpaceViolationPolicy.NO_INSERTS);
-    setQuotaAndVerifyForRegionReplication(6, 0, SpaceViolationPolicy.NO_WRITES);
-    setQuotaAndVerifyForRegionReplication(6, 0, SpaceViolationPolicy.NO_WRITES_COMPACTIONS);
-    setQuotaAndVerifyForRegionReplication(6, 0, SpaceViolationPolicy.DISABLE);
+    for (SpaceViolationPolicy policy : SpaceViolationPolicy.values()) {
+      setQuotaAndVerifyForRegionReplication(6, 0, policy);
+    }
   }
 
   private void setQuotaAndVerifyForRegionReplication(int region, int replicatedRegion,
@@ -112,8 +107,6 @@ public class TestSpaceQuotasWithRegionReplicas {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
         Bytes.toBytes("reject"));
-    // Adding a sleep for 5 sec, so all the chores run and to void flakiness of the test.
-    Thread.sleep(5000);
     helper.verifyViolation(policy, tn, p);
   }
 }

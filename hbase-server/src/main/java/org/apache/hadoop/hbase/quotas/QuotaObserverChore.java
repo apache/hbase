@@ -765,10 +765,9 @@ public class QuotaObserverChore extends ScheduledChore {
       List<RegionInfo> regions = this.conn.getAdmin().getRegions(table);
       if (regions == null) {
         return 0;
-      } else {
-        // Filter the region replicas if any and return the original number of regions for a table.
-        RegionReplicaUtil.removeNonDefaultRegions(regions);
       }
+      // Filter the region replicas if any and return the original number of regions for a table.
+      RegionReplicaUtil.removeNonDefaultRegions(regions);
       return regions.size();
     }
 
