@@ -85,6 +85,10 @@ public class FieldScreenView extends AbstractScreenView {
       case Enter:
         fieldScreenPresenter.turnOffMoveMode();
         return this;
+
+      default:
+        // Do nothing
+        break;
     }
 
     if (keyPress.getType() != KeyPress.Type.Character) {
@@ -104,6 +108,10 @@ public class FieldScreenView extends AbstractScreenView {
 
       case 'q':
         return fieldScreenPresenter.transitionToNextScreen();
+
+      default:
+        // Do nothing
+        break;
     }
 
     return this;

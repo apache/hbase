@@ -75,8 +75,8 @@ public class KeyPressGenerator {
   }
 
   public void start() {
-    executorService.submit(this::readerThread);
-    executorService.submit(this::generatorThread);
+    executorService.execute(this::readerThread);
+    executorService.execute(this::generatorThread);
   }
 
   private void initState() {
@@ -158,6 +158,10 @@ public class KeyPressGenerator {
           case '\t':
             offer(new KeyPress(KeyPress.Type.Tab, '\t', false, false, false));
             continue;
+
+          default:
+            // Do nothing
+            break;
         }
 
         if (ch < 32) {
@@ -248,7 +252,7 @@ public class KeyPressGenerator {
       return false;
     }
     Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
-    return block != null && block != Character.UnicodeBlock.SPECIALS;
+    return block != null && !block.equals(Character.UnicodeBlock.SPECIALS);
   }
 
   private void ctrlAltAndCharacter(char ch) {

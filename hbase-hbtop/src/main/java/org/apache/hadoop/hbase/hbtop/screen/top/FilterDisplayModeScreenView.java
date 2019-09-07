@@ -54,9 +54,8 @@ public class FilterDisplayModeScreenView extends AbstractScreenView {
 
   @Override
   public ScreenView handleKeyPress(KeyPress keyPress) {
-    switch (keyPress.getType()) {
-      case Enter:
-        return filterDisplayModeScreenPresenter.returnToNextScreen();
+    if (keyPress.getType() == KeyPress.Type.Enter) {
+      return filterDisplayModeScreenPresenter.returnToNextScreen();
     }
     return this;
   }

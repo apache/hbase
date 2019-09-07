@@ -84,7 +84,7 @@ public class HBTop extends Configured implements Tool {
         if (delay < 1) {
           LOGGER.warn("Delay set too low or invalid, using default");
         } else {
-          initialRefreshDelay = delay * 1000;
+          initialRefreshDelay = delay * 1000L;
         }
       }
 
