@@ -413,8 +413,10 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       try {
         Collection<LoadQueueItem> toRetry = future.get();
 
-        for (LoadQueueItem lqi : toRetry) {
-          item2RegionMap.remove(lqi);
+        if (item2RegionMap != null) {
+          for (LoadQueueItem lqi : toRetry) {
+            item2RegionMap.remove(lqi);
+          }
         }
         // LQIs that are requeued to be regrouped.
         queue.addAll(toRetry);
