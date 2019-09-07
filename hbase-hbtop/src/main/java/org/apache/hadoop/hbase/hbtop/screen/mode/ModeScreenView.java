@@ -78,6 +78,10 @@ public class ModeScreenView extends AbstractScreenView {
       case End:
         modeScreenPresenter.pageDown();
         return this;
+
+      default:
+        // Do nothing
+        break;
     }
 
     if (keyPress.getType() != KeyPress.Type.Character) {
@@ -88,6 +92,10 @@ public class ModeScreenView extends AbstractScreenView {
     switch (keyPress.getCharacter()) {
       case 'q':
         return modeScreenPresenter.transitionToNextScreen(false);
+
+      default:
+        // Do nothing
+        break;
     }
 
     return this;

@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.hbtop.Record;
