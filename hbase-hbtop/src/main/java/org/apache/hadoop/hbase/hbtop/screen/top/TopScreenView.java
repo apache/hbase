@@ -115,6 +115,10 @@ public class TopScreenView extends AbstractScreenView {
 
       case Escape:
         return null;
+
+      default:
+        // Do nothing
+        break;
     }
 
     if (keyPress.getType() != KeyPress.Type.Character) {
@@ -178,12 +182,14 @@ public class TopScreenView extends AbstractScreenView {
     return this;
   }
 
+  @Override
   public TerminalSize getTerminalSize() {
     TerminalSize terminalSize = super.getTerminalSize();
     updatePageSize(terminalSize);
     return terminalSize;
   }
 
+  @Override
   public TerminalSize doResizeIfNecessary() {
     TerminalSize terminalSize = super.doResizeIfNecessary();
     if (terminalSize == null) {
