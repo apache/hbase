@@ -25,7 +25,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -70,7 +73,17 @@ public final class ClusterMetricsBuilder {
             .collect(Collectors.toList()))
         .setMasterInfoPort(metrics.getMasterInfoPort())
         .addAllServersName(metrics.getServersName().stream().map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()));
+          .collect(Collectors.toList()))
+        .addAllTableRegionStatesCount(metrics.getTableRegionStatesCount()
+          .entrySet()
+          .stream()
+          .map(status ->
+            ClusterStatusProtos.TableRegionStatesCount
+              .newBuilder()
+              .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
+              .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue()))
+              .build())
+          .collect(Collectors.toList()));
     if (metrics.getMasterName() != null) {
       builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
     }
@@ -108,7 +121,12 @@ public final class ClusterMetricsBuilder {
             .map(HBaseProtos.Coprocessor::getName)
             .collect(Collectors.toList()))
         .setServerNames(proto.getServersNameList().stream().map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()));
+            .collect(Collectors.toList()))
+        .setTableRegionStatesCount(
+          proto.getTableRegionStatesCountList().stream()
+          .collect(Collectors.toMap(
+            e -> ProtobufUtil.toTableName(e.getTableName()),
+            e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))));
     if (proto.hasClusterId()) {
       builder.setClusterId(ClusterId.convert(proto.getClusterId()).toString());
     }
@@ -149,6 +167,7 @@ public final class ClusterMetricsBuilder {
       case BALANCER_ON: return ClusterMetrics.Option.BALANCER_ON;
       case SERVERS_NAME: return ClusterMetrics.Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterMetrics.Option.MASTER_INFO_PORT;
+      case TABLE_TO_REGIONS_COUNT: return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -172,6 +191,7 @@ public final class ClusterMetricsBuilder {
       case BALANCER_ON: return ClusterStatusProtos.Option.BALANCER_ON;
       case SERVERS_NAME: return Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
+      case TABLE_TO_REGIONS_COUNT: return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -214,6 +234,7 @@ public final class ClusterMetricsBuilder {
   private Boolean balancerOn;
   private int masterInfoPort;
   private List<ServerName> serversName = Collections.emptyList();
+  private Map<TableName, RegionStatesCount> tableRegionStatesCount = Collections.emptyMap();
 
   private ClusterMetricsBuilder() {
   }
@@ -263,6 +284,13 @@ public final class ClusterMetricsBuilder {
     this.serversName = serversName;
     return this;
   }
+
+  public ClusterMetricsBuilder setTableRegionStatesCount(
+      Map<TableName, RegionStatesCount> tableRegionStatesCount) {
+    this.tableRegionStatesCount = tableRegionStatesCount;
+    return this;
+  }
+
   public ClusterMetrics build() {
     return new ClusterMetricsImpl(
         hbaseVersion,
@@ -275,7 +303,9 @@ public final class ClusterMetricsBuilder {
         masterCoprocessorNames,
         balancerOn,
         masterInfoPort,
-        serversName);
+        serversName,
+        tableRegionStatesCount
+    );
   }
   private static class ClusterMetricsImpl implements ClusterMetrics {
     @Nullable
@@ -293,6 +323,7 @@ public final class ClusterMetricsBuilder {
     private final Boolean balancerOn;
     private final int masterInfoPort;
     private final List<ServerName> serversName;
+    private final Map<TableName, RegionStatesCount> tableRegionStatesCount;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
         Map<ServerName, ServerMetrics> liveServerMetrics,
@@ -303,7 +334,8 @@ public final class ClusterMetricsBuilder {
         List<String> masterCoprocessorNames,
         Boolean balancerOn,
         int masterInfoPort,
-        List<ServerName> serversName) {
+        List<ServerName> serversName,
+        Map<TableName, RegionStatesCount> tableRegionStatesCount) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
@@ -315,6 +347,7 @@ public final class ClusterMetricsBuilder {
       this.balancerOn = balancerOn;
       this.masterInfoPort = masterInfoPort;
       this.serversName = serversName;
+      this.tableRegionStatesCount = Preconditions.checkNotNull(tableRegionStatesCount);
     }
 
     @Override
@@ -370,6 +403,11 @@ public final class ClusterMetricsBuilder {
     @Override
     public List<ServerName> getServersName() {
       return Collections.unmodifiableList(serversName);
+    }
+
+    @Override
+    public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
+      return Collections.unmodifiableMap(tableRegionStatesCount);
     }
 
     @Override
