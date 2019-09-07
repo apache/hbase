@@ -377,11 +377,8 @@ public class WALSplitter {
       if (!skipErrors || e instanceof InterruptedIOException) {
         throw e; // Don't mark the file corrupted if interrupted, or not skipErrors
       }
-      CorruptedLogFileException t =
-        new CorruptedLogFileException("skipErrors=true Could not open wal " +
-            path + " ignoring");
-      t.initCause(e);
-      throw t;
+      throw new CorruptedLogFileException("skipErrors=true Could not open wal "
+        + path + " ignoring", e);
     }
     return in;
   }
@@ -405,11 +402,8 @@ public class WALSplitter {
       if (!skipErrors) {
         throw e;
       }
-      CorruptedLogFileException t =
-          new CorruptedLogFileException("skipErrors=true Ignoring exception" + " while parsing wal "
-              + path + ". Marking as corrupted");
-      t.initCause(e);
-      throw t;
+      throw new CorruptedLogFileException("skipErrors=true Ignoring exception"
+        + " while parsing wal " + path + ". Marking as corrupted", e);
     }
   }
 
@@ -570,5 +564,16 @@ public class WALSplitter {
     CorruptedLogFileException(String s) {
       super(s);
     }
+
+    /**
+     * CorruptedLogFileException with cause
+     *
+     * @param message the message for this exception
+     * @param cause the cause for this exception
+     */
+    CorruptedLogFileException(String message, Throwable cause) {
+      super(message, cause);
+    }
+
   }
 }

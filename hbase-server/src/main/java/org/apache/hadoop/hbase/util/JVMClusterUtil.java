@@ -91,9 +91,7 @@ public class JVMClusterUtil {
         hrsc.toString() + ((target.getCause() != null)?
           target.getCause().getMessage(): ""), target);
     } catch (Exception e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
+      throw new IOException(e);
     }
     return new JVMClusterUtil.RegionServerThread(server, index);
   }
@@ -136,9 +134,7 @@ public class JVMClusterUtil {
         hmc.toString() + ((target.getCause() != null)?
           target.getCause().getMessage(): ""), target);
     } catch (Exception e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
+      throw new IOException(e);
     }
     return new JVMClusterUtil.MasterThread(server, index);
   }

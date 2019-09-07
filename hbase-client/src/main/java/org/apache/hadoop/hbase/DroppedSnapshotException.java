@@ -40,4 +40,15 @@ public class DroppedSnapshotException extends IOException {
   public DroppedSnapshotException(String message) {
     super(message);
   }
+
+  /**
+   * DroppedSnapshotException with cause
+   *
+   * @param message the message for this exception
+   * @param cause the cause for this exception
+   */
+  public DroppedSnapshotException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
 }

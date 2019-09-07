@@ -178,9 +178,7 @@ public final class SnapshotManifestV2 {
       if(t instanceof InvalidProtocolBufferException) {
         throw (InvalidProtocolBufferException)t;
       } else {
-        IOException ex = new IOException("ExecutionException");
-        ex.initCause(e.getCause());
-        throw ex;
+        throw new IOException("ExecutionException", e.getCause());
       }
     }
     return regionsManifest;
