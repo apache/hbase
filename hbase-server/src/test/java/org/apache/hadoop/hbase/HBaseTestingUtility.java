@@ -1239,6 +1239,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public void restartHBaseCluster(int servers, List<Integer> ports)
       throws IOException, InterruptedException {
+    StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numRegionServers(servers).rsPorts(ports).build();
+    restartHBaseCluster(option);
+  }
+
+  public void restartHBaseCluster(StartMiniClusterOption option)
+      throws IOException, InterruptedException {
     if (hbaseAdmin != null) {
       hbaseAdmin.close();
       hbaseAdmin = null;
@@ -1247,7 +1254,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.asyncConnection.close();
       this.asyncConnection = null;
     }
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, 1, servers, ports, null, null);
+    this.hbaseCluster =
+        new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumRegionServers(),
+            option.getRsPorts(), option.getMasterClass(), option.getRsClass());
     // Don't leave here till we've done a successful scan of the hbase:meta
     Connection conn = ConnectionFactory.createConnection(this.conf);
     Table t = conn.getTable(TableName.META_TABLE_NAME);
