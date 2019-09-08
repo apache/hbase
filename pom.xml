@@ -1564,10 +1564,12 @@
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=paranoid
     </hbase-surefire.argLine>
     <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
+      -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=paranoid
     </hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
