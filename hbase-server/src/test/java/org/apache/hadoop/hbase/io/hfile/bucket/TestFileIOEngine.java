@@ -23,6 +23,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +31,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -40,6 +44,9 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Basic test for {@link FileIOEngine}
@@ -128,6 +135,31 @@ public class TestFileIOEngine {
     fileIOEngine.read(be);
     ByteBuff data2 = getByteBuff(be);
     assertArrayEquals(data1, data2.array());
+  }
+
+  @Test
+  public void testReadFailedShouldReleaseByteBuff() {
+    ByteBuffAllocator alloc = Mockito.mock(ByteBuffAllocator.class);
+    final RefCnt refCnt = RefCnt.create();
+    Mockito.when(alloc.allocate(Mockito.anyInt())).thenAnswer(new Answer<ByteBuff>() {
+      @Override
+      public ByteBuff answer(InvocationOnMock invocation) throws Throwable {
+        int len = invocation.getArgument(0);
+        return ByteBuff.wrap(new ByteBuffer[]{ByteBuffer.allocate(len + 1)}, refCnt);
+      }
+    });
+    int len = 10;
+    byte[] data1 = new byte[len];
+    assertEquals(1, refCnt.refCnt());
+    try {
+      fileIOEngine.write(ByteBuffer.wrap(data1), 0);
+      BucketEntry be = createBucketEntry(0, len, alloc);
+      fileIOEngine.read(be);
+      fail();
+    } catch (IOException ioe) {
+      // expected exception.
+    }
+    assertEquals(0, refCnt.refCnt());
   }
 
   @Test
