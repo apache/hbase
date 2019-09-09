@@ -502,8 +502,11 @@ public class BucketCache implements BlockCache, HeapSize {
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
           Cacheable cachedBlock = ioEngine.read(bucketEntry);
-          // RPC start to reference, so retain here.
-          cachedBlock.retain();
+          if (ioEngine.usesSharedMemory()) {
+            // If IOEngine use shared memory, cachedBlock and BucketEntry will share the
+            // same RefCnt, do retain here, in order to count the number of RPC references
+            cachedBlock.retain();
+          }
           // Update the cache statistics.
           if (updateCacheMetrics) {
             cacheStats.hit(caching, key.isPrimary(), key.getBlockType());

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
@@ -48,8 +49,8 @@ public class TestByteBufferIOEngine {
   private static class MockBucketEntry extends BucketEntry {
     private long off;
 
-    MockBucketEntry(long offset, int length) {
-      super(offset & 0xFF00, length, 0, false);
+    MockBucketEntry(long offset, int length, ByteBuffAllocator allocator) {
+      super(offset & 0xFF00, length, 0, false, RefCnt.create(), allocator);
       this.off = offset;
     }
 
@@ -66,7 +67,11 @@ public class TestByteBufferIOEngine {
   }
 
   static BucketEntry createBucketEntry(long offset, int len) {
-    BucketEntry be = new MockBucketEntry(offset, len);
+    return createBucketEntry(offset, len, ByteBuffAllocator.HEAP);
+  }
+
+  static BucketEntry createBucketEntry(long offset, int len, ByteBuffAllocator allocator) {
+    BucketEntry be = new MockBucketEntry(offset, len, allocator);
     be.setDeserializerReference(DESERIALIZER);
     return be;
   }
