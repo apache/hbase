@@ -48,17 +48,19 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
 
     // Destructive actions to mess things around. Cannot run batch restart
     Action[] actions1 = new Action[] {
-        new RestartRandomRsExceptMetaAction(60000),
-        new RestartActiveMasterAction(5000),
-        new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2), //only allow 2 servers to be dead
-        new ForceBalancerAction(),
-        new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
-        new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime, rollingBatchSuspendtRSRatio)
+      new RestartRandomRsExceptMetaAction(60000),
+      new RestartActiveMasterAction(5000),
+      //only allow 2 servers to be dead
+      new RollingBatchRestartRsExceptMetaAction(5000, 1.0f, 2),
+      new ForceBalancerAction(),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
+      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
+          rollingBatchSuspendtRSRatio)
     };
 
     // Action to log more info for debugging
     Action[] actions2 = new Action[] {
-        new DumpClusterStatusAction()
+      new DumpClusterStatusAction()
     };
 
     return new PolicyBasedChaosMonkey(util,

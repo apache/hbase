@@ -52,9 +52,9 @@ public class RestartActionBaseAction extends Action {
 
   /**
    * Stop and then restart the region server instaedof killing it.
-   * @param server
-   * @param sleepTime
-   * @throws IOException
+   * @param server hostname to restart the regionserver on
+   * @param sleepTime number of milliseconds between stop and restart
+   * @throws IOException if something goes wrong
    */
   void gracefulRestartRs(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);

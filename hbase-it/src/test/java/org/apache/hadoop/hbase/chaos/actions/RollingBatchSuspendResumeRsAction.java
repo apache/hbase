@@ -18,30 +18,30 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-
 /**
- * Suspend then resume a ratio of the regionservers in a rolling fashion. At each step, either suspend a
- * server, or resume one, sleeping (sleepTime) in between steps. The parameter maxSuspendedServers
- * limits the maximum number of servers that can be down at the same time during rolling restarts.
+ * Suspend then resume a ratio of the regionservers in a rolling fashion. At each step, either
+ * suspend a server, or resume one, sleeping (sleepTime) in between steps. The parameter
+ * maxSuspendedServers limits the maximum number of servers that can be down at the same time
+ * during rolling restarts.
  */
 public class RollingBatchSuspendResumeRsAction extends Action {
-  private static final Logger LOG = LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
   private float ratio;
   private long sleepTime;
-  private int maxSuspendedServers; // number of maximum suspended servers at any given time. Defaults to 5
+  private int maxSuspendedServers; // number of maximum suspended servers at any given time.
 
   public RollingBatchSuspendResumeRsAction(long sleepTime, float ratio) {
     this(sleepTime, ratio, 5);
@@ -57,17 +57,17 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     SUSPEND, RESUME
   }
 
-  @Override
-  public void perform() throws Exception {
+  @Override public void perform() throws Exception {
     LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
-        (int)(ratio * 100)));
+        (int) (ratio * 100)));
     List<ServerName> selectedServers = selectServers();
 
     Queue<ServerName> serversToBeSuspended = new LinkedList<>(selectedServers);
     Queue<ServerName> suspendedServers = new LinkedList<>();
 
     // loop while there are servers to be suspended or suspended servers to be resumed
-    while ((!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty())  && !context.isStopping()) {
+    while ((!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty()) && !context
+        .isStopping()) {
       SuspendOrResume action;
 
       if (serversToBeSuspended.isEmpty()) { // no more servers to suspend
@@ -84,23 +84,23 @@ public class RollingBatchSuspendResumeRsAction extends Action {
 
       ServerName server;
       switch (action) {
-      case SUSPEND:
-         server = serversToBeSuspended.remove();
-        try {
-          suspendRs(server);
-        } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-          LOG.info("Problem suspending but presume successful; code=" + e.getExitCode(), e);
-        }
-        suspendedServers.add(server);
-        break;
-      case RESUME:
-        server = suspendedServers.remove();
-        try {
-          resumeRs(server);
-        } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-          LOG.info("Problem resuming, will retry; code=" + e.getExitCode(), e);
-        }
-        break;
+        case SUSPEND:
+          server = serversToBeSuspended.remove();
+          try {
+            suspendRs(server);
+          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+            LOG.info("Problem suspending but presume successful; code=" + e.getExitCode(), e);
+          }
+          suspendedServers.add(server);
+          break;
+        case RESUME:
+          server = suspendedServers.remove();
+          try {
+            resumeRs(server);
+          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+            LOG.info("Problem resuming, will retry; code=" + e.getExitCode(), e);
+          }
+          break;
       }
 
       LOG.info("Sleeping for:" + sleepTime);

@@ -18,21 +18,18 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.RegionMover;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 /**
- * Gracefully restarts every non-admin regionserver in a rolling fashion. At each step, it unloads, restarts
- * the loads every rs server sleeping randomly (0-sleepTime) in between servers.
+ * Gracefully restarts every non-admin regionserver in a rolling fashion. At each step, it unloads,
+ * restarts the loads every rs server sleeping randomly (0-sleepTime) in between servers.
  */
 public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(GracefulRollingRestartRsAction.class);

@@ -57,7 +57,8 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new RestartRandomDataNodeAction(60000),
       new RestartRandomZKNodeAction(60000),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
-      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime, rollingBatchSuspendtRSRatio)
+      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
+          rollingBatchSuspendtRSRatio)
     };
 
     // Action to log more info for debugging

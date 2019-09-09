@@ -150,15 +150,15 @@ public abstract class HBaseCluster implements Closeable, Configurable {
 
   /**
    * Suspend the region server
-   * @param serverName
-   * @throws IOException
+   * @param serverName the hostname to suspend the regionserver on
+   * @throws IOException if something goes wrong
    */
   public abstract void suspendRegionServer(ServerName serverName) throws IOException;
 
   /**
    * Resume the region server
-   * @param serverName
-   * @throws IOException
+   * @param serverName the hostname to resume the regionserver on
+   * @throws IOException if something goes wrong
    */
   public abstract void resumeRegionServer(ServerName serverName) throws IOException;
 
