@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,12 +39,21 @@ import org.junit.experimental.categories.Category;
  * A test similar to TestHRegion, but with in-memory flush families.
  * Also checks wal truncation after in-memory compaction.
  */
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestHRegionWithInMemoryFlush extends TestHRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHRegionWithInMemoryFlush.class);
+
+  @BeforeClass
+  public static void setUp() {
+    long globalMemStoreSize = 128 * 1024 * 1024L;
+    float poolSizePercentage = 1.0f;
+    float initialCountPercentage = 0.0f;
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreSize,
+      poolSizePercentage, initialCountPercentage, null);
+  }
 
   /**
    * @return A region on which you must call
