@@ -740,5 +740,14 @@ public class MasterQuotaManager implements RegionStateListener {
       notifier.addArchivedFiles(filesWithSize);
     }
   }
+
+  /**
+   * Remove regionInfo entry for the table which is going to get dropped.
+   *
+   * @param tableName tableName.
+   */
+  public void removeTableRegions(TableName tableName) {
+    regionSizes.entrySet().removeIf(regionInfo -> regionInfo.getKey().getTable().equals(tableName));
+  }
 }
 
