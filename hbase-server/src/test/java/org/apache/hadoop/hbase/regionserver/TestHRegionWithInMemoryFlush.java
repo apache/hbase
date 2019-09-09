@@ -63,6 +63,7 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
     for(int i = 0; i < inMemory.length; i++) {
       inMemory[i] = true;
     }
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return TEST_UTIL.createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey,
         isReadOnly, durability, wal, inMemory, families);
   }
