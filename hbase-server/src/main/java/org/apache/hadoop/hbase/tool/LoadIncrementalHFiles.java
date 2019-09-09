@@ -184,16 +184,19 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void usage() {
-    System.err.println("usage: " + "bin/hbase completebulkload <-Dargs> "
-      + "</path/to/hfileoutputformat-output> <tablename>\n"
-      + "\t-D" + CREATE_TABLE_CONF_KEY + "=no can be used to avoid creation "
-      + "of a table by this tool.\n"
-      + "\t Note: if you set this to 'no', then target table must already exist.\n"
-      + "\t-D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes can be used to ignore "
-      + "unmatched column families.\n"
-      + "\t-loadTable switch implies your baseDirectory to store file has a "
-      + "depth of 3, table must exist\n"
-      + "\t and -loadTable switch is the last option on the command line.\n\n");
+    System.err.println("Usage: " + "bin/hbase completebulkload [OPTIONS] "
+        + "</PATH/TO/HFILEOUTPUTFORMAT-OUTPUT> <TABLENAME>\n"
+        + "Loads directory of hfiles -- a region dir or product of HFileOutputFormat -- "
+        + "into an hbase table.\n"
+        + "OPTIONS (for other -D options, see source code):\n"
+        + " -D" + CREATE_TABLE_CONF_KEY + "=no whether to create table; when 'no', target "
+        + "table must exist.\n"
+        + " -D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes to ignore unmatched column families.\n"
+        + " -loadTable for when directory of files to load has a depth of 3; target table must "
+        + "exist;\n"
+        + " must be last of the options on command line.\n"
+        + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
+        + "documentation.\n");
   }
 
   /**
