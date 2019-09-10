@@ -53,6 +53,13 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
 
   private static class RowIndexEncodingState extends EncodingState {
     RowIndexEncoderV1 encoder = null;
+
+    @Override
+    public void beforeShipped() {
+      if (encoder != null) {
+        encoder.beforeShipped();
+      }
+    }
   }
 
   @Override
