@@ -26,11 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -136,13 +133,6 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
       tds.addAll(admin.listTableDescriptors());
       tds.addAll(admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME));
     }
-    SortedSet<Address> lives = Sets.newTreeSet();
-    for (ServerName sn : conn.getAdmin().getClusterMetrics().getLiveServerMetrics().keySet()) {
-      lives.add(sn.getAddress());
-    }
-    for (ServerName sn : conn.getAdmin().listDecommissionedRegionServers()) {
-      lives.remove(sn.getAddress());
-    }
     try (Table table = conn.getTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
         ResultScanner scanner = table.getScanner(new Scan())) {
       for (;;) {
@@ -154,22 +144,8 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
           RSGroupInfoManagerImpl.META_FAMILY_BYTES, RSGroupInfoManagerImpl.META_QUALIFIER_BYTES));
         RSGroupInfo rsGroupInfo = ProtobufUtil.toGroupInfo(proto);
         groupMap.put(proto.getName(), RSGroupUtil.fillTables(rsGroupInfo, tds));
-        for(Address address : rsGroupInfo.getServers()){
-          lives.remove(address);
-        }
       }
     }
-    SortedSet<TableName> tables = Sets.newTreeSet();
-    for (TableDescriptor td : conn.getAdmin().listTableDescriptors(Pattern.compile(".*"),
-        true)){
-      String groupName = td.getRegionServerGroup().orElse(RSGroupInfo.DEFAULT_GROUP);
-      if (groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
-        tables.add(td.getTableName());
-      }
-    }
-
-    groupMap.put(RSGroupInfo.DEFAULT_GROUP,
-        new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, lives, tables));
     assertEquals(Sets.newHashSet(groupMap.values()), Sets.newHashSet(wrapped.listRSGroups()));
     try {
       String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
@@ -184,7 +160,6 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
           zList.add(RSGroupUtil.fillTables(rsGroupInfo, tds));
         }
       }
-      groupMap.remove(RSGroupInfo.DEFAULT_GROUP);
       assertEquals(zList.size(), groupMap.size());
       for (RSGroupInfo rsGroupInfo : zList) {
         assertTrue(groupMap.get(rsGroupInfo.getName()).equals(rsGroupInfo));

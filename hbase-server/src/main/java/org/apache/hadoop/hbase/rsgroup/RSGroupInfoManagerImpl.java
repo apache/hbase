@@ -396,13 +396,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
 
     // populate puts
-    for (RSGroupInfo gi : groupMap.values()) {
-      if (!gi.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-        RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(gi);
-        Put p = new Put(Bytes.toBytes(gi.getName()));
-        p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
-        mutations.add(p);
-      }
+    for (RSGroupInfo RSGroupInfo : groupMap.values()) {
+      RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+      Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
+      p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
+      mutations.add(p);
     }
 
     if (mutations.size() > 0) {
@@ -451,12 +449,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // Make changes visible after having been persisted to the source of truth
     resetRSGroupMap(newGroupMap);
-    saveRSGroupMapToZK(newGroupMap);
 
-    updateCacheOfRSGroups(newGroupMap.keySet());
-  }
-
-  private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
     try {
       String groupBasePath =
           ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, RS_GROUP_ZNODE);
@@ -470,16 +463,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
       }
 
-      for (RSGroupInfo gi : newGroupMap.values()) {
-        if (!gi.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-          String znode = ZNodePaths.joinZNode(groupBasePath, gi.getName());
-          RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(gi);
-          LOG.debug("Updating znode: " + znode);
-          ZKUtil.createAndFailSilent(watcher, znode);
-          zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
-          zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(znode,
-              ProtobufUtil.prependPBMagic(proto.toByteArray())));
-        }
+      for (RSGroupInfo RSGroupInfo : newGroupMap.values()) {
+        String znode = ZNodePaths.joinZNode(groupBasePath, RSGroupInfo.getName());
+        RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+        LOG.debug("Updating znode: " + znode);
+        ZKUtil.createAndFailSilent(watcher, znode);
+        zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
+        zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(znode,
+          ProtobufUtil.prependPBMagic(proto.toByteArray())));
       }
       LOG.debug("Writing ZK GroupInfo count: " + zkOps.size());
 
@@ -489,6 +480,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       masterServices.abort("Failed to write to rsGroupZNode", e);
       throw new IOException("Failed to write to rsGroupZNode", e);
     }
+    updateCacheOfRSGroups(newGroupMap.keySet());
   }
 
   /**
@@ -548,12 +540,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   // Called by ServerEventsListenerThread. Synchronize on this because redoing
   // the rsGroupMap then writing it out.
-  private synchronized void updateDefaultServers(SortedSet<Address> servers) {
+  private synchronized void updateDefaultServers(SortedSet<Address> servers) throws IOException {
     RSGroupInfo info = rsGroupMap.get(RSGroupInfo.DEFAULT_GROUP);
     RSGroupInfo newInfo = new RSGroupInfo(info.getName(), servers);
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(newInfo.getName(), newInfo);
-    resetRSGroupMap(newGroupMap);
+    flushConfig(newGroupMap);
   }
 
   /**
