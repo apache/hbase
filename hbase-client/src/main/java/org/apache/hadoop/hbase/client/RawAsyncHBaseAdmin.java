@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
@@ -297,6 +299,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -3856,4 +3878,114 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               resp -> resp.getHasUserPermissionList()))
         .call();
   }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroupInfo(String groupName) {
+    return this.<RSGroupInfo> newMasterCaller()
+        .action(((controller, stub) -> this.
+            <GetRSGroupInfoRequest, GetRSGroupInfoResponse, RSGroupInfo> call(controller, stub,
+                RequestConverter.buildGetRSGroupInfoRequest(groupName),
+                (s, c, req, done) -> s.getRSGroupInfo(c, req, done),
+                resp -> ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()))))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> moveServers(Set<Address> servers, String targetGroup) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <MoveServersRequest, MoveServersResponse, Void> call(controller, stub,
+                RequestConverter.buildMoveServersRequest(servers, targetGroup),
+                (s, c, req, done) -> s.moveServers(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> addRSGroup(String groupName) {
+    return this.<Void> newMasterCaller()
+        .action(((controller, stub) -> this.
+            <AddRSGroupRequest, AddRSGroupResponse, Void> call(controller, stub,
+                AddRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+                (s, c, req, done) -> s.addRSGroup(c, req, done), resp -> null)))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> removeRSGroup(String groupName) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <RemoveRSGroupRequest, RemoveRSGroupResponse, Void> call(controller, stub,
+                RemoveRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+                (s, c, req, done) -> s.removeRSGroup(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
+    return this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this.
+            <BalanceRSGroupRequest, BalanceRSGroupResponse, Boolean> call(controller, stub,
+                BalanceRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+                (s, c, req, done) -> s.balanceRSGroup(c, req, done),
+            resp -> resp.getBalanceRan()))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<RSGroupInfo>> listRSGroups() {
+    return this.<List<RSGroupInfo>> newMasterCaller()
+        .action((controller, stub) -> this
+            .<ListRSGroupInfosRequest, ListRSGroupInfosResponse, List<RSGroupInfo>> call(controller,
+                stub, ListRSGroupInfosRequest.getDefaultInstance(),
+                (s, c, req, done) -> s.listRSGroupInfos(c, req, done),
+                resp -> resp.getRSGroupInfoList().stream()
+                    .map(r -> ProtobufUtil.toGroupInfo(r))
+                    .collect(Collectors.toList())))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroupOfServer(Address hostPort) {
+    return this.<RSGroupInfo> newMasterCaller()
+        .action((controller, stub) -> this.
+            <GetRSGroupInfoOfServerRequest, GetRSGroupInfoOfServerResponse, RSGroupInfo> call(
+                controller, stub,
+               RequestConverter.buildGetRSGroupInfoOfServerRequest(hostPort),
+                (s, c, req, done) -> s.getRSGroupInfoOfServer(c, req, done),
+                resp -> ProtobufUtil.toGroupInfo(resp.getRSGroupInfo())))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> removeServers(Set<Address> servers) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <RemoveServersRequest, RemoveServersResponse, Void> call(controller, stub,
+                RequestConverter.buildRemoveServersRequest(servers),
+                (s, c, req, done) -> s.removeServers(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> setRSGroupForTables(Set<TableName> tables, String groupName) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <SetRSGroupForTablesRequest, SetRSGroupForTablesResponse, Void> call(controller, stub,
+                RequestConverter.buildSetRSGroupForTablesRequest(tables, groupName),
+                (s, c, req, done) -> s.setRSGroupForTables(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroupInfoOfTable(TableName table) {
+    return this.<RSGroupInfo> newMasterCaller()
+        .action((controller, stub) -> this.
+            <GetRSGroupInfoOfTableRequest, GetRSGroupInfoOfTableResponse, RSGroupInfo> call(
+                controller, stub,
+                GetRSGroupInfoOfTableRequest.newBuilder().setTableName(
+                    ProtobufUtil.toProtoTableName(table)).build(),
+                (s, c, req, done) -> s.getRSGroupInfoOfTable(c, req, done), resp -> null))
+        .call();
+  }
+
 }

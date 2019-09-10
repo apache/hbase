@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +26,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
@@ -63,15 +62,9 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGro
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Implementation of RSGroupAdminService defined in RSGroupAdmin.proto. This class calls
@@ -84,41 +77,14 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
 
   private MasterServices master;
 
-  private RSGroupAdminServer groupAdminServer;
-
-  private AccessChecker accessChecker;
-
-  /** Provider for mapping principal names to Users */
-  private UserProvider userProvider;
+  private RSGroupInfoManager rsGroupInfoManager;
 
   RSGroupAdminServiceImpl() {
   }
 
-  void initialize(MasterServices master, RSGroupAdminServer groupAdminServer,
-      AccessChecker accessChecker, UserProvider userProvider) {
-    this.master = master;
-    this.groupAdminServer = groupAdminServer;
-    this.accessChecker = accessChecker;
-    this.userProvider = userProvider;
-  }
-
-  @VisibleForTesting
-  void checkPermission(String request) throws IOException {
-    accessChecker.requirePermission(getActiveUser(), request, null, Action.ADMIN);
-  }
-
-  /**
-   * Returns the active user to which authorization checks should be applied. If we are in the
-   * context of an RPC call, the remote user is used, otherwise the currently logged in user is
-   * used.
-   */
-  private User getActiveUser() throws IOException {
-    // for non-rpc handling, fallback to system user
-    Optional<User> optionalUser = RpcServer.getRequestUser();
-    if (optionalUser.isPresent()) {
-      return optionalUser.get();
-    }
-    return userProvider.getCurrent();
+  void initialize(MasterServices masterServices){
+    this.master = masterServices;
+    this.rsGroupInfoManager = masterServices.getRSRSGroupInfoManager();
   }
 
   // for backward compatible
@@ -137,8 +103,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preGetRSGroupInfo(groupName);
       }
-      checkPermission("getRSGroupInfo");
-      RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+      RSGroupInfo rsGroupInfo = rsGroupInfoManager.getRSGroup(groupName);
       if (rsGroupInfo != null) {
         builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
       }
@@ -162,14 +127,13 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preGetRSGroupInfoOfTable(tableName);
       }
-      checkPermission("getRSGroupInfoOfTable");
       Optional<RSGroupInfo> optGroup =
-        RSGroupUtil.getRSGroupInfo(master, groupAdminServer.rsGroupInfoManager, tableName);
+        RSGroupUtil.getRSGroupInfo(master, rsGroupInfoManager, tableName);
       if (optGroup.isPresent()) {
         builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(optGroup.get())));
       } else {
         if (master.getTableStateManager().isTablePresent(tableName)) {
-          RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+          RSGroupInfo rsGroupInfo = rsGroupInfoManager.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
           builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(rsGroupInfo)));
         }
       }
@@ -197,8 +161,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveServers(hostPorts, request.getTargetGroup());
       }
-      checkPermission("moveServers");
-      groupAdminServer.moveServers(hostPorts, request.getTargetGroup());
+      rsGroupInfoManager.moveServers(hostPorts, request.getTargetGroup());
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
       }
@@ -243,7 +206,6 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveTables(tables, request.getTargetGroup());
       }
-      checkPermission("moveTables");
       moveTablesAndWait(tables, request.getTargetGroup());
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveTables(tables, request.getTargetGroup());
@@ -263,8 +225,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preAddRSGroup(request.getRSGroupName());
       }
-      checkPermission("addRSGroup");
-      groupAdminServer.addRSGroup(request.getRSGroupName());
+      rsGroupInfoManager.addRSGroup(new RSGroupInfo(request.getRSGroupName()));
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postAddRSGroup(request.getRSGroupName());
       }
@@ -283,8 +244,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preRemoveRSGroup(request.getRSGroupName());
       }
-      checkPermission("removeRSGroup");
-      groupAdminServer.removeRSGroup(request.getRSGroupName());
+      rsGroupInfoManager.removeRSGroup(request.getRSGroupName());
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRemoveRSGroup(request.getRSGroupName());
       }
@@ -304,8 +264,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
       }
-      checkPermission("balanceRSGroup");
-      boolean balancerRan = groupAdminServer.balanceRSGroup(request.getRSGroupName());
+      boolean balancerRan = rsGroupInfoManager.balanceRSGroup(request.getRSGroupName());
       builder.setBalanceRan(balancerRan);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
@@ -326,8 +285,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preListRSGroups();
       }
-      checkPermission("listRSGroup");
-      List<RSGroupInfo> rsGroupInfos = groupAdminServer.listRSGroups().stream()
+      List<RSGroupInfo> rsGroupInfos = rsGroupInfoManager.listRSGroups().stream()
           .map(RSGroupInfo::new).collect(Collectors.toList());
       Map<String, RSGroupInfo> name2Info = new HashMap<>();
       for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
@@ -364,8 +322,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preGetRSGroupInfoOfServer(hp);
       }
-      checkPermission("getRSGroupInfoOfServer");
-      RSGroupInfo info = groupAdminServer.getRSGroupOfServer(hp);
+      RSGroupInfo info = rsGroupInfoManager.getRSGroupOfServer(hp);
       if (info != null) {
         builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(info)));
       }
@@ -397,8 +354,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
         master.getMasterCoprocessorHost().preMoveServersAndTables(hostPorts, tables,
           request.getTargetGroup());
       }
-      checkPermission("moveServersAndTables");
-      groupAdminServer.moveServers(hostPorts, request.getTargetGroup());
+      rsGroupInfoManager.moveServers(hostPorts, request.getTargetGroup());
       moveTablesAndWait(tables, request.getTargetGroup());
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveServersAndTables(hostPorts, tables,
@@ -424,8 +380,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preRemoveServers(servers);
       }
-      checkPermission("removeServers");
-      groupAdminServer.removeServers(servers);
+      rsGroupInfoManager.removeServers(servers);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRemoveServers(servers);
       }

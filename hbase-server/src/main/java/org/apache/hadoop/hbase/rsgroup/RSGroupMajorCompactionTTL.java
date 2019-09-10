@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
@@ -58,9 +59,9 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
       throws Exception {
 
     Connection conn = ConnectionFactory.createConnection(conf);
-    RSGroupAdmin rsGroupAdmin = new RSGroupAdminClient(conn);
+    Admin admin = conn.getAdmin();
 
-    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroupInfo(rsgroup);
+    RSGroupInfo rsGroupInfo = admin.getRSGroupInfo(rsgroup);
     if (rsGroupInfo == null) {
       LOG.error("Invalid rsgroup specified: " + rsgroup);
       throw new IllegalArgumentException("Invalid rsgroup specified: " + rsgroup);

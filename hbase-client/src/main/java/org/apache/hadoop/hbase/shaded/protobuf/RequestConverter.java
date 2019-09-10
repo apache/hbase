@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
@@ -153,6 +155,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
 
 /**
  * Helper utility to build protocol buffer requests,
@@ -1900,4 +1907,57 @@ public final class RequestConverter {
         map(r -> buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, Bytes.toBytes(r))).
         collect(Collectors.toList());
   }
+
+  public static GetRSGroupInfoRequest buildGetRSGroupInfoRequest(String groupName) {
+    GetRSGroupInfoRequest.Builder builder = GetRSGroupInfoRequest.newBuilder();
+    if (groupName != null && !groupName.isEmpty()) {
+      builder.setRSGroupName(groupName);
+    }
+    return builder.build();
+  }
+
+  public static MoveServersRequest buildMoveServersRequest(Set<Address> servers,
+      String targetGroup) {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for (Address el : servers) {
+      hostPorts.add(
+          HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname()).setPort(el.getPort())
+              .build());
+    }
+    return MoveServersRequest.newBuilder().setTargetGroup(targetGroup).addAllServers(hostPorts)
+            .build();
+  }
+
+  public static GetRSGroupInfoOfServerRequest buildGetRSGroupInfoOfServerRequest(Address hostPort) {
+    return GetRSGroupInfoOfServerRequest.newBuilder()
+        .setServer(HBaseProtos.ServerName.newBuilder()
+        .setHostName(hostPort.getHostname())
+            .setPort(hostPort.getPort())
+            .build())
+        .build();
+  }
+
+  public static RemoveServersRequest buildRemoveServersRequest(Set<Address> servers) {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for(Address el: servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder()
+          .setHostName(el.getHostname())
+          .setPort(el.getPort())
+          .build());
+    }
+    return RemoveServersRequest.newBuilder()
+        .addAllServers(hostPorts)
+        .build();
+  }
+
+  public static SetRSGroupForTablesRequest buildSetRSGroupForTablesRequest(
+      Set<TableName> tables, String groupName){
+    SetRSGroupForTablesRequest.Builder builder =
+        SetRSGroupForTablesRequest.newBuilder().setTargetGroup(groupName);
+    for(TableName tableName: tables) {
+      builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+    }
+    return builder.build();
+  }
+
 }

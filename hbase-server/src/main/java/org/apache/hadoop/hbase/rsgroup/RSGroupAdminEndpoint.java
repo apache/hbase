@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import com.google.protobuf.Service;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -42,11 +42,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
 @CoreCoprocessor
@@ -55,8 +51,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   // Only instance of RSGroupInfoManager. RSGroup aware load balancers ask for this instance on
   // their setup.
   private MasterServices master;
-  private RSGroupInfoManager groupInfoManager;
-  private RSGroupAdminServer groupAdminServer;
   private RSGroupAdminServiceImpl groupAdminService = new RSGroupAdminServiceImpl();
 
   @Override
@@ -66,18 +60,12 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     }
 
     master = ((HasMasterServices) env).getMasterServices();
-    groupInfoManager = master.getRSRSGroupInfoManager();
-    groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
     Class<?> clazz =
       master.getConfiguration().getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, null);
     if (!RSGroupableBalancer.class.isAssignableFrom(clazz)) {
       throw new IOException("Configured balancer does not support RegionServer groups.");
     }
-    AccessChecker accessChecker = ((HasMasterServices) env).getMasterServices().getAccessChecker();
-
-    // set the user-provider.
-    UserProvider userProvider = UserProvider.instantiate(env.getConfiguration());
-    groupAdminService.initialize(master, groupAdminServer, accessChecker, userProvider);
+    groupAdminService.initialize(master);
   }
 
   @Override
@@ -85,22 +73,17 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   @Override
-  public Iterable<Service> getServices() {
-    return Collections.singleton(groupAdminService);
-  }
-
-  @Override
   public Optional<MasterObserver> getMasterObserver() {
     return Optional.of(this);
   }
 
-  RSGroupInfoManager getGroupInfoManager() {
-    return groupInfoManager;
+  @Override
+  public Iterable<Service> getServices() {
+    return Collections.singleton(groupAdminService);
   }
 
-  @VisibleForTesting
-  RSGroupAdminServiceImpl getGroupAdminService() {
-    return groupAdminService;
+  RSGroupInfoManager getGroupInfoManager() {
+    return master.getRSRSGroupInfoManager();
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -114,7 +97,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       servers.stream().filter(server -> !notClearedServers.contains(server))
         .map(ServerName::getAddress).collect(Collectors.toSet());
     if (!clearedServer.isEmpty()) {
-      groupAdminServer.removeServers(clearedServer);
+      master.getRSRSGroupInfoManager().removeServers(clearedServer);
     }
   }
 
@@ -122,7 +105,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     throws IOException {
     if (optGroupName.isPresent()) {
       String groupName = optGroupName.get();
-      RSGroupInfo group = groupAdminServer.getRSGroupInfo(groupName);
+      RSGroupInfo group = master.getRSRSGroupInfoManager().getRSGroup(groupName);
       if (group == null) {
         throw new ConstraintException(
           "Region server group " + groupName + " for " + forWhom.get() + " does not exit");

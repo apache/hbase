@@ -1547,6 +1547,24 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preSetRSGroupForTables(final Set<TableName> tables, final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSetRSGroupForTables(this, tables, groupName);
+      }
+    });
+  }
+
+  public void postSetRSGroupForTables(final Set<TableName> tables, final String groupName) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSetRSGroupForTables(this, tables, groupName);
+      }
+    });
+  }
+
   public void preAddReplicationPeer(final String peerId, final ReplicationPeerConfig peerConfig)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
