@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -68,7 +70,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
       GetRSGroupInfoResponse resp = stub.getRSGroupInfo(null,
           GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build());
       if(resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {
@@ -83,7 +85,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     try {
       GetRSGroupInfoOfTableResponse resp = stub.getRSGroupInfoOfTable(null, request);
       if (resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {
@@ -165,7 +167,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
           ListRSGroupInfosRequest.getDefaultInstance()).getRSGroupInfoList();
       List<RSGroupInfo> result = new ArrayList<>(resp.size());
       for(RSGroupProtos.RSGroupInfo entry : resp) {
-        result.add(ProtobufUtil.toGroupInfo(entry));
+        result.add(RSGroupProtobufUtil.toGroupInfo(entry));
       }
       return result;
     } catch (ServiceException e) {
@@ -184,7 +186,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     try {
       GetRSGroupInfoOfServerResponse resp = stub.getRSGroupInfoOfServer(null, request);
       if (resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {

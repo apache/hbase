@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -162,7 +164,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         checkPermission("getRSGroupInfo");
         RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
         if (rsGroupInfo != null) {
-          builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo));
+          builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(rsGroupInfo));
         }
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postGetRSGroupInfo(groupName);
@@ -187,7 +189,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         checkPermission("getRSGroupInfoOfTable");
         RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupInfoOfTable(tableName);
         if (RSGroupInfo != null) {
-          builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+          builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
         }
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postGetRSGroupInfoOfTable(tableName);
@@ -324,7 +326,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         }
         checkPermission("listRSGroup");
         for (RSGroupInfo RSGroupInfo : groupAdminServer.listRSGroups()) {
-          builder.addRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+          builder.addRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
         }
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postListRSGroups();
@@ -350,7 +352,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         checkPermission("getRSGroupInfoOfServer");
         RSGroupInfo info = groupAdminServer.getRSGroupOfServer(hp);
         if (info != null) {
-          builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(info));
+          builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(info));
         }
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postGetRSGroupInfoOfServer(hp);
