@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -131,6 +134,45 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     ServerName targetServer = getServerName(appInfo.getServers().iterator().next());
     // verify it was assigned to the right group
     Assert.assertEquals(1, admin.getRegions(targetServer).size());
+  }
+
+  @Test
+  public void testCreateWhenRsgroupNoOnlineServers() throws Exception {
+    LOG.info("testCreateWhenRsgroupNoOnlineServers");
+
+    // set rsgroup has no online servers and test create table
+    final RSGroupInfo appInfo = addGroup("appInfo", 1);
+    Iterator<Address> iterator = appInfo.getServers().iterator();
+    List<ServerName> serversToDecommission = new ArrayList<>();
+    ServerName targetServer = getServerName(iterator.next());
+    assertTrue(master.getServerManager().getOnlineServers().containsKey(targetServer));
+    serversToDecommission.add(targetServer);
+    admin.decommissionRegionServers(serversToDecommission, true);
+    assertEquals(1, admin.listDecommissionedRegionServers().size());
+
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+    final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+    try {
+      admin.createTable(desc);
+      fail("Shouldn't create table successfully!");
+    } catch (Exception e) {
+      LOG.debug("create table error", e);
+    }
+
+    // recommission and test create table
+    admin.recommissionRegionServer(targetServer, null);
+    assertEquals(0, admin.listDecommissionedRegionServers().size());
+    admin.createTable(desc);
+    // wait for created table to be assigned
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return getTableRegionMap().get(desc.getTableName()) != null;
+      }
+    });
   }
 
   @Test
