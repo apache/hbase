@@ -46,10 +46,13 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Testcase for HBASE-22819
  */
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class })
 public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 

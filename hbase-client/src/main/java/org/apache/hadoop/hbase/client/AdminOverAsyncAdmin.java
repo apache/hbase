@@ -986,6 +986,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void moveTables(Set<TableName> tables, String targetGroupName) throws IOException {
+
+  }
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+      String targetGroupName)
+      throws IOException {
+
+  }
+
+  @Override
   public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
     return get(admin.getRSGroupInfoOfTable(tableName));
   }

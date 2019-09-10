@@ -47,11 +47,14 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class })
 public class TestRSGroupsKillRS extends TestRSGroupsBase {
 
@@ -84,7 +87,8 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
   @Test
   public void testKillRS() throws Exception {
     RSGroupInfo appInfo = addGroup("appInfo", 1);
-    final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
+    final TableName tableName = TableName.valueOf(tablePrefix + "_ns",
+        name.getMethodName().split("\\[")[0]);
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)

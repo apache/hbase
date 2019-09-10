@@ -2297,6 +2297,11 @@ public interface Admin extends Abortable, Closeable {
    */
   void removeServers(Set<Address> servers) throws IOException;
 
+  void moveTables(Set<TableName> tables, String targetGroupName) throws IOException;
+
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroupName)
+      throws IOException;
+
   RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException;
 
   void setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException;

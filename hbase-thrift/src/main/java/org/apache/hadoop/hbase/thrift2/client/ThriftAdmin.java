@@ -1185,6 +1185,17 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void moveTables(Set<TableName> tables, String targetGroupName) throws IOException {
+    throw new NotImplementedException("moveTables not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
+      String targetGroupName) throws IOException {
+    throw new NotImplementedException("moveServersAndTables not supported in ThriftAdmin");
+  }
+
+  @Override
   public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) {
     throw new NotImplementedException("getRSGroupInfoOfTable not supported in ThriftAdmin");
   }

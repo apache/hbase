@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -29,6 +30,8 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -43,8 +46,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -56,8 +61,10 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +83,6 @@ public abstract class TestRSGroupsBase {
   protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static Admin admin;
   protected static HBaseCluster cluster;
-  protected static RSGroupAdminClient rsGroupAdmin;
   protected static HMaster master;
   protected boolean INIT = false;
   protected static RSGroupAdminEndpoint rsGroupAdminEndpoint;
@@ -90,6 +96,36 @@ public abstract class TestRSGroupsBase {
   @Rule
   public TestName name = new TestName();
   protected TableName tableName;
+
+  protected Admin rsGroupAdmin;
+
+  @Parameterized.Parameter
+  public Supplier<Object> getAdmin;
+
+  private static RSGroupAdmin getRSGroupAdmin(){
+    try {
+      return new VerifyingRSGroupAdminClient(
+          new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
+    } catch (IOException e) {
+      LOG.error("Get group admin failed", e);
+      return null;
+    }
+  }
+
+  private static Admin getAdmin(){
+    try {
+      return TEST_UTIL.getAdmin();
+    } catch (IOException e) {
+      LOG.error("Get hbase admin failed", e);
+      return null;
+    }
+  }
+
+  @Parameterized.Parameters
+  public static List<Object[]> params() {
+    return Arrays.asList(new Supplier<?>[] { TestRSGroupsBase::getRSGroupAdmin },
+        new Supplier<?>[] { TestRSGroupsBase::getAdmin });
+  }
 
   public static void setUpTestBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setFloat(
@@ -109,6 +145,10 @@ public abstract class TestRSGroupsBase {
     initialize();
   }
 
+  public void setAdmin(){
+    rsGroupAdmin = (Admin) getAdmin.get();
+  }
+
   protected static void initialize() throws Exception {
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
@@ -123,8 +163,6 @@ public abstract class TestRSGroupsBase {
       }
     });
     admin.balancerSwitch(false, true);
-    rsGroupAdmin = new VerifyingRSGroupAdminClient(
-        new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     observer = (CPMasterObserver) host.findCoprocessor(CPMasterObserver.class.getName());
     rsGroupAdminEndpoint = (RSGroupAdminEndpoint)
@@ -136,8 +174,9 @@ public abstract class TestRSGroupsBase {
   }
 
   public void setUpBeforeMethod() throws Exception {
+    setAdmin();
     LOG.info(name.getMethodName());
-    tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName());
+    tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName().split("\\[")[0]);
     if (!INIT) {
       INIT = true;
       tearDownAfterMethod();
@@ -201,6 +240,7 @@ public abstract class TestRSGroupsBase {
   }
 
   public void removeGroup(String groupName) throws IOException {
+    RSGroupAdminClient rsGroupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     RSGroupInfo groupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
     rsGroupAdmin.moveTables(groupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.moveServers(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
