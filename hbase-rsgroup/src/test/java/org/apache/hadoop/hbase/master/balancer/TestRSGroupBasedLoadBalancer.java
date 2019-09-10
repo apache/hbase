@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.net.Address;
@@ -129,21 +127,6 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     }
     ArrayListMultimap<String, ServerAndLoad> loadMap = convertToGroupBasedMap(assignments);
     assertClusterAsBalanced(loadMap);
-  }
-
-  @Test
-  public void testGetMisplacedRegions() throws Exception {
-    // Test case where region is not considered misplaced if RSGroupInfo cannot be determined
-    Map<RegionInfo, ServerName> inputForTest = new HashMap<>();
-    RegionInfo ri = RegionInfoBuilder.newBuilder(table0)
-        .setStartKey(new byte[16])
-        .setEndKey(new byte[16])
-        .setSplit(false)
-        .setRegionId(regionId++)
-        .build();
-    inputForTest.put(ri, servers.iterator().next());
-    Set<RegionInfo> misplacedRegions = loadBalancer.getMisplacedRegions(inputForTest);
-    assertFalse(misplacedRegions.contains(ri));
   }
 
   /**
