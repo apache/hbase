@@ -441,7 +441,7 @@
 
                                     <!-- top level net-->
                                     <relocation>
-                                        <pattern>net.</pattern>
+                                        <pattern>net/</pattern>
                                         <shadedPattern>${shaded.prefix}.net.</shadedPattern>
                                     </relocation>
 
