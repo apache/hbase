@@ -19,8 +19,10 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -102,7 +104,7 @@ public class RSGroupInfo {
   /**
    * Get list of servers.
    */
-  public SortedSet<Address> getServers() {
+  public Set<Address> getServers() {
     return servers;
   }
 

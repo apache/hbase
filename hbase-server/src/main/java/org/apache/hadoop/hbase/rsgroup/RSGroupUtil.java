@@ -34,11 +34,12 @@ final class RSGroupUtil {
   private RSGroupUtil() {
   }
 
-  /**
-   * Will try to get the rsgroup from {@link TableDescriptor} first, and then try to get the rsgroup
-   * from the {@link NamespaceDescriptor}. If still not present, return empty.
-   */
-  static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, RSGroupInfoManager manager,
+  @FunctionalInterface
+  private interface GetRSGroup {
+    RSGroupInfo get(String groupName) throws IOException;
+  }
+
+  private static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, GetRSGroup getter,
       TableName tableName) throws IOException {
     TableDescriptor td = master.getTableDescriptors().get(tableName);
     if (td == null) {
@@ -46,16 +47,10 @@ final class RSGroupUtil {
     }
     Optional<String> optGroupNameOfTable = td.getRegionServerGroup();
     if (optGroupNameOfTable.isPresent()) {
-      RSGroupInfo group = manager.getRSGroup(optGroupNameOfTable.get());
+      RSGroupInfo group = getter.get(optGroupNameOfTable.get());
       if (group != null) {
         return Optional.of(group);
       }
-    }
-    // for backward compatible, where we may still have table configs in the RSGroupInfo after
-    // upgrading when migrating is still on-going.
-    RSGroupInfo groupFromOldRSGroupInfo = manager.getRSGroupForTable(tableName);
-    if (groupFromOldRSGroupInfo != null) {
-      return Optional.of(groupFromOldRSGroupInfo);
     }
     ClusterSchema clusterSchema = master.getClusterSchema();
     if (clusterSchema == null) {
@@ -72,7 +67,25 @@ final class RSGroupUtil {
     if (groupNameOfNs == null) {
       return Optional.empty();
     }
-    return Optional.ofNullable(manager.getRSGroup(groupNameOfNs));
+    return Optional.ofNullable(getter.get(groupNameOfNs));
+  }
+
+  /**
+   * Will try to get the rsgroup from {@link TableDescriptor} first, and then try to get the rsgroup
+   * from the {@link NamespaceDescriptor}. If still not present, return empty.
+   */
+  static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, RSGroupInfoManager manager,
+      TableName tableName) throws IOException {
+    return getRSGroupInfo(master, manager::getRSGroup, tableName);
+  }
+
+  /**
+   * Will try to get the rsgroup from {@link TableDescriptor} first, and then try to get the rsgroup
+   * from the {@link NamespaceDescriptor}. If still not present, return empty.
+   */
+  static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master, RSGroupAdmin admin,
+      TableName tableName) throws IOException {
+    return getRSGroupInfo(master, admin::getRSGroupInfo, tableName);
   }
 
   /**

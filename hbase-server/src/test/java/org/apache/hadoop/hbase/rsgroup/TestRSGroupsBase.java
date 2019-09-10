@@ -73,7 +73,7 @@ public abstract class TestRSGroupsBase {
   protected final static Random rand = new Random();
 
   //shared, cluster type specific
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtility TEST_UTIL;
   protected static Admin admin;
   protected static HBaseCluster cluster;
   protected static RSGroupAdminClient rsGroupAdmin;
@@ -92,6 +92,7 @@ public abstract class TestRSGroupsBase {
   protected TableName tableName;
 
   public static void setUpTestBeforeClass() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.getConfiguration().setFloat(
             "hbase.master.balancer.stochastic.tableSkewCost", 6000);
     TEST_UTIL.getConfiguration().set(

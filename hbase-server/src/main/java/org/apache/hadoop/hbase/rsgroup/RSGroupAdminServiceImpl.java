@@ -164,7 +164,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       }
       checkPermission("getRSGroupInfoOfTable");
       Optional<RSGroupInfo> optGroup =
-        RSGroupUtil.getRSGroupInfo(master, groupAdminServer.rsGroupInfoManager, tableName);
+          RSGroupUtil.getRSGroupInfo(master, groupAdminServer, tableName);
       if (optGroup.isPresent()) {
         builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(fillTables(optGroup.get())));
       } else {

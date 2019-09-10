@@ -61,7 +61,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           "one server in 'default' RSGroup.";
 
   private MasterServices master;
-  final RSGroupInfoManager rsGroupInfoManager;
+  private final RSGroupInfoManager rsGroupInfoManager;
 
   /** Define the config key of retries threshold when movements failed */
   //made package private for testing
