@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServe
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
@@ -63,17 +62,12 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     stub = RSGroupAdminService.newBlockingStub(admin.coprocessorService());
   }
 
-  // for writing UTs
-  @VisibleForTesting
-  protected RSGroupAdminClient() {
-  }
-
   @Override
   public RSGroupInfo getRSGroupInfo(String groupName) throws IOException {
     try {
       GetRSGroupInfoResponse resp = stub.getRSGroupInfo(null,
-        GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build());
-      if (resp.hasRSGroupInfo()) {
+          GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build());
+      if(resp.hasRSGroupInfo()) {
         return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
@@ -82,6 +76,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     }
   }
 
+  @Override
   public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
     GetRSGroupInfoOfTableRequest request = GetRSGroupInfoOfTableRequest.newBuilder().setTableName(
         ProtobufUtil.toProtoTableName(tableName)).build();
@@ -116,6 +111,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     }
   }
 
+  @Override
   public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
     MoveTablesRequest.Builder builder = MoveTablesRequest.newBuilder().setTargetGroup(targetGroup);
     for(TableName tableName: tables) {
@@ -196,6 +192,7 @@ public class RSGroupAdminClient implements RSGroupAdmin {
     }
   }
 
+  @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
       throws IOException {
     MoveServersAndTablesRequest.Builder builder =

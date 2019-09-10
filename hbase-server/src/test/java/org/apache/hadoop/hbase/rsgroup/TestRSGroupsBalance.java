@@ -45,6 +45,8 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 @Category({ MediumTests.class })
 public class TestRSGroupsBalance extends TestRSGroupsBase {
 
@@ -151,21 +153,19 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @Test
   public void testMisplacedRegions() throws Exception {
-    String namespace = tablePrefix + "_" + name.getMethodName();
-    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    final TableName tableName =
-        TableName.valueOf(namespace, tablePrefix + "_" + name.getMethodName());
-    LOG.info(name.getMethodName());
+    final TableName tableName = TableName.valueOf(tablePrefix + "_testMisplacedRegions");
+    LOG.info("testMisplacedRegions");
 
-    final RSGroupInfo rsGroupInfo = addGroup(name.getMethodName(), 1);
+    final RSGroupInfo RSGroupInfo = addGroup("testMisplacedRegions", 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-    TEST_UTIL.getAdmin().modifyNamespace(NamespaceDescriptor.create(namespace)
-        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
+
+    rsGroupAdminEndpoint.getGroupInfoManager().moveTables(Sets.newHashSet(tableName),
+      RSGroupInfo.getName());
 
     admin.balancerSwitch(true, true);
-    assertTrue(rsGroupAdmin.balanceRSGroup(rsGroupInfo.getName()));
+    assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()));
     admin.balancerSwitch(false, true);
     assertTrue(observer.preBalanceRSGroupCalled);
     assertTrue(observer.postBalanceRSGroupCalled);
@@ -174,7 +174,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         ServerName serverName =
-            ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
+          ServerName.valueOf(RSGroupInfo.getServers().iterator().next().toString(), 1);
         return admin.getConnection().getAdmin().getRegions(serverName).size() == 15;
       }
     });
