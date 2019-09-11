@@ -484,7 +484,8 @@ public class MasterFileSystem {
           // already been caught by mkdirs above.
           FSUtils.setVersion(fs, rd,
             c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000),
-            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+                HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
         }
       } else {
         if (!fs.isDirectory(rd)) {
@@ -508,7 +509,8 @@ public class MasterFileSystem {
         if (dirConfKey.equals(HConstants.HBASE_DIR)) {
           FSUtils.checkVersion(fs, rd, true,
             c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000),
-            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+                HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
         }
       }
     } catch (DeserializationException de) {
