@@ -802,11 +802,11 @@ public interface RegionInfo {
     }
     int startKeyCompare = Bytes.compareTo(getStartKey(), other.getStartKey());
     if (startKeyCompare == 0) {
-      return !this.isSplitParent();
+      return true;
     }
     if (startKeyCompare < 0) {
       if (isLast()) {
-        return !this.isSplitParent();
+        return true;
       }
       return Bytes.compareTo(getEndKey(), other.getStartKey()) > 0;
     }
