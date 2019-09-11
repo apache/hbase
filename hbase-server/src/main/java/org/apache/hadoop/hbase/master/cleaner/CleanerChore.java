@@ -429,7 +429,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
           try {
             boolean allSubDirsDeleted = futures.stream().allMatch(CompletableFuture::join);
-            boolean deleted = allFilesDeleted && allSubDirsDeleted;
+            boolean deleted = allFilesDeleted && allSubDirsDeleted && isEmptyDirDeletable(dir);
             if (deleted && !root) {
               // If and only if files and sub-dirs under current dir are deleted successfully, and
               // the empty directory can be deleted, and it is not the root dir then task will
