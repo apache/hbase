@@ -4767,6 +4767,10 @@ public class AssignmentManager extends ZooKeeperListener {
     this.regionStateListener = listener;
   }
 
+  public boolean isTableEnabled(final TableName tableName) {
+    return getTableStateManager().isTableState(tableName, ZooKeeperProtos.Table.State.ENABLED);
+  }
+
   private class DelayedAssignCallable implements Runnable {
 
     Callable<?> callable;
