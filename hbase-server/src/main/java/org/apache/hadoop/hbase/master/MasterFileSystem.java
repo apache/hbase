@@ -469,16 +469,23 @@ public class MasterFileSystem {
         } else {
           fs.mkdirs(rd);
         }
-        // DFS leaves safe mode with 0 DNs when there are 0 blocks.
-        // We used to handle this by checking the current DN count and waiting until
-        // it is nonzero. With security, the check for datanode count doesn't work --
-        // it is a privileged op. So instead we adopt the strategy of the jobtracker
-        // and simply retry file creation during bootstrap indefinitely. As soon as
-        // there is one datanode it will succeed. Permission problems should have
-        // already been caught by mkdirs above.
-        FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+
+        // HBASE-17437 updates createInitialFileSystemLayout() to re-use checkRootDir()
+        // to check hbase.wal.dir after checking hbase.rootdir.
+        // But FSUtils.setVersion() is supposed to be called only when checking hbase.rootdir,
+        // while it is supposed to be bypassed when checking hbase.wal.dir.
+        if (dirConfKey.equals(HConstants.HBASE_DIR)) {
+          // DFS leaves safe mode with 0 DNs when there are 0 blocks.
+          // We used to handle this by checking the current DN count and waiting until
+          // it is nonzero. With security, the check for datanode count doesn't work --
+          // it is a privileged op. So instead we adopt the strategy of the jobtracker
+          // and simply retry file creation during bootstrap indefinitely. As soon as
+          // there is one datanode it will succeed. Permission problems should have
+          // already been caught by mkdirs above.
+          FSUtils.setVersion(fs, rd,
+            c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000),
+            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+        }
       } else {
         if (!fs.isDirectory(rd)) {
           throw new IllegalArgumentException(rd.toString() + " is not a directory");
@@ -493,10 +500,16 @@ public class MasterFileSystem {
               + "and restarting the master");
           fs.setPermission(rd, dirPerms);
         }
-        // as above
-        FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+
+        // HBASE-17437 updates createInitialFileSystemLayout() to re-use checkRootDir()
+        // to check hbase.wal.dir after checking hbase.rootdir.
+        // But FSUtils.checkVersion() is supposed to be called only when checking hbase.rootdir,
+        // while it is supposed to be bypassed when checking hbase.wal.dir.
+        if (dirConfKey.equals(HConstants.HBASE_DIR)) {
+          FSUtils.checkVersion(fs, rd, true,
+            c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000),
+            c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+        }
       }
     } catch (DeserializationException de) {
       LOG.fatal("Please fix invalid configuration for " + dirConfKey, de);
