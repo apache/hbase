@@ -126,11 +126,6 @@ public class TestHRegionInfo {
     assertFalse(dri.isOverlap(ari));
     assertTrue(abri.isOverlap(adri));
     assertTrue(adri.isOverlap(abri));
-    // Check that splitParent is not reported as an overlap.
-    RegionInfo splitParent = RegionInfoBuilder.newBuilder(adri.getTable()).
-        setStartKey(adri.getStartKey()).setEndKey(adri.getEndKey()).setOffline(true).
-        setSplit(true).build();
-    assertFalse(splitParent.isOverlap(abri));
   }
 
   @Test
