@@ -617,6 +617,10 @@ public class CatalogJanitor extends ScheduledChore {
             Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
         return null;
       }
+      // Skip split parent region
+      if (ri.isSplitParent()) {
+        return ri;
+      }
       // If table is disabled, skip integrity check.
       if (!isTableDisabled(ri)) {
         if (isTableTransition(ri)) {
