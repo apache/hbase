@@ -3886,7 +3886,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             <GetRSGroupInfoRequest, GetRSGroupInfoResponse, RSGroupInfo> call(controller, stub,
                 RequestConverter.buildGetRSGroupInfoRequest(groupName),
                 (s, c, req, done) -> s.getRSGroupInfo(c, req, done),
-                resp -> ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()))))
+                resp -> resp.hasRSGroupInfo() ?
+                    ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
         .call();
   }
 
@@ -3952,7 +3953,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 controller, stub,
                RequestConverter.buildGetRSGroupInfoOfServerRequest(hostPort),
                 (s, c, req, done) -> s.getRSGroupInfoOfServer(c, req, done),
-                resp -> ProtobufUtil.toGroupInfo(resp.getRSGroupInfo())))
+                resp -> resp.hasRSGroupInfo() ?
+                    ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null))
         .call();
   }
 
@@ -3984,7 +3986,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 controller, stub,
                 GetRSGroupInfoOfTableRequest.newBuilder().setTableName(
                     ProtobufUtil.toProtoTableName(table)).build(),
-                (s, c, req, done) -> s.getRSGroupInfoOfTable(c, req, done), resp -> null))
+                (s, c, req, done) -> s.getRSGroupInfoOfTable(c, req, done),
+                resp -> resp.hasRSGroupInfo() ?
+                    ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null))
         .call();
   }
 

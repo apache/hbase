@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -92,11 +93,11 @@ public class RSGroupAdminClient implements RSGroupAdmin, Admin {
   private RSGroupAdminService.BlockingInterface stub;
   private Admin admin;
 
+
   public RSGroupAdminClient(Connection conn) throws IOException {
     admin = conn.getAdmin();
     stub = RSGroupAdminService.newBlockingStub(admin.coprocessorService());
   }
-
   // for writing UTs
   @VisibleForTesting
   protected RSGroupAdminClient() {
@@ -134,6 +135,11 @@ public class RSGroupAdminClient implements RSGroupAdmin, Admin {
 
   @Override
   public List<TableDescriptor> listTableDescriptors() throws IOException {
+    return null;
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptors(Pattern pattern) throws IOException {
     return null;
   }
 
@@ -928,7 +934,19 @@ public class RSGroupAdminClient implements RSGroupAdmin, Admin {
 
   @Override
   public void setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException {
-
+    SetRSGroupForTablesRequest.Builder builder =
+        SetRSGroupForTablesRequest.newBuilder().setTargetGroup(groupName);
+    for(TableName tableName: tables) {
+      builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException(tableName);
+      }
+    }
+    try {
+      stub.setRSGroupForTables(null, builder.build());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
@@ -946,21 +964,6 @@ public class RSGroupAdminClient implements RSGroupAdmin, Admin {
             .build();
     try {
       stub.moveServers(null, request);
-    } catch (ServiceException e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
-  }
-
-  public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
-    MoveTablesRequest.Builder builder = MoveTablesRequest.newBuilder().setTargetGroup(targetGroup);
-    for(TableName tableName: tables) {
-      builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
-      if (!admin.tableExists(tableName)) {
-        throw new TableNotFoundException(tableName);
-      }
-    }
-    try {
-      stub.moveTables(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -1033,25 +1036,8 @@ public class RSGroupAdminClient implements RSGroupAdmin, Admin {
 
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
       throws IOException {
-    MoveServersAndTablesRequest.Builder builder =
-            MoveServersAndTablesRequest.newBuilder().setTargetGroup(targetGroup);
-    for(Address el: servers) {
-      builder.addServers(HBaseProtos.ServerName.newBuilder()
-              .setHostName(el.getHostname())
-              .setPort(el.getPort())
-              .build());
-    }
-    for(TableName tableName: tables) {
-      builder.addTableName(ProtobufUtil.toProtoTableName(tableName));
-      if (!admin.tableExists(tableName)) {
-        throw new TableNotFoundException(tableName);
-      }
-    }
-    try {
-      stub.moveServersAndTables(null, builder.build());
-    } catch (ServiceException e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
+    setRSGroupForTables(tables, targetGroup);
+    moveServers(servers, targetGroup);
   }
 
   @Override

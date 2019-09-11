@@ -88,7 +88,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
   public void testKillRS() throws Exception {
     RSGroupInfo appInfo = addGroup("appInfo", 1);
     final TableName tableName = TableName.valueOf(tablePrefix + "_ns",
-        name.getMethodName().split("\\[")[0]);
+        getNameWithoutIndex(name.getMethodName()));
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
       .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
@@ -161,7 +161,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     TEST_UTIL.loadTable(t, Bytes.toBytes("f"));
     Set<TableName> toAddTables = new HashSet<>();
     toAddTables.add(tableName);
-    rsGroupAdmin.moveTables(toAddTables, groupName);
+    rsGroupAdmin.setRSGroupForTables(toAddTables, groupName);
     assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getTables().contains(tableName));
     TEST_UTIL.waitTableAvailable(tableName, 30000);
 

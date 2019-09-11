@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
@@ -40,8 +42,14 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
@@ -52,6 +60,8 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   // their setup.
   private MasterServices master;
   private RSGroupAdminServiceImpl groupAdminService = new RSGroupAdminServiceImpl();
+  private AccessChecker accessChecker;
+  private UserProvider userProvider;
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
@@ -65,7 +75,23 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     if (!RSGroupableBalancer.class.isAssignableFrom(clazz)) {
       throw new IOException("Configured balancer does not support RegionServer groups.");
     }
+    accessChecker = master.getAccessChecker();
+    userProvider = UserProvider.instantiate(env.getConfiguration());
     groupAdminService.initialize(master);
+  }
+
+  /**
+   * Returns the active user to which authorization checks should be applied. If we are in the
+   * context of an RPC call, the remote user is used, otherwise the currently logged in user is
+   * used.
+   */
+  private User getActiveUser() throws IOException {
+    // for non-rpc handling, fallback to system user
+    Optional<User> optionalUser = RpcServer.getRequestUser();
+    if (optionalUser.isPresent()) {
+      return optionalUser.get();
+    }
+    return userProvider.getCurrent();
   }
 
   @Override
@@ -187,6 +213,116 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       currentNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP),
       newNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
       checkNamespaceGroup(newNsDescriptor);
+    }
+  }
+
+  @Override
+  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "moveServersAndTables",
+        null, Permission.Action.ADMIN);
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      for (TableName tableName : tables) {
+        // Skip checks for a table that does not exist
+        if (!admin.tableExists(tableName)) {
+          throw new TableNotFoundException(tableName);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "moveServers",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<TableName> tables, String targetGroup) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "moveTables",
+        null, Permission.Action.ADMIN);
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      for (TableName tableName : tables) {
+        // Skip checks for a table that does not exist
+        if (!admin.tableExists(tableName)) {
+          throw new TableNotFoundException(tableName);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String name) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "addRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String name) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "removeRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "balanceRSGroup",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveServers(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "removeServers",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfo(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "getRSGroupInfo",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "getRSGroupInfoOfTable",
+        null, Permission.Action.ADMIN);
+    //todo: should add check for table existence
+  }
+
+  @Override
+  public void preListRSGroups(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "listRSGroups",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetRSGroupInfoOfServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Address server) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "getRSGroupInfoOfServer",
+        null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preSetRSGroupForTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<TableName> tables, String groupName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), "setRSGroupForTables",
+        null, Permission.Action.ADMIN);
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      for (TableName tableName : tables) {
+        // Skip checks for a table that does not exist
+        if (!admin.tableExists(tableName)) {
+          throw new TableNotFoundException(tableName);
+        }
+      }
     }
   }
 }

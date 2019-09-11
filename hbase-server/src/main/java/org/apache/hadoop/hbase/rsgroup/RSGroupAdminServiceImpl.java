@@ -62,14 +62,16 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGro
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.SetRSGroupForTablesResponse;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of RSGroupAdminService defined in RSGroupAdmin.proto. This class calls
- * {@link RSGroupAdminServer} for actual work, converts result to protocol buffer response, handles
- * exceptions if any occurred and then calls the {@code RpcCallback} with the response.
+ * {@link RSGroupInfoManagerImpl} for actual work, converts result to protocol buffer response,
+ * handles exceptions if any occurred and then calls the {@code RpcCallback} with the response.
  */
 class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
 
@@ -383,6 +385,30 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       rsGroupInfoManager.removeServers(servers);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postRemoveServers(servers);
+      }
+    } catch (IOException e) {
+      CoprocessorRpcUtils.setControllerException(controller, e);
+    }
+    done.run(builder.build());
+  }
+
+  @Override
+  public void setRSGroupForTables(RpcController controller, SetRSGroupForTablesRequest request,
+      RpcCallback<SetRSGroupForTablesResponse> done) {
+    SetRSGroupForTablesResponse.Builder builder = SetRSGroupForTablesResponse.newBuilder();
+    Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
+    for (HBaseProtos.TableName tableName : request.getTableNameList()) {
+      tables.add(ProtobufUtil.toTableName(tableName));
+    }
+    LOG.info(master.getClientIdAuditPrefix() + " set tables " + tables + " to rsgroup " +
+        request.getTargetGroup());
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preSetRSGroupForTables(tables, request.getTargetGroup());
+      }
+      moveTablesAndWait(tables, request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postSetRSGroupForTables(tables, request.getTargetGroup());
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);

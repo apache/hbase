@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -2589,90 +2588,4 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
   }
-
-  @Override
-  public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "moveServersAndTables",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preMoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers, String targetGroup) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "moveServers",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String targetGroup) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "moveTables",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String name) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "addRSGroup",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String name) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "removeRSGroup",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "balanceRSGroup",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preRemoveServers(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<Address> servers) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "removeServers",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preGetRSGroupInfo(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfo",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preGetRSGroupInfoOfTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfoOfTable",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preListRSGroups(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "listRSGroups",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preGetRSGroupInfoOfServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Address server) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "getRSGroupInfoOfServer",
-        null, Action.ADMIN);
-  }
-
-  @Override
-  public void preSetRSGroupForTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      Set<TableName> tables, String groupName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(ctx), "setRSGroupForTables",
-        null, Action.ADMIN);
-  }
-
 }

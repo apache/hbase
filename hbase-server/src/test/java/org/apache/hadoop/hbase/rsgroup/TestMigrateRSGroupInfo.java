@@ -109,7 +109,8 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   @Test
   public void testMigrate() throws IOException, InterruptedException {
-    String groupName = name.getMethodName();
+    setAdmin();
+    String groupName = getNameWithoutIndex(name.getMethodName());
     addGroup(groupName, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size() - 1);
     RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
     assertTrue(rsGroupInfo.getTables().isEmpty());

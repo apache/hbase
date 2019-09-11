@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -88,6 +89,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
     // Assignment of meta and rsgroup regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
+    LOG.info("regions assignments are" +
+        master.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
     // 2 (meta and rsgroup)
     assertEquals(2, count);
   }
@@ -168,6 +171,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     // clone
     admin.cloneSnapshot(snapshotName, clonedTableName);
+    admin.deleteSnapshot(snapshotName);
   }
 
   @Test
@@ -254,27 +258,13 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @Test
   public void testRSGroupsWithHBaseQuota() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
-    restartHBaseCluster();
-    try {
-      TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
-        }
-      });
-    } finally {
-      TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, false);
-      restartHBaseCluster();
-    }
-  }
-
-  private void restartHBaseCluster() throws Exception {
-    LOG.info("\n\nShutting down cluster");
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    LOG.info("\n\nSleeping a bit");
-    Thread.sleep(2000);
-    TEST_UTIL.restartHBaseCluster(NUM_SLAVES_BASE - 1);
-    initialize();
+    toggleQuotaCheckAndRestartMiniCluster(true);
+    TEST_UTIL.waitFor(90000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return admin.isTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
+    toggleQuotaCheckAndRestartMiniCluster(false);
   }
 }

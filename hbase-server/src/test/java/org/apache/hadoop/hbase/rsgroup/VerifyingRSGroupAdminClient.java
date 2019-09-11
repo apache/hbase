@@ -89,12 +89,6 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
   }
 
   @Override
-  public void moveTables(Set<TableName> tables, String targetGroup) throws IOException {
-    wrapped.moveTables(tables, targetGroup);
-    verify();
-  }
-
-  @Override
   public void removeRSGroup(String name) throws IOException {
     wrapped.removeRSGroup(name);
     verify();
@@ -125,6 +119,12 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdminClient {
   @Override
   public void removeServers(Set<Address> servers) throws IOException {
     wrapped.removeServers(servers);
+    verify();
+  }
+
+  @Override
+  public void setRSGroupForTables(Set<TableName> tables, String groupName) throws IOException{
+    wrapped.setRSGroupForTables(tables, groupName);
     verify();
   }
 
