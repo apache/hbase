@@ -222,20 +222,6 @@ public class TestRSGroupBasedLoadBalancer {
     assertClusterAsBalanced(loadMap);
   }
 
-  @Test
-  public void testGetMisplacedRegions() throws Exception {
-    // Test case where region is not considered misplaced if RSGroupInfo cannot be determined
-    Map<RegionInfo, ServerName> inputForTest = new HashMap<>();
-    RegionInfo ri = RegionInfoBuilder.newBuilder(table0)
-        .setStartKey(new byte[16])
-        .setEndKey(new byte[16])
-        .setSplit(false)
-        .setRegionId(regionId++)
-        .build();
-    inputForTest.put(ri, servers.iterator().next());
-    Set<RegionInfo> misplacedRegions = loadBalancer.getMisplacedRegions(inputForTest);
-    assertFalse(misplacedRegions.contains(ri));
-  }
   /**
    * Test the cluster startup bulk assignment which attempts to retain assignment info.
    */
