@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
@@ -51,6 +52,8 @@ public class MetricsRegionServer {
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
+  private Meter serverReadQueryMeter;
+  private Meter serverWriteQueryMeter;
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf,
       MetricsTable metricsTable) {
@@ -68,6 +71,8 @@ public class MetricsRegionServer {
     bulkLoadTimer = metricRegistry.timer("Bulkload");
 
     quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
+    serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
+    serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -247,5 +252,33 @@ public class MetricsRegionServer {
    */
   public void incrementRegionSizeReportingChoreTime(long time) {
     quotaSource.incrementRegionSizeReportingChoreTime(time);
+  }
+
+  public void updateReadQueryMeter(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQueryMeter(tn, count);
+    }
+    this.serverReadQueryMeter.mark(count);
+  }
+
+  public void updateReadQueryMeter(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQueryMeter(tn);
+    }
+    this.serverReadQueryMeter.mark();
+  }
+
+  public void updateWriteQueryMeter(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQueryMeter(tn, count);
+    }
+    this.serverWriteQueryMeter.mark(count);
+  }
+
+  public void updateWriteQueryMeter(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQueryMeter(tn);
+    }
+    this.serverWriteQueryMeter.mark();
   }
 }
