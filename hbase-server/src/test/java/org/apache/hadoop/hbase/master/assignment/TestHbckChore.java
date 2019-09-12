@@ -188,7 +188,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
         .setEndKey(Bytes.toBytes(1)).setSplit(true).setOffline(true).setRegionId(0).build();
     String regionName = hri.getEncodedName();
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
-    Future<byte[]> future = submitProcedure(createAssignProcedure(hri));
+    Future<byte[]> future = submitProcedure(am.createAssignProcedure(hri));
     waitOnFuture(future);
 
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
