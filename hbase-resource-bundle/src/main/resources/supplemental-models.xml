@@ -2114,6 +2114,25 @@ Copyright 2005 Sun Microsystems, Inc. and portions Copyright Apache Software Fou
   </supplement>
   <supplement>
     <project>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+
+      <organization>
+        <name>Google</name>
+        <url>http://www.google.com</url>
+      </organization>
+      <licenses>
+        <license>
+          <!-- It has been incorrectly called Apache 2.0 in the original pom-->
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
       <name>Jamon runtime support classes</name>

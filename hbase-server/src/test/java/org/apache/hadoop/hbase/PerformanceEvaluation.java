@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -102,6 +100,7 @@ import org.apache.hadoop.util.ToolRunner;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.stats.UniformSample;
 
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -127,10 +126,7 @@ import org.apache.htrace.impl.ProbabilitySampler;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class PerformanceEvaluation extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  static {
-    MAPPER.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-  }
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   public static final String TABLE_NAME = "TestTable";
   public static final String FAMILY_NAME_BASE = "info";
@@ -291,8 +287,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
       };
 
-      ObjectMapper mapper = new ObjectMapper();
-      TestOptions opts = mapper.readValue(value.toString(), TestOptions.class);
+      TestOptions opts = GSON.fromJson(value.toString(), TestOptions.class);
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
       final Connection con = ConnectionFactory.createConnection(conf);
 
@@ -506,7 +501,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
       Histogram.class,     // yammer metrics
-      ObjectMapper.class); // jackson-mapper-asl
+      Gson.class);  // gson
 
     TableMapReduceUtil.initCredentials(job);
 
@@ -540,7 +535,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           TestOptions next = new TestOptions(opts);
           next.startRow = (j * perClientRows) + (i * (perClientRows/10));
           next.perClientRunRows = perClientRows / 10;
-          String s = MAPPER.writeValueAsString(next);
+          String s = GSON.toJson(next);
           LOG.info("maptask input=" + s);
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
@@ -1948,7 +1943,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       InterruptedException, ClassNotFoundException {
     // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
     // the TestOptions introspection for us and dump the output in a readable format.
-    LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
+    LOG.info(cmd.getSimpleName() + " test run options=" + GSON.toJson(opts));
     try(Connection conn = ConnectionFactory.createConnection(getConf());
         Admin admin = conn.getAdmin()) {
       checkTable(admin, opts);

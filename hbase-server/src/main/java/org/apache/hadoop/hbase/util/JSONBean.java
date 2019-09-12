@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
@@ -48,54 +46,77 @@ import javax.management.openmbean.TabularData;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
+import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
 
 /**
  * Utility for doing JSON and MBeans.
  */
 public class JSONBean {
   private static final Log LOG = LogFactory.getLog(JSONBean.class);
-  private final JsonFactory jsonFactory;
-
-  public JSONBean() {
-    this.jsonFactory = new JsonFactory();
-  }
+  private static final Gson GSON = GsonUtil.createGson().create();
 
   /**
    * Use dumping out mbeans as JSON.
    */
   public interface Writer extends Closeable {
-    void write(final String key, final String value) throws IOException;
-    int write(final MBeanServer mBeanServer, ObjectName qry, String attribute,
-        final boolean description) throws IOException;
+
+    void write(String key, String value) throws IOException;
+
+    int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description)
+      throws IOException;
+
     void flush() throws IOException;
   }
 
+  /**
+   * Notice that, closing the return {@link Writer} will not close the {@code writer} passed in, you
+   * still need to close the {@code writer} by yourself.
+   * <p/>
+   * This is because that, we can only finish the json after you call {@link Writer#close()}. So if
+   * we just close the {@code writer}, you can write nothing after finished the json.
+   */
   public Writer open(final PrintWriter writer) throws IOException {
-    final JsonGenerator jg = jsonFactory.createGenerator(writer);
-    jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-    jg.useDefaultPrettyPrinter();
-    jg.writeStartObject();
-    return new Writer() {
+    final JsonWriter jsonWriter = GSON.newJsonWriter(new java.io.Writer() {
+
+      @Override
+      public void write(char[] cbuf, int off, int len) throws IOException {
+        writer.write(cbuf, off, len);
+      }
+
       @Override
       public void flush() throws IOException {
-        jg.flush();
+        writer.flush();
       }
 
       @Override
       public void close() throws IOException {
-        jg.close();
+        // do nothing
+      }
+    });
+    jsonWriter.setIndent("  ");
+    jsonWriter.beginObject();
+    return new Writer() {
+      @Override
+      public void flush() throws IOException {
+        jsonWriter.flush();
+      }
+
+      @Override
+      public void close() throws IOException {
+        jsonWriter.endObject();
+        jsonWriter.close();
       }
 
       @Override
       public void write(String key, String value) throws IOException {
-        jg.writeStringField(key, value);
+        jsonWriter.name(key).value(value);
       }
 
       @Override
       public int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
-          boolean description)
-      throws IOException {
-        return JSONBean.write(jg, mBeanServer, qry, attribute, description);
+          boolean description) throws IOException {
+        return JSONBean.write(jsonWriter, mBeanServer, qry, attribute, description);
       }
     };
   }
@@ -108,14 +129,13 @@ public class JSONBean {
    * @return Return non-zero if failed to find bean. 0
    * @throws IOException
    */
-  private static int write(final JsonGenerator jg,
-      final MBeanServer mBeanServer, ObjectName qry, String attribute,
-      final boolean description)
-  throws IOException {
-    LOG.trace("Listing beans for "+qry);
+  private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
+      String attribute, boolean description) throws IOException {
+
+    LOG.trace("Listing beans for " + qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
-    jg.writeArrayFieldStart("beans");
+    writer.name("beans").beginArray();
     Iterator<ObjectName> it = names.iterator();
     while (it.hasNext()) {
       ObjectName oname = it.next();
@@ -126,7 +146,9 @@ public class JSONBean {
       try {
         minfo = mBeanServer.getMBeanInfo(oname);
         code = minfo.getClassName();
-        if (description) descriptionStr = minfo.getDescription();
+        if (description) {
+          descriptionStr = minfo.getDescription();
+        }
         String prs = "";
         try {
           if ("org.apache.commons.modeler.BaseModelMBean".equals(code)) {
@@ -138,16 +160,16 @@ public class JSONBean {
             attributeinfo = mBeanServer.getAttribute(oname, prs);
           }
         } catch (RuntimeMBeanException e) {
-         // UnsupportedOperationExceptions happen in the normal course of business,
-         // so no need to log them as errors all the time.
-         if (e.getCause() instanceof UnsupportedOperationException) {
-           if (LOG.isTraceEnabled()) {
-             LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
-           }
-         } else {
-           LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
-         }
-         return 0;
+          // UnsupportedOperationExceptions happen in the normal course of business,
+          // so no need to log them as errors all the time.
+          if (e.getCause() instanceof UnsupportedOperationException) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
+            }
+          } else {
+            LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
+          }
+          return 0;
         } catch (AttributeNotFoundException e) {
           // If the modelerType attribute was not found, the class name is used
           // instead.
@@ -188,39 +210,37 @@ public class JSONBean {
         continue;
       }
 
-      jg.writeStartObject();
-      jg.writeStringField("name", oname.toString());
+      writer.beginObject();
+      writer.name("name").value(oname.toString());
       if (description && descriptionStr != null && descriptionStr.length() > 0) {
-        jg.writeStringField("description", descriptionStr);
+        writer.name("description").value(descriptionStr);
       }
-      jg.writeStringField("modelerType", code);
+      writer.name("modelerType").value(code);
       if (attribute != null && attributeinfo == null) {
-        jg.writeStringField("result", "ERROR");
-        jg.writeStringField("message", "No attribute with name " + attribute + " was found.");
-        jg.writeEndObject();
-        jg.writeEndArray();
-        jg.close();
+        writer.name("result").value("ERROR");
+        writer.name("message").value("No attribute with name " + attribute + " was found.");
+        writer.endObject();
+        writer.endArray();
+        writer.close();
         return -1;
       }
 
       if (attribute != null) {
-        writeAttribute(jg, attribute, descriptionStr, attributeinfo);
+        writeAttribute(writer, attribute, descriptionStr, attributeinfo);
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          writeAttribute(jg, mBeanServer, oname, description, attrs[i]);
+          writeAttribute(writer, mBeanServer, oname, description, attrs[i]);
         }
       }
-      jg.writeEndObject();
+      writer.endObject();
     }
-    jg.writeEndArray();
+    writer.endArray();
     return 0;
   }
 
-  private static void writeAttribute(final JsonGenerator jg,
-      final MBeanServer mBeanServer, ObjectName oname,
-      final boolean description, final MBeanAttributeInfo attr)
-  throws IOException {
+  private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
+      boolean description, MBeanAttributeInfo attr) throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -278,71 +298,67 @@ public class JSONBean {
       return;
     }
 
-    writeAttribute(jg, attName, descriptionStr, value);
+    writeAttribute(writer, attName, descriptionStr, value);
   }
 
-  private static void writeAttribute(JsonGenerator jg, String attName, final String descriptionStr,
-      Object value)
-  throws IOException {
+  private static void writeAttribute(JsonWriter writer, String attName, String descriptionStr,
+    Object value) throws IOException {
     boolean description = false;
     if (descriptionStr != null && descriptionStr.length() > 0 && !attName.equals(descriptionStr)) {
-      description = true;
-      jg.writeFieldName(attName);
-      jg.writeStartObject();
-      jg.writeFieldName("description");
-      jg.writeString(descriptionStr);
-      jg.writeFieldName("value");
-      writeObject(jg, description, value);
-      jg.writeEndObject();
+      writer.name(attName);
+      writer.beginObject();
+      writer.name("description").value(descriptionStr);
+      writer.name("value");
+      writeObject(writer, value);
+      writer.endObject();
     } else {
-      jg.writeFieldName(attName);
-      writeObject(jg, description, value);
+      writer.name(attName);
+      writeObject(writer, value);
     }
   }
 
-  private static void writeObject(final JsonGenerator jg, final boolean description, Object value)
-  throws IOException {
-    if(value == null) {
-      jg.writeNull();
+  private static void writeObject(JsonWriter writer, Object value) throws IOException {
+    if (value == null) {
+      writer.nullValue();
     } else {
       Class<?> c = value.getClass();
       if (c.isArray()) {
-        jg.writeStartArray();
+        writer.beginArray();
         int len = Array.getLength(value);
         for (int j = 0; j < len; j++) {
           Object item = Array.get(value, j);
-          writeObject(jg, description, item);
+          writeObject(writer, item);
         }
-        jg.writeEndArray();
+        writer.endArray();
       } else if(value instanceof Number) {
         Number n = (Number)value;
         double doubleValue = n.doubleValue();
         if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
-          jg.writeString(n.toString());
+          writer.value(n);
         } else {
-          jg.writeNumber(n.toString());
+          writer.value(n.toString());
         }
       } else if(value instanceof Boolean) {
         Boolean b = (Boolean)value;
-        jg.writeBoolean(b);
+        writer.value(b);
       } else if(value instanceof CompositeData) {
         CompositeData cds = (CompositeData)value;
         CompositeType comp = cds.getCompositeType();
         Set<String> keys = comp.keySet();
-        jg.writeStartObject();
-        for (String key: keys) {
-          writeAttribute(jg, key, null, cds.get(key));
+        writer.beginObject();
+        for (String key : keys) {
+          writeAttribute(writer, key, null, cds.get(key));
         }
-        jg.writeEndObject();
+        writer.endObject();
       } else if(value instanceof TabularData) {
         TabularData tds = (TabularData)value;
-        jg.writeStartArray();
-        for(Object entry : tds.values()) {
-          writeObject(jg, description, entry);
+        writer.beginArray();
+        for (Object entry : tds.values()) {
+          writeObject(writer, entry);
         }
-        jg.writeEndArray();
+        writer.endArray();
       } else {
-        jg.writeString(value.toString());
+        writer.value(value.toString());
       }
     }
   }
