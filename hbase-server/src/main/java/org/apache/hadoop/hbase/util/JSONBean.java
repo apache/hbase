@@ -61,10 +61,10 @@ public class JSONBean {
    */
   public interface Writer extends Closeable {
 
-    void write(String key, String value) throws IOException;
+    void write(final String key, final String value) throws IOException;
 
-    int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description)
-      throws IOException;
+    int write(final MBeanServer mBeanServer, final ObjectName qry, final String attribute,
+      final boolean description) throws IOException;
 
     void flush() throws IOException;
   }
@@ -129,8 +129,8 @@ public class JSONBean {
    * @return Return non-zero if failed to find bean. 0
    * @throws IOException
    */
-  private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
-      String attribute, boolean description) throws IOException {
+  private static int write(final JsonWriter writer, final MBeanServer mBeanServer,
+      final ObjectName qry, final String attribute, final boolean description) throws IOException {
 
     LOG.trace("Listing beans for " + qry);
     Set<ObjectName> names = null;
@@ -239,8 +239,9 @@ public class JSONBean {
     return 0;
   }
 
-  private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
-      boolean description, MBeanAttributeInfo attr) throws IOException {
+  private static void writeAttribute(final JsonWriter writer, final MBeanServer mBeanServer,
+      final ObjectName oname, final boolean description, final MBeanAttributeInfo attr)
+      throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -317,7 +318,7 @@ public class JSONBean {
     }
   }
 
-  private static void writeObject(JsonWriter writer, Object value) throws IOException {
+  private static void writeObject(final JsonWriter writer, final Object value) throws IOException {
     if (value == null) {
       writer.nullValue();
     } else {

@@ -123,7 +123,7 @@ public class BlockCacheUtil {
   /**
    * @return A JSON String of <code>filename</code> and counts of <code>blocks</code>
    */
-  public static String toJSON(String filename, NavigableSet<CachedBlock> blocks)
+  public static String toJSON(final String filename, final NavigableSet<CachedBlock> blocks)
       throws IOException {
     CachedBlockCountsPerFile counts = new CachedBlockCountsPerFile(filename);
     for (CachedBlock cb: blocks) {
@@ -141,14 +141,14 @@ public class BlockCacheUtil {
   /**
    * @return JSON string of <code>cbsf</code> aggregated
    */
-  public static String toJSON(CachedBlocksByFile cbsbf) throws IOException {
+  public static String toJSON(final CachedBlocksByFile cbsbf) throws IOException {
     return GSON.toJson(cbsbf);
   }
 
   /**
    * @return JSON string of <code>bc</code> content.
    */
-  public static String toJSON(BlockCache bc) throws IOException {
+  public static String toJSON(final BlockCache bc) throws IOException {
     return GSON.toJson(bc);
   }
 
