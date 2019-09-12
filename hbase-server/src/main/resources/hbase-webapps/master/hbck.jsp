@@ -86,9 +86,13 @@
       <h1>HBCK Chore Report</h1>
       <p>
         <% if (hbckChore.isDisabled()) { %>
-        <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
+          <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
+        <% } else if (startTimestamp == 0 && endTimestamp == 0){ %>
+          <span>No report created. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+        <% } else if (startTimestamp > 0 && endTimestamp == 0){ %>
+          <span>Checking started at <%= iso8601start %>. Please wait for checking to generate a new sub-report.</span>
         <% } else { %>
-        <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
         <% } %>
       </p>
     </div>
@@ -192,7 +196,12 @@
   <div class="row inner_header">
     <div class="page-header">
       <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
-      <p><span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span></p>
+      <p>
+        <% if (report != null) { %>
+          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span></p>
+        <% } else { %>
+          <span>No report created. Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span>
+        <% } %>
     </div>
   </div>
   <% if (report != null && !report.isEmpty()) { %>
