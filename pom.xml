@@ -2500,6 +2500,9 @@
   Non-release builds can temporarily build with a newer JDK version by setting the
   'compileSource' property (eg. mvn -DcompileSource=1.8 clean package).
                 </message>
+                <ignoreClasses>
+                  <ignoreClass>module-info</ignoreClass>
+                </ignoreClasses>
               </enforceBytecodeVersion>
             </rules>
           </configuration>
