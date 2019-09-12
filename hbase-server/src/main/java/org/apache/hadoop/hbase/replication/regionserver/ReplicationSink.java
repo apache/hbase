@@ -259,7 +259,7 @@ public class ReplicationSink {
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             if(LOG.isDebugEnabled()) {
               LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
-                clusterIds.stream().reduce("", (idsList, id) -> idsList + ", " + id));
+                clusterIds.toString());
             }
             HFileReplicator hFileReplicator =
               new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),

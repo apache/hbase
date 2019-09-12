@@ -77,14 +77,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test for bulk load replication. Defines two clusters, with two way replication.
- * Performs a bulk load on cluster defined by UTIL1 first, asserts the Cell on the bulk loaded file
- * gets into the related table in UTIL1, then also validates the same got replicated to cluster
- * UTIL2. Then, bulk loads another file into UTIL2, and checks if related values are present on
- * UTIL2, and also gets replicated to UTIL1.
- * It also defines a preBulkLoad coprocessor that is added to all test table regions on each of the
- * clusters, in order to count amount of times bulk load actually gets invoked. This is to certify
- * we are not entered in the infinite loop condition addressed by HBASE-22380.
+ * Integration test for bulk load replication. Defines three clusters, with the following
+ * replication topology: "1 <-> 2 <-> 3" (active-active between 1 and 2, and active-active between
+ * 2 and 3).
+ *
+ * For each of defined test clusters, it performs a bulk load, asserting values on bulk loaded file
+ * gets replicated to other two peers. Since we are doing 3 bulk loads, with the given replication
+ * topology all these bulk loads should get replicated only once on each peer. To assert this,
+ * this test defines a preBulkLoad coprocessor and adds it to all test table regions, on each of the
+ * clusters. This CP counts the amount of times bulk load actually gets invoked, certifying
+ * we are not entering the infinite loop condition addressed by HBASE-22380.
  */
 @Category({ ReplicationTests.class, MediumTests.class})
 public class TestBulkLoadReplication extends TestReplicationBase {
@@ -108,6 +110,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private static final HBaseTestingUtility UTIL3 = new HBaseTestingUtility();
   private static final Configuration CONF3 = UTIL3.getConfiguration();
+
+  private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
+
   private static Table htable3;
 
   @Rule
@@ -147,6 +152,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Before
   @Override
   public void setUpBase() throws Exception {
+    //"super.setUpBase()" already sets replication from 1->2,
+    //then on the subsequent lines, sets 2->1, 2->3 and 3->2.
+    //So we have following topology: "1 <-> 2 <->3"
     super.setUpBase();
     ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
     ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
@@ -236,11 +244,11 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     String bulkLoadFilePath = createHFileForFamilies(row, value, cluster.getConfiguration());
     copyToHdfs(bulkLoadFilePath, cluster.getDFSCluster());
     BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());
-    bulkLoadHFilesTool.bulkLoad(tableName, new Path("/bulk_dir"));
+    bulkLoadHFilesTool.bulkLoad(tableName, BULK_LOAD_BASE_DIR);
   }
 
   private void copyToHdfs(String bulkLoadFilePath, MiniDFSCluster cluster) throws Exception {
-    Path bulkLoadDir = new Path("/bulk_dir/f");
+    Path bulkLoadDir = new Path(BULK_LOAD_BASE_DIR, "f");
     cluster.getFileSystem().mkdirs(bulkLoadDir);
     cluster.getFileSystem().copyFromLocalFile(new Path(bulkLoadFilePath), bulkLoadDir);
   }
