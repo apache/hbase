@@ -41,15 +41,18 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Testcase for HBASE-22819
  */
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class })
 public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
@@ -63,8 +66,8 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class,
       HMaster.class);
     setUpTestBeforeClass();
@@ -73,8 +76,8 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     }
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
@@ -90,7 +93,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     public TableDescriptors getTableDescriptors() {
       if (RESUME != null) {
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-          if (element.getClassName().contains("RSGroupInfoManagerImpl")) {
+          if (element.getMethodName().equals("migrate")) {
             try {
               RESUME.await();
             } catch (InterruptedException e) {
@@ -106,9 +109,10 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   @Test
   public void testMigrate() throws IOException, InterruptedException {
-    String groupName = name.getMethodName();
+    setAdmin();
+    String groupName = getNameWithoutIndex(name.getMethodName());
     addGroup(groupName, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size() - 1);
-    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
+    RSGroupInfo rsGroupInfo = rsGroupAdmin.getRSGroup(groupName);
     assertTrue(rsGroupInfo.getTables().isEmpty());
     for (int i = 0; i < NUM_TABLES; i++) {
       rsGroupInfo.addTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
@@ -126,7 +130,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // wait until we can get the rs group info for a table
     TEST_UTIL.waitFor(30000, () -> {
       try {
-        rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + 0));
+        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + 0));
         return true;
       } catch (IOException e) {
         return false;
@@ -135,7 +139,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // confirm that before migrating, we could still get the correct rs group for a table.
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
+        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }
@@ -171,7 +175,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     // make sure we could still get the correct rs group info after migration
     for (int i = 0; i < NUM_TABLES; i++) {
       RSGroupInfo info =
-        rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf(TABLE_NAME_PREFIX + i));
+        rsGroupAdmin.getRSGroup(TableName.valueOf(TABLE_NAME_PREFIX + i));
       assertEquals(rsGroupInfo.getName(), info.getName());
       assertEquals(NUM_TABLES, info.getTables().size());
     }

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -54,8 +56,10 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +78,6 @@ public abstract class TestRSGroupsBase {
   protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static Admin admin;
   protected static HBaseCluster cluster;
-  protected static RSGroupAdminClient rsGroupAdmin;
   protected static HMaster master;
   protected boolean INIT = false;
   protected static RSGroupAdminEndpoint rsGroupAdminEndpoint;
@@ -88,6 +91,48 @@ public abstract class TestRSGroupsBase {
   @Rule
   public TestName name = new TestName();
   protected TableName tableName;
+
+  protected Admin rsGroupAdmin;
+
+  @Parameterized.Parameter
+  public Supplier<Object> getAdmin;
+
+  private static RSGroupAdminClient getRSGroupAdmin(){
+    try {
+      return new VerifyingRSGroupAdminClient(
+          new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
+    } catch (IOException e) {
+      LOG.error("Get group admin failed", e);
+      return null;
+    }
+  }
+
+  private static Admin getAdmin(){
+    try {
+      return TEST_UTIL.getAdmin();
+    } catch (IOException e) {
+      LOG.error("Get hbase admin failed", e);
+      return null;
+    }
+  }
+
+  public static Object resetAdminConnection(Object admin) {
+    if(admin instanceof RSGroupAdminClient) {
+      return getRSGroupAdmin();
+    }else {
+      return getAdmin();
+    }
+  }
+
+  public static String getNameWithoutIndex(String name) {
+    return name.split("\\[")[0];
+  }
+
+  @Parameterized.Parameters
+  public static List<Object[]> params() {
+    return Arrays.asList(new Supplier<?>[] { TestRSGroupsBase::getRSGroupAdmin },
+        new Supplier<?>[] { TestRSGroupsBase::getAdmin });
+  }
 
   public static void setUpTestBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setFloat(
@@ -107,6 +152,10 @@ public abstract class TestRSGroupsBase {
     initialize();
   }
 
+  public void setAdmin(){
+    rsGroupAdmin = (Admin) getAdmin.get();
+  }
+
   protected static void initialize() throws Exception {
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
@@ -121,8 +170,6 @@ public abstract class TestRSGroupsBase {
       }
     });
     admin.balancerSwitch(false, true);
-    rsGroupAdmin = new VerifyingRSGroupAdminClient(
-        new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     observer = (CPMasterObserver) host.findCoprocessor(CPMasterObserver.class.getName());
     rsGroupAdminEndpoint = (RSGroupAdminEndpoint)
@@ -134,8 +181,9 @@ public abstract class TestRSGroupsBase {
   }
 
   public void setUpBeforeMethod() throws Exception {
+    setAdmin();
     LOG.info(name.getMethodName());
-    tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName());
+    tableName = TableName.valueOf(tablePrefix + "_" + name.getMethodName().split("\\[")[0]);
     if (!INIT) {
       INIT = true;
       tearDownAfterMethod();
@@ -164,7 +212,8 @@ public abstract class TestRSGroupsBase {
         ((MiniHBaseCluster)cluster).getMaster().getServerName();
 
     try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(masterServerName.getAddress()), "master");
+      rsGroupAdmin.moveToRSGroup(Sets.newHashSet(masterServerName.getAddress()),
+          "master");
     } catch (Exception ex) {
       LOG.warn("Got this on setup, FYI", ex);
     }
@@ -176,7 +225,7 @@ public abstract class TestRSGroupsBase {
         //Might be greater since moving servers back to default
         //is after starting a server
 
-        return rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+        return rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().size()
             == NUM_SLAVES_BASE;
       }
     });
@@ -184,7 +233,7 @@ public abstract class TestRSGroupsBase {
 
   protected RSGroupInfo addGroup(String groupName, int serverCount)
       throws IOException, InterruptedException {
-    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.addRSGroup(groupName);
     Set<Address> set = new HashSet<>();
     for (Address server : defaultInfo.getServers()) {
@@ -193,15 +242,15 @@ public abstract class TestRSGroupsBase {
       }
       set.add(server);
     }
-    rsGroupAdmin.moveServers(set, groupName);
-    RSGroupInfo result = rsGroupAdmin.getRSGroupInfo(groupName);
+    rsGroupAdmin.moveToRSGroup(set, groupName);
+    RSGroupInfo result = rsGroupAdmin.getRSGroup(groupName);
     return result;
   }
 
-  protected void removeGroup(String groupName) throws IOException {
-    RSGroupInfo groupInfo = rsGroupAdmin.getRSGroupInfo(groupName);
-    rsGroupAdmin.moveTables(groupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
-    rsGroupAdmin.moveServers(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
+  public void removeGroup(String groupName) throws IOException {
+    RSGroupInfo groupInfo = rsGroupAdmin.getRSGroup(groupName);
+    rsGroupAdmin.setRSGroup(groupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
+    rsGroupAdmin.moveToRSGroup(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(groupName);
   }
 
@@ -224,7 +273,7 @@ public abstract class TestRSGroupsBase {
     RSGroupAdminClient groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     for(RSGroupInfo group: groupAdmin.listRSGroups()) {
       if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-        groupAdmin.moveTables(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
+        groupAdmin.setRSGroup(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
         groupAdmin.moveServers(group.getServers(), RSGroupInfo.DEFAULT_GROUP);
         groupAdmin.removeRSGroup(group.getName());
       }
@@ -276,8 +325,9 @@ public abstract class TestRSGroupsBase {
     return count;
   }
 
-  protected String getGroupName(String baseName) {
-    return groupPrefix + "_" + baseName + "_" + rand.nextInt(Integer.MAX_VALUE);
+  public String getGroupName(String baseName) {
+    return groupPrefix + "_" + getNameWithoutIndex(baseName) + "_" +
+        rand.nextInt(Integer.MAX_VALUE);
   }
 
   /**
@@ -288,6 +338,17 @@ public abstract class TestRSGroupsBase {
     return TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> sn.getAddress().equals(addr))
       .findFirst().get();
+  }
+
+  protected void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, enable);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+        NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
+    initialize();
+    rsGroupAdmin = (Admin) resetAdminConnection(rsGroupAdmin);
   }
 
   public static class CPMasterObserver implements MasterCoprocessor, MasterObserver {
@@ -313,6 +374,8 @@ public abstract class TestRSGroupsBase {
     boolean postListRSGroupsCalled = false;
     boolean preGetRSGroupInfoOfServerCalled = false;
     boolean postGetRSGroupInfoOfServerCalled = false;
+    boolean preSetRSGroupForTablesCalled = false;
+    boolean postSetRSGroupForTablesCalled = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -337,6 +400,8 @@ public abstract class TestRSGroupsBase {
       postListRSGroupsCalled = false;
       preGetRSGroupInfoOfServerCalled = false;
       postGetRSGroupInfoOfServerCalled = false;
+      preSetRSGroupForTablesCalled = false;
+      postSetRSGroupForTablesCalled = false;
     }
 
     @Override

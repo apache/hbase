@@ -496,4 +496,9 @@ public class MockNoopMasterServices implements MasterServices {
   public RSGroupInfoManager getRSGroupInfoManager() {
     return null;
   }
+
+  @Override
+  public boolean isBalancerOn() {
+    return false;
+  }
 }

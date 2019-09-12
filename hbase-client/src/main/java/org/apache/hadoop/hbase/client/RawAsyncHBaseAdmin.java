@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
@@ -206,8 +208,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .IsSnapshotCleanupEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -258,8 +259,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .SetSnapshotCleanupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRequest;
@@ -285,6 +285,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -3867,24 +3879,189 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> snapshotCleanupSwitch(final boolean on,
       final boolean sync) {
-    return this.<Boolean>newMasterCaller()
-        .action((controller, stub) -> this
-            .call(controller, stub,
-                RequestConverter.buildSetSnapshotCleanupRequest(on, sync),
-                MasterService.Interface::switchSnapshotCleanup,
-                SetSnapshotCleanupResponse::getPrevSnapshotCleanup))
-        .call();
+    return this.<Boolean>newMasterCaller().action((controller, stub) -> this
+        .call(controller, stub, RequestConverter.buildSetSnapshotCleanupRequest(on, sync),
+            MasterService.Interface::switchSnapshotCleanup,
+            SetSnapshotCleanupResponse::getPrevSnapshotCleanup)).call();
   }
 
   @Override
   public CompletableFuture<Boolean> isSnapshotCleanupEnabled() {
-    return this.<Boolean>newMasterCaller()
-        .action((controller, stub) -> this
-            .call(controller, stub,
-                RequestConverter.buildIsSnapshotCleanupEnabledRequest(),
-                MasterService.Interface::isSnapshotCleanupEnabled,
-                IsSnapshotCleanupEnabledResponse::getEnabled))
+    return this.<Boolean>newMasterCaller().action((controller, stub) -> this
+        .call(controller, stub, RequestConverter.buildIsSnapshotCleanupEnabledRequest(),
+            MasterService.Interface::isSnapshotCleanupEnabled,
+            IsSnapshotCleanupEnabledResponse::getEnabled)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> moveToRSGroup(Set<Address> servers, String groupName) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <MoveServersRequest, MoveServersResponse, Void> call(controller, stub,
+                RequestConverter.buildMoveServersRequest(servers, groupName),
+              (s, c, req, done) -> s.moveServers(c, req, done), resp -> null))
         .call();
   }
+
+  @Override
+  public CompletableFuture<Void> addRSGroup(String groupName) {
+    return this.<Void> newMasterCaller()
+        .action(((controller, stub) -> this.
+            <AddRSGroupRequest, AddRSGroupResponse, Void> call(controller, stub,
+                AddRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+              (s, c, req, done) -> s.addRSGroup(c, req, done), resp -> null)))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> removeRSGroup(String groupName) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <RemoveRSGroupRequest, RemoveRSGroupResponse, Void> call(controller, stub,
+                RemoveRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+              (s, c, req, done) -> s.removeRSGroup(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
+    return this.<Boolean> newMasterCaller()
+        .action((controller, stub) -> this.
+            <BalanceRSGroupRequest, BalanceRSGroupResponse, Boolean> call(controller, stub,
+                BalanceRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+              (s, c, req, done) -> s.balanceRSGroup(c, req, done), resp -> resp.getBalanceRan()))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<RSGroupInfo>> listRSGroups() {
+    return this.<List<RSGroupInfo>> newMasterCaller()
+        .action((controller, stub) -> this
+            .<ListRSGroupInfosRequest, ListRSGroupInfosResponse, List<RSGroupInfo>> call(
+                controller, stub, ListRSGroupInfosRequest.getDefaultInstance(),
+              (s, c, req, done) -> s.listRSGroupInfos(c, req, done),
+              resp -> resp.getRSGroupInfoList().stream()
+                  .map(r -> ProtobufUtil.toGroupInfo(r))
+                  .collect(Collectors.toList())))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort) {
+    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
+    addListener(listRSGroups(), (groups, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      for (RSGroupInfo rsGroupInfo : groups) {
+        if (rsGroupInfo.getServers().contains(hostPort)){
+          future.complete(rsGroupInfo);
+          return;
+        }
+      }
+      future.complete(null);
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> removeRSGroup(Set<Address> servers) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this.
+            <RemoveServersRequest, RemoveServersResponse, Void> call(controller, stub,
+                RequestConverter.buildRemoveServersRequest(servers),
+              (s, c, req, done) -> s.removeServers(c, req, done), resp -> null))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    for (TableName tableName : tables) {
+      addListener(tableExists(tableName), (exist, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (!exist) {
+          future.completeExceptionally(new TableNotFoundException(tableName));
+          return;
+        }
+      });
+    }
+    addListener(listTableDescriptors(new ArrayList<>(tables)), ((tableDescriptions, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      if (tableDescriptions == null || tableDescriptions.isEmpty()) {
+        future.complete(null);
+        return;
+      }
+      List<TableDescriptor> newTableDescriptors = new ArrayList<>();
+      for (TableDescriptor td : tableDescriptions) {
+        newTableDescriptors
+            .add(TableDescriptorBuilder.newBuilder(td).setRegionServerGroup(groupName).build());
+      }
+      addListener(CompletableFuture.allOf(
+        newTableDescriptors.stream().map(this::modifyTable).toArray(CompletableFuture[]::new)),
+        (v, e) -> {
+          if (e != null) {
+            future.completeExceptionally(e);
+          } else {
+            future.complete(v);
+          }
+        });
+    }));
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(TableName table) {
+    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
+    addListener(getDescriptor(table), (td, err) -> {
+      if (err != null) {
+        // return null instead of err to keep compatible with old semantics
+        // todo: need to change both this and UTs
+        future.complete(null);
+        return;
+      }
+      addListener(listRSGroups(), (groups, err2) -> {
+        if (err2 != null) {
+          future.completeExceptionally(err2);
+          return;
+        }
+        for (RSGroupInfo rsGroupInfo : groups) {
+          if (rsGroupInfo.getTables().contains(table)) {
+            future.complete(rsGroupInfo);
+            return;
+          }
+        }
+        future.complete(null);
+      });
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<RSGroupInfo> getRSGroup(String groupName) {
+    CompletableFuture<RSGroupInfo> future = new CompletableFuture<>();
+    addListener(listRSGroups(), (groups, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      for (RSGroupInfo rsGroupInfo : groups) {
+        if (rsGroupInfo.getName().equals(groupName)){
+          future.complete(rsGroupInfo);
+          return;
+        }
+      }
+      future.complete(null);
+    });
+    return future;
+  }
+
 
 }
