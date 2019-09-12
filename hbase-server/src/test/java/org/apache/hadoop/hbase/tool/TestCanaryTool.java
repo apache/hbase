@@ -19,6 +19,25 @@
 
 package org.apache.hadoop.hbase.tool;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,7 +53,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
-import com.google.common.collect.Iterables;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -45,16 +63,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-
-import static org.junit.Assert.assertNotEquals;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.argThat;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import com.google.common.collect.Iterables;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({MediumTests.class})
@@ -111,6 +120,55 @@ public class TestCanaryTool {
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class), isA(HColumnDescriptor.class), anyLong());
+  }
+
+  @Test
+  public void testCanaryRegionTaskResult() throws Exception {
+    TableName tableName = TableName.valueOf("testCanaryRegionTaskResult");
+    HTable table = testingUtility.createTable(tableName, new byte[][]{FAMILY});
+    // insert some test rows
+    for (int i = 0; i < 1000; i++) {
+      byte[] iBytes = Bytes.toBytes(i);
+      Put p = new Put(iBytes);
+      p.addColumn(FAMILY, COLUMN, iBytes);
+      table.put(p);
+    }
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    Canary.RegionStdOutSink sink = spy(new Canary.RegionStdOutSink());
+    Canary canary = new Canary(executor, sink);
+    String[] args = {"-writeSniffing", "-t", "10000", "testCanaryRegionTaskResult"};
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
+
+    assertTrue("verify read success count > 0", sink.getReadSuccessCount() > 0);
+    assertTrue("verify write success count > 0", sink.getWriteSuccessCount() > 0);
+    verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(HRegionInfo.class),
+      isA(HColumnDescriptor.class), anyLong());
+    verify(sink, atLeastOnce()).publishWriteTiming(isA(ServerName.class), isA(HRegionInfo.class),
+      isA(HColumnDescriptor.class), anyLong());
+
+    assertTrue("canary should expect to scan at least 1 region",
+      sink.getTotalExpectedRegions() > 0);
+    Map<String, Canary.RegionTaskResult> regionMap = sink.getRegionMap();
+    assertFalse("verify region map has size > 0", regionMap.isEmpty());
+
+    for (String regionName : regionMap.keySet()) {
+      Canary.RegionTaskResult res = regionMap.get(regionName);
+      assertNotNull("verify each expected region has a RegionTaskResult object in the map", res);
+      assertNotNull("verify getRegionNameAsString()", regionName);
+      assertNotNull("verify getRegionInfo()", res.getRegionInfo());
+      assertNotNull("verify getTableName()", res.getTableName());
+      assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
+      assertNotNull("verify getServerName()", res.getServerName());
+      assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
+
+      if (regionName.contains(Canary.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
+        assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
+        assertTrue("write took some time", res.getWriteLatency() > -1);
+      } else {
+        assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
+        assertTrue("read took some time", res.getReadLatency() > -1);
+      }
+    }
   }
 
   @Test
