@@ -650,7 +650,7 @@ public class CatalogJanitor extends ScheduledChore {
       }
       this.previous = ri;
       this.highestEndKeyRegionInfo =
-          MetaFixer.getRegionInfoWithLargestEndKey(ri, this.highestEndKeyRegionInfo);
+          MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
       return ri;
     }
 
