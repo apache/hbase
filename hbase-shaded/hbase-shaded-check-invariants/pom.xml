@@ -129,6 +129,9 @@
                 <banDuplicateClasses>
                   <findAllDuplicates>true</findAllDuplicates>
                 </banDuplicateClasses>
+                <ignoreClasses>
+                  <ignoreClass>module-info</ignoreClass>
+                </ignoreClasses>
               </rules>
             </configuration>
           </execution>
