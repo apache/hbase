@@ -131,9 +131,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             // TODO does hadoopcheck need to be jdk specific?
             // Should be things that work with multijdk
             TESTS = 'all,-unit,-findbugs'
-            // on branches that don't support jdk7, this will already be JAVA_HOME, so we'll end up not
-            // doing multijdk there.
-            MULTIJDK = '/usr/lib/jvm/java-8-openjdk-amd64'
+            // this is only elevant on branches-1. on branches with default jdk8, the relevant jdk will be JAVA_HOME
+            MULTIJDK = '/usr/lib/jvm/zulu-8-amd64'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
           }
@@ -280,9 +279,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             TESTS = 'maven,mvninstall,compile,javac,unit,findbugs,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
-            // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
-            // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            // this is branch-1 specific. the branch-2+ version uses openjdk artifacts
+            SET_JAVA_HOME = '/usr/lib/jvm/zulu-8-amd64'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -365,9 +363,8 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             TESTS = 'maven,mvninstall,compile,javac,unit,htmlout'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
-            // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
-            // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            // this is branch-1 specific. the branch-2+ version uses openjdk artifacts
+            SET_JAVA_HOME = '/usr/lib/jvm/zulu-8-amd64'
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
           }

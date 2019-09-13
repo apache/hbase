@@ -45,6 +45,23 @@ if ! declare -f "yetus_info" >/dev/null; then
 
 fi
 
+# work around yetus overwriting JAVA_HOME from our docker image
+function docker_do_env_adds
+{
+  declare k
+
+  for k in "${DOCKER_EXTRAENVS[@]}"; do
+    if [[ "JAVA_HOME" == "${k}" ]]; then
+      if [ -n "${JAVA_HOME}" ]; then
+        DOCKER_EXTRAARGS+=("--env=JAVA_HOME=${JAVA_HOME}")
+      fi
+    else
+      DOCKER_EXTRAARGS+=("--env=${k}=${!k}")
+    fi
+  done
+}
+
+
 ## @description  Globals specific to this personality
 ## @audience     private
 ## @stability    evolving
