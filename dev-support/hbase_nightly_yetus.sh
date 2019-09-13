@@ -40,6 +40,10 @@ if [[ -n "${MULTIJDK}" ]]; then
   YETUS_ARGS=("--multijdkdirs=${MULTIJDK}" "${YETUS_ARGS[@]}")
 fi
 
+# If we're doing docker, make sure we don't accidentally pollute the image with a host java path
+if [ -n "${JAVA_HOME}" ]; then
+  unset JAVA_HOME
+fi
 if [[ -n "${SET_JAVA_HOME}" ]]; then
   YETUS_ARGS=("--java-home=${SET_JAVA_HOME}" "${YETUS_ARGS[@]}")
 fi
