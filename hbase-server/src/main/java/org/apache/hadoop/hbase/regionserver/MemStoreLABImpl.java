@@ -270,6 +270,11 @@ public class MemStoreLABImpl implements MemStoreLAB {
     }
   }
 
+  @VisibleForTesting
+  int getOpenScannerCount() {
+    return this.openScannerCount.get();
+  }
+
   /**
    * Called when opening a scanner on the data of this MemStoreLAB
    */
