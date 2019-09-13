@@ -156,7 +156,7 @@ pipeline {
                         YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
                         YETUS_ARGS+=("--mvn-custom-repos")
                         # Branch-1 specific, look at the Zulu jdk8
-                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/zulu-8-amd64")
+                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/zulu-8-amd64,/usr/lib/jvm/zulu-7-amd64")
                         YETUS_ARGS+=("--findbugs-home=/usr")
                         YETUS_ARGS+=("--whitespace-eol-ignore-list=.*/generated/.*")
                         YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
