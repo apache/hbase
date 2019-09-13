@@ -97,6 +97,10 @@ function personality_parse_args
         delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
+      --skip-errorprone)
+        delete_parameter "${i}"
+        # errorProne profile does not exist on branch-1.3
+      ;;
     esac
   done
 }
