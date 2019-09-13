@@ -131,8 +131,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             // TODO does hadoopcheck need to be jdk specific?
             // Should be things that work with multijdk
             TESTS = 'all,-unit,-findbugs'
-            // this is only elevant on branches-1. on branches with default jdk8, the relevant jdk will be JAVA_HOME
-            MULTIJDK = '/usr/lib/jvm/zulu-8-amd64'
+            // all jdks tested on this stage for this branch
+            // note that JAVA_HOME still needs to be set for tests
+            // that don't support multijdk. JAVA_HOME will also
+            // determine which jvm will be tested last.
+            MULTIJDK = '/usr/lib/jvm/zulu-8-amd64,/usr/lib/jvm/zulu-7-amd64'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
           }
