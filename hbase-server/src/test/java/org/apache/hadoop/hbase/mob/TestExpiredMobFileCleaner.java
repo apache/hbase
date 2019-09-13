@@ -153,7 +153,7 @@ public class TestExpiredMobFileCleaner {
     String[] args = new String[2];
     args[0] = tableName.getNameAsString();
     args[1] = family;
-    ToolRunner.run(TEST_UTIL.getConfiguration(), new ExpiredMobFileCleaner(), args);
+    ToolRunner.run(TEST_UTIL.getConfiguration(), new MobFileCleanerTool(), args);
 
     FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     String lastFile = filesAfterClean[0].getPath().getName();

@@ -114,4 +114,5 @@ public class MobStoreScanner extends StoreScanner {
       LOG.warn("Failed to free referenced mob cells: ", e);
     }
   }
+
 }

@@ -108,6 +108,9 @@ public class HStoreFile implements StoreFile {
   /** Key for the number of mob cells in metadata */
   public static final byte[] MOB_CELLS_COUNT = Bytes.toBytes("MOB_CELLS_COUNT");
 
+  /** Key for the list of MOB file references */
+  public static final byte[] MOB_FILE_REFS = Bytes.toBytes("MOB_FILE_REFS");
+
   /** Meta key set when store file is a result of a bulk load */
   public static final byte[] BULKLOAD_TASK_KEY = Bytes.toBytes("BULKLOAD_SOURCE_TASK");
   public static final byte[] BULKLOAD_TIME_KEY = Bytes.toBytes("BULKLOAD_TIMESTAMP");

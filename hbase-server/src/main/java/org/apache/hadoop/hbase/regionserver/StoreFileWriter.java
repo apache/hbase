@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.EARLIEST_PUT_TS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAX_SEQ_ID_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
+import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_FILE_REFS;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.TIMERANGE_KEY;
 
 import java.io.IOException;
@@ -240,6 +241,28 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
     writer.appendFileInfo(MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
     appendTrackedTimestampsToMetadata();
+  }
+
+  /**
+   * Appends MOB - specific metadata
+   * @param mobRefSet - set of MOB file names
+   * @throws IOException problem writing to FS
+   */
+  public void appendMobMetadata(Set<String> mobRefSet) throws IOException {
+    if (mobRefSet.isEmpty()) {
+      return;
+    }
+    StringBuilder sb = new StringBuilder(2 * mobRefSet.size() - 1);
+    String[] arr = new String[mobRefSet.size()];
+    arr = mobRefSet.toArray(arr);
+    for (int i = 0; i < arr.length; i++) {
+      sb.append(arr[i]);
+      if (i < arr.length - 1) {
+        sb.append(",");
+      }
+    }
+    byte[] bytes = sb.toString().getBytes();
+    writer.appendFileInfo(MOB_FILE_REFS, bytes);
   }
 
   /**
