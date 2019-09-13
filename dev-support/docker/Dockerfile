@@ -84,10 +84,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
 # See HBASE-19204. So, we use the azul jdks because they are available, and
 # later versions of openjdk (openjdk-7 161). Below we add the azul repo and
 # then install its jdks. We then move aside the headless jdk7 added above
-# when we added maven and ant and rename the azul jvms as
-# though they were from openjdk (otherwise yetus won't set JAVA_HOME;
-# it does find /usr/lib/jvm/ -name java-* -type d so a symlink to the zulu jvms
-# won't work).
+# when we added maven and ant
 RUN echo "dot_style = mega" > "/root/.wgetrc"
 RUN echo "quiet = on" >> "/root/.wgetrc"
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0x219BD9C9
@@ -98,9 +95,7 @@ RUN apt-get -q install --no-install-recommends -y zulu-8 zulu-7
 RUN update-alternatives --config java
 RUN update-alternatives --config javac
 RUN mv /usr/lib/jvm/java-7-openjdk-amd64 /usr/lib/jvm/moved.java-7-openjdk-amd64
-RUN mv /usr/lib/jvm/zulu-7-amd64 /usr/lib/jvm/java-7-openjdk-amd64 
-RUN mv /usr/lib/jvm/zulu-8-amd64 /usr/lib/jvm/java-8-openjdk-amd64 
-
+ENV JAVA_HOME /usr/lib/jvm/zulu-7-amd64
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems

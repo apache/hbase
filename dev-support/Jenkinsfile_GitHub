@@ -110,6 +110,10 @@ pipeline {
                         if [[ "true" = "${DEBUG}" ]]; then
                             YETUS_ARGS+=("--debug")
                         fi
+                        # If we're doing docker, make sure we don't accidentally pollute the image with a host java path
+                        if [ -n "${JAVA_HOME}" ]; then
+                          unset JAVA_HOME
+                        fi
                         YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
                         # where the source is located
                         YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
@@ -151,7 +155,8 @@ pipeline {
                         YETUS_ARGS+=("--docker")
                         YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
                         YETUS_ARGS+=("--mvn-custom-repos")
-                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-8-openjdk-amd64")
+                        # Branch-1 specific, look at the Zulu jdk8
+                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/zulu-8-amd64,/usr/lib/jvm/zulu-7-amd64")
                         YETUS_ARGS+=("--findbugs-home=/usr")
                         YETUS_ARGS+=("--whitespace-eol-ignore-list=.*/generated/.*")
                         YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
