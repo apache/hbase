@@ -183,6 +183,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsInMainte
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
+  .IsSnapshotCleanupEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
@@ -206,6 +208,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSna
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
@@ -4324,4 +4327,35 @@ public class HBaseAdmin implements Admin {
         }
       });
   }
+
+  @Override
+  public boolean snapshotCleanupSwitch(boolean on, boolean synchronous) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(),
+        getRpcControllerFactory()) {
+
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        SetSnapshotCleanupRequest req =
+          RequestConverter.buildSetSnapshotCleanupRequest(on, synchronous);
+        return master.switchSnapshotCleanup(getRpcController(), req).getPrevSnapshotCleanup();
+      }
+    });
+
+  }
+
+  @Override
+  public boolean isSnapshotCleanupEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(),
+        getRpcControllerFactory()) {
+
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        IsSnapshotCleanupEnabledRequest req =
+          RequestConverter.buildIsSnapshotCleanupEnabledRequest();
+        return master.isSnapshotCleanupEnabled(getRpcController(), req).getEnabled();
+      }
+    });
+
+  }
+
 }

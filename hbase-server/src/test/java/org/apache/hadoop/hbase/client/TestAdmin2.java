@@ -810,4 +810,31 @@ public class TestAdmin2 extends TestAdminBase {
     ADMIN.modifyTable(tableDesc);
     assertEquals(11111111, ADMIN.getDescriptor(tableName).getMaxFileSize());
   }
+
+  @Test
+  public void testSnapshotCleanupAsync() throws Exception {
+    testSnapshotCleanup(false);
+  }
+
+  @Test
+  public void testSnapshotCleanupSync() throws Exception {
+    testSnapshotCleanup(true);
+  }
+
+  private void testSnapshotCleanup(final boolean synchronous) throws IOException {
+    final boolean initialState = ADMIN.isSnapshotCleanupEnabled();
+    // Switch the snapshot auto cleanup state to opposite to initial state
+    boolean prevState = ADMIN.snapshotCleanupSwitch(!initialState, synchronous);
+    // The previous state should be the original state we observed
+    assertEquals(initialState, prevState);
+    // Current state should be opposite of the initial state
+    assertEquals(!initialState, ADMIN.isSnapshotCleanupEnabled());
+    // Reset the state back to what it was initially
+    prevState = ADMIN.snapshotCleanupSwitch(initialState, synchronous);
+    // The previous state should be the opposite of the initial state
+    assertEquals(!initialState, prevState);
+    // Current state should be the original state again
+    assertEquals(initialState, ADMIN.isSnapshotCleanupEnabled());
+  }
+
 }

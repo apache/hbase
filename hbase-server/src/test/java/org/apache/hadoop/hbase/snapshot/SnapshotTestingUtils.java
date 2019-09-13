@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
@@ -671,6 +672,12 @@ public final class SnapshotTestingUtils {
       return createSnapshot(snapshotName, tableName, numRegions, SnapshotManifestV2.DESCRIPTOR_VERSION);
     }
 
+    public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName,
+        final int numRegions, final long ttl) throws IOException {
+      return createSnapshot(snapshotName, tableName, numRegions,
+          SnapshotManifestV2.DESCRIPTOR_VERSION, ttl);
+    }
+
     private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
         final int version) throws IOException {
       return createSnapshot(snapshotName, tableName, TEST_NUM_REGIONS, version);
@@ -687,6 +694,22 @@ public final class SnapshotTestingUtils {
         .setVersion(version)
         .build();
 
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
+      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
+      return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
+    }
+
+    private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
+        final int numRegions, final int version, final long ttl) throws IOException {
+      TableDescriptor htd = createHtd(tableName);
+      RegionData[] regions = createTable(htd, numRegions);
+      SnapshotProtos.SnapshotDescription desc = SnapshotProtos.SnapshotDescription.newBuilder()
+          .setTable(htd.getTableName().getNameAsString())
+          .setName(snapshotName)
+          .setVersion(version)
+          .setCreationTime(EnvironmentEdgeManager.currentTime())
+          .setTtl(ttl)
+          .build();
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
       SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
