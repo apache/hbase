@@ -110,6 +110,10 @@ pipeline {
                         if [[ "true" = "${DEBUG}" ]]; then
                             YETUS_ARGS+=("--debug")
                         fi
+                        # If we're doing docker, make sure we don't accidentally pollute the image with a host java path
+                        if [ -n "${JAVA_HOME}" ]; then
+                          unset JAVA_HOME
+                        fi
                         YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
                         # where the source is located
                         YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
