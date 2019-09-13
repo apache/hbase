@@ -41,6 +41,7 @@ public class ZNodePaths {
   public static final char ZNODE_PATH_SEPARATOR = '/';
 
   public final static String META_ZNODE_PREFIX = "meta-region-server";
+  private static final String DEFAULT_SNAPSHOT_CLEANUP_ZNODE = "snapshot-cleanup";
 
   // base znode for this cluster
   public final String baseZNode;
@@ -89,6 +90,8 @@ public class ZNodePaths {
   public final String queuesZNode;
   // znode containing queues of hfile references to be replicated
   public final String hfileRefsZNode;
+  // znode containing the state of the snapshot auto-cleanup
+  final String snapshotCleanupZNode;
 
   public ZNodePaths(Configuration conf) {
     baseZNode = conf.get(ZOOKEEPER_ZNODE_PARENT, DEFAULT_ZOOKEEPER_ZNODE_PARENT);
@@ -123,20 +126,35 @@ public class ZNodePaths {
     queuesZNode = joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.rs", "rs"));
     hfileRefsZNode = joinZNode(replicationZNode,
       conf.get("zookeeper.znode.replication.hfile.refs", "hfile-refs"));
+    snapshotCleanupZNode = joinZNode(baseZNode,
+        conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
   }
 
   @Override
   public String toString() {
-    return "ZNodePaths [baseZNode=" + baseZNode + ", metaReplicaZNodes=" + metaReplicaZNodes
-        + ", rsZNode=" + rsZNode + ", drainingZNode=" + drainingZNode + ", masterAddressZNode="
-        + masterAddressZNode + ", backupMasterAddressesZNode=" + backupMasterAddressesZNode
-        + ", clusterStateZNode=" + clusterStateZNode + ", tableZNode=" + tableZNode
-        + ", clusterIdZNode=" + clusterIdZNode + ", splitLogZNode=" + splitLogZNode
-        + ", balancerZNode=" + balancerZNode + ", regionNormalizerZNode=" + regionNormalizerZNode
-        + ", switchZNode=" + switchZNode + ", tableLockZNode=" + tableLockZNode
-        + ", namespaceZNode=" + namespaceZNode + ", masterMaintZNode=" + masterMaintZNode
-        + ", replicationZNode=" + replicationZNode + ", peersZNode=" + peersZNode
-        + ", queuesZNode=" + queuesZNode + ", hfileRefsZNode=" + hfileRefsZNode + "]";
+    return new StringBuilder()
+        .append("ZNodePaths [baseZNode=").append(baseZNode)
+        .append(", metaReplicaZNodes=").append(metaReplicaZNodes)
+        .append(", rsZNode=").append(rsZNode)
+        .append(", drainingZNode=").append(drainingZNode)
+        .append(", masterAddressZNode=").append(masterAddressZNode)
+        .append(", backupMasterAddressesZNode=").append(backupMasterAddressesZNode)
+        .append(", clusterStateZNode=").append(clusterStateZNode)
+        .append(", tableZNode=").append(tableZNode)
+        .append(", clusterIdZNode=").append(clusterIdZNode)
+        .append(", splitLogZNode=").append(splitLogZNode)
+        .append(", balancerZNode=").append(balancerZNode)
+        .append(", regionNormalizerZNode=").append(regionNormalizerZNode)
+        .append(", switchZNode=").append(switchZNode)
+        .append(", tableLockZNode=").append(tableLockZNode)
+        .append(", namespaceZNode=").append(namespaceZNode)
+        .append(", masterMaintZNode=").append(masterMaintZNode)
+        .append(", replicationZNode=").append(replicationZNode)
+        .append(", peersZNode=").append(peersZNode)
+        .append(", queuesZNode=").append(queuesZNode)
+        .append(", hfileRefsZNode=").append(hfileRefsZNode)
+        .append(", snapshotCleanupZNode=").append(snapshotCleanupZNode)
+        .append("]").toString();
   }
 
   /**

@@ -556,6 +556,22 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Enable/disable snapshot auto-cleanup based on TTL expiration
+    # Returns previous snapshot auto-cleanup switch setting.
+    def snapshot_cleanup_switch(enable_disable)
+      @admin.snapshotCleanupSwitch(
+        java.lang.Boolean.valueOf(enable_disable), java.lang.Boolean.valueOf(false)
+      )
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query the current state of the snapshot auto-cleanup based on TTL
+    # Returns the snapshot auto-cleanup state (true if enabled)
+    def snapshot_cleanup_enabled?
+      @admin.isSnapshotCleanupEnabled
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"

@@ -2879,13 +2879,43 @@ Value 0 for this config indicates TTL: FOREVER
 
 
 
+.Enable/Disable Snapshot Auto Cleanup on running cluster:
 
-At any point of time, if Snapshot cleanup is supposed to be stopped due to
-some snapshot restore activity, it is advisable to disable Snapshot Cleaner with
- config:
+By default, snapshot auto cleanup based on TTL would be enabled
+for any new cluster.
+At any point in time, if snapshot cleanup is supposed to be stopped due to
+some snapshot restore activity or any other reason, it is advisable
+to disable it using shell command:
 
-`hbase.master.cleaner.snapshot.disable`: "true"
+----
+hbase> snapshot_cleanup_switch false
+----
 
+We can re-enable it using:
+
+----
+hbase> snapshot_cleanup_switch true
+----
+
+The shell command with switch false would disable snapshot auto
+cleanup activity based on TTL and return the previous state of
+the activity(true: running already, false: disabled already)
+
+A sample output for above commands:
+----
+Previous snapshot cleanup state : true
+Took 0.0069 seconds
+=> "true"
+----
+
+We can query whether snapshot auto cleanup is enabled for
+cluster using:
+
+----
+hbase> snapshot_cleanup_enabled
+----
+
+The command would return output in true/false.
 
 [[ops.snapshots.list]]
 === Listing Snapshots
