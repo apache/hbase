@@ -62943,6 +62943,1760 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.ClearDeadServersResponse)
   }
 
+  public interface SetSnapshotCleanupRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool enabled = 1;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean hasEnabled();
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean getEnabled();
+
+    // optional bool synchronous = 2;
+    /**
+     * <code>optional bool synchronous = 2;</code>
+     */
+    boolean hasSynchronous();
+    /**
+     * <code>optional bool synchronous = 2;</code>
+     */
+    boolean getSynchronous();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SetSnapshotCleanupRequest}
+   */
+  public static final class SetSnapshotCleanupRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements SetSnapshotCleanupRequestOrBuilder {
+    // Use SetSnapshotCleanupRequest.newBuilder() to construct.
+    private SetSnapshotCleanupRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SetSnapshotCleanupRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SetSnapshotCleanupRequest defaultInstance;
+    public static SetSnapshotCleanupRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SetSnapshotCleanupRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SetSnapshotCleanupRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              enabled_ = input.readBool();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              synchronous_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SetSnapshotCleanupRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SetSnapshotCleanupRequest>() {
+      public SetSnapshotCleanupRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SetSnapshotCleanupRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SetSnapshotCleanupRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool enabled = 1;
+    public static final int ENABLED_FIELD_NUMBER = 1;
+    private boolean enabled_;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean hasEnabled() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean getEnabled() {
+      return enabled_;
+    }
+
+    // optional bool synchronous = 2;
+    public static final int SYNCHRONOUS_FIELD_NUMBER = 2;
+    private boolean synchronous_;
+    /**
+     * <code>optional bool synchronous = 2;</code>
+     */
+    public boolean hasSynchronous() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bool synchronous = 2;</code>
+     */
+    public boolean getSynchronous() {
+      return synchronous_;
+    }
+
+    private void initFields() {
+      enabled_ = false;
+      synchronous_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasEnabled()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, enabled_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, synchronous_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, enabled_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, synchronous_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest) obj;
+
+      boolean result = true;
+      result = result && (hasEnabled() == other.hasEnabled());
+      if (hasEnabled()) {
+        result = result && (getEnabled()
+            == other.getEnabled());
+      }
+      result = result && (hasSynchronous() == other.hasSynchronous());
+      if (hasSynchronous()) {
+        result = result && (getSynchronous()
+            == other.getSynchronous());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasEnabled()) {
+        hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getEnabled());
+      }
+      if (hasSynchronous()) {
+        hash = (37 * hash) + SYNCHRONOUS_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getSynchronous());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SetSnapshotCleanupRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        enabled_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        synchronous_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.enabled_ = enabled_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.synchronous_ = synchronous_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.getDefaultInstance()) return this;
+        if (other.hasEnabled()) {
+          setEnabled(other.getEnabled());
+        }
+        if (other.hasSynchronous()) {
+          setSynchronous(other.getSynchronous());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasEnabled()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool enabled = 1;
+      private boolean enabled_ ;
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean hasEnabled() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean getEnabled() {
+        return enabled_;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder setEnabled(boolean value) {
+        bitField0_ |= 0x00000001;
+        enabled_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder clearEnabled() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        enabled_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool synchronous = 2;
+      private boolean synchronous_ ;
+      /**
+       * <code>optional bool synchronous = 2;</code>
+       */
+      public boolean hasSynchronous() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool synchronous = 2;</code>
+       */
+      public boolean getSynchronous() {
+        return synchronous_;
+      }
+      /**
+       * <code>optional bool synchronous = 2;</code>
+       */
+      public Builder setSynchronous(boolean value) {
+        bitField0_ |= 0x00000002;
+        synchronous_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool synchronous = 2;</code>
+       */
+      public Builder clearSynchronous() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        synchronous_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SetSnapshotCleanupRequest)
+    }
+
+    static {
+      defaultInstance = new SetSnapshotCleanupRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SetSnapshotCleanupRequest)
+  }
+
+  public interface SetSnapshotCleanupResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool prev_snapshot_cleanup = 1;
+    /**
+     * <code>required bool prev_snapshot_cleanup = 1;</code>
+     */
+    boolean hasPrevSnapshotCleanup();
+    /**
+     * <code>required bool prev_snapshot_cleanup = 1;</code>
+     */
+    boolean getPrevSnapshotCleanup();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SetSnapshotCleanupResponse}
+   */
+  public static final class SetSnapshotCleanupResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements SetSnapshotCleanupResponseOrBuilder {
+    // Use SetSnapshotCleanupResponse.newBuilder() to construct.
+    private SetSnapshotCleanupResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SetSnapshotCleanupResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SetSnapshotCleanupResponse defaultInstance;
+    public static SetSnapshotCleanupResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SetSnapshotCleanupResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SetSnapshotCleanupResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              prevSnapshotCleanup_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SetSnapshotCleanupResponse> PARSER =
+        new com.google.protobuf.AbstractParser<SetSnapshotCleanupResponse>() {
+      public SetSnapshotCleanupResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SetSnapshotCleanupResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SetSnapshotCleanupResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool prev_snapshot_cleanup = 1;
+    public static final int PREV_SNAPSHOT_CLEANUP_FIELD_NUMBER = 1;
+    private boolean prevSnapshotCleanup_;
+    /**
+     * <code>required bool prev_snapshot_cleanup = 1;</code>
+     */
+    public boolean hasPrevSnapshotCleanup() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool prev_snapshot_cleanup = 1;</code>
+     */
+    public boolean getPrevSnapshotCleanup() {
+      return prevSnapshotCleanup_;
+    }
+
+    private void initFields() {
+      prevSnapshotCleanup_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasPrevSnapshotCleanup()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, prevSnapshotCleanup_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, prevSnapshotCleanup_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse) obj;
+
+      boolean result = true;
+      result = result && (hasPrevSnapshotCleanup() == other.hasPrevSnapshotCleanup());
+      if (hasPrevSnapshotCleanup()) {
+        result = result && (getPrevSnapshotCleanup()
+            == other.getPrevSnapshotCleanup());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasPrevSnapshotCleanup()) {
+        hash = (37 * hash) + PREV_SNAPSHOT_CLEANUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getPrevSnapshotCleanup());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SetSnapshotCleanupResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        prevSnapshotCleanup_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.prevSnapshotCleanup_ = prevSnapshotCleanup_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance()) return this;
+        if (other.hasPrevSnapshotCleanup()) {
+          setPrevSnapshotCleanup(other.getPrevSnapshotCleanup());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasPrevSnapshotCleanup()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool prev_snapshot_cleanup = 1;
+      private boolean prevSnapshotCleanup_ ;
+      /**
+       * <code>required bool prev_snapshot_cleanup = 1;</code>
+       */
+      public boolean hasPrevSnapshotCleanup() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool prev_snapshot_cleanup = 1;</code>
+       */
+      public boolean getPrevSnapshotCleanup() {
+        return prevSnapshotCleanup_;
+      }
+      /**
+       * <code>required bool prev_snapshot_cleanup = 1;</code>
+       */
+      public Builder setPrevSnapshotCleanup(boolean value) {
+        bitField0_ |= 0x00000001;
+        prevSnapshotCleanup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool prev_snapshot_cleanup = 1;</code>
+       */
+      public Builder clearPrevSnapshotCleanup() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        prevSnapshotCleanup_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SetSnapshotCleanupResponse)
+    }
+
+    static {
+      defaultInstance = new SetSnapshotCleanupResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SetSnapshotCleanupResponse)
+  }
+
+  public interface IsSnapshotCleanupEnabledRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.IsSnapshotCleanupEnabledRequest}
+   */
+  public static final class IsSnapshotCleanupEnabledRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements IsSnapshotCleanupEnabledRequestOrBuilder {
+    // Use IsSnapshotCleanupEnabledRequest.newBuilder() to construct.
+    private IsSnapshotCleanupEnabledRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private IsSnapshotCleanupEnabledRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final IsSnapshotCleanupEnabledRequest defaultInstance;
+    public static IsSnapshotCleanupEnabledRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public IsSnapshotCleanupEnabledRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private IsSnapshotCleanupEnabledRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<IsSnapshotCleanupEnabledRequest> PARSER =
+        new com.google.protobuf.AbstractParser<IsSnapshotCleanupEnabledRequest>() {
+      public IsSnapshotCleanupEnabledRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new IsSnapshotCleanupEnabledRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<IsSnapshotCleanupEnabledRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.IsSnapshotCleanupEnabledRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.IsSnapshotCleanupEnabledRequest)
+    }
+
+    static {
+      defaultInstance = new IsSnapshotCleanupEnabledRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.IsSnapshotCleanupEnabledRequest)
+  }
+
+  public interface IsSnapshotCleanupEnabledResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool enabled = 1;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean hasEnabled();
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean getEnabled();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.IsSnapshotCleanupEnabledResponse}
+   */
+  public static final class IsSnapshotCleanupEnabledResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements IsSnapshotCleanupEnabledResponseOrBuilder {
+    // Use IsSnapshotCleanupEnabledResponse.newBuilder() to construct.
+    private IsSnapshotCleanupEnabledResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private IsSnapshotCleanupEnabledResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final IsSnapshotCleanupEnabledResponse defaultInstance;
+    public static IsSnapshotCleanupEnabledResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public IsSnapshotCleanupEnabledResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private IsSnapshotCleanupEnabledResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              enabled_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<IsSnapshotCleanupEnabledResponse> PARSER =
+        new com.google.protobuf.AbstractParser<IsSnapshotCleanupEnabledResponse>() {
+      public IsSnapshotCleanupEnabledResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new IsSnapshotCleanupEnabledResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<IsSnapshotCleanupEnabledResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool enabled = 1;
+    public static final int ENABLED_FIELD_NUMBER = 1;
+    private boolean enabled_;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean hasEnabled() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean getEnabled() {
+      return enabled_;
+    }
+
+    private void initFields() {
+      enabled_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasEnabled()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, enabled_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, enabled_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse) obj;
+
+      boolean result = true;
+      result = result && (hasEnabled() == other.hasEnabled());
+      if (hasEnabled()) {
+        result = result && (getEnabled()
+            == other.getEnabled());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasEnabled()) {
+        hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getEnabled());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.IsSnapshotCleanupEnabledResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        enabled_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.enabled_ = enabled_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance()) return this;
+        if (other.hasEnabled()) {
+          setEnabled(other.getEnabled());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasEnabled()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool enabled = 1;
+      private boolean enabled_ ;
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean hasEnabled() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean getEnabled() {
+        return enabled_;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder setEnabled(boolean value) {
+        bitField0_ |= 0x00000001;
+        enabled_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder clearEnabled() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        enabled_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.IsSnapshotCleanupEnabledResponse)
+    }
+
+    static {
+      defaultInstance = new IsSnapshotCleanupEnabledResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.IsSnapshotCleanupEnabledResponse)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.MasterService}
    */
@@ -63727,6 +65481,32 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse> done);
 
+      /**
+       * <code>rpc SwitchSnapshotCleanup(.hbase.pb.SetSnapshotCleanupRequest) returns (.hbase.pb.SetSnapshotCleanupResponse);</code>
+       *
+       * <pre>
+       **
+       * Turn on/off snapshot auto-cleanup based on TTL expiration
+       * </pre>
+       */
+      public abstract void switchSnapshotCleanup(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse> done);
+
+      /**
+       * <code>rpc IsSnapshotCleanupEnabled(.hbase.pb.IsSnapshotCleanupEnabledRequest) returns (.hbase.pb.IsSnapshotCleanupEnabledResponse);</code>
+       *
+       * <pre>
+       **
+       * Determine if snapshot auto-cleanup based on TTL expiration is turned on
+       * </pre>
+       */
+      public abstract void isSnapshotCleanupEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -64228,6 +66008,22 @@ public final class MasterProtos {
           impl.listNamespaces(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void switchSnapshotCleanup(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse> done) {
+          impl.switchSnapshotCleanup(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void isSnapshotCleanupEnabled(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse> done) {
+          impl.isSnapshotCleanupEnabled(controller, request, done);
+        }
+
       };
     }
 
@@ -64374,6 +66170,10 @@ public final class MasterProtos {
               return impl.clearDeadServers(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest)request);
             case 61:
               return impl.listNamespaces(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest)request);
+            case 62:
+              return impl.switchSnapshotCleanup(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest)request);
+            case 63:
+              return impl.isSnapshotCleanupEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -64512,6 +66312,10 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest.getDefaultInstance();
             case 61:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest.getDefaultInstance();
+            case 62:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.getDefaultInstance();
+            case 63:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -64650,6 +66454,10 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersResponse.getDefaultInstance();
             case 61:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse.getDefaultInstance();
+            case 62:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance();
+            case 63:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -65434,6 +67242,32 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse> done);
 
+    /**
+     * <code>rpc SwitchSnapshotCleanup(.hbase.pb.SetSnapshotCleanupRequest) returns (.hbase.pb.SetSnapshotCleanupResponse);</code>
+     *
+     * <pre>
+     **
+     * Turn on/off snapshot auto-cleanup based on TTL expiration
+     * </pre>
+     */
+    public abstract void switchSnapshotCleanup(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse> done);
+
+    /**
+     * <code>rpc IsSnapshotCleanupEnabled(.hbase.pb.IsSnapshotCleanupEnabledRequest) returns (.hbase.pb.IsSnapshotCleanupEnabledResponse);</code>
+     *
+     * <pre>
+     **
+     * Determine if snapshot auto-cleanup based on TTL expiration is turned on
+     * </pre>
+     */
+    public abstract void isSnapshotCleanupEnabled(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -65766,6 +67600,16 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse>specializeCallback(
               done));
           return;
+        case 62:
+          this.switchSnapshotCleanup(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse>specializeCallback(
+              done));
+          return;
+        case 63:
+          this.isSnapshotCleanupEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -65904,6 +67748,10 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest.getDefaultInstance();
         case 61:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest.getDefaultInstance();
+        case 62:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest.getDefaultInstance();
+        case 63:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -66042,6 +67890,10 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersResponse.getDefaultInstance();
         case 61:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse.getDefaultInstance();
+        case 62:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance();
+        case 63:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -66992,6 +68844,36 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse.getDefaultInstance()));
       }
+
+      public  void switchSnapshotCleanup(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(62),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance()));
+      }
+
+      public  void isSnapshotCleanupEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(63),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -67308,6 +69190,16 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse listNamespaces(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse switchSnapshotCleanup(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -68061,6 +69953,30 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespacesResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse switchSnapshotCleanup(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(62),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSnapshotCleanupResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(63),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.MasterService)
@@ -68661,6 +70577,26 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_ClearDeadServersResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SetSnapshotCleanupRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SetSnapshotCleanupResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -68870,152 +70806,163 @@ public final class MasterProtos {
       "sRequest\022)\n\013server_name\030\001 \003(\0132\024.hbase.pb" +
       ".ServerName\"E\n\030ClearDeadServersResponse\022" +
       ")\n\013server_name\030\001 \003(\0132\024.hbase.pb.ServerNa",
-      "me*(\n\020MasterSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005MER" +
-      "GE\020\0012\312,\n\rMasterService\022e\n\024GetSchemaAlter" +
-      "Status\022%.hbase.pb.GetSchemaAlterStatusRe" +
-      "quest\032&.hbase.pb.GetSchemaAlterStatusRes" +
-      "ponse\022b\n\023GetTableDescriptors\022$.hbase.pb." +
-      "GetTableDescriptorsRequest\032%.hbase.pb.Ge" +
-      "tTableDescriptorsResponse\022P\n\rGetTableNam" +
-      "es\022\036.hbase.pb.GetTableNamesRequest\032\037.hba" +
-      "se.pb.GetTableNamesResponse\022Y\n\020GetCluste" +
-      "rStatus\022!.hbase.pb.GetClusterStatusReque",
-      "st\032\".hbase.pb.GetClusterStatusResponse\022V" +
-      "\n\017IsMasterRunning\022 .hbase.pb.IsMasterRun" +
-      "ningRequest\032!.hbase.pb.IsMasterRunningRe" +
-      "sponse\022D\n\tAddColumn\022\032.hbase.pb.AddColumn" +
-      "Request\032\033.hbase.pb.AddColumnResponse\022M\n\014" +
-      "DeleteColumn\022\035.hbase.pb.DeleteColumnRequ" +
-      "est\032\036.hbase.pb.DeleteColumnResponse\022M\n\014M" +
-      "odifyColumn\022\035.hbase.pb.ModifyColumnReque" +
-      "st\032\036.hbase.pb.ModifyColumnResponse\022G\n\nMo" +
-      "veRegion\022\033.hbase.pb.MoveRegionRequest\032\034.",
-      "hbase.pb.MoveRegionResponse\022k\n\026DispatchM" +
-      "ergingRegions\022\'.hbase.pb.DispatchMerging" +
-      "RegionsRequest\032(.hbase.pb.DispatchMergin" +
-      "gRegionsResponse\022M\n\014AssignRegion\022\035.hbase" +
-      ".pb.AssignRegionRequest\032\036.hbase.pb.Assig" +
-      "nRegionResponse\022S\n\016UnassignRegion\022\037.hbas" +
-      "e.pb.UnassignRegionRequest\032 .hbase.pb.Un" +
-      "assignRegionResponse\022P\n\rOfflineRegion\022\036." +
-      "hbase.pb.OfflineRegionRequest\032\037.hbase.pb" +
-      ".OfflineRegionResponse\022J\n\013DeleteTable\022\034.",
-      "hbase.pb.DeleteTableRequest\032\035.hbase.pb.D" +
-      "eleteTableResponse\022P\n\rtruncateTable\022\036.hb" +
-      "ase.pb.TruncateTableRequest\032\037.hbase.pb.T" +
-      "runcateTableResponse\022J\n\013EnableTable\022\034.hb" +
-      "ase.pb.EnableTableRequest\032\035.hbase.pb.Ena" +
-      "bleTableResponse\022M\n\014DisableTable\022\035.hbase" +
-      ".pb.DisableTableRequest\032\036.hbase.pb.Disab" +
-      "leTableResponse\022J\n\013ModifyTable\022\034.hbase.p" +
-      "b.ModifyTableRequest\032\035.hbase.pb.ModifyTa" +
-      "bleResponse\022J\n\013CreateTable\022\034.hbase.pb.Cr",
-      "eateTableRequest\032\035.hbase.pb.CreateTableR" +
-      "esponse\022A\n\010Shutdown\022\031.hbase.pb.ShutdownR" +
-      "equest\032\032.hbase.pb.ShutdownResponse\022G\n\nSt" +
-      "opMaster\022\033.hbase.pb.StopMasterRequest\032\034." +
-      "hbase.pb.StopMasterResponse\022h\n\031IsMasterI" +
-      "nMaintenanceMode\022$.hbase.pb.IsInMaintena" +
-      "nceModeRequest\032%.hbase.pb.IsInMaintenanc" +
-      "eModeResponse\022>\n\007Balance\022\030.hbase.pb.Bala" +
-      "nceRequest\032\031.hbase.pb.BalanceResponse\022_\n" +
-      "\022SetBalancerRunning\022#.hbase.pb.SetBalanc",
-      "erRunningRequest\032$.hbase.pb.SetBalancerR" +
-      "unningResponse\022\\\n\021IsBalancerEnabled\022\".hb" +
-      "ase.pb.IsBalancerEnabledRequest\032#.hbase." +
-      "pb.IsBalancerEnabledResponse\022k\n\026SetSplit" +
-      "OrMergeEnabled\022\'.hbase.pb.SetSplitOrMerg" +
-      "eEnabledRequest\032(.hbase.pb.SetSplitOrMer" +
-      "geEnabledResponse\022h\n\025IsSplitOrMergeEnabl" +
-      "ed\022&.hbase.pb.IsSplitOrMergeEnabledReque" +
-      "st\032\'.hbase.pb.IsSplitOrMergeEnabledRespo" +
-      "nse\022D\n\tNormalize\022\032.hbase.pb.NormalizeReq",
-      "uest\032\033.hbase.pb.NormalizeResponse\022e\n\024Set" +
-      "NormalizerRunning\022%.hbase.pb.SetNormaliz" +
-      "erRunningRequest\032&.hbase.pb.SetNormalize" +
-      "rRunningResponse\022b\n\023IsNormalizerEnabled\022" +
-      "$.hbase.pb.IsNormalizerEnabledRequest\032%." +
-      "hbase.pb.IsNormalizerEnabledResponse\022S\n\016" +
-      "RunCatalogScan\022\037.hbase.pb.RunCatalogScan" +
-      "Request\032 .hbase.pb.RunCatalogScanRespons" +
-      "e\022e\n\024EnableCatalogJanitor\022%.hbase.pb.Ena" +
-      "bleCatalogJanitorRequest\032&.hbase.pb.Enab",
-      "leCatalogJanitorResponse\022n\n\027IsCatalogJan" +
-      "itorEnabled\022(.hbase.pb.IsCatalogJanitorE" +
-      "nabledRequest\032).hbase.pb.IsCatalogJanito" +
-      "rEnabledResponse\022V\n\017RunCleanerChore\022 .hb" +
-      "ase.pb.RunCleanerChoreRequest\032!.hbase.pb" +
-      ".RunCleanerChoreResponse\022k\n\026SetCleanerCh" +
-      "oreRunning\022\'.hbase.pb.SetCleanerChoreRun" +
-      "ningRequest\032(.hbase.pb.SetCleanerChoreRu" +
-      "nningResponse\022h\n\025IsCleanerChoreEnabled\022&" +
-      ".hbase.pb.IsCleanerChoreEnabledRequest\032\'",
-      ".hbase.pb.IsCleanerChoreEnabledResponse\022" +
-      "^\n\021ExecMasterService\022#.hbase.pb.Coproces" +
-      "sorServiceRequest\032$.hbase.pb.Coprocessor" +
-      "ServiceResponse\022A\n\010Snapshot\022\031.hbase.pb.S" +
-      "napshotRequest\032\032.hbase.pb.SnapshotRespon" +
-      "se\022h\n\025GetCompletedSnapshots\022&.hbase.pb.G" +
-      "etCompletedSnapshotsRequest\032\'.hbase.pb.G" +
-      "etCompletedSnapshotsResponse\022S\n\016DeleteSn" +
-      "apshot\022\037.hbase.pb.DeleteSnapshotRequest\032" +
-      " .hbase.pb.DeleteSnapshotResponse\022S\n\016IsS",
-      "napshotDone\022\037.hbase.pb.IsSnapshotDoneReq" +
-      "uest\032 .hbase.pb.IsSnapshotDoneResponse\022V" +
-      "\n\017RestoreSnapshot\022 .hbase.pb.RestoreSnap" +
-      "shotRequest\032!.hbase.pb.RestoreSnapshotRe" +
-      "sponse\022h\n\025IsRestoreSnapshotDone\022&.hbase." +
-      "pb.IsRestoreSnapshotDoneRequest\032\'.hbase." +
-      "pb.IsRestoreSnapshotDoneResponse\022P\n\rExec" +
-      "Procedure\022\036.hbase.pb.ExecProcedureReques" +
-      "t\032\037.hbase.pb.ExecProcedureResponse\022W\n\024Ex" +
-      "ecProcedureWithRet\022\036.hbase.pb.ExecProced",
-      "ureRequest\032\037.hbase.pb.ExecProcedureRespo" +
-      "nse\022V\n\017IsProcedureDone\022 .hbase.pb.IsProc" +
-      "edureDoneRequest\032!.hbase.pb.IsProcedureD" +
-      "oneResponse\022V\n\017ModifyNamespace\022 .hbase.p" +
-      "b.ModifyNamespaceRequest\032!.hbase.pb.Modi" +
-      "fyNamespaceResponse\022V\n\017CreateNamespace\022 " +
-      ".hbase.pb.CreateNamespaceRequest\032!.hbase" +
-      ".pb.CreateNamespaceResponse\022V\n\017DeleteNam" +
-      "espace\022 .hbase.pb.DeleteNamespaceRequest" +
-      "\032!.hbase.pb.DeleteNamespaceResponse\022k\n\026G",
-      "etNamespaceDescriptor\022\'.hbase.pb.GetName" +
-      "spaceDescriptorRequest\032(.hbase.pb.GetNam" +
-      "espaceDescriptorResponse\022q\n\030ListNamespac" +
-      "eDescriptors\022).hbase.pb.ListNamespaceDes" +
-      "criptorsRequest\032*.hbase.pb.ListNamespace" +
-      "DescriptorsResponse\022\206\001\n\037ListTableDescrip" +
-      "torsByNamespace\0220.hbase.pb.ListTableDesc" +
-      "riptorsByNamespaceRequest\0321.hbase.pb.Lis" +
-      "tTableDescriptorsByNamespaceResponse\022t\n\031" +
-      "ListTableNamesByNamespace\022*.hbase.pb.Lis",
-      "tTableNamesByNamespaceRequest\032+.hbase.pb" +
-      ".ListTableNamesByNamespaceResponse\022A\n\010Se" +
-      "tQuota\022\031.hbase.pb.SetQuotaRequest\032\032.hbas" +
-      "e.pb.SetQuotaResponse\022x\n\037getLastMajorCom" +
-      "pactionTimestamp\022).hbase.pb.MajorCompact" +
-      "ionTimestampRequest\032*.hbase.pb.MajorComp" +
-      "actionTimestampResponse\022\212\001\n(getLastMajor" +
-      "CompactionTimestampForRegion\0222.hbase.pb." +
-      "MajorCompactionTimestampForRegionRequest" +
-      "\032*.hbase.pb.MajorCompactionTimestampResp",
-      "onse\022_\n\022getProcedureResult\022#.hbase.pb.Ge" +
-      "tProcedureResultRequest\032$.hbase.pb.GetPr" +
-      "ocedureResultResponse\022h\n\027getSecurityCapa" +
-      "bilities\022%.hbase.pb.SecurityCapabilities" +
-      "Request\032&.hbase.pb.SecurityCapabilitiesR" +
-      "esponse\022S\n\016AbortProcedure\022\037.hbase.pb.Abo" +
-      "rtProcedureRequest\032 .hbase.pb.AbortProce" +
-      "dureResponse\022S\n\016ListProcedures\022\037.hbase.p" +
-      "b.ListProceduresRequest\032 .hbase.pb.ListP" +
-      "roceduresResponse\022Y\n\020ClearDeadServers\022!.",
-      "hbase.pb.ClearDeadServersRequest\032\".hbase" +
-      ".pb.ClearDeadServersResponse\022S\n\016ListName" +
-      "spaces\022\037.hbase.pb.ListNamespacesRequest\032" +
-      " .hbase.pb.ListNamespacesResponseBB\n*org" +
-      ".apache.hadoop.hbase.protobuf.generatedB" +
-      "\014MasterProtosH\001\210\001\001\240\001\001"
+      "me\"A\n\031SetSnapshotCleanupRequest\022\017\n\007enabl" +
+      "ed\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\";\n\032SetSnap" +
+      "shotCleanupResponse\022\035\n\025prev_snapshot_cle" +
+      "anup\030\001 \002(\010\"!\n\037IsSnapshotCleanupEnabledRe" +
+      "quest\"3\n IsSnapshotCleanupEnabledRespons" +
+      "e\022\017\n\007enabled\030\001 \002(\010*(\n\020MasterSwitchType\022\t" +
+      "\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\241.\n\rMasterService\022e" +
+      "\n\024GetSchemaAlterStatus\022%.hbase.pb.GetSch" +
+      "emaAlterStatusRequest\032&.hbase.pb.GetSche" +
+      "maAlterStatusResponse\022b\n\023GetTableDescrip",
+      "tors\022$.hbase.pb.GetTableDescriptorsReque" +
+      "st\032%.hbase.pb.GetTableDescriptorsRespons" +
+      "e\022P\n\rGetTableNames\022\036.hbase.pb.GetTableNa" +
+      "mesRequest\032\037.hbase.pb.GetTableNamesRespo" +
+      "nse\022Y\n\020GetClusterStatus\022!.hbase.pb.GetCl" +
+      "usterStatusRequest\032\".hbase.pb.GetCluster" +
+      "StatusResponse\022V\n\017IsMasterRunning\022 .hbas" +
+      "e.pb.IsMasterRunningRequest\032!.hbase.pb.I" +
+      "sMasterRunningResponse\022D\n\tAddColumn\022\032.hb" +
+      "ase.pb.AddColumnRequest\032\033.hbase.pb.AddCo",
+      "lumnResponse\022M\n\014DeleteColumn\022\035.hbase.pb." +
+      "DeleteColumnRequest\032\036.hbase.pb.DeleteCol" +
+      "umnResponse\022M\n\014ModifyColumn\022\035.hbase.pb.M" +
+      "odifyColumnRequest\032\036.hbase.pb.ModifyColu" +
+      "mnResponse\022G\n\nMoveRegion\022\033.hbase.pb.Move" +
+      "RegionRequest\032\034.hbase.pb.MoveRegionRespo" +
+      "nse\022k\n\026DispatchMergingRegions\022\'.hbase.pb" +
+      ".DispatchMergingRegionsRequest\032(.hbase.p" +
+      "b.DispatchMergingRegionsResponse\022M\n\014Assi" +
+      "gnRegion\022\035.hbase.pb.AssignRegionRequest\032",
+      "\036.hbase.pb.AssignRegionResponse\022S\n\016Unass" +
+      "ignRegion\022\037.hbase.pb.UnassignRegionReque" +
+      "st\032 .hbase.pb.UnassignRegionResponse\022P\n\r" +
+      "OfflineRegion\022\036.hbase.pb.OfflineRegionRe" +
+      "quest\032\037.hbase.pb.OfflineRegionResponse\022J" +
+      "\n\013DeleteTable\022\034.hbase.pb.DeleteTableRequ" +
+      "est\032\035.hbase.pb.DeleteTableResponse\022P\n\rtr" +
+      "uncateTable\022\036.hbase.pb.TruncateTableRequ" +
+      "est\032\037.hbase.pb.TruncateTableResponse\022J\n\013" +
+      "EnableTable\022\034.hbase.pb.EnableTableReques",
+      "t\032\035.hbase.pb.EnableTableResponse\022M\n\014Disa" +
+      "bleTable\022\035.hbase.pb.DisableTableRequest\032" +
+      "\036.hbase.pb.DisableTableResponse\022J\n\013Modif" +
+      "yTable\022\034.hbase.pb.ModifyTableRequest\032\035.h" +
+      "base.pb.ModifyTableResponse\022J\n\013CreateTab" +
+      "le\022\034.hbase.pb.CreateTableRequest\032\035.hbase" +
+      ".pb.CreateTableResponse\022A\n\010Shutdown\022\031.hb" +
+      "ase.pb.ShutdownRequest\032\032.hbase.pb.Shutdo" +
+      "wnResponse\022G\n\nStopMaster\022\033.hbase.pb.Stop" +
+      "MasterRequest\032\034.hbase.pb.StopMasterRespo",
+      "nse\022h\n\031IsMasterInMaintenanceMode\022$.hbase" +
+      ".pb.IsInMaintenanceModeRequest\032%.hbase.p" +
+      "b.IsInMaintenanceModeResponse\022>\n\007Balance" +
+      "\022\030.hbase.pb.BalanceRequest\032\031.hbase.pb.Ba" +
+      "lanceResponse\022_\n\022SetBalancerRunning\022#.hb" +
+      "ase.pb.SetBalancerRunningRequest\032$.hbase" +
+      ".pb.SetBalancerRunningResponse\022\\\n\021IsBala" +
+      "ncerEnabled\022\".hbase.pb.IsBalancerEnabled" +
+      "Request\032#.hbase.pb.IsBalancerEnabledResp" +
+      "onse\022k\n\026SetSplitOrMergeEnabled\022\'.hbase.p",
+      "b.SetSplitOrMergeEnabledRequest\032(.hbase." +
+      "pb.SetSplitOrMergeEnabledResponse\022h\n\025IsS" +
+      "plitOrMergeEnabled\022&.hbase.pb.IsSplitOrM" +
+      "ergeEnabledRequest\032\'.hbase.pb.IsSplitOrM" +
+      "ergeEnabledResponse\022D\n\tNormalize\022\032.hbase" +
+      ".pb.NormalizeRequest\032\033.hbase.pb.Normaliz" +
+      "eResponse\022e\n\024SetNormalizerRunning\022%.hbas" +
+      "e.pb.SetNormalizerRunningRequest\032&.hbase" +
+      ".pb.SetNormalizerRunningResponse\022b\n\023IsNo" +
+      "rmalizerEnabled\022$.hbase.pb.IsNormalizerE",
+      "nabledRequest\032%.hbase.pb.IsNormalizerEna" +
+      "bledResponse\022S\n\016RunCatalogScan\022\037.hbase.p" +
+      "b.RunCatalogScanRequest\032 .hbase.pb.RunCa" +
+      "talogScanResponse\022e\n\024EnableCatalogJanito" +
+      "r\022%.hbase.pb.EnableCatalogJanitorRequest" +
+      "\032&.hbase.pb.EnableCatalogJanitorResponse" +
+      "\022n\n\027IsCatalogJanitorEnabled\022(.hbase.pb.I" +
+      "sCatalogJanitorEnabledRequest\032).hbase.pb" +
+      ".IsCatalogJanitorEnabledResponse\022V\n\017RunC" +
+      "leanerChore\022 .hbase.pb.RunCleanerChoreRe",
+      "quest\032!.hbase.pb.RunCleanerChoreResponse" +
+      "\022k\n\026SetCleanerChoreRunning\022\'.hbase.pb.Se" +
+      "tCleanerChoreRunningRequest\032(.hbase.pb.S" +
+      "etCleanerChoreRunningResponse\022h\n\025IsClean" +
+      "erChoreEnabled\022&.hbase.pb.IsCleanerChore" +
+      "EnabledRequest\032\'.hbase.pb.IsCleanerChore" +
+      "EnabledResponse\022^\n\021ExecMasterService\022#.h" +
+      "base.pb.CoprocessorServiceRequest\032$.hbas" +
+      "e.pb.CoprocessorServiceResponse\022A\n\010Snaps" +
+      "hot\022\031.hbase.pb.SnapshotRequest\032\032.hbase.p",
+      "b.SnapshotResponse\022h\n\025GetCompletedSnapsh" +
+      "ots\022&.hbase.pb.GetCompletedSnapshotsRequ" +
+      "est\032\'.hbase.pb.GetCompletedSnapshotsResp" +
+      "onse\022S\n\016DeleteSnapshot\022\037.hbase.pb.Delete" +
+      "SnapshotRequest\032 .hbase.pb.DeleteSnapsho" +
+      "tResponse\022S\n\016IsSnapshotDone\022\037.hbase.pb.I" +
+      "sSnapshotDoneRequest\032 .hbase.pb.IsSnapsh" +
+      "otDoneResponse\022V\n\017RestoreSnapshot\022 .hbas" +
+      "e.pb.RestoreSnapshotRequest\032!.hbase.pb.R" +
+      "estoreSnapshotResponse\022h\n\025IsRestoreSnaps",
+      "hotDone\022&.hbase.pb.IsRestoreSnapshotDone" +
+      "Request\032\'.hbase.pb.IsRestoreSnapshotDone" +
+      "Response\022P\n\rExecProcedure\022\036.hbase.pb.Exe" +
+      "cProcedureRequest\032\037.hbase.pb.ExecProcedu" +
+      "reResponse\022W\n\024ExecProcedureWithRet\022\036.hba" +
+      "se.pb.ExecProcedureRequest\032\037.hbase.pb.Ex" +
+      "ecProcedureResponse\022V\n\017IsProcedureDone\022 " +
+      ".hbase.pb.IsProcedureDoneRequest\032!.hbase" +
+      ".pb.IsProcedureDoneResponse\022V\n\017ModifyNam" +
+      "espace\022 .hbase.pb.ModifyNamespaceRequest",
+      "\032!.hbase.pb.ModifyNamespaceResponse\022V\n\017C" +
+      "reateNamespace\022 .hbase.pb.CreateNamespac" +
+      "eRequest\032!.hbase.pb.CreateNamespaceRespo" +
+      "nse\022V\n\017DeleteNamespace\022 .hbase.pb.Delete" +
+      "NamespaceRequest\032!.hbase.pb.DeleteNamesp" +
+      "aceResponse\022k\n\026GetNamespaceDescriptor\022\'." +
+      "hbase.pb.GetNamespaceDescriptorRequest\032(" +
+      ".hbase.pb.GetNamespaceDescriptorResponse" +
+      "\022q\n\030ListNamespaceDescriptors\022).hbase.pb." +
+      "ListNamespaceDescriptorsRequest\032*.hbase.",
+      "pb.ListNamespaceDescriptorsResponse\022\206\001\n\037" +
+      "ListTableDescriptorsByNamespace\0220.hbase." +
+      "pb.ListTableDescriptorsByNamespaceReques" +
+      "t\0321.hbase.pb.ListTableDescriptorsByNames" +
+      "paceResponse\022t\n\031ListTableNamesByNamespac" +
+      "e\022*.hbase.pb.ListTableNamesByNamespaceRe" +
+      "quest\032+.hbase.pb.ListTableNamesByNamespa" +
+      "ceResponse\022A\n\010SetQuota\022\031.hbase.pb.SetQuo" +
+      "taRequest\032\032.hbase.pb.SetQuotaResponse\022x\n" +
+      "\037getLastMajorCompactionTimestamp\022).hbase",
+      ".pb.MajorCompactionTimestampRequest\032*.hb" +
+      "ase.pb.MajorCompactionTimestampResponse\022" +
+      "\212\001\n(getLastMajorCompactionTimestampForRe" +
+      "gion\0222.hbase.pb.MajorCompactionTimestamp" +
+      "ForRegionRequest\032*.hbase.pb.MajorCompact" +
+      "ionTimestampResponse\022_\n\022getProcedureResu" +
+      "lt\022#.hbase.pb.GetProcedureResultRequest\032" +
+      "$.hbase.pb.GetProcedureResultResponse\022h\n" +
+      "\027getSecurityCapabilities\022%.hbase.pb.Secu" +
+      "rityCapabilitiesRequest\032&.hbase.pb.Secur",
+      "ityCapabilitiesResponse\022S\n\016AbortProcedur" +
+      "e\022\037.hbase.pb.AbortProcedureRequest\032 .hba" +
+      "se.pb.AbortProcedureResponse\022S\n\016ListProc" +
+      "edures\022\037.hbase.pb.ListProceduresRequest\032" +
+      " .hbase.pb.ListProceduresResponse\022Y\n\020Cle" +
+      "arDeadServers\022!.hbase.pb.ClearDeadServer" +
+      "sRequest\032\".hbase.pb.ClearDeadServersResp" +
+      "onse\022S\n\016ListNamespaces\022\037.hbase.pb.ListNa" +
+      "mespacesRequest\032 .hbase.pb.ListNamespace" +
+      "sResponse\022b\n\025SwitchSnapshotCleanup\022#.hba",
+      "se.pb.SetSnapshotCleanupRequest\032$.hbase." +
+      "pb.SetSnapshotCleanupResponse\022q\n\030IsSnaps" +
+      "hotCleanupEnabled\022).hbase.pb.IsSnapshotC" +
+      "leanupEnabledRequest\032*.hbase.pb.IsSnapsh" +
+      "otCleanupEnabledResponseBB\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\014MasterPr" +
+      "otosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -69736,6 +71683,30 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ClearDeadServersResponse_descriptor,
               new java.lang.String[] { "ServerName", });
+          internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor =
+            getDescriptor().getMessageTypes().get(119);
+          internal_static_hbase_pb_SetSnapshotCleanupRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SetSnapshotCleanupRequest_descriptor,
+              new java.lang.String[] { "Enabled", "Synchronous", });
+          internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor =
+            getDescriptor().getMessageTypes().get(120);
+          internal_static_hbase_pb_SetSnapshotCleanupResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SetSnapshotCleanupResponse_descriptor,
+              new java.lang.String[] { "PrevSnapshotCleanup", });
+          internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor =
+            getDescriptor().getMessageTypes().get(121);
+          internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_IsSnapshotCleanupEnabledRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor =
+            getDescriptor().getMessageTypes().get(122);
+          internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_IsSnapshotCleanupEnabledResponse_descriptor,
+              new java.lang.String[] { "Enabled", });
           return null;
         }
       };

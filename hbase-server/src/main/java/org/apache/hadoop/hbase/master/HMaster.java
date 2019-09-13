@@ -174,6 +174,7 @@ import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
+import org.apache.hadoop.hbase.zookeeper.SnapshotCleanupTracker;
 import org.apache.hadoop.hbase.zookeeper.SplitOrMergeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -283,6 +284,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /** Namespace stuff */
   private TableNamespaceManager tableNamespaceManager;
+
+  // Tracker for auto snapshot cleanup state
+  SnapshotCleanupTracker snapshotCleanupTracker;
 
   //Tracker for master maintenance mode setting
   private MasterMaintenanceModeTracker maintenanceModeTracker;
@@ -684,6 +688,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this,
       this.serverManager);
     this.drainingServerTracker.start();
+
+    this.snapshotCleanupTracker = new SnapshotCleanupTracker(zooKeeper, this);
+    this.snapshotCleanupTracker.start();
 
     this.maintenanceModeTracker = new MasterMaintenanceModeTracker(zooKeeper);
     this.maintenanceModeTracker.start();
@@ -1254,15 +1261,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
-    final boolean isSnapshotChoreDisabled = conf.getBoolean(HConstants.SNAPSHOT_CLEANER_DISABLE,
-        false);
-    if (isSnapshotChoreDisabled) {
+    final boolean isSnapshotChoreEnabled = this.snapshotCleanupTracker
+        .isSnapshotCleanupEnabled();
+    this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
+    if (isSnapshotChoreEnabled) {
+      getChoreService().scheduleChore(this.snapshotCleanerChore);
+    } else {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Snapshot Cleaner Chore is disabled. Not starting up the chore..");
       }
-    } else {
-      this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
-      getChoreService().scheduleChore(this.snapshotCleanerChore);
     }
 
     serviceStarted = true;
@@ -1346,6 +1353,37 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     procedureStore.start(numThreads);
     procedureExecutor.start(numThreads, abortOnCorruption);
   }
+
+  /**
+   * Turn on/off Snapshot Cleanup Chore
+   *
+   * @param on indicates whether Snapshot Cleanup Chore is to be run
+   */
+  void switchSnapshotCleanup(final boolean on, final boolean synchronous) {
+    if (synchronous) {
+      synchronized (this.snapshotCleanerChore) {
+        switchSnapshotCleanup(on);
+      }
+    } else {
+      switchSnapshotCleanup(on);
+    }
+  }
+
+  private void switchSnapshotCleanup(final boolean on) {
+    try {
+      snapshotCleanupTracker.setSnapshotCleanupEnabled(on);
+      if (on) {
+        if (!getChoreService().isChoreScheduled(this.snapshotCleanerChore)) {
+          getChoreService().scheduleChore(this.snapshotCleanerChore);
+        }
+      } else {
+        getChoreService().cancelChore(this.snapshotCleanerChore);
+      }
+    } catch (KeeperException e) {
+      LOG.error("Error updating snapshot cleanup mode to " + on, e);
+    }
+  }
+
 
   private void stopProcedureExecutor() {
     if (procedureExecutor != null) {

@@ -98,7 +98,6 @@ public class TestSnapshotCleanerChore {
     snapshotManager = Mockito.mock(SnapshotManager.class);
     Stoppable stopper = new StoppableImplementation();
     Configuration conf = getSnapshotCleanerConf();
-    conf.setStrings("hbase.master.cleaner.snapshot.disable", "false");
     SnapshotCleanerChore snapshotCleanerChore =
             new SnapshotCleanerChore(stopper, conf, snapshotManager);
     List<SnapshotDescription> snapshotDescriptionList = new ArrayList<>();
