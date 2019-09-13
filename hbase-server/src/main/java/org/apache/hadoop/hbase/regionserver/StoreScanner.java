@@ -896,12 +896,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         // need for the updateReaders() to happen.
         LOG.debug("StoreScanner already has the close lock. There is no need to updateReaders");
         // no lock acquired.
+        clearAndClose(memStoreScanners);
         return;
       }
       // lock acquired
       updateReaders = true;
       if (this.closing) {
         LOG.debug("StoreScanner already closing. There is no need to updateReaders");
+        clearAndClose(memStoreScanners);
         return;
       }
       flushed = true;
