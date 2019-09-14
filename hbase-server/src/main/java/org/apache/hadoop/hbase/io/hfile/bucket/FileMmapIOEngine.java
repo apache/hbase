@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * mechanism
  */
 @InterfaceAudience.Private
-public abstract class FileMmapIOEngine implements IOEngine {
+public abstract class FileMmapIOEngine extends PersistentIOEngine {
   static final Logger LOG = LoggerFactory.getLogger(FileMmapIOEngine.class);
 
   protected final String path;
@@ -47,6 +47,7 @@ public abstract class FileMmapIOEngine implements IOEngine {
   private RandomAccessFile raf = null;
 
   public FileMmapIOEngine(String filePath, long capacity) throws IOException {
+    super(new String[] {filePath});
     this.path = filePath;
     this.size = capacity;
     long fileSize = 0;

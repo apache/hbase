@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -238,6 +239,16 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
+  private static final String FILE_VERIFY_ALGORITHM =
+    "hbase.bucketcache.persistent.file.integrity.check.algorithm";
+  private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
+
+  /**
+   * Use {@link java.security.MessageDigest} class's encryption algorithms to check
+   * persistent file integrity, default algorithm is MD5
+   * */
+  private String algorithm;
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
@@ -247,6 +258,7 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
       Configuration conf) throws IOException {
+    this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
     this.writerThreads = new WriterThread[writerThreadNum];
     long blockNumCapacity = capacity / blockSize;
@@ -1053,6 +1065,12 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     try (FileOutputStream fos = new FileOutputStream(persistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
+      byte[] checksum = ((PersistentIOEngine) ioEngine).calculateChecksum(algorithm);
+      if (checksum != null) {
+        fos.write(ProtobufMagic.PB_MAGIC);
+        fos.write(Bytes.toBytes(checksum.length));
+        fos.write(checksum);
+      }
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
     }
   }
@@ -1067,7 +1085,9 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     assert !cacheEnabled;
 
-    try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
+    FileInputStream in = null;
+    try {
+      in = new FileInputStream(persistencePath);
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       int read = in.read(pbuf);
@@ -1081,8 +1101,47 @@ public class BucketCache implements BlockCache, HeapSize {
         throw new IOException("Persistence file does not start with protobuf magic number. " +
             persistencePath);
       }
+      byte[] pbuf2 = new byte[pblen];
+      int read2 = in.read(pbuf2);
+      if (read2 != pblen) {
+        LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
+          "checking for protobuf magic number. Requested=" + pblen + ", but received= " +
+          read2 + ".");
+        return;
+      }
+      if (ProtobufMagic.isPBMagicPrefix(pbuf2)) {
+        byte[] length = new byte[Integer.BYTES];
+        in.read(length);
+        byte[] persistentChecksum = new byte[Bytes.toInt(length)];
+        int readLen = in.read(persistentChecksum);
+        if (readLen != Bytes.toInt(length)) {
+          LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
+            "checking for persistent checksum. Requested=" + length + ", but received=" +
+            readLen + ". ");
+          return;
+        }
+        if (!((PersistentIOEngine) ioEngine).verifyFileIntegrity(
+          persistentChecksum, algorithm)) {
+          LOG.warn("Can't restore from file because of verification failed.");
+          return;
+        }
+      } else {
+        // persistent file may be an old version of file, it's not support verification,
+        // so reopen FileInputStream and read the persistent file from head
+        in.close();
+        in = new FileInputStream(persistencePath);
+        in.read(pbuf);
+      }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+      if (!persistenceFile.delete()) {
+        throw new IOException("Failed deleting persistence file " +
+          persistenceFile.getAbsolutePath());
+      }
     }
   }
 
