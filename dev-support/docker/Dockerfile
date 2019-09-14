@@ -62,6 +62,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python-pip \
     rsync \
     snappy \
+    xz-utils \
     zlib1g-dev \
     wget
 
@@ -116,17 +117,6 @@ RUN mkdir -p /opt/findbugs && \
 ENV FINDBUGS_HOME /opt/findbugs
 
 ####
-# Install shellcheck
-####
-RUN apt-get -q install -y cabal-install
-RUN mkdir /root/.cabal
-RUN echo "remote-repo: hackage.fpcomplete.com:http://hackage.fpcomplete.com/" >> /root/.cabal/config
-#RUN echo "remote-repo: hackage.haskell.org:http://hackage.haskell.org/" > /root/.cabal/config
-RUN echo "remote-repo-cache: /root/.cabal/packages" >> /root/.cabal/config
-RUN cabal update
-RUN cabal install shellcheck --global
-
-####
 # Install pylint
 ####
 RUN pip install pylint==1.9.2
@@ -156,6 +146,24 @@ RUN gem install rubocop
 # Install ruby-lint
 ###
 RUN gem install ruby-lint
+
+####
+# Install shellcheck
+#
+# Include workaround for static linking bug
+# https://github.com/koalaman/shellcheck/issues/1053
+###
+RUN mkdir -p /opt/shellcheck && \
+    curl -L -s -S \
+        https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz \
+        -o /opt/shellcheck.tar.xz && \
+    tar xJf /opt/shellcheck.tar.xz --strip-components 1 -C /opt/shellcheck && \
+    touch /tmp/libc.so.6 && \
+    echo '#!/bin/bash\n\
+LD_LIBRARY_PATH=/tmp /opt/shellcheck/shellcheck $@'\
+> /usr/bin/shellcheck && \
+    chmod +x /usr/bin/shellcheck && \
+    rm -f /opt/shellcheck.tar.xz
 
 ###
 # Avoid out of memory errors in builds
