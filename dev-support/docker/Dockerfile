@@ -32,12 +32,22 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
        libc6-dev \
        ruby \
        ruby-dev \
-       shellcheck \
        wget \
        && \
     gem install --no-document rake rubocop ruby-lint
 
 ENV FINDBUGS_HOME /usr
+
+####
+# Install shellcheck
+###
+RUN mkdir -p /opt/shellcheck && \
+    curl -L -s -S \
+        https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz \
+        -o /opt/shellcheck.tar.xz && \
+    tar xJf /opt/shellcheck.tar.xz --strip-components 1 -C /opt/shellcheck && \
+    ln -s /opt/shellcheck/shellcheck /usr/bin/shellcheck && \
+    rm -f /opt/shellcheck.tar.xz
 
 ###
 # Avoid out of memory errors in builds
