@@ -371,7 +371,7 @@ public class FileIOEngine implements PersistentIOEngine {
       }
     }
     MessageDigest messageDigest = MessageDigest.getInstance(algorithmName);
-    messageDigest.update(sb.toString().getBytes());
+    messageDigest.update(Bytes.toBytes(sb.toString()));
     return messageDigest.digest();
   }
 
