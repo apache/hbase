@@ -76,12 +76,13 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      // check whether Quota table is present or not.
+      // check whether quotaTable is present or not.
       if (!quotaTablePresent && !checkQuotaTableExists()) {
         LOG.info("Quota table not found, skipping quota manager cache refresh.");
-        quotaTablePresent = true;
         return;
       }
+      // since quotaTable is present so setting the flag as true.
+      quotaTablePresent = true;
       if (LOG.isTraceEnabled()) {
         LOG.trace("Reading current quota snapshots from hbase:quota.");
       }
