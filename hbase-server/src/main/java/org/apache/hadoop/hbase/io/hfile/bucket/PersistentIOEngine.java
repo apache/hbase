@@ -45,8 +45,8 @@ public interface PersistentIOEngine extends IOEngine {
     throws IOException, NoSuchAlgorithmException;
 
   /**
-   * Whether the persistence file is old version, it's for back compatibility
-   * @return true if the persistence file is old version
+   * Whether the persistent file support verify file integrity, it's for back compatibility
+   * @return true if the persistent file does not support verify file integrity
    */
   boolean isOldVersion();
 

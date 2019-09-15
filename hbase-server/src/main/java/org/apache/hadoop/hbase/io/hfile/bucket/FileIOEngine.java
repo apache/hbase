@@ -58,7 +58,7 @@ public class FileIOEngine implements PersistentIOEngine {
   private final long sizePerFile;
   private final long capacity;
   private final String algorithmName;
-  private boolean isOldVersion;
+  private boolean oldVersion;
 
   private FileReadAccessor readAccessor = new FileReadAccessor();
   private FileWriteAccessor writeAccessor = new FileWriteAccessor();
@@ -84,7 +84,7 @@ public class FileIOEngine implements PersistentIOEngine {
   public void verifyFileIntegrity(String persistentPath) {
     if (persistentPath != null) {
       byte[] persistentChecksum = readPersistentChecksum(persistentPath);
-      if (!isOldVersion) {
+      if (!oldVersion) {
         try {
           byte[] calculateChecksum = calculateChecksum();
           if (!Bytes.equals(persistentChecksum, calculateChecksum)) {
@@ -333,7 +333,7 @@ public class FileIOEngine implements PersistentIOEngine {
         return persistentChecksum;
       } else {
         // if the persistent file is not start with PB_MAGIC, it's an old version file
-        isOldVersion = true;
+        oldVersion = true;
       }
     } catch (IOException ioex) {
       LOG.warn("Failed read persistent checksum, because of " + ioex);
@@ -377,7 +377,7 @@ public class FileIOEngine implements PersistentIOEngine {
 
   @Override
   public boolean isOldVersion() {
-    return isOldVersion;
+    return oldVersion;
   }
 
   /**
