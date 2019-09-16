@@ -1911,7 +1911,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     RegionInfo regionInfo = oldLocation.getRegion();
     Throwable cause = ClientExceptionsUtil.findException(exception);
     if (cause != null) {
-      if (!ClientExceptionsUtil.isMetaClearingException(cause)) {
+      if (!ClientExceptionsUtil.isMetaClearingException(cause)
+          || ClientExceptionsUtil.isRegionServerOverloadedException(cause)) {
         // We know that the region is still on this region server
         return;
       }
