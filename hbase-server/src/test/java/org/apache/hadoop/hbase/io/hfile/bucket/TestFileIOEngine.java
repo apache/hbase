@@ -68,7 +68,7 @@ public class TestFileIOEngine {
 
   @Before
   public void setUp() throws IOException {
-    fileIOEngine = new FileIOEngine("MD5", null, TOTAL_CAPACITY, FILE_PATHS);
+    fileIOEngine = new FileIOEngine(TOTAL_CAPACITY, FILE_PATHS);
   }
 
   @After
