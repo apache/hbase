@@ -711,7 +711,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       // Do not use the exception for updating cache because it might be coming from
       // any of the regions in the MultiAction.
       updateCachedLocations(server, regionName, row,
-        ClientExceptionsUtil.isMetaClearingException(t) ? null : t);
+        ClientExceptionsUtil.isMetaClearingException(t) &&
+            !ClientExceptionsUtil.isRegionServerOverloadedException(t) ? null : t);
       for (Action action : e.getValue()) {
         Retry retry = manageError(
             action.getOriginalIndex(), action.getAction(), canRetry, t, server);
@@ -913,7 +914,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   private void cleanServerCache(ServerName server, Throwable regionException) {
-    if (ClientExceptionsUtil.isMetaClearingException(regionException)) {
+    if (ClientExceptionsUtil.isMetaClearingException(regionException)
+        && !ClientExceptionsUtil.isRegionServerOverloadedException(regionException)) {
       // We want to make sure to clear the cache in case there were location-related exceptions.
       // We don't to clear the cache for every possible exception that comes through, however.
       asyncProcess.connection.clearCaches(server);
