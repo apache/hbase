@@ -19,16 +19,12 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -36,20 +32,15 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * IO engine that stores data to a file on the local file system.
  */
 @InterfaceAudience.Private
-public class FileIOEngine implements PersistentIOEngine {
+public class FileIOEngine implements IOEngine {
   private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
   public static final String FILE_DELIMITER = ",";
-  private static final DuFileCommand DU = new DuFileCommand(new String[] {"du", ""});
-
   private final String[] filePaths;
   private final FileChannel[] fileChannels;
   private final RandomAccessFile[] rafs;
@@ -57,58 +48,17 @@ public class FileIOEngine implements PersistentIOEngine {
 
   private final long sizePerFile;
   private final long capacity;
-  private final String algorithmName;
-  private boolean oldVersion;
 
   private FileReadAccessor readAccessor = new FileReadAccessor();
   private FileWriteAccessor writeAccessor = new FileWriteAccessor();
 
-  public FileIOEngine(String algorithmName, String persistentPath,
-    long capacity, String... filePaths) throws IOException {
+  public FileIOEngine(long capacity, String... filePaths) throws IOException {
     this.sizePerFile = capacity / filePaths.length;
     this.capacity = this.sizePerFile * filePaths.length;
     this.filePaths = filePaths;
     this.fileChannels = new FileChannel[filePaths.length];
     this.rafs = new RandomAccessFile[filePaths.length];
     this.channelLocks = new ReentrantLock[filePaths.length];
-    this.algorithmName = algorithmName;
-    verifyFileIntegrity(persistentPath);
-    init();
-  }
-
-  /**
-   * Verify cache files's integrity
-   * @param persistentPath the backingMap persistent path
-   */
-  @Override
-  public void verifyFileIntegrity(String persistentPath) {
-    if (persistentPath != null) {
-      byte[] persistentChecksum = readPersistentChecksum(persistentPath);
-      if (!oldVersion) {
-        try {
-          byte[] calculateChecksum = calculateChecksum();
-          if (!Bytes.equals(persistentChecksum, calculateChecksum)) {
-            LOG.warn("The persistent checksum is " + Bytes.toString(persistentChecksum) +
-              ", but the calculate checksum is " + Bytes.toString(calculateChecksum));
-            throw new IOException();
-          }
-        } catch (IOException ioex) {
-          LOG.error("File verification failed because of ", ioex);
-          // delete cache files and backingMap persistent file.
-          deleteCacheDataFile();
-          new File(persistentPath).delete();
-        } catch (NoSuchAlgorithmException nsae) {
-          LOG.error("No such algorithm " + algorithmName, nsae);
-          throw new RuntimeException(nsae);
-        }
-      }
-    } else {
-      // not configure persistent path
-      deleteCacheDataFile();
-    }
-  }
-
-  private void init() throws IOException {
     for (int i = 0; i < filePaths.length; i++) {
       String filePath = filePaths[i];
       try {
@@ -118,15 +68,15 @@ public class FileIOEngine implements PersistentIOEngine {
           // The next setting length will throw exception,logging this message
           // is just used for the detail reason of exception，
           String msg = "Only " + StringUtils.byteDesc(totalSpace)
-            + " total space under " + filePath + ", not enough for requested "
-            + StringUtils.byteDesc(sizePerFile);
+              + " total space under " + filePath + ", not enough for requested "
+              + StringUtils.byteDesc(sizePerFile);
           LOG.warn(msg);
         }
         rafs[i].setLength(sizePerFile);
         fileChannels[i] = rafs[i].getChannel();
         channelLocks[i] = new ReentrantLock();
         LOG.info("Allocating cache " + StringUtils.byteDesc(sizePerFile)
-          + ", on the path: " + filePath);
+            + ", on the path:" + filePath);
       } catch (IOException fex) {
         LOG.error("Failed allocating cache on " + filePath, fex);
         shutdown();
@@ -314,98 +264,6 @@ public class FileIOEngine implements PersistentIOEngine {
       fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
     } finally{
       channelLock.unlock();
-    }
-  }
-
-  /**
-   * Read the persistent checksum from persistent path
-   * @param persistentPath the backingMap persistent path
-   * @return the persistent checksum
-   */
-  private byte[] readPersistentChecksum(String persistentPath) {
-    try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(persistentPath))) {
-      byte[] PBMagic = new byte[ProtobufUtil.PB_MAGIC.length];
-      ois.read(PBMagic);
-      if (Bytes.equals(ProtobufUtil.PB_MAGIC, PBMagic)) {
-        int length = ois.readInt();
-        byte[] persistentChecksum = new byte[length];
-        ois.read(persistentChecksum);
-        return persistentChecksum;
-      } else {
-        // if the persistent file is not start with PB_MAGIC, it's an old version file
-        oldVersion = true;
-      }
-    } catch (IOException ioex) {
-      LOG.warn("Failed read persistent checksum, because of " + ioex);
-      return null;
-    }
-    return null;
-  }
-
-  @Override
-  public void deleteCacheDataFile() {
-    if (filePaths == null) {
-      return;
-    }
-    for (String file : filePaths) {
-      new File(file).delete();
-    }
-  }
-
-  @Override
-  public byte[] calculateChecksum()
-    throws IOException, NoSuchAlgorithmException {
-    if (filePaths == null) {
-      return null;
-    }
-    StringBuilder sb = new StringBuilder();
-    for (String filePath : filePaths){
-      File file = new File(filePath);
-      if (file.exists()){
-        sb.append(filePath);
-        sb.append(getFileSize(filePath));
-        sb.append(file.lastModified());
-      } else {
-        throw new IOException("Cache file: " + filePath + " is not exists.");
-      }
-    }
-    MessageDigest messageDigest = MessageDigest.getInstance(algorithmName);
-    messageDigest.update(Bytes.toBytes(sb.toString()));
-    return messageDigest.digest();
-  }
-
-  @Override
-  public boolean isOldVersion() {
-    return oldVersion;
-  }
-
-  /**
-   * Using Linux command du to get file's real size
-   * @param filePath the file
-   * @return file's real size
-   * @throws IOException something happened like file not exists
-   */
-  private static long getFileSize(String filePath) throws IOException {
-    DU.setExecCommand(filePath);
-    DU.execute();
-    return Long.parseLong(DU.getOutput().split("\t")[0]);
-  }
-
-  private static class DuFileCommand extends Shell.ShellCommandExecutor {
-    private String[] execCommand;
-
-    DuFileCommand(String[] execString) {
-      super(execString);
-      execCommand = execString;
-    }
-
-    void setExecCommand(String filePath) {
-      this.execCommand[1] = filePath;
-    }
-
-    @Override
-    public String[] getExecString() {
-      return this.execCommand;
     }
   }
 
