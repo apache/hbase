@@ -48,7 +48,7 @@ import org.apache.hadoop.util.StringUtils;
 public class FileIOEngine implements PersistentIOEngine {
   private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
   public static final String FILE_DELIMITER = ",";
-  private static final DuFileCommand du = new DuFileCommand(new String[] {"du", ""});
+  private static final DuFileCommand DU = new DuFileCommand(new String[] {"du", ""});
 
   private final String[] filePaths;
   private final FileChannel[] fileChannels;
@@ -355,7 +355,6 @@ public class FileIOEngine implements PersistentIOEngine {
   @Override
   public byte[] calculateChecksum()
     throws IOException, NoSuchAlgorithmException {
-
     if (filePaths == null) {
       return null;
     }
@@ -387,9 +386,9 @@ public class FileIOEngine implements PersistentIOEngine {
    * @throws IOException something happened like file not exists
    */
   private static long getFileSize(String filePath) throws IOException {
-    du.setExecCommand(filePath);
-    du.execute();
-    return Long.parseLong(du.getOutput().split("\t")[0]);
+    DU.setExecCommand(filePath);
+    DU.execute();
+    return Long.parseLong(DU.getOutput().split("\t")[0]);
   }
 
   private static class DuFileCommand extends Shell.ShellCommandExecutor {
