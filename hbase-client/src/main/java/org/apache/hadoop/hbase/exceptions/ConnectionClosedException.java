@@ -42,5 +42,4 @@ public class ConnectionClosedException extends HBaseIOException {
   public ConnectionClosedException(String message, Throwable cause) {
     super(message, cause);
   }
-
 }

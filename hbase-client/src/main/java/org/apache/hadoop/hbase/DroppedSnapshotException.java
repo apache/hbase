@@ -50,5 +50,4 @@ public class DroppedSnapshotException extends IOException {
   public DroppedSnapshotException(String message, Throwable cause) {
     super(message, cause);
   }
-
 }
