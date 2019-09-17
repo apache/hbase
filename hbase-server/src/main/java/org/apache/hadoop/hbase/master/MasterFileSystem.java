@@ -515,9 +515,7 @@ public class MasterFileSystem {
       }
     } catch (DeserializationException de) {
       LOG.fatal("Please fix invalid configuration for " + dirConfKey, de);
-      IOException ioe = new IOException();
-      ioe.initCause(de);
-      throw ioe;
+      throw new IOException(de);
     } catch (IllegalArgumentException iae) {
       LOG.fatal("Please fix invalid configuration for "
         + dirConfKey + " " + rd.toString(), iae);

@@ -168,17 +168,17 @@ class IPCUtil {
       return (SocketTimeoutException) new SocketTimeoutException(
           "Call to " + addr + " failed because " + exception).initCause(exception);
     } else if (exception instanceof ConnectionClosingException) {
-      return (ConnectionClosingException) new ConnectionClosingException(
-          "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
+      return new ConnectionClosingException("Call to " + addr + " failed on local exception: "
+          + exception, exception);
     } else if (exception instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) exception;
     } else if (exception instanceof DoNotRetryIOException) {
-      return (IOException) new DoNotRetryIOException(
-          "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
+      return new DoNotRetryIOException(
+          "Call to " + addr + " failed on local exception: " + exception, exception);
     } else {
-      return (IOException) new IOException(
-          "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
+      return new IOException(
+          "Call to " + addr + " failed on local exception: " + exception, exception);
     }
   }
 

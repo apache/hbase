@@ -307,10 +307,8 @@ public abstract class CommonFSUtils {
       }
       return root;
     } catch (URISyntaxException e) {
-      IOException io = new IOException("Root directory path is not a valid " +
-        "URI -- check your " + HConstants.HBASE_DIR + " configuration");
-      io.initCause(e);
-      throw io;
+      throw new IOException("Root directory path is not a valid " +
+        "URI -- check your " + HConstants.HBASE_DIR + " configuration", e);
     }
   }
 

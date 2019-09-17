@@ -55,5 +55,15 @@ public class ConnectionClosingException extends IOException {
     super(string);
   }
 
+  /**
+   * ConnectionClosingException with cause
+   *
+   * @param message the message for this exception
+   * @param cause the cause for this exception
+   */
+  public ConnectionClosingException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
   private static final long serialVersionUID = -8980028569652624236L;
 }

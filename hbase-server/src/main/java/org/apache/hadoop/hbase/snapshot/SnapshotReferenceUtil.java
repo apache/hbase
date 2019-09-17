@@ -228,9 +228,7 @@ public final class SnapshotReferenceUtil {
       if (e.getCause() instanceof CorruptedSnapshotException) {
         throw new CorruptedSnapshotException(e.getCause().getMessage(), snapshotDesc);
       } else {
-        IOException ex = new IOException();
-        ex.initCause(e.getCause());
-        throw ex;
+        throw new IOException(e.getCause());
       }
     }
   }
