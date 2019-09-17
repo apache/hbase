@@ -135,33 +135,7 @@ public class NamespacesInstanceResource extends ResourceBase {
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
     MIMETYPE_PROTOBUF_IETF})
   public Response put(final NamespacesInstanceModel model, final @Context UriInfo uriInfo) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("PUT " + uriInfo.getAbsolutePath());
-    }
-    servlet.getMetrics().incrementRequests(1);
     return processUpdate(model, true, uriInfo);
-  }
-
-  /**
-   * Build a response for PUT alter namespace with no properties specified.
-   * @param message value not used.
-   * @param headers value not used.
-   * @return response code.
-   */
-  @PUT
-  public Response putNoBody(final byte[] message,
-      final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("PUT " + uriInfo.getAbsolutePath());
-    }
-    servlet.getMetrics().incrementRequests(1);
-    try{
-      NamespacesInstanceModel model = new NamespacesInstanceModel(namespace);
-      return processUpdate(model, true, uriInfo);
-    }catch(IOException ioe){
-      servlet.getMetrics().incrementFailedPutRequests(1);
-      throw new RuntimeException("Cannot retrieve info for '" + namespace + "'.");
-    }
   }
 
   /**
@@ -175,39 +149,26 @@ public class NamespacesInstanceResource extends ResourceBase {
     MIMETYPE_PROTOBUF_IETF})
   public Response post(final NamespacesInstanceModel model,
       final @Context UriInfo uriInfo) {
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("POST " + uriInfo.getAbsolutePath());
-    }
-    servlet.getMetrics().incrementRequests(1);
     return processUpdate(model, false, uriInfo);
   }
 
-  /**
-   * Build a response for POST create namespace with no properties specified.
-   * @param message value not used.
-   * @param headers value not used.
-   * @return response code.
-   */
-  @POST
-  public Response postNoBody(final byte[] message,
-      final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("POST " + uriInfo.getAbsolutePath());
-    }
-    servlet.getMetrics().incrementRequests(1);
-    try{
-      NamespacesInstanceModel model = new NamespacesInstanceModel(namespace);
-      return processUpdate(model, false, uriInfo);
-    }catch(IOException ioe){
-      servlet.getMetrics().incrementFailedPutRequests(1);
-      throw new RuntimeException("Cannot retrieve info for '" + namespace + "'.");
-    }
-  }
 
   // Check that POST or PUT is valid and then update namespace.
-  private Response processUpdate(final NamespacesInstanceModel model, final boolean updateExisting,
+  private Response processUpdate(NamespacesInstanceModel model, final boolean updateExisting,
       final UriInfo uriInfo) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace((updateExisting ? "PUT " : "POST ") + uriInfo.getAbsolutePath());
+    }
+    if (model == null) {
+      try {
+        model = new NamespacesInstanceModel(namespace);
+      } catch(IOException ioe) {
+        servlet.getMetrics().incrementFailedPutRequests(1);
+        throw new RuntimeException("Cannot retrieve info for '" + namespace + "'.");
+      }
+    }
+    servlet.getMetrics().incrementRequests(1);
+
     if (servlet.isReadOnly()) {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
@@ -265,7 +226,9 @@ public class NamespacesInstanceResource extends ResourceBase {
     }
 
     servlet.getMetrics().incrementSucessfulPutRequests(1);
-    return Response.created(uriInfo.getAbsolutePath()).build();
+
+    return updateExisting ? Response.ok(uriInfo.getAbsolutePath()).build() :
+      Response.created(uriInfo.getAbsolutePath()).build();
   }
 
   private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException{
