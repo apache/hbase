@@ -134,7 +134,7 @@ public class TokenUtil {
       User user, Job job)
       throws IOException, InterruptedException {
     try {
-      Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
+      Token<AuthenticationTokenIdentifier> token = ClientTokenUtil.obtainToken(conn, user);
 
       if (token == null) {
         throw new IOException("No token returned for user " + user.getName());
@@ -169,7 +169,7 @@ public class TokenUtil {
   public static void obtainTokenForJob(final Connection conn, final JobConf job, User user)
       throws IOException, InterruptedException {
     try {
-      Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
+      Token<AuthenticationTokenIdentifier> token = ClientTokenUtil.obtainToken(conn, user);
 
       if (token == null) {
         throw new IOException("No token returned for user " + user.getName());
@@ -207,7 +207,7 @@ public class TokenUtil {
 
     Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
     }
     job.getCredentials().addToken(token.getService(), token);
   }
@@ -226,7 +226,7 @@ public class TokenUtil {
       throws IOException, InterruptedException {
     Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
     }
     job.getCredentials().addToken(token.getService(), token);
   }
@@ -245,7 +245,7 @@ public class TokenUtil {
       throws IOException, InterruptedException {
     Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
     if (token == null) {
-      token = obtainToken(conn, user);
+      token = ClientTokenUtil.obtainToken(conn, user);
       user.getUGI().addToken(token.getService(), token);
       return true;
     }

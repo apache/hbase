@@ -95,7 +95,7 @@ public final class ClientTokenUtil {
    * @return the authentication token instance
    */
   @InterfaceAudience.Private
-  public static Token<AuthenticationTokenIdentifier> obtainToken(
+  static Token<AuthenticationTokenIdentifier> obtainToken(
       Connection conn) throws IOException {
     Table meta = null;
     try {
@@ -127,7 +127,7 @@ public final class ClientTokenUtil {
    * @return the protobuf Token message
    */
   @InterfaceAudience.Private
-  public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
+  static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
     AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
     builder.setIdentifier(ByteString.copyFrom(token.getIdentifier()));
     builder.setPassword(ByteString.copyFrom(token.getPassword()));
@@ -144,7 +144,7 @@ public final class ClientTokenUtil {
    * @return the Token instance
    */
   @InterfaceAudience.Private
-  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
+  static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
     return new Token<>(
         proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
         proto.hasPassword() ? proto.getPassword().toByteArray() : null,
@@ -159,7 +159,7 @@ public final class ClientTokenUtil {
    * @return the authentication token instance
    */
   @InterfaceAudience.Private
-  public static Token<AuthenticationTokenIdentifier> obtainToken(
+  static Token<AuthenticationTokenIdentifier> obtainToken(
       final Connection conn, User user) throws IOException, InterruptedException {
     return user.runAs(new PrivilegedExceptionAction<Token<AuthenticationTokenIdentifier>>() {
       @Override
