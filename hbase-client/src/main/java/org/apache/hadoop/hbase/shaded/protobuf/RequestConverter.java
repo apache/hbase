@@ -121,6 +121,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCatalogJ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
+    .IsSnapshotCleanupEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -135,6 +137,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleaner
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
+    .SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetTableStateInMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
@@ -1900,4 +1904,30 @@ public final class RequestConverter {
         map(r -> buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, Bytes.toBytes(r))).
         collect(Collectors.toList());
   }
+
+  /**
+   * Creates SetSnapshotCleanupRequest for turning on/off auto snapshot cleanup
+   *
+   * @param enabled Set to <code>true</code> to enable,
+   *   <code>false</code> to disable.
+   * @param synchronous If <code>true</code>, it waits until current snapshot cleanup is completed,
+   *   if outstanding.
+   * @return a SetSnapshotCleanupRequest
+   */
+  public static SetSnapshotCleanupRequest buildSetSnapshotCleanupRequest(
+      final boolean enabled, final boolean synchronous) {
+    return SetSnapshotCleanupRequest.newBuilder().setEnabled(enabled).setSynchronous(synchronous)
+        .build();
+  }
+
+  /**
+   * Creates IsSnapshotCleanupEnabledRequest to determine if auto snapshot cleanup
+   * based on TTL expiration is turned on
+   *
+   * @return IsSnapshotCleanupEnabledRequest
+   */
+  public static IsSnapshotCleanupEnabledRequest buildIsSnapshotCleanupEnabledRequest() {
+    return IsSnapshotCleanupEnabledRequest.newBuilder().build();
+  }
+
 }

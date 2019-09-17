@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -58,6 +59,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
 
 /**
  * This class is for testing {@link Connection}.
@@ -81,6 +85,7 @@ public class TestConnection {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    ResourceLeakDetector.setLevel(Level.PARANOID);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
@@ -93,6 +98,11 @@ public class TestConnection {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    TEST_UTIL.getAdmin().balancerSwitch(true, true);
   }
 
   /**
@@ -125,7 +135,7 @@ public class TestConnection {
     TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
-    boolean previousBalance = TEST_UTIL.getAdmin().balancerSwitch(false, true);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -190,9 +200,9 @@ public class TestConnection {
     RpcClient rpcClient = ((AsyncConnectionImpl) connection.toAsyncConnection()).rpcClient;
 
     LOG.info("Going to cancel connections. connection=" + connection.toString() + ", sn=" + sn);
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < 500; i++) {
       rpcClient.cancelConnections(sn);
-      Thread.sleep(5);
+      Thread.sleep(50);
     }
 
     step.compareAndSet(1, 2);
@@ -207,7 +217,6 @@ public class TestConnection {
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
-    TEST_UTIL.getAdmin().balancerSwitch(previousBalance, true);
   }
 
   /**
@@ -381,5 +390,23 @@ public class TestConnection {
     };
     conn.getTable(tableName).coprocessorService(MultiRowMutationService.class,
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, callable);
+  }
+
+  // There is no assertion, but you need to confirm that there is no resource leak output from netty
+  @Test
+  public void testCancelConnectionMemoryLeak() throws IOException, InterruptedException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+      Table table = connection.getTable(tableName)) {
+      table.get(new Get(Bytes.toBytes("1")));
+      ServerName sn = TEST_UTIL.getRSForFirstRegionInTable(tableName).getServerName();
+      RpcClient rpcClient = ((AsyncConnectionImpl) connection.toAsyncConnection()).rpcClient;
+      rpcClient.cancelConnections(sn);
+      Thread.sleep(1000);
+      System.gc();
+      Thread.sleep(1000);
+    }
   }
 }

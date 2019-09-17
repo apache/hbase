@@ -275,24 +275,26 @@ if (fqtn != null && master.isInitialized()) {
   </tr>
   <tr>
       <td>Enabled</td>
-      <td><%= admin.isTableEnabled(table.getName()).get() %></td>
+      <td><%= master.getAssignmentManager().isTableEnabled(table.getName()) %></td>
       <td>Is the table enabled</td>
   </tr>
   <tr>
       <td>Compaction</td>
       <td>
 <%
-  try {
-    CompactionState compactionState = admin.getCompactionState(table.getName()).get();
-%>
-<%= compactionState %>
-<%
-  } catch (Exception e) {
-    // Nothing really to do here
-    for(StackTraceElement element : e.getStackTrace()) {
-      %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+  if (master.getAssignmentManager().isTableEnabled(table.getName())) {
+    try {
+      CompactionState compactionState = admin.getCompactionState(table.getName()).get();
+      %><%= compactionState %><%
+    } catch (Exception e) {
+      // Nothing really to do here
+      for(StackTraceElement element : e.getStackTrace()) {
+        %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+      }
+      %> Unknown <%
     }
-%> Unknown <%
+  } else {
+    %><%= CompactionState.NONE %><%
   }
 %>
       </td>

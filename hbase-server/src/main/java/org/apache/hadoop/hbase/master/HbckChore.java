@@ -62,6 +62,7 @@ public class HbckChore extends ScheduledChore {
   private final Map<String, HbckRegionInfo> regionInfoMap = new HashMap<>();
 
   private final Set<String> disabledTableRegions = new HashSet<>();
+  private final Set<String> splitParentRegions = new HashSet<>();
 
   /**
    * The regions only opened on RegionServers, but no region info in meta.
@@ -124,6 +125,7 @@ public class HbckChore extends ScheduledChore {
     running = true;
     regionInfoMap.clear();
     disabledTableRegions.clear();
+    splitParentRegions.clear();
     orphanRegionsOnRS.clear();
     orphanRegionsOnFS.clear();
     inconsistentRegions.clear();
@@ -190,6 +192,9 @@ public class HbckChore extends ScheduledChore {
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
         disabledTableRegions.add(regionInfo.getEncodedName());
       }
+      if (regionInfo.isSplitParent()) {
+        splitParentRegions.add(regionInfo.getEncodedName());
+      }
       HbckRegionInfo.MetaEntry metaEntry =
           new HbckRegionInfo.MetaEntry(regionInfo, regionState.getServerName(),
               regionState.getStamp());
@@ -222,9 +227,12 @@ public class HbckChore extends ScheduledChore {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
       if (hri.getDeployedOn().size() == 0) {
-        // Because the inconsistent regions are not absolutely right, only skip the offline regions
-        // which belong to disabled table.
+        // skip the offline region which belong to disabled table.
         if (disabledTableRegions.contains(encodedRegionName)) {
+          continue;
+        }
+        // skip the split parent regions
+        if (splitParentRegions.contains(encodedRegionName)) {
           continue;
         }
         // Master thought this region opened, but no regionserver reported it.

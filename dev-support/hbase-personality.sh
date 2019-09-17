@@ -31,7 +31,7 @@
 # test-patch  --plugins=all,-hadoopcheck --personality=dev-support/hbase-personality.sh HBASE-15074
 # ````
 #
-# pass the `--jenkins` flag if you want to allow test-patch to destructively alter local working
+# pass the `--sentinel` flag if you want to allow test-patch to destructively alter local working
 # directory / branch in order to have things match what the issue patch requests.
 
 personality_plugins "all"
@@ -44,6 +44,23 @@ if ! declare -f "yetus_info" >/dev/null; then
   }
 
 fi
+
+# work around yetus overwriting JAVA_HOME from our docker image
+function docker_do_env_adds
+{
+  declare k
+
+  for k in "${DOCKER_EXTRAENVS[@]}"; do
+    if [[ "JAVA_HOME" == "${k}" ]]; then
+      if [ -n "${JAVA_HOME}" ]; then
+        DOCKER_EXTRAARGS+=("--env=JAVA_HOME=${JAVA_HOME}")
+      fi
+    else
+      DOCKER_EXTRAARGS+=("--env=${k}=${!k}")
+    fi
+  done
+}
+
 
 ## @description  Globals specific to this personality
 ## @audience     private
@@ -86,15 +103,19 @@ function personality_parse_args
   for i in "$@"; do
     case ${i} in
       --exclude-tests-url=*)
+        delete_parameter "${i}"
         EXCLUDE_TESTS_URL=${i#*=}
       ;;
       --include-tests-url=*)
+        delete_parameter "${i}"
         INCLUDE_TESTS_URL=${i#*=}
       ;;
       --hadoop-profile=*)
+        delete_parameter "${i}"
         HADOOP_PROFILE=${i#*=}
       ;;
       --skip-errorprone)
+        delete_parameter "${i}"
         SKIP_ERRORPRONE=true
       ;;
     esac
@@ -462,6 +483,7 @@ function hadoopcheck_parse_args
   for i in "$@"; do
     case ${i} in
       --quick-hadoopcheck)
+        delete_parameter "${i}"
         QUICK_HADOOPCHECK=true
       ;;
     esac

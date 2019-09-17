@@ -80,7 +80,7 @@ class BucketEntry implements HBaseReferenceCounted {
    */
   private final RefCnt refCnt;
   final AtomicBoolean markedAsEvicted;
-  private final ByteBuffAllocator allocator;
+  final ByteBuffAllocator allocator;
 
   /**
    * Time this block was cached. Presumes we are created just before we are added to the cache.
@@ -194,7 +194,10 @@ class BucketEntry implements HBaseReferenceCounted {
   }
 
   Cacheable wrapAsCacheable(ByteBuffer[] buffers) throws IOException {
-    ByteBuff buf = ByteBuff.wrap(buffers, this.refCnt);
+    return wrapAsCacheable(ByteBuff.wrap(buffers, this.refCnt));
+  }
+
+  Cacheable wrapAsCacheable(ByteBuff buf) throws IOException {
     return this.deserializerReference().deserialize(buf, allocator);
   }
 

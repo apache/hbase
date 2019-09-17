@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -112,6 +112,10 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private static final Logger LOG = LoggerFactory.getLogger(BulkLoadHFilesTool.class);
 
   public static final String NAME = "completebulkload";
+  /**
+   * Whether to run validation on hfiles before loading.
+   */
+  private static final String VALIDATE_HFILES = "hbase.loadincremental.validate.hfile";
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
@@ -175,8 +179,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    */
   private static void validateFamiliesInHFiles(TableDescriptor tableDesc,
       Deque<LoadQueueItem> queue, boolean silence) throws IOException {
-    Set<String> familyNames = Arrays.asList(tableDesc.getColumnFamilies()).stream()
-      .map(f -> f.getNameAsString()).collect(Collectors.toSet());
+    Set<String> familyNames = Arrays.stream(tableDesc.getColumnFamilies())
+      .map(ColumnFamilyDescriptor::getNameAsString).collect(Collectors.toSet());
     List<String> unmatchedFamilies = queue.stream().map(item -> Bytes.toString(item.getFamily()))
       .filter(fn -> !familyNames.contains(fn)).distinct().collect(Collectors.toList());
     if (unmatchedFamilies.size() > 0) {
@@ -207,8 +211,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   /**
    * Iterate over the bulkDir hfiles. Skip reference, HFileLink, files starting with "_". Check and
-   * skip non-valid hfiles by default, or skip this validation by setting
-   * 'hbase.loadincremental.validate.hfile' to false.
+   * skip non-valid hfiles by default, or skip this validation by setting {@link #VALIDATE_HFILES}
+   * to false.
    */
   private static <TFamily> void visitBulkHFiles(FileSystem fs, Path bulkDir,
       BulkHFileVisitor<TFamily> visitor, boolean validateHFile) throws IOException {
@@ -281,7 +285,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       }
 
       @Override
-      public void bulkHFile(final byte[] family, final FileStatus hfile) throws IOException {
+      public void bulkHFile(final byte[] family, final FileStatus hfile) {
         long length = hfile.getLen();
         if (length > conf.getLong(HConstants.HREGION_MAX_FILESIZE,
           HConstants.DEFAULT_MAX_FILE_SIZE)) {
@@ -413,8 +417,10 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       try {
         Collection<LoadQueueItem> toRetry = future.get();
 
-        for (LoadQueueItem lqi : toRetry) {
-          item2RegionMap.remove(lqi);
+        if (item2RegionMap != null) {
+          for (LoadQueueItem lqi : toRetry) {
+            item2RegionMap.remove(lqi);
+          }
         }
         // LQIs that are requeued to be regrouped.
         queue.addAll(toRetry);
@@ -477,14 +483,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       final LoadQueueItem item = queue.remove();
 
       final Callable<Pair<List<LoadQueueItem>, String>> call =
-        new Callable<Pair<List<LoadQueueItem>, String>>() {
-          @Override
-          public Pair<List<LoadQueueItem>, String> call() throws Exception {
-            Pair<List<LoadQueueItem>, String> splits =
-              groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
-            return splits;
-          }
-        };
+        () -> groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
       splittingFutures.add(pool.submit(call));
     }
     // get all the results. All grouping and splitting must finish before
@@ -521,7 +520,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   private List<LoadQueueItem> splitStoreFile(LoadQueueItem item, TableDescriptor tableDesc,
-      byte[] startKey, byte[] splitKey) throws IOException {
+      byte[] splitKey) throws IOException {
     Path hfilePath = item.getFilePath();
     byte[] family = item.getFamily();
     Path tmpDir = hfilePath.getParent();
@@ -609,7 +608,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     }
     int indexForCallable = idx;
 
-    /**
+    /*
      * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
      * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
      * region. 3) if the endkey of the last region is not empty.
@@ -635,7 +634,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       Pair<byte[], byte[]> startEndKey = startEndKeys.get(indexForCallable);
       List<LoadQueueItem> lqis =
         splitStoreFile(item, FutureUtils.get(conn.getAdmin().getDescriptor(tableName)),
-          startEndKey.getFirst(), startEndKey.getSecond());
+            startEndKey.getSecond());
       return new Pair<>(lqis, null);
     }
 
@@ -791,7 +790,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
             Bytes.toStringBinary(first) + " last=" + Bytes.toStringBinary(last));
 
           // To eventually infer start key-end key boundaries
-          Integer value = map.containsKey(first) ? map.get(first) : 0;
+          Integer value = map.getOrDefault(first, 0);
           map.put(first, value + 1);
 
           value = map.containsKey(last) ? map.get(last) : 0;
@@ -854,10 +853,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       // that we can atomically pull out the groups we want to retry.
     }
 
-    if (!queue.isEmpty()) {
-      throw new RuntimeException(
-        "Bulk load aborted with some files not yet loaded." + "Please check log for more details.");
-    }
     return item2RegionMap;
   }
 
@@ -883,20 +878,17 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
-   * Perform a bulk load of the given directory into the given pre-existing table. This method is
-   * not threadsafe.
+   * Perform a bulk load of the given map of families to hfiles into the given pre-existing table.
+   * This method is not threadsafe.
    * @param map map of family to List of hfiles
    * @param tableName table to load the hfiles
    * @param silence true to ignore unmatched column families
    * @param copyFile always copy hfiles if true
-   * @throws TableNotFoundException if table does not yet exist
    */
   private Map<LoadQueueItem, ByteBuffer> doBulkLoad(AsyncClusterConnection conn,
       TableName tableName, Map<byte[], List<Path>> map, boolean silence, boolean copyFile)
-      throws TableNotFoundException, IOException {
-    if (!FutureUtils.get(conn.getAdmin().isTableAvailable(tableName))) {
-      throw new TableNotFoundException("Table " + tableName + " is not currently available.");
-    }
+      throws IOException {
+    tableExists(conn, tableName);
     // LQI queue does not need to be threadsafe -- all operations on this queue
     // happen in this thread
     Deque<LoadQueueItem> queue = new ArrayDeque<>();
@@ -922,20 +914,17 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    *          HFileOutputFormat
    * @param silence true to ignore unmatched column families
    * @param copyFile always copy hfiles if true
-   * @throws TableNotFoundException if table does not yet exist
    */
   private Map<LoadQueueItem, ByteBuffer> doBulkLoad(AsyncClusterConnection conn,
       TableName tableName, Path hfofDir, boolean silence, boolean copyFile)
-      throws TableNotFoundException, IOException {
-    if (!FutureUtils.get(conn.getAdmin().isTableAvailable(tableName))) {
-      throw new TableNotFoundException("Table " + tableName + " is not currently available.");
-    }
+      throws IOException {
+    tableExists(conn, tableName);
 
     /*
      * Checking hfile format is a time-consuming operation, we should have an option to skip this
      * step when bulkloading millions of HFiles. See HBASE-13985.
      */
-    boolean validateHFile = getConf().getBoolean("hbase.loadincremental.validate.hfile", true);
+    boolean validateHFile = getConf().getBoolean(VALIDATE_HFILES, true);
     if (!validateHFile) {
       LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
         "are not correct. If you fail to read data from your table after using this " +
@@ -965,21 +954,16 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   @Override
   public Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName,
-      Map<byte[], List<Path>> family2Files) throws TableNotFoundException, IOException {
-    try (AsyncClusterConnection conn = ClusterConnectionFactory
-      .createAsyncClusterConnection(getConf(), null, userProvider.getCurrent())) {
-      if (!FutureUtils.get(conn.getAdmin().tableExists(tableName))) {
-        String errorMsg = format("Table '%s' does not exist.", tableName);
-        LOG.error(errorMsg);
-        throw new TableNotFoundException(errorMsg);
-      }
+      Map<byte[], List<Path>> family2Files) throws IOException {
+    try (AsyncClusterConnection conn = ClusterConnectionFactory.
+        createAsyncClusterConnection(getConf(), null, userProvider.getCurrent())) {
       return doBulkLoad(conn, tableName, family2Files, isSilence(), isAlwaysCopyFiles());
     }
   }
 
   @Override
   public Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Path dir)
-      throws TableNotFoundException, IOException {
+      throws IOException {
     try (AsyncClusterConnection conn = ClusterConnectionFactory
       .createAsyncClusterConnection(getConf(), null, userProvider.getCurrent())) {
       AsyncAdmin admin = conn.getAdmin();
@@ -987,13 +971,26 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         if (isCreateTable()) {
           createTable(tableName, dir, admin);
         } else {
-          String errorMsg = format("Table '%s' does not exist.", tableName);
-          LOG.error(errorMsg);
-          throw new TableNotFoundException(errorMsg);
+          throwAndLogTableNotFoundException(tableName);
         }
       }
       return doBulkLoad(conn, tableName, dir, isSilence(), isAlwaysCopyFiles());
     }
+  }
+
+  /**
+   * @throws TableNotFoundException if table does not exist.
+   */
+  private void tableExists(AsyncClusterConnection conn, TableName tableName) throws IOException {
+    if (!FutureUtils.get(conn.getAdmin().tableExists(tableName))) {
+      throwAndLogTableNotFoundException(tableName);
+    }
+  }
+
+  private void throwAndLogTableNotFoundException(TableName tn) throws TableNotFoundException {
+    String errorMsg = format("Table '%s' does not exist.", tn);
+    LOG.error(errorMsg);
+    throw new TableNotFoundException(errorMsg);
   }
 
   public void setBulkToken(String bulkToken) {
@@ -1001,16 +998,19 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   private void usage() {
-    System.err.println("usage: " + "bin/hbase completebulkload <-Dargs> "
-        + "</path/to/hfileoutputformat-output> <tablename>\n"
-        + "\t-D" + CREATE_TABLE_CONF_KEY + "=no can be used to avoid creation "
-        + "of a table by this tool.\n"
-        + "\t Note: if you set this to 'no', then target table must already exist.\n"
-        + "\t-D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes can be used to ignore "
-        + "unmatched column families.\n"
-        + "\t-loadTable switch implies your baseDirectory to store file has a "
-        + "depth of 3, table must exist\n"
-        + "\t and -loadTable switch is the last option on the command line.\n\n");
+    System.err.println("Usage: " + "bin/hbase completebulkload [OPTIONS] "
+        + "</PATH/TO/HFILEOUTPUTFORMAT-OUTPUT> <TABLENAME>\n"
+        + "Loads directory of hfiles -- a region dir or product of HFileOutputFormat -- "
+        + "into an hbase table.\n"
+        + "OPTIONS (for other -D options, see source code):\n"
+        + " -D" + CREATE_TABLE_CONF_KEY + "=no whether to create table; when 'no', target "
+        + "table must exist.\n"
+        + " -D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes to ignore unmatched column families.\n"
+        + " -loadTable for when directory of files to load has a depth of 3; target table must "
+        + "exist;\n"
+        + " must be last of the options on command line.\n"
+        + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
+        + "documentation.\n");
   }
 
   @Override
@@ -1021,7 +1021,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     }
     Path dirPath = new Path(args[0]);
     TableName tableName = TableName.valueOf(args[1]);
-
     if (args.length == 2) {
       return !bulkLoad(tableName, dirPath).isEmpty() ? 0 : -1;
     } else {
@@ -1047,5 +1046,4 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     int ret = ToolRunner.run(conf, new BulkLoadHFilesTool(conf), args);
     System.exit(ret);
   }
-
 }

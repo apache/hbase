@@ -40,6 +40,10 @@ if [[ -n "${MULTIJDK}" ]]; then
   YETUS_ARGS=("--multijdkdirs=${MULTIJDK}" "${YETUS_ARGS[@]}")
 fi
 
+# If we're doing docker, make sure we don't accidentally pollute the image with a host java path
+if [ -n "${JAVA_HOME}" ]; then
+  unset JAVA_HOME
+fi
 if [[ -n "${SET_JAVA_HOME}" ]]; then
   YETUS_ARGS=("--java-home=${SET_JAVA_HOME}" "${YETUS_ARGS[@]}")
 fi
@@ -48,15 +52,12 @@ YETUS_ARGS=("--personality=${PERSONALITY_FILE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--basedir=${BASEDIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--archive-list=${ARCHIVE_PATTERN_LIST}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--console-urls" "${YETUS_ARGS[@]}")
-# YETUS-532, repeat this twice in case the fix is to update args rather than docs
-YETUS_ARGS=("--build-url-patchdir=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--build-url-artifacts=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--docker" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockerfile=${BASEDIR}/dev-support/docker/Dockerfile" "${YETUS_ARGS[@]}")
 # Yetus sets BUILDMODE env variable to "full" if this arg is passed.
 YETUS_ARGS=("--empty-patch" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--html-report-file=${OUTPUT_DIR}/console-report.html" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--jenkins" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--mvn-custom-repos" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--patch-dir=${OUTPUT_DIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--project=${PROJECT}" "${YETUS_ARGS[@]}")
@@ -67,6 +68,7 @@ YETUS_ARGS=("--whitespace-tabs-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_A
 YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--ignore-unknown-options=true" "${YETUS_ARGS[@]}")
 # Why are these not being picked up from hbase-personality?
 YETUS_ARGS=("--proclimit=10000" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockermemlimit=20g" "${YETUS_ARGS[@]}")

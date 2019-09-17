@@ -457,6 +457,12 @@ public class CatalogJanitor extends ScheduledChore {
       return this.holes;
     }
 
+    /**
+     * @return Overlap pairs found as we scanned hbase:meta; ordered by hbase:meta
+     *   table sort. Pairs of overlaps may have overlap with subsequent pairs.
+     * @see MetaFixer#calculateMerges(int, List) where we aggregate overlaps
+     *   for a single 'merge' call.
+     */
     public List<Pair<RegionInfo, RegionInfo>> getOverlaps() {
       return this.overlaps;
     }
@@ -479,20 +485,20 @@ public class CatalogJanitor extends ScheduledChore {
 
     @Override
     public String toString() {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       for (Pair<RegionInfo, RegionInfo> p: this.holes) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("hole=" + p.getFirst().getRegionNameAsString() + "/" +
-            p.getSecond().getRegionNameAsString());
+        sb.append("hole=").append(p.getFirst().getRegionNameAsString()).append("/").
+            append(p.getSecond().getRegionNameAsString());
       }
       for (Pair<RegionInfo, RegionInfo> p: this.overlaps) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append("overlap=" + p.getFirst().getRegionNameAsString() + "/" +
-            p.getSecond().getRegionNameAsString());
+        sb.append("overlap=").append(p.getFirst().getRegionNameAsString()).append("/").
+            append(p.getSecond().getRegionNameAsString());
       }
       for (byte [] r: this.emptyRegionInfo) {
         if (sb.length() > 0) {
@@ -533,6 +539,16 @@ public class CatalogJanitor extends ScheduledChore {
      * RegionInfo from previous row.
      */
     private RegionInfo previous = null;
+
+    /**
+     * Keep account of the highest end key seen as we move through hbase:meta.
+     * Usually, the current RegionInfo has the highest end key but if an overlap,
+     * this may no longer hold. An overlap may be a region with startkey 'd' and
+     * endkey 'g'. The next region in meta may be 'e' to 'f' and then 'f' to 'g'.
+     * Looking at previous and current meta row, we won't know about the 'd' to 'g'
+     * overlap unless we keep a running 'highest-endpoint-seen'.
+     */
+    private RegionInfo highestEndKeyRegionInfo = null;
 
     ReportMakingVisitor(MasterServices services) {
       this.services = services;
@@ -587,7 +603,7 @@ public class CatalogJanitor extends ScheduledChore {
             MetaTableAccessor.getRegionInfoColumn());
       } else {
         ri = locations.getDefaultRegionLocation().getRegion();
-        checkServer(metaTableRow.getRow(), locations);
+        checkServer(locations);
       }
 
       if (ri == null) {
@@ -600,6 +616,10 @@ public class CatalogJanitor extends ScheduledChore {
                 "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
             Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
         return null;
+      }
+      // Skip split parent region
+      if (ri.isSplitParent()) {
+        return ri;
       }
       // If table is disabled, skip integrity check.
       if (!isTableDisabled(ri)) {
@@ -615,13 +635,22 @@ public class CatalogJanitor extends ScheduledChore {
           if (!this.previous.isNext(ri)) {
             if (this.previous.isOverlap(ri)) {
               addOverlap(this.previous, ri);
+            } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
+              // We may have seen a region a few rows back that overlaps this one.
+              addOverlap(this.highestEndKeyRegionInfo, ri);
             } else {
               addHole(this.previous, ri);
             }
+          } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
+            // We may have seen a region a few rows back that overlaps this one
+            // even though it properly 'follows' the region just before.
+            addOverlap(this.highestEndKeyRegionInfo, ri);
           }
         }
       }
       this.previous = ri;
+      this.highestEndKeyRegionInfo =
+          MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
       return ri;
     }
 
@@ -658,7 +687,7 @@ public class CatalogJanitor extends ScheduledChore {
     /**
      * Run through referenced servers and save off unknown and the dead.
      */
-    private void checkServer(byte [] metaTableRow, RegionLocations locations) {
+    private void checkServer(RegionLocations locations) {
       if (this.services == null) {
         // Can't do this test if no services.
         return;
@@ -672,6 +701,11 @@ public class CatalogJanitor extends ScheduledChore {
         if (sn == null) {
           continue;
         }
+        if (location.getRegion() == null) {
+          LOG.warn("Empty RegionInfo in {}", location);
+          // This should never happen but if it does, will mess up below.
+          continue;
+        }
         // skip the offline regions which belong to disabled table.
         if (isTableDisabled(location.getRegion())) {
           continue;
@@ -680,7 +714,7 @@ public class CatalogJanitor extends ScheduledChore {
             isServerKnownAndOnline(sn);
         switch (state) {
           case UNKNOWN:
-            this.report.unknownServers.add(new Pair(location.getRegion(), sn));
+            this.report.unknownServers.add(new Pair<>(location.getRegion(), sn));
             break;
 
           default:

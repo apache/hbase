@@ -69,7 +69,10 @@ public class DynamicClassLoader extends ClassLoaderBase {
   private static final String DYNAMIC_JARS_OPTIONAL_CONF_KEY = "hbase.use.dynamic.jars";
   private static final boolean DYNAMIC_JARS_OPTIONAL_DEFAULT = true;
 
-  private boolean useDynamicJars;
+  // The user-provided value for using the DynamicClassLoader
+  private final boolean userConfigUseDynamicJars;
+  // The current state of whether to use the DynamicClassLoader
+  private final boolean useDynamicJars;
 
   private File localDir;
 
@@ -91,12 +94,23 @@ public class DynamicClassLoader extends ClassLoaderBase {
       final Configuration conf, final ClassLoader parent) {
     super(parent);
 
-    useDynamicJars = conf.getBoolean(
+    // Save off the user's original configuration value for the DynamicClassLoader
+    userConfigUseDynamicJars = conf.getBoolean(
         DYNAMIC_JARS_OPTIONAL_CONF_KEY, DYNAMIC_JARS_OPTIONAL_DEFAULT);
 
-    if (useDynamicJars) {
-      initTempDir(conf);
+    boolean dynamicJarsEnabled = userConfigUseDynamicJars;
+    if (dynamicJarsEnabled) {
+      try {
+        initTempDir(conf);
+        dynamicJarsEnabled = true;
+      } catch (Exception e) {
+        LOG.error("Disabling the DynamicClassLoader as it failed to initialize its temp directory."
+            + " Check your configuration and filesystem permissions. Custom coprocessor code may"
+            + " not be loaded as a result of this failure.", e);
+        dynamicJarsEnabled = false;
+      }
     }
+    useDynamicJars = dynamicJarsEnabled;
   }
 
   // FindBugs: Making synchronized to avoid IS2_INCONSISTENT_SYNC complaints about
@@ -132,12 +146,13 @@ public class DynamicClassLoader extends ClassLoaderBase {
     try {
       return parent.loadClass(name);
     } catch (ClassNotFoundException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Class " + name + " not found - using dynamical class loader");
-      }
-
       if (useDynamicJars) {
+        LOG.debug("Class {} not found - using dynamical class loader", name);
         return tryRefreshClass(name);
+      } else if (userConfigUseDynamicJars) {
+        // If the user tried to enable the DCL, then warn again.
+        LOG.debug("Not checking DynamicClassLoader for missing class because it is disabled."
+            + " See the log for previous errors.");
       }
       throw e;
     }

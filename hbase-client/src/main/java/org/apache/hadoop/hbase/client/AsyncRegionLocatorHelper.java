@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
+import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isRegionServerOverloadedException;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -67,7 +68,8 @@ final class AsyncRegionLocatorHelper {
       LOG.debug("The actual exception when updating {} is {}", loc,
         cause != null ? cause.toString() : "none");
     }
-    if (cause == null || !isMetaClearingException(cause)) {
+    if (cause == null || !isMetaClearingException(cause)
+        || isRegionServerOverloadedException(cause)) {
       LOG.debug("Will not update {} because the exception is null or not the one we care about",
         loc);
       return;

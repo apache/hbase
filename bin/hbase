@@ -120,6 +120,7 @@ if [ $# = 0 ]; then
   echo "  rowcounter       Run RowCounter tool"
   echo "  cellcounter      Run CellCounter tool"
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
+  echo "  hbtop            Run HBTop tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
   exit 1
 fi
@@ -223,7 +224,7 @@ if [ "${INTERNAL_CLASSPATH}" != "true" ]; then
   done
 
   # If command can use our shaded client, use it
-  declare -a commands_in_client_jar=("classpath" "version")
+  declare -a commands_in_client_jar=("classpath" "version" "hbtop")
   for c in "${commands_in_client_jar[@]}"; do
     if [ "${COMMAND}" = "${c}" ]; then
       if [ -n "${HADOOP_IN_PATH}" ] && [ -f "${HADOOP_IN_PATH}" ]; then
@@ -656,6 +657,24 @@ elif [ "$COMMAND" = "pre-upgrade" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 elif [ "$COMMAND" = "completebulkload" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.BulkLoadHFilesTool'
+elif [ "$COMMAND" = "hbtop" ] ; then
+  CLASS='org.apache.hadoop.hbase.hbtop.HBTop'
+  if [ -n "${shaded_jar}" ] ; then
+    for f in "${HBASE_HOME}"/lib/hbase-hbtop*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+    for f in "${HBASE_HOME}"/lib/commons-lang3*.jar; do
+      if [ -f "${f}" ]; then
+        CLASSPATH="${CLASSPATH}:${f}"
+        break
+      fi
+    done
+  fi
+
+  HBASE_OPTS="${HBASE_OPTS} -Dlog4j.configuration=file:${HBASE_HOME}/conf/log4j-hbtop.properties"
 else
   CLASS=$COMMAND
 fi

@@ -794,6 +794,9 @@ public interface RegionInfo {
    * @see #isDegenerate()
    */
   default boolean isOverlap(RegionInfo other) {
+    if (other == null) {
+      return false;
+    }
     if (!getTable().equals(other.getTable())) {
       return false;
     }
