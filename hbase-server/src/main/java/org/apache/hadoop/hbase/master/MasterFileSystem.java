@@ -278,9 +278,7 @@ public class MasterFileSystem {
     } catch (DeserializationException de) {
       LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for "
         + HConstants.HBASE_DIR, de);
-      IOException ioe = new IOException();
-      ioe.initCause(de);
-      throw ioe;
+      throw new IOException(de);
     } catch (IllegalArgumentException iae) {
       LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for "
         + HConstants.HBASE_DIR + " " + rd.toString(), iae);

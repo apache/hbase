@@ -2838,8 +2838,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
       }
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-          Bytes.toStringBinary(getRegionInfo().getRegionName()));
-      dse.initCause(t);
+        Bytes.toStringBinary(getRegionInfo().getRegionName()), t);
       status.abort("Flush failed: " + StringUtils.stringifyException(t));
 
       // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
@@ -5931,8 +5930,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // is reached, it will throw out an Error. This Error needs to be caught so it can
       // go ahead to process the minibatch with lock acquired.
       LOG.warn("Error to get row lock for " + Bytes.toStringBinary(row) + ", cause: " + error);
-      IOException ioe = new IOException();
-      ioe.initCause(error);
+      IOException ioe = new IOException(error);
       TraceUtil.addTimelineAnnotation("Error getting row lock");
       throw ioe;
     } finally {

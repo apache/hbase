@@ -266,9 +266,7 @@ public abstract class FSUtils extends CommonFSUtils {
     } catch (Exception e) {
       LOG.error("file system close failed: ", e);
     }
-    IOException io = new IOException("File system is not available");
-    io.initCause(exception);
-    throw io;
+    throw new IOException("File system is not available", exception);
   }
 
   /**
