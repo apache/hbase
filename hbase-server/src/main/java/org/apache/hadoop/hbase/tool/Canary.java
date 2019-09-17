@@ -27,15 +27,15 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
-public interface CanaryInterface {
+public interface Canary {
 
-  static CanaryInterface create(Configuration conf, ExecutorService executor) {
-    return new Canary(conf, executor);
+  static Canary create(Configuration conf, ExecutorService executor) {
+    return new CanaryTool(conf, executor);
   }
 
   @VisibleForTesting
-  static CanaryInterface create(Configuration conf, ExecutorService executor, Canary.Sink sink) {
-    return new Canary(conf, executor, sink);
+  static Canary create(Configuration conf, ExecutorService executor, CanaryTool.Sink sink) {
+    return new CanaryTool(conf, executor, sink);
   }
 
   /**

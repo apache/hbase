@@ -81,7 +81,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.tool.Canary.RegionTask.TaskType;
+import org.apache.hadoop.hbase.tool.CanaryTool.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -121,7 +121,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * </ol>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
-public class Canary implements Tool, CanaryInterface {
+public class CanaryTool implements Tool, Canary {
 
   @Override
   public int checkRegions(String[] targets) throws Exception {
@@ -654,6 +654,7 @@ public class Canary implements Tool, CanaryInterface {
   private static final String CANARY_TABLE_FAMILY_NAME = "Test";
 
   private Configuration conf = null;
+  private long interval = 0;
   private Sink sink = null;
 
   /**
@@ -688,9 +689,6 @@ public class Canary implements Tool, CanaryInterface {
   public static final String HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES
           = "hbase.canary.zookeeper.permitted.failures";
 
-  public static final String HBASE_CANARY_INTERVAL = "hbase.canary.interval";
-  public static final String HBASE_CANARY_TREAT_FAILURE_AS_ERROR
-          = "hbase.canary.treat.failure.as.error";
   public static final String HBASE_CANARY_USE_REGEX = "hbase.canary.use.regex";
   public static final String HBASE_CANARY_TIMEOUT = "hbase.canary.timeout";
   public static final String HBASE_CANARY_FAIL_ON_ERROR = "hbase.canary.fail.on.error";
@@ -698,25 +696,25 @@ public class Canary implements Tool, CanaryInterface {
 
   private ExecutorService executor; // threads to retrieve data from regionservers
 
-  public Canary() {
+  public CanaryTool() {
     this(new ScheduledThreadPoolExecutor(1));
   }
 
-  public Canary(ExecutorService executor) {
+  public CanaryTool(ExecutorService executor) {
     this(executor, null);
   }
 
   @VisibleForTesting
-  Canary(ExecutorService executor, Sink sink) {
+  CanaryTool(ExecutorService executor, Sink sink) {
     this.executor = executor;
     this.sink = sink;
   }
 
-  Canary(Configuration conf, ExecutorService executor) {
+  CanaryTool(Configuration conf, ExecutorService executor) {
     this(conf, executor, null);
   }
 
-  Canary(Configuration conf, ExecutorService executor, Sink sink) {
+  CanaryTool(Configuration conf, ExecutorService executor, Sink sink) {
     this(executor, sink);
     setConf(conf);
   }
@@ -736,7 +734,7 @@ public class Canary implements Tool, CanaryInterface {
 
   private int parseArgs(String[] args) {
     int index = -1;
-    long interval = 0, permittedFailures = 0;
+    long permittedFailures = 0;
     boolean regionServerAllRegions = false, writeSniffing = false;
     String readTableTimeoutsStr = null;
 
@@ -756,8 +754,7 @@ public class Canary implements Tool, CanaryInterface {
           printUsageAndExit();
         } else if (cmd.equals("-daemon") && interval == 0) {
           // user asked for daemon mode, set a default interval between checks
-          conf.setLong(HBASE_CANARY_INTERVAL, DEFAULT_INTERVAL);
-
+          interval = DEFAULT_INTERVAL;
         } else if (cmd.equals("-interval")) {
           // user has specified an interval for canary breaths (-interval N)
           i++;
@@ -773,7 +770,6 @@ public class Canary implements Tool, CanaryInterface {
             System.err.println("-interval needs a numeric value argument.");
             printUsageAndExit();
           }
-          conf.setLong(HBASE_CANARY_INTERVAL, interval);
         } else if (cmd.equals("-zookeeper")) {
           this.zookeeperMode = true;
         } else if(cmd.equals("-regionserver")) {
@@ -785,7 +781,7 @@ public class Canary implements Tool, CanaryInterface {
           writeSniffing = true;
           conf.setBoolean(HBASE_CANARY_REGION_WRITE_SNIFFING, true);
         } else if(cmd.equals("-treatFailureAsError") || cmd.equals("-failureAsError")) {
-          conf.setBoolean(HBASE_CANARY_TREAT_FAILURE_AS_ERROR, true);
+          conf.setBoolean(HBASE_CANARY_FAIL_ON_ERROR, true);
         } else if (cmd.equals("-e")) {
           conf.setBoolean(HBASE_CANARY_USE_REGEX, true);
         } else if (cmd.equals("-t")) {
@@ -931,7 +927,6 @@ public class Canary implements Tool, CanaryInterface {
     long currentTimeLength = 0;
     boolean failOnError = conf.getBoolean(HBASE_CANARY_FAIL_ON_ERROR, true);
     long timeout = conf.getLong(HBASE_CANARY_TIMEOUT, DEFAULT_TIMEOUT);
-    long interval = conf.getLong(HBASE_CANARY_INTERVAL, 0);
     // Get a connection to use in below.
     try (Connection connection = ConnectionFactory.createConnection(this.conf)) {
       do {
@@ -1143,8 +1138,8 @@ public class Canary implements Tool, CanaryInterface {
     boolean useRegExp = conf.getBoolean(HBASE_CANARY_USE_REGEX, false);
     boolean regionServerAllRegions
             = conf.getBoolean(HBASE_CANARY_REGIONSERVER_ALL_REGIONS, false);
-    boolean treatFailureAsError
-            = conf.getBoolean(HBASE_CANARY_TREAT_FAILURE_AS_ERROR, false);
+    boolean failOnError
+            = conf.getBoolean(HBASE_CANARY_FAIL_ON_ERROR, true);
     int permittedFailures
             = conf.getInt(HBASE_CANARY_ZOOKEEPER_PERMITTED_FAILURES, 0);
     boolean writeSniffing
@@ -1159,19 +1154,19 @@ public class Canary implements Tool, CanaryInterface {
           new RegionServerMonitor(connection, monitorTargets, useRegExp,
               getSink(connection.getConfiguration(), RegionServerStdOutSink.class),
               this.executor, regionServerAllRegions,
-              treatFailureAsError, permittedFailures);
+              failOnError, permittedFailures);
 
     } else if (this.zookeeperMode) {
       monitor =
           new ZookeeperMonitor(connection, monitorTargets, useRegExp,
               getSink(connection.getConfiguration(), ZookeeperStdOutSink.class),
-              this.executor, treatFailureAsError, permittedFailures);
+              this.executor, failOnError, permittedFailures);
     } else {
       monitor =
           new RegionMonitor(connection, monitorTargets, useRegExp,
               getSink(connection.getConfiguration(), RegionStdOutSink.class),
               this.executor, writeSniffing,
-              TableName.valueOf(writeTableName), treatFailureAsError, configuredReadTableTimeouts,
+              TableName.valueOf(writeTableName), failOnError, configuredReadTableTimeouts,
               configuredWriteTableTimeout, permittedFailures);
     }
     return monitor;
@@ -1351,7 +1346,7 @@ public class Canary implements Tool, CanaryInterface {
             this.initialized = true;
             for (String table : tables) {
               LongAdder readLatency = regionSink.initializeAndGetReadLatencyForTable(table);
-              taskFutures.addAll(Canary.sniff(admin, regionSink, table, executor, TaskType.READ,
+              taskFutures.addAll(CanaryTool.sniff(admin, regionSink, table, executor, TaskType.READ,
                 this.rawScanEnabled, readLatency));
             }
           } else {
@@ -1370,7 +1365,7 @@ public class Canary implements Tool, CanaryInterface {
             // sniff canary table with write operation
             regionSink.initializeWriteLatency();
             LongAdder writeTableLatency = regionSink.getWriteLatency();
-            taskFutures.addAll(Canary.sniff(admin, regionSink, admin.getDescriptor(writeTableName),
+            taskFutures.addAll(CanaryTool.sniff(admin, regionSink, admin.getDescriptor(writeTableName),
               executor, TaskType.WRITE, this.rawScanEnabled, writeTableLatency));
           }
 
@@ -1475,7 +1470,7 @@ public class Canary implements Tool, CanaryInterface {
             (!td.getTableName().equals(writeTableName))) {
           LongAdder readLatency =
               regionSink.initializeAndGetReadLatencyForTable(td.getTableName().getNameAsString());
-          taskFutures.addAll(Canary.sniff(admin, sink, td, executor, taskType, this.rawScanEnabled,
+          taskFutures.addAll(CanaryTool.sniff(admin, sink, td, executor, taskType, this.rawScanEnabled,
               readLatency));
         }
       }
@@ -1548,7 +1543,7 @@ public class Canary implements Tool, CanaryInterface {
       throws Exception {
     LOG.debug("Checking table is enabled and getting table descriptor for table {}", tableName);
     if (admin.isTableEnabled(TableName.valueOf(tableName))) {
-      return Canary.sniff(admin, sink, admin.getDescriptor(TableName.valueOf(tableName)),
+      return CanaryTool.sniff(admin, sink, admin.getDescriptor(TableName.valueOf(tableName)),
         executor, taskType, rawScanEnabled, readLatency);
     } else {
       LOG.warn("Table {} is not enabled", tableName);
@@ -1862,7 +1857,7 @@ public class Canary implements Tool, CanaryInterface {
     int exitCode;
     ExecutorService executor = new ScheduledThreadPoolExecutor(numThreads);
     try {
-      exitCode = ToolRunner.run(conf, new Canary(executor), args);
+      exitCode = ToolRunner.run(conf, new CanaryTool(executor), args);
     } finally {
       executor.shutdown();
     }
