@@ -231,9 +231,7 @@ public final class SnapshotReferenceUtil {
         throw new CorruptedSnapshotException(e.getCause().getMessage(),
             ProtobufUtil.createSnapshotDesc(snapshotDesc));
       } else {
-        IOException ex = new IOException();
-        ex.initCause(e.getCause());
-        throw ex;
+        throw new IOException(e.getCause());
       }
     }
   }

@@ -218,9 +218,7 @@ public abstract class ModifyRegionUtils {
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (ExecutionException e) {
-      IOException ex = new IOException();
-      ex.initCause(e.getCause());
-      throw ex;
+      throw new IOException(e.getCause());
     }
   }
 

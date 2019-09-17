@@ -410,7 +410,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             String msg = "Couldn't setup connection for "
                 + UserGroupInformation.getLoginUser().getUserName() + " to " + serverPrincipal;
             LOG.warn(msg, ex);
-            throw (IOException) new IOException(msg).initCause(ex);
+            throw new IOException(msg, ex);
           }
         } else {
           LOG.warn("Exception encountered while connecting to " + "the server : " + ex);
