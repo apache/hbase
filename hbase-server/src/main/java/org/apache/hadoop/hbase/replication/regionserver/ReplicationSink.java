@@ -251,22 +251,22 @@ public class ReplicationSink {
       }
 
       if(bulkLoadsPerClusters != null) {
-        for (List<String> clusterIds : bulkLoadsPerClusters.keySet()) {
-          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-            bulkLoadsPerClusters.get(clusterIds);
+        for (Entry<List<String>, Map<String, List<Pair<byte[],
+            List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
+          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             if(LOG.isDebugEnabled()) {
               LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
-                clusterIds.stream().reduce("", (idsList, id) -> idsList + ", " + id));
+                entry.getKey().toString());
             }
             HFileReplicator hFileReplicator =
               new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), clusterIds);
+                getConnection(), entry.getKey());
             hFileReplicator.replicate();
             if(LOG.isDebugEnabled()) {
               LOG.debug("Finished replicating bulk loaded data from cluster id: {}",
-                clusterIds.stream().reduce("", (idsList, id) -> idsList + ", " + id));
+                entry.getKey().toString());
             }
           }
         }
