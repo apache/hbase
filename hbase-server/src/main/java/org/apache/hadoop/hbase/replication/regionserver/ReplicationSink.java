@@ -252,7 +252,7 @@ public class ReplicationSink {
 
       if(bulkLoadsPerClusters != null) {
         for (Entry<List<String>, Map<String, List<Pair<byte[],
-            List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
+          List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
           Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             if(LOG.isDebugEnabled()) {
