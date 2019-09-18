@@ -589,7 +589,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaining region boundaries
     # (deletes all records by recreating the table)
-    def truncate_preserve(table_name_str, conf = @conf)
+    def truncate_preserve(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
 
