@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.concurrent.CompletableFuture;
@@ -73,10 +72,9 @@ public class TestClientTokenUtil {
     shouldInjectFault.set(null, injected);
 
     try {
-      clientTokenUtil.getMethod("obtainToken", Connection.class)
-          .invoke(null, new Object[] { null });
+      ClientTokenUtil.obtainToken((Connection)null);
       fail("Should have injected exception.");
-    } catch (InvocationTargetException e) {
+    } catch (IOException e) {
       Throwable t = e;
       boolean serviceExceptionFound = false;
       while ((t = t.getCause()) != null) {
@@ -90,8 +88,7 @@ public class TestClientTokenUtil {
       }
     }
 
-    CompletableFuture<?> future = (CompletableFuture<?>) clientTokenUtil
-      .getMethod("obtainToken", AsyncConnection.class).invoke(null, new Object[] { null });
+    CompletableFuture<?> future = ClientTokenUtil.obtainToken((AsyncConnection)null);
     try {
       future.get();
       fail("Should have injected exception.");
