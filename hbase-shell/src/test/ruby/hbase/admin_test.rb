@@ -376,6 +376,15 @@ module Hbase
       assert(!output.empty?)
     end
 
+    define_test "truncate should work on disabled table" do
+      table(@test_name).put(1, "x:a", 1)
+      table(@test_name).put(2, "x:a", 2)
+      assert_equal(2, table(@test_name)._count_internal)
+      command(:disable, @test_name)
+      command(:truncate, @test_name)
+      assert_equal(0, table(@test_name)._count_internal)
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "truncate_preserve should empty a table" do
