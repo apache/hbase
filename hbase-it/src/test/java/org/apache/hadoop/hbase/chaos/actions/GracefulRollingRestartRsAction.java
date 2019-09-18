@@ -57,7 +57,7 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
         LOG.info("Loading " + server);
         rm.load();
       } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
-        LOG.info("Problem restarting but presume successful; code=" + e.getExitCode(), e);
+        LOG.info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
       }
       sleep(RandomUtils.nextInt(0, (int)sleepTime));
     }

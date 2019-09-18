@@ -27,6 +27,7 @@ import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +89,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           server = serversToBeSuspended.remove();
           try {
             suspendRs(server);
-          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+          } catch (Shell.ExitCodeException e) {
             LOG.info("Problem suspending but presume successful; code=" + e.getExitCode(), e);
           }
           suspendedServers.add(server);
@@ -97,7 +98,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           server = suspendedServers.remove();
           try {
             resumeRs(server);
-          } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
+          } catch (Shell.ExitCodeException e) {
             LOG.info("Problem resuming, will retry; code=" + e.getExitCode(), e);
           }
           break;
