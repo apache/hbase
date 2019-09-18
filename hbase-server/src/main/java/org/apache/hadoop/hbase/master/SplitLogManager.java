@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLog
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -289,10 +290,12 @@ public class SplitLogManager {
       }
       SplitLogCounters.tot_mgr_log_split_batch_success.increment();
     }
-    String msg = "Finished splitting (more than or equal to) " + totalSize +
-        " bytes in " + ((batch == null)? 0: batch.installed) +
-        " log files in " + logDirs + " in " +
-        ((startTime == 0)? startTime: (EnvironmentEdgeManager.currentTime() - startTime)) + "ms";
+    String msg =
+        "Finished splitting (more than or equal to) " + StringUtils.humanSize(totalSize) + " (" +
+            totalSize + " bytes) in " + ((batch == null) ? 0 : batch.installed) + " log files in " +
+            logDirs + " in " +
+            ((startTime == 0) ? startTime : (EnvironmentEdgeManager.currentTime() - startTime)) +
+            "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,7 @@ public class BoundedLogWriterCreationOutputSink extends LogRecoveredEditsOutputS
     for (final Map.Entry<byte[], WALSplitter.RegionEntryBuffer> buffer : entryBuffers.buffers
         .entrySet()) {
       LOG.info("Submitting writeThenClose of {}",
-        Arrays.toString(buffer.getValue().encodedRegionName));
+          Bytes.toString(buffer.getValue().encodedRegionName));
       completionService.submit(new Callable<Void>() {
         @Override
         public Void call() throws Exception {
