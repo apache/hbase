@@ -801,9 +801,9 @@ public class ReplicationSource extends Thread
                 Path p = rs.getPath();
                 FileStatus[] logs = fs.listStatus(p);
                 for (FileStatus log : logs) {
-                  p = new Path(p, log.getPath().getName());
-                  if (p.getName().equals(currentPath.getName())) {
-                    currentPath = p;
+                  String logName = log.getPath().getName();
+                  if (logName.equals(currentPath.getName())) {
+                    currentPath = new Path(p, logName);
                     LOG.info("Log " + currentPath.getName() + " found at " + currentPath);
                     // Open the log at the new location
                     this.openReader(sleepMultiplier);
