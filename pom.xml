@@ -1505,7 +1505,7 @@
     <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
-    <curator.version>4.0.0</curator.version>
+    <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
     <apache.rat.version>0.12</apache.rat.version>
     <asciidoctor.plugin.version>1.5.5</asciidoctor.plugin.version>
