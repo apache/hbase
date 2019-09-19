@@ -144,7 +144,6 @@ public class MockMasterServices extends MockNoopMasterServices {
     // Set hbase.rootdir into test dir.
     Path rootdir = FSUtils.getRootDir(getConfiguration());
     FSUtils.setRootDir(getConfiguration(), rootdir);
-    Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
   }
 
   public void start(final int numServes, final RSProcedureDispatcher remoteDispatcher)
