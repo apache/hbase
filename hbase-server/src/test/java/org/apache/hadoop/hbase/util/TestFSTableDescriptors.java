@@ -306,7 +306,33 @@ public class TestFSTableDescriptors {
     assertEquals("getAll() didn't return all TableDescriptors, expected: " +
                    (count + 1) + " got: " + htds.getAll().size(),
                  count + 1, htds.getAll().size());
+  }
 
+  @Test
+  public void testGetAllOrdering() throws Exception {
+    final String name = "testGetAllOrdering";
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    Path rootDir = new Path(UTIL.getDataTestDir(), name);
+    FSTableDescriptors tds = new FSTableDescriptorsTest(UTIL.getConfiguration(), fs, rootDir);
+
+    String[] tableNames = new String[] { "foo", "bar", "foo:bar", "bar:foo" };
+    for (String tableName : tableNames) {
+      tds.createTableDescriptor(
+          TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).build());
+    }
+
+    Map<String, TableDescriptor> tables = tds.getAll();
+    assertEquals(4, tables.size());
+
+    String[] tableNamesOrdered =
+        new String[] { "bar:foo", "default:bar", "default:foo", "foo:bar" };
+    int i = 0;
+    for (Map.Entry<String, TableDescriptor> entry : tables.entrySet()) {
+      assertEquals(tableNamesOrdered[i], entry.getKey());
+      assertEquals(tableNamesOrdered[i],
+          entry.getValue().getTableName().getNameWithNamespaceInclAsString());
+      i++;
+    }
   }
 
   @Test
