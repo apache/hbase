@@ -227,6 +227,9 @@ public class HbckChore extends ScheduledChore {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
       if (hri.getDeployedOn().size() == 0) {
+        if (locationInMeta == null) {
+          continue;
+        }
         // skip the offline region which belong to disabled table.
         if (disabledTableRegions.contains(encodedRegionName)) {
           continue;
