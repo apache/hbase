@@ -663,9 +663,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
-      return CompletableFuture.completedFuture(true);
-    }
+    // TODO: This doesn't work if tablename is hbase:meta. Need to ask Master.
+    // Other problems with this implementation are that it presumes state is
+    // available in Master. Would be good to hide how state is kept.
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
       if (error != null) {

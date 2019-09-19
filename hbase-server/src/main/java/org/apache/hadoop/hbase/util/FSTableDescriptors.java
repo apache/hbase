@@ -222,11 +222,6 @@ public class FSTableDescriptors implements TableDescriptors {
       cachehits++;
       return metaTableDescriptor;
     }
-    // hbase:meta is already handled. If some one tries to get the descriptor for
-    // .logs, .oldlogs or .corrupt throw an exception.
-    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tablename.getNameAsString())) {
-       throw new IOException("No descriptor found for non table = " + tablename);
-    }
 
     if (usecache) {
       // Look in cache of descriptors.
@@ -325,15 +320,6 @@ public class FSTableDescriptors implements TableDescriptors {
   public void add(TableDescriptor htd) throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot add a table descriptor - in read only mode");
-    }
-    TableName tableName = htd.getTableName();
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
-    }
-    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName.getNameAsString())) {
-      throw new NotImplementedException(
-          "Cannot add a table descriptor for a reserved subdirectory name: "
-              + htd.getTableName().getNameAsString());
     }
     updateTableDescriptor(htd);
   }

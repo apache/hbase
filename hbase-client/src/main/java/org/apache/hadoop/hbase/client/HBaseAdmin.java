@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -948,14 +949,18 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isTableEnabled(final TableName tableName) throws IOException {
     checkTableExists(tableName);
-    return executeCallable(new RpcRetryingCallable<Boolean>() {
+    // Go to the Master. It knows state of all tables.
+    return executeCallable(new MasterCallable<Boolean>(getConnection(),
+        getRpcControllerFactory()) {
       @Override
-      protected Boolean rpcCall(int callTimeout) throws Exception {
-        TableState tableState = MetaTableAccessor.getTableState(getConnection(), tableName);
-        if (tableState == null) {
+      protected Boolean rpcCall() throws Exception {
+        setPriority(tableName);
+        MasterProtos.GetTableStateRequest req = RequestConverter.buildGetTableStateRequest(tableName);
+        MasterProtos.GetTableStateResponse ret = master.getTableState(getRpcController(), req);
+        if (!ret.hasTableState() || ret.getTableState() == null) {
           throw new TableNotFoundException(tableName);
         }
-        return tableState.inStates(TableState.State.ENABLED);
+        return ret.getTableState().getState() == HBaseProtos.TableState.State.ENABLED;
       }
     });
   }
@@ -963,7 +968,20 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isTableDisabled(TableName tableName) throws IOException {
     checkTableExists(tableName);
-    return connection.isTableDisabled(tableName);
+    // Go to the Master. It knows state of all tables.
+    return executeCallable(new MasterCallable<Boolean>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        setPriority(tableName);
+        MasterProtos.GetTableStateRequest req = RequestConverter.buildGetTableStateRequest(tableName);
+        MasterProtos.GetTableStateResponse ret = master.getTableState(getRpcController(), req);
+        if (!ret.hasTableState() || ret.getTableState() == null) {
+          throw new TableNotFoundException(tableName);
+        }
+        return ret.getTableState().getState() == HBaseProtos.TableState.State.DISABLED;
+      }
+    });
   }
 
   @Override
@@ -4357,5 +4375,4 @@ public class HBaseAdmin implements Admin {
     });
 
   }
-
 }

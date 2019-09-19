@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -45,6 +45,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -2057,6 +2058,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
+    // TODO: This doesn't work if tablename is hbase:meta. Need to ask Master.
+    // Other problems with this implementation are that it presumes state is
+    // available in Master. Would be good to hide how state is kept.
     checkClosed();
     TableState tableState = MetaTableAccessor.getTableState(this, tableName);
     if (tableState == null) {
