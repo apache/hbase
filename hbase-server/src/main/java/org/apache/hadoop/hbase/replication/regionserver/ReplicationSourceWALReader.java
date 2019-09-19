@@ -136,10 +136,13 @@ public class ReplicationSourceWALReader extends Thread {
               LOG.trace(String.format("Read %s WAL entries eligible for replication",
                 batch.getNbEntries()));
             }
-            entryBatchQueue.put(batch);
             sleepMultiplier = 1;
           } else { // got no entries and didn't advance position in WAL
             handleEmptyWALEntryBatch(batch, entryStream.getCurrentPath());
+          }
+          //put batch with updated position into queue even empty，in order to trigger cleanOldLogs,see HBASE-23008 
+          if(batch != null){
+            entryBatchQueue.put(batch);
           }
           currentPosition = entryStream.getPosition();
           entryStream.reset(); // reuse stream
@@ -167,6 +170,7 @@ public class ReplicationSourceWALReader extends Thread {
         batch = new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
       }
       Entry entry = entryStream.next();
+      batch.lastWalPosition = entryStream.getPosition();
       entry = filterEntry(entry);
       if (entry != null) {
         WALEdit edit = entry.getEdit();
