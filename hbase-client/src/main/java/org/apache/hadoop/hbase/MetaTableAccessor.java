@@ -59,8 +59,6 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.filter.QualifierFilter;
-import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -374,7 +372,7 @@ public class MetaTableAccessor {
   @Nullable
   public static List<RegionInfo> getMergeRegions(Connection connection, byte[] regionName)
       throws IOException {
-    return getMergeRegions(getMergeRegionsRaw(connection, regionName));
+    return getMergeRegions(getRegionResult(connection, regionName).rawCells());
   }
 
   /**
@@ -425,31 +423,6 @@ public class MetaTableAccessor {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
     return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
       PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
-  }
-
-  /**
-   * @return Array of Cells made from all columns on the <code>regionName</code> row
-   *   that match the regex 'info:merge.*'.
-   */
-  @Nullable
-  private static Cell [] getMergeRegionsRaw(Connection connection, byte [] regionName)
-      throws IOException {
-    Scan scan = new Scan().withStartRow(regionName).
-        setOneRowLimit().
-        readVersions(1).
-        addFamily(HConstants.CATALOG_FAMILY).
-        setFilter(new QualifierFilter(CompareOperator.EQUAL,
-          new RegexStringComparator(HConstants.MERGE_QUALIFIER_PREFIX_STR+ ".*")));
-    try (Table m = getMetaHTable(connection); ResultScanner scanner = m.getScanner(scan)) {
-      // Should be only one result in this scanner if any.
-      Result result = scanner.next();
-      if (result == null) {
-        return null;
-      }
-      // Should be safe to just return all Cells found since we had filter in place.
-      // All values should be RegionInfos or something wrong.
-      return result.rawCells();
-    }
   }
 
   /**
@@ -1897,21 +1870,23 @@ public class MetaTableAccessor {
       throws IOException {
     Delete delete = new Delete(mergeRegion.getRegionName());
     // NOTE: We are doing a new hbase:meta read here.
-    Cell [] cells = getMergeRegionsRaw(connection, mergeRegion.getRegionName());
+    Cell[] cells = getRegionResult(connection, mergeRegion.getRegionName()).rawCells();
     if (cells == null || cells.length == 0) {
       return;
     }
-    List<byte[]> qualifiers = new ArrayList<>(cells.length);
+    List<byte[]> qualifiers = new ArrayList<>();
     for (Cell cell : cells) {
+      if (!isMergeQualifierPrefix(cell)) {
+        continue;
+      }
       byte[] qualifier = CellUtil.cloneQualifier(cell);
       qualifiers.add(qualifier);
       delete.addColumns(getCatalogFamily(), qualifier, HConstants.LATEST_TIMESTAMP);
     }
     deleteFromMetaTable(connection, delete);
     LOG.info("Deleted merge references in " + mergeRegion.getRegionNameAsString() +
-        ", deleted qualifiers " +
-        qualifiers.stream().map(Bytes::toStringBinary).
-            collect(Collectors.joining(", ")));
+        ", deleted qualifiers " + qualifiers.stream().map(Bytes::toStringBinary).
+        collect(Collectors.joining(", ")));
   }
 
   public static Put addRegionInfo(final Put p, final RegionInfo hri)
