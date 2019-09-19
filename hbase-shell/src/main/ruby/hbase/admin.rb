@@ -576,83 +576,30 @@ module Hbase
     def truncate(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      table_description = @admin.getDescriptor(table_name)
-      raise ArgumentError, "Table #{table_name_str} is not enabled. Enable it first." unless
-          enabled?(table_name_str)
-      puts 'Disabling table...'
-      @admin.disableTable(table_name)
 
-      begin
-        puts 'Truncating table...'
-        @admin.truncateTable(table_name, false)
-      rescue => e
-        # Handle the compatibility case, where the truncate method doesn't exists on the Master
-        raise e unless e.respond_to?(:cause) && !e.cause.nil?
-        rootCause = e.cause
-        if rootCause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
-          # Handle the compatibility case, where the truncate method doesn't exists on the Master
-          puts 'Dropping table...'
-          @admin.deleteTable(table_name)
-
-          puts 'Creating table...'
-          @admin.createTable(table_description)
-        else
-          raise e
-        end
+      if enabled?(table_name_str)
+        puts 'Disabling table...'
+        disable(table_name_str)
       end
+
+      puts 'Truncating table...'
+      @admin.truncateTable(table_name, false)
     end
 
     #----------------------------------------------------------------------------------------------
-    # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
-    def truncate_preserve(table_name_str, conf = @conf)
+    # Truncates table while maintaining region boundaries
+    # (deletes all records by recreating the table)
+    def truncate_preserve(table_name_str)
       puts "Truncating '#{table_name_str}' table (it may take a while):"
       table_name = TableName.valueOf(table_name_str)
-      locator = @connection.getRegionLocator(table_name)
-      begin
-        splits = locator.getAllRegionLocations
-                        .map { |i| Bytes.toStringBinary(i.getRegion.getStartKey) }
-                        .delete_if { |k| k == '' }.to_java :String
-        splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
-      ensure
-        locator.close
+
+      if enabled?(table_name_str)
+        puts 'Disabling table...'
+        disable(table_name_str)
       end
 
-      table_description = @admin.getDescriptor(table_name)
-      puts 'Disabling table...'
-      disable(table_name_str)
-
-      begin
-        puts 'Truncating table...'
-        # just for test
-        unless conf.getBoolean('hbase.client.truncatetable.support', true)
-          raise UnsupportedMethodException, 'truncateTable'
-        end
-        @admin.truncateTable(table_name, true)
-      rescue => e
-        # Handle the compatibility case, where the truncate method doesn't exists on the Master
-        raise e unless e.respond_to?(:cause) && !e.cause.nil?
-        rootCause = e.cause
-        if rootCause.is_a?(org.apache.hadoop.hbase.DoNotRetryIOException)
-          # Handle the compatibility case, where the truncate method doesn't exists on the Master
-          puts 'Dropping table...'
-          @admin.deleteTable(table_name)
-
-          puts 'Creating table with region boundaries...'
-          @admin.createTable(table_description, splits)
-        else
-          raise e
-        end
-      end
-    end
-
-    class UnsupportedMethodException < StandardError
-      def initialize(name)
-        @method_name = name
-      end
-
-      def cause
-        org.apache.hadoop.hbase.DoNotRetryIOException.new("#{@method_name} is not support")
-      end
+      puts 'Truncating table...'
+      @admin.truncateTable(table_name, true)
     end
 
     #----------------------------------------------------------------------------------------------

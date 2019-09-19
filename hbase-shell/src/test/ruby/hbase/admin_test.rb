@@ -362,50 +362,50 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
-    define_test "truncate should empty a table" do
-      table(@test_name).put(1, "x:a", 1)
-      table(@test_name).put(2, "x:a", 2)
+    define_test 'truncate should empty a table' do
+      table(@test_name).put(1, 'x:a', 1)
+      table(@test_name).put(2, 'x:a', 2)
       assert_equal(2, table(@test_name)._count_internal)
       # This is hacky.  Need to get the configuration into admin instance
       command(:truncate, @test_name)
       assert_equal(0, table(@test_name)._count_internal)
     end
 
-    define_test "truncate should yield log records" do
+    define_test 'truncate should yield log records' do
       output = capture_stdout { command(:truncate, @test_name) }
       assert(!output.empty?)
     end
 
+    define_test 'truncate should work on disabled table' do
+      table(@test_name).put(1, 'x:a', 1)
+      table(@test_name).put(2, 'x:a', 2)
+      assert_equal(2, table(@test_name)._count_internal)
+      command(:disable, @test_name)
+      command(:truncate, @test_name)
+      assert_equal(0, table(@test_name)._count_internal)
+    end
+
     #-------------------------------------------------------------------------------
 
-    define_test "truncate_preserve should empty a table" do
-      table(@test_name).put(1, "x:a", 1)
-      table(@test_name).put(2, "x:a", 2)
+    define_test 'truncate_preserve should empty a table' do
+      table(@test_name).put(1, 'x:a', 1)
+      table(@test_name).put(2, 'x:a', 2)
       assert_equal(2, table(@test_name)._count_internal)
       # This is hacky.  Need to get the configuration into admin instance
       command(:truncate_preserve, @test_name)
       assert_equal(0, table(@test_name)._count_internal)
     end
 
-    define_test "truncate_preserve should yield log records" do
+    define_test 'truncate_preserve should yield log records' do
       output = capture_stdout { command(:truncate_preserve, @test_name) }
       assert(!output.empty?)
     end
 
-    define_test "truncate_preserve should maintain the previous region boundaries" do
+    define_test 'truncate_preserve should maintain the previous region boundaries' do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
       splits = table(@create_test_name)._get_splits_internal()
       command(:truncate_preserve, @create_test_name)
-      assert_equal(splits, table(@create_test_name)._get_splits_internal())
-    end
-
-    define_test "truncate_preserve should be fine when truncateTable method doesn't support" do
-      drop_test_table(@create_test_name)
-      admin.create(@create_test_name, 'a', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
-      splits = table(@create_test_name)._get_splits_internal()
-      $TEST_CLUSTER.getConfiguration.setBoolean("hbase.client.truncatetable.support", false)
-      admin.truncate_preserve(@create_test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(splits, table(@create_test_name)._get_splits_internal())
     end
 
