@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -30,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -61,7 +70,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -106,8 +114,49 @@ public class TestMetaTableAccessor {
     UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * Test for HBASE-23044.
+   */
   @Test
-  public void testGettingMergeRegions() throws IOException {
+  public void testGetMergeRegions() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    UTIL.createMultiRegionTable(tn, Bytes.toBytes("CF"), 4);
+    UTIL.waitTableAvailable(tn);
+    try (Admin admin = UTIL.getAdmin()) {
+      List<RegionInfo> regions = admin.getRegions(tn);
+      assertEquals(4, regions.size());
+      admin.mergeRegionsAsync(regions.get(0).getRegionName(), regions.get(1).getRegionName(), false)
+          .get(60, TimeUnit.SECONDS);
+      admin.mergeRegionsAsync(regions.get(2).getRegionName(), regions.get(3).getRegionName(), false)
+          .get(60, TimeUnit.SECONDS);
+
+      List<RegionInfo> mergedRegions = admin.getRegions(tn);
+      assertEquals(2, mergedRegions.size());
+      RegionInfo mergedRegion0 = mergedRegions.get(0);
+      RegionInfo mergedRegion1 = mergedRegions.get(1);
+
+      List<RegionInfo> mergeParents =
+          MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
+      assertTrue(mergeParents.contains(regions.get(0)));
+      assertTrue(mergeParents.contains(regions.get(1)));
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1.getRegionName());
+      assertTrue(mergeParents.contains(regions.get(2)));
+      assertTrue(mergeParents.contains(regions.get(3)));
+
+      // Delete merge qualifiers for mergedRegion0, then cannot getMergeRegions again
+      MetaTableAccessor.deleteMergeQualifiers(connection, mergedRegion0);
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
+      assertNull(mergeParents);
+
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1.getRegionName());
+      assertTrue(mergeParents.contains(regions.get(2)));
+      assertTrue(mergeParents.contains(regions.get(3)));
+    }
+    UTIL.deleteTable(tn);
+  }
+
+  @Test
+  public void testAddMergeRegions() throws IOException {
     TableName tn = TableName.valueOf(this.name.getMethodName());
     Put put = new Put(Bytes.toBytes(this.name.getMethodName()));
     List<RegionInfo> ris = new ArrayList<>();
@@ -121,12 +170,12 @@ public class TestMetaTableAccessor {
     put = MetaTableAccessor.addMergeRegions(put, ris);
     List<Cell> cells = put.getFamilyCellMap().get(HConstants.CATALOG_FAMILY);
     String previousQualifier = null;
-    Assert.assertEquals(limit, cells.size());
+    assertEquals(limit, cells.size());
     for (Cell cell: cells) {
       LOG.info(cell.toString());
       String qualifier = Bytes.toString(cell.getQualifierArray());
-      Assert.assertTrue(qualifier.startsWith(HConstants.MERGE_QUALIFIER_PREFIX_STR));
-      Assert.assertNotEquals(qualifier, previousQualifier);
+      assertTrue(qualifier.startsWith(HConstants.MERGE_QUALIFIER_PREFIX_STR));
+      assertNotEquals(qualifier, previousQualifier);
       previousQualifier = qualifier;
     }
   }
@@ -134,7 +183,7 @@ public class TestMetaTableAccessor {
   @Test
   public void testIsMetaWhenAllHealthy() throws InterruptedException {
     HMaster m = UTIL.getMiniHBaseCluster().getMaster();
-    Assert.assertTrue(m.waitForMetaOnline());
+    assertTrue(m.waitForMetaOnline());
   }
 
   @Test
@@ -143,7 +192,7 @@ public class TestMetaTableAccessor {
     int index = UTIL.getMiniHBaseCluster().getServerWithMeta();
     HRegionServer rsWithMeta = UTIL.getMiniHBaseCluster().getRegionServer(index);
     rsWithMeta.abort("TESTING");
-    Assert.assertTrue(m.waitForMetaOnline());
+    assertTrue(m.waitForMetaOnline());
   }
 
   /**
@@ -188,8 +237,8 @@ public class TestMetaTableAccessor {
 
     try {
       // Make sure reader and writer are working.
-      Assert.assertTrue(reader.isProgressing());
-      Assert.assertTrue(writer.isProgressing());
+      assertTrue(reader.isProgressing());
+      assertTrue(writer.isProgressing());
 
       // Kill server hosting meta -- twice  . See if our reader/writer ride over the
       // meta moves.  They'll need to retry.
@@ -208,8 +257,8 @@ public class TestMetaTableAccessor {
         }
       }
 
-      Assert.assertTrue("reader: " + reader.toString(), reader.isProgressing());
-      Assert.assertTrue("writer: " + writer.toString(), writer.isProgressing());
+      assertTrue("reader: " + reader.toString(), reader.isProgressing());
+      assertTrue("writer: " + writer.toString(), writer.isProgressing());
     } catch (IOException e) {
       throw e;
     } finally {
@@ -220,7 +269,7 @@ public class TestMetaTableAccessor {
       t.close();
     }
     long exeTime = System.currentTimeMillis() - startTime;
-    Assert.assertTrue("Timeout: test took " + exeTime / 1000 + " sec", exeTime < timeOut);
+    assertTrue("Timeout: test took " + exeTime / 1000 + " sec", exeTime < timeOut);
   }
 
   /**
@@ -276,27 +325,27 @@ public class TestMetaTableAccessor {
   public void testGetRegionsFromMetaTable() throws IOException, InterruptedException {
     MetaTableLocator mtl = new MetaTableLocator();
     List<RegionInfo> regions = mtl.getMetaRegions(UTIL.getZooKeeperWatcher());
-    Assert.assertTrue(regions.size() >= 1);
-    Assert.assertTrue(
+    assertTrue(regions.size() >= 1);
+    assertTrue(
         mtl.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
   }
 
   @Test public void testTableExists() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    Assert.assertFalse(MetaTableAccessor.tableExists(connection, tableName));
+    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    Assert.assertTrue(MetaTableAccessor.tableExists(connection, tableName));
+    assertTrue(MetaTableAccessor.tableExists(connection, tableName));
     Admin admin = UTIL.getAdmin();
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
-    Assert.assertFalse(MetaTableAccessor.tableExists(connection, tableName));
-    Assert.assertTrue(MetaTableAccessor.tableExists(connection,
+    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
+    assertTrue(MetaTableAccessor.tableExists(connection,
         TableName.META_TABLE_NAME));
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    Assert.assertTrue(MetaTableAccessor.tableExists(connection, tableName));
+    assertTrue(MetaTableAccessor.tableExists(connection, tableName));
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
-    Assert.assertFalse(MetaTableAccessor.tableExists(connection, tableName));
+    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
   }
 
   @Test public void testGetRegion() throws IOException, InterruptedException {
@@ -305,7 +354,7 @@ public class TestMetaTableAccessor {
     // Test get on non-existent region.
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, Bytes.toBytes("nonexistent-region"));
-    Assert.assertNull(pair);
+    assertNull(pair);
     LOG.info("Finished " + name);
   }
 
@@ -328,18 +377,18 @@ public class TestMetaTableAccessor {
 
     // Now make sure we only get the regions from 1 of the tables at a time
 
-    Assert.assertEquals(1, MetaTableAccessor.getTableRegions(connection, tableName).size());
-    Assert.assertEquals(1, MetaTableAccessor.getTableRegions(connection, greaterName).size());
+    assertEquals(1, MetaTableAccessor.getTableRegions(connection, tableName).size());
+    assertEquals(1, MetaTableAccessor.getTableRegions(connection, greaterName).size());
   }
 
   private static List<RegionInfo> testGettingTableRegions(final Connection connection,
       final TableName name, final int regionCount)
   throws IOException, InterruptedException {
     List<RegionInfo> regions = MetaTableAccessor.getTableRegions(connection, name);
-    Assert.assertEquals(regionCount, regions.size());
+    assertEquals(regionCount, regions.size());
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, regions.get(0).getRegionName());
-    Assert.assertEquals(regions.get(0).getEncodedName(),
+    assertEquals(regions.get(0).getEncodedName(),
       pair.getFirst().getEncodedName());
     return regions;
   }
@@ -349,48 +398,48 @@ public class TestMetaTableAccessor {
   throws IOException, InterruptedException {
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, region.getRegionName());
-    Assert.assertEquals(region.getEncodedName(),
+    assertEquals(region.getEncodedName(),
       pair.getFirst().getEncodedName());
   }
 
   @Test
   public void testParseReplicaIdFromServerColumn() {
     String column1 = HConstants.SERVER_QUALIFIER_STR;
-    Assert.assertEquals(0,
+    assertEquals(0,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column1)));
     String column2 = column1 + MetaTableAccessor.META_REPLICA_ID_DELIMITER;
-    Assert.assertEquals(-1,
+    assertEquals(-1,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column2)));
     String column3 = column2 + "00";
-    Assert.assertEquals(-1,
+    assertEquals(-1,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column3)));
     String column4 = column3 + "2A";
-    Assert.assertEquals(42,
+    assertEquals(42,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column4)));
     String column5 = column4 + "2A";
-    Assert.assertEquals(-1,
+    assertEquals(-1,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column5)));
     String column6 = HConstants.STARTCODE_QUALIFIER_STR;
-    Assert.assertEquals(-1,
+    assertEquals(-1,
         MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column6)));
   }
 
   @Test
   public void testMetaReaderGetColumnMethods() {
-    Assert.assertArrayEquals(HConstants.SERVER_QUALIFIER, MetaTableAccessor.getServerColumn(0));
-    Assert.assertArrayEquals(Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR
+    assertArrayEquals(HConstants.SERVER_QUALIFIER, MetaTableAccessor.getServerColumn(0));
+    assertArrayEquals(Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR
       + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
       MetaTableAccessor.getServerColumn(42));
 
-    Assert.assertArrayEquals(HConstants.STARTCODE_QUALIFIER,
+    assertArrayEquals(HConstants.STARTCODE_QUALIFIER,
       MetaTableAccessor.getStartCodeColumn(0));
-    Assert.assertArrayEquals(Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR
+    assertArrayEquals(Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR
       + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
       MetaTableAccessor.getStartCodeColumn(42));
 
-    Assert.assertArrayEquals(HConstants.SEQNUM_QUALIFIER,
+    assertArrayEquals(HConstants.SEQNUM_QUALIFIER,
       MetaTableAccessor.getSeqNumColumn(0));
-    Assert.assertArrayEquals(Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR
+    assertArrayEquals(Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR
       + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
       MetaTableAccessor.getSeqNumColumn(42));
   }
@@ -459,14 +508,14 @@ public class TestMetaTableAccessor {
       long seqNum, int replicaId, boolean checkSeqNum) throws IOException {
     Get get = new Get(row);
     Result result = meta.get(get);
-    Assert.assertTrue(Bytes.equals(
+    assertTrue(Bytes.equals(
       result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(replicaId)),
       Bytes.toBytes(serverName.getHostAndPort())));
-    Assert.assertTrue(Bytes.equals(
+    assertTrue(Bytes.equals(
       result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(replicaId)),
       Bytes.toBytes(serverName.getStartcode())));
     if (checkSeqNum) {
-      Assert.assertTrue(Bytes.equals(
+      assertTrue(Bytes.equals(
         result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId)),
         Bytes.toBytes(seqNum)));
     }
@@ -480,10 +529,10 @@ public class TestMetaTableAccessor {
         MetaTableAccessor.getServerColumn(replicaId));
     Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
       MetaTableAccessor.getStartCodeColumn(replicaId));
-    Assert.assertNotNull(serverCell);
-    Assert.assertNotNull(startCodeCell);
-    Assert.assertEquals(0, serverCell.getValueLength());
-    Assert.assertEquals(0, startCodeCell.getValueLength());
+    assertNotNull(serverCell);
+    assertNotNull(startCodeCell);
+    assertEquals(0, serverCell.getValueLength());
+    assertEquals(0, startCodeCell.getValueLength());
   }
 
   @Test
@@ -511,12 +560,12 @@ public class TestMetaTableAccessor {
         Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
           MetaTableAccessor.getServerNameColumn(replicaId));
         if (replicaId == 0) {
-          Assert.assertNotNull(stateCell);
+          assertNotNull(stateCell);
         } else {
-          Assert.assertNull(serverCell);
-          Assert.assertNull(startCodeCell);
-          Assert.assertNull(stateCell);
-          Assert.assertNull(snCell);
+          assertNull(serverCell);
+          assertNull(startCodeCell);
+          assertNull(stateCell);
+          assertNull(snCell);
         }
       }
     } finally {
@@ -707,15 +756,15 @@ public class TestMetaTableAccessor {
         MetaTableAccessor.getStartCodeColumn(0));
       Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         MetaTableAccessor.getSeqNumColumn(0));
-      Assert.assertNotNull(serverCell);
-      Assert.assertNotNull(startCodeCell);
-      Assert.assertNotNull(seqNumCell);
-      Assert.assertTrue(serverCell.getValueLength() > 0);
-      Assert.assertTrue(startCodeCell.getValueLength() > 0);
-      Assert.assertTrue(seqNumCell.getValueLength() > 0);
-      Assert.assertEquals(masterSystemTime, serverCell.getTimestamp());
-      Assert.assertEquals(masterSystemTime, startCodeCell.getTimestamp());
-      Assert.assertEquals(masterSystemTime, seqNumCell.getTimestamp());
+      assertNotNull(serverCell);
+      assertNotNull(startCodeCell);
+      assertNotNull(seqNumCell);
+      assertTrue(serverCell.getValueLength() > 0);
+      assertTrue(startCodeCell.getValueLength() > 0);
+      assertTrue(seqNumCell.getValueLength() > 0);
+      assertEquals(masterSystemTime, serverCell.getTimestamp());
+      assertEquals(masterSystemTime, startCodeCell.getTimestamp());
+      assertEquals(masterSystemTime, seqNumCell.getTimestamp());
     }
   }
 
@@ -765,8 +814,8 @@ public class TestMetaTableAccessor {
       Result result = meta.get(get);
       Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
           MetaTableAccessor.getServerColumn(0));
-      Assert.assertNotNull(serverCell);
-      Assert.assertEquals(serverNameTime, serverCell.getTimestamp());
+      assertNotNull(serverCell);
+      assertEquals(serverNameTime, serverCell.getTimestamp());
 
       ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
       edge.setValue(masterSystemTime);
@@ -787,9 +836,9 @@ public class TestMetaTableAccessor {
         MetaTableAccessor.getStartCodeColumn(0));
       Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         MetaTableAccessor.getSeqNumColumn(0));
-      Assert.assertNull(serverCell);
-      Assert.assertNull(startCodeCell);
-      Assert.assertNull(seqNumCell);
+      assertNull(serverCell);
+      assertNull(startCodeCell);
+      assertNull(seqNumCell);
     }
   }
 
@@ -870,7 +919,7 @@ public class TestMetaTableAccessor {
       MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, loc.getServerName(),
         1);
 
-      Assert.assertTrue(prevCalls < scheduler.numPriorityCalls);
+      assertTrue(prevCalls < scheduler.numPriorityCalls);
     }
   }
 
@@ -912,8 +961,8 @@ public class TestMetaTableAccessor {
         MetaTableAccessor.getServerColumn(splitA.getReplicaId()));
       Cell startCodeCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         MetaTableAccessor.getStartCodeColumn(splitA.getReplicaId()));
-      Assert.assertNull(serverCellA);
-      Assert.assertNull(startCodeCellA);
+      assertNull(serverCellA);
+      assertNull(startCodeCellA);
 
       Get get2 = new Get(splitA.getRegionName());
       Result resultB = meta.get(get2);
@@ -921,8 +970,8 @@ public class TestMetaTableAccessor {
         MetaTableAccessor.getServerColumn(splitB.getReplicaId()));
       Cell startCodeCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
         MetaTableAccessor.getStartCodeColumn(splitB.getReplicaId()));
-      Assert.assertNull(serverCellB);
-      Assert.assertNull(startCodeCellB);
+      assertNull(serverCellB);
+      assertNull(startCodeCellB);
     } finally {
       if (meta != null) {
         meta.close();
@@ -938,10 +987,10 @@ public class TestMetaTableAccessor {
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
     final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
       encodedName);
-    Assert.assertNotNull(result);
-    Assert.assertTrue(result.advance());
+    assertNotNull(result);
+    assertTrue(result.advance());
     final String resultingRowKey = CellUtil.getCellKeyAsString(result.current());
-    Assert.assertTrue(resultingRowKey.contains(encodedName));
+    assertTrue(resultingRowKey.contains(encodedName));
     UTIL.deleteTable(tableName);
   }
 
@@ -950,7 +999,7 @@ public class TestMetaTableAccessor {
     final String encodedName = "nonexistingregion";
     final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
       encodedName);
-    Assert.assertNull(result);
+    assertNull(result);
   }
 }
 
