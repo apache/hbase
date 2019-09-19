@@ -129,7 +129,7 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
 
       Token<AuthenticationTokenIdentifier> token =
           secretManager.generateToken(currentUser.getName());
-      response.setToken(TokenUtil.toToken(token)).build();
+      response.setToken(ClientTokenUtil.toToken(token)).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
