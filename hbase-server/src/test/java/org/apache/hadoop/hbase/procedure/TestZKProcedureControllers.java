@@ -327,7 +327,6 @@ public class TestZKProcedureControllers {
       final ArrayList<byte[]> dataFromMembers) {
     ProcedureCoordinator coordinator = Mockito
         .mock(ProcedureCoordinator.class);
-    Mockito.mock(ProcedureCoordinator.class);
     Mockito.doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {

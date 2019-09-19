@@ -69,7 +69,6 @@ import org.mockito.stubbing.Answer;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse;
@@ -173,7 +172,6 @@ public class MockMasterServices extends MockNoopMasterServices {
     // Set hbase.rootdir into test dir.
     Path rootdir = FSUtils.getRootDir(getConfiguration());
     FSUtils.setRootDir(getConfiguration(), rootdir);
-    Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
   }
 
   public void start(final int numServes, final RSProcedureDispatcher remoteDispatcher)
