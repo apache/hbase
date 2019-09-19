@@ -46,7 +46,7 @@ public class TestClientTokenUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientTokenUtil.class);
+    HBaseClassTestRule.forClass(TestClientTokenUtil.class);
 
   private URLClassLoader cl;
 
