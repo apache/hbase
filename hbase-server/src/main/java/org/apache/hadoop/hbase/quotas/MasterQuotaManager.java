@@ -742,12 +742,12 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   /**
-   * Remove regionInfo entry for the table which is going to get dropped.
+   * Removes each region size entry where the RegionInfo references the provided TableName.
    *
    * @param tableName tableName.
    */
-  public void removeTableRegions(TableName tableName) {
-    regionSizes.entrySet().removeIf(regionInfo -> regionInfo.getKey().getTable().equals(tableName));
+  public void removeRegionSizesForTable(TableName tableName) {
+    regionSizes.keySet().removeIf(regionInfo -> regionInfo.getTable().equals(tableName));
   }
 }
 

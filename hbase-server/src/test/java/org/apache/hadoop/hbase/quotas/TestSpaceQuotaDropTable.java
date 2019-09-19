@@ -114,17 +114,18 @@ public class TestSpaceQuotaDropTable {
       }
     });
 
-    boolean beforeDrop = false;
+    boolean hasRegionSize = false;
 
     // region report should be present before dropping the table.
     for (Map.Entry<RegionInfo, Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
       if (entry.getKey().getTable().equals(tn)) {
-        beforeDrop = true;
+        hasRegionSize = true;
         break;
       }
     }
 
-    Assert.assertTrue(beforeDrop);
+    // regionSize report for the given table should be present before dropping the table.
+    Assert.assertTrue(hasRegionSize);
 
     // drop the table
     TEST_UTIL.getAdmin().disableTable(tn);
@@ -133,7 +134,7 @@ public class TestSpaceQuotaDropTable {
     // check if deleted table region report still present in the map.
     for (Map.Entry<RegionInfo, Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
       if (entry.getKey().getTable().equals(tn)) {
-        Assert.fail("Not deleted during the drop command");
+        Assert.fail("Dropped table regionSizes were not deleted during the drop command");
       }
     }
   }

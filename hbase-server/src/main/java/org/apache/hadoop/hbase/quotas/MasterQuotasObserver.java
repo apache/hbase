@@ -80,28 +80,23 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
       return;
     }
     final Connection conn = ctx.getEnvironment().getConnection();
-    Quotas quotas = QuotaUtil.getTableQuota(conn, tableName);
-    Quotas quotasAtNamespace = QuotaUtil.getNamespaceQuota(conn, tableName.getNamespaceAsString());
-    if (quotas != null){
-      if (quotas.hasSpace()){
-        // Remove regions of table from space quota map.
-        this.masterServices.getMasterQuotaManager().removeTableRegions(tableName);
-        QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
-        try (Admin admin = conn.getAdmin()) {
-          admin.setQuota(settings);
+    Quotas tableQuotas = QuotaUtil.getTableQuota(conn, tableName);
+    Quotas namespaceQuotas = QuotaUtil.getNamespaceQuota(conn, tableName.getNamespaceAsString());
+    if (tableQuotas != null || namespaceQuotas != null) {
+      // Remove regions of table from space quota map.
+      this.masterServices.getMasterQuotaManager().removeRegionSizesForTable(tableName);
+      if (tableQuotas != null) {
+        if (tableQuotas.hasSpace()) {
+          QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
+          try (Admin admin = conn.getAdmin()) {
+            admin.setQuota(settings);
+          }
         }
-      }
-      if (quotas.hasThrottle()){
-        QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
-        try (Admin admin = conn.getAdmin()) {
-          admin.setQuota(settings);
-        }
-      }
-    } else {
-      if (quotasAtNamespace != null) {
-        if (quotasAtNamespace.hasSpace()) {
-          // Remove regions of table from space quota map.
-          this.masterServices.getMasterQuotaManager().removeTableRegions(tableName);
+        if (tableQuotas.hasThrottle()) {
+          QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
+          try (Admin admin = conn.getAdmin()) {
+            admin.setQuota(settings);
+          }
         }
       }
     }
