@@ -266,7 +266,7 @@ public class FSTableDescriptors implements TableDescriptors {
 
     if (fsvisited && usecache) {
       for (Map.Entry<TableName, TableDescriptor> entry: this.cache.entrySet()) {
-        tds.put(entry.getKey().toString(), entry.getValue());
+        tds.put(entry.getKey().getNameWithNamespaceInclAsString(), entry.getValue());
       }
       // add hbase:meta to the response
       tds.put(this.metaTableDescriptor.getTableName().getNameAsString(), metaTableDescriptor);
@@ -285,7 +285,7 @@ public class FSTableDescriptors implements TableDescriptors {
           allvisited = false;
           continue;
         } else {
-          tds.put(htd.getTableName().getNameAsString(), htd);
+          tds.put(htd.getTableName().getNameWithNamespaceInclAsString(), htd);
         }
         fsvisited = allvisited;
       }
