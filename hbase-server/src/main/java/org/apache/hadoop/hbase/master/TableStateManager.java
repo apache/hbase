@@ -271,7 +271,6 @@ public class TableStateManager {
 
   private void fixTableStates(TableDescriptors tableDescriptors, Connection connection)
       throws IOException {
-    Map<String, TableDescriptor> allDescriptors = tableDescriptors.getAll();
     Map<String, TableState> states = new HashMap<>();
     // NOTE: Full hbase:meta table scan!
     MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {
@@ -282,15 +281,15 @@ public class TableStateManager {
         return true;
       }
     });
-    for (Map.Entry<String, TableDescriptor> entry : allDescriptors.entrySet()) {
-      TableName tableName = TableName.valueOf(entry.getKey());
+    for (TableDescriptor tableDesc : tableDescriptors.getAll().values()) {
+      TableName tableName = tableDesc.getTableName();
       if (TableName.isMetaTableName(tableName)) {
         // This table is always enabled. No fixup needed. No entry in hbase:meta needed.
         // Call through to fixTableState though in case a super class wants to do something.
         fixTableState(new TableState(tableName, TableState.State.ENABLED));
         continue;
       }
-      TableState tableState = states.get(entry.getKey());
+      TableState tableState = states.get(tableName.getNameAsString());
       if (tableState == null) {
         LOG.warn(tableName + " has no table state in hbase:meta, assuming ENABLED");
         MetaTableAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
