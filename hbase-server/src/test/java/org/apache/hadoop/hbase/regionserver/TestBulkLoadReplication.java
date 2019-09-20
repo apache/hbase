@@ -165,9 +165,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
     //adds cluster2 as a remote peer on cluster3
     UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
-    setupCoprocessor(UTIL1);
-    setupCoprocessor(UTIL2);
-    setupCoprocessor(UTIL3);
+    setupCoprocessor(UTIL1, "cluster1");
+    setupCoprocessor(UTIL2, "cluster2");
+    setupCoprocessor(UTIL3, "cluster3");
   }
 
   private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtility util) {
@@ -175,12 +175,15 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtility cluster){
+  private void setupCoprocessor(HBaseTestingUtility cluster, String name){
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
         r.getCoprocessorHost()
           .load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
             cluster.getConfiguration());
+        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost()
+          .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        cp.clusterName = cluster.getClusterKey();
       } catch (Exception e){
         LOG.error(e.getMessage(), e);
       }
@@ -291,20 +294,21 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   public static class BulkReplicationTestObserver implements RegionCoprocessor {
 
+    String clusterName;
+    AtomicInteger bulkLoadCounts = new AtomicInteger();
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(new RegionObserver() {
-        @Override
-        public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-          List<Pair<byte[], String>> familyPaths) throws IOException {
-            BULK_LOADS_COUNT.incrementAndGet();
-        }
 
         @Override
         public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
             throws IOException {
           BULK_LOAD_LATCH.countDown();
+          BULK_LOADS_COUNT.incrementAndGet();
+          LOG.debug("Another file bulk loaded. Total for {}: {}", clusterName,
+            bulkLoadCounts.addAndGet(1));
         }
       });
     }
