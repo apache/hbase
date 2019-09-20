@@ -400,7 +400,7 @@ if (fqtn != null && master.isInitialized()) {
 <h2>Table Schema</h2>
 <table class="table table-striped">
   <tr>
-      <th>Column Name</th>
+      <th>Column Family Name</th>
       <th></th>
   </tr>
   <%
