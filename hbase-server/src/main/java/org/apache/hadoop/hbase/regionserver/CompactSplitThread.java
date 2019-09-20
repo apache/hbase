@@ -132,9 +132,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   private void createSplitExcecutors() {
     final String n = Thread.currentThread().getName();
     int splitThreads = conf.getInt(SPLIT_THREADS, SPLIT_THREADS_DEFAULT);
-    final AtomicInteger splitThreadCounter = new AtomicInteger(0);
     this.splits =
         (ThreadPoolExecutor) Executors.newFixedThreadPool(splitThreads, new ThreadFactory() {
+          AtomicInteger splitThreadCounter = new AtomicInteger(0);
+
           @Override
           public Thread newThread(Runnable r) {
             String name = n + "-splits-" + splitThreadCounter.getAndIncrement();
@@ -157,10 +158,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     final String n = Thread.currentThread().getName();
 
     StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<Runnable>();
-
-    final AtomicInteger longCompactionThreadCounter = new AtomicInteger(0);
     this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60, TimeUnit.SECONDS,
         stealJobQueue, new ThreadFactory() {
+          AtomicInteger longCompactionThreadCounter = new AtomicInteger(0);
+
           @Override
           public Thread newThread(Runnable r) {
             String name = n + "-longCompactions-" + longCompactionThreadCounter.getAndIncrement();
@@ -169,10 +170,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         });
     this.longCompactions.setRejectedExecutionHandler(new Rejection());
     this.longCompactions.prestartAllCoreThreads();
-
-    final AtomicInteger shortCompactionThreadCounter = new AtomicInteger(0);
     this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60, TimeUnit.SECONDS,
         stealJobQueue.getStealFromQueue(), new ThreadFactory() {
+          AtomicInteger shortCompactionThreadCounter = new AtomicInteger(0);
+
           @Override
           public Thread newThread(Runnable r) {
             String name = n + "-shortCompactions-" + shortCompactionThreadCounter.getAndIncrement();
