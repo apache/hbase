@@ -576,5 +576,14 @@ public class MasterQuotaManager implements RegionStateListener {
     }
     return numEntriesRemoved;
   }
+
+  /**
+   * Removes each region size entry where the RegionInfo references the provided TableName.
+   *
+   * @param tableName tableName.
+   */
+  public void removeRegionSizesForTable(TableName tableName) {
+    regionSizes.keySet().removeIf(regionInfo -> regionInfo.getTable().equals(tableName));
+  }
 }
 
