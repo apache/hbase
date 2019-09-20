@@ -109,7 +109,6 @@ public class TestSplitMerge {
 
   @Test
   public void testMergeRegionOrder() throws Exception {
-
     int regionCount= 20;
 
     TableName tableName = TableName.valueOf("MergeRegionOrder");
@@ -143,14 +142,13 @@ public class TestSplitMerge {
     RegionInfo mergedRegion = mergedRegions.get(0);
 
     List<RegionInfo> mergeParentRegions = MetaTableAccessor.getMergeRegions(UTIL.getConnection(),
-      mergedRegion.getEncodedNameAsBytes());
+      mergedRegion.getRegionName());
 
     assertEquals(mergeParentRegions.size(), regionCount);
 
-    for (int c = 0; c < regionCount-1; c++) {
-      assertTrue(Bytes.compareTo(
-        mergeParentRegions.get(c).getStartKey(),
-        mergeParentRegions.get(c+1).getStartKey()) < 0);
+    for (int c = 0; c < regionCount - 1; c++) {
+      assertTrue(Bytes.compareTo(mergeParentRegions.get(c).getStartKey(),
+        mergeParentRegions.get(c + 1).getStartKey()) < 0);
     }
   }
 }
