@@ -24,10 +24,14 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
@@ -35,6 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
  * An observer to automatically delete quotas when a table/namespace
  * is deleted.
  */
+@CoreCoprocessor
 @InterfaceAudience.Private
 public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   public static final String REMOVE_QUOTA_ON_TABLE_DELETE = "hbase.quota.remove.on.table.delete";
@@ -43,6 +48,7 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   private CoprocessorEnvironment cpEnv;
   private Configuration conf;
   private boolean quotasEnabled = false;
+  private MasterServices masterServices;
 
   @Override
   public Optional<MasterObserver> getMasterObserver() {
@@ -51,9 +57,19 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
 
   @Override
   public void start(CoprocessorEnvironment ctx) throws IOException {
-    this.cpEnv = ctx;
-    this.conf = cpEnv.getConfiguration();
+    this.conf = ctx.getConfiguration();
     this.quotasEnabled = QuotaUtil.isQuotaEnabled(conf);
+
+    if (!(ctx instanceof MasterCoprocessorEnvironment)) {
+      throw new CoprocessorException("Must be loaded on master.");
+    }
+    // if running on master
+    MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) ctx;
+    if (mEnv instanceof HasMasterServices) {
+      this.masterServices = ((HasMasterServices) mEnv).getMasterServices();
+    } else {
+      throw new CoprocessorException("Must be loaded on a master having master services.");
+    }
   }
 
   @Override
@@ -64,18 +80,23 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
       return;
     }
     final Connection conn = ctx.getEnvironment().getConnection();
-    Quotas quotas = QuotaUtil.getTableQuota(conn, tableName);
-    if (quotas != null){
-      if (quotas.hasSpace()){
-        QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
-        try (Admin admin = conn.getAdmin()) {
-          admin.setQuota(settings);
+    Quotas tableQuotas = QuotaUtil.getTableQuota(conn, tableName);
+    Quotas namespaceQuotas = QuotaUtil.getNamespaceQuota(conn, tableName.getNamespaceAsString());
+    if (tableQuotas != null || namespaceQuotas != null) {
+      // Remove regions of table from space quota map.
+      this.masterServices.getMasterQuotaManager().removeRegionSizesForTable(tableName);
+      if (tableQuotas != null) {
+        if (tableQuotas.hasSpace()) {
+          QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
+          try (Admin admin = conn.getAdmin()) {
+            admin.setQuota(settings);
+          }
         }
-      }
-      if (quotas.hasThrottle()){
-        QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
-        try (Admin admin = conn.getAdmin()) {
-          admin.setQuota(settings);
+        if (tableQuotas.hasThrottle()) {
+          QuotaSettings settings = QuotaSettingsFactory.unthrottleTable(tableName);
+          try (Admin admin = conn.getAdmin()) {
+            admin.setQuota(settings);
+          }
         }
       }
     }
