@@ -1094,6 +1094,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
+      blockNumber.add(backingMap.size());
     }
   }
 
