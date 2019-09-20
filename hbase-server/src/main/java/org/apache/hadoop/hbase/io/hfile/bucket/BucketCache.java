@@ -1120,6 +1120,7 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketAllocator = allocator;
       deserialiserMap = deserMap;
       backingMap = backingMapFromFile;
+      blockNumber.set(backingMap.size());
     } finally {
       if (ois != null) {
         ois.close();
