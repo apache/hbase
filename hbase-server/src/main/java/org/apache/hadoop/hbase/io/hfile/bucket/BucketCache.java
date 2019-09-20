@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -242,6 +244,16 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
+  private static final String FILE_VERIFY_ALGORITHM =
+    "hbase.bucketcache.persistent.file.integrity.check.algorithm";
+  private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
+
+  /**
+   * Use {@link java.security.MessageDigest} class's encryption algorithms to check
+   * persistent file integrity, default algorithm is MD5
+   * */
+  private String algorithm;
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws FileNotFoundException,
       IOException {
@@ -252,8 +264,9 @@ public class BucketCache implements BlockCache, HeapSize {
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
                      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
                      Configuration conf)
-      throws FileNotFoundException, IOException {
-    this.ioEngine = getIOEngineFromName(ioEngineName, capacity);
+      throws IOException {
+    this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
+    ioEngine = getIOEngineFromName(ioEngineName, capacity);
     this.writerThreads = new WriterThread[writerThreadNum];
     long blockNumCapacity = capacity / blockSize;
     if (blockNumCapacity >= Integer.MAX_VALUE) {
@@ -295,7 +308,7 @@ public class BucketCache implements BlockCache, HeapSize {
       } catch (IOException ioex) {
         LOG.error("Can't restore from file because of", ioex);
       } catch (ClassNotFoundException cnfe) {
-        LOG.error("Can't restore from file in rebuild because can't deserialise",cnfe);
+        LOG.error("Can't restore from file in rebuild because can't deserialise", cnfe);
         throw new RuntimeException(cnfe);
       }
     }
@@ -1021,41 +1034,69 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private void persistToFile() throws IOException {
     assert !cacheEnabled;
-    FileOutputStream fos = null;
-    ObjectOutputStream oos = null;
-    try {
+    try (ObjectOutputStream oos = new ObjectOutputStream(
+      new FileOutputStream(persistencePath, false))){
       if (!ioEngine.isPersistent()) {
         throw new IOException("Attempt to persist non-persistent cache mappings!");
       }
-      fos = new FileOutputStream(persistencePath, false);
-      oos = new ObjectOutputStream(fos);
+      byte[] checksum = ((PersistentIOEngine) ioEngine).calculateChecksum(algorithm);
+      if (checksum != null) {
+        oos.write(ProtobufUtil.PB_MAGIC);
+        oos.writeInt(checksum.length);
+        oos.write(checksum);
+      }
       oos.writeLong(cacheCapacity);
       oos.writeUTF(ioEngine.getClass().getName());
       oos.writeUTF(backingMap.getClass().getName());
       oos.writeObject(deserialiserMap);
       oos.writeObject(backingMap);
-    } finally {
-      if (oos != null) oos.close();
-      if (fos != null) fos.close();
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void retrieveFromFile(int[] bucketSizes) throws IOException, BucketAllocatorException,
+  private void retrieveFromFile(int[] bucketSizes) throws IOException,
       ClassNotFoundException {
     File persistenceFile = new File(persistencePath);
     if (!persistenceFile.exists()) {
       return;
     }
     assert !cacheEnabled;
-    FileInputStream fis = null;
     ObjectInputStream ois = null;
     try {
       if (!ioEngine.isPersistent())
         throw new IOException(
             "Attempt to restore non-persistent cache mappings!");
-      fis = new FileInputStream(persistencePath);
-      ois = new ObjectInputStream(fis);
+      ois = new ObjectInputStream(new FileInputStream(persistencePath));
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      byte[] pbuf = new byte[pblen];
+      int read = ois.read(pbuf);
+      if (read != pblen) {
+        LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
+          "checking for protobuf magic number. Requested=" + pblen + ", but received= " +
+          read + ".");
+        return;
+      }
+      if (Bytes.equals(ProtobufUtil.PB_MAGIC, pbuf)) {
+        int length = ois.readInt();
+        byte[] persistentChecksum = new byte[length];
+        int readLen = ois.read(persistentChecksum);
+        if (readLen != length) {
+          LOG.warn("Can't restore from file because of incorrect number of bytes read while " +
+            "checking for persistent checksum. Requested=" + length + ", but received=" +
+            readLen + ". ");
+          return;
+        }
+        if (!((PersistentIOEngine) ioEngine).verifyFileIntegrity(
+            persistentChecksum, algorithm)) {
+          LOG.warn("Can't restore from file because of verification failed.");
+          return;
+        }
+      } else {
+        // persistent file may be an old version of file, it's not support verification,
+        // so reopen ObjectInputStream and read the persistent file from head
+        ois.close();
+        ois = new ObjectInputStream(new FileInputStream(persistencePath));
+      }
       long capacitySize = ois.readLong();
       if (capacitySize != cacheCapacity)
         throw new IOException("Mismatched cache capacity:"
@@ -1079,8 +1120,9 @@ public class BucketCache implements BlockCache, HeapSize {
       deserialiserMap = deserMap;
       backingMap = backingMapFromFile;
     } finally {
-      if (ois != null) ois.close();
-      if (fis != null) fis.close();
+      if (ois != null) {
+        ois.close();
+      }
       if (!persistenceFile.delete()) {
         throw new IOException("Failed deleting persistence file "
             + persistenceFile.getAbsolutePath());
@@ -1596,5 +1638,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
   float getMemoryFactor() {
     return memoryFactor;
+  }
+
+  @VisibleForTesting
+  public UniqueIndexMap<Integer> getDeserialiserMap() {
+    return deserialiserMap;
   }
 }
