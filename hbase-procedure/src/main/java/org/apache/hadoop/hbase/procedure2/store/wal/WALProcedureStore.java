@@ -421,9 +421,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
         }
 
         // Create new state-log
-        if (!rollWriter(flushLogId + 1)) {
+        long newFlushLogId = flushLogId + 1;
+        if (!rollWriter(newFlushLogId)) {
           // someone else has already created this log
-          LOG.debug("Someone else has already created log {}. Retrying.", flushLogId + 1);
+          LOG.debug("Someone else has already created log {}. Retrying.", newFlushLogId);
           continue;
         }
 
@@ -1042,8 +1043,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     // Create new state-log
-    if (!rollWriter(flushLogId + 1)) {
-      LOG.warn("someone else has already created log {}", flushLogId + 1);
+    long newFlushLogId = flushLogId + 1;
+    if (!rollWriter(newFlushLogId)) {
+      LOG.warn("someone else has already created log {}", newFlushLogId);
       return false;
     }
 
@@ -1100,25 +1102,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
       startPos = newStream.getPos();
     } catch (IOException ioe) {
       LOG.warn("Encountered exception writing header", ioe);
-      try {
-        newStream.close();
-      } catch (IOException e) {
-        LOG.error("Exception occured while closing the file {}", newLogFile, e);
-      }
-      try {
-        // Delete the incomplete file
-        if (!fs.delete(newLogFile, false)) {
-          LOG.warn(
-            "Failed to delete the log file {}, increasing the log id by 1 for the next roll attempt",
-            newLogFile);
-          flushLogId++;
-        }
-      } catch (IOException e) {
-        LOG.warn("Exception occured while deleting the file {}", newLogFile, e);
-        flushLogId++;
-        LOG.info("Increased the log id to {}", flushLogId);
-      }
-
+      // Close and delete the incomplete file
+      closeAndDeleteIncompleteFile(newStream, newLogFile);
       return false;
     }
 
@@ -1181,6 +1166,29 @@ public class WALProcedureStore extends ProcedureStoreBase {
       LOG.error("Unable to close the stream", e);
     }
     stream = null;
+  }
+
+  private void closeAndDeleteIncompleteFile(FSDataOutputStream newStream, Path newLogFile) {
+    // Close the FS
+    try {
+      newStream.close();
+    } catch (IOException e) {
+      LOG.error("Exception occured while closing the file {}", newLogFile, e);
+    }
+
+    // Delete the incomplete file
+    try {
+      if (!fs.delete(newLogFile, false)) {
+        LOG.warn(
+          "Failed to delete the log file {}, increasing the log id by 1 for the next roll attempt",
+          newLogFile);
+        flushLogId++;
+      }
+    } catch (IOException e) {
+      LOG.warn("Exception occured while deleting the file {}", newLogFile, e);
+      flushLogId++;
+      LOG.info("Increased the log id to {}", flushLogId);
+    }
   }
 
   // ==========================================================================
