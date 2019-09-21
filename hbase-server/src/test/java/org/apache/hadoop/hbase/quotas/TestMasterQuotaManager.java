@@ -17,16 +17,12 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.apache.hadoop.hbase.quotas.QuotaUtil.QUOTA_CONF_KEY;
 import static org.apache.hadoop.hbase.util.Bytes.toBytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -55,10 +51,6 @@ public class TestMasterQuotaManager {
     MasterServices masterServices = mock(MasterServices.class);
     MasterQuotaManager manager = new MasterQuotaManager(masterServices);
     manager.initializeRegionSizes();
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(QUOTA_CONF_KEY, "false");
-    when(masterServices.getConfiguration()).thenReturn(conf);
     // Mock out some regions
     TableName tableName = TableName.valueOf("foo");
     HRegionInfo region1 = new HRegionInfo(tableName, null, toBytes("a"));
@@ -81,18 +73,19 @@ public class TestMasterQuotaManager {
 
     assertEquals(5, manager.snapshotRegionSizes().size());
 
+    QuotaObserverChore chore = mock(QuotaObserverChore.class);
     // Prune nothing
-    assertEquals(0, manager.pruneEntriesOlderThan(0));
+    assertEquals(0, manager.pruneEntriesOlderThan(0, chore));
     assertEquals(5, manager.snapshotRegionSizes().size());
-    assertEquals(0, manager.pruneEntriesOlderThan(10));
+    assertEquals(0, manager.pruneEntriesOlderThan(10, chore));
     assertEquals(5, manager.snapshotRegionSizes().size());
 
     // Prune the elements at time1
-    assertEquals(2, manager.pruneEntriesOlderThan(15));
+    assertEquals(2, manager.pruneEntriesOlderThan(15, chore));
     assertEquals(3, manager.snapshotRegionSizes().size());
 
     // Prune the elements at time2
-    assertEquals(2, manager.pruneEntriesOlderThan(30));
+    assertEquals(2, manager.pruneEntriesOlderThan(30, chore));
     assertEquals(1, manager.snapshotRegionSizes().size());
   }
 }

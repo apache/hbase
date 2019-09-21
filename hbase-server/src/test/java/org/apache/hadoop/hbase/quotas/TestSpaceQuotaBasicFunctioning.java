@@ -19,6 +19,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -229,26 +232,28 @@ public class TestSpaceQuotaBasicFunctioning {
   @Test
   public void testDisablePolicyQuotaAndViolate() throws Exception {
     TableName tableName = helper.createTable();
-    helper.setQuotaLimit(tableName, SpaceViolationPolicy.DISABLE, 2L);
-    helper.writeData(tableName, SpaceQuotaHelperForTests.ONE_MEGABYTE * 3L);
+    helper.setQuotaLimit(tableName, SpaceViolationPolicy.DISABLE, 1L);
+    helper.writeData(tableName, SpaceQuotaHelperForTests.ONE_MEGABYTE * 2L);
+    TEST_UTIL.getConfiguration()
+        .setLong("hbase.master.quotas.region.report.retention.millis", 100);
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
 
-    // Sufficient time for all the chores to run.
-    Thread.sleep(5000);
-
-    long timeToPrune = System.currentTimeMillis() + 11 * 60 * 1000;
-    quotaManager.pruneEntriesOlderThan(timeToPrune);
+    // Make sure the master has report for the table.
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
+        List<RegionInfo> tableRegions =
+            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+        return regionSizes.containsKey(tableRegions.get(0));
+      }
+    });
 
     // Check if disabled table region report present in the map after retention period expired.
     // It should be present after retention period expired.
-    for (Map.Entry<RegionInfo, Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
-      if (entry.getKey().getTable().equals(tableName)) {
-        assertTrue(true);
-        return;
-      }
-    }
-    Assert.fail("Testcase failed, disable entry removed");
+    Assert.assertTrue(quotaManager.snapshotRegionSizes().keySet().stream()
+        .filter(k -> k.getTable().equals(tableName)).count() > 0);
   }
 }

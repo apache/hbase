@@ -695,20 +695,22 @@ public class MasterQuotaManager implements RegionStateListener {
     return copy;
   }
 
-  int pruneEntriesOlderThan(long timeToPruneBefore) {
+  int pruneEntriesOlderThan(long timeToPruneBefore, QuotaObserverChore quotaObserverChore) {
     if (regionSizes == null) {
       return 0;
     }
     int numEntriesRemoved = 0;
-    Iterator<Entry<RegionInfo,SizeSnapshotWithTimestamp>> iterator =
+    Iterator<Entry<RegionInfo, SizeSnapshotWithTimestamp>> iterator =
         regionSizes.entrySet().iterator();
     while (iterator.hasNext()) {
       RegionInfo regionInfo = iterator.next().getKey();
       long currentEntryTime = regionSizes.get(regionInfo).getTime();
-      boolean isInViolationAndPolicyDisable = isInViolationAndPolicyDisable(regionInfo.getTable());
       // do not prune the entries if table is in violation and
-      // violation policy is disable.prune entries older than time.
-      if (currentEntryTime < timeToPruneBefore && !isInViolationAndPolicyDisable) {
+      // violation policy is disable to avoid cycle of enable/disable.
+      // Please refer HBASE-22012 for more details.
+      // prune entries older than time.
+      if (currentEntryTime < timeToPruneBefore && !isInViolationAndPolicyDisable(
+          regionInfo.getTable(), quotaObserverChore)) {
         iterator.remove();
         numEntriesRemoved++;
       }
@@ -719,35 +721,37 @@ public class MasterQuotaManager implements RegionStateListener {
   /**
    * Method to check if a table is in violation and policy set on table is DISABLE.
    *
-   * @param tableName tableName to check.
+   * @param tableName          tableName to check.
+   * @param quotaObserverChore QuotaObserverChore instance
    * @return returns true if table is in violation and policy is disable else false.
    */
-  private boolean isInViolationAndPolicyDisable(TableName tableName) {
+  private boolean isInViolationAndPolicyDisable(TableName tableName,
+      QuotaObserverChore quotaObserverChore) {
     boolean isInViolationAtTable = false;
-    boolean isInViolationAndPolicyDisable = false;
+    boolean isInViolationAtNamespace = false;
     SpaceViolationPolicy policy = null;
-    try {
-      if (QuotaUtil.isQuotaEnabled(masterServices.getConfiguration())) {
-        // Get Current Snapshot for the given table
-        SpaceQuotaSnapshot spaceQuotaSnapshot =
-            QuotaUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), tableName);
-        if (spaceQuotaSnapshot != null) {
-          // check if table in violation
-          isInViolationAtTable = spaceQuotaSnapshot.getQuotaStatus().isInViolation();
-          Optional<SpaceViolationPolicy> policyAtNamespace =
-              spaceQuotaSnapshot.getQuotaStatus().getPolicy();
-          if (policyAtNamespace.isPresent()) {
-            policy = policyAtNamespace.get();
-          }
-        }
+    // Get Current Snapshot for the given table
+    SpaceQuotaSnapshot tableQuotaSnapshot = quotaObserverChore.getTableQuotaSnapshot(tableName);
+    SpaceQuotaSnapshot namespaceQuotaSnapshot =
+        quotaObserverChore.getNamespaceQuotaSnapshot(tableName.getNamespaceAsString());
+    if (tableQuotaSnapshot != null) {
+      // check if table in violation
+      isInViolationAtTable = tableQuotaSnapshot.getQuotaStatus().isInViolation();
+      Optional<SpaceViolationPolicy> tablePolicy = tableQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (tablePolicy.isPresent()) {
+        policy = tablePolicy.get();
       }
-      isInViolationAndPolicyDisable =
-          (policy == SpaceViolationPolicy.DISABLE) && isInViolationAtTable;
-
-    } catch (IOException e) {
-      LOG.info("Problem in getting connection to quota table: ", e);
+    } else if (namespaceQuotaSnapshot != null) {
+      // check namespace in violation
+      isInViolationAtNamespace = namespaceQuotaSnapshot.getQuotaStatus().isInViolation();
+      Optional<SpaceViolationPolicy> namespacePolicy =
+          tableQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (namespacePolicy.isPresent()) {
+        policy = namespacePolicy.get();
+      }
     }
-    return isInViolationAndPolicyDisable;
+    return (policy == SpaceViolationPolicy.DISABLE) && (isInViolationAtTable
+        || isInViolationAtNamespace);
   }
 
   public void processFileArchivals(FileArchiveNotificationRequest request, Connection conn,
