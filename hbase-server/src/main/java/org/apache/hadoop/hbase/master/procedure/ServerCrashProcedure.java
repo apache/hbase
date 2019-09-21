@@ -464,7 +464,9 @@ public class ServerCrashProcedure
             TableState.State.DISABLING, TableState.State.DISABLED)) {
             continue;
           }
-          TransitRegionStateProcedure proc = TransitRegionStateProcedure.assign(env, region, null);
+          // force to assign to a new candidate server, see HBASE-23035 for more details.
+          TransitRegionStateProcedure proc =
+              TransitRegionStateProcedure.assign(env, region, true, null);
           regionNode.setProcedure(proc);
           addChildProcedure(proc);
         }
