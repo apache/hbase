@@ -70,7 +70,7 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
   public static void setUp() throws Exception {
     SecureTestCluster.setUp();
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
+      Token<? extends TokenIdentifier> token = ClientTokenUtil.obtainToken(conn);
       UserGroupInformation.getCurrentUser().addToken(token);
     }
   }

@@ -67,7 +67,7 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
     TEST_UTIL.getConfiguration().set("hbase.rpc.protection", "privacy");
     SecureTestCluster.setUp();
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      Token<? extends TokenIdentifier> token = TokenUtil.obtainToken(conn);
+      Token<? extends TokenIdentifier> token = ClientTokenUtil.obtainToken(conn);
       UserGroupInformation.getCurrentUser().addToken(token);
     }
   }
