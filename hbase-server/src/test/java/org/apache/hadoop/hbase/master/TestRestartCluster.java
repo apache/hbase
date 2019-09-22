@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -113,104 +113,63 @@ public class TestRestartCluster {
    * This tests retaining assignments on a cluster restart
    */
   @Test
-  public void testRetainAssignmentOnRestart() throws Exception {
-    UTIL.startMiniCluster(2);
+  public void testRoundRobinAssignmentOnRestart() throws Exception {
+    final int regionNum = 10;
+    final int rsNum = 2;
+    UTIL.startMiniCluster(rsNum);
     // Turn off balancer
     UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().synchronousBalanceSwitch(false);
     LOG.info("\n\nCreating tables");
     for (TableName TABLE : TABLES) {
-      UTIL.createTable(TABLE, FAMILY);
+      UTIL.createMultiRegionTable(TABLE, FAMILY, regionNum);
     }
+    // Wait until all regions are assigned
     for (TableName TABLE : TABLES) {
       UTIL.waitTableEnabled(TABLE);
     }
-
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     UTIL.waitUntilNoRegionsInTransition(120000);
-
-    // We don't have to use SnapshotOfRegionAssignmentFromMeta.
-    // We use it here because AM used to use it to load all user region placements
-    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
-      master.getConnection());
-    snapshot.initialize();
-    Map<RegionInfo, ServerName> regionToRegionServerMap
-      = snapshot.getRegionToRegionServerMap();
 
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
-    assertEquals(2, threads.size());
-    int[] rsPorts = new int[3];
-    for (int i = 0; i < 2; i++) {
-      rsPorts[i] = threads.get(i).getRegionServer().getServerName().getPort();
-    }
-    rsPorts[2] = cluster.getMaster().getServerName().getPort();
-    for (ServerName serverName: regionToRegionServerMap.values()) {
-      boolean found = false; // Test only, no need to optimize
-      for (int k = 0; k < 3 && !found; k++) {
-        found = serverName.getPort() == rsPorts[k];
-      }
-      assertTrue(found);
-    }
+    assertEquals(rsNum, threads.size());
 
-    LOG.info("\n\nShutting down HBase cluster");
-    cluster.stopMaster(0);
-    cluster.shutdown();
-    cluster.waitUntilShutDown();
+    ServerName testServer = threads.get(0).getRegionServer().getServerName();
+    int port = testServer.getPort();
+    List<RegionInfo> regionInfos =
+        cluster.getMaster().getAssignmentManager().getRegionStates().getServerNode(testServer)
+            .getRegionInfoList();
+    LOG.debug("RegionServer {} has {} regions", testServer, regionInfos.size());
+    assertTrue(regionInfos.size() >= (TABLES.length * regionNum / rsNum));
 
-    LOG.info("\n\nSleeping a bit");
-    Thread.sleep(2000);
+    // Restart 1 regionserver
+    cluster.stopRegionServer(testServer);
+    cluster.waitForRegionServerToStop(testServer, 60000);
+    cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, port);
+    cluster.startRegionServer();
 
-    LOG.info("\n\nStarting cluster the second time with the same ports");
-    try {
-      cluster.getConf().setInt(
-          ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
-      master = cluster.startMaster().getMaster();
-      for (int i = 0; i < 3; i++) {
-        cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, rsPorts[i]);
-        cluster.startRegionServer();
-      }
-    } finally {
-      // Reset region server port so as not to conflict with other tests
-      cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, 0);
-      cluster.getConf().setInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
-    }
-
-    // Make sure live regionservers are on the same host/port
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     List<ServerName> localServers = master.getServerManager().getOnlineServersList();
-    assertEquals(3, localServers.size());
-    for (int i = 0; i < 3; i++) {
-      boolean found = false;
-      for (ServerName serverName: localServers) {
-        if (serverName.getPort() == rsPorts[i]) {
-          found = true;
-          break;
-        }
+    ServerName newTestServer = null;
+    for (ServerName serverName : localServers) {
+      if (serverName.getAddress().equals(testServer.getAddress())) {
+        newTestServer = serverName;
+        break;
       }
-      assertTrue(found);
     }
+    assertNotNull(newTestServer);
 
-    // Wait till master is initialized and all regions are assigned
+    // Wait until all regions are assigned
     for (TableName TABLE : TABLES) {
       UTIL.waitTableAvailable(TABLE);
     }
+    UTIL.waitUntilNoRegionsInTransition(60000);
 
-    snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
-    snapshot.initialize();
-    Map<RegionInfo, ServerName> newRegionToRegionServerMap =
-      snapshot.getRegionToRegionServerMap();
-    assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
-    for (Map.Entry<RegionInfo, ServerName> entry : newRegionToRegionServerMap.entrySet()) {
-      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) {
-        continue;
-      }
-      ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
-      ServerName currentServer = entry.getValue();
-      LOG.info(
-        "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
-      assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
-      assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
-    }
+    List<RegionInfo> newRegionInfos =
+        cluster.getMaster().getAssignmentManager().getRegionStates().getServerNode(newTestServer)
+            .getRegionInfoList();
+    LOG.debug("RegionServer {} has {} regions", newTestServer, newRegionInfos.size());
+    assertTrue("Should not retain all regions when restart",
+        newRegionInfos.size() < regionInfos.size());
   }
 
   @Test

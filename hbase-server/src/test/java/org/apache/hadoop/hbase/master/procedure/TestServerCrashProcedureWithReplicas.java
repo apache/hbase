@@ -10,10 +10,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -22,10 +19,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -53,24 +48,6 @@ public class TestServerCrashProcedureWithReplicas extends TestServerCrashProcedu
     final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
       HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE, 3);
     return t;
-  }
-
-  protected void assertReplicaDistributed(final Table t) {
-    // Assert all data came back.
-    List<RegionInfo> regionInfos = new ArrayList<>();
-    for (RegionServerThread rs : this.util.getMiniHBaseCluster().getRegionServerThreads()) {
-      regionInfos.clear();
-      for (Region r : rs.getRegionServer().getRegions(t.getName())) {
-        LOG.info("The region is " + r.getRegionInfo() + " the location is "
-            + rs.getRegionServer().getServerName());
-        if (contains(regionInfos, r.getRegionInfo())) {
-          LOG.error("Am exiting");
-          fail("Crashed replica regions should not be assigned to same region server");
-        } else {
-          regionInfos.add(r.getRegionInfo());
-        }
-      }
-    }
   }
 
   private boolean contains(List<RegionInfo> regionInfos, RegionInfo regionInfo) {
