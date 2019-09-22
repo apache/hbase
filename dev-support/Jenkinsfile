@@ -138,6 +138,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             MULTIJDK = '/usr/lib/jvm/zulu-8-amd64,/usr/lib/jvm/zulu-7-amd64'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
+            SKIP_ERRORPRONE = 'true'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -205,6 +206,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_JDK7}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_JDK7}"
             // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
+            SKIP_ERRORPRONE = 'true'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
