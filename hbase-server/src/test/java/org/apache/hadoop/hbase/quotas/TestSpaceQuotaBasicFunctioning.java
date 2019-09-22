@@ -253,7 +253,8 @@ public class TestSpaceQuotaBasicFunctioning {
 
     // Check if disabled table region report present in the map after retention period expired.
     // It should be present after retention period expired.
-    Assert.assertTrue(quotaManager.snapshotRegionSizes().keySet().stream()
-        .filter(k -> k.getTable().equals(tableName)).count() > 0);
+    final long regionSizes = quotaManager.snapshotRegionSizes().keySet().stream()
+        .filter(k -> k.getTable().equals(tableName)).count();
+    Assert.assertTrue(regionSizes > 0);
   }
 }

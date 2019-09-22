@@ -729,7 +729,8 @@ public class MasterQuotaManager implements RegionStateListener {
       QuotaObserverChore quotaObserverChore) {
     boolean isInViolationAtTable = false;
     boolean isInViolationAtNamespace = false;
-    SpaceViolationPolicy policy = null;
+    SpaceViolationPolicy tablePolicy = null;
+    SpaceViolationPolicy namespacePolicy = null;
     // Get Current Snapshot for the given table
     SpaceQuotaSnapshot tableQuotaSnapshot = quotaObserverChore.getTableQuotaSnapshot(tableName);
     SpaceQuotaSnapshot namespaceQuotaSnapshot =
@@ -737,21 +738,21 @@ public class MasterQuotaManager implements RegionStateListener {
     if (tableQuotaSnapshot != null) {
       // check if table in violation
       isInViolationAtTable = tableQuotaSnapshot.getQuotaStatus().isInViolation();
-      Optional<SpaceViolationPolicy> tablePolicy = tableQuotaSnapshot.getQuotaStatus().getPolicy();
-      if (tablePolicy.isPresent()) {
-        policy = tablePolicy.get();
-      }
-    } else if (namespaceQuotaSnapshot != null) {
-      // check namespace in violation
-      isInViolationAtNamespace = namespaceQuotaSnapshot.getQuotaStatus().isInViolation();
-      Optional<SpaceViolationPolicy> namespacePolicy =
-          tableQuotaSnapshot.getQuotaStatus().getPolicy();
-      if (namespacePolicy.isPresent()) {
-        policy = namespacePolicy.get();
+      Optional<SpaceViolationPolicy> policy = tableQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (policy.isPresent()) {
+        tablePolicy = policy.get();
       }
     }
-    return (policy == SpaceViolationPolicy.DISABLE) && (isInViolationAtTable
-        || isInViolationAtNamespace);
+    if (namespaceQuotaSnapshot != null) {
+      // check namespace in violation
+      isInViolationAtNamespace = namespaceQuotaSnapshot.getQuotaStatus().isInViolation();
+      Optional<SpaceViolationPolicy> policy = namespaceQuotaSnapshot.getQuotaStatus().getPolicy();
+      if (policy.isPresent()) {
+        namespacePolicy = policy.get();
+      }
+    }
+    return (tablePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtTable) || (
+        namespacePolicy == SpaceViolationPolicy.DISABLE && isInViolationAtNamespace);
   }
 
   public void processFileArchivals(FileArchiveNotificationRequest request, Connection conn,
