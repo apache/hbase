@@ -73,6 +73,10 @@ YETUS_ARGS=("--ignore-unknown-options=true" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--proclimit=10000" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockermemlimit=20g" "${YETUS_ARGS[@]}")
 
+if [[ "$SKIP_ERRORPRONE" = true ]]; then
+  YETUS_ARGS=("--skip-errorprone" "${YETUS_ARGS[@]}")
+fi
+
 if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
   YETUS_ARGS=("--exclude-tests-url=${EXCLUDE_TESTS_URL}" "${YETUS_ARGS[@]}")
 fi
