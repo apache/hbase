@@ -121,22 +121,17 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     final String n = Thread.currentThread().getName();
 
     StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<Runnable>(COMPARATOR);
-    this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60,
-        TimeUnit.SECONDS, stealJobQueue,
-        new ThreadFactoryBuilder()
-            .setNameFormat(n + "-longCompactions-" + System.currentTimeMillis())
+    this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60, TimeUnit.SECONDS,
+        stealJobQueue, new ThreadFactoryBuilder().setNameFormat(n + "-longCompactions-%d")
             .setDaemon(true).build());
     this.longCompactions.setRejectedExecutionHandler(new Rejection());
     this.longCompactions.prestartAllCoreThreads();
-    this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60,
-        TimeUnit.SECONDS, stealJobQueue.getStealFromQueue(),
-        new ThreadFactoryBuilder()
-            .setNameFormat(n + "-shortCompactions-" + System.currentTimeMillis())
-            .setDaemon(true).build());
+    this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60, TimeUnit.SECONDS,
+        stealJobQueue.getStealFromQueue(), new ThreadFactoryBuilder()
+            .setNameFormat(n + "-shortCompactions-%d").setDaemon(true).build());
     this.shortCompactions.setRejectedExecutionHandler(new Rejection());
     this.splits = (ThreadPoolExecutor) Executors.newFixedThreadPool(splitThreads,
-        new ThreadFactoryBuilder().setNameFormat(n + "-splits-" + System.currentTimeMillis())
-            .setDaemon(true).build());
+        new ThreadFactoryBuilder().setNameFormat(n + "-splits-%d").setDaemon(true).build());
 
     // compaction throughput controller
     this.compactionThroughputController =
