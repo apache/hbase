@@ -141,10 +141,24 @@ public class FSTableDescriptors implements TableDescriptors {
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
-    this.metaTableDescriptor = metaObserver == null ? createMetaTableDescriptor(conf)
-          : metaObserver.apply(createMetaTableDescriptorBuilder(conf)).build();
+    TableDescriptor td = null;
+    try {
+      td = getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
+    } catch (TableInfoMissingException e) {
+      td = metaObserver == null? createMetaTableDescriptor(conf):
+        metaObserver.apply(createMetaTableDescriptorBuilder(conf)).build();
+      LOG.info("Creating new hbase:meta table default descriptor/schema {}", td);
+      updateTableDescriptor(td);
+    }
+    this.metaTableDescriptor = td;
   }
 
+  /**
+   *
+   * Should be private
+   * @deprecated Since 2.3.0. Should be for internal use only. Used by testing.
+   */
+  @Deprecated
   @VisibleForTesting
   public static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf) throws IOException {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
@@ -218,16 +232,6 @@ public class FSTableDescriptors implements TableDescriptors {
   public TableDescriptor get(final TableName tablename)
   throws IOException {
     invocations++;
-    if (TableName.META_TABLE_NAME.equals(tablename)) {
-      cachehits++;
-      return metaTableDescriptor;
-    }
-    // hbase:meta is already handled. If some one tries to get the descriptor for
-    // .logs, .oldlogs or .corrupt throw an exception.
-    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tablename.getNameAsString())) {
-       throw new IOException("No descriptor found for non table = " + tablename);
-    }
-
     if (usecache) {
       // Look in cache of descriptors.
       TableDescriptor cachedtdm = this.cache.get(tablename);
@@ -263,7 +267,6 @@ public class FSTableDescriptors implements TableDescriptors {
   public Map<String, TableDescriptor> getAll()
   throws IOException {
     Map<String, TableDescriptor> tds = new TreeMap<>();
-
     if (fsvisited && usecache) {
       for (Map.Entry<TableName, TableDescriptor> entry: this.cache.entrySet()) {
         tds.put(entry.getKey().getNameWithNamespaceInclAsString(), entry.getValue());
@@ -326,15 +329,6 @@ public class FSTableDescriptors implements TableDescriptors {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot add a table descriptor - in read only mode");
     }
-    TableName tableName = htd.getTableName();
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
-    }
-    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName.getNameAsString())) {
-      throw new NotImplementedException(
-          "Cannot add a table descriptor for a reserved subdirectory name: "
-              + htd.getTableName().getNameAsString());
-    }
     updateTableDescriptor(htd);
   }
 
@@ -359,26 +353,6 @@ public class FSTableDescriptors implements TableDescriptors {
     return descriptor;
   }
 
-  /**
-   * Checks if a current table info file exists for the given table
-   *
-   * @param tableName name of table
-   * @return true if exists
-   * @throws IOException
-   */
-  public boolean isTableInfoExists(TableName tableName) throws IOException {
-    return getTableInfoPath(tableName) != null;
-  }
-
-  /**
-   * Find the most current table info file for the given table in the hbase root directory.
-   * @return The file status of the current table info file or null if it does not exist
-   */
-  private FileStatus getTableInfoPath(final TableName tableName) throws IOException {
-    Path tableDir = getTableDir(tableName);
-    return getTableInfoPath(tableDir);
-  }
-
   private FileStatus getTableInfoPath(Path tableDir)
   throws IOException {
     return getTableInfoPath(fs, tableDir, !fsreadonly);
@@ -393,7 +367,6 @@ public class FSTableDescriptors implements TableDescriptors {
    * were sequence numbers).
    *
    * @return The file status of the current table info file or null if it does not exist
-   * @throws IOException
    */
   public static FileStatus getTableInfoPath(FileSystem fs, Path tableDir)
   throws IOException {
@@ -411,7 +384,6 @@ public class FSTableDescriptors implements TableDescriptors {
    * older files.
    *
    * @return The file status of the current table info file or null if none exist
-   * @throws IOException
    */
   private static FileStatus getTableInfoPath(FileSystem fs, Path tableDir, boolean removeOldFiles)
   throws IOException {
@@ -597,21 +569,6 @@ public class FSTableDescriptors implements TableDescriptors {
       this.cache.put(td.getTableName(), td);
     }
     return p;
-  }
-
-  /**
-   * Deletes all the table descriptor files from the file system.
-   * Used in unit tests only.
-   * @throws NotImplementedException if in read only mode
-   */
-  public void deleteTableDescriptorIfExists(TableName tableName) throws IOException {
-    if (fsreadonly) {
-      throw new NotImplementedException("Cannot delete a table descriptor - in read only mode");
-    }
-
-    Path tableDir = getTableDir(tableName);
-    Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
-    deleteTableDescriptorFiles(fs, tableInfoDir, Integer.MAX_VALUE);
   }
 
   /**

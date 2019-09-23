@@ -89,6 +89,8 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -663,42 +665,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
-      return CompletableFuture.completedFuture(true);
-    }
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-        return;
-      }
-      if (state.isPresent()) {
-        future.complete(state.get().inStates(TableState.State.ENABLED));
-      } else {
-        future.completeExceptionally(new TableNotFoundException(tableName));
-      }
-    });
-    return future;
+    return isTableState(tableName, TableState.State.ENABLED);
   }
 
   @Override
   public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
-      return CompletableFuture.completedFuture(false);
-    }
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (state, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-        return;
-      }
-      if (state.isPresent()) {
-        future.complete(state.get().inStates(TableState.State.DISABLED));
-      } else {
-        future.completeExceptionally(new TableNotFoundException(tableName));
-      }
-    });
-    return future;
+    return isTableState(tableName, TableState.State.DISABLED);
+  }
+
+  /**
+   * @return Future that calls Master getTableState and compares to <code>state</code>
+   */
+  private CompletableFuture<Boolean> isTableState(TableName tableName, TableState.State state) {
+    return this.<Boolean> newMasterCaller().action((controller, stub) ->
+      this.<MasterProtos.GetTableStateRequest, MasterProtos.GetTableStateResponse, Boolean> call(
+        controller, stub, MasterProtos.GetTableStateRequest.newBuilder().
+          setTableName(ProtobufUtil.toProtoTableName(tableName)).build(), (s, c, req, done) ->
+            s.getTableState(c, req, done), resp -> resp.getTableState().
+              toString().equals(state.toString()))).call();
   }
 
   @Override
