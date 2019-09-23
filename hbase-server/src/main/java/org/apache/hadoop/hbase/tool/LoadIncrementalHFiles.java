@@ -137,8 +137,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private String bulkToken;
 
-  private List<String> clusterIds = new ArrayList<>();
-
   /**
    * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
    * the case where a region has split during the process of the load. When this happens, the HFile
@@ -541,7 +539,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           try (Table table = conn.getTable(getTableName())) {
             secureClient = new SecureBulkLoadClient(getConf(), table);
             success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-              assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile, clusterIds);
+              assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile);
           }
           return success ? regionName : null;
         } finally {
@@ -1251,10 +1249,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   public void setBulkToken(String stagingDir) {
     this.bulkToken = stagingDir;
-  }
-
-  public void setClusterIds(List<String> clusterIds) {
-    this.clusterIds = clusterIds;
   }
 
   /**

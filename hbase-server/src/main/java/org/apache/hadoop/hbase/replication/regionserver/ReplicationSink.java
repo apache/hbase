@@ -174,7 +174,9 @@ public class ReplicationSink {
       // invocation of this method per table and cluster id.
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
-      Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
+      // Map of table name Vs list of pair of family and list of hfile paths from its namespace
+      Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = null;
+
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
@@ -202,19 +204,10 @@ public class ReplicationSink {
           Cell cell = cells.current();
           // Handle bulk load hfiles replication
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
-            BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
-            if(bulkLoadsPerClusters == null) {
-              bulkLoadsPerClusters = new HashMap<>();
-            }
-            // Map of table name Vs list of pair of family and list of
-            // hfile paths from its namespace
-            Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-              bulkLoadsPerClusters.get(bld.getClusterIdsList());
             if (bulkLoadHFileMap == null) {
               bulkLoadHFileMap = new HashMap<>();
-              bulkLoadsPerClusters.put(bld.getClusterIdsList(), bulkLoadHFileMap);
             }
-            buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
+            buildBulkLoadHFileMap(bulkLoadHFileMap, table, cell);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
@@ -250,26 +243,14 @@ public class ReplicationSink {
         LOG.debug("Finished replicating mutations.");
       }
 
-      if(bulkLoadsPerClusters != null) {
-        for (Entry<List<String>, Map<String, List<Pair<byte[],
-          List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
-          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
-          if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
-                entry.getKey().toString());
-            }
-            HFileReplicator hFileReplicator =
-              new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
+      if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
+        LOG.debug("Started replicating bulk loaded data.");
+        HFileReplicator hFileReplicator =
+            new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), entry.getKey());
-            hFileReplicator.replicate();
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Finished replicating bulk loaded data from cluster id: {}",
-                entry.getKey().toString());
-            }
-          }
-        }
+                getConnection());
+        hFileReplicator.replicate();
+        LOG.debug("Finished replicating bulk loaded data.");
       }
 
       int size = entries.size();
@@ -284,7 +265,8 @@ public class ReplicationSink {
 
   private void buildBulkLoadHFileMap(
       final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, TableName table,
-      BulkLoadDescriptor bld) throws IOException {
+      Cell cell) throws IOException {
+    BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
     List<StoreDescriptor> storesList = bld.getStoresList();
     int storesSize = storesList.size();
     for (int j = 0; j < storesSize; j++) {
