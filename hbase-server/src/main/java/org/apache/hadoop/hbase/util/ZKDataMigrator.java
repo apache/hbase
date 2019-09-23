@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Utlity method to migrate zookeeper data across HBase versions.
+ * Used by Master mirroring table state to zk for hbase-1 clients.
  * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
  */
 @Deprecated
@@ -65,25 +66,7 @@ public class ZKDataMigrator {
       return rv;
     for (String child: children) {
       TableName tableName = TableName.valueOf(child);
-      ZooKeeperProtos.DeprecatedTableState.State state = getTableState(zkw, tableName);
-      TableState.State newState = TableState.State.ENABLED;
-      if (state != null) {
-        switch (state) {
-        case ENABLED:
-          newState = TableState.State.ENABLED;
-          break;
-        case DISABLED:
-          newState = TableState.State.DISABLED;
-          break;
-        case DISABLING:
-          newState = TableState.State.DISABLING;
-          break;
-        case ENABLING:
-          newState = TableState.State.ENABLING;
-          break;
-        default:
-        }
-      }
+      TableState.State newState = ProtobufUtil.toTableState(getTableState(zkw, tableName));
       rv.put(tableName, newState);
     }
     return rv;
@@ -100,20 +83,13 @@ public class ZKDataMigrator {
    * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
    */
   @Deprecated
-  private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
+  private static ZooKeeperProtos.DeprecatedTableState.State getTableState(
           final ZKWatcher zkw, final TableName tableName)
       throws KeeperException, InterruptedException {
     String znode = ZNodePaths.joinZNode(zkw.getZNodePaths().tableZNode,
             tableName.getNameAsString());
-    byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) return null;
     try {
-      ProtobufUtil.expectPBMagicPrefix(data);
-      ZooKeeperProtos.DeprecatedTableState.Builder builder =
-          ZooKeeperProtos.DeprecatedTableState.newBuilder();
-      int magicLen = ProtobufUtil.lengthOfPBMagic();
-      ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
-      return builder.getState();
+      return ProtobufUtil.toTableState(ZKUtil.getData(zkw, znode));
     } catch (IOException e) {
       KeeperException ke = new KeeperException.DataInconsistencyException();
       ke.initCause(e);

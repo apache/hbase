@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
@@ -34,15 +35,18 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
@@ -58,8 +62,19 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   private final ZNodePaths znodePaths;
 
+  /**
+   * A znode maintained by MirroringTableStateManager.
+   * MirroringTableStateManager is deprecated to be removed in hbase3. It can also be disabled.
+   * Make sure it is enabled if you want to alter hbase:meta table in hbase2. In hbase3,
+   * TBD how metatable state will be hosted; likely on active hbase master.
+   */
+  private final String znodeMirroredMetaTableState;
+
+
   ZKAsyncRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
+    this.znodeMirroredMetaTableState =
+      ZNodePaths.joinZNode(this.znodePaths.tableZNode, TableName.META_TABLE_NAME.getNameAsString());
     this.zk = new ReadOnlyZKClient(conf);
   }
 
@@ -155,7 +170,8 @@ class ZKAsyncRegistry implements AsyncRegistry {
           }
           Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
           if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-            LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
+            LOG.warn("hbase:meta region (replicaId={}) is in state {}", replicaId,
+                stateAndServerName.getFirst());
           }
           locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
             getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
@@ -170,7 +186,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
             LOG.warn("Failed to fetch " + path, error);
             locs[replicaId] = null;
           } else if (proto == null) {
-            LOG.warn("Meta znode for replica " + replicaId + " is null");
+            LOG.warn("hbase:meta znode for replica " + replicaId + " is null");
             locs[replicaId] = null;
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
@@ -194,9 +210,8 @@ class ZKAsyncRegistry implements AsyncRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocation() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     addListener(
-      zk.list(znodePaths.baseZNode)
-        .thenApply(children -> children.stream()
-          .filter(c -> c.startsWith(znodePaths.metaZNodePrefix)).collect(Collectors.toList())),
+      zk.list(znodePaths.baseZNode).thenApply(children -> children.stream().
+          filter(c -> znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
       (metaReplicaZNodes, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
@@ -227,6 +242,43 @@ class ZKAsyncRegistry implements AsyncRegistry {
           return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
             snProto.getStartCode());
         });
+  }
+
+  @Override
+  public CompletableFuture<TableState> getMetaTableState() {
+    return getAndConvert(this.znodeMirroredMetaTableState, ZKAsyncRegistry::getTableState).
+      thenApply(state -> {
+        return state == null || state.equals(ENABLED_META_TABLE_STATE.getState())?
+          ENABLED_META_TABLE_STATE: new TableState(TableName.META_TABLE_NAME, state);
+      }).exceptionally(e -> {
+        // Handle this case where no znode... Return default ENABLED in this case:
+        // Caused by: java.io.IOException: java.util.concurrent.ExecutionException:
+        // java.util.concurrent.ExecutionException:
+        // org.apache.zookeeper.KeeperException$NoNodeException: KeeperErrorCode = NoNode for
+        //  /hbase/table/hbase:meta
+        // If not case of above, then rethrow but may need to wrap. See
+        // https://stackoverflow.com/questions/55453961/
+        //  completablefutureexceptionally-rethrow-checked-exception
+        if (e.getCause() instanceof KeeperException.NoNodeException) {
+          return ENABLED_META_TABLE_STATE;
+        }
+        throw e instanceof CompletionException? (CompletionException)e:
+          new CompletionException(e);
+      });
+  }
+
+  /**
+   * Get tablestate from data byte array found in the mirroring znode of table state.
+   */
+  private static TableState.State getTableState(byte[] data) throws DeserializationException {
+    if (data == null || data.length == 0) {
+      return null;
+    }
+    try {
+      return ProtobufUtil.toTableState(ProtobufUtil.toTableState(removeMetaData(data)));
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
   }
 
   @Override
