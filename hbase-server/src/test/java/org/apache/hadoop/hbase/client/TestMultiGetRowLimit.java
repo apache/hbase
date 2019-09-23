@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -45,21 +44,19 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * This test sets the multi size WAAAAAY low and then checks to make sure that gets will still make
- * progress.
+ * Test multiget's return rows should not more than the threshold number
  */
 @Category({MediumTests.class, ClientTests.class})
-public class TestMultiRespectsLimits {
-
+public class TestMultiGetRowLimit {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiRespectsLimits.class);
+      HBaseClassTestRule.forClass(TestMultiGetRowLimit.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
   private final static byte[] FAMILY = Bytes.toBytes("D");
-  public static final int MAX_SIZE = 500;
+  public static final int ROWS = 100;
 
   @Rule
   public TestName name = new TestName();
@@ -68,8 +65,9 @@ public class TestMultiRespectsLimits {
   public static void setUpBeforeClass() throws Exception {
     // disable the debug log to avoid flooding the output
     LogManager.getLogger(AsyncRegionLocatorHelper.class).setLevel(Level.INFO);
-    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
-      MAX_SIZE);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_RS_PARALLEL_GET_ENABLED, true);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_RS_PARALLEL_GET_THREADS, 3);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_RS_MULTIGET_BATCHSIZE, ROWS / 2);
     // Only start on regionserver so that all regions are on the same server.
     TEST_UTIL.startMiniCluster(1);
   }
@@ -80,41 +78,27 @@ public class TestMultiRespectsLimits {
   }
 
   @Test
-  public void testMultiLimits() throws Exception {
+  public void testMultiGetRowLimits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
+    List<Get> gets = new ArrayList<>(ROWS);
 
-    // Split the table to make sure that the chunking happens accross regions.
-    try (final Admin admin = TEST_UTIL.getAdmin()) {
-      admin.split(tableName);
-      TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return admin.getRegions(tableName).size() > 1;
-        }
-      });
-    }
-    List<Get> gets = new ArrayList<>(MAX_SIZE);
-
-    for (int i = 0; i < MAX_SIZE; i++) {
+    for (int i = 0; i < ROWS; i++) {
       gets.add(new Get(HBaseTestingUtility.ROWS[i]));
     }
 
     RpcServerInterface rpcServer = TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer();
     BaseSource s = rpcServer.getMetrics().getMetricsSource();
     long startingExceptions = METRICS_ASSERT.getCounter("exceptions", s);
-    long startingMultiExceptions = METRICS_ASSERT.getCounter("exceptions.multiResponseTooLarge", s);
+    long startingMultiExceptions = METRICS_ASSERT
+        .getCounter("exceptions.multiResponseTooLarge", s);
 
     Result[] results = t.get(gets);
-    assertEquals(MAX_SIZE, results.length);
+    assertEquals(ROWS, results.length);
 
-    // Cells from TEST_UTIL.loadTable have a length of 27.
-    // Multiplying by less than that gives an easy lower bound on size.
-    // However in reality each kv is being reported as much higher than that.
-    METRICS_ASSERT.assertCounterGt("exceptions",
-        startingExceptions + ((MAX_SIZE * 25) / MAX_SIZE), s);
-    METRICS_ASSERT.assertCounterGt("exceptions.multiResponseTooLarge",
-        startingMultiExceptions + ((MAX_SIZE * 25) / MAX_SIZE), s);
+    assertEquals(METRICS_ASSERT.getCounter("exceptions", s), startingExceptions + 1);
+    assertEquals(METRICS_ASSERT.getCounter("exceptions.multiResponseTooLarge", s),
+        startingMultiExceptions + 1);
   }
 }

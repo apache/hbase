@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetAddress;
 import java.util.Optional;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.security.User;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
-import org.apache.hadoop.hbase.security.User;
+
 
 /**
  * Interface of all necessary to carry out a RPC service invocation on the server. This interface
@@ -89,18 +91,15 @@ public interface RpcCallContext {
    */
   long getResponseCellSize();
 
+  long getNumberOfGets();
+
+  long incrementGetsNumber();
+
   /**
-   * Add on the given amount to the retained cell size.
-   *
-   * This is not thread safe and not synchronized at all. If this is used by more than one thread
-   * then everything will break. Since this is called for every row synchronization would be too
-   * onerous.
+   * Method to account for the size of retained cells and retained data blocks.
+   * @param result result to add size.
    */
-  void incrementResponseCellSize(long cellSize);
-
-  long getResponseBlockSize();
-
-  void incrementResponseBlockSize(long blockSize);
+  void addResultSize(Result result);
 
   long getResponseExceptionSize();
   void incrementResponseExceptionSize(long exceptionSize);

@@ -1933,6 +1933,12 @@ public class HRegionServer extends HasThread implements
       this.executorService.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
           conf.getInt("hbase.storescanner.parallel.seek.threads", 10));
     }
+    if (conf.getBoolean(HConstants.HBASE_RS_PARALLEL_GET_ENABLED,
+        HConstants.DEFAULT_PARALLEL_GET_ENABLED)) {
+      this.executorService.startExecutorService(ExecutorType.RS_PARALLEL_GET,
+          conf.getInt(HConstants.HBASE_RS_PARALLEL_GET_THREADS,
+              HConstants.DEFAULT_PARALLEL_GET_THREADS));
+    }
     this.executorService.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS, conf.getInt(
         HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
     // Start the threads for compacted files discharger
@@ -3511,8 +3517,8 @@ public class HRegionServer extends HasThread implements
   }
 
   CoprocessorServiceResponse execRegionServerService(
-      @SuppressWarnings("UnusedParameters") final RpcController controller,
-      final CoprocessorServiceRequest serviceRequest) throws ServiceException {
+      final RpcController controller, final CoprocessorServiceRequest serviceRequest)
+          throws ServiceException {
     try {
       ServerRpcController serviceController = new ServerRpcController();
       CoprocessorServiceCall call = serviceRequest.getCall();

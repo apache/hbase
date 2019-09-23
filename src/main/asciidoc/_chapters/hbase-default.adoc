@@ -1146,6 +1146,18 @@ The maximum number of KeyValues to read and then write in a batch when flushing 
 `false`
 
 
+[[hbase.regionserver.parallel.get.enabled]]
+*`hbase.regionserver.parallel.get.enabled`*::
++
+.Description
+
+      Enables regionserver to do multiget in parallel,
+      a feature which can reduce response latency under special conditions.
++
+.Default
+`false`
+
+
 [[hbase.storescanner.parallel.seek.threads]]
 *`hbase.storescanner.parallel.seek.threads`*::
 +

@@ -972,6 +972,17 @@ public final class HConstants {
   /** Whether nonces are enabled; default is true. */
   public static final String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
 
+  /** Some configuration param about multiget in parallel */
+  public static final String HBASE_RS_PARALLEL_GET_ENABLED =
+      "hbase.regionserver.parallel.get.enabled";
+  public static final boolean DEFAULT_PARALLEL_GET_ENABLED = false;
+  public static final String HBASE_RS_PARALLEL_GET_THREADS =
+      "hbase.regionserver.parallel.get.threads";
+  public static final int DEFAULT_PARALLEL_GET_THREADS = 20;
+  public static final String HBASE_RS_MULTIGET_BATCHSIZE =
+      "hbase.regionserver.multiget.batch.size";
+  public static final long DEFAULT_MULTIGET_BATCHSIZE = 10000;
+
   /**
    * Configuration key for the size of the block cache
    */

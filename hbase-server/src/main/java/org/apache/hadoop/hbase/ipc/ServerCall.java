@@ -24,27 +24,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -85,10 +92,10 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   protected final InetAddress remoteAddress;
   protected RpcCallback rpcCallback;
 
-  private long responseCellSize = 0;
-  private long responseBlockSize = 0;
+  private AtomicLong responseCellSize = new AtomicLong(0);
+  private AtomicLong getsNum = new AtomicLong(0);
   // cumulative size of serialized exceptions
-  private long exceptionSize = 0;
+  private AtomicLong exceptionSize = new AtomicLong(0);
   private final boolean retryImmediatelySupported;
 
   // This is a dirty hack to address HBASE-22539. The lowest bit is for normal rpc cleanup, and the
@@ -431,31 +438,36 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public long getResponseCellSize() {
-    return responseCellSize;
+    return responseCellSize.get();
   }
 
   @Override
-  public void incrementResponseCellSize(long cellSize) {
-    responseCellSize += cellSize;
+  public long getNumberOfGets() {
+    return getsNum.get();
   }
 
   @Override
-  public long getResponseBlockSize() {
-    return responseBlockSize;
+  public long incrementGetsNumber() {
+    return this.getsNum.incrementAndGet();
   }
 
   @Override
-  public void incrementResponseBlockSize(long blockSize) {
-    responseBlockSize += blockSize;
+  public void addResultSize(Result result) {
+    if (result != null && !result.isEmpty()) {
+      for (Cell c : result.rawCells()) {
+        this.responseCellSize.addAndGet(PrivateCellUtil.estimatedSerializedSizeOf(c));
+      }
+    }
   }
 
   @Override
   public long getResponseExceptionSize() {
-    return exceptionSize;
+    return exceptionSize.get();
   }
+
   @Override
   public void incrementResponseExceptionSize(long exSize) {
-    exceptionSize += exSize;
+    exceptionSize.addAndGet(exSize);
   }
 
   @Override

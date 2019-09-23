@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,15 +38,14 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
@@ -123,6 +121,8 @@ import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.handler.AssignRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.GetActionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.GetActionHandler.GetContext;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
@@ -254,6 +254,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDes
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 
+
 /**
  * Implements the regionserver RPC services.
  */
@@ -316,6 +317,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @VisibleForTesting
   protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
+  private long multiGetBatchSize;
 
   // The reference to the priority extraction function
   private final PriorityFunction priority;
@@ -335,6 +337,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * The RPC timeout period (milliseconds)
    */
   private final int rpcTimeout;
+
+  private boolean parallelGetEnabled;
 
   /**
    * The minimum allowable delta to use for the scan limit
@@ -410,10 +414,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * An RpcCallBack that creates a list of scanners that needs to perform callBack operation on
    * completion of multiGets.
    */
-   static class RegionScannersCloseCallBack implements RpcCallback {
+  public static class RegionScannersCloseCallBack implements RpcCallback {
     private final List<RegionScanner> scanners = new ArrayList<>();
 
-    public void addScanner(RegionScanner scanner) {
+    public synchronized void addScanner(RegionScanner scanner) {
       this.scanners.add(scanner);
     }
 
@@ -777,7 +781,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final OperationQuota quota, final RegionAction actions, final CellScanner cellScanner,
       final RegionActionResult.Builder builder, List<CellScannable> cellsToReturn, long nonceGroup,
       final RegionScannersCloseCallBack closeCallBack, RpcCallContext context,
-      ActivePolicyEnforcement spaceQuotaEnforcement) {
+      ActivePolicyEnforcement spaceQuotaEnforcement) throws ServiceException {
     // Gather up CONTIGUOUS Puts and Deletes in this mutations List.  Idea is that rather than do
     // one at a time, we instead pass them in batch.  Be aware that the corresponding
     // ResultOrException instance that matches each Put or Delete is then added down in the
@@ -786,31 +790,28 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     List<ClientProtos.Action> mutations = null;
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     IOException sizeIOE = null;
-    Object lastBlock = null;
-    ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = ResultOrException.newBuilder();
+    List<GetContext> getCtxs = new ArrayList<>();
+    if (cellsToReturn == null && isClientCellBlockSupport(context)) {
+      cellsToReturn = new ArrayList<CellScannable>();
+    }
+    ResultOrException.Builder resultOrExceptionBuilder = ResultOrException.newBuilder();
     boolean hasResultOrException = false;
     for (ClientProtos.Action action : actions.getActionList()) {
       hasResultOrException = false;
       resultOrExceptionBuilder.clear();
       try {
         Result r = null;
-
-        if (context != null
-            && context.isRetryImmediatelySupported()
-            && (context.getResponseCellSize() > maxQuotaResultSize
-              || context.getResponseBlockSize() + context.getResponseExceptionSize()
-              > maxQuotaResultSize)) {
-
+        if (isRpcCallAboveQuota(context, maxQuotaResultSize, true)) {
           // We're storing the exception since the exception and reason string won't
           // change after the response size limit is reached.
-          if (sizeIOE == null ) {
+          if (sizeIOE == null) {
             // We don't need the stack un-winding do don't throw the exception.
             // Throwing will kill the JVM's JIT.
             //
             // Instead just create the exception and then store it.
-            sizeIOE = new MultiActionResultTooLarge("Max size exceeded"
+            sizeIOE = new MultiActionResultTooLarge("RpcCall above quota"
                 + " CellSize: " + context.getResponseCellSize()
-                + " BlockSize: " + context.getResponseBlockSize());
+                + " GetsNumber: " + context.getNumberOfGets());
 
             // Only report the exception once since there's only one request that
             // caused the exception. Otherwise this number will dominate the exceptions count.
@@ -843,14 +844,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           try {
             Get get = ProtobufUtil.toGet(pbGet);
+            if (parallelGetEnabled) {
+              getCtxs.add(new GetContext(this, region, get, context, closeCallBack,
+                  maxQuotaResultSize, action.getIndex()));
+              continue;
+            }
             if (context != null) {
               r = get(get, (region), closeCallBack, context);
+              context.incrementGetsNumber();
             } else {
               r = region.get(get);
             }
           } finally {
             final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
-            if (metricsRegionServer != null) {
+            if (metricsRegionServer != null && !parallelGetEnabled) {
               metricsRegionServer.updateGet(
                   region.getTableDescriptor().getTableName(),
                   EnvironmentEdgeManager.currentTime() - before);
@@ -904,15 +911,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           ClientProtos.Result pbResult = null;
           if (isClientCellBlockSupport(context)) {
             pbResult = ProtobufUtil.toResultNoData(r);
-            //  Hard to guess the size here.  Just make a rough guess.
-            if (cellsToReturn == null) {
-              cellsToReturn = new ArrayList<>();
-            }
             cellsToReturn.add(r);
           } else {
             pbResult = ProtobufUtil.toResult(r);
           }
-          lastBlock = addSize(context, r, lastBlock);
+          if (context != null) {
+            context.addResultSize(r);
+          }
           hasResultOrException = true;
           resultOrExceptionBuilder.setResult(pbResult);
         }
@@ -933,11 +938,67 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         builder.addResultOrException(resultOrExceptionBuilder.build());
       }
     }
+    // do multiget in parallel
+    if (getCtxs != null && !getCtxs.isEmpty()) {
+      doParallelGet(getCtxs, cellsToReturn, builder);
+    }
     // Finish up any outstanding mutations
     if (!CollectionUtils.isEmpty(mutations)) {
       doNonAtomicBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
     }
     return cellsToReturn;
+  }
+
+  public boolean isRpcCallAboveQuota(RpcCallContext context, long maxQuotaResultSize,
+      boolean considerBatchSize) {
+    return context != null && context.isRetryImmediatelySupported()
+        && (context.getResponseCellSize() + context.getResponseExceptionSize() > maxQuotaResultSize
+            || (considerBatchSize && context.getNumberOfGets() > multiGetBatchSize));
+  }
+
+  private void doParallelGet(List<GetContext> getCtxs, List<CellScannable> cellsToReturn,
+      RegionActionResult.Builder builder) throws ServiceException {
+    ResultOrException.Builder resultOrExceptionBuilder = null;
+    CountDownLatch latch = new CountDownLatch(getCtxs.size());
+    List<GetActionHandler> handlers = new ArrayList<>(getCtxs.size());
+    for (GetContext getCtx : getCtxs) {
+      GetActionHandler handler = new GetActionHandler(getCtx, latch);
+      this.regionServer.executorService.submit(handler);
+      handlers.add(handler);
+    }
+    try {
+      latch.await();
+    } catch (InterruptedException ie) {
+      throw new ServiceException(ie);
+    }
+    boolean metricsAdd = false;
+    for (GetActionHandler handler : handlers) {
+      if (handler.getSizeIOException() != null) {
+        resultOrExceptionBuilder = ResultOrException.newBuilder()
+            .setException(ResponseConverter.buildException(handler.getSizeIOException()));
+        if (!metricsAdd) {
+          rpcServer.getMetrics().exception(handler.getSizeIOException());
+          metricsAdd = true;
+        }
+      } else if (handler.getResult() != null) {
+        ClientProtos.Result pbResult = null;
+        if (isClientCellBlockSupport(handler.getCurCall())) {
+          pbResult = ProtobufUtil.toResultNoData(handler.getResult());
+          cellsToReturn.add(handler.getResult());
+        } else {
+          pbResult = ProtobufUtil.toResult(handler.getResult());
+        }
+        resultOrExceptionBuilder = ResultOrException.newBuilder().setResult(pbResult);
+      }
+      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+      if (metricsRegionServer != null) {
+        metricsRegionServer.updateGet(
+            handler.getRegion().getTableDescriptor().getTableName(),
+            handler.getProcessTime());
+      }
+      resultOrExceptionBuilder.setIndex(handler.getActionIndex());
+      builder.addResultOrException(resultOrExceptionBuilder.build());
+    }
   }
 
   private void checkCellSizeLimit(final HRegion r, final Mutation m) throws IOException {
@@ -1257,9 +1318,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     maxScannerResultSize = conf.getLong(
       HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
+    multiGetBatchSize = rs.conf.getLong(HConstants.HBASE_RS_MULTIGET_BATCHSIZE,
+      HConstants.DEFAULT_MULTIGET_BATCHSIZE);
     rpcTimeout = conf.getInt(
       HConstants.HBASE_RPC_TIMEOUT_KEY,
       HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    parallelGetEnabled = rs.conf.getBoolean(HConstants.HBASE_RS_PARALLEL_GET_ENABLED,
+      HConstants.DEFAULT_PARALLEL_GET_ENABLED);
     minimumScanTimeLimitDelta = conf.getLong(
       REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
       DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA);
@@ -1307,6 +1372,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (rpcServer instanceof ConfigurationObserver) {
       ((ConfigurationObserver)rpcServer).onConfigurationChange(newConf);
     }
+    parallelGetEnabled = newConf.getBoolean(HConstants.HBASE_RS_PARALLEL_GET_ENABLED,
+        HConstants.DEFAULT_PARALLEL_GET_ENABLED);
+    multiGetBatchSize = newConf.getLong(HConstants.HBASE_RS_MULTIGET_BATCHSIZE,
+        HConstants.DEFAULT_MULTIGET_BATCHSIZE);
   }
 
   protected PriorityFunction createPriority() {
@@ -1372,47 +1441,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return scannerHolder.getNextCallSeq();
     }
     return 0L;
-  }
-
-  /**
-   * Method to account for the size of retained cells and retained data blocks.
-   * @param context rpc call context
-   * @param r result to add size.
-   * @param lastBlock last block to check whether we need to add the block size in context.
-   * @return an object that represents the last referenced block from this response.
-   */
-  Object addSize(RpcCallContext context, Result r, Object lastBlock) {
-    if (context != null && r != null && !r.isEmpty()) {
-      for (Cell c : r.rawCells()) {
-        context.incrementResponseCellSize(PrivateCellUtil.estimatedSerializedSizeOf(c));
-
-        // Since byte buffers can point all kinds of crazy places it's harder to keep track
-        // of which blocks are kept alive by what byte buffer.
-        // So we make a guess.
-        if (c instanceof ByteBufferExtendedCell) {
-          ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) c;
-          ByteBuffer bb = bbCell.getValueByteBuffer();
-          if (bb != lastBlock) {
-            context.incrementResponseBlockSize(bb.capacity());
-            lastBlock = bb;
-          }
-        } else {
-          // We're using the last block being the same as the current block as
-          // a proxy for pointing to a new block. This won't be exact.
-          // If there are multiple gets that bounce back and forth
-          // Then it's possible that this will over count the size of
-          // referenced blocks. However it's better to over count and
-          // use two rpcs than to OOME the regionserver.
-          byte[] valueArray = c.getValueArray();
-          if (valueArray != lastBlock) {
-            context.incrementResponseBlockSize(valueArray.length);
-            lastBlock = valueArray;
-          }
-        }
-
-      }
-    }
-    return lastBlock;
   }
 
   private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Shipper shipper,
@@ -2600,7 +2628,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           pbr = ProtobufUtil.toResultNoData(r);
           ((HBaseRpcController) controller).setCellScanner(CellUtil.createCellScanner(r
               .rawCells()));
-          addSize(context, r, null);
+          context.addResultSize(r);
         } else {
           pbr = ProtobufUtil.toResult(r);
         }
@@ -2628,7 +2656,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  private Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
+  public Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
       RpcCallContext context) throws IOException {
     region.prepareGet(get);
     boolean stale = region.getRegionInfo().getReplicaId() != 0;
@@ -3018,7 +3046,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean clientCellBlockSupported = isClientCellBlockSupport(context);
       addResult(builder, r, controller, clientCellBlockSupported);
       if (clientCellBlockSupported) {
-        addSize(context, r, null);
+        context.addResultSize(r);
       }
       return builder.build();
     } catch (IOException ie) {
@@ -3215,8 +3243,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
       long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-      ScanResponse.Builder builder, MutableObject<Object> lastBlock, RpcCallContext context)
-      throws IOException {
+      ScanResponse.Builder builder, RpcCallContext context) throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -3316,7 +3343,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
             boolean mayHaveMoreCellsInRow = scannerContext.mayHaveMoreCellsInRow();
             Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
-            lastBlock.setValue(addSize(context, r, lastBlock.getValue()));
+            if (context != null) {
+              context.addResultSize(r);
+            }
             results.add(r);
             numOfResults++;
             if (!mayHaveMoreCellsInRow && limitOfRows > 0) {
@@ -3516,7 +3545,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       limitOfRows = -1;
     }
-    MutableObject<Object> lastBlock = new MutableObject<>();
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
@@ -3527,7 +3555,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           Boolean bypass = region.getCoprocessorHost().preScannerNext(scanner, results, rows);
           if (!results.isEmpty()) {
             for (Result r : results) {
-              lastBlock.setValue(addSize(context, r, lastBlock.getValue()));
+              if (context != null) {
+                context.addResultSize(r);
+              }
             }
           }
           if (bypass != null && bypass.booleanValue()) {
@@ -3536,7 +3566,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
-            results, builder, lastBlock, context);
+            results, builder, context);
         } else {
           builder.setMoreResultsInRegion(!results.isEmpty());
         }

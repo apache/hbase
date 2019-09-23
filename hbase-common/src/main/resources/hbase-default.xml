@@ -936,6 +936,13 @@ possible configurations would overwhelm and obscure the important.
       a feature which can reduce response latency under special conditions.</description>
   </property>
   <property>
+    <name>hbase.regionserver.parallel.get.enabled</name>
+    <value>false</value>
+    <description>
+      Enables regionserver to do multiget in parallel,
+      a feature which can reduce response latency under special conditions.</description>
+  </property>
+  <property>
     <name>hbase.storescanner.parallel.seek.threads</name>
     <value>10</value>
     <description>
