@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -87,8 +88,10 @@ public class TestGetClosestAtOrBefore  {
   public void testUsingMetaAndBinary() throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = UTIL.getDataTestDirOnTestFS();
+
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
+    TableDescriptorBuilder metaBuilder =
+        FSTableDescriptors.createMetaTableDescriptorBuilder(UTIL.getConfiguration())
             .setMemStoreFlushSize(64 * 1024 * 1024);
 
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,

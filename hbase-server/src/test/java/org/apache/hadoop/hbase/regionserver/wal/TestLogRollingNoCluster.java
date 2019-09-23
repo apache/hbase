@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -77,8 +78,6 @@ public class TestLogRollingNoCluster {
   /**
    * Spin up a bunch of threads and have them all append to a WAL.  Roll the
    * WAL frequently to try and trigger NPE.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testContendedLogRolling() throws Exception {
@@ -161,7 +160,8 @@ public class TestLogRollingNoCluster {
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
-          TableDescriptor htd = TEST_UTIL.getMetaTableDescriptorBuilder().build();
+          TableDescriptor htd =
+              FSTableDescriptors.createMetaTableDescriptor(TEST_UTIL.getConfiguration());
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
           for(byte[] fam : htd.getColumnFamilyNames()) {
             scopes.put(fam, 0);
