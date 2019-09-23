@@ -4083,6 +4083,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         requestFlushIfNeeded();
       }
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName(), batchOp.size());
+      }
       batchOp.closeRegionOperation();
     }
     return batchOp.retCodeDetails;
@@ -6613,6 +6617,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
       }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
+      }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
@@ -7742,6 +7749,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // STEP 11. Release row lock(s)
           releaseRowLocks(acquiredRowLocks);
+
+          if (rsServices != null && rsServices.getMetrics() != null) {
+            rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+              getTableName(), mutations.size());
+          }
         }
         success = true;
       } finally {
@@ -7896,6 +7908,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (rsServices != null && rsServices.getNonceManager() != null) {
           rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
             writeEntry.getWriteNumber());
+        }
+        if (rsServices != null && rsServices.getMetrics() != null) {
+          rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+            getTableName());
         }
         writeEntry = null;
       } finally {
