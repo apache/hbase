@@ -539,5 +539,5 @@ public interface MasterServices extends Server {
   /**
    * @return the {@link RSGroupInfoManager}
    */
-  RSGroupInfoManager getRSRSGroupInfoManager();
+  RSGroupInfoManager getRSGroupInfoManager();
 }

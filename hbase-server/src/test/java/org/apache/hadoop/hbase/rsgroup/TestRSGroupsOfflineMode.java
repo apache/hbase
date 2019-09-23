@@ -163,8 +163,7 @@ public class TestRSGroupsOfflineMode {
     });
 
     // Get groupInfoManager from the new active master.
-    RSGroupInfoManager groupMgr = ((MiniHBaseCluster) cluster).getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class).getGroupInfoManager();
+    RSGroupInfoManager groupMgr = ((MiniHBaseCluster) cluster).getMaster().getRSGroupInfoManager();
     // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
     // Kill final regionserver to see the failover happens for all tables except GROUP table since

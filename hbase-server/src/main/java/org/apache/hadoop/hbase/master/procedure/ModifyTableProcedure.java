@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -242,8 +243,6 @@ public class ModifyTableProcedure
 
   /**
    * Check conditions before any real action of modifying a table.
-   * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
@@ -285,6 +284,8 @@ public class ModifyTableProcedure
       }
     }
 
+
+
     // Find out whether all column families in unmodifiedTableDescriptor also exists in
     // the modifiedTableDescriptor. This is to determine whether we are safe to rollback.
     final Set<byte[]> oldFamilies = unmodifiedTableDescriptor.getColumnFamilyNames();
@@ -294,6 +295,14 @@ public class ModifyTableProcedure
         this.deleteColumnFamilyInModify = true;
         break;
       }
+    }
+    if (!unmodifiedTableDescriptor.getRegionServerGroup()
+      .equals(modifiedTableDescriptor.getRegionServerGroup())) {
+      Supplier<String> forWhom = () -> "table " + getTableName();
+      RSGroupInfo rsGroupInfo = MasterProcedureUtil.checkGroupExists(
+        env.getMasterServices().getRSGroupInfoManager()::getRSGroup,
+        modifiedTableDescriptor.getRegionServerGroup(), forWhom);
+      MasterProcedureUtil.checkGroupNotEmpty(rsGroupInfo, forWhom);
     }
   }
 

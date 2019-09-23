@@ -75,7 +75,7 @@ public class TestRegionReplicasWithRestartScenarios {
     HTU.getConfiguration().setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 8192);
     HTU.getConfiguration().setInt(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 1);
     HTU.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 128 * 1024 * 1024);
-    HTU.getConfiguration().setInt(">hbase.master.wait.on.regionservers.mintostart", 3);
+    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
@@ -135,7 +135,7 @@ public class TestRegionReplicasWithRestartScenarios {
     checkDuplicates(onlineRegions3);
     assertFalse(res);
     int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-    assertEquals(61, totalRegions);
+    assertEquals(62, totalRegions);
   }
 
   private boolean checkDuplicates(Collection<HRegion> onlineRegions3) throws Exception {

@@ -43,6 +43,8 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterRestart.class);
 
+  private static final int NUM_REGIONS = 4;
+
   @Override
   protected boolean splitWALCoordinatedByZk() {
     return true;
@@ -61,7 +63,7 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
     }
 
     List<RegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
-    assertEquals(3, allRegions.size());
+    assertEquals(NUM_REGIONS, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
     UTIL.shutdownMiniHBaseCluster();
@@ -76,7 +78,7 @@ public class TestClusterRestart extends AbstractTestRestartCluster {
     // Otherwise we're reusing an Connection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
     allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
-    assertEquals(3, allRegions.size());
+    assertEquals(NUM_REGIONS, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
     for (TableName TABLE : TABLES) {
       try {
