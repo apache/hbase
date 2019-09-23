@@ -21,6 +21,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
@@ -49,6 +50,8 @@ public class MetricsRegionServer {
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
+  private Meter serverReadQueryMeter;
+  private Meter serverWriteQueryMeter;
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf) {
     this(regionServerWrapper,
@@ -62,6 +65,8 @@ public class MetricsRegionServer {
 
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");
+    serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
+    serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -210,5 +215,34 @@ public class MetricsRegionServer {
 
   public void updateBulkLoad(long millis) {
     this.bulkLoadTimer.updateMillis(millis);
+  }
+
+
+  public void updateReadQueryMeter(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQueryMeter(tn, count);
+    }
+    this.serverReadQueryMeter.mark(count);
+  }
+
+  public void updateReadQueryMeter(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableReadQueryMeter(tn);
+    }
+    this.serverReadQueryMeter.mark();
+  }
+
+  public void updateWriteQueryMeter(TableName tn, long count) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQueryMeter(tn, count);
+    }
+    this.serverWriteQueryMeter.mark(count);
+  }
+
+  public void updateWriteQueryMeter(TableName tn) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateTableWriteQueryMeter(tn);
+    }
+    this.serverWriteQueryMeter.mark();
   }
 }
