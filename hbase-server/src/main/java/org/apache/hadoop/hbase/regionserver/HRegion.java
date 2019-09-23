@@ -3160,6 +3160,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       }
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName(), batchOp.operations.length);
+      }
       closeRegionOperation(op);
     }
     return batchOp.retCodeDetails;
@@ -6258,6 +6262,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
       }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable());
+      }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
@@ -7644,6 +7651,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (txid != 0) {
             syncOrDefer(txid, getEffectiveDurability(processor.useDurability()));
           }
+
+          if (rsServices != null && rsServices.getMetrics() != null) {
+            rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+              getTableName(), mutations.size());
+          }
           walSyncSuccessful = true;
           // 12. call postBatchMutate hook
           processor.postBatchMutate(this);
@@ -7949,6 +7961,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if(txid != 0){
         syncOrDefer(txid, durability);
       }
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName());
+      }
       doRollBackMemstore = false;
     } finally {
       if (rowLock != null) {
@@ -8078,6 +8094,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // will yield indeterminate results.
       return doIncrement(mutation, nonceGroup, nonce);
     } finally {
+      if (rsServices != null && rsServices.getMetrics() != null) {
+        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
+          getTableName());
+      }
       if (this.metricsRegion != null) this.metricsRegion.updateIncrement();
       closeRegionOperation(op);
     }
