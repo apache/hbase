@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,8 +20,11 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
+
 
 /**
  * A KeepAlive connection is not physically closed immediately after the close,
@@ -35,7 +38,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * final user code. Hence it's package protected.
  */
 @InterfaceAudience.Private
-interface MasterKeepAliveConnection extends MasterProtos.MasterService.BlockingInterface {
+interface MasterKeepAliveConnection extends
+    MasterProtos.MasterService.BlockingInterface, Closeable {
   // Do this instead of implement Closeable because closeable returning IOE is PITA.
   void close();
 }
