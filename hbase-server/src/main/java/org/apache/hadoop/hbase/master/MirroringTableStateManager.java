@@ -38,7 +38,8 @@ import org.slf4j.LoggerFactory;
  * mirroring. See in HMaster where we make the choice. The below does zk updates on a best-effort
  * basis only. If we fail updating zk we keep going because only hbase1 clients suffer; we'll just
  * log at WARN level.
- * @deprecated Since 2.0.0. To be removed in 3.0.0.
+ * @deprecated Since 2.0.0. To be removed in 3.0.0. ZKRegistry#getMetaTableState reads
+ *   mirrored state so add alternative mechanism before purge else cannot disable hbase:meta table
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -47,7 +48,7 @@ public class MirroringTableStateManager extends TableStateManager {
 
   /**
    * Set this key to true in Configuration to enable mirroring of table state out to zookeeper so
-   * hbase-1.x clients can pick-up table state.
+   * hbase-1.x clients can pick-up table state. Default value is 'true'.
    */
   static final String MIRROR_TABLE_STATE_TO_ZK_KEY = "hbase.mirror.table.state.to.zookeeper";
 

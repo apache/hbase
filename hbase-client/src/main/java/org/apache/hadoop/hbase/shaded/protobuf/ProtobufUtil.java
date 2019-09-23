@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -3368,4 +3369,46 @@ public final class ProtobufUtil {
       .build();
   }
 
+
+  /**
+   * Parses pb TableState from <code>data</code>
+   */
+  public static ZooKeeperProtos.DeprecatedTableState.State toTableState(byte [] data)
+    throws DeserializationException, IOException {
+    if (data == null || data.length <= 0) {
+      return null;
+    }
+    ProtobufUtil.expectPBMagicPrefix(data);
+    ZooKeeperProtos.DeprecatedTableState.Builder builder =
+      ZooKeeperProtos.DeprecatedTableState.newBuilder();
+    int magicLen = ProtobufUtil.lengthOfPBMagic();
+    ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
+    return builder.getState();
+  }
+
+
+  /**
+   * @return Convert from pb TableState to pojo TableState.
+   */
+  public static TableState.State toTableState(ZooKeeperProtos.DeprecatedTableState.State state) {
+    TableState.State newState = TableState.State.ENABLED;
+    if (state != null) {
+      switch (state) {
+        case ENABLED:
+          newState = TableState.State.ENABLED;
+          break;
+        case DISABLED:
+          newState = TableState.State.DISABLED;
+          break;
+        case DISABLING:
+          newState = TableState.State.DISABLING;
+          break;
+        case ENABLING:
+          newState = TableState.State.ENABLING;
+          break;
+        default:
+      }
+    }
+    return newState;
+  }
 }

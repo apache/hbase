@@ -151,6 +151,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.impl.Log4jLoggerAdapter;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -493,8 +494,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @return META table descriptor
+   * @return META table descriptor builder
+   * @Deprecated
    */
+  @Deprecated
+  @VisibleForTesting
   public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
     try {
       return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
