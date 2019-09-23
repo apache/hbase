@@ -145,6 +145,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
@@ -498,7 +499,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * @return META table descriptor
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   * @deprecated since 2.0 version and will be removed in 3.0 version. Currently for test only.
    *             use {@link #getMetaTableDescriptorBuilder()}
    */
   @Deprecated
@@ -508,7 +509,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * @return META table descriptor
+   * @deprecated Since 2.3.0. No one should be using this internal. Used in testing only.
    */
+  @Deprecated
+  @VisibleForTesting
   public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
     try {
       return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);
