@@ -5853,7 +5853,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isSuccessful = false;
     try {
       this.writeRequestsCount.increment();
-      
+
       // There possibly was a split that happened between when the split keys
       // were gathered and before the HRegion's write lock was taken.  We need
       // to validate the HFile region before attempting to bulk load all of them
