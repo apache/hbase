@@ -192,6 +192,16 @@ public class TestConnectionImplementation {
       table.close();
     }
 
+    // See if stats change.
+    LOG.info(((ConnectionImplementation)con1).tableStateCache.stats().toString());
+    assertEquals(0, ((ConnectionImplementation)con1).tableStateCache.stats().missCount());
+    try (Admin a = con1.getAdmin()) {
+      a.isTableDisabled(TableName.META_TABLE_NAME);
+    }
+    LOG.info(((ConnectionImplementation)con1).tableStateCache.stats().toString());
+    assertEquals(1, ((ConnectionImplementation)con1).tableStateCache.stats().missCount());
+    assertEquals(1,
+      ((ConnectionImplementation)con1).tableStateCache.stats().loadSuccessCount());
     con1.close();
 
     // if the pool was created on demand it should be closed upon connection close

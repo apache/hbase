@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -125,6 +127,33 @@ public class TestZKAsyncRegistry {
         fail("Should have failed since we set an incorrect meta znode prefix");
       } catch (ExecutionException e) {
         assertThat(e.getCause(), instanceOf(IOException.class));
+      }
+    }
+  }
+
+  /**
+   * Test meta tablestate implementation.
+   * Test is a bit involved because meta has replicas... Replica assign lags so check
+   * between steps all assigned.
+   */
+  @Test
+  public void testMetaTableState() throws IOException, ExecutionException, InterruptedException {
+    assertTrue(TEST_UTIL.getMiniHBaseCluster().getMaster().isActiveMaster());
+    int ritTimeout = 10000;
+    TEST_UTIL.waitUntilNoRegionsInTransition(ritTimeout);
+    LOG.info("MASTER INITIALIZED");
+    try (ZKAsyncRegistry registry = new ZKAsyncRegistry(TEST_UTIL.getConfiguration())) {
+      assertEquals(TableState.State.ENABLED, registry.getMetaTableState().get().getState());
+      LOG.info("META ENABLED");
+      try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+        admin.disableTable(TableName.META_TABLE_NAME);
+        assertEquals(TableState.State.DISABLED, registry.getMetaTableState().get().getState());
+        TEST_UTIL.waitUntilNoRegionsInTransition(ritTimeout);
+        LOG.info("META DISABLED");
+        admin.enableTable(TableName.META_TABLE_NAME);
+        assertEquals(TableState.State.ENABLED, registry.getMetaTableState().get().getState());
+        TEST_UTIL.waitUntilNoRegionsInTransition(ritTimeout);
+        LOG.info("META ENABLED");
       }
     }
   }
