@@ -156,7 +156,7 @@ public class TestRegionReplicasWithRestartScenarios {
     assertFalse(res);
     int totalRegions = HTU.getMiniHBaseCluster().getLiveRegionServerThreads().stream().
       mapToInt(l -> l.getRegionServer().getOnlineRegions().size()).sum();
-    assertEquals(61, totalRegions);
+    assertEquals(62, totalRegions);
   }
 
   private boolean checkDuplicates(Collection<HRegion> onlineRegions3) throws Exception {

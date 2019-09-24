@@ -473,6 +473,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     }
   }
 
+  @Override
   public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.fnm.getFavoredNodes(regionInfo);
   }

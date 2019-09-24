@@ -35,4 +35,6 @@ public interface FavoredNodesPromoter {
 
   void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
       throws IOException;
+
+  List<ServerName> getFavoredNodes(RegionInfo regionInfo);
 }
