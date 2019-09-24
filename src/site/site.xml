@@ -123,10 +123,6 @@
         <item name="API" href="2.1/apidocs/index.html" target="_blank" />
         <item name="Ref Guide (single-page)" href="2.1/book.html" target="_blank" />
       </item>
-      <item name="2.0 Documentation">
-        <item name="API" href="2.0/apidocs/index.html" target="_blank" />
-        <item name="Ref Guide (single-page)" href="2.0/book.html" target="_blank" />
-      </item>
     </menu>
     <menu name="ASF">
       <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
