@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -52,6 +53,7 @@ public class TestHBaseFsckReplication {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setBoolean("hbase.write.hbck1.lock.file", false);
     UTIL.startMiniCluster(1);
+    UTIL.waitTableAvailable(TableName.valueOf("hbase:rsgroup"));
   }
 
   @AfterClass

@@ -65,6 +65,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   ServerName BOGUS_SERVER_NAME = ServerName.valueOf("localhost,1,1");
 
   /**
+   * Config for pluggable load balancers.
+   * @deprecated since 3.0.0, will be removed in 4.0.0. In the new implementation, as the base load
+   *             balancer will always be the rs group based one, you should just use
+   *             {@link org.apache.hadoop.hbase.HConstants#HBASE_MASTER_LOADBALANCER_CLASS} to
+   *             config the per group load balancer.
+   */
+  @Deprecated
+  String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+  /**
    * Set the current cluster status. This allows a LoadBalancer to map host name to a server
    */
   void setClusterMetrics(ClusterMetrics st);

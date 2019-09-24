@@ -188,6 +188,7 @@ public class CreateNamespaceProcedure
       return false;
     }
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
+    checkNamespaceRSGroup(env, nsDescriptor);
     return true;
   }
 
