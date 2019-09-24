@@ -121,7 +121,7 @@ public class TestRollingRestart {
         log("Region still online: " + oregion);
       }
     }
-    assertEquals(1, regions.size());
+    assertEquals(2, regions.size());
     log("Enabling table\n");
     TEST_UTIL.getAdmin().enableTable(tableName);
     log("Waiting for no more RIT\n");
