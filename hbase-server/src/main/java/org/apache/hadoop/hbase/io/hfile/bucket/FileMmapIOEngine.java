@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -54,7 +55,12 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
     try {
       raf = new RandomAccessFile(filePath, "rw");
       fileSize = roundUp(capacity, ByteBufferArray.DEFAULT_BUFFER_SIZE);
-      raf.setLength(fileSize);
+      File file = new File(filePath);
+      // setLength() method will change file's last modified time. So if don't do
+      // this check, wrong time will be used when calculating checksum.
+      if (file.length() != fileSize) {
+        raf.setLength(fileSize);
+      }
       fileChannel = raf.getChannel();
       LOG.info("Allocating " + StringUtils.byteDesc(fileSize) + ", on the path:" + filePath);
     } catch (java.io.FileNotFoundException fex) {
