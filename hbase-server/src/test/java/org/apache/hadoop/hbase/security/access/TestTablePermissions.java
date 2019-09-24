@@ -102,6 +102,7 @@ public class TestTablePermissions {
 
     // Wait for the ACL table to become available
     UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
+    UTIL.waitTableAvailable(TableName.valueOf("hbase:rsgroup"));
 
     ZKW = new ZKWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);
@@ -222,7 +223,7 @@ public class TestTablePermissions {
     // check full load
     Map<byte[], ListMultimap<String, UserPermission>> allPerms = PermissionStorage.loadAll(conf);
     assertEquals("Full permission map should have entries for both test tables",
-        2, allPerms.size());
+        3, allPerms.size());
 
     userPerms = allPerms.get(TEST_TABLE.getName()).get("hubert");
     assertNotNull(userPerms);
