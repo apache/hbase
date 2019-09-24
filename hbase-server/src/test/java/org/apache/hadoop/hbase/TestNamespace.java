@@ -118,7 +118,7 @@ public class TestNamespace {
 
     //verify existence of system tables
     Set<TableName> systemTables = Sets.newHashSet(
-        TableName.META_TABLE_NAME);
+        TableName.META_TABLE_NAME, TableName.valueOf("hbase:rsgroup"));
     List<TableDescriptor> descs = admin.listTableDescriptorsByNamespace(
       Bytes.toBytes(NamespaceDescriptor.SYSTEM_NAMESPACE.getName()));
     assertEquals(systemTables.size(), descs.size());
