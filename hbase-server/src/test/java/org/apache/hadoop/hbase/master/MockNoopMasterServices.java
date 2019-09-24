@@ -493,7 +493,7 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public RSGroupInfoManager getRSRSGroupInfoManager() {
+  public RSGroupInfoManager getRSGroupInfoManager() {
     return null;
   }
 }
