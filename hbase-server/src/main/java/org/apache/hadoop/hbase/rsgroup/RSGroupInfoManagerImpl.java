@@ -427,7 +427,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         // master first and then region server, so after all the region servers has been reopened,
         // the new TableDescriptor will be loaded.
         try {
-          tds.add(newTd);
+          tds.update(newTd);
         } catch (IOException e) {
           LOG.warn("Failed to migrate {} in group {}", tableName, groupInfo.getName(), e);
           failedTables.add(tableName);

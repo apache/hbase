@@ -35,13 +35,15 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,12 +69,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
  * providing appropriate assignments for user tables.
  */
 @InterfaceAudience.Private
-public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
+public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
   private Configuration config;
   private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
+  private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
 
@@ -330,36 +333,42 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   @Override
   public void initialize() throws IOException {
-    try {
+    if (rsGroupInfoManager == null) {
+      rsGroupInfoManager = masterServices.getRSGroupInfoManager();
       if (rsGroupInfoManager == null) {
-        List<RSGroupAdminEndpoint> cps =
-          masterServices.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class);
-        if (cps.size() != 1) {
-          String msg = "Expected one implementation of GroupAdminEndpoint but found " + cps.size();
-          LOG.error(msg);
-          throw new HBaseIOException(msg);
-        }
-        rsGroupInfoManager = cps.get(0).getGroupInfoManager();
-        if(rsGroupInfoManager == null){
-          String msg = "RSGroupInfoManager hasn't been initialized";
-          LOG.error(msg);
-          throw new HBaseIOException(msg);
-        }
-        rsGroupInfoManager.start();
+        String msg = "RSGroupInfoManager hasn't been initialized";
+        LOG.error(msg);
+        throw new HBaseIOException(msg);
       }
-    } catch (IOException e) {
-      throw new HBaseIOException("Failed to initialize GroupInfoManagerImpl", e);
+      rsGroupInfoManager.start();
     }
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
-        StochasticLoadBalancer.class, LoadBalancer.class);
-    internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
+    Class<? extends LoadBalancer> balancerClass;
+    String balancerClassName = config.get(HBASE_RSGROUP_LOADBALANCER_CLASS);
+    if (balancerClassName == null) {
+      balancerClass = config.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        LoadBalancerFactory.getDefaultLoadBalancerClass(), LoadBalancer.class);
+    } else {
+      try {
+        balancerClass = Class.forName(balancerClassName).asSubclass(LoadBalancer.class);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e);
+      }
+    }
+    // avoid infinite nesting
+    if (getClass().isAssignableFrom(balancerClass)) {
+      balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
+    }
+    internalBalancer = ReflectionUtils.newInstance(balancerClass);
+    if (internalBalancer instanceof FavoredNodesPromoter) {
+      favoredNodesManager = new FavoredNodesManager(masterServices);
+    }
+    internalBalancer.setConf(config);
     internalBalancer.setMasterServices(masterServices);
     if(clusterStatus != null) {
       internalBalancer.setClusterMetrics(clusterStatus);
     }
-    internalBalancer.setConf(config);
     internalBalancer.initialize();
   }
 
@@ -400,6 +409,14 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @VisibleForTesting
   public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
     this.rsGroupInfoManager = rsGroupInfoManager;
+  }
+
+  public LoadBalancer getInternalBalancer() {
+    return internalBalancer;
+  }
+
+  public FavoredNodesManager getFavoredNodesManager() {
+    return favoredNodesManager;
   }
 
   @Override
