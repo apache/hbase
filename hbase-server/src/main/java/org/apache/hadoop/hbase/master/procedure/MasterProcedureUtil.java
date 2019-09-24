@@ -18,14 +18,18 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -192,10 +196,52 @@ public final class MasterProcedureUtil {
    * keep trying. The default proc.getException().unwrapRemoteException
    * doesn't have access to DNRIOE from the procedure2 module.
    */
-  public static IOException unwrapRemoteIOException(Procedure proc) {
+  public static IOException unwrapRemoteIOException(Procedure<?> proc) {
     Exception e = proc.getException().unwrapRemoteException();
     // Do not retry ProcedureExceptions!
     return (e instanceof ProcedureException)? new DoNotRetryIOException(e):
         proc.getException().unwrapRemoteIOException();
+  }
+
+  /**
+   * Do not allow creating new tables/namespaces which has an empty rs group, expect the default rs
+   * group. Notice that we do not check for online servers, as this is not stable because region
+   * servers can die at any time.
+   */
+  public static void checkGroupNotEmpty(RSGroupInfo rsGroupInfo, Supplier<String> forWhom)
+    throws ConstraintException {
+    if (rsGroupInfo == null || rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
+      // we do not have a rs group config or we explicitly set the rs group to default, then no need
+      // to check.
+      return;
+    }
+    if (rsGroupInfo.getServers().isEmpty()) {
+      throw new ConstraintException(
+        "No servers in the rsgroup " + rsGroupInfo.getName() + " for " + forWhom.get());
+    }
+  }
+
+  @FunctionalInterface
+  public interface RSGroupGetter {
+    RSGroupInfo get(String groupName) throws IOException;
+  }
+
+  public static RSGroupInfo checkGroupExists(RSGroupGetter getter, Optional<String> optGroupName,
+    Supplier<String> forWhom) throws IOException {
+    if (optGroupName.isPresent()) {
+      String groupName = optGroupName.get();
+      RSGroupInfo group = getter.get(groupName);
+      if (group == null) {
+        throw new ConstraintException(
+          "Region server group " + groupName + " for " + forWhom.get() + " does not exit");
+      }
+      return group;
+    }
+    return null;
+  }
+
+  public static Optional<String> getNamespaceGroup(NamespaceDescriptor namespaceDesc) {
+    return Optional
+      .ofNullable(namespaceDesc.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP));
   }
 }
