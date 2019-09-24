@@ -37,7 +37,7 @@ under the License.
     <tr>
       <th>Version</th>
       <th>Release Date</th>
-      <th>Compatiblity Report</th>
+      <th>Compatibility Report</th>
       <th>Changes</th>
       <th>Release Notes</th>
       <th>Download</th>
@@ -162,7 +162,7 @@ under the License.
     <tr>
       <th>Version</th>
       <th>Release Date</th>
-      <th>Compatiblity Report</th>
+      <th>Compatibility Report</th>
       <th>Changes</th>
       <th>Release Notes</th>
       <th>Download</th>
@@ -190,6 +190,41 @@ under the License.
       <td>
       </td>
     </tr>
+    </table>
+  </section>
+  <section name="HBase Operator Tools">
+    <table>
+      <tr>
+        <th>Version</th>
+        <th>Release Date</th>
+        <th>Compatibility Report</th>
+        <th>Changes</th>
+        <th>Release Notes</th>
+        <th>Download</th>
+        <th>Notices</th>
+      </tr>
+      <tr>
+        <td style="test-align: left">
+          1.0.0
+        </td>
+        <td style="test-align: left">
+          2019/09/24
+        </td>
+        <td style="test-align: left">
+        </td>
+        <td style="test-align: left">
+          <a href="https://apache.org/dist/hbase/hbase-operator-tools-1.0.0/CHANGES.md">Changes</a>
+        </td>
+        <td style="test-align: left">
+          <a href="https://apache.org/dist/hbase/hbase-operator-tools-1.0.0/RELEASENOTES.md">Release Notes</a>
+        </td>
+        <td style="test-align: left">
+          <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-src.tar.gz">src</a> (<a href="https://www.apache.org/dist/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-src.tar.gz.sha512">sha512</a> <a href="https://www.apache.org/dist/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-src.tar.gz.asc">asc</a>) <br />
+          <a href="https://www.apache.org/dyn/closer.lua/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-bin.tar.gz">bin</a> (<a href="https://www.apache.org/dist/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-bin.tar.gz.sha512">sha512</a> <a href="https://www.apache.org/dist/hbase/hbase-operator-tools-1.0.0/hbase-operator-tools-1.0.0-bin.tar.gz.asc">asc</a>) <br />
+        </td>
+        <td>
+        </td>
+      </tr>
     </table>
   </section>
 
