@@ -254,7 +254,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
-      <artifactId>hbase-shaded-miscellaneous</artifactId>
+      <artifactId>hbase-shaded-gson</artifactId>
     </dependency>
   </dependencies>
 

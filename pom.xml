@@ -1307,7 +1307,7 @@
     <spy.version>2.11.6</spy.version>
     <bouncycastle.version>1.46</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
-    <hbase-thirdparty.version>2.2.1</hbase-thirdparty.version>
+    <hbase.shaded.gson.version>3.0.0</hbase.shaded.gson.version>
     <!-- Plugin Dependencies -->
     <error-prone.version>2.1.1</error-prone.version>
     <maven.assembly.version>3.1.1</maven.assembly.version>
@@ -1823,8 +1823,8 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-miscellaneous</artifactId>
-        <version>${hbase-thirdparty.version}</version>
+        <artifactId>hbase-shaded-gson</artifactId>
+        <version>${hbase.shaded.gson.version}</version>
       </dependency>
       <dependency>
         <!--If this is not in the runtime lib, we get odd
